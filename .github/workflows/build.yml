@@ -20,15 +20,41 @@ jobs:
         submodules: 'recursive'
     
     - name: Print Build Environment Info
+      shell: powershell
       run: |
-        echo "构建环境信息:"
-        echo "操作系统: ${{ runner.os }}"
-        echo "构建类型: ${{ matrix.build_type }}"
-        echo "工作目录: $(pwd)"
-        echo "CMake版本: $(cmake --version | head -n 1)"
-        echo "Git版本: $(git --version)"
-        echo "Python版本: $(python --version 2>&1 || echo 'Python not found')"
-        echo "可用内存: $(Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object @{Name='TotalMemory'; Expression={[math]::Round($_.TotalVisibleMemorySize/1MB, 2)}}, @{Name='FreeMemory'; Expression={[math]::Round($_.FreePhysicalMemory/1MB, 2)}} | ConvertTo-Json || echo 'Memory info not available')"
+        Write-Host "构建环境信息:"
+        Write-Host "操作系统: ${{ runner.os }}"
+        Write-Host "构建类型: ${{ matrix.build_type }}"
+        Write-Host "工作目录: $(Get-Location)"
+        try {
+          $cmakeVersion = cmake --version | Select-Object -First 1
+          Write-Host "CMake版本: $cmakeVersion"
+        } catch {
+          Write-Host "CMake版本: 无法获取"
+        }
+        try {
+          $gitVersion = git --version
+          Write-Host "Git版本: $gitVersion"
+        } catch {
+          Write-Host "Git版本: 无法获取"
+        }
+        try {
+          $pythonVersion = python --version 2>$null
+          if (-not $pythonVersion) { $pythonVersion = & python -V 2>$null }
+          if ($pythonVersion) {
+            Write-Host "Python版本: $pythonVersion"
+          } else {
+            Write-Host "Python版本: Python not found"
+          }
+        } catch {
+          Write-Host "Python版本: Python not found"
+        }
+        try {
+          $memoryInfo = Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object @{Name='TotalMemory'; Expression={[math]::Round($_.TotalVisibleMemorySize/1MB, 2)}}, @{Name='FreeMemory'; Expression={[math]::Round($_.FreePhysicalMemory/1MB, 2)}} | ConvertTo-Json
+          Write-Host "可用内存: $memoryInfo"
+        } catch {
+          Write-Host "内存信息不可用"
+        }
     
     - name: Cache vcpkg dependencies
       uses: actions/cache@v4
