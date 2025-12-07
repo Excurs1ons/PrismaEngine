@@ -2,8 +2,8 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://github.com/Excurs1ons/PrismaEngine)
-[![Build Status](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
-[![Code Quality](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/code_quality.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/code_quality.yml)
+[![Build Prisma Engine](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
+
 
 Prisma Engine is a modern cross-platform game engine designed for lightweight/high-performance game development. The engine features a modular architecture, supports Windows and Android platforms, with plans to extend to more platforms.
 
