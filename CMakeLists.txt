@@ -4,7 +4,7 @@ project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
 # 设置C++标准
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-if(!EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts)")
+if(NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts)")
     execute_process(
         COMMAND git submodule update --init --recursive --force
     )
