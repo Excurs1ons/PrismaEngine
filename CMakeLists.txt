@@ -42,26 +42,62 @@ add_subdirectory(src/runtime)
 add_subdirectory(src/game)
 add_subdirectory(src/editor)
 
-# 创建分发目标
-add_custom_target(dist
-    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
-    COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
-        --format=gnutar 
-        "${CMAKE_BINARY_DIR}/install"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Creating distribution package"
-    VERBATIM
+# 安装projects目录
+install(DIRECTORY projects/
+    DESTINATION projects
+    PATTERN "CMakeLists.txt" EXCLUDE
+    PATTERN "build" EXCLUDE
+    PATTERN ".gradle" EXCLUDE
 )
 
-add_custom_target(dist-win
-    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
-    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
-        --format=zip
-        "${CMAKE_BINARY_DIR}/install"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Creating Windows distribution package"
-    VERBATIM
+# 安装resources目录
+install(DIRECTORY resources/
+    DESTINATION resources
+    PATTERN "build" EXCLUDE
 )
+
+# 创建分发目标
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_custom_target(dist
+        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Debug --prefix ${CMAKE_BINARY_DIR}/install
+        COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
+            --format=gnutar 
+            "${CMAKE_BINARY_DIR}/install"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Creating distribution package"
+        VERBATIM
+    )
+
+    add_custom_target(dist-win
+        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Debug --prefix ${CMAKE_BINARY_DIR}/install
+        COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
+            --format=zip
+            "${CMAKE_BINARY_DIR}/install"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Creating Windows distribution package"
+        VERBATIM
+    )
+else()
+    add_custom_target(dist
+        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
+        COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
+            --format=gnutar 
+            "${CMAKE_BINARY_DIR}/install"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Creating distribution package"
+        VERBATIM
+    )
+
+    add_custom_target(dist-win
+        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
+        COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
+            --format=zip
+            "${CMAKE_BINARY_DIR}/install"
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        COMMENT "Creating Windows distribution package"
+        VERBATIM
+    )
+endif()
 
 # 创建一个聚合目标，确保CLion能正确识别项目
 add_custom_target(Prisma ALL
