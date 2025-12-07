@@ -4,7 +4,7 @@
 #include <Windows.h>
 #include <iostream>
 
-DirectoryWatcher::DirectoryWatcher() : m_hDir(INVALID_HANDLE_VALUE), m_stopEvent(NULL), m_running(false) {}
+DirectoryWatcher::DirectoryWatcher() : m_running(false), m_hDir(INVALID_HANDLE_VALUE), m_stopEvent(NULL) {}
 
 DirectoryWatcher::~DirectoryWatcher() {
     Stop();
