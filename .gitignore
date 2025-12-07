@@ -323,5 +323,4 @@ clion-*.txt
 *.VC.VC.opendb
 
 # vcpkg directories and files
-vcpkg/
 !vcpkg.json
