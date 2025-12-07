@@ -61,7 +61,16 @@ target_link_libraries(Engine PUBLIC
 
 # 链接系统库
 if(WIN32)
-    target_link_libraries(Engine PRIVATE xaudio2)
+    target_link_libraries(Engine PRIVATE xaudio2
+        d3d12
+        dxgi
+        d3dcompiler
+    )
+else (ANDROID)
+    target_link_libraries(Engine PRIVATE
+        log
+    )
+
 endif()
 
 # 设置公共头文件

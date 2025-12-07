@@ -21,13 +21,24 @@ add_library(Editor SHARED
 # 包含目录
 target_include_directories(Editor
     PRIVATE 
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core/include
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_SOURCE_DIR}/../core
+        ${CMAKE_CURRENT_SOURCE_DIR}/../core/resource
+        ${CMAKE_CURRENT_SOURCE_DIR}/../core/audio
+        ${CMAKE_CURRENT_SOURCE_DIR}/../core/graphic
+        ${CMAKE_CURRENT_SOURCE_DIR}/../core/platform
 )
+
+# 查找并链接 DirectX 12 (使用 Windows SDK)
+find_package(directx-headers CONFIG REQUIRED)
 
 # 链接依赖
 target_link_libraries(Editor 
     PRIVATE Engine
+    Microsoft::DirectX-Headers
+    d3d12
+    dxgi
+    d3dcompiler
 )
 
 # 编译选项
