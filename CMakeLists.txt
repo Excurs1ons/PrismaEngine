@@ -13,18 +13,18 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-    if(DEFINED CMAKE_TOOLCHAIN_FILE)
-        set(VCPKG_MANIFEST_MODE ON)
+if(DEFINED CMAKE_TOOLCHAIN_FILE)
+    set(VCPKG_MANIFEST_MODE ON)
 
-        # 启用vcpkg manifest以解决构建时的警告
-        set(VCPKG_ENABLE_MANIFEST ON)
+    # 启用vcpkg manifest以解决构建时的警告
+    set(VCPKG_ENABLE_MANIFEST ON)
 
-        # 对于Visual Studio生成器，传递VcpkgEnableManifest参数给MSBuild
-        if(CMAKE_GENERATOR MATCHES "Visual Studio")
-            set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "configs/Directory.Build.props")
-        endif()
+    # 对于Visual Studio生成器，传递VcpkgEnableManifest参数给MSBuild
+    if(CMAKE_GENERATOR MATCHES "Visual Studio")
+        set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "configs/Directory.Build.props")
     endif()
 endif()
+
 
 # 设置输出目录，使可执行文件、动态库和静态库分别放在不同的目录
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
