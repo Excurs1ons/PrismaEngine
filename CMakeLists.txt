@@ -13,6 +13,11 @@ endif()
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# 设置默认的安装前缀
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Default install path" FORCE)
+endif()
+
 if(DEFINED CMAKE_TOOLCHAIN_FILE)
     set(VCPKG_MANIFEST_MODE ON)
 
@@ -39,18 +44,20 @@ add_subdirectory(src/editor)
 
 # 创建分发目标
 add_custom_target(dist
+    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
     COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
         --format=gnutar 
-        "${CMAKE_INSTALL_PREFIX}"
+        "${CMAKE_BINARY_DIR}/install"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Creating distribution package"
     VERBATIM
 )
 
 add_custom_target(dist-win
+    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
     COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
         --format=zip
-        "${CMAKE_INSTALL_PREFIX}"
+        "${CMAKE_BINARY_DIR}/install"
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
     COMMENT "Creating Windows distribution package"
     VERBATIM
