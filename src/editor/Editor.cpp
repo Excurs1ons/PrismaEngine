@@ -3,8 +3,8 @@
     Game为Runtime执行游戏逻辑
     Editor为Runtime执行编辑器逻辑
 */
-#include "../core/CommandLineParser.h"
-#include "../core/Logger.h"
+#include "CommandLineParser.h"
+#include "Logger.h"
 #include "Common.h"
 #include "ResourceManager.h"
 #include "WindowsUtils.h"

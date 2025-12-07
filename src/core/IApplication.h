@@ -1,4 +1,5 @@
 #pragma once
+#include "Singleton.h"
 
 namespace Engine {
 
@@ -6,7 +7,7 @@ template<typename T>
 class IApplication :public Singleton<T> {
 public:
     friend class Singleton<T>;
-    virtual ~IApplication() = default;
+    ~IApplication() override = default;
 
     /// <summary>
     /// 应用程序初始化，应该包括完成平台层和渲染器的初始化
@@ -15,10 +16,20 @@ public:
     virtual bool Initialize() = 0;
     virtual int Run() = 0;
     virtual void Shutdown() = 0;
+    // 提供获取运行状态的公共方法
+    virtual bool IsRunning() const {
+        return isRunning;
+    }
 
 protected:
-    bool m_isRunning = false;
-    bool m_isInitialized = false;
+    // 提供设置运行状态的保护方法
+    virtual void SetRunning(bool running) {
+        isRunning = running;
+    }
+
+private:
+    bool isRunning = false;
+    bool isInitialized = false;
 };
 
 }
