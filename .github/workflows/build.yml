@@ -19,6 +19,10 @@ jobs:
       with:
         submodules: 'recursive'
     
+    - name: Fetch all history for vcpkg
+      run: |
+        git fetch --all
+      
     - name: Setup vcpkg
       run: |
         ./vcpkg/bootstrap-vcpkg.bat
@@ -47,87 +51,5 @@ jobs:
         path: |
           build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz
           build/${{ matrix.build_type }}/PrismaEngine-*.zip
-          build/${{ matrix.build_type }}/install/**
-        if-no-files-found: warn
-
-  build-linux:
-    runs-on: ubuntu-latest
-    
-    strategy:
-      matrix:
-        build_type: [release, debug]
-        
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
-    
-    - name: Setup vcpkg
-      run: |
-        ./vcpkg/bootstrap-vcpkg.sh
-      
-    - name: Configure CMake
-      run: |
-        cmake -B build/${{ matrix.build_type }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
-      
-    - name: Build
-      run: |
-        cmake --build build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
-      
-    - name: Install
-      run: |
-        cmake --install build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.build_type }}/install
-      
-    - name: Create Distribution Package
-      run: |
-        cmake --build build/${{ matrix.build_type }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
-      
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: prisma-engine-${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}-linux
-        path: |
-          build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz
-          build/${{ matrix.build_type }}/install/**
-        if-no-files-found: warn
-        
-  build-macos:
-    runs-on: macos-latest
-    
-    strategy:
-      matrix:
-        build_type: [release, debug]
-        
-    steps:
-    - uses: actions/checkout@v4
-      with:
-        submodules: 'recursive'
-    
-    - name: Setup vcpkg
-      run: |
-        ./vcpkg/bootstrap-vcpkg.sh
-      
-    - name: Configure CMake
-      run: |
-        cmake -B build/${{ matrix.build_type }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
-      
-    - name: Build
-      run: |
-        cmake --build build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
-      
-    - name: Install
-      run: |
-        cmake --install build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.build_type }}/install
-      
-    - name: Create Distribution Package
-      run: |
-        cmake --build build/${{ matrix.build_type }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
-      
-    - name: Upload Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: prisma-engine-${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}-macos
-        path: |
-          build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz
           build/${{ matrix.build_type }}/install/**
         if-no-files-found: warn
