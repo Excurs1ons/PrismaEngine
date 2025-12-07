@@ -2,8 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://github.com/Excurs1ons/PrismaEngine)
-[![Build Status](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
-[![Code Quality](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/code_quality.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/code_quality.yml)
+[![Build Prisma Engine](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
 
 Prisma Engine 是一个现代化的跨平台游戏引擎，专为轻量化/高性能游戏开发而设计。引擎采用模块化架构，支持Windows和Android平台，并计划扩展至更多平台。
 
