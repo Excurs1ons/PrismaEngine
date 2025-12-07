@@ -4,34 +4,28 @@
 [![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://github.com/Excurs1ons/PrismaEngine)
 [![Build Prisma Engine](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
 
-Prisma Engine 是一个现代化的跨平台游戏引擎，专为轻量化/高性能游戏开发而设计。引擎采用模块化架构，支持Windows和Android平台，并计划扩展至更多平台。
+Prisma Engine 是一个个人学习项目，作者通过它来学习游戏引擎开发的基础知识。作为初学者的作品，项目中难免存在不足和错误，但每一步都是学习的过程。引擎尝试实现一些基本功能，支持Windows和Android平台。
 
 简体中文 | [English](../README.md)
 
-## 🚀 核心特性
+## 🎯 项目目标
 
-### 🎯 跨平台支持
-- **Windows**: 原生DirectX 12支持，提供最佳性能
-- **Android**: 完整的移动平台支持，基于Vulkan图形API
-- **未来规划**: Linux、macOS等平台支持
+### 📚 学习目的
+- 通过实践学习游戏引擎开发的基础知识
+- 理解图形渲染、资源管理和系统架构的基本概念
+- 探索跨平台开发的基本流程
 
-### 🎮 可插拔后端系统
-- **渲染后端**: 支持DirectX 12、Vulkan、SDL3等多种渲染API，运行时切换
-- **输入后端**: 支持Win32、SDL3、DirectInput等多种输入系统
-- **音频后端**: 支持XAudio2、SDL3等音频渲染引擎
-- **统一接口**: 抽象的后端接口设计，便于扩展新后端
+### 🔧 尝试实现的功能
+- **跨平台支持**: 尝试支持Windows和Android平台
+- **渲染后端**: 尝试实现DirectX 12和Vulkan渲染支持
+- **输入系统**: 基本的输入处理功能
+- **音频系统**: 简单的音频播放功能
+- **资源管理**: 基本的资源加载和管理机制
 
-### 🎮 渲染系统
-- **多后端渲染**: DirectX 12、Vulkan、SDL3可切换
-- **现代图形特性**: 支持多线程渲染、Bindless纹理、实例化渲染
-- **高级功能**: 异步计算、硬件光线追踪、瓦片渲染
-- **实时渲染**: 动态光照、阴影和后期处理效果
-
-### 🔧 引擎架构
-- **组件系统**: 基于ECS（Entity-Component-System）架构
-- **模块化设计**: 可插拔的子系统，便于扩展和维护
-- **资源管理**: 智能资源加载、缓存和生命周期管理
-- **音频系统**: 多后端音频渲染，支持WAV格式播放
+### ⚠️ 注意事项
+- 这是一个学习项目，代码质量和架构设计可能不够完善
+- 功能实现可能存在bug和性能问题
+- 欢迎提出建议和指导，帮助作者改进和学习
 
 ## 📋 系统要求
 
@@ -131,4 +125,4 @@ PrismaEngine/
 
 ---
 
-*PrismaEngine - 为现代游戏开发而生的高性能引擎*
+*PrismaEngine - 一个初学者的游戏引擎学习项目*
