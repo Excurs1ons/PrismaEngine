@@ -40,7 +40,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json")
 
         # 对于Visual Studio生成器，传递VcpkgEnableManifest参数给MSBuild
         if(CMAKE_GENERATOR MATCHES "Visual Studio")
-            set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "${CMAKE_CURRENT_SOURCE_DIR}/Directory.Build.props")
+            set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "configs/Directory.Build.props")
         endif()
     endif()
 endif()
