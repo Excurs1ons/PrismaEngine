@@ -1,8 +1,8 @@
 #pragma once
-#include "../include/MetaData.h"
-#include "../include/Serializable.h"
-#include "../include/SerializationVersion.h"
-#include "include/AssetSerializer.h"
+#include "MetaData.h"
+#include "Serializable.h"
+#include "SerializationVersion.h"
+#include "AssetSerializer.h"
 #include <filesystem>
 #include <memory>
 #include <string>

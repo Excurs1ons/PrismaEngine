@@ -1,9 +1,9 @@
 #pragma once
-#include <nlohmann/json.hpp>
+#include "Mesh.h"
+#include "ResourceBase.h"
 #include <DirectXMath.h>
 #include <filesystem>
-#include "Resources.h"
-#include "Mesh.h"
+#include <nlohmann/json.hpp>
 using json = nlohmann::json;
 
 namespace nlohmann {

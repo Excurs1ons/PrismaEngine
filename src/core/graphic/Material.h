@@ -1,10 +1,10 @@
 #pragma once
-#include "Resources.h"
+#include "ResourceBase.h"
 #include "include/RenderCommandContext.h"
 
 namespace Engine {
 
-    class Material :public Resource
+    class Material :public ResourceBase
     {
     public:
         void Apply(RenderCommandContext* context);

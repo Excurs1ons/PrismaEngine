@@ -9,10 +9,10 @@ namespace Engine {
 enum class ResourceType { Unknown, Shader, Texture, Mesh, Model, Audio, Material, Config };
 
 // 资源基类（同前）
-class Resource {
+class ResourceBase {
 public:
     std::string name;
-    virtual ~Resource()                                 = default;
+    virtual ~ResourceBase()                                 = default;
     virtual bool Load(const std::filesystem::path& path) = 0;
     virtual void Unload()                                = 0;
     virtual bool IsLoaded() const                        = 0;
