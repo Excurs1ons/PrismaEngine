@@ -300,3 +300,28 @@ gradle/wrapper/gradle-wrapper.jar
 /Runtime/Android/local.properties
 /Runtime/Android/.gradle/
 Editor/imgui.ini
+
+# CMake build directories
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+CMakeConfigureLog.yaml
+InstallScripts.json
+TargetDirectories.txt
+clion-*.txt
+
+# Prisma Engine build artifacts
+/bin/
+/lib/
+*.vcxproj.filters
+*.vcxproj.user
+*.sdf
+*.opensdf
+*.VC.db
+*.VC.VC.opendb
+
+# vcpkg directories and files
+vcpkg/
+!vcpkg.json
