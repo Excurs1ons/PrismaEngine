@@ -5,11 +5,8 @@ project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 添加一个选项来控制是否启用UTF-8编码，默认值可以通过-DENABLE_UTF8=ON/OFF在命令行覆盖
-option(ENABLE_UTF8 "Enable UTF-8 encoding for MSVC" ON)
-
 # 根据ENABLE_UTF8选项决定是否启用UTF-8编码
-if(MSVC AND ENABLE_UTF8)
+if(MSVC)
     # 使用 /utf-8 选项，它相当于同时设置了 /source-charset:utf-8 和 /execution-charset:utf-8
     add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
@@ -17,19 +14,31 @@ endif()
 
 # vcpkg集成
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json")
-    # 如果没有通过命令行指定toolchain文件，则使用项目内的vcpkg
+    # 如果没有通过命令行指定toolchain文件，则尝试使用项目内的vcpkg或环境变量中的vcpkg
     if("${CMAKE_TOOLCHAIN_FILE}" STREQUAL "")
-        set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
-            CACHE STRING "Vcpkg toolchain file" FORCE)
+        # 首先尝试项目内部的vcpkg
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+            set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+                CACHE STRING "Vcpkg toolchain file" FORCE)
+        # 如果项目内没有vcpkg，则尝试使用环境变量VCPKG_ROOT
+        elseif(DEFINED ENV{VCPKG_ROOT} AND EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+            set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                CACHE STRING "Vcpkg toolchain file" FORCE)
+        else()
+            message(FATAL_ERROR "Vcpkg toolchain file not found")
+        endif()
     endif()
-    set(VCPKG_MANIFEST_MODE ON)
-    
-    # 启用vcpkg manifest以解决构建时的警告
-    set(VCPKG_ENABLE_MANIFEST ON)
-    
-    # 对于Visual Studio生成器，传递VcpkgEnableManifest参数给MSBuild
-    if(CMAKE_GENERATOR MATCHES "Visual Studio")
-        set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "${CMAKE_CURRENT_SOURCE_DIR}/Directory.Build.props")
+
+    if(DEFINED CMAKE_TOOLCHAIN_FILE)
+        set(VCPKG_MANIFEST_MODE ON)
+
+        # 启用vcpkg manifest以解决构建时的警告
+        set(VCPKG_ENABLE_MANIFEST ON)
+
+        # 对于Visual Studio生成器，传递VcpkgEnableManifest参数给MSBuild
+        if(CMAKE_GENERATOR MATCHES "Visual Studio")
+            set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "${CMAKE_CURRENT_SOURCE_DIR}/Directory.Build.props")
+        endif()
     endif()
 endif()
 
