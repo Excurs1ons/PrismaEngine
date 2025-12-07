@@ -1,11 +1,11 @@
 #pragma once
-#include "Serializable.h"
-#include <string>
+#include "../include/AssetSerializer.h"
+#include "../include/MetaData.h"
+#include "../include/Serializable.h"
+#include "../include/SerializationVersion.h"
 #include <filesystem>
 #include <memory>
-#include "MetaData.h"
-#include "SerializationVersion.h"
-#include "AssetSerializer.h"
+#include <string>
 
 namespace Engine {
 using namespace Serialization;

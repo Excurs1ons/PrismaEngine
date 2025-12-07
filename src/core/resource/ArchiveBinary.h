@@ -1,6 +1,6 @@
 #pragma once
-#include <istream>
 #include "Archive.h"
+#include <istream>
 
 namespace Engine {
     namespace Serialization {

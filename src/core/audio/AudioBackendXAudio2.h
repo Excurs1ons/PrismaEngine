@@ -1,10 +1,10 @@
 #pragma once
 #include "AudioBackend.h"
 // 包含XAudio2头文件
-#include <xaudio2.h>
-#include <wrl/client.h>
+#include <../include/Logger.h>
 #include <mutex>
-#include <Logger.h>
+#include <wrl/client.h>
+#include <xaudio2.h>
 using namespace Microsoft::WRL;
 
 #if defined(PlaySound)

@@ -1,7 +1,7 @@
 #pragma once
+#include "../include/SerializationVersion.h"
 #include "Archive.h"
 #include <nlohmann/json.hpp>
-#include "SerializationVersion.h"
 
 using json = nlohmann::json;
 namespace Engine {
