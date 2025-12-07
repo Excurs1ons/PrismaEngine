@@ -106,7 +106,7 @@ PrismaEngine/
 ├── EngineTest/      # 引擎测试
 ├── EditorTest/      # 编辑器测试
 ├── RuntimeTest/     # 运行时测试
-├── Docs/           # 文档资源
+├── docs/           # 文档资源
 └── Tools/          # 开发工具
 ```
 

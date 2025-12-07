@@ -7,7 +7,7 @@
 
 Prisma Engine is a modern cross-platform game engine designed for lightweight/high-performance game development. The engine features a modular architecture, supports Windows and Android platforms, with plans to extend to more platforms.
 
-English | [简体中文](Docs/README_zh.md)
+English | [简体中文](docs/README_zh.md)
 
 ## 🚀 Core Features
 
@@ -106,7 +106,7 @@ PrismaEngine/
 ├── EngineTest/      # Engine tests
 ├── EditorTest/      # Editor tests
 ├── RuntimeTest/     # Runtime tests
-├── Docs/           # Documentation resources
+├── docs/           # Documentation resources
 └── Tools/          # Development tools
 ```
 
@@ -138,10 +138,10 @@ PrismaEngine/
 
 ## 📚 Documentation Resources
 
-- [📖 Engine Architecture](Docs/RenderingSystem.md) - Detailed rendering system explanation
-- [🗺️ Development Roadmap](Docs/Roadmap.md) - Project development plan
-- [💾 Asset Serialization](Docs/AssetSerialization.md) - Resource management mechanism
-- [📝 Development Notes](Docs/MEMO.md) - Technical implementation details
+- [📖 Engine Architecture](docs/RenderingSystem.md) - Detailed rendering system explanation
+- [🗺️ Development Roadmap](docs/Roadmap.md) - Project development plan
+- [💾 Asset Serialization](docs/AssetSerialization.md) - Resource management mechanism
+- [📝 Development Notes](docs/MEMO.md) - Technical implementation details
 
 ## 📄 License
 
