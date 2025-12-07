@@ -2,7 +2,7 @@
 #pragma once
 #define NOMINMAX
 #include "Resources.h"
-#include "include/RenderBackendDirectX12.h"
+#include "RenderBackendDirectX12.h"
 #include <DirectXCollision.h>
 #include <DirectXColors.h>
 #include <DirectXPackedVector.h>

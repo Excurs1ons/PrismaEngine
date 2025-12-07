@@ -2,11 +2,11 @@
 
 # 收集源文件
 file(GLOB_RECURSE ENGINE_SOURCES 
-    "src/*.cpp"
+    "*.cpp"
 )
 
 file(GLOB_RECURSE ENGINE_HEADERS
-    "include/*.h"
+    "*.h"
 )
 
 # 创建静态库
@@ -18,12 +18,13 @@ add_library(Engine STATIC
 # 设置包含目录
 target_include_directories(Engine
     PUBLIC 
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/core
         ${CMAKE_CURRENT_SOURCE_DIR}/resource
         ${CMAKE_CURRENT_SOURCE_DIR}/audio
+        ${CMAKE_CURRENT_SOURCE_DIR}/graphic
+        ${CMAKE_CURRENT_SOURCE_DIR}/platform
 )
 
 # 设置编译定义
