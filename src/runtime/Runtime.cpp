@@ -7,9 +7,9 @@
 #elif defined(__APPLE__)
 #endif
 
-#include "Common.h"
+#include "../core/Common.h"
 
-#include "DynamicLoader.h"
+#include "../core/DynamicLoader.h"
 #include "Export.h"
 #include <iostream>
 
