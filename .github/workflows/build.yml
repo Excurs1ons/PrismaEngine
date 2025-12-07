@@ -97,32 +97,47 @@ jobs:
         }
       
     - name: Verify Build Artifacts
+      shell: powershell
       run: |
-        echo "验证构建产物..."
-        ls -la build/${{ matrix.build_type }}/
+        Write-Host "验证构建产物..."
+        Get-ChildItem -Path "build/${{ matrix.build_type }}" -Force
         
         # 检查分发包文件
-        if [ -f "build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz" ]; then
-          echo "找到tar.gz分发包"
-          tar -tzf build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz | head -n 10
-        else
-          echo "警告: 未找到tar.gz分发包"
-        fi
+        $tarFile = Get-ChildItem -Path "build/${{ matrix.build_type }}" -Filter "PrismaEngine-*.tar.gz" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($tarFile) {
+          Write-Host "找到tar.gz分发包: $($tarFile.Name)"
+          # 在Windows上使用tar命令（Windows 10+内置）
+          try {
+            tar -tzf $tarFile.FullName | Select-Object -First 10
+          } catch {
+            Write-Host "无法列出tar.gz内容，但文件存在"
+          }
+        } else {
+          Write-Host "警告: 未找到tar.gz分发包"
+        }
         
-        if [ -f "build/${{ matrix.build_type }}/PrismaEngine-*.zip" ]; then
-          echo "找到zip分发包"
-          unzip -l build/${{ matrix.build_type }}/PrismaEngine-*.zip | head -n 10
-        else
-          echo "警告: 未找到zip分发包"
-        fi
+        $zipFile = Get-ChildItem -Path "build/${{ matrix.build_type }}" -Filter "PrismaEngine-*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($zipFile) {
+          Write-Host "找到zip分发包: $($zipFile.Name)"
+          # 使用Expand-Archive列出zip内容
+          try {
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            [IO.Compression.ZipFile]::OpenRead($zipFile.FullName).Entries | Select-Object -First 10 | ForEach-Object { $_.FullName }
+          } catch {
+            Write-Host "无法列出zip内容，但文件存在"
+          }
+        } else {
+          Write-Host "警告: 未找到zip分发包"
+        }
         
         # 检查安装目录
-        if [ -d "build/${{ matrix.build_type }}/install" ]; then
-          echo "安装目录内容:"
-          ls -la build/${{ matrix.build_type }}/install/
-        else
-          echo "警告: 未找到安装目录"
-        fi
+        $installDir = "build/${{ matrix.build_type }}/install"
+        if (Test-Path $installDir -PathType Container) {
+          Write-Host "安装目录内容:"
+          Get-ChildItem -Path $installDir -Force
+        } else {
+          Write-Host "警告: 未找到安装目录"
+        }
     
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
