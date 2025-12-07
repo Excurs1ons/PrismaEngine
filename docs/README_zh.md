@@ -50,9 +50,25 @@ Prisma Engine 是一个现代化的跨平台游戏引擎，专为轻量化/高�
 ## 🛠️ 快速开始
 
 ### 1. 获取源代码
+
+要克隆仓库及其子模块，请使用 `--recursive` 标志：
+
 ```bash
-git clone https://github.com/Excurs1ons/PrismaEngine.git
+git clone --recursive https://github.com/Excurs1ons/PrismaEngine.git
 cd PrismaEngine
+```
+
+如果您已经克隆了仓库但没有使用 `--recursive` 标志，可以单独初始化和更新子模块：
+
+```bash
+git submodule init
+git submodule update
+```
+
+或者使用我们的设置脚本：
+
+```bash
+./setup_project.bat
 ```
 
 ### 2. 设置开发环境
