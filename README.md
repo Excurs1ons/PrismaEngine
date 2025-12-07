@@ -37,8 +37,9 @@ English | [简体中文](docs/README_zh.md)
 ## 📋 System Requirements
 
 ### Development Environment
-- **IDE**: Visual Studio 2022 or newer
+- **IDE**: Visual Studio 2022 or newer, CLion, or any CMake-compatible IDE
 - **SDK**: Windows 10 SDK (10.0.22621.0+)
+- **Build System**: CMake 3.24+
 - **Package Manager**: vcpkg
 - **Mobile Development**: Android NDK, Android SDK
 
@@ -65,76 +66,53 @@ git submodule init
 git submodule update
 ```
 
-Or use our setup script:
-
-```bash
-./setup_project.bat
-```
-
 ### 2. Setup Development Environment
 ```bash
-# Install vcpkg
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-./bootstrap-vcpkg.bat
+# Bootstrap vcpkg
+./vcpkg/bootstrap-vcpkg.bat
 
 # Install dependencies
-vcpkg install
+./vcpkg/vcpkg install
 ```
 
 ### 3. Build Project
-1. Open `PrismaEngine.sln` in Visual Studio
-2. Select target platform and configuration (Debug/Release)
-3. Build solution (Ctrl+Shift+B)
-4. Run sample projects
+Using CMake with presets:
+```bash
+# Configure the project
+cmake --preset=windows-x64-debug
+
+# Build the project
+cmake --build --preset=windows-x64-debug
+```
+
+Alternative Visual Studio approach:
+1. Open folder in Visual Studio (File -> Open -> Folder)
+2. Select the PrismaEngine root folder
+3. Visual Studio will automatically detect CMake configuration
+4. Build solution (Ctrl+Shift+B)
 
 ### 4. Run Samples
 - **Editor**: Game editor application
 - **Runtime**: Game runtime environment
-- **EngineTest**: Engine functionality tests
 
 ## 📁 Project Structure
 
 ```
 PrismaEngine/
-├── Engine/           # Core engine module
-│   ├── include/     # Public header files
-│   ├── src/         # Implementation files
-│   └── Engine.vcxitems  # Project configuration
-├── Editor/          # Game editor
-├── Runtime/         # Game runtime
-├── EngineTest/      # Engine tests
-├── EditorTest/      # Editor tests
-├── RuntimeTest/     # Runtime tests
-├── docs/           # Documentation resources
-└── Tools/          # Development tools
+├── src/              # Source code
+│   ├── core/         # Core engine module
+│   ├── editor/       # Game editor
+│   ├── game/         # Game framework
+│   └── runtime/      # Game runtime
+├── projects/         # Platform-specific project files
+│   ├── android/      # Android projects
+│   └── windows/      # Windows projects
+├── docs/             # Documentation resources
+├── tools/            # Development tools
+├── vcpkg/            # Package manager
+├── CMakeLists.txt    # Main CMake configuration
+└── CMakePresets.json # CMake presets
 ```
-
-## 🔬 Core Modules
-
-### Backend System
-- **RenderBackend**: Abstract render backend interface, supports DirectX 12, Vulkan, SDL3
-- **InputBackend**: Abstract input backend interface, supports Win32, SDL3, DirectInput
-- **AudioBackend**: Abstract audio backend interface, supports XAudio2, SDL3
-- **Backend Management**: Runtime backend switching and hot-plug support
-
-### Rendering System
-- **Renderer**: Unified render interface with multi-backend support
-- **RenderSystem**: Render pipeline management with multi-threaded rendering
-- **MeshRenderer**: Mesh rendering component with instancing support
-- **Camera2D**: 2D camera system with viewport management
-- **Shader**: Shader management system with HLSL/GLSL support
-
-### Scene Management
-- **Scene**: Scene management with entity hierarchy support
-- **GameObject**: Game object base class with component container
-- **Transform**: Transform component with 2D/3D transformation support
-- **Component**: Component base class system with serialization support
-
-### Input System
-- **KeyCode**: Keyboard input mapping with cross-platform keycode unification
-- **InputManager**: Input event handling with multi-backend support
-- **Cross-platform Input**: Unified keyboard, mouse, touch input handling
 
 ## 📚 Documentation Resources
 
