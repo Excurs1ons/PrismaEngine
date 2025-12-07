@@ -1,8 +1,8 @@
 #pragma once
+#include "../resource/Archive.h"
+#include <filesystem>
 #include <string>
 #include <vector>
-#include <filesystem>
-#include "Archive.h"
 
 namespace Engine {
     namespace Serialization {

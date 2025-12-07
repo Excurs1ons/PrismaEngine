@@ -3,7 +3,7 @@
 #include <map>
 #include <vector>
 
-#include "AudioSystem.h"
+#include "../include/AudioSystem.h"
 #include "AudioBackend.h"
 
 namespace Engine {

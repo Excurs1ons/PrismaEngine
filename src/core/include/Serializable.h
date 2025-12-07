@@ -5,8 +5,8 @@
 #include <DirectXPackedVector.h>
 #include <DirectXCollision.h>
 // 移除了对Asset.h的循环引用
+#include "../resource/Archive.h"
 #include "MetaData.h"
-#include "Archive.h"
 
 namespace Engine {
 

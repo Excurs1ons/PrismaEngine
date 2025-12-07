@@ -1,16 +1,16 @@
 #pragma once
 
-#include "Serializable.h"
-#include "Resources.h"
-#include <nlohmann/json.hpp>
-#include <vector>
-#include <memory>
+#include "../include/Resources.h"
+#include "../include/Serializable.h"
 #include <fstream>
+#include <memory>
+#include <nlohmann/json.hpp>
 #include <sstream>
+#include <vector>
 
+#include "../include/ArchiveBinary.h"
+#include "../include/ArchiveJson.h"
 #include <filesystem>
-#include "ArchiveBinary.h"
-#include "ArchiveJson.h"
 
 using json = nlohmann::json;
 
