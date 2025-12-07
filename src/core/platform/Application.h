@@ -18,10 +18,4 @@ private:
     std::unique_ptr<EngineCore> engine;
 };
 
-
-extern "C" {
-    ENGINE_API bool Initialize();
-    ENGINE_API int Run();
-    ENGINE_API void Shutdown();
-}
 }  // namespace Engine

@@ -13,4 +13,12 @@ public:
     int Run() override;
     void Shutdown() override;
 };
+
+
+// 添加导出函数实现
+extern "C" {
+    __declspec(dllexport) bool Initialize();
+    __declspec(dllexport) int Run();
+    __declspec(dllexport) void Shutdown();
+}
 #endif //GAME_H

@@ -444,6 +444,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
 }
 
 bool RenderBackendDirectX12::LoadAssets() {
+    return true;
     // 创建空的根签名
     {
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
