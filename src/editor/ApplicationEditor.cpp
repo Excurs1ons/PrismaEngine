@@ -1,15 +1,15 @@
 #include "ApplicationEditor.h"
-#include "../core/Logger.h"
-#include "../core/PlatformSDL.h"
+#include "Logger.h"
+#include "PlatformSDL.h"
 #include "RenderBackendVulkan.h"
 #include "RenderSystem.h"
 #include <iostream>
 #include <stdexcept>
 #include <windows.h>
 
-#include "../core/SceneManager.h"
+#include "SceneManager.h"
 #include "ResourceManager.h"
-#include "mesh.h"
+#include "Mesh.h"
 #include "nlohmann/json.hpp"
 #include <vector>
 
