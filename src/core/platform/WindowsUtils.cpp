@@ -33,11 +33,12 @@ bool DirectoryWatcher::Start(const std::filesystem::path& directory, FileChangeC
 }
 
 void DirectoryWatcher::Stop() {
-    if (!m_running)
+    if (!m_running) {
         return;
+}
 
     m_running = false;
-    if (m_stopEvent) {
+    if (m_stopEvent != nullptr) {
         SetEvent((HANDLE)m_stopEvent);
     }
 
@@ -45,9 +46,9 @@ void DirectoryWatcher::Stop() {
         m_watchThread.join();
     }
 
-    if (m_stopEvent) {
+    if (m_stopEvent != nullptr) {
         CloseHandle((HANDLE)m_stopEvent);
-        m_stopEvent = NULL;
+        m_stopEvent = nullptr;
     }
 }
 
