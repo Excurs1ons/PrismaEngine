@@ -1,8 +1,8 @@
 #pragma once
-#include "../core/Export.h"
-#include "../core/IApplication.h"
-#include "../core/Singleton.h"
-#include "RenderBackend.h"
+#include "Export.h"
+#include "IApplication.h"
+#include "Singleton.h"
+
 
 class ApplicationEditor : public Engine::IApplication<ApplicationEditor>
 {
