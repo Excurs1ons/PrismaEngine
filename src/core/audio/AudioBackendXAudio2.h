@@ -1,7 +1,7 @@
 #pragma once
 #include "AudioBackend.h"
 // 包含XAudio2头文件
-#include <../Logger.h>
+#include "Logger.h"
 #include <mutex>
 #include <wrl/client.h>
 #include <xaudio2.h>
