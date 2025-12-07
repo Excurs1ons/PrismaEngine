@@ -1,6 +1,6 @@
 #pragma once
 #include "Singleton.h"
-#include "include/LogScope.h"
+#include "LogScope.h"
 #include <chrono>
 #include <cstdint>
 #include <fstream>
