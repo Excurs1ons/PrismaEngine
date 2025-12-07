@@ -38,9 +38,18 @@ concept Formattable = requires(T && t) {
     std::format("{}", std::forward<T>(t));
 };
 
+// 检查是否是字符串字面量或const char*类型
+template<typename T>
+concept StringType = std::is_same_v<std::decay_t<T>, const char*> || 
+                     std::is_same_v<std::decay_t<T>, char*> ||
+                     std::is_convertible_v<T, std::string_view> ||
+                     requires(T && t) {
+                         std::format("{}", std::forward<T>(t));
+                     };
+
 template<typename... Args>
 constexpr bool CheckFormattable() {
-    return (Formattable<Args> && ...);
+    return (StringType<Args> && ...);
 }
 
 class Logger:public Singleton<Logger>

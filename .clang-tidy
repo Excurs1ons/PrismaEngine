@@ -34,5 +34,17 @@ CheckOptions:
     value: camelBack
   - key: readability-identifier-naming.PrivateMemberCase
     value: camelBack
+  - key: readability-identifier-naming.ProtectedMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.PublicMemberCase
+    value: camelBack
+  - key: readability-identifier-naming.MemberPrefix
+    value: ''
+  - key: readability-identifier-naming.PrivateMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.ProtectedMemberPrefix
+    value: ''
+  - key: readability-identifier-naming.PublicMemberPrefix
+    value: ''
   - key: readability-identifier-naming.ParameterCase
     value: lower_case

@@ -9,6 +9,7 @@ set(GAME_SOURCES
 set(GAME_HEADERS
     framework.h
     pch.h
+        Game.h
 )
 
 # 创建动态库

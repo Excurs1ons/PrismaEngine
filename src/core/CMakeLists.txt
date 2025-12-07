@@ -13,7 +13,7 @@ file(GLOB_RECURSE ENGINE_HEADERS
 add_library(Engine STATIC 
     ${ENGINE_SOURCES}
     ${ENGINE_HEADERS}
-        packing/pipeline.h
+    packing/pipeline.h
 )
 
 # 设置包含目录

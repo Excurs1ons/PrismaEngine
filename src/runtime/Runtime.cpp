@@ -97,45 +97,49 @@ int main(int argc, char* argv[]) {
         LOG_FATAL("Logger", "日志系统初始化失败，正在退出...");
         return -1;
     }
+    std::string lib_name;
     if (cmdParser.IsOptionSet("editor")) {
         LOG_INFO("Runtime", "尝试启动编辑器");
-        return 0;
+        lib_name = "PrismaEditor.dll";
     }
-    if (cmdParser.IsOptionSet("game")) {
+    else if (cmdParser.IsOptionSet("game")) {
         LOG_INFO("Runtime", "尝试启动游戏");
-        return 0;
+        lib_name = "PrismaGame.dll";
     }
-    LOG_INFO("Runtime", "未指定启动模式");
-    return 0;
-    // 动态加载 Engine DLL
-    DynamicLoader engineLoader;
-    try {
-        engineLoader.Load("Engine.dll");
-        LOG_INFO("Runtime", "成功加载 Engine.dll");
-
-    } catch (const std::exception& e) {
-        LOG_FATAL("Runtime", "无法加载 Engine.dll: {}", e.what());
+    else {
+        LOG_INFO("Runtime", "未指定或无效的启动模式");
         return -1;
     }
 
-    auto initialize = engineLoader.GetFunction<InitializeFunc>("Initialize");
-    auto run = engineLoader.GetFunction<RunFunc>("Run");
-    auto shutdown = engineLoader.GetFunction<ShutdownFunc>("Shutdown");
+    // 动态加载 Engine DLL
+    DynamicLoader game_loader;
+    try {
+        game_loader.Load(lib_name);
+        LOG_INFO("Runtime", "成功加载 {0}",lib_name);
 
-    LOG_INFO("Runtime", "获取 Application 实例成功");
+    } catch (const std::exception& e) {
+        LOG_FATAL("Runtime", "无法加载 {0}: {1}", lib_name, e.what());
+        return -1;
+    }
+
+    auto initialize = game_loader.GetFunction<InitializeFunc>("Initialize");
+    auto run = game_loader.GetFunction<RunFunc>("Run");
+    auto shutdown = game_loader.GetFunction<ShutdownFunc>("Shutdown");
+
+    LOG_INFO("Runtime", "获取 {0} 实例成功", lib_name);
 
     if (!initialize()) {
         LOG_FATAL("Runtime", "应用程序初始化失败，正在退出...");
         return -1;
     }
-    LOG_INFO("Runtime", "Application 初始化成功");
+    LOG_INFO("Runtime", "{0} 初始化成功", lib_name);
 
-    int exitCode = run();
-    LOG_INFO("Runtime", "Application 运行完成，退出码: {}", exitCode);
+    int exit_code = run();
+    LOG_INFO("Runtime", "{0} 运行完成，退出码: {1}", lib_name, exit_code);
 
     shutdown();
-    LOG_INFO("Runtime", "Application 已关闭");
+    LOG_INFO("Runtime", "{0} 已关闭", lib_name);
 
     Logger::GetInstance().Flush();  // 确保日志被写出
-    return exitCode;
+    return exit_code;
 }

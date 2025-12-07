@@ -31,16 +31,16 @@ void ShowDemo() {
     LOG_TRACE("Demo", "这是一条跟踪消息");
 }
 
-ApplicationEditor::ApplicationEditor() {
+Editor::Editor() {
     LOG_INFO("Editor", "正在初始化编辑器");
 }
 
-ApplicationEditor::~ApplicationEditor()
+Editor::~Editor()
 {
     LOG_INFO("Editor", "正在关闭编辑器");
 }
 
-bool ApplicationEditor::Initialize()
+bool Editor::Initialize()
 {
     LOG_INFO("Editor", "正在初始化编辑器");
 
@@ -252,7 +252,7 @@ bool ApplicationEditor::Initialize()
 	return true;
 }
 
-int ApplicationEditor::Run()
+int Editor::Run()
 {
     auto platform = PlatformSDL::GetInstance();
     auto renderSystem = RenderSystem::GetInstance();
@@ -294,7 +294,7 @@ int ApplicationEditor::Run()
     return 0;
 }
 
-void ApplicationEditor::Shutdown()
+void Editor::Shutdown()
 {
     LOG_INFO("Editor", "正在关闭编辑器");
 
@@ -321,15 +321,15 @@ void ApplicationEditor::Shutdown()
 
 // 实现导出函数
 extern "C" {
-    __declspec(dllexport) bool InitializeEditor() {
-        return ApplicationEditor::GetInstance().Initialize();
+    __declspec(dllexport) bool Initialize() {
+        return Editor::GetInstance().Initialize();
     }
 
-    __declspec(dllexport) int RunEditor() {
-        return ApplicationEditor::GetInstance().Run();
+    __declspec(dllexport) int Run() {
+        return Editor::GetInstance().Run();
     }
 
-    __declspec(dllexport) void ShutdownEditor() {
-        ApplicationEditor::GetInstance().Shutdown();
+    __declspec(dllexport) void Shutdown() {
+        Editor::GetInstance().Shutdown();
     }
 }
