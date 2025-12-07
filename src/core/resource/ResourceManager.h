@@ -340,7 +340,7 @@ private:
 
     // 资源映射（频繁读写，使用读写锁）
     mutable std::shared_mutex m_resourcesMutex;
-    std::unordered_map<std::string, std::shared_ptr<Resource>> m_resources;
+    std::unordered_map<std::string, std::shared_ptr<ResourceBase>> m_resources;
 };
 
 }  // namespace Engine

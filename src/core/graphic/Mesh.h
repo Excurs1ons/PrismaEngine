@@ -1,8 +1,8 @@
 
 #pragma once
 #define NOMINMAX
-#include "Resources.h"
 #include "RenderBackendDirectX12.h"
+#include "ResourceBase.h"
 #include <DirectXCollision.h>
 #include <DirectXColors.h>
 #include <DirectXPackedVector.h>
@@ -53,7 +53,7 @@ struct SubMesh {
     IndexBufferHandle indexBufferHandle;
 };
 
-class Mesh : public Resource
+class Mesh : public ResourceBase
 {
     // 加载到GPU的方法
     //bool UploadToGPU(RenderDevice* device);

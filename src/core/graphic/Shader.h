@@ -8,7 +8,7 @@
 using Microsoft::WRL::ComPtr;
 
 namespace Engine {
-class Shader : public Resource {
+class Shader : public ResourceBase {
 public:
     Shader();
     ~Shader();
