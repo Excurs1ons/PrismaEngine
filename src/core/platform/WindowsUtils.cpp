@@ -1,8 +1,9 @@
+#if defined(WIN32) || defined(_WIN32) || defined(_WIN64) || defined(WIN64)
 #include "WindowsUtils.h"
-#include <../core/Logger.h>
+#include "Logger.h"
 #include <Windows.h>
 #include <iostream>
-namespace Editor {
+
 DirectoryWatcher::DirectoryWatcher() : m_hDir(INVALID_HANDLE_VALUE), m_stopEvent(NULL), m_running(false) {}
 
 DirectoryWatcher::~DirectoryWatcher() {
@@ -19,8 +20,9 @@ bool DirectoryWatcher::Start(const std::wstring& directory, FileChangeCallback c
 
     // 创建手动重置事件
     m_stopEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
-    if (!m_stopEvent)
+    if (m_stopEvent == nullptr) {
         return false;
+}
 
     m_watchThread = std::thread(&DirectoryWatcher::WatchLoop, this);
     return true;
@@ -156,4 +158,4 @@ void DirectoryWatcher::WatchLoop() {
     CloseHandle((HANDLE)m_hDir);
     m_hDir = INVALID_HANDLE_VALUE;
 }
-}  // namespace Editor
+#endif
