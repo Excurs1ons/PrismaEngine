@@ -5,34 +5,28 @@
 [![Build Prisma Engine](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
 
 
-Prisma Engine is a modern cross-platform game engine designed for lightweight/high-performance game development. The engine features a modular architecture, supports Windows and Android platforms, with plans to extend to more platforms.
+Prisma Engine is a personal learning project through which the author is learning the basics of game engine development. As a beginner's work, the project inevitably has shortcomings and errors, but every step is part of the learning process. The engine attempts to implement some basic features and supports Windows and Android platforms.
 
 English | [简体中文](docs/README_zh.md)
 
-## 🚀 Core Features
+## 🎯 Project Goals
 
-### 🎯 Cross-Platform Support
-- **Windows**: Native DirectX 12 support for optimal performance
-- **Android**: Complete mobile platform support based on Vulkan graphics API
-- **Future Plans**: Linux, macOS and other platform support
+### 📚 Learning Objectives
+- Learn the basics of game engine development through practice
+- Understand fundamental concepts of graphics rendering, resource management, and system architecture
+- Explore the basic workflow of cross-platform development
 
-### 🎮 Pluggable Backend System
-- **Render Backend**: Support for DirectX 12, Vulkan, SDL3 with runtime switching
-- **Input Backend**: Support for Win32, SDL3, DirectInput input systems
-- **Audio Backend**: Support for XAudio2, SDL3 audio rendering engines
-- **Unified Interface**: Abstract backend interface design for easy extension
+### 🔧 Attempted Features
+- **Cross-Platform Support**: Attempting to support Windows and Android platforms
+- **Rendering Backend**: Trying to implement DirectX 12 and Vulkan rendering support
+- **Input System**: Basic input handling functionality
+- **Audio System**: Simple audio playback functionality
+- **Resource Management**: Basic resource loading and management mechanisms
 
-### 🎮 Rendering System
-- **Multi-Backend Rendering**: DirectX 12, Vulkan, SDL3 with runtime switching
-- **Modern Graphics Features**: Multi-threaded rendering, Bindless textures, Instancing
-- **Advanced Features**: Async compute, Hardware ray tracing, Tile-based rendering
-- **Real-time Rendering**: Dynamic lighting, shadows, and post-processing effects
-
-### 🔧 Engine Architecture
-- **Component System**: Based on ECS (Entity-Component-System) architecture
-- **Modular Design**: Pluggable subsystems for easy extension and maintenance
-- **Resource Management**: Smart resource loading, caching and lifecycle management
-- **Audio System**: Multi-backend audio rendering with WAV format support
+### ⚠️ Notes
+- This is a learning project, and code quality and architecture design may not be perfect
+- Feature implementations may contain bugs and performance issues
+- Suggestions and guidance are welcome to help the author improve and learn
 
 ## 📋 System Requirements
 
@@ -132,4 +126,4 @@ This project is licensed under the [MIT License](LICENSE) - see the license file
 
 ---
 
-*PrismaEngine - High-performance engine for modern game development*
+*PrismaEngine - A beginner's game engine learning project*
