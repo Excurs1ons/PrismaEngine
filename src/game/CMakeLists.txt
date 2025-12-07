@@ -49,3 +49,9 @@ target_compile_definitions(Game
 set_target_properties(Game PROPERTIES
     OUTPUT_NAME "PrismaGame"
 )
+
+# 安装规则
+install(TARGETS Game
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)

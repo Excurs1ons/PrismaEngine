@@ -41,3 +41,61 @@ add_subdirectory(src/editor)
 add_custom_target(Prisma ALL
         DEPENDS Engine Editor Runtime Game
 )
+
+# CPack打包配置
+set(CPACK_PACKAGE_NAME "PrismaEngine")
+set(CPACK_PACKAGE_VENDOR "Prisma")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Prisma Game Engine")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
+set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
+set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "PrismaEngine")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+# Windows特定配置
+if(WIN32)
+    set(CPACK_GENERATOR "NSIS;ZIP")
+    set(CPACK_NSIS_DISPLAY_NAME "Prisma Engine")
+    set(CPACK_NSIS_PACKAGE_NAME "Prisma Engine")
+    set(CPACK_NSIS_CONTACT "contact@example.com")
+    set(CPACK_NSIS_MODIFY_PATH ON)
+endif()
+
+# 其他平台配置
+if(UNIX AND NOT APPLE)
+    set(CPACK_GENERATOR "TGZ;DEB")
+endif()
+
+if(APPLE)
+    set(CPACK_GENERATOR "DragNDrop")
+endif()
+
+# 安装配置文件
+include(CMakePackageConfigHelpers)
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PrismaEngineConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
+    INSTALL_DESTINATION lib/cmake/PrismaEngine
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES 
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
+    DESTINATION lib/cmake/PrismaEngine
+)
+
+install(EXPORT PrismaEngineTargets
+    FILE PrismaEngineTargets.cmake
+    NAMESPACE PrismaEngine::
+    DESTINATION lib/cmake/PrismaEngine
+)
+
+include(CPack)

@@ -41,3 +41,8 @@ target_compile_definitions(Runtime
 set_target_properties(Runtime PROPERTIES
     OUTPUT_NAME "PrismaRuntime"
 )
+
+# 安装规则
+install(TARGETS Runtime
+    RUNTIME DESTINATION bin
+)
