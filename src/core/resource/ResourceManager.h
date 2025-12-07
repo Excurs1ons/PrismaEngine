@@ -5,7 +5,7 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Shader.h"
-#include "include/Resources.h"
+#include "ResourceBase.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>

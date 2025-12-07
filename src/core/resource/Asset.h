@@ -10,7 +10,7 @@
 namespace Engine {
 using namespace Serialization;
 // Asset基类，继承自IResource和Serializable
-class Asset : public Resource,public Serializable {
+class Asset : public ResourceBase ,public Serializable {
 public:
     Asset()          = default;
     virtual ~Asset() = default;
