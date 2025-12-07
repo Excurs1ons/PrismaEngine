@@ -1,13 +1,13 @@
 #include "RenderBackendVulkan.h"
-#include "LogScope.h"
-#include <vector>
-#include <stdexcept>
-#include "Logger.h"
+#include "../platform/ApplicationWindows.h"
 #include "Camera2D.h"
-#include "ApplicationWindows.h"
-#include <unordered_map>
-#include <mutex>
+#include "LogScope.h"
+#include "Logger.h"
 #include "SceneManager.h"
+#include <mutex>
+#include <stdexcept>
+#include <unordered_map>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace Engine {
