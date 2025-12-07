@@ -1,3 +1,8 @@
+/*
+    Editor也相当于Game，但有自己的特殊逻辑
+    Game为Runtime执行游戏逻辑
+    Editor为Runtime执行编辑器逻辑
+*/
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 #elif defined(__ANDROID__)
@@ -71,6 +76,8 @@ int main(int argc, char* argv[]) {
     if (cmdParser.IsOptionSet("log-count")) {
         logConfig.maxFileCount = std::stoull(cmdParser.GetOptionValue("log-count"));
     }
+
+
     // 根据命令行参数设置日志级别
     if (cmdParser.IsOptionSet("log-level")) {
         std::string levelStr = cmdParser.GetOptionValue("log-level");

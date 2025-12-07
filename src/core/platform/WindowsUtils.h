@@ -5,8 +5,6 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-namespace Editor {
-
 
 enum class FileAction {
     Unknown,
@@ -56,4 +54,3 @@ private:
     void* m_hDir; // HANDLE
     void* m_stopEvent; // HANDLE 用于通知线程停止
 };
-}  // namespace Editor

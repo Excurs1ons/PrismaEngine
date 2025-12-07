@@ -2,14 +2,11 @@
 
 # 源文件
 set(EDITOR_SOURCES
-        ApplicationEditor.cpp
         Editor.cpp
-        WindowsUtils.cpp
 )
 
 set(EDITOR_HEADERS
-        ApplicationEditor.h
-        WindowsUtils.h
+        Editor.h
 )
 
 # 创建动态库
