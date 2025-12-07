@@ -37,6 +37,25 @@ add_subdirectory(src/runtime)
 add_subdirectory(src/game)
 add_subdirectory(src/editor)
 
+# 创建分发目标
+add_custom_target(dist
+    COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
+        --format=gnutar 
+        "${CMAKE_INSTALL_PREFIX}"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Creating distribution package"
+    VERBATIM
+)
+
+add_custom_target(dist-win
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
+        --format=zip
+        "${CMAKE_INSTALL_PREFIX}"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Creating Windows distribution package"
+    VERBATIM
+)
+
 # 创建一个聚合目标，确保CLion能正确识别项目
 add_custom_target(Prisma ALL
         DEPENDS Engine Editor Runtime Game
