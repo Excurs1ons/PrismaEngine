@@ -318,10 +318,21 @@ clion-*.txt
 /lib/
 *.vcxproj.filters
 *.vcxproj.user
-*.sdf
-*.opensdf
-*.VC.db
-*.VC.VC.opendb
 
 # vcpkg directories and files
 !vcpkg.json
+*/gradle-wrapper.jar
+
+/build
+*.iml
+.gradle
+*/local.properties
+*/.idea/
+
+.DS_Store
+*/build
+*/captures
+.externalNativeBuild
+.cxx
+local.properties
+
