@@ -50,9 +50,25 @@ English | [简体中文](Docs/README_zh.md)
 ## 🛠️ Quick Start
 
 ### 1. Get Source Code
+
+To clone the repository along with its submodules, use the `--recursive` flag:
+
 ```bash
-git clone https://github.com/Excurs1ons/PrismaEngine.git
+git clone --recursive https://github.com/Excurs1ons/PrismaEngine.git
 cd PrismaEngine
+```
+
+If you have already cloned the repository without the `--recursive` flag, you can initialize and update the submodules separately:
+
+```bash
+git submodule init
+git submodule update
+```
+
+Or use our setup script:
+
+```bash
+./setup_project.bat
 ```
 
 ### 2. Setup Development Environment
