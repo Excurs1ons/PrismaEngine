@@ -1,5 +1,5 @@
 #pragma once
-#include "../include/SerializationVersion.h"
+#include "SerializationVersion.h"
 #include "Archive.h"
 #include <nlohmann/json.hpp>
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "ManagerBase.h"
 #include "RenderBackend.h"
-#include "include/RenderThread.h"
+#include "RenderThread.h"
 #include <memory>
 
 namespace Engine {

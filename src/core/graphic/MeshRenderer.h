@@ -3,7 +3,7 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Transform.h"
-#include "include/RendererComponent.h"
+#include "RendererComponent.h"
 #include <memory>
 
 class MeshRenderer :public RendererComponent
