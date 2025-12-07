@@ -19,6 +19,38 @@ jobs:
       with:
         submodules: 'recursive'
     
+    - name: Print Build Environment Info
+      run: |
+        echo "构建环境信息:"
+        echo "操作系统: ${{ runner.os }}"
+        echo "构建类型: ${{ matrix.build_type }}"
+        echo "工作目录: $(pwd)"
+        echo "CMake版本: $(cmake --version | head -n 1)"
+        echo "Git版本: $(git --version)"
+        echo "Python版本: $(python --version 2>&1 || echo 'Python not found')"
+        echo "可用内存: $(free -h 2>/dev/null || wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /format:list 2>/dev/null || echo 'Memory info not available')"
+    
+    - name: Cache vcpkg dependencies
+      uses: actions/cache@v4
+      id: cache-vcpkg
+      with:
+        path: |
+          ./vcpkg_installed
+          ./build/vcpkg_installed
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          ${{ runner.os }}-vcpkg-
+    
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./build/${{ matrix.build_type }}
+        key: ${{ runner.os }}-build-${{ matrix.build_type }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'vcpkg.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ matrix.build_type }}-
+          ${{ runner.os }}-build-
+    
     - name: Fetch all history for vcpkg
       run: |
         git fetch --all
@@ -33,17 +65,65 @@ jobs:
       
     - name: Build
       run: |
-        cmake --build build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
+        echo "开始构建 ${{ matrix.build_type }} 配置..."
+        # 使用最大并行度构建，但限制在合理范围内以避免资源耗尽
+        cmake --build build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --parallel 4 || {
+          echo "构建失败，尝试获取详细错误信息..."
+          cmake --build build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
+          exit 1
+        }
       
     - name: Install
       run: |
-        cmake --install build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.build_type }}/install
+        echo "开始安装 ${{ matrix.build_type }} 配置..."
+        cmake --install build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.build_type }}/install || {
+          echo "安装失败，尝试获取详细错误信息..."
+          cmake --install build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.build_type }}/install --verbose 2>&1 | tail -n 100
+          exit 1
+        }
       
     - name: Create Distribution Package
       run: |
-        cmake --build build/${{ matrix.build_type }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
-        cmake --build build/${{ matrix.build_type }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
+        echo "创建分发包..."
+        cmake --build build/${{ matrix.build_type }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
+          echo "创建分发包失败，尝试获取详细错误信息..."
+          cmake --build build/${{ matrix.build_type }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
+          exit 1
+        }
+        cmake --build build/${{ matrix.build_type }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
+          echo "创建Windows分发包失败，尝试获取详细错误信息..."
+          cmake --build build/${{ matrix.build_type }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
+          exit 1
+        }
       
+    - name: Verify Build Artifacts
+      run: |
+        echo "验证构建产物..."
+        ls -la build/${{ matrix.build_type }}/
+        
+        # 检查分发包文件
+        if [ -f "build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz" ]; then
+          echo "找到tar.gz分发包"
+          tar -tzf build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz | head -n 10
+        else
+          echo "警告: 未找到tar.gz分发包"
+        fi
+        
+        if [ -f "build/${{ matrix.build_type }}/PrismaEngine-*.zip" ]; then
+          echo "找到zip分发包"
+          unzip -l build/${{ matrix.build_type }}/PrismaEngine-*.zip | head -n 10
+        else
+          echo "警告: 未找到zip分发包"
+        fi
+        
+        # 检查安装目录
+        if [ -d "build/${{ matrix.build_type }}/install" ]; then
+          echo "安装目录内容:"
+          ls -la build/${{ matrix.build_type }}/install/
+        else
+          echo "警告: 未找到安装目录"
+        fi
+    
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
