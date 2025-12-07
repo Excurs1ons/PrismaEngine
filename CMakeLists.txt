@@ -32,6 +32,15 @@ endif()
 
 
 # 设置输出目录，使可执行文件、动态库和静态库分别放在不同的目录
+# 对于多配置生成器，为每种配置设置不同的输出目录
+foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
+    string(TOUPPER ${CONFIG} UPPER_CONFIG)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${UPPER_CONFIG} ${CMAKE_BINARY_DIR}/bin/${CONFIG})
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${UPPER_CONFIG} ${CMAKE_BINARY_DIR}/lib/${CONFIG})
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${UPPER_CONFIG} ${CMAKE_BINARY_DIR}/lib/${CONFIG})
+endforeach()
+
+# 单配置生成器的默认设置
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
@@ -57,47 +66,37 @@ install(DIRECTORY resources/
 )
 
 # 创建分发目标
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    add_custom_target(dist
-        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Debug --prefix ${CMAKE_BINARY_DIR}/install
-        COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
-            --format=gnutar 
-            "${CMAKE_BINARY_DIR}/install"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Creating distribution package"
-        VERBATIM
-    )
-
-    add_custom_target(dist-win
-        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Debug --prefix ${CMAKE_BINARY_DIR}/install
-        COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
-            --format=zip
-            "${CMAKE_BINARY_DIR}/install"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Creating Windows distribution package"
-        VERBATIM
-    )
+# 更健壮的构建类型判断
+if(CMAKE_BINARY_DIR MATCHES "/debug/" OR CMAKE_BINARY_DIR MATCHES "\\debug$")
+    set(DIST_CONFIG "Debug")
+elseif(CMAKE_BINARY_DIR MATCHES "/release/" OR CMAKE_BINARY_DIR MATCHES "\\release$")
+    set(DIST_CONFIG "Release")
 else()
-    add_custom_target(dist
-        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
-        COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
-            --format=gnutar 
-            "${CMAKE_BINARY_DIR}/install"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Creating distribution package"
-        VERBATIM
-    )
-
-    add_custom_target(dist-win
-        COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config Release --prefix ${CMAKE_BINARY_DIR}/install
-        COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
-            --format=zip
-            "${CMAKE_BINARY_DIR}/install"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        COMMENT "Creating Windows distribution package"
-        VERBATIM
-    )
+    # 对于多配置生成器(如Visual Studio)，使用默认配置
+    set(DIST_CONFIG "Release")
+    message(WARNING "无法从构建路径确定配置类型，使用默认Release配置")
 endif()
+
+add_custom_target(dist
+    COMMAND ${CMAKE_COMMAND} -E echo "使用配置: ${DIST_CONFIG} 创建分发包"
+    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config ${DIST_CONFIG} --prefix ${CMAKE_BINARY_DIR}/install
+    COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz" 
+        --format=gnutar 
+        "${CMAKE_BINARY_DIR}/install"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Creating distribution package"
+    VERBATIM
+)
+
+add_custom_target(dist-win
+    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config ${DIST_CONFIG} --prefix ${CMAKE_BINARY_DIR}/install
+    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip" 
+        --format=zip
+        "${CMAKE_BINARY_DIR}/install"
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Creating Windows distribution package"
+    VERBATIM
+)
 
 # 创建一个聚合目标，确保CLion能正确识别项目
 add_custom_target(Prisma ALL
