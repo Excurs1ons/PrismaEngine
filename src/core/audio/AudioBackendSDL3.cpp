@@ -54,7 +54,7 @@ namespace Engine {
             SDL_CloseAudioDevice(m_deviceId);
         }
 
-        uint32_t AudioBackendSDL3::PlaySound(const AudioClip& source, float volume, float pitch, bool loop)
+        uint32_t AudioBackendSDL3::PlaySoundOnce(const AudioClip& source, float volume, float pitch, bool loop)
         {
             return 0;
         }
