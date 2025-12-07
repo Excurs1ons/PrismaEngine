@@ -35,6 +35,10 @@ int main(int argc, char* argv[]) {
     cmdParser.AddOption("log-file", "", "设置日志文件路径", true);
     cmdParser.AddOption("log-size", "", "设置日志文件大小", true);
     cmdParser.AddOption("log-count", "", "设置日志文件数量", true);
+
+    cmdParser.AddOption("editor", "", "尝试启动编辑器", false);
+    cmdParser.AddOption("game", "", "尝试启动游戏", false);
+
     // 添加动作选项示例
     cmdParser.AddActionOption("version", "V", "显示版本信息", false, [](const std::string&) {
         std::cout << "YAGE Runtime 版本 1.0.0" << std::endl;
@@ -86,7 +90,16 @@ int main(int argc, char* argv[]) {
         LOG_FATAL("Logger", "日志系统初始化失败，正在退出...");
         return -1;
     }
-
+    if (cmdParser.IsOptionSet("editor")) {
+        LOG_INFO("Runtime", "尝试启动编辑器");
+        return 0;
+    }
+    if (cmdParser.IsOptionSet("game")) {
+        LOG_INFO("Runtime", "尝试启动游戏");
+        return 0;
+    }
+    LOG_INFO("Runtime", "未指定启动模式");
+    return 0;
     // 动态加载 Engine DLL
     DynamicLoader engineLoader;
     try {
