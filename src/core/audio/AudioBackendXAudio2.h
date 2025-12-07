@@ -6,8 +6,7 @@
 #include <wrl/client.h>
 #include <xaudio2.h>
 using namespace Microsoft::WRL;
-
-#if defined(PlaySound)
+#ifdef PlaySound
 #undef PlaySound
 #endif
 namespace Engine {

@@ -1,7 +1,10 @@
 #include "AudioBackendXAudio2.h"
-#include "../Helper.h"
+#include "Helper.h"
 #include "Logger.h"
 #include <iostream>
+#ifdef PlaySound
+#undef PlaySound
+#endif
 namespace Engine {
     namespace Audio {
 
@@ -177,14 +180,6 @@ namespace Engine {
         void AudioBackendXAudio2::Update()
         {
         }
-
-
-
-
-
-
-
-
 
         void __stdcall AudioBackendXAudio2::OnVoiceProcessingPassStart(UINT32 BytesRequired)
         {
