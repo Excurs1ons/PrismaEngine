@@ -7,7 +7,7 @@
 
 Prisma Engine 是一个现代化的跨平台游戏引擎，专为轻量化/高性能游戏开发而设计。引擎采用模块化架构，支持Windows和Android平台，并计划扩展至更多平台。
 
-简体中文 | [English](README.md)
+简体中文 | [English](../README.md)
 
 ## 🚀 核心特性
 
@@ -37,8 +37,9 @@ Prisma Engine 是一个现代化的跨平台游戏引擎，专为轻量化/高�
 ## 📋 系统要求
 
 ### 开发环境
-- **IDE**: Visual Studio 2022 或更新版本
+- **IDE**: Visual Studio 2022 或更新版本、CLion 或任何支持CMake的IDE
 - **SDK**: Windows 10 SDK (10.0.22621.0+) 
+- **构建系统**: CMake 3.24+
 - **包管理**: vcpkg
 - **移动开发**: Android NDK, Android SDK
 
@@ -65,76 +66,53 @@ git submodule init
 git submodule update
 ```
 
-或者使用我们的设置脚本：
-
-```bash
-./setup_project.bat
-```
-
 ### 2. 设置开发环境
 ```bash
-# 安装vcpkg
-git clone https://github.com/Microsoft/vcpkg.git
-cd vcpkg
-./bootstrap-vcpkg.bat
+# 初始化vcpkg
+./vcpkg/bootstrap-vcpkg.bat
 
 # 安装依赖库
-vcpkg install
+./vcpkg/vcpkg install
 ```
 
 ### 3. 构建项目
-1. 使用Visual Studio打开 `PrismaEngine.sln`
-2. 选择目标平台和配置（Debug/Release）
-3. 构建解决方案 (Ctrl+Shift+B)
-4. 运行示例项目
+使用CMake预设：
+```bash
+# 配置项目
+cmake --preset=windows-x64-debug
+
+# 构建项目
+cmake --build --preset=windows-x64-debug
+```
+
+或者使用Visual Studio方法：
+1. 在Visual Studio中打开文件夹（文件 -> 打开 -> 文件夹）
+2. 选择PrismaEngine根文件夹
+3. Visual Studio会自动检测CMake配置
+4. 构建解决方案 (Ctrl+Shift+B)
 
 ### 4. 运行示例
 - **Editor**: 游戏编辑器应用
 - **Runtime**: 游戏运行时环境
-- **EngineTest**: 引擎功能测试
 
 ## 📁 项目结构
 
 ```
 PrismaEngine/
-├── Engine/           # 核心引擎模块
-│   ├── include/     # 公共头文件
-│   ├── src/         # 实现文件
-│   └── Engine.vcxitems  # 项目配置
-├── Editor/          # 游戏编辑器
-├── Runtime/         # 游戏运行时
-├── EngineTest/      # 引擎测试
-├── EditorTest/      # 编辑器测试
-├── RuntimeTest/     # 运行时测试
-├── docs/           # 文档资源
-└── Tools/          # 开发工具
+├── src/              # 源代码
+│   ├── core/         # 核心引擎模块
+│   ├── editor/       # 游戏编辑器
+│   ├── game/         # 游戏框架
+│   └── runtime/      # 游戏运行时
+├── projects/         # 平台相关项目文件
+│   ├── android/      # Android项目
+│   └── windows/      # Windows项目
+├── docs/             # 文档资源
+├── tools/            # 开发工具
+├── vcpkg/            # 包管理器
+├── CMakeLists.txt    # 主CMake配置
+└── CMakePresets.json # CMake预设
 ```
-
-## 🔬 核心模块
-
-### 后端系统
-- **RenderBackend**: 抽象渲染后端接口，支持DirectX 12、Vulkan、SDL3
-- **InputBackend**: 抽象输入后端接口，支持Win32、SDL3、DirectInput
-- **AudioBackend**: 抽象音频后端接口，支持XAudio2、SDL3
-- **后端管理**: 运行时后端切换和热插拔支持
-
-### 渲染系统
-- **Renderer**: 统一渲染接口，支持多后端
-- **RenderSystem**: 渲染管线管理，支持多线程渲染
-- **MeshRenderer**: 网格渲染组件，支持实例化
-- **Camera2D**: 2D相机系统，支持视口管理
-- **Shader**: 着色器管理系统，支持HLSL/GLSL
-
-### 场景管理
-- **Scene**: 场景管理，支持实体层次结构
-- **GameObject**: 游戏对象基类，组件容器
-- **Transform**: 变换组件，支持2D/3D变换
-- **Component**: 组件基类系统，支持序列化
-
-### 输入系统
-- **KeyCode**: 键盘输入映射，跨平台键码统一
-- **InputManager**: 输入事件处理，多后端支持
-- **跨平台输入**: 统一键盘、鼠标、触摸输入处理
 
 ## 📚 文档资源
 
@@ -145,7 +123,7 @@ PrismaEngine/
 
 ## 📄 许可证
 
-本项目采用 [MIT 许可证](LICENSE) - 详情请参阅许可证文件。
+本项目采用 [MIT 许可证](../LICENSE) - 详情请参阅许可证文件。
 
 ## 📞 联系方式
 
