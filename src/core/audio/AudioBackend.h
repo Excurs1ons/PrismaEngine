@@ -65,7 +65,7 @@ namespace Engine {
 			virtual ~AudioBackend() = default;
 			virtual bool Initialize(const AudioFormat& format) = 0;
 			virtual void Shutdown() = 0;
-			virtual uint32_t PlaySound(const AudioClip& source, float volume, float pitch, bool loop) = 0;
+			virtual uint32_t PlaySoundOnce(const AudioClip& source, float volume, float pitch, bool loop) = 0;
 			virtual void StopSound(uint32_t instanceId) = 0;
 			virtual void PauseSound(uint32_t instanceId) = 0;
 			virtual void ResumeSound(uint32_t instanceId) = 0;

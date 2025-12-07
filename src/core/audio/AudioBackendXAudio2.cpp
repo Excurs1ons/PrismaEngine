@@ -70,7 +70,7 @@ namespace Engine {
             m_XAudio2.Reset();
         }
 
-        uint32_t AudioBackendXAudio2::PlaySound(const AudioClip& source, float volume, float pitch, bool loop)
+        uint32_t AudioBackendXAudio2::PlaySoundOnce(const AudioClip& source, float volume, float pitch, bool loop)
         {
 
             // 打开WAV文件

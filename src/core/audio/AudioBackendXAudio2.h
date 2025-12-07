@@ -21,7 +21,7 @@ namespace Engine {
 			~AudioBackendXAudio2() { Shutdown(); }
 			bool Initialize(const AudioFormat& format) override;
 			void Shutdown() override;
-			uint32_t PlaySound(const AudioClip& source, float volume, float pitch, bool loop) override;
+			uint32_t PlaySoundOnce(const AudioClip& source, float volume, float pitch, bool loop) override;
             void StopSound(uint32_t instanceId) override;
             void PauseSound(uint32_t instanceId) override;
             void ResumeSound(uint32_t instanceId) override;
