@@ -3,7 +3,6 @@
 #include "IApplication.h"
 #include <memory>
 namespace Engine {
-
 class Application : public IApplication<Application> {
 public:
     friend class IApplication;
@@ -18,4 +17,11 @@ public:
 private:
     std::unique_ptr<EngineCore> engine;
 };
+
+
+extern "C" {
+    ENGINE_API bool Initialize();
+    ENGINE_API int Run();
+    ENGINE_API void Shutdown();
+}
 }  // namespace Engine

@@ -2,13 +2,8 @@
 #include "Engine.h"
 #include "Export.h"
 #include "Logger.h"
-#include "PhysicsSystem.h"
 #include "PlatformWindows.h"
-#include "RenderSystem.h"
-#include "ResourceManager.h"
-#include "SceneManager.h"
-#include "ThreadManager.h"
-#include <iostream>
+
 namespace Engine {
 /// <summary>
 /// 应用程序初始化，需要完成平台层和引擎的初始化
@@ -54,21 +49,21 @@ void Application::Shutdown() {
     SetRunning(false);
     LOG_INFO("Application", "应用程序关闭完成");
 }
+
 extern "C" {
 
-// 导出其他函数供动态加载使用
-ENGINE_API bool Initialize() {
-    return Application::GetInstance().Initialize();
-}
+    // 导出其他函数供动态加载使用
+    ENGINE_API bool Initialize() {
+        return Application::GetInstance().Initialize();
+    }
 
-ENGINE_API int Run() {
-    return Application::GetInstance().Run();
-}
+    ENGINE_API int Run() {
+        return Application::GetInstance().Run();
+    }
 
-ENGINE_API void Shutdown() {
-    Application::GetInstance().Shutdown();
-}
+    ENGINE_API void Shutdown() {
+        Application::GetInstance().Shutdown();
+    }
 
 }
-
 }  // namespace Engine
