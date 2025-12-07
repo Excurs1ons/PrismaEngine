@@ -4,8 +4,13 @@ project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
 # 设置C++标准
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+if(!EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts)")
+    execute_process(
+        COMMAND git submodule update --init --recursive --force
+    )
+    message("vcpkg submodule updated")
+endif()
 
-# 根据ENABLE_UTF8选项决定是否启用UTF-8编码
 if(MSVC)
     # 使用 /utf-8 选项，它相当于同时设置了 /source-charset:utf-8 和 /execution-charset:utf-8
     add_compile_options("$<$<C_COMPILER_ID:MSVC>:/utf-8>")
@@ -14,20 +19,18 @@ endif()
 
 # vcpkg集成
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg.json")
-    # 如果没有通过命令行指定toolchain文件，则尝试使用项目内的vcpkg或环境变量中的vcpkg
-    if("${CMAKE_TOOLCHAIN_FILE}" STREQUAL "")
-        # 首先尝试项目内部的vcpkg
-        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
-            set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
-                CACHE STRING "Vcpkg toolchain file" FORCE)
-        # 如果项目内没有vcpkg，则尝试使用环境变量VCPKG_ROOT
-        elseif(DEFINED ENV{VCPKG_ROOT} AND EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
-            set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
-                CACHE STRING "Vcpkg toolchain file" FORCE)
-        else()
-            message(FATAL_ERROR "Vcpkg toolchain file not found")
-        endif()
+    # 首先尝试项目内部的vcpkg
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_SOURCE_DIR}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+            CACHE STRING "Vcpkg toolchain file" FORCE)
+    # 如果项目内没有vcpkg，则尝试使用环境变量VCPKG_ROOT
+    elseif(DEFINED ENV{VCPKG_ROOT} AND EXISTS "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake")
+        set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            CACHE STRING "Vcpkg toolchain file" FORCE)
+    else()
+        message(FATAL_ERROR "Vcpkg toolchain file not found")
     endif()
+
 
     if(DEFINED CMAKE_TOOLCHAIN_FILE)
         set(VCPKG_MANIFEST_MODE ON)
