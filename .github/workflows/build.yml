@@ -28,7 +28,7 @@ jobs:
         echo "CMake版本: $(cmake --version | head -n 1)"
         echo "Git版本: $(git --version)"
         echo "Python版本: $(python --version 2>&1 || echo 'Python not found')"
-        echo "可用内存: $(wmic OS get TotalVisibleMemorySize,FreePhysicalMemory /format:list 2>/dev/null || echo 'Memory info not available')"
+        echo "可用内存: $(Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object @{Name='TotalMemory'; Expression={[math]::Round($_.TotalVisibleMemorySize/1MB, 2)}}, @{Name='FreeMemory'; Expression={[math]::Round($_.FreePhysicalMemory/1MB, 2)}} | ConvertTo-Json || echo 'Memory info not available')"
     
     - name: Cache vcpkg dependencies
       uses: actions/cache@v4
