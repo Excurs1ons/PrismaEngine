@@ -82,3 +82,17 @@ set_target_properties(Engine PROPERTIES
 set_target_properties(Engine PROPERTIES
     OUTPUT_NAME "PrismaEngine"
 )
+
+# 安装规则
+install(TARGETS Engine
+    EXPORT PrismaEngineTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+    PUBLIC_HEADER DESTINATION include/prisma/core
+)
+
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+    DESTINATION include/prisma/core
+    FILES_MATCHING PATTERN "*.h"
+)

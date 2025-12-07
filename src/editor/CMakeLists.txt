@@ -52,3 +52,10 @@ target_compile_definitions(Editor
 set_target_properties(Editor PROPERTIES
     OUTPUT_NAME "PrismaEditor"
 )
+
+# 安装规则
+install(TARGETS Editor
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
+    RUNTIME DESTINATION bin
+)
