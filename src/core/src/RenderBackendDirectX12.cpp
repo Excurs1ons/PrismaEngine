@@ -1,0 +1,679 @@
+#include <directx/d3dx12.h>
+//directx-headers 必须放在windows sdk的d3d12.h之前
+#include "RenderBackendDirectX12.h"
+#include "LogScope.h"
+#include "Camera2D.h"
+#include "ApplicationWindows.h"
+#include <iostream>
+#include <dxgi.h>
+#include <d3d12.h>
+#include <wrl.h>
+#include <d3dcompiler.h>
+
+#include "Helper.h"
+#include "ResourceManager.h"
+#include "Shader.h"
+#include "RenderThread.h"
+#include "Logger.h"
+
+#include "SceneManager.h"
+
+using namespace Microsoft::WRL;
+using namespace Engine;
+HWND g_hWnd = nullptr;
+
+namespace Engine {
+
+// Minimal DirectX implementation of IRenderCommandContext to forward calls to the D3D12 command list
+class DXRenderCommandContext : public RenderCommandContext {
+public:
+    DXRenderCommandContext(ID3D12GraphicsCommandList* cmdList,
+                           D3D12_VIEWPORT* vp,
+                           D3D12_RECT* sc,
+                           RenderBackendDirectX12* backend)
+        : m_commandList(cmdList), m_viewport(vp ? *vp : D3D12_VIEWPORT{}), m_scissorRect(sc ? *sc : D3D12_RECT{}),
+          m_backend(backend) {}
+
+    void SetConstantBuffer(const char* name, FXMMATRIX matrix) override {
+        LOG_DEBUG("DXContext", "SetConstantBuffer(matrix) name={0}", name);
+        // TODO: implement proper CBV upload and root binding. For now leave as debug log.
+    }
+    void SetConstantBuffer(const char* name, const float* data, size_t size) override {
+        LOG_DEBUG("DXContext", "SetConstantBuffer(data) name={0} size={1}", name, size);
+    }
+    void SetVertexBuffer(const void* data, uint32_t sizeInBytes, uint32_t strideInBytes) override {
+        if (!m_commandList || !m_backend) {
+            LOG_ERROR("DXContext", "SetVertexBuffer: invalid command list or backend");
+            return;
+        }
+        // Forward to backend which owns dynamic upload buffer and binding logic
+        m_backend->UploadAndBindVertexBuffer(m_commandList, data, sizeInBytes, strideInBytes);
+    }
+    void SetShaderResource(const char* name, void* resource) override {
+        LOG_DEBUG("DXContext", "SetShaderResource name={0}", name);
+    }
+    void SetSampler(const char* name, void* sampler) override { LOG_DEBUG("DXContext", "SetSampler name={0}", name); }
+    void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation = 0, uint32_t baseVertexLocation = 0) override {
+        if (!m_commandList) {
+            LOG_ERROR("DXContext", "DrawIndexed called but command list is null");
+            return;
+        }
+        LOG_TRACE("DXContext",
+                  "DrawIndexed count={0} startIndex={1} baseVertex={2}",
+                  indexCount,
+                  startIndexLocation,
+                  baseVertexLocation);
+        // If index buffer is not bound we treat indexCount as vertexCount fallback
+        m_commandList->DrawInstanced(indexCount, 1, startIndexLocation, baseVertexLocation);
+    }
+    void Draw(uint32_t vertexCount, uint32_t startVertexLocation = 0) override {
+        if (!m_commandList) {
+            LOG_ERROR("DXContext", "Draw called but command list is null");
+            return;
+        }
+        LOG_TRACE("DXContext", "Draw count={0} startVertex={1}", vertexCount, startVertexLocation);
+        m_commandList->DrawInstanced(vertexCount, 1, startVertexLocation, 0);
+    }
+    void SetViewport(float x, float y, float width, float height) override {
+        if (!m_commandList)
+            return;
+        D3D12_VIEWPORT vp = {x, y, width, height, 0.0f, 1.0f};
+        m_commandList->RSSetViewports(1, &vp);
+    }
+    void SetScissorRect(int left, int top, int right, int bottom) override {
+        if (!m_commandList)
+            return;
+        D3D12_RECT rect = {left, top, right, bottom};
+        m_commandList->RSSetScissorRects(1, &rect);
+    }
+
+private:
+    ID3D12GraphicsCommandList* m_commandList = nullptr;
+    D3D12_VIEWPORT m_viewport;
+    D3D12_RECT m_scissorRect;
+    RenderBackendDirectX12* m_backend = nullptr;
+};
+
+RenderBackendDirectX12::RenderBackendDirectX12(std::wstring name)
+    : m_fenceEvent(nullptr), m_fenceValue(0), m_frameIndex(0), m_height(1), m_rtvDescriptorSize(0),
+      m_scissorRect{0, 0, 1L, 1L}, m_vertexBufferView{}, m_viewport{0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f}, m_width(1),
+      m_aspectRatio(1), m_dynamicVBCPUAddress(nullptr), m_dynamicVBSize(0), m_dynamicVBOffset(0) {}
+bool RenderBackendDirectX12::Initialize(Platform* platform, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
+    g_hWnd        = (HWND)windowHandle;
+    m_height      = height;
+    m_width       = width;
+    m_scissorRect = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
+    m_viewport    = {0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f};
+    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+    // m_RenderThread
+    if (!LoadPipeline()) {
+        return false;
+    }
+    if (!LoadAssets()) {
+        return false;
+    }
+    isInitialized = true;
+    return true;
+}
+RenderBackendDirectX12::~RenderBackendDirectX12() {}
+void RenderBackendDirectX12::OnRender() {}
+void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter);
+
+void RenderBackendDirectX12::Shutdown() {
+    // Wait for the GPU to be done with all resources.
+    // WaitForPreviousFrame();
+
+    CloseHandle(m_fenceEvent);
+}
+
+void RenderBackendDirectX12::BeginFrame() {
+    // 创建渲染帧日志作用域
+    LogScope* frameScope = LogScopeManager::GetInstance().CreateScope("DirectXFrame");
+    Logger::GetInstance().PushLogScope(frameScope);
+
+    // 指令列表分配器只能在关联的指令列表在GPU完成执行之后才能重置，
+    // apps should use
+    // fences to determine GPU execution progress.
+    HRESULT hr = m_commandAllocator->Reset();
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法重置命令分配器: {0}", HrToString(hr));
+        Logger::GetInstance().PopLogScope(frameScope);
+        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
+        return;
+    }
+
+    // However, when ExecuteCommandList() is called on a particular command
+    // list, that command list can then be reset at any time and must be before
+    // re-recording.
+    hr = m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get());
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法重置命令列表: {0}", HrToString(hr));
+        Logger::GetInstance().PopLogScope(frameScope);
+        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
+        return;
+    }
+
+    // 设置必需的状态
+    m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+    m_commandList->RSSetViewports(1, &m_viewport);
+    m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+    // 将后台缓冲区作为渲染目标
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+    m_commandList->ResourceBarrier(1, &barrier);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+        m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+
+    // 从场景获取主相机和清除颜色，默认为青色
+    float clearColor[4] = {0.0f, 1.0f, 1.0f, 1.0f};  // 默认青色
+    //auto& app           = Singleton<ApplicationWindows>::GetInstance();
+    auto scene = SceneManager::GetInstance()->GetCurrentScene();
+    if (scene) {
+        // 尝试从场景中获取主相机
+        Camera* mainCamera = scene->GetMainCamera();
+        if (mainCamera) {
+            // 从主相机获取清除颜色
+            XMVECTOR cameraClearColor = mainCamera->GetClearColor();
+            clearColor[0]             = XMVectorGetX(cameraClearColor);
+            clearColor[1]             = XMVectorGetY(cameraClearColor);
+            clearColor[2]             = XMVectorGetZ(cameraClearColor);
+            clearColor[3]             = XMVectorGetW(cameraClearColor);
+            LOG_DEBUG("RenderBackendDirectX12",
+                      "Using main camera clear color: ({0}, {1}, {2}, {3})",
+                      clearColor[0],
+                      clearColor[1],
+                      clearColor[2],
+                      clearColor[3]);
+        } else {
+            LOG_DEBUG("RenderBackendDirectX12", "No main camera found in scene, using default clear color");
+        }
+    }
+
+    // 录制渲染指令
+    m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+    m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+
+    // 创建渲染命令上下文并调用场景渲染
+    DXRenderCommandContext context(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
+
+    // 调用场景渲染
+    auto scenePtr = SceneManager::GetInstance()->GetCurrentScene();
+    if (scenePtr) {
+        scenePtr->Render(&context);
+    }
+
+    // 将后台缓冲区切换到呈现状态
+    barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+    m_commandList->ResourceBarrier(1, &barrier);
+
+    hr = m_commandList->Close();
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法关闭命令列表: {0}", HrToString(hr));
+        Logger::GetInstance().PopLogScope(frameScope);
+        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
+        return;
+    }
+
+    // 执行渲染指令
+    ID3D12CommandList* ppCommandLists[] = {m_commandList.Get()};
+    m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
+
+    // 绘制
+    hr = m_swapChain->Present(1, 0);
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "交换链呈现失败: {0}", HrToString(hr));
+        Logger::GetInstance().PopLogScope(frameScope);
+        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
+        return;
+    }
+
+    // 等待上一帧完成
+    WaitForPreviousFrame();
+
+    // 正常结束BeginFrame，继续保持作用域活跃到EndFrame
+}
+
+void RenderBackendDirectX12::EndFrame() {
+    // 获取当前日志作用域
+    LogScope* frameScope = Logger::GetInstance().GetCurrentLogScope();
+
+    // DirectX的EndFrame目前没有太多逻辑，主要是通知作用域结束
+    if (frameScope) {
+        Logger::GetInstance().PopLogScope(frameScope);
+        LogScopeManager::GetInstance().DestroyScope(frameScope, true);  // 正常结束，不输出日志
+    }
+}
+
+/// <summary>
+/// 调用多次，每次调用都会录制一个渲染指令
+/// </summary>
+/// <param name="cmd"></param>
+void RenderBackendDirectX12::SubmitRenderCommand(const RenderCommand& cmd) {
+    // TODO: 实现具体的渲染命令提交
+}
+
+bool RenderBackendDirectX12::Supports(RendererFeature feature) const {
+    return (static_cast<int>(m_support) & static_cast<int>(feature)) != 0;
+}
+
+void RenderBackendDirectX12::Present() {
+    // 在EndFrame中已经实现了呈现逻辑
+}
+
+bool RenderBackendDirectX12::LoadPipeline() {
+    UINT dxgiFactoryFlags = 0;
+#if defined(_DEBUG)
+    // 在调试模式下启用调试层
+    {
+        ComPtr<ID3D12Debug> debugController;
+        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+            debugController->EnableDebugLayer();
+
+            // 启用额外的调试层（需要安装SDK配置）
+            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+        }
+    }
+#endif
+
+    ComPtr<IDXGIFactory4> factory;
+    HRESULT hr = CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory));
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建DXGI工厂: {0}", HrToString(hr));
+        return false;
+    }
+    LOG_INFO("DirectX", "成功创建DXGI工厂");
+
+    if (g_hWnd == nullptr) {
+        LOG_ERROR("DirectX", "无效的窗口句 HANDLE");
+        return false;
+    }
+
+    RECT rc;
+    GetClientRect(g_hWnd, &rc);
+    m_width  = rc.right - rc.left;
+    m_height = rc.bottom - rc.top;
+
+    // 创建设备
+    ComPtr<IDXGIAdapter1> hardwareAdapter;
+    GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+
+    hr = D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建D3D12设备: {0}", HrToString(hr));
+        return false;
+    }
+    LOG_INFO("DirectX", "成功创建D3D12设备");
+
+    // 描述符大小对于分配增量描述符非常重要
+    m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+    // 创建命令队列
+    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+    queueDesc.Flags                    = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    queueDesc.Type                     = D3D12_COMMAND_LIST_TYPE_DIRECT;
+
+    hr = m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建命令队列: {0}", HrToString(hr));
+        return false;
+    }
+    LOG_INFO("DirectX", "成功创建命令队列");
+
+    // 创建交换链
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.BufferCount           = FrameCount;
+    swapChainDesc.Width                 = m_width;
+    swapChainDesc.Height                = m_height;
+    swapChainDesc.Format                = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swapChainDesc.BufferUsage           = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.SwapEffect            = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swapChainDesc.SampleDesc.Count      = 1;
+
+    ComPtr<IDXGISwapChain1> swapChain;
+    hr = factory->CreateSwapChainForHwnd(m_commandQueue.Get(),  // 交换链需要对设备的命令队列进行引用
+                                         g_hWnd,
+                                         &swapChainDesc,
+                                         nullptr,
+                                         nullptr,
+                                         &swapChain);
+
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建交换链: {0}", HrToString(hr));
+        return false;
+    }
+    LOG_INFO("DirectX", "成功创建交换链");
+
+    // 此示例不支持全屏转换
+    hr = factory->MakeWindowAssociation(g_hWnd, DXGI_MWA_NO_ALT_ENTER);
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法设置窗口关联: {0}", HrToString(hr));
+        return false;
+    }
+
+    hr = swapChain.As(&m_swapChain);
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法转换交换链: {0}", HrToString(hr));
+        return false;
+    }
+
+    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+    // 创建渲染目标视图描述符堆
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+        rtvHeapDesc.NumDescriptors             = FrameCount;
+        rtvHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        rtvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        hr                                     = m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "无法创建RTV描述符堆: {0}", HrToString(hr));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建RTV描述符堆");
+    }
+
+    // 创建帧资源
+    {
+        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+
+        // 创建实际的渲染目标视图
+        for (UINT n = 0; n < FrameCount; n++) {
+            hr = m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n]));
+            if (FAILED(hr)) {
+                LOG_ERROR("DirectX", "无法获取交换链缓冲区 {0}: {1}", n, HrToString(hr));
+                return false;
+            }
+
+            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
+            rtvHandle.Offset(1, m_rtvDescriptorSize);
+
+            LOG_INFO("DirectX", "成功创建渲染目标视图 {0}", n);
+        }
+    }
+
+    hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建命令分配器: {0}", HrToString(hr));
+        return false;
+    }
+    LOG_INFO("DirectX", "成功创建命令分配器");
+
+    // 创建命令列表
+    hr = m_device->CreateCommandList(
+        0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), nullptr, IID_PPV_ARGS(&m_commandList));
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建命令列表: {0}", HrToString(hr));
+        return false;
+    }
+    LOG_INFO("DirectX", "成功创建命令列表");
+
+    // 命令列表在首次创建时处于打开状态，但不需要它处于打开状态，因此将其关闭
+    hr = m_commandList->Close();
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法关闭命令列表: {0}", HrToString(hr));
+        return false;
+    }
+
+    // 创建同步对象
+    {
+        hr = m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "无法创建围栏: {0}", HrToString(hr));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建围栏");
+
+        m_fenceValue = 1;
+
+        // 创建事件句柄
+        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        if (m_fenceEvent == nullptr) {
+            hr = HRESULT_FROM_WIN32(GetLastError());
+            LOG_ERROR("DirectX", "无法创建围栏事件: {0}", HrToString(hr));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建围栏事件");
+    }
+
+    return true;
+}
+
+bool RenderBackendDirectX12::LoadAssets() {
+    // 创建空的根签名
+    {
+        D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
+        rootSignatureDesc.NumParameters             = 0;
+        rootSignatureDesc.pParameters               = nullptr;
+        rootSignatureDesc.NumStaticSamplers         = 0;
+        rootSignatureDesc.pStaticSamplers           = nullptr;
+        rootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+
+        ComPtr<ID3DBlob> signature;
+        ComPtr<ID3DBlob> error;
+        HRESULT hRserializeRootSig =
+            D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+        if (FAILED(hRserializeRootSig)) {
+            LOG_ERROR("DirectX", "序列化根签名失败: {0}", HrToString(hRserializeRootSig));
+            if (error) {
+                LOG_ERROR("DirectX", "错误信息: {0}", static_cast<const char*>(error->GetBufferPointer()));
+            }
+            return false;
+        }
+        LOG_INFO("DirectX", "成功序列化根签名");
+        HRESULT hRcreateRootSignature;
+        hRcreateRootSignature = m_device->CreateRootSignature(
+            0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
+        if (FAILED(hRcreateRootSignature)) {
+            LOG_ERROR("DirectX", "创建根签名失败: {0}", HrToString(hRcreateRootSignature));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建根签名");
+    }
+
+    // 创建管线状态，包括编译和加载着色器
+    {
+        // 使用资源管理器加载着色器
+        auto resourceManager = ResourceManager::GetInstance();
+        auto shaderHandle     = resourceManager->Load<Shader>("shader.hlsl");
+
+        if (!shaderHandle.IsValid()) {
+            LOG_ERROR("DirectX", "通过资源管理器加载着色器失败");
+            return false;
+        }
+        LOG_INFO("DirectX", "成功加载着色器");
+        auto* shader      = shaderHandle.Get();
+        auto vertexShader = shader->GetVertexShaderBlob();
+        auto pixelShader  = shader->GetPixelShaderBlob();
+
+        // 定义顶点输入布局
+        D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+            {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+
+        // 创建图形管线状态对象（PSO）
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+        psoDesc.InputLayout                        = {inputElementDescs, _countof(inputElementDescs)};
+        psoDesc.pRootSignature                     = m_rootSignature.Get();
+        psoDesc.VS                                 = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+        psoDesc.PS                                 = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+        psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+        psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+        psoDesc.DepthStencilState.DepthEnable      = FALSE;
+        psoDesc.DepthStencilState.StencilEnable    = FALSE;
+        psoDesc.SampleMask                         = UINT_MAX;
+        psoDesc.PrimitiveTopologyType              = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        psoDesc.NumRenderTargets                   = 1;
+        psoDesc.RTVFormats[0]                      = DXGI_FORMAT_R8G8B8A8_UNORM;
+        psoDesc.SampleDesc.Count                   = 1;
+        HRESULT hRcreatePSO = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
+        if (FAILED(hRcreatePSO)) {
+            LOG_ERROR("DirectX", "创建图形管线状态失败: {0}", HrToString(hRcreatePSO));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建图形管线状态");
+    }
+
+    // 创建并上传顶点缓冲区
+    {
+        // 定义顶点数据
+        struct VertexData {
+            DirectX::XMFLOAT3 position;
+            DirectX::XMFLOAT4 color;
+        };
+
+        VertexData triangleVertices[] = {{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
+                                         {{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
+                                         {{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}};
+
+        const UINT vertexBufferSize = sizeof(triangleVertices);
+
+        // 注意：使用UPLOAD堆类型意味着GPU不能有效地读取这些资源
+        // UPLOAD堆类型适用于将数据从CPU复制到GPU的一次性资源
+
+        auto heapProps    = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+        HRESULT hr        = m_device->CreateCommittedResource(&heapProps,
+                                                       D3D12_HEAP_FLAG_NONE,
+                                                       &resourceDesc,
+                                                       D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                       nullptr,
+                                                       IID_PPV_ARGS(&m_vertexBuffer));
+
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "创建顶点缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建顶点缓冲区");
+
+        // 将三角形数据复制到顶点缓冲区
+        UINT8* pVertexDataBegin;
+        CD3DX12_RANGE readRange(0, 0);  // 我们不打算从CPU读取这个资源
+        hr = m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "映射顶点缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
+        m_vertexBuffer->Unmap(0, nullptr);
+
+        // 初始化顶点缓冲区视图
+        m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+        // Use the actual stride of the uploaded vertex layout (VertexData)
+        m_vertexBufferView.StrideInBytes = sizeof(VertexData);
+        m_vertexBufferView.SizeInBytes   = vertexBufferSize;
+    }
+
+    // 创建动态上传缓冲区（用于每帧小批量顶点上传）
+    {
+        // 4MB per-frame upload buffer
+        const uint64_t dynamicSize = 4ULL * 1024ULL * 1024ULL;
+        auto heapProps             = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto resourceDesc          = CD3DX12_RESOURCE_DESC::Buffer(dynamicSize);
+        HRESULT hr                 = m_device->CreateCommittedResource(&heapProps,
+                                                       D3D12_HEAP_FLAG_NONE,
+                                                       &resourceDesc,
+                                                       D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                       nullptr,
+                                                       IID_PPV_ARGS(&m_dynamicVertexBuffer));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "创建动态顶点上传缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicVBSize = dynamicSize;
+        // 映射一次，保持 CPU 指针直到销毁
+        CD3DX12_RANGE readRange(0, 0);
+        uint8_t* ptr = nullptr;
+        hr           = m_dynamicVertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "映射动态顶点缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicVBCPUAddress = ptr;
+        m_dynamicVBOffset     = 0;
+    }
+
+    return true;
+}
+
+void RenderBackendDirectX12::UploadAndBindVertexBuffer(ID3D12GraphicsCommandList* cmdList,
+                                                const void* data,
+                                                uint32_t sizeInBytes,
+                                                uint32_t strideInBytes) {
+    if (!m_dynamicVertexBuffer || !m_dynamicVBCPUAddress) {
+        LOG_ERROR("DirectX", "UploadAndBindVertexBuffer: dynamic buffer not created");
+        return;
+    }
+    // Simple linear allocator with wrap when necessary. Ensure 16-byte alignment for safety.
+    const uint64_t align = 16;
+    uint64_t offset      = (m_dynamicVBOffset + (align - 1)) & ~(align - 1);
+    if (offset + sizeInBytes > m_dynamicVBSize) {
+        // wrap to start
+        offset = 0;
+    }
+    // copy CPU data
+    memcpy(m_dynamicVBCPUAddress + offset, data, sizeInBytes);
+
+    // build a temporary VB view and bind
+    D3D12_VERTEX_BUFFER_VIEW vbView{};
+    vbView.BufferLocation = m_dynamicVertexBuffer->GetGPUVirtualAddress() + offset;
+    vbView.SizeInBytes    = sizeInBytes;
+    vbView.StrideInBytes  = strideInBytes;
+
+    cmdList->IASetVertexBuffers(0, 1, &vbView);
+
+    // advance offset for next allocation
+    m_dynamicVBOffset = offset + sizeInBytes;
+}
+
+void RenderBackendDirectX12::WaitForPreviousFrame() {
+    // 等待帧渲染完成并不是最佳实践
+    // This is code implemented as such for simplicity. More advanced samples
+    // illustrate how to use fences for efficient resource usage.
+
+    // Signal and increment the fence value.
+    const UINT64 fence = m_fenceValue;
+    if (!m_fence) {
+        // 错误处理：记录/返回，避免调用 Signal(nullptr,...)
+        return;
+    }
+    ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
+    m_fenceValue++;
+
+    // Wait until the previous frame is finished.
+    if (m_fence->GetCompletedValue() < fence) {
+        ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
+        WaitForSingleObject(m_fenceEvent, INFINITE);
+    }
+
+    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+}
+
+void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter) {
+    ComPtr<IDXGIAdapter1> adapter;
+    *ppAdapter = nullptr;
+
+    for (UINT adapterIndex = 0; DXGI_ERROR_NOT_FOUND != pFactory->EnumAdapters1(adapterIndex, &adapter);
+         ++adapterIndex) {
+        DXGI_ADAPTER_DESC1 desc;
+        adapter->GetDesc1(&desc);
+
+        if (desc.Flags & DXGI_ADAPTER_FLAG_SOFTWARE) {
+            // 不要选择基本渲染器适配器，如果请求的话
+            continue;
+        }
+
+        // 检查适配器是否支持D3D12，但如果创建设备失败则继续
+        if (SUCCEEDED(D3D12CreateDevice(adapter.Get(), D3D_FEATURE_LEVEL_11_0, _uuidof(ID3D12Device), nullptr))) {
+            break;
+        }
+    }
+
+    *ppAdapter = adapter.Detach();
+}
+
+}  // namespace Engine
