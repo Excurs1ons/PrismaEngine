@@ -1,4 +1,4 @@
-﻿// Application.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
+// Application.cpp : 此文件包含 "main" 函数。程序执行将在此处开始并结束。
 //
 
 #include "pch.h"
@@ -7,6 +7,10 @@
 int main()
 {
     std::cout << "Hello World!\n";
+    
+    // 等待用户按键后再退出，防止双击运行时窗口自动关闭
+    std::cout << "\nPress Enter to exit...";
+    std::cin.get();
 }
 
 // 运行程序: Ctrl + F5 或调试 >“开始执行(不调试)”菜单
