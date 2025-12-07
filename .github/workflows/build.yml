@@ -1,0 +1,133 @@
+name: Build Prisma Engine
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    
+    - name: Setup vcpkg
+      run: |
+        ./vcpkg/bootstrap-vcpkg.bat
+      
+    - name: Configure CMake
+      run: |
+        cmake --preset vs2022-${{ matrix.build_type.toLowerCase() }}
+      
+    - name: Build
+      run: |
+        cmake --build build/${{ matrix.build_type.toLowerCase() }} --config ${{ matrix.build_type }}
+      
+    - name: Install
+      run: |
+        cmake --install build/${{ matrix.build_type.toLowerCase() }} --config ${{ matrix.build_type }} --prefix build/${{ matrix.build_type.toLowerCase() }}/install
+      
+    - name: Create Distribution Package
+      run: |
+        cmake --build build/${{ matrix.build_type.toLowerCase() }} --target dist --config ${{ matrix.build_type }}
+        cmake --build build/${{ matrix.build_type.toLowerCase() }} --target dist-win --config ${{ matrix.build_type }}
+      
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: prisma-engine-${{ matrix.build_type }}-windows
+        path: |
+          build/${{ matrix.build_type.toLowerCase() }}/PrismaEngine-*.tar.gz
+          build/${{ matrix.build_type.toLowerCase() }}/PrismaEngine-*.zip
+          build/${{ matrix.build_type.toLowerCase() }}/install/**
+        if-no-files-found: warn
+
+  build-linux:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    
+    - name: Setup vcpkg
+      run: |
+        ./vcpkg/bootstrap-vcpkg.sh
+      
+    - name: Configure CMake
+      run: |
+        cmake -B build/${{ matrix.build_type.toLowerCase() }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+      
+    - name: Build
+      run: |
+        cmake --build build/${{ matrix.build_type.toLowerCase() }} --config ${{ matrix.build_type }}
+      
+    - name: Install
+      run: |
+        cmake --install build/${{ matrix.build_type.toLowerCase() }} --config ${{ matrix.build_type }} --prefix build/${{ matrix.build_type.toLowerCase() }}/install
+      
+    - name: Create Distribution Package
+      run: |
+        cmake --build build/${{ matrix.build_type.toLowerCase() }} --target dist --config ${{ matrix.build_type }}
+      
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: prisma-engine-${{ matrix.build_type }}-linux
+        path: |
+          build/${{ matrix.build_type.toLowerCase() }}/PrismaEngine-*.tar.gz
+          build/${{ matrix.build_type.toLowerCase() }}/install/**
+        if-no-files-found: warn
+        
+  build-macos:
+    runs-on: macos-latest
+    
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    
+    - name: Setup vcpkg
+      run: |
+        ./vcpkg/bootstrap-vcpkg.sh
+      
+    - name: Configure CMake
+      run: |
+        cmake -B build/${{ matrix.build_type.toLowerCase() }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} -DCMAKE_TOOLCHAIN_FILE=vcpkg/scripts/buildsystems/vcpkg.cmake
+      
+    - name: Build
+      run: |
+        cmake --build build/${{ matrix.build_type.toLowerCase() }} --config ${{ matrix.build_type }}
+      
+    - name: Install
+      run: |
+        cmake --install build/${{ matrix.build_type.toLowerCase() }} --config ${{ matrix.build_type }} --prefix build/${{ matrix.build_type.toLowerCase() }}/install
+      
+    - name: Create Distribution Package
+      run: |
+        cmake --build build/${{ matrix.build_type.toLowerCase() }} --target dist --config ${{ matrix.build_type }}
+      
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: prisma-engine-${{ matrix.build_type }}-macos
+        path: |
+          build/${{ matrix.build_type.toLowerCase() }}/PrismaEngine-*.tar.gz
+          build/${{ matrix.build_type.toLowerCase() }}/install/**
+        if-no-files-found: warn
