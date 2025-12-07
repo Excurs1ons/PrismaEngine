@@ -49,21 +49,4 @@ void Application::Shutdown() {
     SetRunning(false);
     LOG_INFO("Application", "应用程序关闭完成");
 }
-
-extern "C" {
-
-    // 导出其他函数供动态加载使用
-    ENGINE_API bool Initialize() {
-        return Application::GetInstance().Initialize();
-    }
-
-    ENGINE_API int Run() {
-        return Application::GetInstance().Run();
-    }
-
-    ENGINE_API void Shutdown() {
-        Application::GetInstance().Shutdown();
-    }
-
-}
 }  // namespace Engine

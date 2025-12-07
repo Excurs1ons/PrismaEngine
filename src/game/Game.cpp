@@ -3,6 +3,7 @@
 
 #include "IApplication.h"
 #include "pch.h"
+#include "Common.h"
 
 
 bool Game::Initialize() {
@@ -16,3 +17,18 @@ void Game::Shutdown() {
 }
 
 // Platform->Engine->Application->Game|Editor
+
+// 添加导出函数实现
+extern "C" {
+    __declspec(dllexport) bool Initialize() {
+        return Game::GetInstance().Initialize();
+    }
+
+    __declspec(dllexport) int Run() {
+        return Game::GetInstance().Run();
+    }
+
+    __declspec(dllexport) void Shutdown() {
+        Game::GetInstance().Shutdown();
+    }
+}
