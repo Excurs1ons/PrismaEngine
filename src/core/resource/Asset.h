@@ -1,5 +1,5 @@
 #pragma once
-#include "../include/AssetSerializer.h"
+#include "AssetSerializer.h"
 #include "../include/MetaData.h"
 #include "../include/Serializable.h"
 #include "../include/SerializationVersion.h"

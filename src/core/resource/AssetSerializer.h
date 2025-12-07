@@ -8,8 +8,8 @@
 #include <sstream>
 #include <vector>
 
-#include "../include/ArchiveBinary.h"
-#include "../include/ArchiveJson.h"
+#include "ArchiveBinary.h"
+#include "ArchiveJson.h"
 #include <filesystem>
 
 using json = nlohmann::json;
