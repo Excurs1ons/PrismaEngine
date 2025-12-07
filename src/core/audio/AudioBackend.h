@@ -1,5 +1,5 @@
 #pragma once
-#include "../ISubSystem.h"
+#include "ISubSystem.h"
 #include <string>
 #include <vector>
 
@@ -68,7 +68,9 @@ namespace Engine {
 			virtual ~AudioBackend() = default;
 			virtual bool Initialize(const AudioFormat& format) = 0;
 			virtual void Shutdown() = 0;
-
+#if defined(PlaySound)
+#undef PlaySound
+#endif
 			virtual uint32_t PlaySound(const AudioClip& source, float volume, float pitch, bool loop) = 0;
 			virtual void StopSound(uint32_t instanceId) = 0;
 			virtual void PauseSound(uint32_t instanceId) = 0;

@@ -1,11 +1,11 @@
 #pragma once
-
+#include <directx/d3dx12.h>
 #include "Platform.h"
 #include "RenderBackend.h"
 #include <DirectXMath.h>
 #include <DirectXPackedVector.h>
+// 确保先包含Windows SDK的d3d12.h，再包含d3dx12.h
 #include <d3d12.h>
-#include <directx/d3dx12.h>
 #include <dxgi1_4.h>
 using WindowHandle = void*;
 using namespace DirectX;
