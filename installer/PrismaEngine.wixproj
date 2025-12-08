@@ -1,0 +1,15 @@
+<Project Sdk="WixToolset.Sdk/6.0.0">
+  <PropertyGroup>
+    <OutputType>Package</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <Cultures>zh-cn</Cultures>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- 引用 UI 扩展 -->
+    <PackageReference Include="WixToolset.UI.wixext" Version="6.0.0" />
+
+    <!-- 要安装的文件 -->
+    <Content Include="example.txt" />
+  </ItemGroup>
+</Project>

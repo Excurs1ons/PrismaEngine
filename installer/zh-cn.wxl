@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<WixLocalization Culture="zh-cn" xmlns="http://wixtoolset.org/schemas/v4/wxl" Codepage="936">
+
+  <!-- 产品信息 -->
+  <String Id="ProductName" Value="Prisma引擎" />
+  <String Id="Manufacturer" Value="ACME科技有限公司" />
+
+  <!-- 功能描述 -->
+  <String Id="ProductFeature" Value="Prisma引擎主程序" />
+
+  <!-- WixUI 界面文本 -->
+  <String Id="WixUI_InstallDirTitle" Value="Prisma引擎 安装" />
+
+  <!-- 对话框标题和描述 -->
+  <String Id="WelcomeDlg_Title" Value="欢迎使用 Prisma引擎 安装向导" />
+  <String Id="WelcomeDlg_Description" Value="本向导将指导您完成 Prisma引擎 的安装。" />
+
+  <String Id="InstallDirDlg_Title" Value="选择安装位置" />
+  <String Id="InstallDirDlg_Description" Value="为 Prisma引擎 选择安装文件夹。" />
+
+  <String Id="VerifyReadyDlg_Title" Value="准备安装" />
+  <String Id="VerifyReadyDlg_Description" Value="安装程序已准备好安装 Prisma引擎。" />
+
+  <String Id="ExitDlg_Title" Value="安装完成" />
+  <String Id="ExitDlg_Description" Value="Prisma引擎 已成功安装。" />
+
+  <!-- 按钮文本 -->
+  <String Id="WelcomeDlg_Next" Value="下一步(&amp;N) >" />
+  <String Id="InstallDirDlg_Back" Value="&lt; 上一步(&amp;B)" />
+  <String Id="InstallDirDlg_Next" Value="下一步(&amp;N) >" />
+  <String Id="VerifyReadyDlg_Back" Value="&lt; 上一步(&amp;B)" />
+  <String Id="VerifyReadyDlg_Install" Value="安装(&amp;I)" />
+  <String Id="ExitDlg_Finish" Value="完成(&amp;F)" />
+
+  <!-- 标签和控件文本 -->
+  <String Id="FolderLabel" Value="文件夹:" />
+  <String Id="ChangeFolder" Value="更改..." />
+  <String Id="DestinationFolder" Value="目标文件夹" />
+  <String Id="BrowseDlg_Title" Value="浏览文件夹" />
+  <String Id="BrowseDlg_Label" Value="文件夹名称:" />
+  <String Id="BrowseDlg_OK" Value="确定" />
+  <String Id="BrowseDlg_Cancel" Value="取消" />
+
+  <!-- 浏览按钮 -->
+  <String Id="InstallDirDlg_BrowseLabel" Value="浏览(&amp;B)..." />
+
+  <!-- 错误和警告消息 -->
+  <String Id="DowngradeErrorMessage" Value="已安装更新版本的 [ProductName]，请先卸载。" />
+  <String Id="DiskCostWarning" Value="所选驱动器的可用空间不足。" />
+
+  <!-- 控制面板信息 -->
+  <String Id="ARPHELPLINK" Value="https://www.acme-corp.com/prisma" />
+  <String Id="ARPURLINFOABOUT" Value="ACME科技有限公司" />
+  <String Id="ARPCOMMENTS" Value="Prisma引擎 - 高性能数据处理引擎" />
+
+</WixLocalization>

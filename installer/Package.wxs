@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">>
+  <Package Name="Prisma引擎"
+           Manufacturer="Me"
+           Version="1.0.0.0"
+           UpgradeCode="{AFE48998-7B73-40BE-839A-A354C280D055}"
+           Language="2052"
+           Compressed="yes">
+
+    <!-- 指定许可协议文件 -->
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+
+    <MajorUpgrade DowngradeErrorMessage="已安装更新版本的Prisma引擎，请先卸载。" />
+    <MediaTemplate EmbedCab="yes" />
+
+   <!-- 正确引用 UI（WiX v4 新语法） -->
+    <ui:WixUI Id="WixUI_InstallDir" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+
+    <Feature Id="ProductFeature" Title="Prisma引擎主程序" Level="1">
+      <ComponentGroupRef Id="ProductComponents" />
+    </Feature>
+
+  </Package>
+
+  <Fragment>
+    <StandardDirectory Id="ProgramFilesFolder">
+      <Directory Id="INSTALLFOLDER" Name="PrismaEngine" />
+    </StandardDirectory>
+  </Fragment>
+
+  <Fragment>
+    <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+      <Component>
+        <File Source="example.txt" />
+      </Component>
+    </ComponentGroup>
+  </Fragment>
+</Wix>
