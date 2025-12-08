@@ -18,42 +18,45 @@ jobs:
     - uses: actions/checkout@v4
       with:
         submodules: 'recursive'
-    
+
     - name: Print Build Environment Info
       shell: powershell
       run: |
-        Write-Host "构建环境信息:"
-        Write-Host "操作系统: ${{ runner.os }}"
-        Write-Host "构建类型: ${{ matrix.build_type }}"
-        Write-Host "工作目录: $(Get-Location)"
+        Write-Host "Build Environment Info:"
+        Write-Host "OS: ${{ runner.os }}"
+        Write-Host "Build Type: ${{ matrix.build_type }}"
+        Write-Host "Work Dir: $(Get-Location)"
         try {
           $cmakeVersion = cmake --version | Select-Object -First 1
-          Write-Host "CMake版本: $cmakeVersion"
+          Write-Host "CMake Version: $cmakeVersion"
         } catch {
-          Write-Host "CMake版本: 无法获取"
+          Write-Host "CMake Version: Unavailable"
         }
         try {
           $gitVersion = git --version
-          Write-Host "Git版本: $gitVersion"
+          Write-Host "Git Version: $gitVersion"
         } catch {
-          Write-Host "Git版本: 无法获取"
+          Write-Host "Git Version: Unavailable"
         }
         try {
           $pythonVersion = python --version 2>$null
           if (-not $pythonVersion) { $pythonVersion = & python -V 2>$null }
           if ($pythonVersion) {
-            Write-Host "Python版本: $pythonVersion"
+            Write-Host "Python Version: $pythonVersion"
           } else {
-            Write-Host "Python版本: Python not found"
+            Write-Host "Python Version: Python not found"
           }
         } catch {
-          Write-Host "Python版本: Python not found"
+          Write-Host "Python Version: Python not found"
         }
         try {
-          $memoryInfo = Get-CimInstance -ClassName Win32_OperatingSystem | Select-Object @{Name='TotalMemory'; Expression={[math]::Round($_.TotalVisibleMemorySize/1MB, 2)}}, @{Name='FreeMemory'; Expression={[math]::Round($_.FreePhysicalMemory/1MB, 2)}} | ConvertTo-Json
-          Write-Host "可用内存: $memoryInfo"
+          # 简化内存查询逻辑，防止单行复杂命令解析出错
+          $os = Get-CimInstance -ClassName Win32_OperatingSystem
+          $total = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
+          $free = [math]::Round($os.FreePhysicalMemory/1MB, 2)
+          Write-Host "Memory (MB): Total=$total, Free=$free"
         } catch {
-          Write-Host "内存信息不可用"
+          Write-Host "Memory info unavailable"
         }
     
     - name: Cache vcpkg dependencies
@@ -125,44 +128,42 @@ jobs:
     - name: Verify Build Artifacts
       shell: powershell
       run: |
-        Write-Host "验证构建产物..."
+        Write-Host "Verifying Build Artifacts..."
         Get-ChildItem -Path "build/${{ matrix.build_type }}" -Force
         
-        # 检查分发包文件
+        # Check distribution package
         $tarFile = Get-ChildItem -Path "build/${{ matrix.build_type }}" -Filter "PrismaEngine-*.tar.gz" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($tarFile) {
-          Write-Host "找到tar.gz分发包: $($tarFile.Name)"
-          # 在Windows上使用tar命令（Windows 10+内置）
+          Write-Host "Found tar.gz package: $($tarFile.Name)"
           try {
             tar -tzf $tarFile.FullName | Select-Object -First 10
           } catch {
-            Write-Host "无法列出tar.gz内容，但文件存在"
+            Write-Host "Cannot list tar.gz content, but file exists."
           }
         } else {
-          Write-Host "警告: 未找到tar.gz分发包"
+          Write-Host "Warning: tar.gz package not found."
         }
         
         $zipFile = Get-ChildItem -Path "build/${{ matrix.build_type }}" -Filter "PrismaEngine-*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($zipFile) {
-          Write-Host "找到zip分发包: $($zipFile.Name)"
-          # 使用Expand-Archive列出zip内容
+          Write-Host "Found zip package: $($zipFile.Name)"
           try {
             Add-Type -AssemblyName System.IO.Compression.FileSystem
             [IO.Compression.ZipFile]::OpenRead($zipFile.FullName).Entries | Select-Object -First 10 | ForEach-Object { $_.FullName }
           } catch {
-            Write-Host "无法列出zip内容，但文件存在"
+            Write-Host "Cannot list zip content, but file exists."
           }
         } else {
-          Write-Host "警告: 未找到zip分发包"
+          Write-Host "Warning: zip package not found."
         }
         
-        # 检查安装目录
+        # Check install directory
         $installDir = "build/${{ matrix.build_type }}/install"
         if (Test-Path $installDir -PathType Container) {
-          Write-Host "安装目录内容:"
+          Write-Host "Install directory content:"
           Get-ChildItem -Path $installDir -Force
         } else {
-          Write-Host "警告: 未找到安装目录"
+          Write-Host "Warning: Install directory not found."
         }
     
     - name: Upload Artifacts
