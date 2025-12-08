@@ -3,42 +3,31 @@ plugins {
 }
 
 android {
-    namespace 'com.example.myapplication'
+    namespace 'com.prisma.game'
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.example.myapplication"
-        minSdk 28
+        applicationId 'com.prisma.game'
+        minSdk 31
         targetSdk 36
         versionCode 1
         versionName "1.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-        ndk {
-            // 指定只构建和打包 arm64-v8a 架构
-            abiFilters 'arm64-v8a'
-        }
-        externalNativeBuild {
-            cmake {
-                cppFlags '-std=c++17'
-            }
-        }
     }
 
     buildTypes {
         release {
-            minifyEnabled true
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig signingConfigs.debug
-        }
-        debug {
-            // 通常在调试版本中不开启，以加快编译速度
             minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
+    }
+    buildFeatures {
+        prefab true
     }
     externalNativeBuild {
         cmake {
@@ -46,16 +35,13 @@ android {
             version '3.22.1'
         }
     }
-    buildFeatures {
-        viewBinding true
-    }
 }
 
 dependencies {
 
     implementation libs.appcompat
     implementation libs.material
-    implementation libs.constraintlayout
+    implementation libs.games.activity
     testImplementation libs.junit
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
