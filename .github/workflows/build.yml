@@ -136,7 +136,10 @@ jobs:
         if ($tarFile) {
           Write-Host "Found tar.gz package: $($tarFile.Name)"
           try {
+            # tar在管道被Select-Object关闭时会报错退出，导致ExitCode=1
             tar -tzf $tarFile.FullName | Select-Object -First 10
+            # 强制重置退出码，忽略管道断开错误
+            if ($LastExitCode -ne 0) { $global:LastExitCode = 0 }
           } catch {
             Write-Host "Cannot list tar.gz content, but file exists."
           }
@@ -149,7 +152,9 @@ jobs:
           Write-Host "Found zip package: $($zipFile.Name)"
           try {
             Add-Type -AssemblyName System.IO.Compression.FileSystem
-            [IO.Compression.ZipFile]::OpenRead($zipFile.FullName).Entries | Select-Object -First 10 | ForEach-Object { $_.FullName }
+            $zip = [IO.Compression.ZipFile]::OpenRead($zipFile.FullName)
+            $zip.Entries | Select-Object -First 10 | ForEach-Object { $_.FullName }
+            $zip.Dispose() # 显式释放文件句柄
           } catch {
             Write-Host "Cannot list zip content, but file exists."
           }
@@ -165,7 +170,9 @@ jobs:
         } else {
           Write-Host "Warning: Install directory not found."
         }
-    
+        
+        # 显式以成功状态退出，防止之前的非致命错误导致步骤失败
+        exit 0
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
