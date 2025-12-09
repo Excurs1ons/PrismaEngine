@@ -45,11 +45,41 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 
-# 添加子目录
-add_subdirectory(src/core)
-add_subdirectory(src/runtime)
-add_subdirectory(src/game)
-add_subdirectory(src/editor)
+if (CMAKE_SYSTEM_NAME STREQUAL "Android")
+    message(STATUS "Building for Android")
+
+    # 检查 Android NDK 环境变量
+    if(DEFINED ANDROID_NDK_HOME)
+        message(STATUS "ANDROID_NDK_HOME is set to: ${ANDROID_NDK_HOME}")
+    else()
+        message(WARNING "ANDROID_NDK_HOME is not set")
+    endif()
+
+    # 检查 Android SDK 环境变量
+    if(DEFINED ENV{ANDROID_HOME})
+        message(STATUS "ANDROID_HOME is set to: $ENV{ANDROID_HOME}")
+    elseif(DEFINED ENV{ANDROID_SDK_ROOT})
+        message(STATUS "ANDROID_SDK_ROOT is set to: $ENV{ANDROID_SDK_ROOT}")
+    else()
+        message(WARNING "Neither ANDROID_HOME nor ANDROID_SDK_ROOT is set")
+    endif()
+
+    # 检查 Android 构建参数
+    if(DEFINED ANDROID_ABI)
+        message(STATUS "Android ABI: ${ANDROID_ABI}")
+    endif()
+    if(DEFINED ANDROID_PLATFORM)
+        message(STATUS "Android Platform: ${ANDROID_PLATFORM}")
+    endif()
+
+    add_subdirectory(projects/android)
+else()
+    message(STATUS "Building for Desktop")
+    add_subdirectory(src/core)
+    add_subdirectory(src/runtime)
+    add_subdirectory(src/game)
+    add_subdirectory(src/editor)
+endif()
 
 # 安装projects目录
 install(DIRECTORY projects/
