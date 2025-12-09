@@ -31,19 +31,64 @@ if(DEFINED CMAKE_TOOLCHAIN_FILE)
 endif()
 
 
-# 设置输出目录，使可执行文件、动态库和静态库分别放在不同的目录
-# 对于多配置生成器，为每种配置设置不同的输出目录
+# 动态设置输出目录
+# 构建目录结构: build/{system}-{platform}-{build_type}
+
+# 判断平台信息
+if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set(PLATFORM_NAME "windows")
+    if(CMAKE_GENERATOR_PLATFORM MATCHES "Win64" OR CMAKE_VS_PLATFORM_NAME STREQUAL "x64")
+        set(PLATFORM_ARCH "x64")
+    elseif(CMAKE_GENERATOR_PLATFORM MATCHES "ARM64" OR CMAKE_VS_PLATFORM_NAME STREQUAL "ARM64")
+        set(PLATFORM_ARCH "arm64")
+    else()
+        set(PLATFORM_ARCH "x86")
+    endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    set(PLATFORM_NAME "linux")
+    set(PLATFORM_ARCH "x64")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(PLATFORM_NAME "macos")
+    set(PLATFORM_ARCH "universal")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    set(PLATFORM_NAME "android")
+    if(DEFINED ANDROID_ABI)
+        if(ANDROID_ABI STREQUAL "arm64-v8a")
+            set(PLATFORM_ARCH "arm64")
+        elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
+            set(PLATFORM_ARCH "arm")
+        elseif(ANDROID_ABI STREQUAL "x86_64")
+            set(PLATFORM_ARCH "x64")
+        elseif(ANDROID_ABI STREQUAL "x86")
+            set(PLATFORM_ARCH "x86")
+        else()
+            set(PLATFORM_ARCH ${ANDROID_ABI})
+        endif()
+    else()
+        set(PLATFORM_ARCH "arm64")
+    endif()
+else()
+    set(PLATFORM_NAME "${CMAKE_SYSTEM_NAME}")
+    set(PLATFORM_ARCH "unknown")
+endif()
+
+# 输出构建信息
+message(STATUS "Build Platform: ${PLATFORM_NAME}-${PLATFORM_ARCH}")
+
+# 对于多配置生成器（如 Visual Studio），为每种配置设置不同的输出目录
 foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
     string(TOUPPER ${CONFIG} UPPER_CONFIG)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY_${UPPER_CONFIG} ${CMAKE_BINARY_DIR}/bin/${CONFIG})
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY_${UPPER_CONFIG} ${CMAKE_BINARY_DIR}/lib/${CONFIG})
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY_${UPPER_CONFIG} ${CMAKE_BINARY_DIR}/lib/${CONFIG})
+    message(STATUS "Multi-config output for ${CONFIG}: bin/${CONFIG}, lib/${CONFIG}")
 endforeach()
 
-# 单配置生成器的默认设置
+# 单配置生成器的默认设置（Ninja、Makefile 等）
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+message(STATUS "Single-config output: bin, lib")
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Android")
     message(STATUS "Building for Android")
