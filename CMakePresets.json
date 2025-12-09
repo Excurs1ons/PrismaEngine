@@ -2,23 +2,265 @@
   "version": 3,
   "configurePresets": [
     {
-      "name": "vs2022-debug",
-      "displayName": "Visual Studio 2022 Debug",
+      "name": "base",
+      "hidden": true,
+      "description": "Base configuration for all platforms"
+    },
+    {
+      "name": "windows-base",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Base Windows configuration",
       "generator": "Visual Studio 17 2022",
-      "binaryDir": "${sourceDir}/build/debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Windows"
       }
     },
     {
-      "name": "vs2022-release",
-      "displayName": "Visual Studio 2022 Release",
-      "generator": "Visual Studio 17 2022",
-      "binaryDir": "${sourceDir}/build/release",
+      "name": "windows-x64-debug",
+      "displayName": "Windows x64 Debug",
+      "inherits": "windows-base",
+      "description": "Debug build for Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-x64-debug",
+      "architecture": "x64",
+      "toolset": "host=x64",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-x64-release",
+      "displayName": "Windows x64 Release",
+      "inherits": "windows-base",
+      "description": "Release build for Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-x64-release",
+      "architecture": "x64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "windows-arm64-debug",
+      "displayName": "Windows ARM64 Debug",
+      "inherits": "windows-base",
+      "description": "Debug build for Windows ARM64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-arm64-debug",
+      "architecture": "ARM64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-arm64-release",
+      "displayName": "Windows ARM64 Release",
+      "inherits": "windows-base",
+      "description": "Release build for Windows ARM64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-arm64-release",
+      "architecture": "ARM64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "windows-x86-debug",
+      "displayName": "Windows x86 Debug",
+      "inherits": "windows-base",
+      "description": "Debug build for Windows x86 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-x86-debug",
+      "architecture": "Win32",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "windows-x86-release",
+      "displayName": "Windows x86 Release",
+      "inherits": "windows-base",
+      "description": "Release build for Windows x86 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-x86-release",
+      "architecture": "Win32",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "android-base",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Base Android configuration",
+      "toolchainFile": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_FIND_ROOT_PATH_MODE_PACKAGE": "BOTH"
+      }
+    },
+    {
+      "name": "android-arm64-debug",
+      "displayName": "Android arm64-v8a Debug",
+      "inherits": "android-base",
+      "description": "Debug build for Android ARM64 (arm64-v8a)",
+      "binaryDir": "${sourceDir}/build/android-arm64-debug",
+      "cacheVariables": {
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "android-arm64-release",
+      "displayName": "Android arm64-v8a Release",
+      "inherits": "android-base",
+      "description": "Release build for Android ARM64 (arm64-v8a)",
+      "binaryDir": "${sourceDir}/build/android-arm64-release",
+      "cacheVariables": {
+        "ANDROID_ABI": "arm64-v8a",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "android-arm-debug",
+      "displayName": "Android armeabi-v7a Debug",
+      "inherits": "android-base",
+      "description": "Debug build for Android ARM (armeabi-v7a)",
+      "binaryDir": "${sourceDir}/build/android-arm-debug",
+      "cacheVariables": {
+        "ANDROID_ABI": "armeabi-v7a",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "android-arm-release",
+      "displayName": "Android armeabi-v7a Release",
+      "inherits": "android-base",
+      "description": "Release build for Android ARM (armeabi-v7a)",
+      "binaryDir": "${sourceDir}/build/android-arm-release",
+      "cacheVariables": {
+        "ANDROID_ABI": "armeabi-v7a",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "android-x64-debug",
+      "displayName": "Android x86_64 Debug",
+      "inherits": "android-base",
+      "description": "Debug build for Android x86_64",
+      "binaryDir": "${sourceDir}/build/android-x64-debug",
+      "cacheVariables": {
+        "ANDROID_ABI": "x86_64",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "android-x64-release",
+      "displayName": "Android x86_64 Release",
+      "inherits": "android-base",
+      "description": "Release build for Android x86_64",
+      "binaryDir": "${sourceDir}/build/android-x64-release",
+      "cacheVariables": {
+        "ANDROID_ABI": "x86_64",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "android-x86-debug",
+      "displayName": "Android x86 Debug",
+      "inherits": "android-base",
+      "description": "Debug build for Android x86",
+      "binaryDir": "${sourceDir}/build/android-x86-debug",
+      "cacheVariables": {
+        "ANDROID_ABI": "x86",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "android-x86-release",
+      "displayName": "Android x86 Release",
+      "inherits": "android-base",
+      "description": "Release build for Android x86",
+      "binaryDir": "${sourceDir}/build/android-x86-release",
+      "cacheVariables": {
+        "ANDROID_ABI": "x86",
+        "ANDROID_PLATFORM": "android-31",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Base Linux configuration",
+      "generator": "Unix Makefiles",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      }
+    },
+    {
+      "name": "linux-x64-debug",
+      "displayName": "Linux x64 Debug",
+      "inherits": "linux-base",
+      "description": "Debug build for Linux x64 (Placeholder)",
+      "binaryDir": "${sourceDir}/build/linux-x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "linux-x64-release",
+      "displayName": "Linux x64 Release",
+      "inherits": "linux-base",
+      "description": "Release build for Linux x64 (Placeholder)",
+      "binaryDir": "${sourceDir}/build/linux-x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "macos-base",
+      "hidden": true,
+      "inherits": "base",
+      "description": "Base macOS configuration",
+      "generator": "Xcode",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Darwin"
+      }
+    },
+    {
+      "name": "macos-universal-debug",
+      "displayName": "macOS Universal Debug",
+      "inherits": "macos-base",
+      "description": "Debug build for macOS Universal (Placeholder)",
+      "binaryDir": "${sourceDir}/build/macos-universal-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "macos-universal-release",
+      "displayName": "macOS Universal Release",
+      "inherits": "macos-base",
+      "description": "Release build for macOS Universal (Placeholder)",
+      "binaryDir": "${sourceDir}/build/macos-universal-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
       }
     }
   ]
