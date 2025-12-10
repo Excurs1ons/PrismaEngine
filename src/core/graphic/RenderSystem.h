@@ -2,6 +2,7 @@
 #include "ManagerBase.h"
 #include "RenderBackend.h"
 #include "RenderThread.h"
+#include "ScriptableRenderPipe.h"
 #include <memory>
 
 namespace Engine {
@@ -30,9 +31,11 @@ public:
     void Resize(uint32_t width, uint32_t height);
 
     RenderBackend* GetRenderBackend() const { return renderBackend.get(); }
+    ScriptableRenderPipe* GetRenderPipe() const { return renderPipe.get(); }
 
 private:
     std::unique_ptr<RenderBackend> renderBackend;
+    std::unique_ptr<ScriptableRenderPipe> renderPipe;
     WorkerThread renderThread;
 };
 }  // namespace Engine
