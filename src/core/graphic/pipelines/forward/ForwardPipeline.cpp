@@ -1,4 +1,5 @@
 #include "ForwardPipeline.h"
+#include "graphic/pipelines/SkyboxRenderPass.h"
 #include "Logger.h"
 
 namespace Engine {
@@ -25,12 +26,17 @@ bool ForwardPipeline::Initialize(ScriptableRenderPipeline* renderPipe)
 
     m_renderPipe = renderPipe;
     
+    // 创建天空盒渲染通道
+    m_skyboxRenderPass = std::make_shared<SkyboxRenderPass>();
+    m_renderPipe->AddRenderPass(m_skyboxRenderPass);
+    
     LOG_INFO("ForwardPipeline", "Forward rendering pipeline initialized successfully");
     return true;
 }
 
 void ForwardPipeline::Shutdown()
 {
+    m_skyboxRenderPass.reset();
     m_renderPipe = nullptr;
     LOG_INFO("ForwardPipeline", "Forward rendering pipeline shutdown completed");
 }
