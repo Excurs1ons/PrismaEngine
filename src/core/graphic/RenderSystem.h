@@ -39,5 +39,6 @@ private:
     std::unique_ptr<ScriptableRenderPipeline> renderPipe;
     std::unique_ptr<Graphic::Pipelines::Forward::ForwardPipeline> forwardPipeline;
     WorkerThread renderThread;
+
 };
 }  // namespace Engine

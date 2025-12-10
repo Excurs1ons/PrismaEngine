@@ -29,11 +29,17 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_DESTROY:
             LOG_INFO("Platform", "窗口已关闭");
             PostQuitMessage(0);
+            PlatformWindows::GetInstance()->DestroyWindow(hwnd);
             return 0;
         default:
             return DefWindowProcA(hwnd, msg, wParam, lParam);
     }
 }
+
+WindowHandle PlatformWindows::GetWindowHandle() const {
+    return hwnd;
+}
+
 WindowHandle PlatformWindows::CreateWindow(const WindowProps& props) {
     // 注册窗口类
     static bool classRegistered = false;
@@ -117,7 +123,7 @@ WindowHandle PlatformWindows::CreateWindow(const WindowProps& props) {
     this->hwnd = hwnd;
     
     LOG_INFO("Platform", "创建窗口成功: {0}", props.Title);
-    return static_cast<WindowHandle>(hwnd);
+    return hwnd;
 }
 
 bool PlatformWindows::SetWindowIcon(const std::string& path) {
@@ -136,6 +142,9 @@ void PlatformWindows::DestroyWindow(WindowHandle window) {
     // 销毁窗口的实现
     if (window) {
         ::DestroyWindow(static_cast<HWND>(window));
+    }
+    if (hwnd) {
+        hwnd = nullptr;
     }
 }
 
@@ -166,9 +175,11 @@ bool PlatformWindows::ShouldClose(WindowHandle window) const {
             if (msg.message == WM_QUIT) {
                 return true;
             }
+            return false;
         }
+        return false;
     }
-    return false;
+    return true;
 }
 
 uint64_t PlatformWindows::GetTimeMicroseconds() const {

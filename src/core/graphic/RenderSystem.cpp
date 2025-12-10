@@ -68,12 +68,12 @@ bool RenderSystem::Initialize() {
     platform = PlatformWindows::GetInstance().get();
     // 创建一个默认窗口用于 DirectX 渲染
     WindowProps props("Game Window", 1600, 900);
-    WindowHandle window = platform->CreateWindow(props);
-    if (!window) {
+    auto windowHandle = platform->CreateWindow(props);
+    if (!windowHandle) {
         LOG_ERROR("Render", "无法创建默认窗口");
         return false;
     }
-    return Initialize(platform, RenderBackendType::DirectX12, window, nullptr, 1600, 900);
+    return Initialize(platform, RenderBackendType::DirectX12, windowHandle, nullptr, 1600, 900);
 #else
     return Initialize(platform, RenderBackendType::DirectX12, nullptr, nullptr, 1600, 900);
 #endif
