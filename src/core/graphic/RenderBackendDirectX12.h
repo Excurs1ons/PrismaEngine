@@ -54,6 +54,7 @@ public:
 private:
     bool LoadPipeline();
     bool InitializeRenderObjects();
+    RenderCommandContext* CreateCommandContext() override;
     bool CreateRootSignature();
     bool CreatePipelineState();
     bool CreateDepthBuffer();
