@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphic/ScriptableRenderPipeline.h"
+#include "graphic/pipelines/SkyboxRenderPass.h"
 #include <memory>
 
 namespace Engine {
@@ -24,6 +25,9 @@ public:
 private:
     // 渲染管线引用
     ScriptableRenderPipeline* m_renderPipe;
+    
+    // 天空盒渲染通道
+    std::shared_ptr<SkyboxRenderPass> m_skyboxRenderPass;
 };
 
 } // namespace Forward
