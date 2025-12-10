@@ -48,9 +48,16 @@ public:
                                   uint32_t sizeInBytes,
                                   bool use16BitIndices = true);
 
+    // 获取动态常量缓冲区地址
+    D3D12_GPU_VIRTUAL_ADDRESS GetDynamicConstantBufferAddress(const void* data, size_t sizeInBytes);
+
 private:
     bool LoadPipeline();
-    bool LoadAssets();
+    bool InitializeRenderObjects();
+    bool CreateRootSignature();
+    bool CreatePipelineState();
+    bool CreateDepthBuffer();
+    bool CreateDynamicBuffers();
     void WaitForPreviousFrame();
     static const UINT FrameCount = 2;
 
@@ -60,6 +67,8 @@ private:
     ComPtr<IDXGISwapChain3> m_swapChain;
     ComPtr<ID3D12Device> m_device;
     ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
+    ComPtr<ID3D12Resource> m_depthStencil;
+    ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
     ComPtr<ID3D12CommandAllocator> m_commandAllocator;
     ComPtr<ID3D12CommandQueue> m_commandQueue;
     ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -68,9 +77,7 @@ private:
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
     UINT m_rtvDescriptorSize;
 
-    // App resources.
-    ComPtr<ID3D12Resource> m_vertexBuffer;
-    D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+    // 硬编码顶点缓冲区已移除 - 现在使用动态渲染系统
 
     // 动态顶点上传缓冲区（每帧小批量网格数据）
     ComPtr<ID3D12Resource> m_dynamicVertexBuffer;
@@ -83,6 +90,12 @@ private:
     uint8_t* m_dynamicIBCPUAddress = nullptr;
     uint64_t m_dynamicIBSize       = 0;
     uint64_t m_dynamicIBOffset     = 0;
+
+    // 动态常量缓冲区（用于MVP矩阵、材质参数等）
+    ComPtr<ID3D12Resource> m_dynamicConstantBuffer;
+    uint8_t* m_dynamicCBCPUAddress = nullptr;
+    uint64_t m_dynamicCBSize       = 0;
+    uint64_t m_dynamicCBOffset     = 0;
 
     // Synchronization objects.
     UINT m_frameIndex;

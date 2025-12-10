@@ -36,10 +36,52 @@ public:
 
     void SetConstantBuffer(const char* name, FXMMATRIX matrix) override {
         LOG_DEBUG("DXContext", "SetConstantBuffer(matrix) name={0}", name);
-        // TODO: implement proper CBV upload and root binding. For now leave as debug log.
+
+        // 确定常量缓冲区寄存器
+        uint32_t registerIndex = 0;
+        if (strcmp(name, "ViewProjection") == 0) {
+            registerIndex = 0;
+        } else if (strcmp(name, "World") == 0) {
+            registerIndex = 1;
+        } else if (strcmp(name, "BaseColor") == 0) {
+            registerIndex = 2;
+        } else if (strcmp(name, "MaterialParams") == 0) {
+            registerIndex = 3;
+        } else {
+            LOG_WARNING("DXContext", "Unknown constant buffer name: {0}", name);
+            return;
+        }
+
+        // 存储矩阵数据到临时缓冲区
+        XMFLOAT4X4 matrixData;
+        XMStoreFloat4x4(&matrixData, matrix);
+        SetConstantBuffer(name, reinterpret_cast<const float*>(&matrixData), 16);
     }
+
     void SetConstantBuffer(const char* name, const float* data, size_t size) override {
         LOG_DEBUG("DXContext", "SetConstantBuffer(data) name={0} size={1}", name, size);
+
+        // 确定常量缓冲区寄存器
+        uint32_t registerIndex = 0;
+        if (strcmp(name, "ViewProjection") == 0) {
+            registerIndex = 0;
+        } else if (strcmp(name, "World") == 0) {
+            registerIndex = 1;
+        } else if (strcmp(name, "BaseColor") == 0) {
+            registerIndex = 2;
+        } else if (strcmp(name, "MaterialParams") == 0) {
+            registerIndex = 3;
+        } else {
+            LOG_WARNING("DXContext", "Unknown constant buffer name: {0}", name);
+            return;
+        }
+
+        // 获取常量缓冲区所需的GPU虚拟地址
+        // 这里我们使用动态上传缓冲区来存储常量数据
+        D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = m_backend->GetDynamicConstantBufferAddress(data, size * sizeof(float));
+
+        // 设置根参数
+        m_commandList->SetGraphicsRootConstantBufferView(registerIndex, gpuAddress);
     }
     void SetVertexBuffer(const void* data, uint32_t sizeInBytes, uint32_t strideInBytes) override {
         if (!m_commandList || !m_backend) {
@@ -104,8 +146,10 @@ private:
 
 RenderBackendDirectX12::RenderBackendDirectX12(std::wstring name)
     : m_fenceEvent(nullptr), m_fenceValue(0), m_frameIndex(0), m_height(1), m_rtvDescriptorSize(0),
-      m_scissorRect{0, 0, 1L, 1L}, m_vertexBufferView{}, m_viewport{0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f}, m_width(1),
-      m_aspectRatio(1), m_dynamicVBCPUAddress(nullptr), m_dynamicVBSize(0), m_dynamicVBOffset(0) {}
+      m_scissorRect{0, 0, 1L, 1L}, m_viewport{0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f}, m_width(1),
+      m_aspectRatio(1), m_dynamicVBCPUAddress(nullptr), m_dynamicVBSize(0), m_dynamicVBOffset(0),
+      m_dynamicIBCPUAddress(nullptr), m_dynamicIBSize(0), m_dynamicIBOffset(0),
+      m_dynamicCBCPUAddress(nullptr), m_dynamicCBSize(0), m_dynamicCBOffset(0) {}
 bool RenderBackendDirectX12::Initialize(Platform* platform, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
     g_hWnd        = (HWND)windowHandle;
     m_height      = height;
@@ -117,7 +161,7 @@ bool RenderBackendDirectX12::Initialize(Platform* platform, WindowHandle windowH
     if (!LoadPipeline()) {
         return false;
     }
-    if (!LoadAssets()) {
+    if (!InitializeRenderObjects()) {
         return false;
     }
     isInitialized = true;
@@ -142,6 +186,7 @@ void RenderBackendDirectX12::BeginFrame() {
     // 重置每帧动态缓冲区偏移量
     m_dynamicVBOffset = 0;
     m_dynamicIBOffset = 0;
+    m_dynamicCBOffset = 0;
 
     // 指令列表分配器只能在关联的指令列表在GPU完成执行之后才能重置，
     // apps should use
@@ -177,7 +222,8 @@ void RenderBackendDirectX12::BeginFrame() {
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
         m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, nullptr);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
     // 从场景获取主相机和清除颜色，默认为青色
     float clearColor[4] = {0.0f, 1.0f, 1.0f, 1.0f};  // 默认青色
@@ -206,15 +252,35 @@ void RenderBackendDirectX12::BeginFrame() {
 
     // 录制渲染指令
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-
-    // 创建渲染命令上下文并调用场景渲染
-    DXRenderCommandContext context(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
 
     // 调用场景渲染
     auto scenePtr = SceneManager::GetInstance()->GetCurrentScene();
     if (scenePtr) {
+        // 获取相机矩阵
+        XMMATRIX cameraMatrix = XMMatrixIdentity();
+        Camera* mainCamera = scenePtr->GetMainCamera();
+        if (mainCamera) {
+            // 尝试转换为Camera2D来获取视图投影矩阵
+            Camera2D* camera2D = dynamic_cast<Camera2D*>(mainCamera);
+            if (camera2D) {
+                cameraMatrix = camera2D->GetViewProjectionMatrix();
+                LOG_DEBUG("RenderBackendDirectX12", "Using Camera2D matrix from main camera");
+            } else {
+                LOG_DEBUG("RenderBackendDirectX12", "Main camera is not Camera2D, using identity matrix");
+            }
+        } else {
+            LOG_DEBUG("RenderBackendDirectX12", "No main camera found, using identity matrix");
+        }
+
+        // 创建渲染命令上下文
+        DXRenderCommandContext context(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
+
+        // 设置相机矩阵到渲染上下文
+        context.SetConstantBuffer("ViewProjection", reinterpret_cast<const float*>(&cameraMatrix), 16);
+
+        // 渲染场景
         scenePtr->Render(&context);
     }
 
@@ -408,6 +474,60 @@ bool RenderBackendDirectX12::LoadPipeline() {
         }
     }
 
+    // 创建深度缓冲区和DSV堆
+    {
+        // 创建DSV描述符堆
+        D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+        dsvHeapDesc.NumDescriptors = 1;
+        dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+        dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        hr = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "无法创建DSV描述符堆: {0}", HrToString(hr));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建DSV描述符堆");
+
+        // 创建深度缓冲区资源
+        D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
+        depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
+        depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+        depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+        D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
+        depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
+        depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
+        depthOptimizedClearValue.DepthStencil.Stencil = 0;
+
+        CD3DX12_RESOURCE_DESC depthTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D(
+            DXGI_FORMAT_D32_FLOAT,
+            m_width,
+            m_height,
+            1,
+            0,
+            1,
+            0,
+            D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+
+        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+        hr = m_device->CreateCommittedResource(
+            &heapProps,
+            D3D12_HEAP_FLAG_NONE,
+            &depthTextureDesc,
+            D3D12_RESOURCE_STATE_DEPTH_WRITE,
+            &depthOptimizedClearValue,
+            IID_PPV_ARGS(&m_depthStencil));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "无法创建深度缓冲区: {0}", HrToString(hr));
+            return false;
+        }
+        LOG_INFO("DirectX", "成功创建深度缓冲区");
+
+        // 创建深度模板视图
+        m_device->CreateDepthStencilView(m_depthStencil.Get(), &depthStencilDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+        LOG_INFO("DirectX", "成功创建深度模板视图");
+    }
+
     hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法创建命令分配器: {0}", HrToString(hr));
@@ -455,20 +575,33 @@ bool RenderBackendDirectX12::LoadPipeline() {
     return true;
 }
 
-bool RenderBackendDirectX12::LoadAssets() {
-    // 创建空的根签名
+bool RenderBackendDirectX12::InitializeRenderObjects() {
+    // 创建根签名支持常量缓冲区
     {
-        D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
-        rootSignatureDesc.NumParameters             = 0;
-        rootSignatureDesc.pParameters               = nullptr;
-        rootSignatureDesc.NumStaticSamplers         = 0;
-        rootSignatureDesc.pStaticSamplers           = nullptr;
-        rootSignatureDesc.Flags                     = D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
+        // 定义4个常量缓冲区根参数
+        CD3DX12_ROOT_PARAMETER1 rootParameters[4];
+
+        // ViewProjection矩阵 - b0
+        rootParameters[0].InitAsConstantBufferView(0);
+
+        // World矩阵 - b1
+        rootParameters[1].InitAsConstantBufferView(1);
+
+        // BaseColor - b2
+        rootParameters[2].InitAsConstantBufferView(2);
+
+        // MaterialParams - b3
+        rootParameters[3].InitAsConstantBufferView(3);
+
+        CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDesc;
+        rootSignatureDesc.Init_1_1(_countof(rootParameters), rootParameters, 0, nullptr,
+                                   D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
         ComPtr<ID3DBlob> signature;
         ComPtr<ID3DBlob> error;
-        HRESULT hRserializeRootSig =
-            D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error);
+        HRESULT hRserializeRootSig = D3DX12SerializeVersionedRootSignature(&rootSignatureDesc,
+                                                                          D3D_ROOT_SIGNATURE_VERSION_1_1,
+                                                                          &signature, &error);
         if (FAILED(hRserializeRootSig)) {
             LOG_ERROR("DirectX", "序列化根签名失败: {0}", HrToString(hRserializeRootSig));
             if (error) {
@@ -515,8 +648,11 @@ bool RenderBackendDirectX12::LoadAssets() {
         psoDesc.PS                                 = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
         psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
         psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-        psoDesc.DepthStencilState.DepthEnable      = FALSE;
+        psoDesc.DepthStencilState.DepthEnable      = TRUE;
+        psoDesc.DepthStencilState.DepthWriteMask   = D3D12_DEPTH_WRITE_MASK_ALL;
+        psoDesc.DepthStencilState.DepthFunc       = D3D12_COMPARISON_FUNC_LESS;
         psoDesc.DepthStencilState.StencilEnable    = FALSE;
+        psoDesc.DSVFormat                         = DXGI_FORMAT_D32_FLOAT;
         psoDesc.SampleMask                         = UINT_MAX;
         psoDesc.PrimitiveTopologyType              = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.NumRenderTargets                   = 1;
@@ -530,55 +666,7 @@ bool RenderBackendDirectX12::LoadAssets() {
         LOG_INFO("DirectX", "成功创建图形管线状态");
     }
 
-    // 创建并上传顶点缓冲区
-    {
-        // 定义顶点数据
-        struct VertexData {
-            DirectX::XMFLOAT3 position;
-            DirectX::XMFLOAT4 color;
-        };
-
-        VertexData triangleVertices[] = {{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-                                         {{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-                                         {{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}}};
-
-        const UINT vertexBufferSize = sizeof(triangleVertices);
-
-        // 注意：使用UPLOAD堆类型意味着GPU不能有效地读取这些资源
-        // UPLOAD堆类型适用于将数据从CPU复制到GPU的一次性资源
-
-        auto heapProps    = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-        auto resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-        HRESULT hr        = m_device->CreateCommittedResource(&heapProps,
-                                                       D3D12_HEAP_FLAG_NONE,
-                                                       &resourceDesc,
-                                                       D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                       nullptr,
-                                                       IID_PPV_ARGS(&m_vertexBuffer));
-
-        if (FAILED(hr)) {
-            LOG_ERROR("DirectX", "创建顶点缓冲区失败: {0}", HrToString(hr));
-            return false;
-        }
-        LOG_INFO("DirectX", "成功创建顶点缓冲区");
-
-        // 将三角形数据复制到顶点缓冲区
-        UINT8* pVertexDataBegin;
-        CD3DX12_RANGE readRange(0, 0);  // 我们不打算从CPU读取这个资源
-        hr = m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin));
-        if (FAILED(hr)) {
-            LOG_ERROR("DirectX", "映射顶点缓冲区失败: {0}", HrToString(hr));
-            return false;
-        }
-        memcpy(pVertexDataBegin, triangleVertices, sizeof(triangleVertices));
-        m_vertexBuffer->Unmap(0, nullptr);
-
-        // 初始化顶点缓冲区视图
-        m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-        // Use the actual stride of the uploaded vertex layout (VertexData)
-        m_vertexBufferView.StrideInBytes = sizeof(VertexData);
-        m_vertexBufferView.SizeInBytes   = vertexBufferSize;
-    }
+    // 顶点缓冲区现在由动态渲染系统管理，不再需要硬编码几何体
 
     // 创建动态上传缓冲区（用于每帧小批量顶点上传）
     {
@@ -636,6 +724,36 @@ bool RenderBackendDirectX12::LoadAssets() {
         }
         m_dynamicIBCPUAddress = ptr;
         m_dynamicIBOffset     = 0;
+    }
+
+    // 创建动态常量缓冲区（用于MVP矩阵、材质参数等）
+    {
+        // 256KB per-frame upload buffer for constants（16个矩阵+其他参数应该足够了）
+        const uint64_t dynamicCBSize = 256ULL * 1024ULL;
+        auto heapProps               = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto resourceDesc            = CD3DX12_RESOURCE_DESC::Buffer(dynamicCBSize);
+        HRESULT hr                   = m_device->CreateCommittedResource(&heapProps,
+                                                         D3D12_HEAP_FLAG_NONE,
+                                                         &resourceDesc,
+                                                         D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                         nullptr,
+                                                         IID_PPV_ARGS(&m_dynamicConstantBuffer));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "创建动态常量缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicCBSize = dynamicCBSize;
+        // 映射一次，保持 CPU 指针直到销毁
+        CD3DX12_RANGE readRange(0, 0);
+        uint8_t* ptr = nullptr;
+        hr           = m_dynamicConstantBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "映射动态常量缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicCBCPUAddress = ptr;
+        m_dynamicCBOffset     = 0;
+        LOG_INFO("DirectX", "成功创建动态常量缓冲区");
     }
 
     return true;
@@ -701,6 +819,35 @@ void RenderBackendDirectX12::UploadAndBindIndexBuffer(ID3D12GraphicsCommandList*
 
     // 为下次分配推进偏移量
     m_dynamicIBOffset = offset + sizeInBytes;
+}
+
+D3D12_GPU_VIRTUAL_ADDRESS RenderBackendDirectX12::GetDynamicConstantBufferAddress(const void* data, size_t sizeInBytes) {
+    if (!m_dynamicConstantBuffer || !m_dynamicCBCPUAddress) {
+        LOG_ERROR("DirectX", "动态常量缓冲区未初始化");
+        return 0;
+    }
+
+    // 对齐到256字节边界（DirectX 12常量缓冲区要求）
+    const size_t alignment = 256;
+    size_t alignedSize = (sizeInBytes + alignment - 1) & ~(alignment - 1);
+
+    // 检查是否有足够空间
+    if (m_dynamicCBOffset + alignedSize > m_dynamicCBSize) {
+        LOG_WARNING("DirectX", "动态常量缓冲区空间不足，重置偏移量");
+        m_dynamicCBOffset = 0;
+    }
+
+    // 复制数据到常量缓冲区
+    uint8_t* dest = m_dynamicCBCPUAddress + m_dynamicCBOffset;
+    memcpy(dest, data, sizeInBytes);
+
+    // 获取GPU虚拟地址
+    D3D12_GPU_VIRTUAL_ADDRESS gpuAddress = m_dynamicConstantBuffer->GetGPUVirtualAddress() + m_dynamicCBOffset;
+
+    // 更新偏移量
+    m_dynamicCBOffset += alignedSize;
+
+    return gpuAddress;
 }
 
 void RenderBackendDirectX12::WaitForPreviousFrame() {
