@@ -12,7 +12,12 @@ jobs:
     
     strategy:
       matrix:
-        build_type: [release, debug]
+        preset: [windows-x64-debug, windows-x64-release]
+        include:
+          - preset: windows-x64-debug
+            build_type: debug
+          - preset: windows-x64-release
+            build_type: release
         
     steps:
     - uses: actions/checkout@v4
@@ -24,6 +29,7 @@ jobs:
       run: |
         Write-Host "Build Environment Info:"
         Write-Host "OS: ${{ runner.os }}"
+        Write-Host "Build Preset: ${{ matrix.preset }}"
         Write-Host "Build Type: ${{ matrix.build_type }}"
         Write-Host "Work Dir: $(Get-Location)"
         try {
@@ -74,10 +80,10 @@ jobs:
       uses: actions/cache@v4
       with:
         path: |
-          ./build/${{ matrix.build_type }}
-        key: ${{ runner.os }}-build-${{ matrix.build_type }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'vcpkg.json') }}
+          ./build/${{ matrix.preset }}
+        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'vcpkg.json') }}
         restore-keys: |
-          ${{ runner.os }}-build-${{ matrix.build_type }}-
+          ${{ runner.os }}-build-${{ matrix.preset }}-
           ${{ runner.os }}-build-
     
     - name: Fetch all history for vcpkg
@@ -90,38 +96,38 @@ jobs:
       
     - name: Configure CMake
       run: |
-        cmake --preset vs2022-${{ matrix.build_type }}
+        cmake --preset ${{ matrix.preset }}
       
     - name: Build
       run: |
         echo "开始构建 ${{ matrix.build_type }} 配置..."
         # 使用最大并行度构建，但限制在合理范围内以避免资源耗尽
-        cmake --build build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --parallel 4 || {
+        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --parallel 4 || {
           echo "构建失败，尝试获取详细错误信息..."
-          cmake --build build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
+          cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
           exit 1
         }
       
     - name: Install
       run: |
         echo "开始安装 ${{ matrix.build_type }} 配置..."
-        cmake --install build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.build_type }}/install || {
+        cmake --install build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.preset }}/install || {
           echo "安装失败，尝试获取详细错误信息..."
-          cmake --install build/${{ matrix.build_type }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.build_type }}/install --verbose 2>&1 | tail -n 100
+          cmake --install build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.preset }}/install --verbose 2>&1 | tail -n 100
           exit 1
         }
       
     - name: Create Distribution Package
       run: |
         echo "创建分发包..."
-        cmake --build build/${{ matrix.build_type }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
+        cmake --build build/${{ matrix.preset }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
           echo "创建分发包失败，尝试获取详细错误信息..."
-          cmake --build build/${{ matrix.build_type }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
+          cmake --build build/${{ matrix.preset }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
           exit 1
         }
-        cmake --build build/${{ matrix.build_type }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
+        cmake --build build/${{ matrix.preset }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
           echo "创建Windows分发包失败，尝试获取详细错误信息..."
-          cmake --build build/${{ matrix.build_type }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
+          cmake --build build/${{ matrix.preset }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
           exit 1
         }
       
@@ -129,10 +135,10 @@ jobs:
       shell: powershell
       run: |
         Write-Host "Verifying Build Artifacts..."
-        Get-ChildItem -Path "build/${{ matrix.build_type }}" -Force
+        Get-ChildItem -Path "build/${{ matrix.preset }}" -Force
         
         # Check distribution package
-        $tarFile = Get-ChildItem -Path "build/${{ matrix.build_type }}" -Filter "PrismaEngine-*.tar.gz" -ErrorAction SilentlyContinue | Select-Object -First 1
+        $tarFile = Get-ChildItem -Path "build/${{ matrix.preset }}" -Filter "PrismaEngine-*.tar.gz" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($tarFile) {
           Write-Host "Found tar.gz package: $($tarFile.Name)"
           try {
@@ -147,7 +153,7 @@ jobs:
           Write-Host "Warning: tar.gz package not found."
         }
         
-        $zipFile = Get-ChildItem -Path "build/${{ matrix.build_type }}" -Filter "PrismaEngine-*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
+        $zipFile = Get-ChildItem -Path "build/${{ matrix.preset }}" -Filter "PrismaEngine-*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($zipFile) {
           Write-Host "Found zip package: $($zipFile.Name)"
           try {
@@ -163,7 +169,7 @@ jobs:
         }
         
         # Check install directory
-        $installDir = "build/${{ matrix.build_type }}/install"
+        $installDir = "build/${{ matrix.preset }}/install"
         if (Test-Path $installDir -PathType Container) {
           Write-Host "Install directory content:"
           Get-ChildItem -Path $installDir -Force
@@ -178,7 +184,7 @@ jobs:
       with:
         name: prisma-engine-${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}-windows
         path: |
-          build/${{ matrix.build_type }}/PrismaEngine-*.tar.gz
-          build/${{ matrix.build_type }}/PrismaEngine-*.zip
-          build/${{ matrix.build_type }}/install/**
+          build/${{ matrix.preset }}/PrismaEngine-*.tar.gz
+          build/${{ matrix.preset }}/PrismaEngine-*.zip
+          build/${{ matrix.preset }}/install/**
         if-no-files-found: warn
