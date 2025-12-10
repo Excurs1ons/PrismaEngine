@@ -45,10 +45,12 @@ void ScriptableRenderPipeline::Execute()
     for (auto& renderPass : m_renderPasses) {
         if (renderPass) {
             // 创建渲染命令上下文
-            // 注意：这里需要根据具体的渲染后端创建相应的上下文
-            // 由于上下文创建依赖于具体后端实现，暂时传空指针
-            // TODO: 需要实现从渲染后端获取上下文的机制
-            renderPass->Execute(nullptr);
+            // 从渲染后端获取上下文
+            auto context = m_renderBackend->CreateCommandContext();
+            renderPass->Execute(context);
+            
+            // 释放上下文
+            delete context;
         }
     }
     
