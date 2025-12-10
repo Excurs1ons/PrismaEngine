@@ -10,6 +10,7 @@ set(PIPELINE_FORWARD_HEADERS
 
 set(ENGINE_GRAPHIC_SOURCES
     ${PIPELINE_FORWARD_SOURCES}
+    graphic/pipelines/SkyboxRenderPass.cpp
     graphic/BasicRenderPipeline.cpp
     graphic/GeometryRenderPass.cpp
     graphic/Material.cpp
@@ -27,6 +28,7 @@ set(ENGINE_GRAPHIC_SOURCES
 
 set(ENGINE_GRAPHIC_HEADERS
     ${PIPELINE_FORWARD_HEADERS}
+    graphic/pipelines/SkyboxRenderPass.h
     graphic/BasicRenderPipeline.h
     graphic/GeometryRenderPass.h
     graphic/Material.h
