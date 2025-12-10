@@ -43,7 +43,7 @@ void CameraController::HandleInput() {
         bool aPressed = InputManager::GetInstance().IsKeyDown(KeyCode::A);
         bool sPressed = InputManager::GetInstance().IsKeyDown(KeyCode::S);
         bool dPressed = InputManager::GetInstance().IsKeyDown(KeyCode::D);
-        LOG_INFO("CameraController", "Input test - W:{0} A:{1} S:{2} D:{3}", wPressed, aPressed, sPressed, dPressed);
+        LOG_TRACE("CameraController", "Input test - W:{0} A:{1} S:{2} D:{3}", wPressed, aPressed, sPressed, dPressed);
     }
 
     // 获取当前相机位置
