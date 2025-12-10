@@ -111,10 +111,101 @@ double PlatformSDL::GetTimeSeconds() const {
 }
 
 bool PlatformSDL::IsKeyDown(KeyCode key) const {
-    // 简单的映射，实际可能需要更复杂的 KeyCode 转换
     const bool* state = SDL_GetKeyboardState(NULL);
-    // TODO: 实现 KeyCode 到 SDL_Scancode 的映射
-    return false; 
+
+    // KeyCode 到 SDL_Scancode 的映射
+    switch (key) {
+        // 字母键
+        case KeyCode::A: return state[SDL_SCANCODE_A];
+        case KeyCode::B: return state[SDL_SCANCODE_B];
+        case KeyCode::C: return state[SDL_SCANCODE_C];
+        case KeyCode::D: return state[SDL_SCANCODE_D];
+        case KeyCode::E: return state[SDL_SCANCODE_E];
+        case KeyCode::F: return state[SDL_SCANCODE_F];
+        case KeyCode::G: return state[SDL_SCANCODE_G];
+        case KeyCode::H: return state[SDL_SCANCODE_H];
+        case KeyCode::I: return state[SDL_SCANCODE_I];
+        case KeyCode::J: return state[SDL_SCANCODE_J];
+        case KeyCode::K: return state[SDL_SCANCODE_K];
+        case KeyCode::L: return state[SDL_SCANCODE_L];
+        case KeyCode::M: return state[SDL_SCANCODE_M];
+        case KeyCode::N: return state[SDL_SCANCODE_N];
+        case KeyCode::O: return state[SDL_SCANCODE_O];
+        case KeyCode::P: return state[SDL_SCANCODE_P];
+        case KeyCode::Q: return state[SDL_SCANCODE_Q];
+        case KeyCode::R: return state[SDL_SCANCODE_R];
+        case KeyCode::S: return state[SDL_SCANCODE_S];
+        case KeyCode::T: return state[SDL_SCANCODE_T];
+        case KeyCode::U: return state[SDL_SCANCODE_U];
+        case KeyCode::V: return state[SDL_SCANCODE_V];
+        case KeyCode::W: return state[SDL_SCANCODE_W];
+        case KeyCode::X: return state[SDL_SCANCODE_X];
+        case KeyCode::Y: return state[SDL_SCANCODE_Y];
+        case KeyCode::Z: return state[SDL_SCANCODE_Z];
+
+        // 数字键
+        case KeyCode::Num0: return state[SDL_SCANCODE_0];
+        case KeyCode::Num1: return state[SDL_SCANCODE_1];
+        case KeyCode::Num2: return state[SDL_SCANCODE_2];
+        case KeyCode::Num3: return state[SDL_SCANCODE_3];
+        case KeyCode::Num4: return state[SDL_SCANCODE_4];
+        case KeyCode::Num5: return state[SDL_SCANCODE_5];
+        case KeyCode::Num6: return state[SDL_SCANCODE_6];
+        case KeyCode::Num7: return state[SDL_SCANCODE_7];
+        case KeyCode::Num8: return state[SDL_SCANCODE_8];
+        case KeyCode::Num9: return state[SDL_SCANCODE_9];
+
+        // 功能键
+        case KeyCode::F1: return state[SDL_SCANCODE_F1];
+        case KeyCode::F2: return state[SDL_SCANCODE_F2];
+        case KeyCode::F3: return state[SDL_SCANCODE_F3];
+        case KeyCode::F4: return state[SDL_SCANCODE_F4];
+        case KeyCode::F5: return state[SDL_SCANCODE_F5];
+        case KeyCode::F6: return state[SDL_SCANCODE_F6];
+        case KeyCode::F7: return state[SDL_SCANCODE_F7];
+        case KeyCode::F8: return state[SDL_SCANCODE_F8];
+        case KeyCode::F9: return state[SDL_SCANCODE_F9];
+        case KeyCode::F10: return state[SDL_SCANCODE_F10];
+        case KeyCode::F11: return state[SDL_SCANCODE_F11];
+        case KeyCode::F12: return state[SDL_SCANCODE_F12];
+
+        // 方向键
+        case KeyCode::ArrowUp: return state[SDL_SCANCODE_UP];
+        case KeyCode::ArrowDown: return state[SDL_SCANCODE_DOWN];
+        case KeyCode::ArrowLeft: return state[SDL_SCANCODE_LEFT];
+        case KeyCode::ArrowRight: return state[SDL_SCANCODE_RIGHT];
+
+        // 特殊键
+        case KeyCode::Space: return state[SDL_SCANCODE_SPACE];
+        case KeyCode::Enter: return state[SDL_SCANCODE_RETURN];
+        case KeyCode::Escape: return state[SDL_SCANCODE_ESCAPE];
+        case KeyCode::Backspace: return state[SDL_SCANCODE_BACKSPACE];
+        case KeyCode::Tab: return state[SDL_SCANCODE_TAB];
+        case KeyCode::CapsLock: return state[SDL_SCANCODE_CAPSLOCK];
+
+        // 修饰键
+        case KeyCode::LeftShift: return state[SDL_SCANCODE_LSHIFT];
+        case KeyCode::RightShift: return state[SDL_SCANCODE_RSHIFT];
+        case KeyCode::LeftControl: return state[SDL_SCANCODE_LCTRL];
+        case KeyCode::RightControl: return state[SDL_SCANCODE_RCTRL];
+        case KeyCode::LeftAlt: return state[SDL_SCANCODE_LALT];
+        case KeyCode::RightAlt: return state[SDL_SCANCODE_RALT];
+
+        // 符号键
+        case KeyCode::Grave: return state[SDL_SCANCODE_GRAVE];
+        case KeyCode::Minus: return state[SDL_SCANCODE_MINUS];
+        case KeyCode::Equal: return state[SDL_SCANCODE_EQUALS];
+        case KeyCode::LeftBracket: return state[SDL_SCANCODE_LEFTBRACKET];
+        case KeyCode::RightBracket: return state[SDL_SCANCODE_RIGHTBRACKET];
+        case KeyCode::Backslash: return state[SDL_SCANCODE_BACKSLASH];
+        case KeyCode::Semicolon: return state[SDL_SCANCODE_SEMICOLON];
+        case KeyCode::Apostrophe: return state[SDL_SCANCODE_APOSTROPHE];
+        case KeyCode::Comma: return state[SDL_SCANCODE_COMMA];
+        case KeyCode::Period: return state[SDL_SCANCODE_PERIOD];
+        case KeyCode::Slash: return state[SDL_SCANCODE_SLASH];
+
+        default: return false;
+    }
 }
 
 bool PlatformSDL::IsMouseButtonDown(MouseButton btn) const {
