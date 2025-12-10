@@ -38,13 +38,20 @@ PS_INPUT VSMain(VS_INPUT input)
     return output;
 }
 
+#ifdef USE_TEXTURE
 TextureCube skyboxTexture : register(t0);
 SamplerState skyboxSampler : register(s0);
+#endif
 
 // 像素着色器入口点
 float4 PSMain(PS_INPUT input) : SV_TARGET
 {
+#ifdef USE_TEXTURE
     // 从立方体贴图中采样颜色
     float4 color = skyboxTexture.Sample(skyboxSampler, input.texCoord);
     return color;
+#else
+    // 如果没有定义纹理，则返回纯色（天蓝色）
+    return float4(0.5f, 0.75f, 1.0f, 1.0f);
+#endif
 }
