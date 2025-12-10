@@ -39,6 +39,9 @@ public:
     // 获取视图-投影矩阵
     XMMATRIX GetViewProjectionMatrix() const;
 
+    // 更新投影矩阵以适应窗口大小
+    void UpdateProjectionMatrix(float windowWidth, float windowHeight);
+
 private:
     XMVECTOR m_position;
     float m_rotation;
