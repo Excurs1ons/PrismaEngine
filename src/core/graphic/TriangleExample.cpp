@@ -1,5 +1,7 @@
 #include "TriangleExample.h"
 #include "Logger.h"
+#include "Material.h"
+#include "ResourceManager.h"
 
 TriangleExample::TriangleExample()
 {
@@ -52,7 +54,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
-    
+
     // 定义三角形顶点数据 (位置 + 颜色)
     float triangleVertices[] = {
         // 位置 (x, y, z)     颜色 (r, g, b, a)
@@ -60,12 +62,15 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
         posX + 0.25f, posY - 0.25f, 0.0f,  r, g, b, a,  // 顶点2
         posX - 0.25f, posY - 0.25f, 0.0f,  r, g, b, a   // 顶点3
     };
-    
+
     // 设置顶点数据
     renderComponent->SetVertexData(triangleVertices, 3);
-    
-    // 设置颜色
-    renderComponent->SetColor(r, g, b, a);
+
+    // 创建并设置材质
+    auto material = Material::CreateDefault();
+    material->SetBaseColor(r, g, b, a);
+    // material->SetName(name + "_Material"); // Material类没有SetName方法，暂时注释
+    renderComponent->SetMaterial(material);
     
     LOG_DEBUG("TriangleExample", "Created triangle '{0}' at position ({1}, {2}) with color ({3}, {4}, {5}, {6})", 
         name, posX, posY, r, g, b, a);
@@ -109,8 +114,13 @@ std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name,
     // 设置索引数据 - 这是新增的功能
     renderComponent->SetIndexData(quadIndices, 6);
 
-    // 设置颜色
-    renderComponent->SetColor(r, g, b, a);
+    // 创建特殊材质 (具有不同的金属度和粗糙度)
+    auto material = Material::CreateDefault();
+    material->SetBaseColor(r, g, b, a);
+    material->SetMetallic(0.8f);  // 高金属度
+    material->SetRoughness(0.2f); // 低粗糙度 (更光滑)
+    // material->SetName(name + "_MetallicMaterial"); // Material类没有SetName方法，暂时注释
+    renderComponent->SetMaterial(material);
 
     LOG_DEBUG("TriangleExample", "创建四边形 '{0}' 在位置 ({1}, {2})，大小 {3}，颜色 ({4}, {5}, {6}, {7})",
         name, posX, posY, size, r, g, b, a);
