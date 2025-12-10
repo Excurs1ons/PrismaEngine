@@ -102,13 +102,10 @@ int main(int argc, char* argv[]) {
         LOG_INFO("Runtime", "尝试启动编辑器");
         lib_name = "PrismaEditor.dll";
     }
-    else if (cmdParser.IsOptionSet("game")) {
-        LOG_INFO("Runtime", "尝试启动游戏");
-        lib_name = "PrismaGame.dll";
-    }
     else {
-        LOG_INFO("Runtime", "未指定或无效的启动模式");
-        return -1;
+        // 默认启动游戏模式（如果没有指定--editor参数）
+        LOG_INFO("Runtime", "默认启动游戏模式");
+        lib_name = "PrismaGame.dll";
     }
 
     // 动态加载 Engine DLL
