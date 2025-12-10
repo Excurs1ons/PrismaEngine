@@ -19,6 +19,7 @@ public:
     bool Initialize() override;
     void Shutdown() override;
 
+    WindowHandle GetWindowHandle() const;
     // 窗口管理
     WindowHandle CreateWindow(const WindowProps& desc) override;
     void DestroyWindow(WindowHandle window) override;
