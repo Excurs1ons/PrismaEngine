@@ -3,6 +3,7 @@
 #include "PlatformWindows.h"
 #include "RenderBackendDirectX12.h"
 #include "RenderBackendVulkan.h"
+#include "pipelines/forward/ForwardPipeline.h"
 #if defined(_WIN32)
 #include <Windows.h>
 extern HWND g_hWnd;
@@ -48,10 +49,10 @@ bool RenderSystem::Initialize(
         return false;
     }
     
-    // 初始化基本渲染管线
-    this->basicRenderPipeline = std::make_unique<BasicRenderPipeline>();
-    if (!this->basicRenderPipeline->Initialize(this->renderPipe.get())) {
-        LOG_ERROR("Render", "基本渲染管线初始化失败");
+    // 初始化前向渲染管线
+    this->forwardPipeline = std::make_unique<Graphic::Pipelines::Forward::ForwardPipeline>();
+    if (!this->forwardPipeline->Initialize(this->renderPipe.get())) {
+        LOG_ERROR("Render", "前向渲染管线初始化失败");
         return false;
     }
     
@@ -71,10 +72,10 @@ bool RenderSystem::Initialize() {
 void RenderSystem::Shutdown() {
     LOG_INFO("Render", "渲染系统开始关闭");
     
-    // 先关闭基本渲染管线
-    if (basicRenderPipeline) {
-        basicRenderPipeline->Shutdown();
-        basicRenderPipeline.reset();
+    // 先关闭前向渲染管线
+    if (forwardPipeline) {
+        forwardPipeline->Shutdown();
+        forwardPipeline.reset();
     }
     
     // 先关闭渲染管线
@@ -98,6 +99,12 @@ void RenderSystem::Update(float deltaTime) {
     
     // 执行渲染帧
     renderBackend->BeginFrame();
+    
+    // 执行可编程渲染管线
+    if (renderPipe) {
+        renderPipe->Execute();
+    }
+    
     renderBackend->EndFrame();
     renderBackend->Present();
 }

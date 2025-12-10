@@ -35,6 +35,7 @@ bool BasicRenderPipeline::Initialize(ScriptableRenderPipe* renderPipe)
         m_renderPipe->AddRenderPass(m_postProcessPass);
     }
     
+    LOG_WARNING("BasicRenderPipeline", "Basic render pipeline is deprecated. Please use ForwardPipeline instead.");
     LOG_INFO("BasicRenderPipeline", "Basic render pipeline initialized successfully");
     return true;
 }

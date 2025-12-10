@@ -6,7 +6,7 @@
 
 namespace Engine {
 
-// 基本渲染管线实现
+// 基本渲染管线实现 (已弃用)
 class BasicRenderPipeline
 {
 public:
