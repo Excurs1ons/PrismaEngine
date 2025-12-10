@@ -3,10 +3,10 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Transform.h"
-#include "RendererComponent.h"
+#include "RenderComponent.h"
 #include <memory>
 
-class MeshRenderer :public RendererComponent
+class MeshRenderer :public RenderComponent
 {
 private:
     std::shared_ptr<Mesh> m_mesh;

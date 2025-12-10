@@ -15,7 +15,8 @@
 #include "Shader.h"
 #include "RenderThread.h"
 #include "Logger.h"
-
+#include "GameObject.h"
+#include "Transform.h"
 #include "SceneManager.h"
 
 using namespace Microsoft::WRL;
@@ -281,6 +282,15 @@ void RenderBackendDirectX12::BeginFrame() {
 
         // 设置相机矩阵到渲染上下文
         context.SetConstantBuffer("ViewProjection", reinterpret_cast<const float*>(&cameraMatrix), 16);
+
+        // 添加调试日志 - 输出相机位置和矩阵信息
+        if (mainCamera) {
+            XMVECTOR camPos = XMLoadFloat3(&mainCamera->gameObject()->transform()->position);
+            XMFLOAT3 camPosFloat;
+            XMStoreFloat3(&camPosFloat, camPos);
+            LOG_DEBUG("RenderBackend", "Camera pos({0:.2f}, {1:.2f}, {2:.2f}) ViewProjection matrix set",
+                camPosFloat.x, camPosFloat.y, camPosFloat.z);
+        }
 
         // 渲染场景
         scenePtr->Render(&context);

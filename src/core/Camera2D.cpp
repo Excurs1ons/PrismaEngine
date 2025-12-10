@@ -89,14 +89,19 @@ XMMATRIX Camera2D::GetViewMatrix() const
 {
     if (m_isViewDirty)
     {
-        // 计算视图矩阵: Rotation * Translation的逆矩阵
-        XMMATRIX translationMatrix = XMMatrixTranslationFromVector(-m_position);
-        XMMATRIX rotationMatrix = XMMatrixRotationZ(-m_rotation);
-        
-        m_viewMatrix = XMMatrixMultiply(translationMatrix, rotationMatrix);
+        // 计算视图矩阵: 相机的变换矩阵的逆矩阵
+        // 注意顺序：先旋转，再平移
+        XMMATRIX translationMatrix = XMMatrixTranslationFromVector(m_position);
+        XMMATRIX rotationMatrix = XMMatrixRotationZ(m_rotation);
+
+        // 组合相机的变换矩阵：平移 * 旋转
+        XMMATRIX cameraMatrix = XMMatrixMultiply(translationMatrix, rotationMatrix);
+
+        // 视图矩阵是相机变换矩阵的逆矩阵
+        m_viewMatrix = XMMatrixInverse(nullptr, cameraMatrix);
         m_isViewDirty = false;
     }
-    
+
     return m_viewMatrix;
 }
 
