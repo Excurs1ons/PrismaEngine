@@ -1,4 +1,5 @@
 #pragma once
+#include "GameObject.h"
 #include "Component.h"
 #include "RenderCommandContext.h"
 #include <DirectXMath.h>

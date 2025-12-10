@@ -1,11 +1,8 @@
 #pragma once
-#include "Component.h"
+#include "Transform.h"
 #include <memory>
 #include <string>
 #include <vector>
-
-// 前向声明
-class Transform;
 
 class GameObject
 {
@@ -14,7 +11,7 @@ public:
     GameObject(std::string name, std::unique_ptr<Transform> transform = nullptr);
     
     //get属性
-    Transform* transform() { return m_transform.get(); }
+    Transform* transform() const { return m_transform.get(); }
     
 	/// @brief 添加组件
     template<typename T>

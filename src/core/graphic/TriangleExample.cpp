@@ -59,9 +59,9 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     
     // 添加变换组件并设置位置
     auto transform = gameObject->transform();
-    transform->position[0] = posX;
-    transform->position[1] = posY;
-    transform->position[2] = 0.0f;
+    transform->position.x = posX;
+    transform->position.y = posY;
+    transform->position.z = 0.0f;
     
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
@@ -97,9 +97,9 @@ std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name,
 
     // 添加变换组件并设置位置
     auto transform = gameObject->transform();
-    transform->position[0] = posX;
-    transform->position[1] = posY;
-    transform->position[2] = 0.0f;
+    transform->position.x = posX;
+    transform->position.y = posY;
+    transform->position.z = 0.0f;
 
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
@@ -146,9 +146,9 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     
     // 添加变换组件并设置位置
     auto transform = gameObject->transform();
-    transform->position[0] = posX;
-    transform->position[1] = posY;
-    transform->position[2] = 0.0f;
+    transform->position.x = posX;
+    transform->position.y = posY;
+    transform->position.z = 0.0f;
     
     // 添加相机组件
     auto camera = gameObject->AddComponent<Camera2D>();

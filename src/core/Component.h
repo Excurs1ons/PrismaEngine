@@ -4,10 +4,12 @@ class GameObject;
 class Component {
 
 protected:
-    GameObject* m_owner;
-
+    GameObject* m_owner = nullptr;
 public:
+    virtual GameObject* gameObject();
+
     virtual void Update(float deltaTime);
+    Component();
     //Component():m_owner(nullptr) {}
     virtual ~Component() {}
     virtual void Owner(GameObject* owner) { m_owner = owner; }
