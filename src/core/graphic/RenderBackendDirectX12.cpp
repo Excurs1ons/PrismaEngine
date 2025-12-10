@@ -265,6 +265,8 @@ void RenderBackendDirectX12::BeginFrame() {
             // 尝试转换为Camera2D来获取视图投影矩阵
             Camera2D* camera2D = dynamic_cast<Camera2D*>(mainCamera);
             if (camera2D) {
+                // 更新投影矩阵以适应当前窗口宽高比
+                camera2D->UpdateProjectionMatrix(static_cast<float>(m_width), static_cast<float>(m_height));
                 cameraMatrix = camera2D->GetViewProjectionMatrix();
                 LOG_DEBUG("RenderBackendDirectX12", "Using Camera2D matrix from main camera");
             } else {
