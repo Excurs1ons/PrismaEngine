@@ -15,11 +15,11 @@ namespace Engine {
 static std::unordered_map<void*, uint32_t> s_acquiredImageIndex;
 static std::mutex s_acquiredImageMutex;
 
-RendererVulkan::RendererVulkan()
+RenderBackendVulkan::RenderBackendVulkan()
     : instance(VK_NULL_HANDLE), physicalDevice(VK_NULL_HANDLE), device(VK_NULL_HANDLE), graphicsQueue(VK_NULL_HANDLE),
       renderPass(VK_NULL_HANDLE), swapChain(VK_NULL_HANDLE), commandPool(VK_NULL_HANDLE),
       imageAvailableSemaphore(VK_NULL_HANDLE), renderFinishedSemaphore(VK_NULL_HANDLE), inFlightFence(VK_NULL_HANDLE) {}
-bool RendererVulkan::Initialize(Platform* platform, void* windowHandle, void* surface, uint32_t width, uint32_t height) {
+bool RenderBackendVulkan::Initialize(Platform* platform, void* windowHandle, void* surface, uint32_t width, uint32_t height) {
     try {
         // 1. 如果 instance 为空，创建它
         if (instance == VK_NULL_HANDLE) {
@@ -83,7 +83,7 @@ bool RendererVulkan::Initialize(Platform* platform, void* windowHandle, void* su
     }
 }
 
-void RendererVulkan::Shutdown() {
+void RenderBackendVulkan::Shutdown() {
     vkDestroyFence(device, inFlightFence, nullptr);
     vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
     vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
@@ -112,7 +112,7 @@ void RendererVulkan::Shutdown() {
     LOG_INFO("Vulkan", "Vulkan renderer shutdown completed");
 }
 
-void RendererVulkan::BeginFrame() {
+void RenderBackendVulkan::BeginFrame() {
     // 创建渲染帧日志作用域
     LogScope* frameScope = LogScopeManager::GetInstance().CreateScope("VulkanFrame");
     Logger::GetInstance().PushLogScope(frameScope);
@@ -219,7 +219,7 @@ void RendererVulkan::BeginFrame() {
     // 正常结束BeginFrame，继续保持作用域活跃到EndFrame
 }
 
-void RendererVulkan::EndFrame() {
+void RenderBackendVulkan::EndFrame() {
     // 获取当前日志作用域
     LogScope* frameScope = Logger::GetInstance().GetCurrentLogScope();
 
@@ -379,7 +379,7 @@ void RendererVulkan::EndFrame() {
     }
 }
 
-void RendererVulkan::Resize(uint32_t width, uint32_t height) {
+void RenderBackendVulkan::Resize(uint32_t width, uint32_t height) {
     if (width == 0 || height == 0) return;
 
     m_swapchainExtent.width = width;
@@ -409,19 +409,19 @@ void RendererVulkan::Resize(uint32_t width, uint32_t height) {
     LOG_INFO("Vulkan", "Swapchain resized to {0}x{1}", width, height);
 }
 
-void RendererVulkan::SubmitRenderCommand(const RenderCommand& cmd) {
+void RenderBackendVulkan::SubmitRenderCommand(const RenderCommand& cmd) {
     // TODO: 实现具体的渲染命令提交
 }
 
-bool RendererVulkan::Supports(RendererFeature feature) const {
+bool RenderBackendVulkan::Supports(RendererFeature feature) const {
     return false;
 }
 
-void RendererVulkan::Present() {
+void RenderBackendVulkan::Present() {
     // 在EndFrame中已经实现了呈现逻辑
 }
 
-bool RendererVulkan::CreateInstance(const char* const* extensions, uint32_t extCount) {
+bool RenderBackendVulkan::CreateInstance(const char* const* extensions, uint32_t extCount) {
     VkApplicationInfo appInfo{};
     appInfo.sType              = VK_STRUCTURE_TYPE_APPLICATION_INFO;
     appInfo.pApplicationName   = "YAGE Engine";
@@ -445,7 +445,7 @@ bool RendererVulkan::CreateInstance(const char* const* extensions, uint32_t extC
     return true;
 }
 
-void RendererVulkan::CreateSwapChain() {
+void RenderBackendVulkan::CreateSwapChain() {
     // 查询交换链支持信息
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, m_surface, &capabilities);
@@ -510,7 +510,7 @@ void RendererVulkan::CreateSwapChain() {
     vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
 }
 
-void RendererVulkan::CreateImageViews() {
+void RenderBackendVulkan::CreateImageViews() {
     swapChainImageViews.resize(swapChainImages.size());
 
     for (size_t i = 0; i < swapChainImages.size(); i++) {
@@ -538,7 +538,7 @@ void RendererVulkan::CreateImageViews() {
     }
 }
 
-void RendererVulkan::CreateRenderPass() {
+void RenderBackendVulkan::CreateRenderPass() {
     VkAttachmentDescription colorAttachment{};
     colorAttachment.format         = swapChainImageFormat;
     colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
@@ -570,7 +570,7 @@ void RendererVulkan::CreateRenderPass() {
     }
 }
 
-void RendererVulkan::CreateFramebuffers() {
+void RenderBackendVulkan::CreateFramebuffers() {
     swapChainFramebuffers.resize(swapChainImageViews.size());
 
     for (size_t i = 0; i < swapChainImageViews.size(); i++) {
@@ -591,7 +591,7 @@ void RendererVulkan::CreateFramebuffers() {
     }
 }
 
-void RendererVulkan::CreateCommandPool() {
+void RenderBackendVulkan::CreateCommandPool() {
     QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(physicalDevice);
 
     VkCommandPoolCreateInfo poolInfo{};
@@ -604,7 +604,7 @@ void RendererVulkan::CreateCommandPool() {
     }
 }
 
-void RendererVulkan::CreateCommandBuffers() {
+void RenderBackendVulkan::CreateCommandBuffers() {
     commandBuffers.resize(swapChainFramebuffers.size());
 
     VkCommandBufferAllocateInfo allocInfo{};
@@ -618,7 +618,7 @@ void RendererVulkan::CreateCommandBuffers() {
     }
 }
 
-void RendererVulkan::PickPhysicalDevice() {
+void RenderBackendVulkan::PickPhysicalDevice() {
     uint32_t deviceCount = 0;
     vkEnumeratePhysicalDevices(instance, &deviceCount, nullptr);
 
@@ -644,7 +644,7 @@ void RendererVulkan::PickPhysicalDevice() {
     }
 }
 
-void RendererVulkan::CreateLogicalDevice() {
+void RenderBackendVulkan::CreateLogicalDevice() {
     QueueFamilyIndices indices     = FindQueueFamilies(physicalDevice);
     const char* deviceExtensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
     VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -674,7 +674,7 @@ void RendererVulkan::CreateLogicalDevice() {
     vkGetDeviceQueue(device, indices.graphicsFamily.value(), 0, &graphicsQueue);
 }
 
-bool RendererVulkan::IsDeviceSuitable(VkPhysicalDevice device) {
+bool RenderBackendVulkan::IsDeviceSuitable(VkPhysicalDevice device) {
     VkPhysicalDeviceProperties deviceProperties;
     vkGetPhysicalDeviceProperties(device, &deviceProperties);
 
@@ -684,7 +684,7 @@ bool RendererVulkan::IsDeviceSuitable(VkPhysicalDevice device) {
     return deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU && deviceFeatures.geometryShader;
 }
 
-QueueFamilyIndices RendererVulkan::FindQueueFamilies(VkPhysicalDevice device) {
+QueueFamilyIndices RenderBackendVulkan::FindQueueFamilies(VkPhysicalDevice device) {
     QueueFamilyIndices indices;
 
     uint32_t queueFamilyCount = 0;
