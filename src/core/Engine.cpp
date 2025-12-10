@@ -5,6 +5,7 @@
 #include "ResourceManager.h"
 #include "SceneManager.h"
 #include "ThreadManager.h"
+#include "InputManager.h"
 
 #include "PlatformWindows.h"
 
@@ -48,6 +49,10 @@ namespace Engine {
     int EngineCore::MainLoop() {
         isRunning_ = true;
         auto platform = PlatformWindows::GetInstance();
+
+        // 初始化输入管理器
+        InputManager::GetInstance().SetPlatform(platform.get());
+
         // 主循环
         while (IsRunning()) {
             Tick();
@@ -96,9 +101,9 @@ void EngineCore::Tick() {
 
     // 简单的退出条件：运行10秒后退出
     // 在实际应用中，这里应该检查窗口是否关闭、是否有退出请求等
-    if ((int)Time::TotalTime % 2 == 0) {
-        LOG_INFO("Engine", "已运行{0}秒，DeltaTime = {1}", Time::TotalTime, Time::DeltaTime);
-    }
+    // if ((int)Time::TotalTime % 2 == 0) {
+    //     LOG_INFO("Engine", "已运行{0}秒，DeltaTime = {1}", Time::TotalTime, Time::DeltaTime);
+    // }
 }
 
 }  // namespace Engine
