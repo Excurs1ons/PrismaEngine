@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.31)
+
 project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
 
 # 检查是否在 Visual Studio 中
@@ -44,29 +45,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     else()
         set(PLATFORM_ARCH "x86")
     endif()
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    set(PLATFORM_NAME "linux")
-    set(PLATFORM_ARCH "x64")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(PLATFORM_NAME "macos")
-    set(PLATFORM_ARCH "universal")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    set(PLATFORM_NAME "android")
-    if(DEFINED ANDROID_ABI)
-        if(ANDROID_ABI STREQUAL "arm64-v8a")
-            set(PLATFORM_ARCH "arm64")
-        elseif(ANDROID_ABI STREQUAL "armeabi-v7a")
-            set(PLATFORM_ARCH "arm")
-        elseif(ANDROID_ABI STREQUAL "x86_64")
-            set(PLATFORM_ARCH "x64")
-        elseif(ANDROID_ABI STREQUAL "x86")
-            set(PLATFORM_ARCH "x86")
-        else()
-            set(PLATFORM_ARCH ${ANDROID_ABI})
-        endif()
-    else()
-        set(PLATFORM_ARCH "arm64")
-    endif()
 else()
     set(PLATFORM_NAME "${CMAKE_SYSTEM_NAME}")
     set(PLATFORM_ARCH "unknown")
@@ -90,41 +68,12 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 message(STATUS "Single-config output: bin, lib")
 
-if (CMAKE_SYSTEM_NAME STREQUAL "Android")
-    message(STATUS "Building for Android")
-
-    # 检查 Android NDK 环境变量
-    if(DEFINED ANDROID_NDK_HOME)
-        message(STATUS "ANDROID_NDK_HOME is set to: ${ANDROID_NDK_HOME}")
-    else()
-        message(WARNING "ANDROID_NDK_HOME is not set")
-    endif()
-
-    # 检查 Android SDK 环境变量
-    if(DEFINED ENV{ANDROID_HOME})
-        message(STATUS "ANDROID_HOME is set to: $ENV{ANDROID_HOME}")
-    elseif(DEFINED ENV{ANDROID_SDK_ROOT})
-        message(STATUS "ANDROID_SDK_ROOT is set to: $ENV{ANDROID_SDK_ROOT}")
-    else()
-        message(WARNING "Neither ANDROID_HOME nor ANDROID_SDK_ROOT is set")
-    endif()
-
-    # 检查 Android 构建参数
-    if(DEFINED ANDROID_ABI)
-        message(STATUS "Android ABI: ${ANDROID_ABI}")
-    endif()
-    if(DEFINED ANDROID_PLATFORM)
-        message(STATUS "Android Platform: ${ANDROID_PLATFORM}")
-    endif()
-
-    add_subdirectory(projects/android)
-else()
-    message(STATUS "Building for Desktop")
-    add_subdirectory(src/core)
-    add_subdirectory(src/runtime)
-    add_subdirectory(src/game)
-    add_subdirectory(src/editor)
-endif()
+# Windows 构建
+message(STATUS "Building for Windows")
+add_subdirectory(src/core)
+add_subdirectory(src/runtime)
+add_subdirectory(src/game)
+add_subdirectory(src/editor)
 
 # 安装projects目录
 install(DIRECTORY projects/
@@ -197,15 +146,6 @@ if(WIN32)
     set(CPACK_NSIS_PACKAGE_NAME "Prisma Engine")
     set(CPACK_NSIS_CONTACT "contact@example.com")
     set(CPACK_NSIS_MODIFY_PATH ON)
-endif()
-
-# 其他平台配置
-if(UNIX AND NOT APPLE)
-    set(CPACK_GENERATOR "TGZ;DEB")
-endif()
-
-if(APPLE)
-    set(CPACK_GENERATOR "DragNDrop")
 endif()
 
 # 安装配置文件

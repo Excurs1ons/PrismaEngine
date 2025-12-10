@@ -36,11 +36,17 @@ protected:
         static_cast<RendererFeature>(RendererFeature::MultiThreaded | RendererFeature::BindlessTextures);
 
 public:
-    // Upload per-frame vertex data and bind to given command list
+    // 上传并绑定顶点缓冲区数据到指定命令列表
     void UploadAndBindVertexBuffer(ID3D12GraphicsCommandList* cmdList,
                                    const void* data,
                                    uint32_t sizeInBytes,
                                    uint32_t strideInBytes);
+
+    // 上传并绑定索引缓冲区数据到指定命令列表
+    void UploadAndBindIndexBuffer(ID3D12GraphicsCommandList* cmdList,
+                                  const void* data,
+                                  uint32_t sizeInBytes,
+                                  bool use16BitIndices = true);
 
 private:
     bool LoadPipeline();
@@ -66,11 +72,17 @@ private:
     ComPtr<ID3D12Resource> m_vertexBuffer;
     D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 
-    // Dynamic per-frame upload buffer for small meshes
+    // 动态顶点上传缓冲区（每帧小批量网格数据）
     ComPtr<ID3D12Resource> m_dynamicVertexBuffer;
     uint8_t* m_dynamicVBCPUAddress = nullptr;
     uint64_t m_dynamicVBSize       = 0;
     uint64_t m_dynamicVBOffset     = 0;
+
+    // 动态索引上传缓冲区（每帧小批量索引数据）
+    ComPtr<ID3D12Resource> m_dynamicIndexBuffer;
+    uint8_t* m_dynamicIBCPUAddress = nullptr;
+    uint64_t m_dynamicIBSize       = 0;
+    uint64_t m_dynamicIBOffset     = 0;
 
     // Synchronization objects.
     UINT m_frameIndex;

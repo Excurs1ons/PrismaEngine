@@ -16,7 +16,10 @@ public:
 
     // 设置顶点缓冲区（将数据复制到后端的 per-frame upload 区并绑定）
     virtual void SetVertexBuffer(const void* data, uint32_t sizeInBytes, uint32_t strideInBytes) = 0;
-    
+
+    // 设置索引缓冲区（将数据复制到后端的 per-frame upload 区并绑定）
+    virtual void SetIndexBuffer(const void* data, uint32_t sizeInBytes, bool use16BitIndices = true) = 0;
+
     // 设置着色器资源
     virtual void SetShaderResource(const char* name, void* resource) = 0;
     
