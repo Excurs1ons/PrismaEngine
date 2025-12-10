@@ -57,6 +57,10 @@ private:
     std::shared_ptr<Material> m_skyboxMaterial;
     std::shared_ptr<Shader> m_skyboxShader;
     
+    // 网格数据
+    std::vector<float> m_vertices;
+    std::vector<uint16_t> m_indices;
+    
     // 常量缓冲区数据
     std::vector<float> m_constantBuffer;
     

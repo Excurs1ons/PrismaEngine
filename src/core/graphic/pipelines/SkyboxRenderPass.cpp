@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "ResourceManager.h"
 #include "Shader.h"
+#include <DirectXColors.h>
 
 namespace Engine {
 namespace Graphic {
@@ -33,14 +34,34 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
 {
     LOG_DEBUG("SkyboxRenderPass", "Executing skybox render pass");
     
-    // 实现天空盒渲染逻辑
-    // 1. 设置天空盒着色器
-    // 2. 绑定立方体贴图纹理
-    // 3. 设置视图投影矩阵（去掉平移部分）
-    // 4. 渲染立方体网格
+    if (!context) {
+        LOG_WARNING("SkyboxRenderPass", "Render context is null");
+        return;
+    }
     
-    // 在实际实现中，我们需要访问渲染后端来执行这些操作
-    // 这里只是占位符实现
+    // 实现天空盒渲染逻辑
+    if (m_skyboxShader && !m_vertices.empty() && !m_indices.empty()) {
+        // 1. 设置常量缓冲区（视图投影矩阵）
+        if (!m_constantBuffer.empty()) {
+            context->SetConstantBuffer("ConstantBuffer", m_constantBuffer.data(), m_constantBuffer.size());
+        }
+        
+        // 2. 设置顶点和索引缓冲区
+        context->SetVertexBuffer(m_vertices.data(), 
+                               static_cast<uint32_t>(m_vertices.size() * sizeof(float)), 
+                               3 * sizeof(float)); // 3个float表示一个顶点位置
+        
+        context->SetIndexBuffer(m_indices.data(), 
+                              static_cast<uint32_t>(m_indices.size() * sizeof(uint16_t)), 
+                              true); // 使用16位索引
+        
+        // 3. 绘制立方体
+        context->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
+        
+        LOG_DEBUG("SkyboxRenderPass", "天空盒渲染完成");
+    } else {
+        LOG_WARNING("SkyboxRenderPass", "天空盒着色器未加载或网格数据缺失，跳过渲染");
+    }
 }
 
 void SkyboxRenderPass::SetRenderTarget(void* renderTarget)
@@ -109,7 +130,7 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
     // 4----7
     
     // 顶点数据
-    float vertices[] = {
+    m_vertices = {
         // 前面
         -1.0f, -1.0f,  1.0f,  // 0
          1.0f, -1.0f,  1.0f,  // 1
@@ -123,7 +144,7 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
     };
     
     // 索引数据 (三角形列表)
-    uint16_t indices[] = {
+    m_indices = {
         // 前面
         0, 1, 2,
         2, 3, 0,
@@ -144,9 +165,8 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
         1, 0, 4
     };
     
-    // 在实际实现中，我们将这些数据存储到 m_skyboxMesh 中
-    // 这里只是示意性的注释
-    LOG_DEBUG("SkyboxRenderPass", "天空盒网格数据已准备: 8个顶点, 36个索引");
+    LOG_DEBUG("SkyboxRenderPass", "天空盒网格数据已准备: {0}个顶点, {1}个索引", 
+              m_vertices.size() / 3, m_indices.size());
 }
 
 } // namespace Pipelines
