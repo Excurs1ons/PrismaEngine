@@ -26,11 +26,13 @@ PS_INPUT VSMain(VS_INPUT input)
     // 注意：对于天空盒，我们通常会移除视图矩阵中的平移部分
     // 这样天空盒就会跟随摄像机移动，看起来永远无法到达
     float4x4 viewProjection = mViewProjection;
-    viewProjection[3][0] = 0.0f;
-    viewProjection[3][1] = 0.0f;
-    viewProjection[3][2] = 0.0f;
+    viewProjection._m30 = 0.0f;
+    viewProjection._m31 = 0.0f;
+    viewProjection._m32 = 0.0f;
     
+    // 将w分量设置为z分量，这样可以确保天空盒总是在最远的地方渲染
     output.position = mul(pos, viewProjection);
+    output.position.z = output.position.w;
     
     // 纹理坐标就是顶点位置本身，因为我们要从立方体贴图中采样
     output.texCoord = input.position;
@@ -51,7 +53,7 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
     float4 color = skyboxTexture.Sample(skyboxSampler, input.texCoord);
     return color;
 #else
-    // 如果没有定义纹理，则返回纯色（天蓝色）
-    return float4(0.5f, 0.75f, 1.0f, 1.0f);
+    // 如果没有定义纹理，则返回纯色（粉红色）便于识别
+    return float4(1.0f, 0.0f, 1.0f, 1.0f); // 粉红色
 #endif
 }
