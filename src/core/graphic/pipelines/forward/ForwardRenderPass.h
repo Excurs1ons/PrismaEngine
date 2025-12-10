@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../RenderPass.h"
+#include "graphic/RenderPass.h"
 
 namespace Engine {
 namespace Graphic {

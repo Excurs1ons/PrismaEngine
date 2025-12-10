@@ -14,7 +14,7 @@ BasicRenderPipeline::~BasicRenderPipeline()
     Shutdown();
 }
 
-bool BasicRenderPipeline::Initialize(ScriptableRenderPipe* renderPipe)
+bool BasicRenderPipeline::Initialize(ScriptableRenderPipeline* renderPipe)
 {
     if (!renderPipe) {
         LOG_ERROR("BasicRenderPipeline", "Invalid render pipe provided");

@@ -379,7 +379,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
     LOG_INFO("DirectX", "成功创建DXGI工厂");
 
     if (g_hWnd == nullptr) {
-        LOG_ERROR("DirectX", "无效的窗口句 HANDLE");
+        LOG_ERROR("DirectX", "无效的窗口句柄");
         return false;
     }
 

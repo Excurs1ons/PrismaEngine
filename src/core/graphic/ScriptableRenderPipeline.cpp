@@ -1,40 +1,40 @@
-#include "ScriptableRenderPipe.h"
+#include "ScriptableRenderPipeline.h"
 #include "Logger.h"
 
 namespace Engine {
 
-ScriptableRenderPipe::ScriptableRenderPipe()
+ScriptableRenderPipeline::ScriptableRenderPipeline()
     : m_renderBackend(nullptr)
     , m_width(0)
     , m_height(0)
 {
 }
 
-ScriptableRenderPipe::~ScriptableRenderPipe()
+ScriptableRenderPipeline::~ScriptableRenderPipeline()
 {
     Shutdown();
 }
 
-bool ScriptableRenderPipe::Initialize(RenderBackend* renderBackend)
+bool ScriptableRenderPipeline::Initialize(RenderBackend* renderBackend)
 {
     if (!renderBackend) {
-        LOG_ERROR("ScriptableRenderPipe", "Invalid render backend provided");
+        LOG_ERROR("ScriptableRenderPipeline", "无效的渲染后端");
         return false;
     }
 
     m_renderBackend = renderBackend;
-    LOG_INFO("ScriptableRenderPipe", "Scriptable render pipe initialized successfully");
+    LOG_INFO("ScriptableRenderPipeline", "渲染管线初始化成功");
     return true;
 }
 
-void ScriptableRenderPipe::Shutdown()
+void ScriptableRenderPipeline::Shutdown()
 {
     m_renderPasses.clear();
     m_renderBackend = nullptr;
     LOG_INFO("ScriptableRenderPipe", "Scriptable render pipe shutdown completed");
 }
 
-void ScriptableRenderPipe::Execute()
+void ScriptableRenderPipeline::Execute()
 {
     if (!m_renderBackend) {
         LOG_ERROR("ScriptableRenderPipe", "Render backend is not initialized");
@@ -55,7 +55,7 @@ void ScriptableRenderPipe::Execute()
     LOG_DEBUG("ScriptableRenderPipe", "Executed {0} render passes", m_renderPasses.size());
 }
 
-void ScriptableRenderPipe::AddRenderPass(std::shared_ptr<RenderPass> renderPass)
+void ScriptableRenderPipeline::AddRenderPass(std::shared_ptr<RenderPass> renderPass)
 {
     if (renderPass) {
         m_renderPasses.push_back(renderPass);
@@ -63,7 +63,7 @@ void ScriptableRenderPipe::AddRenderPass(std::shared_ptr<RenderPass> renderPass)
     }
 }
 
-void ScriptableRenderPipe::RemoveRenderPass(std::shared_ptr<RenderPass> renderPass)
+void ScriptableRenderPipeline::RemoveRenderPass(std::shared_ptr<RenderPass> renderPass)
 {
     if (renderPass) {
         auto it = std::find(m_renderPasses.begin(), m_renderPasses.end(), renderPass);
@@ -74,7 +74,7 @@ void ScriptableRenderPipe::RemoveRenderPass(std::shared_ptr<RenderPass> renderPa
     }
 }
 
-void ScriptableRenderPipe::SetViewportSize(uint32_t width, uint32_t height)
+void ScriptableRenderPipeline::SetViewportSize(uint32_t width, uint32_t height)
 {
     m_width = width;
     m_height = height;

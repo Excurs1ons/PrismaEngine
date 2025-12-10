@@ -1,12 +1,34 @@
 # 引擎核心库
 
+# 包含graphic子目录的CMakeLists.txt来定义变量
+include(graphic/CMakeLists.txt)
+
 # 收集源文件
-file(GLOB_RECURSE ENGINE_SOURCES 
+set(ENGINE_SOURCES "")
+set(ENGINE_HEADERS "")
+
+# 添加core目录下的源文件（除了graphic目录）
+file(GLOB_RECURSE CORE_SOURCES 
     "*.cpp"
 )
 
-file(GLOB_RECURSE ENGINE_HEADERS
+list(FILTER CORE_SOURCES EXCLUDE REGEX "graphic/")
+
+file(GLOB_RECURSE CORE_HEADERS
     "*.h"
+)
+
+list(FILTER CORE_HEADERS EXCLUDE REGEX "graphic/")
+
+# 添加graphic目录下的源文件和头文件（使用在graphic/CMakeLists.txt中定义的变量）
+set(ENGINE_SOURCES 
+    ${CORE_SOURCES}
+    ${ENGINE_GRAPHIC_SOURCES}
+)
+
+set(ENGINE_HEADERS
+    ${CORE_HEADERS}
+    ${ENGINE_GRAPHIC_HEADERS}
 )
 
 # 创建静态库
