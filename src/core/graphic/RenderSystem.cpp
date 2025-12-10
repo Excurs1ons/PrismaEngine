@@ -2,7 +2,7 @@
 #include "Logger.h"
 #include "PlatformWindows.h"
 #include "RenderBackendDirectX12.h"
-#include "RendererVulkan.h"
+#include "RenderBackendVulkan.h"
 #if defined(_WIN32)
 #include <Windows.h>
 extern HWND g_hWnd;
@@ -22,7 +22,7 @@ bool RenderSystem::Initialize(
             this->renderBackend = std::make_unique<RenderBackendDirectX12>(L"RendererDirectX");
             break;
         case RenderBackendType::Vulkan:
-            this->renderBackend = std::make_unique<RendererVulkan>();
+            this->renderBackend = std::make_unique<RenderBackendVulkan>();
             break;
         case RenderBackendType::None:
         default:
@@ -48,6 +48,13 @@ bool RenderSystem::Initialize(
         return false;
     }
     
+    // 初始化基本渲染管线
+    this->basicRenderPipeline = std::make_unique<BasicRenderPipeline>();
+    if (!this->basicRenderPipeline->Initialize(this->renderPipe.get())) {
+        LOG_ERROR("Render", "基本渲染管线初始化失败");
+        return false;
+    }
+    
     this->renderBackend->isInitialized = true;
     LOG_INFO("Render", "渲染系统初始化完成");
     return true;
@@ -63,6 +70,12 @@ bool RenderSystem::Initialize() {
 
 void RenderSystem::Shutdown() {
     LOG_INFO("Render", "渲染系统开始关闭");
+    
+    // 先关闭基本渲染管线
+    if (basicRenderPipeline) {
+        basicRenderPipeline->Shutdown();
+        basicRenderPipeline.reset();
+    }
     
     // 先关闭渲染管线
     if (renderPipe) {

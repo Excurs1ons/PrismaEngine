@@ -3,6 +3,7 @@
 #include "RenderBackend.h"
 #include "RenderThread.h"
 #include "ScriptableRenderPipe.h"
+#include "BasicRenderPipeline.h"
 #include <memory>
 
 namespace Engine {
@@ -36,6 +37,7 @@ public:
 private:
     std::unique_ptr<RenderBackend> renderBackend;
     std::unique_ptr<ScriptableRenderPipe> renderPipe;
+    std::unique_ptr<BasicRenderPipeline> basicRenderPipeline;
     WorkerThread renderThread;
 };
 }  // namespace Engine

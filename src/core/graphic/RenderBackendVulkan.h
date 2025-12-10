@@ -10,12 +10,12 @@ struct QueueFamilyIndices {
     bool IsComplete() { return graphicsFamily.has_value(); }
 };
 
-class RendererVulkan : public RenderBackend {
+class RenderBackendVulkan : public RenderBackend {
     friend class RenderBackend;
 
 public:
-    RendererVulkan();
-    virtual ~RendererVulkan() {}
+    RenderBackendVulkan();
+    ~RenderBackendVulkan() override {}
 
     // 添加带参数的初始化方法
     bool Initialize(Platform* platform, void* windowHandle, void* surface, uint32_t width, uint32_t height) override;

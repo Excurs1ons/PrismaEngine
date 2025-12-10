@@ -118,7 +118,7 @@ bool Editor::Initialize()
 
     // 初始化 ImGui 后端
     // 获取 RenderBackend 并转换为 RendererVulkan
-    auto backend = dynamic_cast<RendererVulkan*>(renderSystem->GetRenderBackend());
+    auto backend = dynamic_cast<RenderBackendVulkan*>(renderSystem->GetRenderBackend());
     if (!backend) {
         LOG_ERROR("Editor", "ImGui 初始化失败：无法获取 Vulkan 后端");
         return false;
@@ -299,7 +299,7 @@ void Editor::Shutdown()
     LOG_INFO("Editor", "正在关闭编辑器");
 
     auto renderSystem = RenderSystem::GetInstance();
-    auto backend = dynamic_cast<RendererVulkan*>(renderSystem->GetRenderBackend());
+    auto backend = dynamic_cast<RenderBackendVulkan*>(renderSystem->GetRenderBackend());
     if (backend) {
         vkDeviceWaitIdle(backend->GetDevice());
     }
