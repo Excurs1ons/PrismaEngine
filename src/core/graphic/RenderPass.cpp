@@ -11,6 +11,8 @@ RenderPass::~RenderPass()
 
 RenderPass2D::RenderPass2D()
     : m_cameraMatrix(XMMatrixIdentity())
+    , m_width(0)
+    , m_height(0)
 {
 }
 
@@ -33,4 +35,10 @@ void RenderPass2D::AddMeshToRenderQueue(std::shared_ptr<Mesh> mesh, FXMMATRIX tr
 void RenderPass2D::SetCameraMatrix(FXMMATRIX viewProjection)
 {
     m_cameraMatrix = viewProjection;
+}
+
+void RenderPass2D::SetViewport(uint32_t width, uint32_t height)
+{
+    m_width = width;
+    m_height = height;
 }

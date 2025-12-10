@@ -41,7 +41,12 @@ public:
     // 设置摄像机矩阵
     void SetCameraMatrix(FXMMATRIX viewProjection);
     
+    // 设置视口
+    void SetViewport(uint32_t width, uint32_t height) override;
+    
 private:
     // 2D渲染相关的私有数据
     XMMATRIX m_cameraMatrix;
+    uint32_t m_width;
+    uint32_t m_height;
 };

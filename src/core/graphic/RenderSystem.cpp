@@ -1,40 +1,22 @@
-#include "Logger.h"
 #include "RenderSystem.h"
-#include "RenderBackendDirectX12.h"
-#include "RenderBackendVulkan.h"
+#include "Logger.h"
 #include "PlatformWindows.h"
-#include <memory>
+#include "RenderBackendDirectX12.h"
+#include "RendererVulkan.h"
+#if defined(_WIN32)
+#include <Windows.h>
+extern HWND g_hWnd;
+#endif
 
 namespace Engine {
+
 bool RenderSystem::Initialize(
     Platform* platform, RenderBackendType renderBackendType, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
-    LOG_INFO("Render", "渲染系统初始化开始");
-    
-    // 如果没有提供窗口句柄，创建一个默认窗口
-    if (!windowHandle) {
-        LOG_DEBUG("Render", "窗口句柄为空，创建默认窗口");
-        WindowProps props;
-        props.Title  = "YAGE Render Window";
-        props.Width  = 1600;
-        props.Height = 900;
-        props.Resizable = true;
-        
-        if (!platform) {
-            LOG_ERROR("Render", "未提供平台接口，无法创建默认窗口");
-            return false;
-        }
+    LOG_INFO("Render", "正在初始化渲染系统: 后端类型={0}", static_cast<int>(renderBackendType));
 
-        windowHandle = platform->CreateWindow(props);
-
-        if (!windowHandle) {
-            LOG_ERROR("Render", "创建默认窗口失败");
-            return false;
-        }
-    }
-    
     switch (renderBackendType) {
         case RenderBackendType::SDL3:
-            LOG_ERROR("Render", "尚未实现SDL3渲染后端");
+            LOG_ERROR("Render", "SDL3渲染后端尚未实现");
             return false;
         case RenderBackendType::DirectX12:
             this->renderBackend = std::make_unique<RenderBackendDirectX12>(L"RendererDirectX");
@@ -59,6 +41,13 @@ bool RenderSystem::Initialize(
         return false;
     }
     
+    // 初始化可编程渲染管线
+    this->renderPipe = std::make_unique<ScriptableRenderPipe>();
+    if (!this->renderPipe->Initialize(this->renderBackend.get())) {
+        LOG_ERROR("Render", "可编程渲染管线初始化失败");
+        return false;
+    }
+    
     this->renderBackend->isInitialized = true;
     LOG_INFO("Render", "渲染系统初始化完成");
     return true;
@@ -74,6 +63,12 @@ bool RenderSystem::Initialize() {
 
 void RenderSystem::Shutdown() {
     LOG_INFO("Render", "渲染系统开始关闭");
+    
+    // 先关闭渲染管线
+    if (renderPipe) {
+        renderPipe->Shutdown();
+        renderPipe.reset();
+    }
     
     if (renderBackend) {
         renderBackend->Shutdown();
@@ -121,6 +116,10 @@ void RenderSystem::Present() {
 void RenderSystem::Resize(uint32_t width, uint32_t height) {
     if (renderBackend) {
         renderBackend->Resize(width, height);
+    }
+    
+    if (renderPipe) {
+        renderPipe->SetViewportSize(width, height);
     }
 }
 
