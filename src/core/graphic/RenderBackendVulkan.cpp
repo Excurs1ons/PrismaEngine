@@ -11,6 +11,56 @@
 #include <vulkan/vulkan.h>
 
 namespace Engine {
+
+// Vulkan渲染命令上下文的简单实现
+class VulkanRenderCommandContext : public RenderCommandContext {
+public:
+    VulkanRenderCommandContext(RenderBackendVulkan* backend) : m_backend(backend) {}
+    
+    void SetConstantBuffer(const char* name, FXMMATRIX matrix) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void SetConstantBuffer(const char* name, const float* data, size_t size) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void SetVertexBuffer(const void* data, uint32_t sizeInBytes, uint32_t strideInBytes) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void SetIndexBuffer(const void* data, uint32_t sizeInBytes, bool use16BitIndices = true) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void SetShaderResource(const char* name, void* resource) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void SetSampler(const char* name, void* sampler) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation = 0, uint32_t baseVertexLocation = 0) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void Draw(uint32_t vertexCount, uint32_t startVertexLocation = 0) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void SetViewport(float x, float y, float width, float height) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+    
+    void SetScissorRect(int left, int top, int right, int bottom) override {
+        // 简单实现，实际项目中需要更复杂的逻辑
+    }
+
+private:
+    RenderBackendVulkan* m_backend;
+};
+
 // 用于在不修改头文件的情况下将每个实例的 acquired imageIndex 保持到 EndFrame
 static std::unordered_map<void*, uint32_t> s_acquiredImageIndex;
 static std::mutex s_acquiredImageMutex;
@@ -419,6 +469,12 @@ bool RenderBackendVulkan::Supports(RendererFeature feature) const {
 
 void RenderBackendVulkan::Present() {
     // 在EndFrame中已经实现了呈现逻辑
+}
+
+RenderCommandContext* RenderBackendVulkan::CreateCommandContext()
+{
+    // 创建一个新的Vulkan渲染命令上下文实例
+    return new VulkanRenderCommandContext(this);
 }
 
 bool RenderBackendVulkan::CreateInstance(const char* const* extensions, uint32_t extCount) {

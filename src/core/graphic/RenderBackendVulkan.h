@@ -1,5 +1,6 @@
 #pragma once
 #include "RenderBackend.h"
+#include "RenderCommandContext.h"
 #include <vulkan/vulkan.h>
 #include <optional>
 #include <vector>
@@ -9,6 +10,9 @@ struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     bool IsComplete() { return graphicsFamily.has_value(); }
 };
+
+// 前向声明
+class VulkanRenderCommandContext;
 
 class RenderBackendVulkan : public RenderBackend {
     friend class RenderBackend;
@@ -33,6 +37,10 @@ public:
     bool Supports(RendererFeature feature) const override;
 
     void Present() override;
+    
+    // 实现CreateCommandContext方法
+    RenderCommandContext* CreateCommandContext() override;
+
     bool isInitialized = false;
     VkInstance GetVulkanInstance() const { return instance; }
     VkPhysicalDevice GetPhysicalDevice() const { return physicalDevice; }
@@ -88,6 +96,8 @@ private:
     VkSemaphore imageAvailableSemaphore;
     VkSemaphore renderFinishedSemaphore;
     VkFence inFlightFence;
+    
+    friend class VulkanRenderCommandContext;
 };
 
 }  // namespace Engine
