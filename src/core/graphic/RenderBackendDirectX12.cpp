@@ -48,6 +48,8 @@ public:
             registerIndex = 2;
         } else if (strcmp(name, "MaterialParams") == 0) {
             registerIndex = 3;
+        } else if (strcmp(name, "ConstantBuffer") == 0) {
+            registerIndex = 0;
         } else {
             LOG_WARNING("DXContext", "Unknown constant buffer name: {0}", name);
             return;
@@ -72,6 +74,8 @@ public:
             registerIndex = 2;
         } else if (strcmp(name, "MaterialParams") == 0) {
             registerIndex = 3;
+        } else if (strcmp(name, "ConstantBuffer") == 0) {
+            registerIndex = 0;
         } else {
             LOG_WARNING("DXContext", "Unknown constant buffer name: {0}", name);
             return;
@@ -769,6 +773,12 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
     }
 
     return true;
+}
+
+RenderCommandContext* RenderBackendDirectX12::CreateCommandContext()
+{
+    // 创建一个新的渲染命令上下文实例
+    return new DXRenderCommandContext(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
 }
 
 void RenderBackendDirectX12::UploadAndBindVertexBuffer(ID3D12GraphicsCommandList* cmdList,
