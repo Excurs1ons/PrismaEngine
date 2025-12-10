@@ -1,5 +1,6 @@
 #pragma once
-#include "../Platform.h"
+#include "Platform.h"
+#include "RenderCommandContext.h"
 #include <cstdint>
 #include <functional>
 
@@ -45,6 +46,10 @@ public:
     virtual bool Supports(RendererFeature feature) const = 0;
 
     virtual void Present() = 0;
+    
+    // 创建渲染命令上下文
+    virtual RenderCommandContext* CreateCommandContext() = 0;
+    
     bool isInitialized     = false;
 
 protected:
