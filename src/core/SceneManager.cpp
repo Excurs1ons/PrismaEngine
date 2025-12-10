@@ -3,7 +3,11 @@
 #include <Logger.h>
 namespace Engine {
 void SceneManager::Shutdown() {}
-void SceneManager::Update(float deltaTime) {}
+void SceneManager::Update(float deltaTime) {
+    if (m_currentScene) {
+        m_currentScene->Update(deltaTime);
+    }
+}
 Scene* SceneManager::GetCurrentScene() {
     return m_currentScene.get();
 }
