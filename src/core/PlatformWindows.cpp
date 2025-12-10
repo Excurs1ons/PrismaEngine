@@ -351,8 +351,104 @@ void PlatformWindows::Shutdown() {
 }
 
 bool PlatformWindows::IsKeyDown(KeyCode key) const {
+    // 将 KeyCode 映射到 Windows 虚拟键码
+    int virtualKey = 0;
+
+    switch (key) {
+        // 字母键
+        case KeyCode::A: virtualKey = 'A'; break;
+        case KeyCode::B: virtualKey = 'B'; break;
+        case KeyCode::C: virtualKey = 'C'; break;
+        case KeyCode::D: virtualKey = 'D'; break;
+        case KeyCode::E: virtualKey = 'E'; break;
+        case KeyCode::F: virtualKey = 'F'; break;
+        case KeyCode::G: virtualKey = 'G'; break;
+        case KeyCode::H: virtualKey = 'H'; break;
+        case KeyCode::I: virtualKey = 'I'; break;
+        case KeyCode::J: virtualKey = 'J'; break;
+        case KeyCode::K: virtualKey = 'K'; break;
+        case KeyCode::L: virtualKey = 'L'; break;
+        case KeyCode::M: virtualKey = 'M'; break;
+        case KeyCode::N: virtualKey = 'N'; break;
+        case KeyCode::O: virtualKey = 'O'; break;
+        case KeyCode::P: virtualKey = 'P'; break;
+        case KeyCode::Q: virtualKey = 'Q'; break;
+        case KeyCode::R: virtualKey = 'R'; break;
+        case KeyCode::S: virtualKey = 'S'; break;
+        case KeyCode::T: virtualKey = 'T'; break;
+        case KeyCode::U: virtualKey = 'U'; break;
+        case KeyCode::V: virtualKey = 'V'; break;
+        case KeyCode::W: virtualKey = 'W'; break;
+        case KeyCode::X: virtualKey = 'X'; break;
+        case KeyCode::Y: virtualKey = 'Y'; break;
+        case KeyCode::Z: virtualKey = 'Z'; break;
+
+        // 数字键
+        case KeyCode::Num0: virtualKey = '0'; break;
+        case KeyCode::Num1: virtualKey = '1'; break;
+        case KeyCode::Num2: virtualKey = '2'; break;
+        case KeyCode::Num3: virtualKey = '3'; break;
+        case KeyCode::Num4: virtualKey = '4'; break;
+        case KeyCode::Num5: virtualKey = '5'; break;
+        case KeyCode::Num6: virtualKey = '6'; break;
+        case KeyCode::Num7: virtualKey = '7'; break;
+        case KeyCode::Num8: virtualKey = '8'; break;
+        case KeyCode::Num9: virtualKey = '9'; break;
+
+        // 功能键
+        case KeyCode::F1: virtualKey = VK_F1; break;
+        case KeyCode::F2: virtualKey = VK_F2; break;
+        case KeyCode::F3: virtualKey = VK_F3; break;
+        case KeyCode::F4: virtualKey = VK_F4; break;
+        case KeyCode::F5: virtualKey = VK_F5; break;
+        case KeyCode::F6: virtualKey = VK_F6; break;
+        case KeyCode::F7: virtualKey = VK_F7; break;
+        case KeyCode::F8: virtualKey = VK_F8; break;
+        case KeyCode::F9: virtualKey = VK_F9; break;
+        case KeyCode::F10: virtualKey = VK_F10; break;
+        case KeyCode::F11: virtualKey = VK_F11; break;
+        case KeyCode::F12: virtualKey = VK_F12; break;
+
+        // 方向键
+        case KeyCode::ArrowUp: virtualKey = VK_UP; break;
+        case KeyCode::ArrowDown: virtualKey = VK_DOWN; break;
+        case KeyCode::ArrowLeft: virtualKey = VK_LEFT; break;
+        case KeyCode::ArrowRight: virtualKey = VK_RIGHT; break;
+
+        // 特殊键
+        case KeyCode::Space: virtualKey = VK_SPACE; break;
+        case KeyCode::Enter: virtualKey = VK_RETURN; break;
+        case KeyCode::Escape: virtualKey = VK_ESCAPE; break;
+        case KeyCode::Backspace: virtualKey = VK_BACK; break;
+        case KeyCode::Tab: virtualKey = VK_TAB; break;
+        case KeyCode::CapsLock: virtualKey = VK_CAPITAL; break;
+
+        // 修饰键
+        case KeyCode::LeftShift: virtualKey = VK_LSHIFT; break;
+        case KeyCode::RightShift: virtualKey = VK_RSHIFT; break;
+        case KeyCode::LeftControl: virtualKey = VK_LCONTROL; break;
+        case KeyCode::RightControl: virtualKey = VK_RCONTROL; break;
+        case KeyCode::LeftAlt: virtualKey = VK_LMENU; break;
+        case KeyCode::RightAlt: virtualKey = VK_RMENU; break;
+
+        // 符号键
+        case KeyCode::Grave: virtualKey = VK_OEM_3; break;          // ` ~
+        case KeyCode::Minus: virtualKey = VK_OEM_MINUS; break;    // - _
+        case KeyCode::Equal: virtualKey = VK_OEM_PLUS; break;     // = +
+        case KeyCode::LeftBracket: virtualKey = VK_OEM_4; break;  // [ {
+        case KeyCode::RightBracket: virtualKey = VK_OEM_6; break; // ] }
+        case KeyCode::Backslash: virtualKey = VK_OEM_5; break;    // \ |
+        case KeyCode::Semicolon: virtualKey = VK_OEM_1; break;    // ; :
+        case KeyCode::Apostrophe: virtualKey = VK_OEM_7; break;   // ' "
+        case KeyCode::Comma: virtualKey = VK_OEM_COMMA; break;    // , <
+        case KeyCode::Period: virtualKey = VK_OEM_PERIOD; break;  // . >
+        case KeyCode::Slash: virtualKey = VK_OEM_2; break;        // / ?
+
+        default: return false;
+    }
+
     // 检查键盘按键状态
-    SHORT state = GetAsyncKeyState(static_cast<int>(key));
+    SHORT state = GetAsyncKeyState(virtualKey);
     return (state & 0x8000) != 0;
 }
 
