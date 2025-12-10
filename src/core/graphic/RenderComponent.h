@@ -3,7 +3,13 @@
 #include "RenderCommandContext.h"
 #include <DirectXMath.h>
 #include <vector>
+#include <memory>
+
 using namespace DirectX;
+
+namespace Engine {
+    class Material; // 前向声明
+}
 
 // 渲染组件，用于渲染几何体
 class RenderComponent : public Component
@@ -30,11 +36,16 @@ public:
     // 渲染方法
     virtual void Render(RenderCommandContext* context);
     
-    // 设置颜色
+    // 设置颜色 (为了向后兼容，现在设置材质的基础颜色)
     void SetColor(float r, float g, float b, float a = 1.0f);
-    
+
     // 获取颜色
-    XMVECTOR GetColor() const { return m_color; }
+    XMVECTOR GetColor() const;
+
+    // 材质相关方法
+    void SetMaterial(std::shared_ptr<Engine::Material> material);
+    std::shared_ptr<Engine::Material> GetMaterial() const { return m_material; }
+    std::shared_ptr<Engine::Material> GetOrCreateMaterial();
     
     // Component接口实现
     void Initialize() override;
@@ -47,4 +58,7 @@ private:
     uint32_t m_indexCount;
     bool m_use16BitIndices; // 缓存索引类型，避免运行时检查
     XMVECTOR m_color;
+
+    // 材质系统
+    std::shared_ptr<Engine::Material> m_material;
 };

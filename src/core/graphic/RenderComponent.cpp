@@ -1,4 +1,5 @@
 #include "RenderComponent.h"
+#include "Material.h"
 #include "Transform.h"
 #include "Logger.h"
 
@@ -51,16 +52,19 @@ void RenderComponent::Render(RenderCommandContext* context)
 {
     if (!context || m_vertexCount == 0)
         return;
-        
-    // 设置变换矩阵
+
+    // 应用材质 (这会设置颜色、纹理等参数)
+    auto material = GetOrCreateMaterial();
+    if (material) {
+        material->Apply(context);
+    }
+
+    // 设置世界矩阵 (寄存器 b1)
     if (auto* transform = m_owner->transform()) {
         float* matrix = transform->GetMatrix();
         XMMATRIX worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrix));
-        context->SetConstantBuffer("World", worldMatrix);
+        context->SetConstantBuffer("World", reinterpret_cast<const float*>(&worldMatrix), 16);
     }
-    
-    // 设置颜色
-    context->SetConstantBuffer("ObjectColor", reinterpret_cast<const float*>(&m_color), 4);
 
     // 绑定顶点缓冲区到渲染后端（将数据复制到后端的 per-frame upload buffer）
     // 顶点布局: 7 floats per vertex (x,y,z,r,g,b,a)
@@ -92,6 +96,45 @@ void RenderComponent::Render(RenderCommandContext* context)
 void RenderComponent::SetColor(float r, float g, float b, float a)
 {
     m_color = XMVectorSet(r, g, b, a);
+
+    // 如果已有材质，更新其基础颜色
+    if (m_material) {
+        m_material->SetBaseColor(r, g, b, a);
+    }
+}
+
+// 获取颜色
+XMVECTOR RenderComponent::GetColor() const
+{
+    if (m_material) {
+        auto& color = m_material->GetProperties().baseColor;
+        return XMVectorSet(color.x, color.y, color.z, color.w);
+    }
+    return m_color;
+}
+
+// 材质相关方法
+void RenderComponent::SetMaterial(std::shared_ptr<Engine::Material> material)
+{
+    m_material = material;
+    if (m_material) {
+        // 同步颜色到材质
+        XMFLOAT4 color;
+        XMStoreFloat4(&color, m_color);
+        m_material->SetBaseColor(color.x, color.y, color.z, color.w);
+    }
+}
+
+std::shared_ptr<Engine::Material> RenderComponent::GetOrCreateMaterial()
+{
+    if (!m_material) {
+        m_material = Engine::Material::CreateDefault();
+        // 同步颜色到新材质
+        XMFLOAT4 color;
+        XMStoreFloat4(&color, m_color);
+        m_material->SetBaseColor(color.x, color.y, color.z, color.w);
+    }
+    return m_material;
 }
 
 void RenderComponent::Initialize()
