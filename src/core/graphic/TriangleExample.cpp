@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "Material.h"
 #include "ResourceManager.h"
+#include "../CameraController.h"
 
 TriangleExample::TriangleExample()
 {
@@ -30,10 +31,20 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     // 创建一个四边形来测试索引缓冲区
     auto quad = CreateQuad("TestQuad", 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 1.0f); // 蓝色四边形
 
+    // 添加更多参考对象来观察相机移动
+    auto referenceQuad1 = CreateQuad("RefQuad1", -2.0f, 1.5f, 0.2f, 1.0f, 1.0f, 0.0f); // 黄色
+    auto referenceQuad2 = CreateQuad("RefQuad2", 2.0f, -1.5f, 0.2f, 1.0f, 0.0f, 1.0f); // 品红色
+    auto referenceTriangle1 = CreateTriangle("RefTri1", 0.0f, 2.0f, 1.0f, 0.5f, 0.5f); // 粉色
+    auto referenceTriangle2 = CreateTriangle("RefTri2", 0.0f, -2.0f, 0.5f, 0.5f, 1.0f); // 浅蓝色
+
     // 添加到场景
     scene->AddGameObject(triangle1);
     scene->AddGameObject(triangle2);
     scene->AddGameObject(quad);
+    scene->AddGameObject(referenceQuad1);
+    scene->AddGameObject(referenceQuad2);
+    scene->AddGameObject(referenceTriangle1);
+    scene->AddGameObject(referenceTriangle2);
     
     LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形（索引缓冲区测试）");
     
@@ -141,15 +152,24 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     
     // 添加相机组件
     auto camera = gameObject->AddComponent<Camera2D>();
-    
+
     // 设置相机位置
     camera->SetPosition(posX, posY, 0.0f);
-    
-    // 设置正交投影
-    camera->SetOrthographicProjection(-1.0f, 1.0f, -1.0f, 1.0f, 0.1f, 1000.0f);
-    
+
+    // 设置正交投影 - 使用基于宽高比的投影
+    // 假设窗口大小，这里使用16:9的宽高比作为默认值
+    float aspectRatio = 16.0f / 9.0f;
+    float viewHeight = 2.0f;  // 视口高度为2个单位
+    float viewWidth = viewHeight * aspectRatio;  // 根据宽高比计算宽度
+
+    camera->SetOrthographicProjection(-viewWidth/2, viewWidth/2, -viewHeight/2, viewHeight/2, 0.1f, 1000.0f);
+
     // 设置清除颜色为深蓝色
     camera->SetClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+
+    // 添加相机控制器组件
+    auto cameraController = gameObject->AddComponent<CameraController>();
+    cameraController->SetMoveSpeed(2.0f);  // 设置移动速度
     
     LOG_DEBUG("TriangleExample", "Created camera '{0}' at position ({1}, {2})", name, posX, posY);
     
