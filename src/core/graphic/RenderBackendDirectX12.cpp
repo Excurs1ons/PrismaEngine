@@ -43,11 +43,19 @@ public:
     }
     void SetVertexBuffer(const void* data, uint32_t sizeInBytes, uint32_t strideInBytes) override {
         if (!m_commandList || !m_backend) {
-            LOG_ERROR("DXContext", "SetVertexBuffer: invalid command list or backend");
+            LOG_ERROR("DXContext", "SetVertexBuffer: 无效的命令列表或后端");
             return;
         }
-        // Forward to backend which owns dynamic upload buffer and binding logic
+        // 转发给后端，后端拥有动态上传缓冲区和绑定逻辑
         m_backend->UploadAndBindVertexBuffer(m_commandList, data, sizeInBytes, strideInBytes);
+    }
+    void SetIndexBuffer(const void* data, uint32_t sizeInBytes, bool use16BitIndices = true) override {
+        if (!m_commandList || !m_backend) {
+            LOG_ERROR("DXContext", "SetIndexBuffer: 无效的命令列表或后端");
+            return;
+        }
+        // 转发给后端处理索引缓冲区上传和绑定
+        m_backend->UploadAndBindIndexBuffer(m_commandList, data, sizeInBytes, use16BitIndices);
     }
     void SetShaderResource(const char* name, void* resource) override {
         LOG_DEBUG("DXContext", "SetShaderResource name={0}", name);
@@ -55,16 +63,16 @@ public:
     void SetSampler(const char* name, void* sampler) override { LOG_DEBUG("DXContext", "SetSampler name={0}", name); }
     void DrawIndexed(uint32_t indexCount, uint32_t startIndexLocation = 0, uint32_t baseVertexLocation = 0) override {
         if (!m_commandList) {
-            LOG_ERROR("DXContext", "DrawIndexed called but command list is null");
+            LOG_ERROR("DXContext", "DrawIndexed 调用时命令列表为空");
             return;
         }
         LOG_TRACE("DXContext",
-                  "DrawIndexed count={0} startIndex={1} baseVertex={2}",
+                  "DrawIndexed 索引数={0} 起始索引={1} 基础顶点={2}",
                   indexCount,
                   startIndexLocation,
                   baseVertexLocation);
-        // If index buffer is not bound we treat indexCount as vertexCount fallback
-        m_commandList->DrawInstanced(indexCount, 1, startIndexLocation, baseVertexLocation);
+        // 执行索引绘制
+        m_commandList->DrawIndexedInstanced(indexCount, 1, startIndexLocation, baseVertexLocation, 0);
     }
     void Draw(uint32_t vertexCount, uint32_t startVertexLocation = 0) override {
         if (!m_commandList) {
@@ -130,6 +138,10 @@ void RenderBackendDirectX12::BeginFrame() {
     // 创建渲染帧日志作用域
     LogScope* frameScope = LogScopeManager::GetInstance().CreateScope("DirectXFrame");
     Logger::GetInstance().PushLogScope(frameScope);
+
+    // 重置每帧动态缓冲区偏移量
+    m_dynamicVBOffset = 0;
+    m_dynamicIBOffset = 0;
 
     // 指令列表分配器只能在关联的指令列表在GPU完成执行之后才能重置，
     // apps should use
@@ -444,7 +456,6 @@ bool RenderBackendDirectX12::LoadPipeline() {
 }
 
 bool RenderBackendDirectX12::LoadAssets() {
-    return true;
     // 创建空的根签名
     {
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc = {};
@@ -598,6 +609,35 @@ bool RenderBackendDirectX12::LoadAssets() {
         m_dynamicVBOffset     = 0;
     }
 
+    // 创建动态索引上传缓冲区（每帧临时索引数据）
+    {
+        // 1MB per-frame upload buffer for indices（对于大多数情况应该足够了）
+        const uint64_t dynamicIBSize = 1ULL * 1024ULL * 1024ULL;
+        auto heapProps               = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto resourceDesc            = CD3DX12_RESOURCE_DESC::Buffer(dynamicIBSize);
+        HRESULT hr                   = m_device->CreateCommittedResource(&heapProps,
+                                                         D3D12_HEAP_FLAG_NONE,
+                                                         &resourceDesc,
+                                                         D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                         nullptr,
+                                                         IID_PPV_ARGS(&m_dynamicIndexBuffer));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "创建动态索引上传缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicIBSize = dynamicIBSize;
+        // 映射一次，保持 CPU 指针直到销毁
+        CD3DX12_RANGE readRange(0, 0);
+        uint8_t* ptr = nullptr;
+        hr           = m_dynamicIndexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "映射动态索引缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicIBCPUAddress = ptr;
+        m_dynamicIBOffset     = 0;
+    }
+
     return true;
 }
 
@@ -627,8 +667,40 @@ void RenderBackendDirectX12::UploadAndBindVertexBuffer(ID3D12GraphicsCommandList
 
     cmdList->IASetVertexBuffers(0, 1, &vbView);
 
-    // advance offset for next allocation
+    // 为下次分配推进偏移量
     m_dynamicVBOffset = offset + sizeInBytes;
+}
+
+void RenderBackendDirectX12::UploadAndBindIndexBuffer(ID3D12GraphicsCommandList* cmdList,
+                                                     const void* data,
+                                                     uint32_t sizeInBytes,
+                                                     bool use16BitIndices) {
+    if (!m_dynamicIndexBuffer || !m_dynamicIBCPUAddress) {
+        LOG_ERROR("DirectX", "UploadAndBindIndexBuffer: 动态索引缓冲区未创建");
+        return;
+    }
+
+    // 简单的线性分配器，必要时回绕。确保对齐到4字节边界。
+    const uint64_t align = 4;
+    uint64_t offset = (m_dynamicIBOffset + (align - 1)) & ~(align - 1);
+    if (offset + sizeInBytes > m_dynamicIBSize) {
+        // 回绕到开始位置
+        offset = 0;
+    }
+
+    // 复制CPU数据
+    memcpy(m_dynamicIBCPUAddress + offset, data, sizeInBytes);
+
+    // 创建临时索引缓冲区视图并绑定
+    D3D12_INDEX_BUFFER_VIEW ibView{};
+    ibView.BufferLocation = m_dynamicIndexBuffer->GetGPUVirtualAddress() + offset;
+    ibView.SizeInBytes = sizeInBytes;
+    ibView.Format = use16BitIndices ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
+
+    cmdList->IASetIndexBuffer(&ibView);
+
+    // 为下次分配推进偏移量
+    m_dynamicIBOffset = offset + sizeInBytes;
 }
 
 void RenderBackendDirectX12::WaitForPreviousFrame() {

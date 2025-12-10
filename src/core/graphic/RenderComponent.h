@@ -17,6 +17,7 @@ public:
     
     // 设置索引数据
     void SetIndexData(const uint32_t* indices, uint32_t indexCount);
+    void SetIndexData(const uint16_t* indices, uint32_t indexCount); // 支持16位索引
     
     // 获取顶点数据
     const float* GetVertexData() const { return m_vertices.data(); }
@@ -44,5 +45,6 @@ private:
     std::vector<uint32_t> m_indices;
     uint32_t m_vertexCount;
     uint32_t m_indexCount;
+    bool m_use16BitIndices; // 缓存索引类型，避免运行时检查
     XMVECTOR m_color;
 };

@@ -22,16 +22,18 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     }
     
     // 创建几个三角形
-    auto triangle1 = CreateTriangle("Triangle1", 0.0f, 0.0f, 1.0f, 0.0f, 0.0f); // 红色
-    auto triangle2 = CreateTriangle("Triangle2", 0.5f, 0.0f, 0.0f, 1.0f, 0.0f); // 绿色
-    auto triangle3 = CreateTriangle("Triangle3", -0.5f, 0.0f, 0.0f, 0.0f, 1.0f); // 蓝色
-    
-    // 添加三角形到场景
+    auto triangle1 = CreateTriangle("Triangle1", -0.7f, 0.0f, 1.0f, 0.0f, 0.0f); // 红色
+    auto triangle2 = CreateTriangle("Triangle2", 0.7f, 0.0f, 0.0f, 1.0f, 0.0f); // 绿色
+
+    // 创建一个四边形来测试索引缓冲区
+    auto quad = CreateQuad("TestQuad", 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 1.0f); // 蓝色四边形
+
+    // 添加到场景
     scene->AddGameObject(triangle1);
     scene->AddGameObject(triangle2);
-    scene->AddGameObject(triangle3);
+    scene->AddGameObject(quad);
     
-    LOG_INFO("TriangleExample", "Example scene created with 1 camera and 3 triangles");
+    LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形（索引缓冲区测试）");
     
     return scene;
 }
@@ -68,6 +70,51 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     LOG_DEBUG("TriangleExample", "Created triangle '{0}' at position ({1}, {2}) with color ({3}, {4}, {5}, {6})", 
         name, posX, posY, r, g, b, a);
     
+    return gameObject;
+}
+
+std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name, float posX, float posY,
+                                                       float size, float r, float g, float b, float a)
+{
+    // 创建游戏对象
+    auto gameObject = std::make_shared<GameObject>(name);
+
+    // 添加变换组件并设置位置
+    auto transform = gameObject->transform();
+    transform->position[0] = posX;
+    transform->position[1] = posY;
+    transform->position[2] = 0.0f;
+
+    // 添加渲染组件
+    auto renderComponent = gameObject->AddComponent<RenderComponent>();
+
+    // 定义四边形顶点数据 (位置 + 颜色) - 4个顶点
+    float quadVertices[] = {
+        // 位置 (x, y, z)              颜色 (r, g, b, a)
+        posX - size/2, posY + size/2, 0.0f,  r, g, b, a,  // 左上
+        posX + size/2, posY + size/2, 0.0f,  r, g, b, a,  // 右上
+        posX + size/2, posY - size/2, 0.0f,  r, g, b, a,  // 右下
+        posX - size/2, posY - size/2, 0.0f,  r, g, b, a   // 左下
+    };
+
+    // 定义索引数据 - 2个三角形，共6个索引
+    uint16_t quadIndices[] = {
+        0, 1, 2,  // 第一个三角形 (左上, 右上, 右下)
+        0, 2, 3   // 第二个三角形 (左上, 右下, 左下)
+    };
+
+    // 设置顶点数据
+    renderComponent->SetVertexData(quadVertices, 4);
+
+    // 设置索引数据 - 这是新增的功能
+    renderComponent->SetIndexData(quadIndices, 6);
+
+    // 设置颜色
+    renderComponent->SetColor(r, g, b, a);
+
+    LOG_DEBUG("TriangleExample", "创建四边形 '{0}' 在位置 ({1}, {2})，大小 {3}，颜色 ({4}, {5}, {6}, {7})",
+        name, posX, posY, size, r, g, b, a);
+
     return gameObject;
 }
 

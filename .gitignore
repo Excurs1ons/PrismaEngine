@@ -336,3 +336,6 @@ clion-*.txt
 .cxx
 local.properties
 
+/nul
+/CLAUDE.md
+/.claude/settings.local.json

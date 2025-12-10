@@ -4,9 +4,18 @@
 #include "IApplication.h"
 #include "pch.h"
 #include "Common.h"
+#include "../core/graphic/TriangleExample.h"
+#include "../core/SceneManager.h"
 
 
 bool Game::Initialize() {
+    // 调用基类初始化
+    if (!Application::Initialize()) {
+        return false;
+    }
+
+    // SceneManager 的 Initialize() 方法已经创建了包含索引缓冲区测试的示例场景
+    LOG_INFO("Game", "游戏初始化完成 - 使用默认索引缓冲区测试场景");
     return true;
 }
 int Game::Run() {
