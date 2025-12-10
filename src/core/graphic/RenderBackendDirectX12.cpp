@@ -775,10 +775,22 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
     return true;
 }
 
-RenderCommandContext* RenderBackendDirectX12::CreateCommandContext()
-{
+RenderCommandContext* RenderBackendDirectX12::CreateCommandContext() {
     // 创建一个新的渲染命令上下文实例
     return new DXRenderCommandContext(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
+}
+//TODO: 创建根签名和图形管线状态
+bool RenderBackendDirectX12::CreateRootSignature() {
+    return true;
+}
+bool RenderBackendDirectX12::CreatePipelineState() {
+    return true;
+}
+bool RenderBackendDirectX12::CreateDepthBuffer() {
+    return true;
+}
+bool RenderBackendDirectX12::CreateDynamicBuffers() {
+    return true;
 }
 
 void RenderBackendDirectX12::UploadAndBindVertexBuffer(ID3D12GraphicsCommandList* cmdList,
