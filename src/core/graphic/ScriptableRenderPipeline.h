@@ -8,11 +8,11 @@
 namespace Engine {
 
 // 可编程渲染管线类
-class ScriptableRenderPipe
+class ScriptableRenderPipeline
 {
 public:
-    ScriptableRenderPipe();
-    ~ScriptableRenderPipe();
+    ScriptableRenderPipeline();
+    ~ScriptableRenderPipeline();
 
     // 初始化渲染管线
     bool Initialize(RenderBackend* renderBackend);

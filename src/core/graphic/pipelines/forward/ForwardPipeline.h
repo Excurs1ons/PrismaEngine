@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../../ScriptableRenderPipe.h"
+#include "graphic/ScriptableRenderPipeline.h"
 #include <memory>
 
 namespace Engine {
@@ -16,14 +16,14 @@ public:
     ~ForwardPipeline();
 
     // 初始化前向渲染管线
-    bool Initialize(ScriptableRenderPipe* renderPipe);
+    bool Initialize(ScriptableRenderPipeline* renderPipe);
     
     // 关闭渲染管线
     void Shutdown();
     
 private:
     // 渲染管线引用
-    ScriptableRenderPipe* m_renderPipe;
+    ScriptableRenderPipeline* m_renderPipe;
 };
 
 } // namespace Forward

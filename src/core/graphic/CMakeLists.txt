@@ -1,47 +1,47 @@
 set(PIPELINE_FORWARD_SOURCES
-    pipelines/forward/ForwardPipeline.cpp
-    pipelines/forward/ForwardRenderPass.cpp
+    graphic/pipelines/forward/ForwardPipeline.cpp
+    graphic/pipelines/forward/ForwardRenderPass.cpp
 )
 
 set(PIPELINE_FORWARD_HEADERS
-    pipelines/forward/ForwardPipeline.h
-    pipelines/forward/ForwardRenderPass.h
+    graphic/pipelines/forward/ForwardPipeline.h
+    graphic/pipelines/forward/ForwardRenderPass.h
 )
 
 set(ENGINE_GRAPHIC_SOURCES
     ${PIPELINE_FORWARD_SOURCES}
-    BasicRenderPipeline.cpp
-    GeometryRenderPass.cpp
-    Material.cpp
-    Mesh.cpp
-    MeshRenderer.cpp
-    RenderBackendDirectX12.cpp
-    RenderBackendVulkan.cpp
-    RenderComponent.cpp
-    RenderPass.cpp
-    RenderSystem.cpp
-    ScriptableRenderPipe.cpp
-    Shader.cpp
-    TriangleExample.cpp
+    graphic/BasicRenderPipeline.cpp
+    graphic/GeometryRenderPass.cpp
+    graphic/Material.cpp
+    graphic/Mesh.cpp
+    graphic/MeshRenderer.cpp
+    graphic/RenderBackendDirectX12.cpp
+    graphic/RenderBackendVulkan.cpp
+    graphic/RenderComponent.cpp
+    graphic/RenderPass.cpp
+    graphic/RenderSystem.cpp
+    graphic/ScriptableRenderPipeline.cpp
+    graphic/Shader.cpp
+    graphic/TriangleExample.cpp
 )
 
 set(ENGINE_GRAPHIC_HEADERS
     ${PIPELINE_FORWARD_HEADERS}
-    BasicRenderPipeline.h
-    GeometryRenderPass.h
-    Material.h
-    Mesh.h
-    MeshRenderer.h
-    RenderBackend.h
-    RenderBackendDirectX12.h
-    RenderBackendVulkan.h
-    RenderCommandContext.h
-    RenderComponent.h
-    RenderGraph.h
-    RenderPass.h
-    RenderSystem.h
-    RenderThread.h
-    ScriptableRenderPipe.h
-    Shader.h
-    TriangleExample.h
+    graphic/BasicRenderPipeline.h
+    graphic/GeometryRenderPass.h
+    graphic/Material.h
+    graphic/Mesh.h
+    graphic/MeshRenderer.h
+    graphic/RenderBackend.h
+    graphic/RenderBackendDirectX12.h
+    graphic/RenderBackendVulkan.h
+    graphic/RenderCommandContext.h
+    graphic/RenderComponent.h
+    graphic/RenderGraph.h
+    graphic/RenderPass.h
+    graphic/RenderSystem.h
+    graphic/RenderThread.h
+    graphic/ScriptableRenderPipeline.h
+    graphic/Shader.h
+    graphic/TriangleExample.h
 )

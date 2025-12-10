@@ -1,5 +1,5 @@
 #include "ForwardRenderPass.h"
-#include "../../Logger.h"
+#include "Logger.h"
 
 namespace Engine {
 namespace Graphic {

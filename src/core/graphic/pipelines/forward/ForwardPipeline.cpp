@@ -1,5 +1,5 @@
 #include "ForwardPipeline.h"
-#include "../../Logger.h"
+#include "Logger.h"
 
 namespace Engine {
 namespace Graphic {
@@ -16,7 +16,7 @@ ForwardPipeline::~ForwardPipeline()
     Shutdown();
 }
 
-bool ForwardPipeline::Initialize(ScriptableRenderPipe* renderPipe)
+bool ForwardPipeline::Initialize(ScriptableRenderPipeline* renderPipe)
 {
     if (!renderPipe) {
         LOG_ERROR("ForwardPipeline", "Invalid render pipe provided");

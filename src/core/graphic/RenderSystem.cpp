@@ -21,9 +21,11 @@ bool RenderSystem::Initialize(
             return false;
         case RenderBackendType::DirectX12:
             this->renderBackend = std::make_unique<RenderBackendDirectX12>(L"RendererDirectX");
+            LOG_INFO("Render", "DirectX12渲染后端创建完成");
             break;
         case RenderBackendType::Vulkan:
             this->renderBackend = std::make_unique<RenderBackendVulkan>();
+            LOG_INFO("Render", "Vulkan渲染后端创建完成");
             break;
         case RenderBackendType::None:
         default:
@@ -35,7 +37,6 @@ bool RenderSystem::Initialize(
         LOG_ERROR("Render", "渲染后端创建失败: {0}", static_cast<int>(renderBackendType));
         return false;
     }
-    LOG_INFO("Render", "渲染后端创建完成 : {0}", static_cast<int>(renderBackendType));
 
     if (!this->renderBackend->Initialize(platform, windowHandle, surface, width, height)) {
         LOG_ERROR("Render", "渲染后端初始化失败");
@@ -43,7 +44,7 @@ bool RenderSystem::Initialize(
     }
     
     // 初始化可编程渲染管线
-    this->renderPipe = std::make_unique<ScriptableRenderPipe>();
+    this->renderPipe = std::make_unique<ScriptableRenderPipeline>();
     if (!this->renderPipe->Initialize(this->renderBackend.get())) {
         LOG_ERROR("Render", "可编程渲染管线初始化失败");
         return false;

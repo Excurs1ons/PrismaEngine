@@ -1,6 +1,6 @@
 #pragma once
 
-#include "ScriptableRenderPipe.h"
+#include "ScriptableRenderPipeline.h"
 #include "RenderPass.h"
 #include <memory>
 
@@ -14,7 +14,7 @@ public:
     ~BasicRenderPipeline();
 
     // 初始化基本渲染管线
-    bool Initialize(ScriptableRenderPipe* renderPipe);
+    bool Initialize(ScriptableRenderPipeline* renderPipe);
     
     // 关闭渲染管线
     void Shutdown();
@@ -27,7 +27,7 @@ private:
     std::shared_ptr<RenderPass> CreatePostProcessPass();
     
     // 渲染管线引用
-    ScriptableRenderPipe* m_renderPipe;
+    ScriptableRenderPipeline* m_renderPipe;
     
     // 渲染通道
     std::shared_ptr<RenderPass> m_geometryPass;
