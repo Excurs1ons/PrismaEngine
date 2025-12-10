@@ -1,0 +1,47 @@
+set(PIPELINE_FORWARD_SOURCES
+    pipelines/forward/ForwardPipeline.cpp
+    pipelines/forward/ForwardRenderPass.cpp
+)
+
+set(PIPELINE_FORWARD_HEADERS
+    pipelines/forward/ForwardPipeline.h
+    pipelines/forward/ForwardRenderPass.h
+)
+
+set(ENGINE_GRAPHIC_SOURCES
+    ${PIPELINE_FORWARD_SOURCES}
+    BasicRenderPipeline.cpp
+    GeometryRenderPass.cpp
+    Material.cpp
+    Mesh.cpp
+    MeshRenderer.cpp
+    RenderBackendDirectX12.cpp
+    RenderBackendVulkan.cpp
+    RenderComponent.cpp
+    RenderPass.cpp
+    RenderSystem.cpp
+    ScriptableRenderPipe.cpp
+    Shader.cpp
+    TriangleExample.cpp
+)
+
+set(ENGINE_GRAPHIC_HEADERS
+    ${PIPELINE_FORWARD_HEADERS}
+    BasicRenderPipeline.h
+    GeometryRenderPass.h
+    Material.h
+    Mesh.h
+    MeshRenderer.h
+    RenderBackend.h
+    RenderBackendDirectX12.h
+    RenderBackendVulkan.h
+    RenderCommandContext.h
+    RenderComponent.h
+    RenderGraph.h
+    RenderPass.h
+    RenderSystem.h
+    RenderThread.h
+    ScriptableRenderPipe.h
+    Shader.h
+    TriangleExample.h
+)
