@@ -9,7 +9,7 @@ set(GAME_SOURCES
 set(GAME_HEADERS
     framework.h
     pch.h
-        Game.h
+    Game.h
 )
 
 # 创建动态库
@@ -22,7 +22,6 @@ add_library(Game SHARED
 target_include_directories(Game
     PRIVATE 
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core/include
 )
 
 # 链接依赖

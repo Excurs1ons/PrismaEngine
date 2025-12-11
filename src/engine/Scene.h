@@ -1,9 +1,9 @@
 #pragma once
 #include "Camera.h"
 #include "GameObject.h"
-#include "RenderBackend.h"
-#include "RenderCommandContext.h"
-#include "RenderComponent.h"
+#include "graphic/RenderBackend.h"
+#include "graphic/RenderCommandContext.h"
+#include "graphic/RenderComponent.h"
 #include "SceneNode.h"
 #include <memory>
 #include <vector>

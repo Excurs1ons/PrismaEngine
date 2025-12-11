@@ -43,7 +43,6 @@ target_include_directories(Engine
     PUBLIC 
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
     PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/core
         ${CMAKE_CURRENT_SOURCE_DIR}/resource
         ${CMAKE_CURRENT_SOURCE_DIR}/audio
         ${CMAKE_CURRENT_SOURCE_DIR}/graphic
@@ -111,10 +110,5 @@ install(TARGETS Engine
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin
-    PUBLIC_HEADER DESTINATION include/prisma/core
-)
-
-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
-    DESTINATION include/prisma/core
-    FILES_MATCHING PATTERN "*.h"
+    PUBLIC_HEADER DESTINATION include/prisma/engine
 )

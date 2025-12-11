@@ -1,12 +1,11 @@
 // dllmain.cpp : 定义 DLL 应用程序的入口点。
 #include "Game.h"
 
+#include "../engine/SceneManager.h"
+#include "../engine/graphic/TriangleExample.h"
+#include "Common.h"
 #include "IApplication.h"
 #include "pch.h"
-#include "Common.h"
-#include "../core/graphic/TriangleExample.h"
-#include "../core/SceneManager.h"
-
 
 bool Game::Initialize() {
     // 调用基类初始化

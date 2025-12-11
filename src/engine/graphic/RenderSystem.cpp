@@ -73,9 +73,17 @@ bool RenderSystem::Initialize() {
         LOG_ERROR("Render", "无法创建默认窗口");
         return false;
     }
-    return Initialize(platform, RenderBackendType::DirectX12, windowHandle, nullptr, 1600, 900);
+    bool result = Initialize(platform, RenderBackendType::DirectX12, windowHandle, nullptr, 1600, 900);
+    if (result && renderBackend) {
+        renderBackend->isInitialized = true;
+    }
+    return result;
 #else
-    return Initialize(platform, RenderBackendType::DirectX12, nullptr, nullptr, 1600, 900);
+    bool result = Initialize(platform, RenderBackendType::DirectX12, nullptr, nullptr, 1600, 900);
+    if (result && renderBackend) {
+        renderBackend->isInitialized = true;
+    }
+    return result;
 #endif
 }
 
@@ -104,6 +112,7 @@ void RenderSystem::Shutdown() {
 
 void RenderSystem::Update(float deltaTime) {
     if (!renderBackend || !renderBackend->isInitialized) {
+        LOG_ERROR("Render", "渲染后端未初始化");
         return;
     }
     
@@ -112,6 +121,7 @@ void RenderSystem::Update(float deltaTime) {
     
     // 执行可编程渲染管线
     if (renderPipe) {
+        LOG_DEBUG("RenderSystem", "执行可编程渲染管线");
         renderPipe->Execute();
     }
     

@@ -151,7 +151,7 @@ private:
 
 RenderBackendDirectX12::RenderBackendDirectX12(std::wstring name)
     : m_fenceEvent(nullptr), m_fenceValue(0), m_frameIndex(0), m_height(1), m_rtvDescriptorSize(0),
-      m_scissorRect{0, 0, 1L, 1L}, m_viewport{0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f}, m_width(1),
+      m_scissorRect{0, 0, 1L, 1L}, m_viewport{0.0f, 0.0f, 1.0f, 1.0f}, m_width(1),
       m_aspectRatio(1), m_dynamicVBCPUAddress(nullptr), m_dynamicVBSize(0), m_dynamicVBOffset(0),
       m_dynamicIBCPUAddress(nullptr), m_dynamicIBSize(0), m_dynamicIBOffset(0),
       m_dynamicCBCPUAddress(nullptr), m_dynamicCBSize(0), m_dynamicCBOffset(0) {}
@@ -231,7 +231,7 @@ void RenderBackendDirectX12::BeginFrame() {
     m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
     // 从场景获取主相机和清除颜色，默认为青色
-    float clearColor[4] = {0.0f, 1.0f, 1.0f, 1.0f};  // 默认青色
+    float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};  // 黑色
     //auto& app           = Singleton<ApplicationWindows>::GetInstance();
     auto scene = SceneManager::GetInstance()->GetCurrentScene();
     if (scene) {
@@ -260,52 +260,19 @@ void RenderBackendDirectX12::BeginFrame() {
     m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-    // 调用场景渲染
-    auto scenePtr = SceneManager::GetInstance()->GetCurrentScene();
-    if (scenePtr) {
-        // 获取相机矩阵
-        XMMATRIX cameraMatrix = XMMatrixIdentity();
-        Camera* mainCamera = scenePtr->GetMainCamera();
-        if (mainCamera) {
-            // 尝试转换为Camera2D来获取视图投影矩阵
-            Camera2D* camera2D = dynamic_cast<Camera2D*>(mainCamera);
-            if (camera2D) {
-                // 更新投影矩阵以适应当前窗口宽高比
-                camera2D->UpdateProjectionMatrix(static_cast<float>(m_width), static_cast<float>(m_height));
-                cameraMatrix = camera2D->GetViewProjectionMatrix();
-                LOG_DEBUG("RenderBackendDirectX12", "Using Camera2D matrix from main camera");
-            } else {
-                LOG_DEBUG("RenderBackendDirectX12", "Main camera is not Camera2D, using identity matrix");
-            }
-        } else {
-            LOG_DEBUG("RenderBackendDirectX12", "No main camera found, using identity matrix");
-        }
+    LOG_DEBUG("RenderBackendDirectX12", "BeginFrame completed, ready for pipeline execution");
+}
 
-        // 创建渲染命令上下文
-        DXRenderCommandContext context(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
-
-        // 设置相机矩阵到渲染上下文
-        context.SetConstantBuffer("ViewProjection", reinterpret_cast<const float*>(&cameraMatrix), 16);
-
-        // 添加调试日志 - 输出相机位置和矩阵信息
-        if (mainCamera) {
-            XMVECTOR camPos = XMLoadFloat3(&mainCamera->gameObject()->transform()->position);
-            XMFLOAT3 camPosFloat;
-            XMStoreFloat3(&camPosFloat, camPos);
-            LOG_DEBUG("RenderBackend", "Camera pos({0:.2f}, {1:.2f}, {2:.2f}) ViewProjection matrix set",
-                camPosFloat.x, camPosFloat.y, camPosFloat.z);
-        }
-
-        // 渲染场景
-        scenePtr->Render(&context);
-    }
+void RenderBackendDirectX12::EndFrame() {
+    // 获取当前日志作用域
+    LogScope* frameScope = Logger::GetInstance().GetCurrentLogScope();
 
     // 将后台缓冲区切换到呈现状态
-    barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
         m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
     m_commandList->ResourceBarrier(1, &barrier);
 
-    hr = m_commandList->Close();
+    HRESULT hr = m_commandList->Close();
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法关闭命令列表: {0}", HrToString(hr));
         Logger::GetInstance().PopLogScope(frameScope);
@@ -317,24 +284,7 @@ void RenderBackendDirectX12::BeginFrame() {
     ID3D12CommandList* ppCommandLists[] = {m_commandList.Get()};
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-    // 绘制
-    hr = m_swapChain->Present(1, 0);
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "交换链呈现失败: {0}", HrToString(hr));
-        Logger::GetInstance().PopLogScope(frameScope);
-        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
-        return;
-    }
-
-    // 等待上一帧完成
-    WaitForPreviousFrame();
-
-    // 正常结束BeginFrame，继续保持作用域活跃到EndFrame
-}
-
-void RenderBackendDirectX12::EndFrame() {
-    // 获取当前日志作用域
-    LogScope* frameScope = Logger::GetInstance().GetCurrentLogScope();
+    LOG_DEBUG("RenderBackendDirectX12", "EndFrame completed");
 
     // DirectX的EndFrame目前没有太多逻辑，主要是通知作用域结束
     if (frameScope) {
@@ -637,81 +587,81 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
     }
 
     // 创建管线状态，包括编译和加载着色器
-    {
-        // 使用资源管理器加载着色器
-        auto resourceManager = ResourceManager::GetInstance();
-        auto shaderHandle     = resourceManager->Load<Shader>("shader.hlsl");
-
-        if (!shaderHandle.IsValid()) {
-            LOG_ERROR("DirectX", "通过资源管理器加载着色器失败");
-            return false;
-        }
-        LOG_INFO("DirectX", "成功加载着色器");
-        auto* shader      = shaderHandle.Get();
-        auto vertexShader = shader->GetVertexShaderBlob();
-        auto pixelShader  = shader->GetPixelShaderBlob();
-
-        // 定义顶点输入布局
-        D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-            {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-            {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
-
-        // 创建图形管线状态对象（PSO）
-        D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-        psoDesc.InputLayout                        = {inputElementDescs, _countof(inputElementDescs)};
-        psoDesc.pRootSignature                     = m_rootSignature.Get();
-        psoDesc.VS                                 = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-        psoDesc.PS                                 = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-        psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-        psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-        psoDesc.DepthStencilState.DepthEnable      = TRUE;
-        psoDesc.DepthStencilState.DepthWriteMask   = D3D12_DEPTH_WRITE_MASK_ALL;
-        psoDesc.DepthStencilState.DepthFunc       = D3D12_COMPARISON_FUNC_LESS;
-        psoDesc.DepthStencilState.StencilEnable    = FALSE;
-        psoDesc.DSVFormat                         = DXGI_FORMAT_D32_FLOAT;
-        psoDesc.SampleMask                         = UINT_MAX;
-        psoDesc.PrimitiveTopologyType              = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        psoDesc.NumRenderTargets                   = 1;
-        psoDesc.RTVFormats[0]                      = DXGI_FORMAT_R8G8B8A8_UNORM;
-        psoDesc.SampleDesc.Count                   = 1;
-        HRESULT hRcreatePSO = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
-        if (FAILED(hRcreatePSO)) {
-            LOG_ERROR("DirectX", "创建图形管线状态失败: {0}", HrToString(hRcreatePSO));
-            return false;
-        }
-        LOG_INFO("DirectX", "成功创建图形管线状态");
-    }
-
-    // 顶点缓冲区现在由动态渲染系统管理，不再需要硬编码几何体
-
-    // 创建动态上传缓冲区（用于每帧小批量顶点上传）
-    {
-        // 4MB per-frame upload buffer
-        const uint64_t dynamicSize = 4ULL * 1024ULL * 1024ULL;
-        auto heapProps             = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-        auto resourceDesc          = CD3DX12_RESOURCE_DESC::Buffer(dynamicSize);
-        HRESULT hr                 = m_device->CreateCommittedResource(&heapProps,
-                                                       D3D12_HEAP_FLAG_NONE,
-                                                       &resourceDesc,
-                                                       D3D12_RESOURCE_STATE_GENERIC_READ,
-                                                       nullptr,
-                                                       IID_PPV_ARGS(&m_dynamicVertexBuffer));
-        if (FAILED(hr)) {
-            LOG_ERROR("DirectX", "创建动态顶点上传缓冲区失败: {0}", HrToString(hr));
-            return false;
-        }
-        m_dynamicVBSize = dynamicSize;
-        // 映射一次，保持 CPU 指针直到销毁
-        CD3DX12_RANGE readRange(0, 0);
-        uint8_t* ptr = nullptr;
-        hr           = m_dynamicVertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr));
-        if (FAILED(hr)) {
-            LOG_ERROR("DirectX", "映射动态顶点缓冲区失败: {0}", HrToString(hr));
-            return false;
-        }
-        m_dynamicVBCPUAddress = ptr;
-        m_dynamicVBOffset     = 0;
-    }
+    // {
+    //     // 使用资源管理器加载着色器
+    //     auto resourceManager = ResourceManager::GetInstance();
+    //     auto shaderHandle     = resourceManager->Load<Shader>("shader.hlsl");
+    //
+    //     if (!shaderHandle.IsValid()) {
+    //         LOG_ERROR("DirectX", "通过资源管理器加载着色器失败");
+    //         return false;
+    //     }
+    //     LOG_INFO("DirectX", "成功加载着色器");
+    //     auto* shader      = shaderHandle.Get();
+    //     auto vertexShader = shader->GetVertexShaderBlob();
+    //     auto pixelShader  = shader->GetPixelShaderBlob();
+    //
+    //     // 定义顶点输入布局
+    //     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+    //         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+    //         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+    //
+    //     // 创建图形管线状态对象（PSO）
+    //     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+    //     psoDesc.InputLayout                        = {inputElementDescs, _countof(inputElementDescs)};
+    //     psoDesc.pRootSignature                     = m_rootSignature.Get();
+    //     psoDesc.VS                                 = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+    //     psoDesc.PS                                 = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+    //     psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+    //     psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    //     psoDesc.DepthStencilState.DepthEnable      = TRUE;
+    //     psoDesc.DepthStencilState.DepthWriteMask   = D3D12_DEPTH_WRITE_MASK_ALL;
+    //     psoDesc.DepthStencilState.DepthFunc       = D3D12_COMPARISON_FUNC_LESS;
+    //     psoDesc.DepthStencilState.StencilEnable    = FALSE;
+    //     psoDesc.DSVFormat                         = DXGI_FORMAT_D32_FLOAT;
+    //     psoDesc.SampleMask                         = UINT_MAX;
+    //     psoDesc.PrimitiveTopologyType              = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+    //     psoDesc.NumRenderTargets                   = 1;
+    //     psoDesc.RTVFormats[0]                      = DXGI_FORMAT_R8G8B8A8_UNORM;
+    //     psoDesc.SampleDesc.Count                   = 1;
+    //     HRESULT hRcreatePSO = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
+    //     if (FAILED(hRcreatePSO)) {
+    //         LOG_ERROR("DirectX", "创建图形管线状态失败: {0}", HrToString(hRcreatePSO));
+    //         return false;
+    //     }
+    //     LOG_INFO("DirectX", "成功创建图形管线状态");
+    // }
+    //
+    // // 顶点缓冲区现在由动态渲染系统管理，不再需要硬编码几何体
+    //
+    // // 创建动态上传缓冲区（用于每帧小批量顶点上传）
+    // {
+    //     // 4MB per-frame upload buffer
+    //     const uint64_t dynamicSize = 4ULL * 1024ULL * 1024ULL;
+    //     auto heapProps             = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    //     auto resourceDesc          = CD3DX12_RESOURCE_DESC::Buffer(dynamicSize);
+    //     HRESULT hr                 = m_device->CreateCommittedResource(&heapProps,
+    //                                                    D3D12_HEAP_FLAG_NONE,
+    //                                                    &resourceDesc,
+    //                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
+    //                                                    nullptr,
+    //                                                    IID_PPV_ARGS(&m_dynamicVertexBuffer));
+    //     if (FAILED(hr)) {
+    //         LOG_ERROR("DirectX", "创建动态顶点上传缓冲区失败: {0}", HrToString(hr));
+    //         return false;
+    //     }
+    //     m_dynamicVBSize = dynamicSize;
+    //     // 映射一次，保持 CPU 指针直到销毁
+    //     CD3DX12_RANGE readRange(0, 0);
+    //     uint8_t* ptr = nullptr;
+    //     hr           = m_dynamicVertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr));
+    //     if (FAILED(hr)) {
+    //         LOG_ERROR("DirectX", "映射动态顶点缓冲区失败: {0}", HrToString(hr));
+    //         return false;
+    //     }
+    //     m_dynamicVBCPUAddress = ptr;
+    //     m_dynamicVBOffset     = 0;
+    // }
 
     // 创建动态索引上传缓冲区（每帧临时索引数据）
     {
@@ -777,6 +727,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
 
 RenderCommandContext* RenderBackendDirectX12::CreateCommandContext() {
     // 创建一个新的渲染命令上下文实例
+    LOG_DEBUG("RenderBackendDirectX12", "创建命令上下文");
     return new DXRenderCommandContext(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
 }
 //TODO: 创建根签名和图形管线状态
@@ -797,6 +748,8 @@ void RenderBackendDirectX12::UploadAndBindVertexBuffer(ID3D12GraphicsCommandList
                                                 const void* data,
                                                 uint32_t sizeInBytes,
                                                 uint32_t strideInBytes) {
+    LOG_DEBUG("RenderBackendDirectX12", "上传并绑定顶点缓冲区，大小: {0} 字节，步长: {1} 字节", sizeInBytes, strideInBytes);
+                                                    
     if (!m_dynamicVertexBuffer || !m_dynamicVBCPUAddress) {
         LOG_ERROR("DirectX", "UploadAndBindVertexBuffer: dynamic buffer not created");
         return;
@@ -827,6 +780,8 @@ void RenderBackendDirectX12::UploadAndBindIndexBuffer(ID3D12GraphicsCommandList*
                                                      const void* data,
                                                      uint32_t sizeInBytes,
                                                      bool use16BitIndices) {
+    LOG_DEBUG("RenderBackendDirectX12", "上传并绑定索引缓冲区，大小: {0} 字节，使用16位索引: {1}", sizeInBytes, use16BitIndices);
+                                                     
     if (!m_dynamicIndexBuffer || !m_dynamicIBCPUAddress) {
         LOG_ERROR("DirectX", "UploadAndBindIndexBuffer: 动态索引缓冲区未创建");
         return;
