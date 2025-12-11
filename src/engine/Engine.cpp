@@ -59,8 +59,8 @@ namespace Engine {
             platform->PumpEvents();
             
             // 检查窗口是否应该关闭
-            if (!platform->GetWindowHandle()) {
-                Shutdown();
+            if (platform->ShouldClose(platform->GetWindowHandle())) {
+                isRunning_ = false;
             }
         }
         LOG_INFO("Engine", "引擎已停止运行，应用程序将关闭");

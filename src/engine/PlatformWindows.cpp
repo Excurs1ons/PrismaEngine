@@ -29,7 +29,6 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_DESTROY:
             LOG_INFO("Platform", "窗口已关闭");
             PostQuitMessage(0);
-            PlatformWindows::GetInstance()->DestroyWindow(hwnd);
             return 0;
         default:
             return DefWindowProcA(hwnd, msg, wParam, lParam);
@@ -171,11 +170,10 @@ bool PlatformWindows::ShouldClose(WindowHandle window) const {
     if (window) {
         MSG msg;
         // 检查是否有 WM_QUIT 消息
-        if (PeekMessage(&msg, static_cast<HWND>(window), 0, 0, PM_NOREMOVE)) {
+        if (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
             if (msg.message == WM_QUIT) {
                 return true;
             }
-            return false;
         }
         return false;
     }
