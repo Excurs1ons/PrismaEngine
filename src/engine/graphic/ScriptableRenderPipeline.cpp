@@ -8,15 +8,19 @@ ScriptableRenderPipeline::ScriptableRenderPipeline()
     , m_width(0)
     , m_height(0)
 {
+    LOG_DEBUG("ScriptableRenderPipeline", "构造函数被调用");
 }
 
 ScriptableRenderPipeline::~ScriptableRenderPipeline()
 {
+    LOG_DEBUG("ScriptableRenderPipeline", "析构函数被调用");
     Shutdown();
 }
 
 bool ScriptableRenderPipeline::Initialize(RenderBackend* renderBackend)
 {
+    LOG_DEBUG("ScriptableRenderPipeline", "初始化渲染管线");
+    
     if (!renderBackend) {
         LOG_ERROR("ScriptableRenderPipeline", "无效的渲染后端");
         return false;
@@ -29,6 +33,7 @@ bool ScriptableRenderPipeline::Initialize(RenderBackend* renderBackend)
 
 void ScriptableRenderPipeline::Shutdown()
 {
+    LOG_DEBUG("ScriptableRenderPipeline", "关闭渲染管线");
     m_renderPasses.clear();
     m_renderBackend = nullptr;
     LOG_INFO("ScriptableRenderPipe", "Scriptable render pipe shutdown completed");
@@ -36,32 +41,41 @@ void ScriptableRenderPipeline::Shutdown()
 
 void ScriptableRenderPipeline::Execute()
 {
+    LOG_DEBUG("ScriptableRenderPipeline", "开始执行渲染管线，渲染通道数量: {0}", m_renderPasses.size());
+
     if (!m_renderBackend) {
         LOG_ERROR("ScriptableRenderPipe", "Render backend is not initialized");
         return;
     }
 
     // 执行所有渲染通道
-    for (auto& renderPass : m_renderPasses) {
+    for (size_t i = 0; i < m_renderPasses.size(); ++i) {
+        auto& renderPass = m_renderPasses[i];
         if (renderPass) {
+            LOG_DEBUG("ScriptableRenderPipeline", "执行第 {0} 个渲染通道", i);
             // 创建渲染命令上下文
             // 从渲染后端获取上下文
             auto context = m_renderBackend->CreateCommandContext();
-            renderPass->Execute(context);
+            if (context) {
+                LOG_DEBUG("ScriptableRenderPipeline", "成功创建命令上下文: 0x{0:x}", reinterpret_cast<uintptr_t>(context));
+                renderPass->Execute(context);
+            } else {
+                LOG_ERROR("ScriptableRenderPipeline", "无法创建命令上下文");
+            }
             
             // 释放上下文
             delete context;
         }
     }
     
-    LOG_DEBUG("ScriptableRenderPipe", "Executed {0} render passes", m_renderPasses.size());
+    LOG_DEBUG("ScriptableRenderPipeline", "渲染管线执行完成，共执行 {0} 个渲染通道", m_renderPasses.size());
 }
 
 void ScriptableRenderPipeline::AddRenderPass(std::shared_ptr<RenderPass> renderPass)
 {
     if (renderPass) {
         m_renderPasses.push_back(renderPass);
-        LOG_DEBUG("ScriptableRenderPipe", "Added render pass. Total passes: {0}", m_renderPasses.size());
+        LOG_DEBUG("ScriptableRenderPipe", "添加渲染通道. 总数: {0}", m_renderPasses.size());
     }
 }
 
@@ -71,13 +85,15 @@ void ScriptableRenderPipeline::RemoveRenderPass(std::shared_ptr<RenderPass> rend
         auto it = std::find(m_renderPasses.begin(), m_renderPasses.end(), renderPass);
         if (it != m_renderPasses.end()) {
             m_renderPasses.erase(it);
-            LOG_DEBUG("ScriptableRenderPipe", "Removed render pass. Total passes: {0}", m_renderPasses.size());
+            LOG_DEBUG("ScriptableRenderPipe", "移除渲染通道. 总数: {0}", m_renderPasses.size());
         }
     }
 }
 
 void ScriptableRenderPipeline::SetViewportSize(uint32_t width, uint32_t height)
 {
+    LOG_DEBUG("ScriptableRenderPipeline", "设置视口大小为 {0}x{1}", width, height);
+    
     m_width = width;
     m_height = height;
     

@@ -14,6 +14,7 @@ SkyboxRenderPass::SkyboxRenderPass()
     , m_width(0)
     , m_height(0)
 {
+    LOG_DEBUG("SkyboxRenderPass", "构造函数被调用");
     InitializeSkyboxMesh();
     // 加载天空盒着色器
     auto resourceManager = ResourceManager::GetInstance();
@@ -28,71 +29,94 @@ SkyboxRenderPass::SkyboxRenderPass()
 
 SkyboxRenderPass::~SkyboxRenderPass()
 {
+    LOG_DEBUG("SkyboxRenderPass", "析构函数被调用");
 }
 
 void SkyboxRenderPass::Execute(RenderCommandContext* context)
 {
-    LOG_DEBUG("SkyboxRenderPass", "Executing skybox render pass");
+    LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法开始");
     
     if (!context) {
         LOG_WARNING("SkyboxRenderPass", "Render context is null");
         return;
     }
     
+    LOG_DEBUG("SkyboxRenderPass", "上下文有效，开始渲染逻辑");
+    
     // 实现天空盒渲染逻辑
     if (m_skyboxShader && !m_vertices.empty() && !m_indices.empty()) {
+        LOG_DEBUG("SkyboxRenderPass", "着色器和网格数据有效");
+        
         // 1. 设置常量缓冲区（视图投影矩阵）
         if (!m_constantBuffer.empty()) {
-            context->SetConstantBuffer("ConstantBuffer", m_constantBuffer.data(), m_constantBuffer.size());
+            LOG_DEBUG("SkyboxRenderPass", "设置常量缓冲区");
+            // 天空盒需要特殊的视图矩阵处理（移除平移）
+            XMMATRIX modifiedViewProjection = m_viewProjection;
+            modifiedViewProjection.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+            context->SetConstantBuffer("ConstantBuffer", modifiedViewProjection);
         }
         
         // 2. 设置顶点和索引缓冲区
+        LOG_DEBUG("SkyboxRenderPass", "设置顶点缓冲区，顶点数量: {0}", m_vertices.size());
         context->SetVertexBuffer(m_vertices.data(), 
                                static_cast<uint32_t>(m_vertices.size() * sizeof(float)), 
                                3 * sizeof(float)); // 3个float表示一个顶点位置
         
+        LOG_DEBUG("SkyboxRenderPass", "设置索引缓冲区，索引数量: {0}", m_indices.size());
         context->SetIndexBuffer(m_indices.data(), 
                               static_cast<uint32_t>(m_indices.size() * sizeof(uint16_t)), 
                               true); // 使用16位索引
         
         // 3. 绘制立方体
+        LOG_DEBUG("SkyboxRenderPass", "调用 DrawIndexed，索引数量: {0}", m_indices.size());
         context->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
         
-        LOG_DEBUG("SkyboxRenderPass", "天空盒渲染完成");
+        LOG_INFO("SkyboxRenderPass", "天空盒渲染完成");
     } else {
         LOG_WARNING("SkyboxRenderPass", "天空盒着色器未加载或网格数据缺失，跳过渲染");
+        if (!m_skyboxShader) {
+            LOG_WARNING("SkyboxRenderPass", "着色器为空");
+        }
+        if (m_vertices.empty()) {
+            LOG_WARNING("SkyboxRenderPass", "顶点数据为空");
+        }
+        if (m_indices.empty()) {
+            LOG_WARNING("SkyboxRenderPass", "索引数据为空");
+        }
     }
+    
+    LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法结束");
 }
 
 void SkyboxRenderPass::SetRenderTarget(void* renderTarget)
 {
     m_renderTarget = renderTarget;
-    LOG_DEBUG("SkyboxRenderPass", "Setting render target");
+    LOG_DEBUG("SkyboxRenderPass", "设置渲染目标: 0x{0:x}", reinterpret_cast<uintptr_t>(renderTarget));
 }
 
 void SkyboxRenderPass::ClearRenderTarget(float r, float g, float b, float a)
 {
     // 天空盒渲染通道不需要清屏操作
-    LOG_DEBUG("SkyboxRenderPass", "Ignoring clear render target call");
+    LOG_DEBUG("SkyboxRenderPass", "忽略清屏操作，颜色: ({0}, {1}, {2}, {3})", r, g, b, a);
 }
 
 void SkyboxRenderPass::SetViewport(uint32_t width, uint32_t height)
 {
     m_width = width;
     m_height = height;
-    LOG_DEBUG("SkyboxRenderPass", "Setting viewport to {0}x{1}", width, height);
+    LOG_DEBUG("SkyboxRenderPass", "设置视口为 {0}x{1}", width, height);
 }
 
 void SkyboxRenderPass::SetCubeMapTexture(void* cubeMapTexture)
 {
     m_cubeMapTexture = cubeMapTexture;
-    LOG_DEBUG("SkyboxRenderPass", "Setting cube map texture");
+    LOG_DEBUG("SkyboxRenderPass", "设置立方体贴图纹理: 0x{0:x}", reinterpret_cast<uintptr_t>(cubeMapTexture));
 }
 
 void SkyboxRenderPass::SetViewProjectionMatrix(const XMMATRIX& viewProjection)
 {
     m_viewProjection = viewProjection;
-    LOG_DEBUG("SkyboxRenderPass", "Setting view projection matrix");
+    LOG_DEBUG("SkyboxRenderPass", "设置视图投影矩阵");
     
     // 更新常量缓冲区
     if (m_constantBuffer.empty()) {
@@ -107,7 +131,7 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
 {
     // 初始化天空盒立方体网格
     // 创建一个立方体网格用于渲染天空盒
-    LOG_DEBUG("SkyboxRenderPass", "Initializing skybox mesh");
+    LOG_DEBUG("SkyboxRenderPass", "初始化天空盒网格");
     
     // 在实际实现中，我们会在这里创建立方体顶点和索引数据
     // 并将其存储在 m_skyboxMesh 中
@@ -165,7 +189,7 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
         1, 0, 4
     };
     
-    LOG_DEBUG("SkyboxRenderPass", "天空盒网格数据已准备: {0}个顶点, {1}个索引", 
+    LOG_INFO("SkyboxRenderPass", "天空盒网格数据已准备: {0}个顶点, {1}个索引", 
               m_vertices.size() / 3, m_indices.size());
 }
 

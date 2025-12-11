@@ -12,9 +12,9 @@
 #elif defined(__APPLE__)
 #endif
 
-#include "../core/Common.h"
+#include "../engine/Common.h"
 
-#include "../core/DynamicLoader.h"
+#include "../engine/DynamicLoader.h"
 #include "Export.h"
 #include <iostream>
 

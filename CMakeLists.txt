@@ -70,7 +70,7 @@ message(STATUS "Single-config output: bin, lib")
 
 # Windows 构建
 message(STATUS "Building for Windows")
-add_subdirectory(src/core)
+add_subdirectory(src/engine)
 add_subdirectory(src/runtime)
 add_subdirectory(src/game)
 add_subdirectory(src/editor)
