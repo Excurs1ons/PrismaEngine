@@ -18,8 +18,8 @@ add_executable(Runtime
 
 # 包含目录
 target_include_directories(Runtime
-    PRIVATE 
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core/include
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../engine
 )
 
 # 链接依赖
