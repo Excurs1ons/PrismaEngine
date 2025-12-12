@@ -3,8 +3,23 @@ name: Build Prisma Engine
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+      - 'resources/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'vcpkg.json'
+      - '.github/workflows/build.yml'
   pull_request:
     branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'assets/**'
+      - 'resources/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'vcpkg.json'
 
 jobs:
   build-windows:
