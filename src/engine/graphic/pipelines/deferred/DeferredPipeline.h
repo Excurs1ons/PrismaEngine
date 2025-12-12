@@ -3,7 +3,7 @@
 #include "graphic/ScriptableRenderPipeline.h"
 #include "graphic/pipelines/SkyboxRenderPass.h"
 #include "graphic/pipelines/forward/TransparentPass.h"
-#include "Camera.h"
+#include "graphic/ICamera.h"
 #include "GBuffer.h"
 #include "GeometryPass.h"
 #include "LightingPass.h"
