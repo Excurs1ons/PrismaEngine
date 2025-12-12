@@ -79,15 +79,9 @@ bool Editor::Initialize()
     }
 
     // 4. 初始化 ImGui
-    if (!InitializeImGui()) {
+    if (!Initialize()) {
         LOG_ERROR("Editor", "ImGui 初始化失败");
         return false;
-    }
-
-    // 5. 加载测试场景
-    auto sceneManager = SceneManager::GetInstance();
-    if (sceneManager) {
-        sceneManager->LoadScene("TestScene");
     }
 
     return true;
@@ -119,7 +113,13 @@ bool Editor::InitializeImGui()
     }
 
     // 初始化 SDL3
-    if (!ImGui_ImplSDL3_InitForOther((SDL_Window*)platform->GetWindowHandle())) {
+    auto window = platform->GetWindow();
+    if (!window) {
+        LOG_ERROR("Editor", "无法获取窗口句柄");
+        return false;
+    }
+
+    if (!ImGui_ImplSDL3_InitForOther((SDL_Window*)window)) {
         LOG_ERROR("Editor", "ImGui SDL3 初始化失败");
         return false;
     }
