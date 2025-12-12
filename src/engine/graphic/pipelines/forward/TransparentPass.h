@@ -58,6 +58,9 @@ private:
     // 视口尺寸
     uint32_t m_width = 0;
     uint32_t m_height = 0;
+
+    // 渲染上下文
+    RenderCommandContext* m_context = nullptr;
 };
 
 } // namespace Forward
