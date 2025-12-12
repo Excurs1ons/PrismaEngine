@@ -35,18 +35,27 @@ SkyboxRenderPass::~SkyboxRenderPass()
 void SkyboxRenderPass::Execute(RenderCommandContext* context)
 {
     LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法开始");
-    
+
     if (!context) {
         LOG_WARNING("SkyboxRenderPass", "Render context is null");
         return;
     }
-    
+
+    // 验证必要资源
+    if (!IsInitialized()) {
+        LOG_WARNING("SkyboxRenderPass", "Skybox not properly initialized, skipping render");
+        return;
+    }
+
+    if (!m_cubeMapTexture) {
+        LOG_DEBUG("SkyboxRenderPass", "No cubemap texture set, skipping skybox render");
+        return;
+    }
+
     LOG_DEBUG("SkyboxRenderPass", "上下文有效，开始渲染逻辑");
-    
-    // 实现天空盒渲染逻辑
-    if (m_skyboxShader && !m_vertices.empty() && !m_indices.empty()) {
-        LOG_DEBUG("SkyboxRenderPass", "着色器和网格数据有效");
-        
+    LOG_DEBUG("SkyboxRenderPass", "着色器和网格数据有效");
+
+    try {
         // 1. 设置常量缓冲区（视图投影矩阵）
         if (!m_constantBuffer.empty()) {
             LOG_DEBUG("SkyboxRenderPass", "设置常量缓冲区");
@@ -70,19 +79,16 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
         // 3. 绘制立方体
         LOG_DEBUG("SkyboxRenderPass", "调用 DrawIndexed，索引数量: {0}", m_indices.size());
         context->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
-        
+
         LOG_INFO("SkyboxRenderPass", "天空盒渲染完成");
-    } else {
-        LOG_WARNING("SkyboxRenderPass", "天空盒着色器未加载或网格数据缺失，跳过渲染");
-        if (!m_skyboxShader) {
-            LOG_WARNING("SkyboxRenderPass", "着色器为空");
+
+        // 设置立方体贴图
+        if (m_cubeMapTexture) {
+            context->SetShaderResource("CubeMap", m_cubeMapTexture);
         }
-        if (m_vertices.empty()) {
-            LOG_WARNING("SkyboxRenderPass", "顶点数据为空");
-        }
-        if (m_indices.empty()) {
-            LOG_WARNING("SkyboxRenderPass", "索引数据为空");
-        }
+
+    } catch (const std::exception& e) {
+        LOG_ERROR("SkyboxRenderPass", "Exception during execute: {0}", e.what());
     }
     
     LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法结束");
@@ -189,8 +195,16 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
         1, 0, 4
     };
     
-    LOG_INFO("SkyboxRenderPass", "天空盒网格数据已准备: {0}个顶点, {1}个索引", 
+    LOG_INFO("SkyboxRenderPass", "天空盒网格数据已准备: {0}个顶点, {1}个索引",
               m_vertices.size() / 3, m_indices.size());
+}
+
+bool SkyboxRenderPass::IsInitialized() const {
+    return m_skyboxShader != nullptr &&
+           !m_vertices.empty() &&
+           !m_indices.empty() &&
+           m_width > 0 &&
+           m_height > 0;
 }
 
 } // namespace Pipelines

@@ -66,6 +66,9 @@ private:
     
     // 初始化天空盒网格
     void InitializeSkyboxMesh();
+
+    // 检查资源是否已正确初始化
+    bool IsInitialized() const;
 };
 
 } // namespace Pipelines

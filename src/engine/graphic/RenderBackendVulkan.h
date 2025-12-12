@@ -42,6 +42,7 @@ public:
     RenderCommandContext* CreateCommandContext() override;
 
     bool isInitialized = false;
+    bool isFrameActive = false; // 跟踪帧状态，防止EndFrame在BeginFrame前调用
     VkInstance GetVulkanInstance() const { return instance; }
     VkPhysicalDevice GetPhysicalDevice() const { return physicalDevice; }
     VkDevice GetDevice() const { return device; }
