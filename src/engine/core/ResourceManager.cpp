@@ -297,6 +297,10 @@ void ResourceManager::UpdateStats() const
     m_stats.audioMemoryUsage = 0;
 
     for (const auto& pair : m_resources) {
+        if (!pair.second) {
+            continue; // 跳过空指针
+        }
+
         const auto& resource = pair.second;
 
         switch (resource->GetState()) {
@@ -316,18 +320,20 @@ void ResourceManager::UpdateStats() const
         uint64_t size = resource->GetSize();
         m_stats.totalMemoryUsage += size;
 
-        switch (resource->GetType()) {
-        case ResourceType::Texture:
-            m_stats.textureMemoryUsage += size;
-            break;
-        case ResourceType::Mesh:
-            m_stats.meshMemoryUsage += size;
-            break;
-        case ResourceType::Audio:
-            m_stats.audioMemoryUsage += size;
-            break;
-        default:
-            break;
+        if (resource) {
+            switch (resource->GetType()) {
+            case ResourceType::Texture:
+                m_stats.textureMemoryUsage += size;
+                break;
+            case ResourceType::Mesh:
+                m_stats.meshMemoryUsage += size;
+                break;
+            case ResourceType::Audio:
+                m_stats.audioMemoryUsage += size;
+                break;
+            default:
+                break;
+            }
         }
     }
 }
