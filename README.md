@@ -1,46 +1,62 @@
 # Prisma Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-Windows-blue.svg)](https://github.com/Excurs1ons/PrismaEngine)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-lightgrey.svg)](https://github.com/Excurs1ons/PrismaEngine)
 [![Build Prisma Engine](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
+[![RenderGraph](https://img.shields.io/badge/RenderGraph-Planning-orange.svg)](docs/RenderGraph_Migration_Plan.md)
 
 
-Prisma Engine is a personal learning project through which the author is learning the basics of game engine development. As a beginner's work, the project inevitably has shortcomings and errors, but every step is part of the learning process. The engine attempts to implement some basic features and supports Windows and Android platforms.
+Prisma Engine is a modern 3D game engine built from scratch, focusing on learning advanced graphics programming techniques and modern rendering architectures. The project implements cutting-edge rendering systems including ScriptableRenderPipeline and is currently migrating to a RenderGraph-based architecture for optimal performance and flexibility.
 
 English | [简体中文](docs/README_zh.md)
 
 ## 🎯 Project Goals
 
-### 📚 Learning Objectives
-- Learn the basics of game engine development through practice
-- Understand fundamental concepts of graphics rendering, resource management, and system architecture
-- Explore the basic workflow of cross-platform development
+## ✨ Features
 
-### 🔧 Attempted Features
-- **Cross-Platform Support**: Attempting to support Windows and Android platforms
-- **Rendering Backend**: Trying to implement DirectX 12 and Vulkan rendering support
-- **Input System**: Basic input handling functionality
-- **Audio System**: Simple audio playback functionality
-- **Resource Management**: Basic resource loading and management mechanisms
+### 🎮 Core Systems
+- **Modern Rendering Architecture**: ScriptableRenderPipeline with flexible Pass system
+- **Multi-Backend Support**: DirectX 12 (Windows) and Vulkan (Cross-platform)
+- **Cross-Platform**: Windows and Android with shared codebase
+- **Input Management**: Unified input system with SDL3 backend
+- **Audio System**: XAudio2 (Windows) and SDL3 Audio (Cross-platform)
+- **Resource Management**: JSON-based asset serialization system
 
-### ⚠️ Notes
-- This is a learning project, and code quality and architecture design may not be perfect
-- Feature implementations may contain bugs and performance issues
-- Suggestions and guidance are welcome to help the author improve and learn
+### 🚀 Advanced Rendering
+- **Forward Rendering Pipeline**: Physically-based rendering with PBR materials
+- **Skybox Rendering**: Cubemap-based environment rendering
+- **GUI System**: Dear ImGui integration for editor UI
+- **Scriptable Passes**: Flexible render pass architecture for custom effects
+
+### 🔄 Upcoming (RenderGraph Migration)
+- **RenderGraph System**: Modern DAG-based rendering architecture
+  - Automatic resource dependency management
+  - Optimized memory allocation with resource aliasing
+  - Parallel pass execution support
+  - Cross-API abstraction layer
+- **GPU-Driven Rendering**: Indirect drawing and GPU culling
+- **Advanced Post-Processing**: Tone mapping, FXAA, and custom effects
+
+### ⚠️ Development Status
+- This is a learning project focused on modern graphics programming
+- Actively migrating to RenderGraph architecture (see [migration plan](docs/RenderGraph_Migration_Plan.md))
+- Performance optimizations and bug fixes ongoing
+- Community contributions and feedback are welcome!
 
 ## 📋 System Requirements
 
 ### Development Environment
-- **IDE**: Visual Studio 2022 or newer, CLion, or any CMake-compatible IDE
-- **SDK**: Windows 10 SDK (10.0.22621.0+)
-- **Build System**: CMake 3.24+
+- **IDE**: Visual Studio 2022 (Windows), CLion (Cross-platform), or any CMake-compatible IDE
+- **SDK**: Windows 10 SDK (10.0.26100.0+)
+- **Build System**: CMake 3.31+
 - **Package Manager**: vcpkg
-- **Mobile Development**: Android NDK, Android SDK
+- **Mobile Development**: Android NDK r25+, Android SDK API 30+
 
 ### Runtime Environment
-- **Windows**: Windows 10+, DirectX 12 compatible graphics card
-- **Android**: Android 5.0+, Vulkan compatible device
-- **Graphics API**: DirectX 12 or Vulkan 1.1+
+- **Windows**: Windows 10 (1903) or later, DirectX 12 compatible graphics card
+- **Android**: Android 7.0+ (API Level 24), Vulkan 1.1+ compatible device
+- **Graphics API**: DirectX 12 (Windows), Vulkan 1.1+ (Cross-platform)
+- **Memory**: 4GB RAM minimum, 8GB recommended
 
 ## 🛠️ Quick Start
 
@@ -93,37 +109,69 @@ Alternative Visual Studio approach:
 
 ```
 PrismaEngine/
-├── src/              # Source code
-│   ├── core/         # Core engine module
-│   ├── editor/       # Game editor
-│   ├── game/         # Game framework
-│   └── runtime/      # Game runtime
-├── projects/         # Platform-specific project files
-│   ├── android/      # Android projects
-│   └── windows/      # Windows projects
-├── docs/             # Documentation resources
-├── tools/            # Development tools
-├── vcpkg/            # Package manager
-├── CMakeLists.txt    # Main CMake configuration
-└── CMakePresets.json # CMake presets
+├── src/                          # Source code
+│   ├── engine/                    # Core engine modules
+│   │   ├── audio/                 # Audio system
+│   │   ├── graphic/               # Rendering system
+│   │   │   ├── pipelines/         # Render pipelines
+│   │   │   │   └── forward/       # Forward rendering
+│   │   │   ├── RenderGraphCore.h  # RenderGraph architecture
+│   │   │   ├── RenderBackend.h    # Rendering backend interface
+│   │   │   └── ...                # Other rendering components
+│   │   ├── platform/              # Platform abstraction
+│   │   ├── resource/              # Resource management
+│   │   └── ...                    # Other core systems
+│   ├── editor/                    # Game editor
+│   ├── game/                      # Game framework
+│   └── runtime/                   # Game runtime
+├── projects/                     # Platform-specific projects
+│   ├── android/                   # Android projects
+│   │   └── Game/                  # Android game app
+│   └── windows/                   # Windows projects
+│       └── Game/                  # Windows game app
+├── docs/                         # Documentation
+│   ├── RenderGraph_Migration_Plan.md  # RenderGraph migration guide
+│   ├── RenderingSystem.md             # Rendering system docs
+│   ├── Roadmap.md                     # Project roadmap
+│   └── ...                            # Other documentation
+├── assets/                        # Game assets
+│   └── shaders/                    # HLSL shader files
+├── tools/                         # Development tools
+│   └── Scripts/                    # Build and utility scripts
+├── vcpkg/                         # Package manager submodule
+├── CMakeLists.txt                 # Main CMake configuration
+├── CMakePresets.json              # CMake presets
+└── .gitmodules                    # Git submodule configuration
 ```
 
-## 📚 Documentation Resources
+## 📚 Documentation
 
-- [📖 Engine Architecture](docs/RenderingSystem.md) - Detailed rendering system explanation
-- [🗺️ Development Roadmap](docs/Roadmap.md) - Project development plan
-- [💾 Asset Serialization](docs/AssetSerialization.md) - Resource management mechanism
+### 📖 Architecture & Design
+- [🔄 RenderGraph Migration Plan](docs/RenderGraph_Migration_Plan.md) - Detailed migration strategy
+- [🎮 Rendering System](docs/RenderingSystem.md) - Current rendering architecture
+- [💾 Asset Serialization](docs/AssetSerialization.md) - Resource management system
 - [📝 Development Notes](docs/MEMO.md) - Technical implementation details
+
+### 🗺️ Project Planning
+- [📍 Development Roadmap](docs/Roadmap.md) - Project development timeline
+- [📋 Requirements](docs/Requirements.md) - Engine requirements and specifications
 
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE) - see the license file for details.
 
-## 📞 Contact
+## 🙏 Acknowledgments
+
+- [DirectX 12](https://github.com/microsoft/DirectX-Graphics-Samples) - Inspiration for rendering backend
+- [Vulkan](https://github.com/KhronosGroup/Vulkan-Guide) - Cross-platform graphics API
+- [SDL3](https://github.com/libsdl-org/SDL) - Cross-platform platform layer
+- [Dear ImGui](https://github.com/ocornut/imgui) - Immediate mode GUI library
+
+## 📞 Contact & Support
 
 - **Project Homepage**: [GitHub Repository](https://github.com/Excurs1ons/PrismaEngine)
-- **Issue Reporting**: [Issues](https://github.com/Excurs1ons/PrismaEngine/issues)
+- **Issue Reporting**: [GitHub Issues](https://github.com/Excurs1ons/PrismaEngine/issues)
 
 ---
 
-*PrismaEngine - A beginner's game engine learning project*
+*PrismaEngine - A personal learning project for exploring modern graphics programming*
