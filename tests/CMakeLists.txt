@@ -6,8 +6,13 @@ project(PrismaEngineTests)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# 查找依赖包
-find_package(DirectXMath REQUIRED)
+# 在Windows上查找DirectXMath（包含在Windows SDK中）
+if(WIN32)
+    # DirectXMath是Windows SDK的一部分，不需要单独安装
+elseif(NOT WIN32)
+    # 在其他平台上可能需要不同的数学库
+    message(FATAL_ERROR "DirectXMath is only available on Windows platform")
+endif()
 
 # 包含目录
 include_directories(
@@ -30,7 +35,6 @@ add_executable(PrismaEngineTests
 # 链接库
 target_link_libraries(PrismaEngineTests
     PRIVATE
-    ${DirectXMath_LIBRARIES}
 )
 
 # 在Windows上设置子系统和入口点
