@@ -332,10 +332,10 @@ void InputManager::SendEvent(const InputEvent& event)
 
 // InputBinding 实现
 InputBinding::InputBinding(const std::string& name, KeyCode key, InputAction action, Callback callback)
-    : m_name(name)
-    , m_key(key)
-    , m_action(action)
-    , m_callback(callback)
+    : m_name(name),
+      m_key(key),
+      m_action(action),
+      m_callback(callback)
 {
 }
 
