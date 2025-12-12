@@ -2,7 +2,7 @@
 
 #include "graphic/ScriptableRenderPipeline.h"
 #include "graphic/pipelines/SkyboxRenderPass.h"
-#include "graphic/Camera.h"
+#include "Camera.h"
 #include "DepthPrePass.h"
 #include "OpaquePass.h"
 #include "TransparentPass.h"
