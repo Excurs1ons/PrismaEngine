@@ -55,9 +55,9 @@ bool Editor::Initialize()
     // props.FullScreenMode = FullScreenMode::Window;
     // props.ShowState = WindowShowState::Maximize;
 
-    auto window = platform->CreateWindow(props);
+    m_window = platform->CreateWindow(props);
 
-    if (!window) {
+    if (!m_window) {
         LOG_FATAL("System", "无法创建窗口");
         return false;
     }
@@ -73,13 +73,13 @@ bool Editor::Initialize()
     backendType = RenderBackendType::Vulkan;
 #endif
 
-    if (!renderSystem->Initialize(platform.get(), backendType, window, nullptr, props.Width, props.Height)) {
+    if (!renderSystem->Initialize(platform.get(), backendType, m_window, nullptr, props.Width, props.Height)) {
         LOG_FATAL("System", "渲染系统初始化失败");
         return false;
     }
 
     // 4. 初始化 ImGui
-    if (!Initialize()) {
+    if (!InitializeImGui()) {
         LOG_ERROR("Editor", "ImGui 初始化失败");
         return false;
     }
@@ -113,13 +113,7 @@ bool Editor::InitializeImGui()
     }
 
     // 初始化 SDL3
-    auto window = platform->GetWindow();
-    if (!window) {
-        LOG_ERROR("Editor", "无法获取窗口句柄");
-        return false;
-    }
-
-    if (!ImGui_ImplSDL3_InitForOther((SDL_Window*)window)) {
+    if (!ImGui_ImplSDL3_InitForOther((SDL_Window*)m_window)) {
         LOG_ERROR("Editor", "ImGui SDL3 初始化失败");
         return false;
     }
@@ -154,7 +148,7 @@ int Editor::Run()
 
     while (running) {
         platform->PumpEvents();
-        if (platform->ShouldClose(nullptr)) {
+        if (platform->ShouldClose(m_window)) {
             running = false;
         }
 
