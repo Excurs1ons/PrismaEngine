@@ -1,4 +1,4 @@
-#include "../tests/TestFramework.h"
+#include "TestFramework.h"
 #include <DirectXMath.h>
 
 using namespace DirectX;

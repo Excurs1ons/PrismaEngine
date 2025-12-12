@@ -15,9 +15,9 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-# 收集所有测试源文件
-file(GLOB_RECURSE TEST_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+# 收集测试源文件（排除TestMain.cpp，它会被单独添加）
+file(GLOB TEST_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/*Test.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
 )
 

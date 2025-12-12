@@ -1,4 +1,4 @@
-#include "../tests/TestFramework.h"
+#include "TestFramework.h"
 #include "../src/engine/core/ResourceManager.h"
 
 using namespace Engine::Core;
