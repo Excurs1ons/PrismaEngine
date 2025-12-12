@@ -1,0 +1,23 @@
+{
+  "name": "Ground Material",
+  "shader": "StandardPBR",
+  "properties": {
+    "albedo": [0.5, 0.5, 0.5, 1.0],
+    "metallic": 0.0,
+    "roughness": 0.8,
+    "normalScale": 1.0,
+    "occlusionStrength": 1.0,
+    "emissive": [0, 0, 0],
+    "emissiveIntensity": 0.0,
+    "tiling": [10, 10],
+    "offset": [0, 0]
+  },
+  "textures": {
+    "albedoMap": "textures/ground/grass_albedo.png",
+    "normalMap": "textures/ground/grass_normal.png",
+    "metallicMap": "textures/ground/grass_metallic.png",
+    "roughnessMap": "textures/ground/grass_roughness.png",
+    "occlusionMap": "textures/ground/grass_ao.png",
+    "emissiveMap": ""
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "Player Material",
+  "shader": "StandardPBR",
+  "properties": {
+    "albedo": [0.2, 0.5, 0.8, 1.0],
+    "metallic": 0.1,
+    "roughness": 0.4,
+    "normalScale": 1.0,
+    "occlusionStrength": 1.0,
+    "emissive": [0, 0, 0],
+    "emissiveIntensity": 0.0,
+    "tiling": [1, 1],
+    "offset": [0, 0]
+  },
+  "textures": {
+    "albedoMap": "textures/player/player_albedo.png",
+    "normalMap": "textures/player/player_normal.png",
+    "metallicMap": "textures/player/player_metallic.png",
+    "roughnessMap": "textures/player/player_roughness.png",
+    "occlusionMap": "",
+    "emissiveMap": ""
+  }
+}
