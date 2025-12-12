@@ -17,13 +17,13 @@ add_library(Editor SHARED
 
 # 包含目录
 target_include_directories(Editor
-    PRIVATE 
+    PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core/resource
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core/audio
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core/graphic
-        ${CMAKE_CURRENT_SOURCE_DIR}/../core/platform
+        ${CMAKE_CURRENT_SOURCE_DIR}/../engine
+        ${CMAKE_CURRENT_SOURCE_DIR}/../engine/resource
+        ${CMAKE_CURRENT_SOURCE_DIR}/../engine/audio
+        ${CMAKE_CURRENT_SOURCE_DIR}/../engine/graphic
+        ${CMAKE_CURRENT_SOURCE_DIR}/../engine/platform
 )
 
 # 查找并链接 DirectX 12 (使用 Windows SDK)
