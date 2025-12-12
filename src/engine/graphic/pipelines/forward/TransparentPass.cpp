@@ -14,6 +14,7 @@ namespace Forward {
 
 TransparentPass::TransparentPass()
     : m_depthWrite(false)
+    , m_context(nullptr)
 {
     LOG_DEBUG("TransparentPass", "构造函数被调用");
 }
@@ -25,6 +26,8 @@ TransparentPass::~TransparentPass()
 
 void TransparentPass::Execute(RenderCommandContext* context)
 {
+    m_context = context;
+
     if (!context || !m_renderTarget || !m_depthBuffer) {
         LOG_WARNING("TransparentPass", "Invalid context, render target or depth buffer");
         return;
