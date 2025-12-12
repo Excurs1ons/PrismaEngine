@@ -75,6 +75,12 @@ add_subdirectory(src/runtime)
 add_subdirectory(src/game)
 add_subdirectory(src/editor)
 
+# 可选：添加测试（如果BUILD_TESTING开启）
+option(BUILD_TESTING "Build tests" ON)
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+
 # 安装projects目录
 install(DIRECTORY projects/
     DESTINATION projects
