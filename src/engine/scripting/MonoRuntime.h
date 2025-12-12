@@ -1,9 +1,11 @@
 #pragma once
 
+#ifdef PRISMA_ENABLE_MONO
 #include <mono/jit/jit.h>
 #include <mono/metadata/assembly.h>
 #include <mono/metadata/environment.h>
 #include <mono/metadata/mono-config.h>
+#endif
 #include <string>
 #include <unordered_map>
 #include <memory>
@@ -13,228 +15,128 @@
 namespace Engine {
 namespace Scripting {
 
-// Mono对象包装器
-class MonoObject {
+#ifdef PRISMA_ENABLE_MONO
+// 前向声明Mono类型
+struct MonoDomain;
+struct MonoObject;
+struct MonoClass;
+struct MonoAssembly;
+struct MonoImage;
+struct MonoMethodDesc;
+struct MonoMethod;
+#else
+// 占位符类型
+using MonoDomain = void;
+using MonoObject = void;
+using MonoClass = void;
+using MonoAssembly = void;
+using MonoImage = void;
+using MonoMethodDesc = void;
+using MonoMethod = void;
+#endif
+
+// Mono对象包装类
+class ManagedObject {
 public:
-    MonoObject(MonoDomain* domain, ::MonoObject* obj);
-    ~MonoObject();
+    ManagedObject() = default;
+    virtual ~ManagedObject() = default;
 
-    // 获取原生Mono对象
-    ::MonoObject* GetManagedObject() const { return m_monoObject; }
+    bool IsValid() const { return m_monoObject != nullptr; }
 
-    // 调用方法
+    // 通用方法调用
     template<typename... Args>
-    void CallMethod(const std::string& methodName, Args... args);
-
-    // 获取/设置属性
-    template<typename T>
-    T GetPropertyValue(const std::string& propertyName);
-
-    template<typename T>
-    void SetPropertyValue(const std::string& propertyName, const T& value);
-
-    // 获取字段
-    template<typename T>
-    T GetFieldValue(const std::string& fieldName);
-
-    template<typename T>
-    void SetFieldValue(const std::string& fieldName, const T& value);
+    ManagedObject InvokeMethod(const std::string& methodName, Args&&... args) {
+        return ManagedObject(); // 空实现
+    }
 
 private:
-    MonoDomain* m_domain;
-    ::MonoObject* m_monoObject;
-    MonoClass* m_class;
+    MonoDomain* m_domain = nullptr;
+    ::MonoObject* m_monoObject = nullptr;
+    MonoClass* m_class = nullptr;
 };
 
-// Mono类包装器
-class MonoClass {
+// Mono域管理
+class MonoDomain {
 public:
-    MonoClass(MonoDomain* domain, const std::string& namespaceName, const std::string& className);
+    MonoDomain() = default;
+    ~MonoDomain() = default;
 
-    // 创建实例
-    std::shared_ptr<MonoObject> CreateInstance();
-
-    // 获取方法
-    MonoMethod* GetMethod(const std::string& methodName, int paramCount);
-
-    // 获取属性
-    MonoProperty* GetProperty(const std::string& propertyName);
-
-    // 获取字段
-    MonoField* GetField(const std::string& fieldName);
-
-private:
-    MonoDomain* m_domain;
-    ::MonoClass* m_monoClass;
+    bool Initialize(const std::string& domainName) { return false; }
+    void Shutdown() {}
+    bool IsInitialized() const { return false; }
+    void* GetNativeDomain() const { return nullptr; }
 };
 
-// Mono方法包装器
-class MonoMethod {
+// 程序集管理
+class MonoAssembly {
 public:
-    MonoMethod(MonoDomain* domain, ::MonoMethod* method);
+    MonoAssembly() = default;
+    ~MonoAssembly() = default;
 
-    // 调用方法
-    template<typename Ret, typename... Args>
-    Ret Invoke(MonoObject* obj, Args... args);
-
-    void Invoke(MonoObject* obj);
-
-private:
-    MonoDomain* m_domain;
-    ::MonoMethod* m_monoMethod;
-    void* m_signature;
-};
-
-// 脚本组件
-class ScriptComponent {
-public:
-    ScriptComponent(const std::string& scriptPath);
-    ~ScriptComponent();
-
-    // 加载脚本
-    bool Load();
-
-    // 初始化
-    void Initialize();
-
-    // 更新
-    void Update(float deltaTime);
-
-    // 销毁
-    void Destroy();
-
-    // 设置游戏对象
-    void SetGameObject(void* gameObject);
-
-    // 获取脚本实例
-    std::shared_ptr<MonoObject> GetInstance() const { return m_instance; }
-
-    // 是否已加载
-    bool IsLoaded() const { return m_loaded; }
-
-private:
-    std::string m_scriptPath;
-    std::shared_ptr<MonoClass> m_scriptClass;
-    std::shared_ptr<MonoObject> m_instance;
-    void* m_gameObject = nullptr;
-    bool m_loaded = false;
-
-    // 缓存常用方法
-    MonoMethod* m_awakeMethod = nullptr;
-    MonoMethod* m_startMethod = nullptr;
-    MonoMethod* m_updateMethod = nullptr;
-    MonoMethod* m_onDestroyMethod = nullptr;
+    bool Load(const std::string& assemblyPath) { return false; }
+    bool IsLoaded() const { return false; }
+    ManagedObject CreateInstance(const std::string& className) { return ManagedObject(); }
 };
 
 // Mono运行时管理器
 class MonoRuntime {
 public:
+    MonoRuntime() = default;
+    ~MonoRuntime() = default;
+
     static MonoRuntime& GetInstance();
 
-    // 初始化Mono运行时
-    bool Initialize();
-
-    // 关闭Mono运行时
+    // 初始化和清理
+    bool Initialize(const std::string& configPath = "");
     void Shutdown();
+    bool IsInitialized() const;
 
-    // 加载程序集
-    bool LoadAssembly(const std::string& assemblyPath);
+    // 程序集管理
+    bool LoadAssembly(const std::string& assemblyName, const std::string& path);
+    ManagedObject CreateInstance(const std::string& assemblyName, const std::string& className);
 
-    // 创建脚本组件
-    std::shared_ptr<ScriptComponent> CreateScript(const std::string& scriptPath);
-
-    // 获取域
-    MonoDomain* GetDomain() const { return m_domain; }
-
-    // 注册内部调用函数
-    void RegisterInternalCalls();
-
-    // 调用静态方法
-    template<typename Ret, typename... Args>
-    Ret CallStaticMethod(const std::string& assemblyName,
-                        const std::string& namespaceName,
-                        const std::string& className,
-                        const std::string& methodName,
-                        Args... args);
-
-    // 创建C#对象
+    // 调用方法
     template<typename... Args>
-    std::shared_ptr<MonoObject> CreateObject(const std::string& namespaceName,
-                                            const std::string& className,
-                                            Args... args);
+    ManagedObject InvokeMethod(ManagedObject& instance, const std::string& methodName, Args&&... args) {
+        return ManagedObject();
+    }
 
-    // 垃圾回收
-    void CollectGarbage();
+    // 类型转换
+    ManagedObject StringToMono(const std::string& str);
+    std::string MonoToString(ManagedObject& obj);
+    ManagedObject IntToMono(int value);
+    int MonoToInt(ManagedObject& obj);
+    ManagedObject FloatToMono(float value);
+    float MonoToFloat(ManagedObject& obj);
+    ManagedObject BoolToMono(bool value);
+    bool MonoToBool(ManagedObject& obj);
+
+    // 数组操作
+    ManagedObject CreateArray(int length);
+    int GetArrayLength(ManagedObject& array);
+    ManagedObject GetArrayElement(ManagedObject& array, int index);
+    void SetArrayElement(ManagedObject& array, int index, ManagedObject& value);
+
+    // 域管理
+    MonoDomain* CreateDomain(const std::string& domainName);
+    void UnloadDomain(MonoDomain* domain);
+    MonoDomain* GetRootDomain() const;
+
+    // 异常处理
+    bool HasException();
+    std::string GetExceptionMessage();
+    void ClearException();
+
+    // 配置
+    void SetSearchPaths(const std::vector<std::string>& paths);
+    void RegisterInternalCall(const std::string& signature, void* function);
 
 private:
-    MonoRuntime();
-    ~MonoRuntime();
-
-    MonoRuntime(const MonoRuntime&) = delete;
-    MonoRuntime& operator=(const MonoRuntime&) = delete;
-
-    // 内部调用函数注册
-    void RegisterEngineAPIs();
-
-    // Mono资源
-    MonoDomain* m_domain = nullptr;
-    MonoAssembly* m_coreAssembly = nullptr;
-    MonoImage* m_coreImage = nullptr;
-
-    // 脚本缓存
-    std::unordered_map<std::string, std::shared_ptr<MonoClass>> m_classCache;
-    std::unordered_map<std::string, MonoAssembly*> m_assemblies;
-
-    // 是否已初始化
     bool m_initialized = false;
+    std::unordered_map<std::string, std::unique_ptr<MonoAssembly>> m_assemblies;
+    std::vector<std::unique_ptr<MonoDomain>> m_domains;
+    std::vector<std::string> m_searchPaths;
 };
-
-// 内部调用函数定义
-namespace InternalCalls {
-
-// Transform相关
-void Transform_SetPosition(void* transform, float x, float y, float z);
-void Transform_GetPosition(void* transform, float* x, float* y, float* z);
-void Transform_SetRotation(void* transform, float x, float y, float z, float w);
-void Transform_GetRotation(void* transform, float* x, float* y, float* z, float* w);
-void Transform_SetScale(void* transform, float x, float y, float z);
-void Transform_GetScale(void* transform, float* x, float* y, float* z);
-
-// GameObject相关
-void* GameObject_Create();
-void GameObject_Destroy(void* gameObject);
-void* GameObject_AddComponent(void* gameObject, void* componentType);
-void* GameObject_GetComponent(void* gameObject, void* componentType);
-bool GameObject_HasComponent(void* gameObject, void* componentType);
-
-// Debug相关
-void Debug_Log(const char* message);
-void Debug_LogWarning(const char* message);
-void Debug_LogError(const char* message);
-
-// Time相关
-float Time_GetDeltaTime();
-float Time_GetTime();
-
-// Input相关
-bool Input_GetKey(int keyCode);
-bool Input_GetKeyDown(int keyCode);
-bool Input_GetKeyUp(int keyCode);
-bool Input_GetMouseButton(int button);
-float Input_GetMouseX();
-float Input_GetMouseY();
-
-// Mathf相关
-float Mathf_Sin(float value);
-float Mathf_Cos(float value);
-float Mathf_Tan(float value);
-float Mathf_Abs(float value);
-float Mathf_Min(float a, float b);
-float Mathf_Max(float a, float b);
-float Mathf_Clamp(float value, float min, float max);
-float Mathf_Lerp(float a, float b, float t);
-
-} // namespace InternalCalls
 
 } // namespace Scripting
 } // namespace Engine
