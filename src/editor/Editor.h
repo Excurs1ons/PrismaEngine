@@ -13,6 +13,9 @@ public:
 	bool Initialize() override;
 	int Run() override;
 	void Shutdown() override;
+
+private:
+	bool InitializeImGui();
 };
 
 extern "C" {
