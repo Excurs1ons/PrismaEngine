@@ -14,7 +14,6 @@
 
 // 引擎和游戏头文件
 #include "../../../src/engine/pch.h"
-#include "../../../src/game/pch.h"
 
 // Win32应用程序特定的头文件
 #include <mmsystem.h>
