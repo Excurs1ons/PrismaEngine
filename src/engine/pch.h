@@ -109,10 +109,16 @@
 // 这些头文件会在各自需要时被包含
 // 只包含标准库和第三方库头文件
 
-// 常用宏定义
-#define SAFE_DELETE(p) { if(p) { delete (p); (p) = nullptr; } }
-#define SAFE_DELETE_ARRAY(p) { if(p) { delete[] (p); (p) = nullptr; } }
-#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p) = nullptr; } }
+// 常用宏定义（使用条件编译避免重定义）
+#ifndef SAFE_DELETE
+    #define SAFE_DELETE(p) { if(p) { delete (p); (p) = nullptr; } }
+#endif
+
+#ifndef SAFE_DELETE_ARRAY
+    #define SAFE_DELETE_ARRAY(p) { if(p) { delete[] (p); (p) = nullptr; } }
+#endif
+
+// 注意：SAFE_RELEASE 在 Helper.h 中定义，这里不定义以避免冲突
 
 // 禁用某些警告
 #ifdef _MSC_VER
