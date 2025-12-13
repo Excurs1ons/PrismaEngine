@@ -1,12 +1,64 @@
-﻿// pch.h: 这是预编译标头文件。
-// 下方列出的文件仅编译一次，提高了将来生成的生成性能。
-// 这还将影响 IntelliSense 性能，包括代码完成和许多代码浏览功能。
-// 但是，如果此处列出的文件中的任何一个在生成之间有更新，它们全部都将被重新编译。
-// 请勿在此处添加要频繁更新的文件，这将使得性能优势无效。
+#pragma once
 
-#ifndef PCH_H
-#define PCH_H
+// Windows应用程序预编译头文件
+// 包含Windows应用程序常用的头文件
 
-// 添加要在此处预编译的标头
+// Windows特定头文件
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <windowsx.h>
+#include <shellapi.h>
+#include <commctrl.h>
+#include <commdlg.h>
 
-#endif //PCH_H
+// 引擎和游戏头文件
+#include "../../../src/engine/pch.h"
+#include "../../../src/game/pch.h"
+
+// Win32应用程序特定的头文件
+#include <mmsystem.h>
+#include <wincodec.h>
+#include <d2d1.h>
+#include <dwrite.h>
+
+// 便利宏
+#define WINDOW_CLASS_NAME L"PrismaEngineWindow"
+#define APP_NAME L"Prisma Engine"
+
+// 窗口消息处理宏
+#define HANDLE_MSG(hwnd, message, fn) \
+    case (message): return HANDLE_##message((hwnd), (wParam), (lParam), (fn))
+
+// 常用的Windows资源ID
+enum {
+    ID_FILE_NEW = 1001,
+    ID_FILE_OPEN,
+    ID_FILE_SAVE,
+    ID_FILE_EXIT,
+    ID_EDIT_UNDO,
+    ID_EDIT_REDO,
+    ID_EDIT_CUT,
+    ID_EDIT_COPY,
+    ID_EDIT_PASTE,
+    ID_VIEW_FULLSCREEN,
+    ID_VIEW_SETTINGS,
+    ID_HELP_ABOUT
+};
+
+// 便利的字符串转换
+inline std::wstring StringToWString(const std::string& str) {
+    if (str.empty()) return std::wstring();
+    int size_needed = MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), NULL, 0);
+    std::wstring wstrTo(size_needed, 0);
+    MultiByteToWideChar(CP_UTF8, 0, &str[0], (int)str.size(), &wstrTo[0], size_needed);
+    return wstrTo;
+}
+
+inline std::string WStringToString(const std::wstring& wstr) {
+    if (wstr.empty()) return std::string();
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);
+    return strTo;
+}

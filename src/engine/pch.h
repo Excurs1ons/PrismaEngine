@@ -1,13 +1,174 @@
-﻿// pch.h: 这是预编译标头文件。
-// 下方列出的文件仅编译一次，提高了将来生成的生成性能。
-// 这还将影响 IntelliSense 性能，包括代码完成和许多代码浏览功能。
-// 但是，如果此处列出的文件中的任何一个在生成之间有更新，它们全部都将被重新编译。
-// 请勿在此处添加要频繁更新的文件，这将使得性能优势无效。
+#pragma once
 
-#ifndef PCH_H
-#define PCH_H
+// 平台定义
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #define NOMINMAX
+    #include <windows.h>
+    #include <windowsx.h>
+    #include <d3d12.h>
+    #include <dxgi1_6.h>
+    #include <DirectXMath.h>
+    #include <DirectXColors.h>
+#endif
 
-// 添加要在此处预编译的标头
-#include "framework.h"
+// C++标准库核心头文件
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <bitset>
+#include <chrono>
+#include <condition_variable>
+#include <deque>
+#include <forward_list>
+#include <fstream>
+#include <functional>
+#include <future>
+#include <initializer_list>
+#include <iostream>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <numeric>
+#include <optional>
+#include <queue>
+#include <set>
+#include <span>
+#include <stack>
+#include <string>
+#include <string_view>
+#include <thread>
+#include <tuple>
+#include <type_traits>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <variant>
+#include <vector>
 
-#endif //PCH_H
+// C标准库头文件
+#include <cassert>
+#include <cctype>
+#include <cerrno>
+#include <cfloat>
+#include <ciso646>
+#include <climits>
+#include <clocale>
+#include <cmath>
+#include <csetjmp>
+#include <csignal>
+#include <cstdarg>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctime>
+#include <cwchar>
+#include <cwctype>
+
+// 文件系统
+#include <filesystem>
+
+// 数学库
+#include <cmath>
+#include <numbers>
+
+// 异常处理
+#include <exception>
+#include <stdexcept>
+#include <system_error>
+
+// 智能指针（已经在上面，但强调一下）
+#include <memory>
+
+// 字符串流
+#include <sstream>
+#include <iomanip>
+
+// 第三方库
+#ifdef ENABLE_VULKAN
+    #include <vulkan/vulkan.h>
+#endif
+
+#ifdef ENABLE_SDL
+    #include <SDL3/SDL.h>
+    #include <SDL3/SDL_main.h>
+#endif
+
+#ifdef USE_IMGUI
+    #include <imgui.h>
+#endif
+
+#ifdef USE_NLOHMANN_JSON
+    #include <nlohmann/json.hpp>
+#endif
+
+// 项目核心头文件（这些是稳定的，不经常改变）
+#include "core/Logger.h"
+#include "core/Object.h"
+#include "core/Types.h"
+
+// 平台相关
+#ifdef _WIN32
+    #include "platform/PlatformWindows.h"
+#endif
+
+// 常用宏定义
+#define SAFE_DELETE(p) { if(p) { delete (p); (p) = nullptr; } }
+#define SAFE_DELETE_ARRAY(p) { if(p) { delete[] (p); (p) = nullptr; } }
+#define SAFE_RELEASE(p) { if(p) { (p)->Release(); (p) = nullptr; } }
+
+// 禁用某些警告
+#ifdef _MSC_VER
+    #pragma warning(push)
+    #pragma warning(disable: 4251)  // class 'xxx' needs to have dll-interface
+    #pragma warning(disable: 4275)  // non dll-interface class 'xxx' used as base for dll-interface class 'yyy'
+#endif
+
+// 便于调试的宏
+#ifdef _DEBUG
+    #define DEBUG_ONLY(x) x
+    #define RELEASE_ONLY(x)
+#else
+    #define DEBUG_ONLY(x)
+    #define RELEASE_ONLY(x) x
+#endif
+
+// 常用的类型别名
+using byte = unsigned char;
+using sbyte = signed char;
+using uint8 = unsigned char;
+using uint16 = unsigned short;
+using uint32 = unsigned int;
+using uint64 = unsigned long long;
+using int8 = signed char;
+using int16 = signed short;
+using int32 = int;
+using int64 = long long;
+
+// 单位转换常量
+constexpr float PI = 3.14159265358979323846f;
+constexpr float TWO_PI = 2.0f * PI;
+constexpr float HALF_PI = PI * 0.5f;
+constexpr float DEG_TO_RAD = PI / 180.0f;
+constexpr float RAD_TO_DEG = 180.0f / PI;
+
+// 常用的数学函数
+template<typename T>
+T Clamp(T value, T min, T max) {
+    return std::max(min, std::min(max, value));
+}
+
+template<typename T>
+T Lerp(T a, T b, float t) {
+    return a + (b - a) * t;
+}
+
+// 恢复警告设置
+#ifdef _MSC_VER
+    #pragma warning(pop)
+#endif
