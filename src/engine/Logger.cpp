@@ -111,12 +111,15 @@ void Logger::LogInternal(LogLevel level, const std::string& category,
     if (level < config_.minLevel) return;
 
     LogEntry entry(level, message, category, loc);
-    
-    // 根据日志级别决定是否捕获调用堆栈
-    CallStackOutput stackOutput = GetCallStackOutputForLevel(level);
-    if (stackOutput != CallStackOutput::None) {
-        // 捕获调用堆栈（跳过2帧：CaptureCallStack 和 LogInternal）
-        entry.callStack = CaptureCallStack(2);
+
+    // 只有启用调用堆栈时才捕获
+    if (config_.enableCallStack) {
+        // 根据日志级别决定是否捕获调用堆栈
+        CallStackOutput stackOutput = GetCallStackOutputForLevel(level);
+        if (stackOutput != CallStackOutput::None) {
+            // 捕获调用堆栈（跳过2帧：CaptureCallStack 和 LogInternal）
+            entry.callStack = CaptureCallStack(2);
+        }
     }
 
     // 检查是否有活跃的日志作用域

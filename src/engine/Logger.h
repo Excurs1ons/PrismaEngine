@@ -27,6 +27,7 @@ struct LogConfig {
     bool enableTimestamp      = true;
     bool enableThreadId       = true;
     bool enableSourceLocation = true;
+    bool enableCallStack      = false;            // 默认不启用调用堆栈捕获（性能优化）
     bool asyncMode            = true;
     size_t asyncQueueSize     = 1024;
     std::string logFilePath   = "logs/engine.log";
