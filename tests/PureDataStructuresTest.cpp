@@ -76,28 +76,28 @@ private:
 
             // 测试空Vector
             AssertTrue(vec.Empty());
-            AssertEquals(0u, vec.Size());
+            AssertEquals(static_cast<size_t>(0), vec.Size());
 
             // 测试添加元素
             vec.PushBack(1);
             vec.PushBack(2);
             vec.PushBack(3);
             AssertFalse(vec.Empty());
-            AssertEquals(3u, vec.Size());
+            AssertEquals(static_cast<size_t>(3), vec.Size());
             AssertEquals(1, vec[0]);
             AssertEquals(2, vec[1]);
             AssertEquals(3, vec[2]);
 
             // 测试移除元素
             vec.PopBack();
-            AssertEquals(2u, vec.Size());
+            AssertEquals(static_cast<size_t>(2), vec.Size());
             AssertEquals(1, vec[0]);
             AssertEquals(2, vec[1]);
 
             // 测试清空
             vec.Clear();
             AssertTrue(vec.Empty());
-            AssertEquals(0u, vec.Size());
+            AssertEquals(static_cast<size_t>(0), vec.Size());
 
             // 测试保留容量
             Vector<int> vec2;
@@ -107,7 +107,7 @@ private:
 
             // 测试初始大小构造
             Vector<int> vec3(10);
-            AssertEquals(10u, vec3.Size());
+            AssertEquals(static_cast<size_t>(10), vec3.Size());
         }
     };
 
@@ -120,13 +120,13 @@ private:
             std::unordered_map<std::string, int> map;
 
             // 测试空map
-            AssertEquals(0u, map.size());
+            AssertEquals(static_cast<size_t>(0), map.size());
 
             // 测试插入和查找
             map["one"] = 1;
             map["two"] = 2;
             map["three"] = 3;
-            AssertEquals(3u, map.size());
+            AssertEquals(static_cast<size_t>(3), map.size());
 
             AssertEquals(1, map["one"]);
             AssertEquals(2, map["two"]);
@@ -141,7 +141,7 @@ private:
 
             // 测试删除
             map.erase("two");
-            AssertEquals(2u, map.size());
+            AssertEquals(static_cast<size_t>(2), map.size());
             AssertFalse(map.count("two"));
 
             // 测试迭代
@@ -255,7 +255,7 @@ private:
             auto newEnd = std::unique(vecWithDup.begin(), vecWithDup.end());
             vecWithDup.erase(newEnd, vecWithDup.end());
 
-            AssertEquals(3u, vecWithDup.Size());
+            AssertEquals(static_cast<size_t>(3), vecWithDup.Size());
             AssertEquals(1, vecWithDup[0]);
             AssertEquals(2, vecWithDup[1]);
             AssertEquals(3, vecWithDup[2]);
