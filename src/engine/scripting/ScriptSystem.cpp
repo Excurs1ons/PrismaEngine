@@ -66,7 +66,7 @@ void ScriptSystem::Shutdown() {
 bool ScriptSystem::LoadAssembly(const std::string& assemblyPath) {
     auto& runtime = MonoRuntime::GetInstance();
 
-    if (runtime.LoadAssembly(assemblyPath)) {
+    if (runtime.LoadAssembly("assembly", assemblyPath)) {
         m_loadedAssemblies.push_back(assemblyPath);
         LOG_INFO("ScriptSystem", "成功加载程序集: {0}", assemblyPath);
         return true;
@@ -99,10 +99,11 @@ void ScriptSystem::AddScript(Engine::Core::ECS::EntityID entity, const std::stri
     }
 
     // 创建新脚本
-    auto script = MonoRuntime::GetInstance().CreateScript(scriptPath);
-    if (script) {
-        // 设置游戏对象引用
-        script->SetGameObject(reinterpret_cast<void*>(entity));
+    auto managedScript = MonoRuntime::GetInstance().CreateScript(scriptPath);
+    if (managedScript.IsValid()) {
+        // 创建ScriptComponent包装器
+        auto script = std::make_shared<ScriptComponent>();
+        script->scriptPaths.push_back(scriptPath);
 
         entityScripts->scripts.push_back(script);
         LOG_INFO("ScriptSystem", "为实体 {0} 添加脚本: {1}", entity, scriptPath);

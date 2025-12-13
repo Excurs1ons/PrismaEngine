@@ -130,5 +130,17 @@ void MonoRuntime::RegisterInternalCall(const std::string& signature, void* funct
     // 空实现
 }
 
+void MonoRuntime::CollectGarbage() {
+    // 空实现
+#ifdef PRISMA_ENABLE_MONO
+    // TODO: 实现实际的垃圾回收
+#endif
+}
+
+ManagedObject MonoRuntime::CreateScript(const std::string& scriptPath) {
+    // 创建空的脚本对象
+    return ManagedObject();
+}
+
 } // namespace Scripting
 } // namespace Engine
