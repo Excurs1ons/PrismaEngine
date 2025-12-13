@@ -43,13 +43,14 @@ void OpaquePass::Execute(RenderCommandContext* context)
         context->SetConstantBuffer("View", m_view);
         context->SetConstantBuffer("Projection", m_projection);
         context->SetConstantBuffer("ViewProjection", m_viewProjection);
-        context->SetConstantBuffer("AmbientLight", &m_ambientLight, sizeof(XMFLOAT3));
+        context->SetConstantBuffer("AmbientLight", reinterpret_cast<const float*>(&m_ambientLight), sizeof(XMFLOAT3));
 
         // 设置光源数据
         if (!m_lights.empty()) {
-            context->SetConstantBuffer("Lights", m_lights.data(),
+            context->SetConstantBuffer("Lights", reinterpret_cast<const float*>(m_lights.data()),
                                         static_cast<size_t>(m_lights.size() * sizeof(Light)));
-            context->SetConstantBuffer("LightCount", &m_lights.size(), sizeof(uint32_t));
+            uint32_t lightCount = static_cast<uint32_t>(m_lights.size());
+            context->SetConstantBuffer("LightCount", reinterpret_cast<const float*>(&lightCount), sizeof(uint32_t));
         }
 
         // 获取场景
@@ -62,14 +63,8 @@ void OpaquePass::Execute(RenderCommandContext* context)
         // 获取主相机位置
         auto camera = scene->GetMainCamera();
         XMFLOAT3 cameraPos = XMFLOAT3(0, 0, 0);
-        if (camera) {
-            XMVECTOR camPos = camera->GetPosition();
-            cameraPos = XMFLOAT3(
-                XMVectorGetX(camPos),
-                XMVectorGetY(camPos),
-                XMVectorGetZ(camPos)
-            );
-        }
+        // TODO: 实现Camera的GetPosition方法
+        // 现在使用默认位置
 
         // 遍历所有带有MeshRenderer的游戏对象
         const auto& gameObjects = scene->GetGameObjects();
@@ -139,10 +134,10 @@ void OpaquePass::Execute(RenderCommandContext* context)
                 const auto& props = material->GetProperties();
                 // PBR材质参数
                 XMFLOAT3 albedo = { props.baseColor.x, props.baseColor.y, props.baseColor.z };
-                context->SetConstantBuffer("MaterialAlbedo", &albedo, sizeof(XMFLOAT3));
-                context->SetConstantBuffer("MaterialMetallic", &props.metallic, sizeof(float));
-                context->SetConstantBuffer("MaterialRoughness", &props.roughness, sizeof(float));
-                context->SetConstantBuffer("MaterialEmissive", &props.emissive, sizeof(float));
+                context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedo), sizeof(XMFLOAT3));
+                context->SetConstantBuffer("MaterialMetallic", reinterpret_cast<const float*>(&props.metallic), sizeof(float));
+                context->SetConstantBuffer("MaterialRoughness", reinterpret_cast<const float*>(&props.roughness), sizeof(float));
+                context->SetConstantBuffer("MaterialEmissive", reinterpret_cast<const float*>(&props.emissive), sizeof(float));
 
                 // 绑定纹理 - 这里简化处理，暂时跳过纹理绑定
                 // TODO: 实现纹理资源的正确绑定
@@ -151,7 +146,7 @@ void OpaquePass::Execute(RenderCommandContext* context)
             // 渲染所有子网格
             for (const auto& subMesh : mesh->subMeshes) {
                 // 设置顶点和索引缓冲区（使用GPU句柄）
-                context->SetVertexBuffer(nullptr, 0, subMesh.GetVertexStride());
+                context->SetVertexBuffer(nullptr, 0, Vertex::GetVertexStride());
                 context->SetIndexBuffer(nullptr, 0, false);
 
                 // 执行绘制

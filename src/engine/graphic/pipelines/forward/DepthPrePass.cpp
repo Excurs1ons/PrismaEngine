@@ -70,7 +70,7 @@ void DepthPrePass::Execute(RenderCommandContext* context)
 
                 // 使用RenderBackend来渲染
                 // 这里简化处理，直接渲染
-                context->SetVertexBuffer(nullptr, 0, subMesh.GetVertexStride());
+                context->SetVertexBuffer(nullptr, 0, Vertex::GetVertexStride());
                 context->SetIndexBuffer(nullptr, 0, false);
 
                 // 绘制子网格
