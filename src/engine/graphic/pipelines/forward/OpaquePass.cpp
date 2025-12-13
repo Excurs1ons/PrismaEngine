@@ -202,9 +202,6 @@ void OpaquePass::SetViewport(uint32_t width, uint32_t height)
     m_width = width;
     m_height = height;
     LOG_DEBUG("OpaquePass", "设置视口: {0}x{1}", width, height);
-
-    // 设置视口到渲染上下文
-    context->SetViewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
 }
 
 void OpaquePass::SetDepthBuffer(void* depthBuffer)

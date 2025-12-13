@@ -1,11 +1,17 @@
 set(PIPELINE_FORWARD_SOURCES
     graphic/pipelines/forward/ForwardPipeline.cpp
     graphic/pipelines/forward/ForwardRenderPass.cpp
+    graphic/pipelines/forward/DepthPrePass.cpp
+    graphic/pipelines/forward/OpaquePass.cpp
+    graphic/pipelines/forward/TransparentPass.cpp
 )
 
 set(PIPELINE_FORWARD_HEADERS
     graphic/pipelines/forward/ForwardPipeline.h
     graphic/pipelines/forward/ForwardRenderPass.h
+    graphic/pipelines/forward/DepthPrePass.h
+    graphic/pipelines/forward/OpaquePass.h
+    graphic/pipelines/forward/TransparentPass.h
 )
 
 set(ENGINE_GRAPHIC_SOURCES
