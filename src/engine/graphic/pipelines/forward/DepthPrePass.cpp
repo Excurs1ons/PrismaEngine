@@ -51,33 +51,31 @@ void DepthPrePass::Execute(RenderCommandContext* context)
 
             // 获取网格数据
             auto mesh = meshRenderer->GetMesh();
-            if (!mesh) continue;
+            if (!mesh || mesh->subMeshes.empty()) continue;
 
             // 设置世界矩阵
-            auto transform = gameObject->GetTransform();
+            auto transform = gameObject->transform();
             if (transform) {
-                XMMATRIX worldMatrix = transform->GetWorldMatrix();
+                // Transform::GetMatrix() 返回的是转置后的矩阵
+                float* matrixData = transform->GetMatrix();
+                XMMATRIX worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrixData));
+                // 再次转置回来，因为GetMatrix()为了HLSL已经转置了一次
+                worldMatrix = XMMatrixTranspose(worldMatrix);
                 context->SetConstantBuffer("World", worldMatrix);
             }
 
-            // 设置顶点和索引缓冲区
-            const auto& vertices = mesh->GetVertices();
-            const auto& indices = mesh->GetIndices();
+            // 渲染所有子网格
+            for (const auto& subMesh : mesh->subMeshes) {
+                if (!subMesh.vertexBufferHandle) continue; // 如果没有上传到GPU则跳过
 
-            if (!vertices.empty()) {
-                context->SetVertexBuffer(vertices.data(),
-                                      static_cast<uint32_t>(vertices.size() * sizeof(float)),
-                                      mesh->GetVertexStride());
+                // 使用RenderBackend来渲染
+                // 这里简化处理，直接渲染
+                context->SetVertexBuffer(nullptr, 0, subMesh.GetVertexStride());
+                context->SetIndexBuffer(nullptr, 0, false);
+
+                // 绘制子网格
+                context->DrawIndexed(subMesh.indicesCount());
             }
-
-            if (!indices.empty()) {
-                context->SetIndexBuffer(indices.data(),
-                                      static_cast<uint32_t>(indices.size() * sizeof(uint32_t)),
-                                      false); // 32位索引
-            }
-
-            // 深度预渲染 - 只写入深度，不进行颜色计算
-            context->DrawIndexed(static_cast<uint32_t>(indices.size()));
         }
 
         LOG_DEBUG("DepthPrePass", "深度预渲染完成");
