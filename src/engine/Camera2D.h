@@ -42,6 +42,24 @@ public:
     // 更新投影矩阵以适应窗口大小
     void UpdateProjectionMatrix(float windowWidth, float windowHeight);
 
+    // ICamera接口实现
+    XMVECTOR GetForward() const override { return XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f); }
+    XMVECTOR GetUp() const override { return XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); }
+    XMVECTOR GetRight() const override { return XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); }
+
+    float GetFOV() const override { return 0.0f; } // 正交投影没有FOV
+    void SetFOV(float fov) override { (void)fov; } // 正交投影忽略FOV
+
+    float GetNearPlane() const override { return m_nearPlane; }
+    float GetFarPlane() const override { return m_farPlane; }
+    float GetAspectRatio() const override { return m_width / m_height; }
+
+    void SetNearFarPlanes(float nearPlane, float farPlane) override;
+    void SetAspectRatio(float aspectRatio) override;
+
+    bool IsActive() const override { return m_isActive; }
+    void SetActive(bool active) override { m_isActive = active; }
+
 private:
     XMVECTOR m_position;
     float m_rotation;
@@ -55,4 +73,5 @@ private:
 
     mutable bool m_isOrthoDirty;
     mutable bool m_isViewDirty;
+    bool m_isActive = true;
 };

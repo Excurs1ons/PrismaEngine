@@ -121,6 +121,20 @@ void DepthPrePass::SetViewProjectionMatrix(const XMMATRIX& viewProjection)
     m_viewProjection = viewProjection;
 }
 
+void DepthPrePass::SetViewMatrix(const XMMATRIX& view)
+{
+    m_view = view;
+    // 重新计算视图投影矩阵
+    m_viewProjection = m_view * m_projection;
+}
+
+void DepthPrePass::SetProjectionMatrix(const XMMATRIX& projection)
+{
+    m_projection = projection;
+    // 重新计算视图投影矩阵
+    m_viewProjection = m_view * m_projection;
+}
+
 } // namespace Forward
 } // namespace Pipelines
 } // namespace Graphic

@@ -113,6 +113,13 @@ void SkyboxRenderPass::SetViewport(uint32_t width, uint32_t height)
     LOG_DEBUG("SkyboxRenderPass", "设置视口为 {0}x{1}", width, height);
 }
 
+void SkyboxRenderPass::SetDepthBuffer(void* depthBuffer)
+{
+    // 天空盒不需要特殊的深度缓冲处理，但需要保存以避免编译警告
+    (void)depthBuffer;
+    LOG_DEBUG("SkyboxRenderPass", "设置深度缓冲区: 0x{0:x}", reinterpret_cast<uintptr_t>(depthBuffer));
+}
+
 void SkyboxRenderPass::SetCubeMapTexture(void* cubeMapTexture)
 {
     m_cubeMapTexture = cubeMapTexture;
@@ -123,13 +130,41 @@ void SkyboxRenderPass::SetViewProjectionMatrix(const XMMATRIX& viewProjection)
 {
     m_viewProjection = viewProjection;
     LOG_DEBUG("SkyboxRenderPass", "设置视图投影矩阵");
-    
+
     // 更新常量缓冲区
     if (m_constantBuffer.empty()) {
         m_constantBuffer.resize(16); // 4x4 矩阵
     }
-    
+
     // 将矩阵数据复制到常量缓冲区
+    XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(m_constantBuffer.data()), m_viewProjection);
+}
+
+void SkyboxRenderPass::SetViewMatrix(const XMMATRIX& view)
+{
+    m_view = view;
+    // 重新计算视图投影矩阵
+    m_viewProjection = m_view * m_projection;
+
+    // 更新常量缓冲区
+    if (m_constantBuffer.empty()) {
+        m_constantBuffer.resize(16); // 4x4 矩阵
+    }
+
+    XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(m_constantBuffer.data()), m_viewProjection);
+}
+
+void SkyboxRenderPass::SetProjectionMatrix(const XMMATRIX& projection)
+{
+    m_projection = projection;
+    // 重新计算视图投影矩阵
+    m_viewProjection = m_view * m_projection;
+
+    // 更新常量缓冲区
+    if (m_constantBuffer.empty()) {
+        m_constantBuffer.resize(16); // 4x4 矩阵
+    }
+
     XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(m_constantBuffer.data()), m_viewProjection);
 }
 

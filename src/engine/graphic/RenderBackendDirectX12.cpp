@@ -885,4 +885,24 @@ void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter) {
     *ppAdapter = adapter.Detach();
 }
 
+void* RenderBackendDirectX12::GetDefaultRenderTarget()
+{
+    // 返回当前帧的渲染目标
+    if (m_frameIndex < FrameCount) {
+        return m_renderTargets[m_frameIndex].Get();
+    }
+    return nullptr;
+}
+
+void* RenderBackendDirectX12::GetDefaultDepthBuffer()
+{
+    return m_depthStencil.Get();
+}
+
+void RenderBackendDirectX12::GetRenderTargetSize(uint32_t& width, uint32_t& height)
+{
+    width = static_cast<uint32_t>(m_viewport.Width);
+    height = static_cast<uint32_t>(m_viewport.Height);
+}
+
 }  // namespace Engine

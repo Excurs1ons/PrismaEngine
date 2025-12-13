@@ -32,6 +32,9 @@ public:
     // 设置相机
     void SetCamera(ICamera* camera);
 
+    // 设置渲染目标（由RenderSystem调用）
+    void SetRenderTargets(void* renderTarget, void* depthBuffer, uint32_t width, uint32_t height);
+
 private:
     // 渲染管线引用
     ScriptableRenderPipeline* m_renderPipe;

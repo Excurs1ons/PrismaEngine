@@ -921,4 +921,25 @@ QueueFamilyIndices RenderBackendVulkan::FindQueueFamilies(VkPhysicalDevice devic
     return indices;
 }
 
+void* RenderBackendVulkan::GetDefaultRenderTarget()
+{
+    // Vulkan中渲染目标是framebuffer，返回当前framebuffer
+    if (currentFrame < swapChainFramebuffers.size()) {
+        return &swapChainFramebuffers[currentFrame];
+    }
+    return nullptr;
+}
+
+void* RenderBackendVulkan::GetDefaultDepthBuffer()
+{
+    // 返回深度图像视图
+    return &depthImageView;
+}
+
+void RenderBackendVulkan::GetRenderTargetSize(uint32_t& width, uint32_t& height)
+{
+    width = swapChainExtent.width;
+    height = swapChainExtent.height;
+}
+
 }  // namespace Engine

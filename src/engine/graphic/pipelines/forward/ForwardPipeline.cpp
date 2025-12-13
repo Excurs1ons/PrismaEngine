@@ -5,6 +5,7 @@
 #include "graphic/pipelines/forward/TransparentPass.h"
 #include "Camera.h"
 #include "Logger.h"
+#include "SceneManager.h"
 #include <DirectXColors.h>
 
 namespace Engine {
@@ -93,38 +94,56 @@ void ForwardPipeline::Shutdown()
 
 void ForwardPipeline::Update(float deltaTime)
 {
-    if (!m_renderPipe || !m_camera) {
+    if (!m_renderPipe) {
         return;
+    }
+
+    // 从SceneManager获取当前场景和相机
+    auto sceneManager = SceneManager::GetInstance();
+    if (sceneManager) {
+        auto scene = sceneManager->GetCurrentScene();
+        if (scene) {
+            auto camera = scene->GetMainCamera();
+            if (camera) {
+                // 转换为ICamera接口
+                m_camera = static_cast<Engine::Graphic::ICamera*>(camera);
+
+                // 更新各个RenderPass的相机数据
+                if (m_depthPrePass && m_camera) {
+                    m_depthPrePass->SetViewMatrix(m_camera->GetViewMatrix());
+                    m_depthPrePass->SetProjectionMatrix(m_camera->GetProjectionMatrix());
+                }
+
+                if (m_skyboxRenderPass && m_camera) {
+                    m_skyboxRenderPass->SetViewMatrix(m_camera->GetViewMatrix());
+                    m_skyboxRenderPass->SetProjectionMatrix(m_camera->GetProjectionMatrix());
+                }
+
+                if (m_opaquePass && m_camera) {
+                    m_opaquePass->SetViewMatrix(m_camera->GetViewMatrix());
+                    m_opaquePass->SetProjectionMatrix(m_camera->GetProjectionMatrix());
+                }
+
+                if (m_transparentPass && m_camera) {
+                    m_transparentPass->SetViewMatrix(m_camera->GetViewMatrix());
+                    m_transparentPass->SetProjectionMatrix(m_camera->GetProjectionMatrix());
+                }
+            }
+        }
     }
 
     // 更新渲染统计
     m_stats.lastFrameTime = deltaTime;
 
-    // 获取相机矩阵
-    XMMATRIX view = m_camera->GetViewMatrix();
-    XMMATRIX projection = m_camera->GetProjectionMatrix();
-    XMMATRIX viewProjection = view * projection;
-
-    // 更新所有Pass的相机矩阵
-    if (m_depthPrePass) {
-        m_depthPrePass->SetViewProjectionMatrix(viewProjection);
-    }
-
-    if (m_skyboxRenderPass) {
-        // 天空盒需要特殊的视图矩阵（移除平移）
+    // 如果有相机，更新天空盒的特殊视图矩阵（移除平移）
+    if (m_camera && m_skyboxRenderPass) {
+        XMMATRIX view = m_camera->GetViewMatrix();
         XMMATRIX skyboxView = view;
         skyboxView.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
-        m_skyboxRenderPass->SetViewProjectionMatrix(skyboxView * projection);
-    }
 
-    if (m_opaquePass) {
-        m_opaquePass->SetViewMatrix(view);
-        m_opaquePass->SetProjectionMatrix(projection);
-    }
-
-    if (m_transparentPass) {
-        m_transparentPass->SetViewMatrix(view);
-        m_transparentPass->SetProjectionMatrix(projection);
+        // 天空盒需要单独处理视图矩阵
+        m_skyboxRenderPass->SetViewMatrix(skyboxView);
+        m_skyboxRenderPass->SetProjectionMatrix(m_camera->GetProjectionMatrix());
     }
 }
 
@@ -132,6 +151,35 @@ void ForwardPipeline::SetCamera(ICamera* camera)
 {
     m_camera = camera;
     LOG_DEBUG("ForwardPipeline", "设置相机: {0}", camera ? "有效" : "无效");
+}
+
+void ForwardPipeline::SetRenderTargets(void* renderTarget, void* depthBuffer, uint32_t width, uint32_t height)
+{
+    // 设置所有RenderPass的渲染目标和深度缓冲
+    if (m_depthPrePass) {
+        m_depthPrePass->SetRenderTarget(renderTarget);
+        m_depthPrePass->SetDepthBuffer(depthBuffer);
+        m_depthPrePass->SetViewport(width, height);
+    }
+
+    if (m_skyboxRenderPass) {
+        m_skyboxRenderPass->SetRenderTarget(renderTarget);
+        m_skyboxRenderPass->SetViewport(width, height);
+    }
+
+    if (m_opaquePass) {
+        m_opaquePass->SetRenderTarget(renderTarget);
+        m_opaquePass->SetDepthBuffer(depthBuffer);
+        m_opaquePass->SetViewport(width, height);
+    }
+
+    if (m_transparentPass) {
+        m_transparentPass->SetRenderTarget(renderTarget);
+        m_transparentPass->SetDepthBuffer(depthBuffer);
+        m_transparentPass->SetViewport(width, height);
+    }
+
+    LOG_INFO("ForwardPipeline", "渲染目标和深度缓冲已设置: {0}x{1}", width, height);
 }
 
 } // namespace Forward
