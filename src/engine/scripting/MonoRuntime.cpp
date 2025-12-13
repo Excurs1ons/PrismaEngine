@@ -16,7 +16,7 @@ bool MonoRuntime::Initialize(const std::string& configPath) {
     // 实际的Mono初始化代码
     return true;
 #else
-    LOG_INFO("Mono support is disabled. Scripting system will not be available.");
+    LOG_INFO("MonoRuntime", "Mono support is disabled. Scripting system will not be available.");
     return false;
 #endif
 }
@@ -33,7 +33,7 @@ bool MonoRuntime::IsInitialized() const {
 
 bool MonoRuntime::LoadAssembly(const std::string& assemblyName, const std::string& path) {
     if (!m_initialized) {
-        LOG_ERROR("MonoRuntime not initialized");
+        LOG_ERROR("MonoRuntime", "MonoRuntime not initialized");
         return false;
     }
 
@@ -41,7 +41,7 @@ bool MonoRuntime::LoadAssembly(const std::string& assemblyName, const std::strin
     // 实际的加载代码
     return true;
 #else
-    LOG_WARN("Mono support is disabled, cannot load assembly: " + assemblyName);
+    LOG_WARNING("MonoRuntime", "Mono support is disabled, cannot load assembly: {0}", assemblyName);
     return false;
 #endif
 }
