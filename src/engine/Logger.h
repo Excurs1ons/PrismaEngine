@@ -1,6 +1,7 @@
 #pragma once
 #include "Singleton.h"
 #include "LogScope.h"
+#include "LogEntry.h"
 #include <chrono>
 #include <cstdint>
 #include <fstream>
@@ -26,7 +27,6 @@ struct LogConfig {
     bool enableTimestamp      = true;
     bool enableThreadId       = true;
     bool enableSourceLocation = true;
-    bool enableCallStack      = true;
     bool asyncMode            = true;
     size_t asyncQueueSize     = 1024;
     std::string logFilePath   = "logs/engine.log";
@@ -193,6 +193,9 @@ public:
     // 调用堆栈相关方法
     std::vector<StackFrame> CaptureCallStack(int skipFrames = 0, int maxFrames = 32);
     std::string FormatCallStack(const std::vector<StackFrame>& callStack);
+    
+    // 获取指定日志级别的调用堆栈输出行为
+    CallStackOutput GetCallStackOutputForLevel(LogLevel level);
 
 private:
     bool initialized_ = false;

@@ -7,6 +7,13 @@
 // 日志级别
 enum class LogLevel { Trace = 0, Debug = 1, Info = 2, Warning = 3, Error = 4, Fatal = 5 };
 
+// 调用堆栈输出行为
+enum class CallStackOutput {
+    None,        // 不输出调用堆栈
+    CallerOnly,  // 仅输出调用者位置
+    Full         // 输出完整调用堆栈
+};
+
 // 日志颜色（ANSI 颜色码）
 enum class LogColor {
     Reset         = 0,
@@ -73,4 +80,3 @@ struct LogEntry {
         : level(lvl), message(std::move(msg)), category(std::move(cat)), timestamp(std::chrono::system_clock::now()),
           threadId(std::this_thread::get_id()), location(loc) {}
 };
-

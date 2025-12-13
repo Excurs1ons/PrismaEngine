@@ -86,8 +86,14 @@ install(DIRECTORY projects/
 )
 
 # 安装resources目录
-install(DIRECTORY resources/
-    DESTINATION resources
+#install(DIRECTORY resources/
+#    DESTINATION resources
+#    PATTERN "build" EXCLUDE
+#)
+
+# 安装assets目录
+install(DIRECTORY assets/
+    DESTINATION assets
     PATTERN "build" EXCLUDE
 )
 

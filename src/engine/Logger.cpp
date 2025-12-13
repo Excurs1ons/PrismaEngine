@@ -14,6 +14,24 @@
 bool Logger::IsInitialized() const {
     return initialized_;
 }
+
+CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
+    switch (level) {
+    case LogLevel::Trace:
+    case LogLevel::Debug:
+        return CallStackOutput::Full;     // Trace/Debug级别输出完整调用堆栈
+    case LogLevel::Info:
+        return CallStackOutput::None;     // Info级别不输出调用堆栈
+    case LogLevel::Warning:
+    case LogLevel::Error:
+        return CallStackOutput::CallerOnly;  // Warning/Error级别仅输出调用点
+    case LogLevel::Fatal:
+        return CallStackOutput::Full;     // Fatal级别输出完整调用堆栈
+    default:
+        return CallStackOutput::None;
+    }
+}
+
 /// @brief 初始化日志系统
 bool Logger::Initialize(const LogConfig& config)
 {
@@ -93,8 +111,10 @@ void Logger::LogInternal(LogLevel level, const std::string& category,
 
     LogEntry entry(level, message, category, loc);
     
-    // 捕获调用堆栈（跳过2帧：CaptureCallStack 和 LogInternal）
-    if (config_.enableCallStack && level >= LogLevel::Warning) {
+    // 根据日志级别决定是否捕获调用堆栈
+    CallStackOutput stackOutput = GetCallStackOutputForLevel(level);
+    if (stackOutput != CallStackOutput::None) {
+        // 捕获调用堆栈（跳过2帧：CaptureCallStack 和 LogInternal）
         entry.callStack = CaptureCallStack(2);
     }
 
@@ -343,15 +363,16 @@ std::string Logger::FormatEntry(const LogEntry& entry, bool useColors) {
     // 消息
     oss << entry.message;
 
-    // 源码位置
-    if (config_.enableSourceLocation && entry.level >= LogLevel::Warning) {
+    // 源码位置和调用堆栈
+    CallStackOutput stackOutput = GetCallStackOutputForLevel(entry.level);
+    if (config_.enableSourceLocation && stackOutput != CallStackOutput::None) {
         // 只显示文件名，不显示完整路径
         std::filesystem::path filePath(entry.location.file);
         oss << " (" << filePath.filename().string()
             << ":" << entry.location.line << ")";
             
         // 显示调用堆栈
-        if (!entry.callStack.empty()) {
+        if (stackOutput == CallStackOutput::Full && !entry.callStack.empty()) {
             oss << "\nCall Stack:\n" << FormatCallStack(entry.callStack);
         }
     }
