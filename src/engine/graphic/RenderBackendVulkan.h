@@ -104,7 +104,10 @@ private:
     VkSemaphore imageAvailableSemaphore;
     VkSemaphore renderFinishedSemaphore;
     VkFence inFlightFence;
-    
+
+    // 当前帧的图像索引
+    uint32_t currentFrame = 0;
+
     friend class VulkanRenderCommandContext;
 };
 
