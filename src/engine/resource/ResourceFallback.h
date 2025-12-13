@@ -29,15 +29,6 @@ public:
         std::shared_ptr<ResourceBase> failedResource
     );
 
-private:
-    /// @brief 创建默认着色器
-    static std::shared_ptr<Shader> CreateDefaultShader(const std::string& relativePath);
-
-    /// @brief 创建默认网格
-    static std::shared_ptr<Mesh> CreateDefaultMesh(const std::string& relativePath);
-
-    /// @brief 创建默认材质
-    static std::shared_ptr<Material> CreateDefaultMaterial(const std::string& relativePath);
 };
 
 } // namespace Resource
