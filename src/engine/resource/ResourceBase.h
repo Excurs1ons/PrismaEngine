@@ -24,13 +24,18 @@ public:
     const std::filesystem::path& GetPath() const { return m_path; }
     const std::string& GetName() const { return m_name; }
 
+    // 允许ResourceFallback访问和修改必要成员
+    void SetName(const std::string& name) { m_name = name; }
+    void SetLoaded(bool loaded) { m_isLoaded = loaded; }
+
 protected:
     std::filesystem::path m_path;
     std::string m_name;
     bool m_isLoaded = false;
 
-    // 允许 ResourceManager 访问 protected 成员
+    // 允许 ResourceManager 和 ResourceFallback 访问 protected 成员
     friend class ResourceManager;
+    friend class ResourceFallback;
 };
 
 // 资源句柄（同前）
