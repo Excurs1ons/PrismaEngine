@@ -325,10 +325,10 @@ void RenderBackendDirectX12::Present() {
                 deviceRemovedCount++;
 
                 // 只记录前几次错误，避免刷屏
-                if (deviceRemovedCount <= 3) {
-                    HRESULT deviceRemovedReason = m_device ? m_device->GetDeviceRemovedReason() : E_FAIL;
-                    LOG_WARNING("DirectX", "设备暂时不可用 (可能因显示器切换等原因), 尝试继续运行");
-                }
+
+                HRESULT deviceRemovedReason = m_device ? m_device->GetDeviceRemovedReason() : E_FAIL;
+                LOG_WARNING("DirectX", "设备暂时不可用 (可能因显示器切换等原因), 尝试继续运行");
+
 
                 // 不立即标记为未初始化，给设备恢复的机会
                 return;
