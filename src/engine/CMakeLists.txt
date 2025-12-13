@@ -32,9 +32,11 @@ set(ENGINE_HEADERS
 )
 
 # 创建静态库
-add_library(Engine STATIC 
+add_library(Engine STATIC
     ${ENGINE_SOURCES}
     ${ENGINE_HEADERS}
+    pch.h
+    pch.cpp
     packing/pipeline.h
 )
 
@@ -89,6 +91,11 @@ else (ANDROID)
         log
     )
 
+endif()
+
+# 启用预编译头文件
+if(MSVC)
+    target_precompile_headers(Engine PRIVATE pch.h)
 endif()
 
 # 设置公共头文件
