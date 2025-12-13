@@ -67,9 +67,9 @@ private:
     };
 
     // Vector测试
-    class VectorTest : public TestCase {
+    class VectorTest : public TestFramework::TestCase {
     public:
-        VectorTest() : TestCase("Vector Operations") {}
+        VectorTest() : TestFramework::TestCase("Vector Operations") {}
     protected:
         void RunTest() override {
             Vector<int> vec;
@@ -112,9 +112,9 @@ private:
     };
 
     // UnorderedMap测试
-    class UnorderedMapTest : public TestCase {
+    class UnorderedMapTest : public TestFramework::TestCase {
     public:
-        UnorderedMapTest() : TestCase("UnorderedMap Operations") {}
+        UnorderedMapTest() : TestFramework::TestCase("UnorderedMap Operations") {}
     protected:
         void RunTest() override {
             std::unordered_map<std::string, int> map;
@@ -154,9 +154,9 @@ private:
     };
 
     // 内存管理测试
-    class MemoryManagementTest : public TestCase {
+    class MemoryManagementTest : public TestFramework::TestCase {
     public:
-        MemoryManagementTest() : TestCase("Memory Management") {}
+        MemoryManagementTest() : TestFramework::TestCase("Memory Management") {}
     protected:
         void RunTest() override {
             // 测试智能指针
@@ -199,9 +199,9 @@ private:
     };
 
     // 算法测试
-    class AlgorithmsTest : public TestCase {
+    class AlgorithmsTest : public TestFramework::TestCase {
     public:
-        AlgorithmsTest() : TestCase("Algorithms") {}
+        AlgorithmsTest() : TestFramework::TestCase("Algorithms") {}
     protected:
         void RunTest() override {
             // 测试排序

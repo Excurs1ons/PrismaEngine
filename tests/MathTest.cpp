@@ -15,9 +15,9 @@ public:
 
 private:
     // Vector3测试
-    class Vector3Test : public TestCase {
+    class Vector3Test : public TestFramework::TestCase {
     public:
-        Vector3Test() : TestCase("Vector3") {}
+        Vector3Test() : TestFramework::TestCase("Vector3") {}
     protected:
         void RunTest() override {
             XMVECTOR v1 = XMVectorSet(1.0f, 2.0f, 3.0f, 0.0f);
@@ -50,9 +50,9 @@ private:
     };
 
     // 矩阵测试
-    class MatrixTest : public TestCase {
+    class MatrixTest : public TestFramework::TestCase {
     public:
-        MatrixTest() : TestCase("Matrix") {}
+        MatrixTest() : TestFramework::TestCase("Matrix") {}
     protected:
         void RunTest() override {
             XMMATRIX identity = XMMatrixIdentity();
@@ -78,9 +78,9 @@ private:
     };
 
     // 四元数测试
-    class QuaternionTest : public TestCase {
+    class QuaternionTest : public TestFramework::TestCase {
     public:
-        QuaternionTest() : TestCase("Quaternion") {}
+        QuaternionTest() : TestFramework::TestCase("Quaternion") {}
     protected:
         void RunTest() override {
             // 单位四元数
@@ -111,9 +111,9 @@ private:
     };
 
     // 数学函数测试
-    class MathFunctionsTest : public TestCase {
+    class MathFunctionsTest : public TestFramework::TestCase {
     public:
-        MathFunctionsTest() : TestCase("MathFunctions") {}
+        MathFunctionsTest() : TestFramework::TestCase("MathFunctions") {}
     protected:
         void RunTest() override {
             // 三角函数

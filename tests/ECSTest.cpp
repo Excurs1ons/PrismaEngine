@@ -31,9 +31,9 @@ public:
 
 private:
     // 创建实体测试
-    class CreateEntityTest : public TestCase {
+    class CreateEntityTest : public TestFramework::TestCase {
     public:
-        CreateEntityTest() : TestCase("CreateEntity") {}
+        CreateEntityTest() : TestFramework::TestCase("CreateEntity") {}
     protected:
         void RunTest() override {
             World& world = World::GetInstance();
@@ -45,9 +45,9 @@ private:
     };
 
     // 添加组件测试
-    class AddComponentTest : public TestCase {
+    class AddComponentTest : public TestFramework::TestCase {
     public:
-        AddComponentTest() : TestCase("AddComponent") {}
+        AddComponentTest() : TestFramework::TestCase("AddComponent") {}
     protected:
         void RunTest() override {
             World& world = World::GetInstance();
@@ -60,9 +60,9 @@ private:
     };
 
     // 获取组件测试
-    class GetComponentTest : public TestCase {
+    class GetComponentTest : public TestFramework::TestCase {
     public:
-        GetComponentTest() : TestCase("GetComponent") {}
+        GetComponentTest() : TestFramework::TestCase("GetComponent") {}
     protected:
         void RunTest() override {
             World& world = World::GetInstance();
@@ -79,9 +79,9 @@ private:
     };
 
     // 移除组件测试
-    class RemoveComponentTest : public TestCase {
+    class RemoveComponentTest : public TestFramework::TestCase {
     public:
-        RemoveComponentTest() : TestCase("RemoveComponent") {}
+        RemoveComponentTest() : TestFramework::TestCase("RemoveComponent") {}
     protected:
         void RunTest() override {
             World& world = World::GetInstance();
@@ -96,9 +96,9 @@ private:
     };
 
     // 检查组件测试
-    class HasComponentTest : public TestCase {
+    class HasComponentTest : public TestFramework::TestCase {
     public:
-        HasComponentTest() : TestCase("HasComponent") {}
+        HasComponentTest() : TestFramework::TestCase("HasComponent") {}
     protected:
         void RunTest() override {
             World& world = World::GetInstance();
@@ -112,9 +112,9 @@ private:
     };
 
     // 系统测试
-    class SystemTest : public TestCase {
+    class SystemTest : public TestFramework::TestCase {
     public:
-        SystemTest() : TestCase("System") {}
+        SystemTest() : TestFramework::TestCase("System") {}
     protected:
         void RunTest() override {
             World& world = World::GetInstance();
