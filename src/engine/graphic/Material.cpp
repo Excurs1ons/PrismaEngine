@@ -100,7 +100,7 @@ std::shared_ptr<Material> Material::CreateDefault() {
 
     // 加载默认着色器
     auto resourceManager = ResourceManager::GetInstance();
-    auto shaderHandle = resourceManager->Load<Shader>("resources/shaders/default.hlsl");
+    auto shaderHandle = resourceManager->Load<Shader>("shaders/default.hlsl");
     if (shaderHandle.IsValid()) {
         material->SetShader(std::shared_ptr<Shader>(shaderHandle.Get(), [](Shader*){})); // 临时解决方案
         LOG_INFO("Material", "默认材质加载了默认着色器");

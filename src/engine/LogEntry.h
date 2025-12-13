@@ -1,8 +1,12 @@
 #pragma once
 #include <chrono>
 #include <mutex>
+#include <vector>
+#include <string>
+
 // 日志级别
 enum class LogLevel { Trace = 0, Debug = 1, Info = 2, Warning = 3, Error = 4, Fatal = 5 };
+
 // 日志颜色（ANSI 颜色码）
 enum class LogColor {
     Reset         = 0,
@@ -34,6 +38,7 @@ inline LogTarget operator|(LogTarget a, LogTarget b) {
 inline bool operator&(LogTarget a, LogTarget b) {
     return (static_cast<int>(a) & static_cast<int>(b)) != 0;
 }
+
 // 源码位置信息
 struct SourceLocation {
     const char* file;
@@ -41,6 +46,17 @@ struct SourceLocation {
     const char* function;
 
     inline SourceLocation(const char* f = "", int l = 0, const char* func = "") : file(f), line(l), function(func) {}
+};
+
+// 调用堆栈帧信息
+struct StackFrame {
+    std::string file;
+    int line = 0;
+    std::string function;
+    
+    StackFrame() = default;
+    StackFrame(const std::string& f, int l, const std::string& func)
+        : file(f), line(l), function(func) {}
 };
 
 // 日志条目
@@ -51,6 +67,7 @@ struct LogEntry {
     std::chrono::system_clock::time_point timestamp;
     std::thread::id threadId;
     SourceLocation location;
+    std::vector<StackFrame> callStack;  // 调用堆栈
 
     LogEntry(LogLevel lvl, std::string msg, std::string cat, SourceLocation loc = SourceLocation())
         : level(lvl), message(std::move(msg)), category(std::move(cat)), timestamp(std::chrono::system_clock::now()),

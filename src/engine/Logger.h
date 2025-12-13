@@ -11,6 +11,7 @@
 #include <string>
 #include <thread>
 #include <type_traits>
+#include <vector>
 
 // 日志配置
 struct LogConfig {
@@ -25,6 +26,7 @@ struct LogConfig {
     bool enableTimestamp      = true;
     bool enableThreadId       = true;
     bool enableSourceLocation = true;
+    bool enableCallStack      = true;
     bool asyncMode            = true;
     size_t asyncQueueSize     = 1024;
     std::string logFilePath   = "logs/engine.log";
@@ -187,6 +189,10 @@ public:
 
     // 写入日志条目（公开供LogScope使用）
     void WriteEntry(const LogEntry& entry);
+
+    // 调用堆栈相关方法
+    std::vector<StackFrame> CaptureCallStack(int skipFrames = 0, int maxFrames = 32);
+    std::string FormatCallStack(const std::vector<StackFrame>& callStack);
 
 private:
     bool initialized_ = false;
