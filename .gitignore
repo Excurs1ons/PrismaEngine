@@ -340,3 +340,6 @@ local.properties
 /CLAUDE.md
 /.claude/settings.local.json
 /vcpkg/*
+
+# Claude Code 相关文件
+.claude/
