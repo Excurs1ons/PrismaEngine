@@ -6,10 +6,8 @@
     #define NOMINMAX
     #include <windows.h>
     #include <windowsx.h>
-    #include <d3d12.h>
-    #include <dxgi1_6.h>
-    #include <DirectXMath.h>
-    #include <DirectXColors.h>
+    // DirectX头文件将在需要时包含
+    // 不在PCH中包含以避免版本兼容性问题
 #endif
 
 // C++标准库核心头文件
