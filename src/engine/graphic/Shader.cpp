@@ -1,9 +1,11 @@
 #include "Shader.h"
-#include <d3dcompiler.h>
-#include <iostream>
-#include <fstream>
-#include <filesystem>
+
+#include "DefaultShader.h"
 #include "StringUtils.h"
+#include <d3dcompiler.h>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
 using namespace Engine;
 using namespace StringUtils;
 Shader::Shader() {

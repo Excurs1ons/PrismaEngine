@@ -1,8 +1,8 @@
 #include "ResourceFallback.h"
 #include "Logger.h"
-#include "../graphic/DefaultShader.h"
-#include "../graphic/Material.h"
-#include "../graphic/Mesh.h"
+#include "graphic/DefaultShader.h"
+#include "graphic/Material.h"
+#include "graphic/Mesh.h"
 
 namespace Engine {
 namespace Resource {
