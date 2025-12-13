@@ -195,8 +195,6 @@ void TransparentPass::SetViewport(uint32_t width, uint32_t height)
     m_width = width;
     m_height = height;
     LOG_DEBUG("TransparentPass", "设置视口: {0}x{1}", width, height);
-
-    m_context->SetViewport(0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height));
 }
 
 void TransparentPass::SetDepthBuffer(void* depthBuffer)

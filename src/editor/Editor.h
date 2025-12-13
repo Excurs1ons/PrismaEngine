@@ -18,7 +18,7 @@ private:
 	bool InitializeImGui();
 
 	// 窗口句柄
-	Engine::WindowHandle m_window = nullptr;
+	WindowHandle m_window = nullptr;
 };
 
 extern "C" {
