@@ -5,7 +5,7 @@ namespace Engine {
 namespace Graphic {
 
 // 默认顶点着色器 (HLSL)
-const char* DEFAULT_VERTEX_SHADER = R"(
+inline const char* DEFAULT_VERTEX_SHADER = R"(
 cbuffer ViewProjectionBuffer : register(b0)
 {
     matrix ViewProjection;
@@ -57,7 +57,7 @@ PS_IN VSMain(VS_IN input)
 )";
 
 // 默认像素着色器 (HLSL)
-const char* DEFAULT_PIXEL_SHADER = R"(
+inline const char* DEFAULT_PIXEL_SHADER = R"(
 cbuffer MaterialParamsBuffer : register(b3)
 {
     float Metallic;
@@ -82,7 +82,7 @@ float4 PSMain(PS_IN input) : SV_TARGET
 )";
 
 // 清屏用着色器 - 仅顶点着色器
-const char* CLEAR_VERTEX_SHADER = R"(
+inline const char* CLEAR_VERTEX_SHADER = R"(
 struct VS_IN
 {
     float3 pos : POSITION;
@@ -105,7 +105,7 @@ PS_IN VSMain(VS_IN input)
 )";
 
 // 清屏用着色器 - 像素着色器
-const char* CLEAR_PIXEL_SHADER = R"(
+inline const char* CLEAR_PIXEL_SHADER = R"(
 cbuffer ClearColorBuffer : register(b0)
 {
     float4 ClearColor;
