@@ -106,3 +106,69 @@ bool Shader::IsLoaded() const {
 ResourceType Shader::GetType() const {
     return ResourceType::Shader;
 }
+
+bool Shader::CompileFromString(const char* vsSource, const char* psSource)
+{
+    if (!vsSource || !psSource) {
+        LOG_ERROR("Shader", "着色器源码为空");
+        return false;
+    }
+
+    UINT compileFlags = 0;
+#if defined(_DEBUG) || defined(DBG)
+    compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
+#endif
+
+    // 编译顶点着色器
+    ComPtr<ID3DBlob> errors;
+    HRESULT hr = D3DCompile(
+        vsSource,
+        strlen(vsSource),
+        "DefaultVertexShader",
+        nullptr,
+        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "VSMain",
+        "vs_5_0",
+        compileFlags,
+        0,
+        &m_vertexShader,
+        &errors);
+
+    if (errors != nullptr) {
+        LOG_ERROR("Shader", "顶点着色器编译错误: {0}", static_cast<char*>(errors->GetBufferPointer()));
+    }
+
+    if (FAILED(hr)) {
+        LOG_ERROR("Shader", "顶点着色器编译失败");
+        return false;
+    }
+
+    // 编译像素着色器
+    errors.Reset();
+    hr = D3DCompile(
+        psSource,
+        strlen(psSource),
+        "DefaultPixelShader",
+        nullptr,
+        D3D_COMPILE_STANDARD_FILE_INCLUDE,
+        "PSMain",
+        "ps_5_0",
+        compileFlags,
+        0,
+        &m_pixelShader,
+        &errors);
+
+    if (errors != nullptr) {
+        LOG_ERROR("Shader", "像素着色器编译错误: {0}", static_cast<char*>(errors->GetBufferPointer()));
+    }
+
+    if (FAILED(hr)) {
+        LOG_ERROR("Shader", "像素着色器编译失败");
+        return false;
+    }
+
+    m_name = "DefaultShader";
+    m_isLoaded = true;
+    LOG_INFO("Shader", "默认着色器编译成功");
+    return true;
+}
