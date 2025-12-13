@@ -27,6 +27,14 @@ public:
     void SetMaterial(std::shared_ptr<Material> material) {
         m_material = material;
     }
+
+    std::shared_ptr<Mesh> GetMesh() const {
+        return m_mesh;
+    }
+
+    std::shared_ptr<Material> GetMaterial() const {
+        return m_material;
+    }
     virtual void Update(float deltaTime) override;
     MeshRenderer();
     virtual ~MeshRenderer() override;
