@@ -76,7 +76,7 @@ bool ScriptSystem::LoadAssembly(const std::string& assemblyPath) {
     return false;
 }
 
-void ScriptSystem::AddScript(ECS::EntityID entity, const std::string& scriptPath) {
+void ScriptSystem::AddScript(Engine::Core::ECS::EntityID entity, const std::string& scriptPath) {
     if (!m_initialized) {
         LOG_ERROR("ScriptSystem", "系统未初始化");
         return;
@@ -111,7 +111,7 @@ void ScriptSystem::AddScript(ECS::EntityID entity, const std::string& scriptPath
     }
 }
 
-void ScriptSystem::RemoveScript(ECS::EntityID entity, const std::string& scriptPath) {
+void ScriptSystem::RemoveScript(Engine::Core::ECS::EntityID entity, const std::string& scriptPath) {
     EntityScripts* entityScripts = GetEntityScripts(entity);
     if (!entityScripts) {
         return;
@@ -129,7 +129,7 @@ void ScriptSystem::RemoveScript(ECS::EntityID entity, const std::string& scriptP
     }
 }
 
-void ScriptSystem::ClearScripts(ECS::EntityID entity) {
+void ScriptSystem::ClearScripts(Engine::Core::ECS::EntityID entity) {
     EntityScripts* entityScripts = GetEntityScripts(entity);
     if (!entityScripts) {
         return;
@@ -174,7 +174,7 @@ const std::vector<std::shared_ptr<ScriptComponent>>& ScriptSystem::GetActiveScri
     return empty; // TODO: 实现获取活动脚本列表
 }
 
-ScriptSystem::EntityScripts* ScriptSystem::GetEntityScripts(ECS::EntityID entity) {
+ScriptSystem::EntityScripts* ScriptSystem::GetEntityScripts(Engine::Core::ECS::EntityID entity) {
     auto it = m_entityIndex.find(entity);
     if (it != m_entityIndex.end()) {
         return &m_entityScripts[it->second];
@@ -183,7 +183,7 @@ ScriptSystem::EntityScripts* ScriptSystem::GetEntityScripts(ECS::EntityID entity
 }
 
 void ScriptSystem::CleanupDestroyedEntities() {
-    auto& world = ECS::World::GetInstance();
+    auto& world = Engine::Core::ECS::World::GetInstance();
 
     // 检查实体是否仍然有效
     for (auto it = m_entityScripts.begin(); it != m_entityScripts.end();) {
