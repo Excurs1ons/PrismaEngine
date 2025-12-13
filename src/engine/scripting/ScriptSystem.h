@@ -8,6 +8,9 @@
 namespace Engine {
 namespace Scripting {
 
+// 前向声明
+class ScriptComponent;
+
 // 脚本系统 - ECS系统，管理所有脚本组件
 class ScriptSystem : public Engine::Core::ECS::ISystem {
 public:
@@ -77,7 +80,7 @@ private:
 // 脚本组件（ECS版本）
 class ScriptComponent : public Engine::Core::ECS::IComponent {
 public:
-    static constexpr Engine::Core::ECS::ComponentTypeID TYPE_ID = Engine::Core::ECS::ComponentTypes::Script;
+    static constexpr Engine::Core::ECS::ComponentTypeID TYPE_ID = 9;
 
     Engine::Core::ECS::ComponentTypeID GetTypeID() const override { return TYPE_ID; }
 
