@@ -49,4 +49,3 @@ void Scene::SetMainCamera(Camera* camera)
     m_mainCamera = camera;
     LOG_INFO("Scene", "Main camera set to {0}", camera ? "valid camera" : "nullptr");
 }
-}
