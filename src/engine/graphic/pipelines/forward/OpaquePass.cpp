@@ -63,14 +63,17 @@ void OpaquePass::Execute(RenderCommandContext* context)
         // 获取主相机位置
         auto camera = scene->GetMainCamera();
         XMFLOAT3 cameraPos = XMFLOAT3(0, 0, 0);
-        // TODO: 实现Camera的GetPosition方法
-        // 现在使用默认位置
+        if (camera) {
+            XMVECTOR pos = camera->GetPosition();
+            cameraPos = XMFLOAT3(XMVectorGetX(pos), XMVectorGetY(pos), XMVectorGetZ(pos));
+        }
 
         // 遍历所有带有MeshRenderer的游戏对象
         const auto& gameObjects = scene->GetGameObjects();
 
         // 收集所有需要渲染的对象
         struct RenderObject {
+            RenderComponent* renderComponent;
             MeshRenderer* meshRenderer;
             XMMATRIX worldMatrix;
             float distanceToCamera;
@@ -80,11 +83,28 @@ void OpaquePass::Execute(RenderCommandContext* context)
         for (const auto& gameObject : gameObjects) {
             if (!gameObject) continue;
 
-            auto meshRenderer = gameObject->GetComponent<MeshRenderer>();
-            if (!meshRenderer) continue;
+            // 优先检查RenderComponent
+            auto renderComponent = gameObject->GetComponent<RenderComponent>();
+            MeshRenderer* meshRenderer = nullptr;
 
-            auto mesh = meshRenderer->GetMesh();
-            if (!mesh || mesh->subMeshes.empty()) continue;
+            // 如果没有RenderComponent，尝试获取MeshRenderer（向后兼容）
+            if (!renderComponent) {
+                meshRenderer = gameObject->GetComponent<MeshRenderer>();
+                if (!meshRenderer) continue;
+                renderComponent = meshRenderer;
+            } else {
+                // 如果有RenderComponent，检查它是否也是MeshRenderer
+                meshRenderer = dynamic_cast<MeshRenderer*>(renderComponent);
+            }
+
+            // 检查是否有有效的网格数据
+            if (meshRenderer) {
+                auto mesh = meshRenderer->GetMesh();
+                if (!mesh || mesh->subMeshes.empty()) continue;
+            } else {
+                // 对于纯RenderComponent，检查顶点数据
+                if (renderComponent->GetVertexCount() == 0) continue;
+            }
 
             auto transform = gameObject->transform();
             XMMATRIX worldMatrix;
@@ -110,7 +130,7 @@ void OpaquePass::Execute(RenderCommandContext* context)
                 powf(objectPos.z - cameraPos.z, 2)
             );
 
-            renderObjects.push_back({ meshRenderer, worldMatrix, distance });
+            renderObjects.push_back({ renderComponent, meshRenderer, worldMatrix, distance });
             m_stats.objects++;
         }
 
@@ -122,37 +142,45 @@ void OpaquePass::Execute(RenderCommandContext* context)
 
         // 渲染所有对象
         for (const auto& renderObj : renderObjects) {
-            auto meshRenderer = renderObj.meshRenderer;
-            auto mesh = meshRenderer->GetMesh();
-            auto material = meshRenderer->GetMaterial();
+            auto renderComponent = renderObj.renderComponent;
 
             // 设置世界矩阵
             context->SetConstantBuffer("World", renderObj.worldMatrix);
 
-            // 设置材质参数
-            if (material) {
-                const auto& props = material->GetProperties();
-                // PBR材质参数
-                XMFLOAT3 albedo = { props.baseColor.x, props.baseColor.y, props.baseColor.z };
-                context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedo), sizeof(XMFLOAT3));
-                context->SetConstantBuffer("MaterialMetallic", reinterpret_cast<const float*>(&props.metallic), sizeof(float));
-                context->SetConstantBuffer("MaterialRoughness", reinterpret_cast<const float*>(&props.roughness), sizeof(float));
-                context->SetConstantBuffer("MaterialEmissive", reinterpret_cast<const float*>(&props.emissive), sizeof(float));
+            // 如果是MeshRenderer，使用它的网格和材质
+            if (renderObj.meshRenderer) {
+                auto mesh = renderObj.meshRenderer->GetMesh();
+                auto material = renderObj.meshRenderer->GetMaterial();
 
-                // 绑定纹理 - 这里简化处理，暂时跳过纹理绑定
-                // TODO: 实现纹理资源的正确绑定
-            }
+                // 设置材质参数
+                if (material) {
+                    const auto& props = material->GetProperties();
+                    // PBR材质参数
+                    XMFLOAT3 albedo = { props.baseColor.x, props.baseColor.y, props.baseColor.z };
+                    context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedo), sizeof(XMFLOAT3));
+                    context->SetConstantBuffer("MaterialMetallic", reinterpret_cast<const float*>(&props.metallic), sizeof(float));
+                    context->SetConstantBuffer("MaterialRoughness", reinterpret_cast<const float*>(&props.roughness), sizeof(float));
+                    context->SetConstantBuffer("MaterialEmissive", reinterpret_cast<const float*>(&props.emissive), sizeof(float));
 
-            // 渲染所有子网格
-            for (const auto& subMesh : mesh->subMeshes) {
-                // 设置顶点和索引缓冲区（使用GPU句柄）
-                context->SetVertexBuffer(nullptr, 0, Vertex::GetVertexStride());
-                context->SetIndexBuffer(nullptr, 0, false);
+                    // 绑定纹理 - 这里简化处理，暂时跳过纹理绑定
+                    // TODO: 实现纹理资源的正确绑定
+                }
 
-                // 执行绘制
-                context->DrawIndexed(subMesh.indicesCount());
+                // 渲染所有子网格
+                for (const auto& subMesh : mesh->subMeshes) {
+                    // 设置顶点和索引缓冲区（使用GPU句柄）
+                    context->SetVertexBuffer(nullptr, 0, Vertex::GetVertexStride());
+                    context->SetIndexBuffer(nullptr, 0, false);
+
+                    // 执行绘制
+                    context->DrawIndexed(subMesh.indicesCount());
+                    m_stats.drawCalls++;
+                    m_stats.triangles += subMesh.indicesCount() / 3;
+                }
+            } else {
+                // 对于纯RenderComponent，直接调用其Render方法
+                renderComponent->Render(context);
                 m_stats.drawCalls++;
-                m_stats.triangles += subMesh.indicesCount() / 3;
             }
         }
 

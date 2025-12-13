@@ -45,6 +45,9 @@ private:
     // 视口尺寸
     uint32_t m_width;
     uint32_t m_height;
+
+    // 复用的命令上下文
+    RenderCommandContext* m_cachedContext = nullptr;
 };
 
 } // namespace Engine

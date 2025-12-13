@@ -31,18 +31,27 @@ public:
     
     // 设置视口
     void SetViewport(uint32_t width, uint32_t height) override;
-    
+
+    // 设置深度缓冲区
+    void SetDepthBuffer(void* depthBuffer);
+
     // 设置天空盒立方体贴图
     void SetCubeMapTexture(void* cubeMapTexture);
     
     // 设置视图投影矩阵
     void SetViewProjectionMatrix(const XMMATRIX& viewProjection);
 
+    // 设置视图和投影矩阵
+    void SetViewMatrix(const XMMATRIX& view);
+    void SetProjectionMatrix(const XMMATRIX& projection);
+
 private:
     // 天空盒立方体贴图纹理
     void* m_cubeMapTexture;
     
-    // 视图投影矩阵
+    // 视图和投影矩阵
+    XMMATRIX m_view;
+    XMMATRIX m_projection;
     XMMATRIX m_viewProjection;
     
     // 渲染目标

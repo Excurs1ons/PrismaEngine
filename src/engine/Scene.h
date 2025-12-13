@@ -25,9 +25,7 @@ public:
     // 更新场景中的所有对象
     void Update(float deltaTime);
     
-    // 渲染场景中的所有对象
-    void Render(RenderCommandContext* context);
-    
+      
     // 获取场景中的所有游戏对象
     const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
     

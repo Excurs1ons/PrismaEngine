@@ -41,6 +41,13 @@ public:
     // 实现CreateCommandContext方法
     RenderCommandContext* CreateCommandContext() override;
 
+    // 获取默认渲染目标和深度缓冲
+    void* GetDefaultRenderTarget() override;
+    void* GetDefaultDepthBuffer() override;
+
+    // 获取当前渲染目标尺寸
+    void GetRenderTargetSize(uint32_t& width, uint32_t& height) override;
+
     bool isInitialized = false;
     bool isFrameActive = false; // 跟踪帧状态，防止EndFrame在BeginFrame前调用
     VkInstance GetVulkanInstance() const { return instance; }

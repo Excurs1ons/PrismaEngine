@@ -141,3 +141,28 @@ void Camera2D::UpdateProjectionMatrix(float windowWidth, float windowHeight)
     // 标记投影矩阵需要重新计算
     m_isOrthoDirty = true;
 }
+
+void Camera2D::SetNearFarPlanes(float nearPlane, float farPlane)
+{
+    m_nearPlane = nearPlane;
+    m_farPlane = farPlane;
+    m_isOrthoDirty = true;
+}
+
+void Camera2D::SetAspectRatio(float aspectRatio)
+{
+    // 保持高度为2个单位，根据宽高比计算宽度
+    float viewHeight = 2.0f;
+    float viewWidth = viewHeight * aspectRatio;
+
+    // 更新投影参数
+    m_width = viewWidth;
+    m_height = viewHeight;
+    m_left = -viewWidth * 0.5f;
+    m_right = viewWidth * 0.5f;
+    m_bottom = -viewHeight * 0.5f;
+    m_top = viewHeight * 0.5f;
+
+    // 标记投影矩阵需要重新计算
+    m_isOrthoDirty = true;
+}

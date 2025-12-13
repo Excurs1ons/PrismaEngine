@@ -33,11 +33,17 @@ public:
     // 设置视图投影矩阵
     void SetViewProjectionMatrix(const XMMATRIX& viewProjection);
 
+    // 设置视图和投影矩阵
+    void SetViewMatrix(const XMMATRIX& view);
+    void SetProjectionMatrix(const XMMATRIX& projection);
+
 private:
     // 深度缓冲区
     void* m_depthBuffer = nullptr;
 
-    // 视图投影矩阵
+    // 视图和投影矩阵
+    XMMATRIX m_view = DirectX::XMMatrixIdentity();
+    XMMATRIX m_projection = DirectX::XMMatrixIdentity();
     XMMATRIX m_viewProjection = DirectX::XMMatrixIdentity();
 
     // 渲染目标

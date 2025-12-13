@@ -22,24 +22,25 @@ namespace Engine {
         LOG_INFO("Engine", "引擎初始化开始");
         
         // 核心子系统
-        if (!RegisterSystem<ThreadManager>()) { 
-            return false; 
+        if (!RegisterSystem<ThreadManager>()) {
+            return false;
         }    // 管理 JobSystem 和 独立线程
-        
-        if (!RegisterSystem<ResourceManager>()) { 
-            return false; 
+
+        if (!RegisterSystem<ResourceManager>()) {
+            return false;
         }   // 负责 IO 和资源缓存
-        
-        if (!RegisterSystem<RenderSystem>()) { 
-            return false; 
-        }     // 渲染管线逻辑
-        
-        if (!RegisterSystem<SceneManager>()) { 
-            return false; 
+
+        // SceneManager必须在RenderSystem之前初始化，因为RenderSystem依赖它
+        if (!RegisterSystem<SceneManager>()) {
+            return false;
         }     // 场景生命周期
-        
-        if (!RegisterSystem<PhysicsSystem>()) { 
-            return false; 
+
+        if (!RegisterSystem<RenderSystem>()) {
+            return false;
+        }     // 渲染管线逻辑
+
+        if (!RegisterSystem<PhysicsSystem>()) {
+            return false;
         }     // 物理世界管理
         
         LOG_INFO("Engine", "引擎初始化完成");

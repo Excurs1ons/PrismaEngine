@@ -56,7 +56,19 @@ bool RenderSystem::Initialize(
         LOG_ERROR("Render", "前向渲染管线初始化失败");
         return false;
     }
-    
+
+    // 获取并设置默认渲染目标和深度缓冲
+    auto defaultRenderTarget = this->renderBackend->GetDefaultRenderTarget();
+    auto defaultDepthBuffer = this->renderBackend->GetDefaultDepthBuffer();
+    uint32_t width, height;
+    this->renderBackend->GetRenderTargetSize(width, height);
+
+    if (defaultRenderTarget && defaultDepthBuffer) {
+        // 设置所有RenderPass的渲染目标和深度缓冲
+        this->forwardPipeline->SetRenderTargets(defaultRenderTarget, defaultDepthBuffer, width, height);
+        LOG_INFO("Render", "设置默认渲染目标: {0}x{1}", width, height);
+    }
+
     this->renderBackend->isInitialized = true;
     LOG_INFO("Render", "渲染系统初始化完成");
     return true;
@@ -115,16 +127,21 @@ void RenderSystem::Update(float deltaTime) {
         LOG_ERROR("Render", "渲染后端未初始化");
         return;
     }
-    
+
+    // 更新前向渲染管线（从Scene获取相机等数据）
+    if (forwardPipeline) {
+        forwardPipeline->Update(deltaTime);
+    }
+
     // 执行渲染帧
     renderBackend->BeginFrame();
-    
+
     // 执行可编程渲染管线
     if (renderPipe) {
         LOG_DEBUG("RenderSystem", "执行可编程渲染管线");
         renderPipe->Execute();
     }
-    
+
     renderBackend->EndFrame();
     renderBackend->Present();
 }
@@ -153,13 +170,31 @@ void RenderSystem::Present() {
     }
 }
 
-void RenderSystem::Resize(uint32_t width, uint32_t height) {
-    if (renderBackend) {
-        renderBackend->Resize(width, height);
+void RenderSystem::Resize(uint32_t width, uint32_t height)
+{
+    if (!renderBackend) {
+        LOG_ERROR("Render", "渲染后端未初始化，无法调整大小");
+        return;
     }
-    
+
+    LOG_INFO("Render", "调整渲染大小到: {0}x{1}", width, height);
+
+    // 调整渲染后端大小
+    renderBackend->Resize(width, height);
+
     if (renderPipe) {
         renderPipe->SetViewportSize(width, height);
+    }
+
+    // 获取新的渲染目标和尺寸
+    auto renderTarget = renderBackend->GetDefaultRenderTarget();
+    auto depthBuffer = renderBackend->GetDefaultDepthBuffer();
+    uint32_t newWidth, newHeight;
+    renderBackend->GetRenderTargetSize(newWidth, newHeight);
+
+    // 更新所有RenderPass的视口和渲染目标
+    if (forwardPipeline && renderTarget && depthBuffer) {
+        forwardPipeline->SetRenderTargets(renderTarget, depthBuffer, newWidth, newHeight);
     }
 }
 

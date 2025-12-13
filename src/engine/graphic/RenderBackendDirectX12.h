@@ -51,6 +51,13 @@ public:
     // 获取动态常量缓冲区地址
     D3D12_GPU_VIRTUAL_ADDRESS GetDynamicConstantBufferAddress(const void* data, size_t sizeInBytes);
 
+    // 获取默认渲染目标和深度缓冲
+    void* GetDefaultRenderTarget() override;
+    void* GetDefaultDepthBuffer() override;
+
+    // 获取当前渲染目标尺寸
+    void GetRenderTargetSize(uint32_t& width, uint32_t& height) override;
+
 private:
     bool LoadPipeline();
     bool InitializeRenderObjects();
