@@ -43,7 +43,8 @@ void TransparentPass::Execute(RenderCommandContext* context)
         context->SetConstantBuffer("View", m_view);
         context->SetConstantBuffer("Projection", m_projection);
         context->SetConstantBuffer("ViewProjection", m_viewProjection);
-        context->SetConstantBuffer("DepthWrite", &m_depthWrite, sizeof(bool));
+        float depthWrite = m_depthWrite ? 1.0f : 0.0f;
+        context->SetConstantBuffer("DepthWrite", &depthWrite, sizeof(float));
 
         // 获取场景
         auto scene = SceneManager::GetInstance()->GetCurrentScene();
@@ -55,14 +56,8 @@ void TransparentPass::Execute(RenderCommandContext* context)
         // 获取主相机
         auto camera = scene->GetMainCamera();
         XMFLOAT3 cameraPos = XMFLOAT3(0, 0, 0);
-        if (camera) {
-            XMVECTOR camPos = camera->GetPosition();
-            cameraPos = XMFLOAT3(
-                XMVectorGetX(camPos),
-                XMVectorGetY(camPos),
-                XMVectorGetZ(camPos)
-            );
-        }
+        // TODO: 实现Camera的GetPosition方法
+        // 现在使用默认位置
 
         // 收集所有透明对象
         struct TransparentObject {
@@ -144,9 +139,9 @@ void TransparentPass::Execute(RenderCommandContext* context)
                     props.baseColor.z,
                     transObj.alpha
                 };
-                context->SetConstantBuffer("MaterialAlbedo", &albedoWithAlpha, sizeof(XMFLOAT4));
-                context->SetConstantBuffer("MaterialMetallic", &props.metallic, sizeof(float));
-                context->SetConstantBuffer("MaterialRoughness", &props.roughness, sizeof(float));
+                context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedoWithAlpha), sizeof(XMFLOAT4));
+                context->SetConstantBuffer("MaterialMetallic", reinterpret_cast<const float*>(&props.metallic), sizeof(float));
+                context->SetConstantBuffer("MaterialRoughness", reinterpret_cast<const float*>(&props.roughness), sizeof(float));
 
                 // 绑定纹理 - 这里简化处理，暂时跳过纹理绑定
                 // TODO: 实现纹理资源的正确绑定
@@ -155,7 +150,7 @@ void TransparentPass::Execute(RenderCommandContext* context)
             // 渲染所有子网格
             for (const auto& subMesh : mesh->subMeshes) {
                 // 设置顶点和索引缓冲区（使用GPU句柄）
-                context->SetVertexBuffer(nullptr, 0, subMesh.GetVertexStride());
+                context->SetVertexBuffer(nullptr, 0, Vertex::GetVertexStride());
                 context->SetIndexBuffer(nullptr, 0, false);
 
                 // TODO: 启用Alpha混合
