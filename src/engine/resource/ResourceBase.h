@@ -8,6 +8,9 @@ namespace Engine {
 // ============================================================================
 enum class ResourceType { Unknown, Shader, Texture, Mesh, Model, Audio, Material, Config };
 
+// 前向声明
+class ResourceManager;
+
 // 资源基类（同前）
 class ResourceBase {
 public:
@@ -25,6 +28,9 @@ protected:
     std::filesystem::path m_path;
     std::string m_name;
     bool m_isLoaded = false;
+
+    // 允许 ResourceManager 访问 protected 成员
+    friend class ResourceManager;
 };
 
 // 资源句柄（同前）
