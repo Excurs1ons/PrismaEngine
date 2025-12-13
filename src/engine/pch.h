@@ -107,15 +107,9 @@
     #include <nlohmann/json.hpp>
 #endif
 
-// 项目核心头文件（这些是稳定的，不经常改变）
-#include "core/Logger.h"
-#include "core/Object.h"
-#include "core/Types.h"
-
-// 平台相关
-#ifdef _WIN32
-    #include "platform/PlatformWindows.h"
-#endif
+// 注意：不要在PCH中包含项目特定的头文件
+// 这些头文件会在各自需要时被包含
+// 只包含标准库和第三方库头文件
 
 // 常用宏定义
 #define SAFE_DELETE(p) { if(p) { delete (p); (p) = nullptr; } }

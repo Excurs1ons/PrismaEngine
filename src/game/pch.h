@@ -6,42 +6,14 @@
 // 引擎核心头文件（总是需要）
 #include "../engine/pch.h"
 
-// 游戏特定头文件（不经常改变的）
-#include "core/GameObject.h"
-#include "core/Scene.h"
-#include "core/Component.h"
-#include "core/Transform.h"
+// 注意：游戏特定的头文件（GameObject、Scene等）不在PCH中包含
+// 它们会在各自的源文件中被包含
 
-// 游戏系统
-#include "systems/GameSystem.h"
-#include "systems/RenderSystem.h"
-#include "systems/PhysicsSystem.h"
-#include "systems/AudioSystem.h"
-#include "systems/InputSystem.h"
-#include "systems/ScriptSystem.h"
-
-// 游戏组件
-#include "components/RenderComponent.h"
-#include "components/PhysicsComponent.h"
-#include "components/AudioComponent.h"
-#include "components/ScriptComponent.h"
-#include "components/CameraComponent.h"
-#include "components/LightComponent.h"
-
-// 游戏资源
-#include "resources/Mesh.h"
-#include "resources/Texture.h"
-#include "resources/Material.h"
-#include "resources/AudioClip.h"
-#include "resources/Shader.h"
-#include "resources/SceneAsset.h"
-
-// 数学库
-#include "math/Vector3.h"
-#include "math/Vector2.h"
-#include "math/Matrix4.h"
-#include "math/Quaternion.h"
-#include "math/MathUtils.h"
+// C++标准库额外包含（游戏常用）
+#include <random>
+#include <fstream>
+#include <filesystem>
+#include <sstream>
 
 // 游戏特定类型
 using GameObjectID = uint32;
