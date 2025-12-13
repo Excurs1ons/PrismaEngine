@@ -37,6 +37,7 @@ int main(int argc, char* argv[]) {
     cmdParser.AddOption("height", "", "设置窗口高度", true);
     cmdParser.AddOption("log-level", "l", "设置日志级别 (trace, debug, info, warning, error)", true);
     cmdParser.AddOption("project-path", "p", "设置项目路径", true);
+    cmdParser.AddOption("assets-path", "a", "设置资源路径", true);
     cmdParser.AddOption("log-file", "", "设置日志文件路径", true);
     cmdParser.AddOption("log-size", "", "设置日志文件大小", true);
     cmdParser.AddOption("log-count", "", "设置日志文件数量", true);
@@ -107,6 +108,28 @@ int main(int argc, char* argv[]) {
         LOG_INFO("Runtime", "默认启动游戏模式");
         lib_name = "PrismaGame.dll";
     }
+
+    // 设置资源路径
+    std::string assetsPath;
+    if (cmdParser.IsOptionSet("assets-path")) {
+        assetsPath = cmdParser.GetOptionValue("assets-path");
+        LOG_INFO("Runtime", "使用指定的资源路径: {0}", assetsPath);
+    } else if (cmdParser.IsOptionSet("project-path")) {
+        // 如果指定了项目路径，资源路径应该是项目路径下的 assets
+        assetsPath = cmdParser.GetOptionValue("project-path") + "/assets";
+        LOG_INFO("Runtime", "使用项目路径下的资源目录: {0}", assetsPath);
+    } else {
+        // 默认路径：当前目录下的 Assets
+        assetsPath = "./Assets";
+        LOG_INFO("Runtime", "使用默认资源路径: {0}", assetsPath);
+    }
+
+    // 设置环境变量，让 ResourceManager 能找到资源
+#ifdef _WIN32
+    SetEnvironmentVariableA("PRISMA_ASSETS_PATH", assetsPath.c_str());
+#else
+    setenv("PRISMA_ASSETS_PATH", assetsPath.c_str(), 1);
+#endif
 
     // 动态加载 Engine DLL
     DynamicLoader game_loader;
