@@ -125,6 +125,12 @@ public:
     int MonoToInt(ManagedObject& obj);
     ManagedObject FloatToMono(float value);
     float MonoToFloat(ManagedObject& obj);
+
+    // 垃圾回收
+    void CollectGarbage();
+
+    // 创建脚本实例
+    ManagedObject CreateScript(const std::string& scriptPath);
     ManagedObject BoolToMono(bool value);
     bool MonoToBool(ManagedObject& obj);
 
