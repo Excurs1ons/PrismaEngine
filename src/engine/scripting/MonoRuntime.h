@@ -51,7 +51,7 @@ public:
     ManagedObject() = default;
     virtual ~ManagedObject() = default;
 
-    bool IsValid() const { return m_monoObject.ptr != nullptr; }
+    bool IsValid() const { return m_monoObject != nullptr; }
 
     // 通用方法调用
     template<typename... Args>
