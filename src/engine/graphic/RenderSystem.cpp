@@ -101,13 +101,6 @@ bool RenderSystem::Initialize() {
 void RenderSystem::Shutdown() {
     LOG_INFO("Render", "渲染系统开始关闭");
 
-    // 停止渲染线程
-    if (renderThread.IsRunning()) {
-        renderThread.Stop();
-        renderThread.Join();
-        LOG_INFO("Render", "渲染线程已停止");
-    }
-
     // 先关闭前向渲染管线
     if (forwardPipeline) {
         forwardPipeline->Shutdown();
@@ -147,16 +140,8 @@ void RenderSystem::Update(float deltaTime) {
         forwardPipeline->Update(deltaTime);
     }
 
-    // 如果渲染线程未运行，启动它
-    if (!renderThread.IsRunning() && renderBackend && renderPipe) {
-        // 设置渲染任务
-        m_renderTask = [this]() {
-            RenderFrame();
-        };
-        renderThread.SetTask(m_renderTask);
-        renderThread.Start();
-        LOG_INFO("RenderSystem", "渲染线程已启动");
-    }
+    // 在主线程中执行渲染
+    RenderFrame();
 }
 
 void RenderSystem::SetGuiRenderCallback(GuiRenderCallback callback) {
