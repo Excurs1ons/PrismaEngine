@@ -166,18 +166,25 @@ void PlatformWindows::SetWindowTitle(WindowHandle window, const char* title) {
 }
 
 bool PlatformWindows::ShouldClose(WindowHandle window) const {
-    // 检查窗口是否应该关闭
-    if (window) {
-        MSG msg;
-        // 检查是否有 WM_QUIT 消息
-        if (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
-            if (msg.message == WM_QUIT) {
-                return true;
-            }
-        }
-        return false;
+    // 如果窗口句柄无效，认为应该关闭
+    if (!window) {
+        return true;
     }
-    return true;
+
+    // 检查窗口是否仍然存在
+    if (!IsWindow(static_cast<HWND>(window))) {
+        return true;
+    }
+
+    // 检查是否有 WM_QUIT 消息
+    MSG msg;
+    if (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
+        if (msg.message == WM_QUIT) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 uint64_t PlatformWindows::GetTimeMicroseconds() const {
