@@ -66,17 +66,14 @@ find_package(Vulkan REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 #find_package(openfbx CONFIG REQUIRED)
-find_package(GTest CONFIG REQUIRED)
 find_package(directx-headers CONFIG REQUIRED)
 
-target_link_libraries(Engine PUBLIC 
+target_link_libraries(Engine PUBLIC
     SDL3::SDL3
     Vulkan::Vulkan
     nlohmann_json::nlohmann_json
     imgui::imgui
 #    openfbx::openfbx
-    GTest::gtest
-    GTest::gtest_main
     Microsoft::DirectX-Headers
 )
 
