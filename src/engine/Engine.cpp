@@ -90,6 +90,8 @@ bool EngineCore::IsRunning() const {
 }
 
 void EngineCore::Tick() {
+    LOG_TRACE("Engine", "Tick开始");
+
     // 计算时间差
     static auto lastTime = std::chrono::high_resolution_clock::now();
     auto currentTime     = std::chrono::high_resolution_clock::now();
@@ -98,12 +100,20 @@ void EngineCore::Tick() {
 
     // 更新Time类的静态变量
     Time::DeltaTime = deltaTime;
+
+    LOG_TRACE("Engine", " deltaTime: {0:.3f}s", deltaTime);
     Time::TotalTime += deltaTime;
 
     // 统一更新所有子系统
+    LOG_TRACE("Engine", " 开始更新 {0} 个子系统", m_systems.size());
+    int systemCount = 0;
     for (auto& sys : m_systems) {
-        sys->Update(deltaTime);
+        if (sys) {
+            LOG_TRACE("Engine", " 更新系统 {0}", systemCount++);
+            sys->Update(deltaTime);
+        }
     }
+    LOG_TRACE("Engine", " 更新了 {0} 个子系统", systemCount);
 
     // 简单的退出条件：运行10秒后退出
     // 在实际应用中，这里应该检查窗口是否关闭、是否有退出请求等
