@@ -2,6 +2,7 @@
 #include "Export.h"
 #include "IApplication.h"
 #include "Singleton.h"
+#include "Platform.h"  // 包含WindowHandle定义
 
 
 class Editor : public Engine::IApplication<Editor>
