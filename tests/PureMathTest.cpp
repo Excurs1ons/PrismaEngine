@@ -105,9 +105,9 @@ private:
     };
 
     // Vector3测试
-    class VectorTest : public TestCase {
+    class VectorTest : public TestFramework::TestCase {
     public:
-        VectorTest() : TestCase("Vector Operations") {}
+        VectorTest() : TestFramework::TestCase("Vector Operations") {}
     protected:
         void RunTest() override {
             Vector3 v1(1.0f, 2.0f, 3.0f);
@@ -157,9 +157,9 @@ private:
     };
 
     // Matrix4测试
-    class MatrixTest : public TestCase {
+    class MatrixTest : public TestFramework::TestCase {
     public:
-        MatrixTest() : TestCase("Matrix Operations") {}
+        MatrixTest() : TestFramework::TestCase("Matrix Operations") {}
     protected:
         void RunTest() override {
             Matrix4 m;
@@ -195,9 +195,9 @@ private:
     };
 
     // 数学工具函数测试
-    class MathUtilsTest : public TestCase {
+    class MathUtilsTest : public TestFramework::TestCase {
     public:
-        MathUtilsTest() : TestCase("Math Utilities") {}
+        MathUtilsTest() : TestFramework::TestCase("Math Utilities") {}
     protected:
         void RunTest() override {
             // 线性插值
