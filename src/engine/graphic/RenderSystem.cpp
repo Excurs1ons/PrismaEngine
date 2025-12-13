@@ -100,64 +100,55 @@ bool RenderSystem::Initialize() {
 
 void RenderSystem::Shutdown() {
     LOG_INFO("Render", "渲染系统开始关闭");
-    
+
+    // 停止渲染线程
+    if (renderThread.IsRunning()) {
+        renderThread.Stop();
+        renderThread.Join();
+        LOG_INFO("Render", "渲染线程已停止");
+    }
+
     // 先关闭前向渲染管线
     if (forwardPipeline) {
         forwardPipeline->Shutdown();
         forwardPipeline.reset();
     }
-    
+
     // 先关闭渲染管线
     if (renderPipe) {
         renderPipe->Shutdown();
         renderPipe.reset();
     }
-    
+
     if (renderBackend) {
         renderBackend->Shutdown();
         renderBackend.reset();
     }
-    
+
     LOG_INFO("Render", "渲染系统关闭完成");
 }
 
 void RenderSystem::Update(float deltaTime) {
-    LOG_TRACE("RenderSystem", "RenderSystem::Update 开始");
-
     if (!renderBackend || !renderBackend->isInitialized) {
         LOG_ERROR("Render", "渲染后端未初始化");
         return;
     }
-    LOG_TRACE("RenderSystem", "渲染后端已初始化");
 
     // 更新前向渲染管线（从Scene获取相机等数据）
     if (forwardPipeline) {
-        LOG_TRACE("RenderSystem", "更新前向渲染管线");
         forwardPipeline->Update(deltaTime);
-        LOG_TRACE("RenderSystem", "前向渲染管线更新完成");
     }
 
-    // 执行渲染帧
-    LOG_TRACE("RenderSystem", "调用 renderBackend->BeginFrame()");
-    renderBackend->BeginFrame();
-    LOG_TRACE("RenderSystem", "renderBackend->BeginFrame() 完成");
-
-    // 执行可编程渲染管线
-    if (renderPipe) {
-        LOG_TRACE("RenderSystem", "执行可编程渲染管线");
-        renderPipe->Execute();
-        LOG_TRACE("RenderSystem", "可编程渲染管线执行完成");
+    // 如果渲染线程未运行，启动它
+    if (!renderThread.IsRunning() && renderBackend && renderPipe) {
+        // 设置渲染任务
+        m_renderTask = [this]() {
+            RenderFrame();
+        };
+        renderThread.SetTask(m_renderTask);
+        renderThread.Start();
+        LOG_INFO("RenderSystem", "渲染线程已启动");
     }
-
-    LOG_TRACE("RenderSystem", "调用 renderBackend->EndFrame()");
-    renderBackend->EndFrame();
-    LOG_TRACE("RenderSystem", "renderBackend->EndFrame() 完成");
-
-    LOG_TRACE("RenderSystem", "调用 renderBackend->Present()");
-    renderBackend->Present();
-    LOG_TRACE("RenderSystem", "renderBackend->Present() 完成");
-
-    LOG_TRACE("RenderSystem", "RenderSystem::Update 完成");
 }
 
 void RenderSystem::SetGuiRenderCallback(GuiRenderCallback callback) {
@@ -210,6 +201,23 @@ void RenderSystem::Resize(uint32_t width, uint32_t height)
     if (forwardPipeline && renderTarget && depthBuffer) {
         forwardPipeline->SetRenderTargets(renderTarget, depthBuffer, newWidth, newHeight);
     }
+}
+
+void RenderSystem::RenderFrame() {
+    if (!renderBackend || !renderBackend->isInitialized) {
+        return;
+    }
+
+    // 执行渲染帧
+    renderBackend->BeginFrame();
+
+    // 执行可编程渲染管线
+    if (renderPipe) {
+        renderPipe->Execute();
+    }
+
+    renderBackend->EndFrame();
+    renderBackend->Present();
 }
 
 }  // namespace Engine
