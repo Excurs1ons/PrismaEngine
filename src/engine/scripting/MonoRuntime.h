@@ -1,38 +1,48 @@
 #pragma once
 
-#ifdef PRISMA_ENABLE_MONO
-#include <mono/jit/jit.h>
-#include <mono/metadata/assembly.h>
-#include <mono/metadata/environment.h>
-#include <mono/metadata/mono-config.h>
-#endif
 #include <string>
 #include <unordered_map>
 #include <memory>
 #include <vector>
 #include <functional>
 
+#ifdef PRISMA_ENABLE_MONO
+#include <mono/jit/jit.h>
+#include <mono/metadata/assembly.h>
+#include <mono/metadata/environment.h>
+#include <mono/metadata/mono-config.h>
+#endif
+
 namespace Engine {
 namespace Scripting {
 
 #ifdef PRISMA_ENABLE_MONO
-// 前向声明Mono类型
-struct MonoDomain;
-struct MonoObject;
-struct MonoClass;
-struct MonoAssembly;
-struct MonoImage;
-struct MonoMethodDesc;
-struct MonoMethod;
+// 使用实际的Mono类型
+using MonoDomainPtr = ::MonoDomain;
+using MonoObjectPtr = ::MonoObject;
+using MonoClassPtr = ::MonoClass;
+using MonoAssemblyPtr = ::MonoAssembly;
+using MonoImagePtr = ::MonoImage;
+using MonoMethodDescPtr = ::MonoMethodDesc;
+using MonoMethodPtr = ::MonoMethod;
 #else
 // 占位符类型
-using MonoDomain = void;
-using MonoObject = void;
-using MonoClass = void;
-using MonoAssembly = void;
-using MonoImage = void;
-using MonoMethodDesc = void;
-using MonoMethod = void;
+struct MonoDomain { void* ptr; };
+struct MonoObject { void* ptr; };
+struct MonoClass { void* ptr; };
+struct MonoAssembly { void* ptr; };
+struct MonoImage { void* ptr; };
+struct MonoMethodDesc { void* ptr; };
+struct MonoMethod { void* ptr; };
+
+// 类型别名
+using MonoDomainPtr = MonoDomain;
+using MonoObjectPtr = MonoObject;
+using MonoClassPtr = MonoClass;
+using MonoAssemblyPtr = MonoAssembly;
+using MonoImagePtr = MonoImage;
+using MonoMethodDescPtr = MonoMethodDesc;
+using MonoMethodPtr = MonoMethod;
 #endif
 
 // Mono对象包装类
@@ -41,7 +51,7 @@ public:
     ManagedObject() = default;
     virtual ~ManagedObject() = default;
 
-    bool IsValid() const { return m_monoObject != nullptr; }
+    bool IsValid() const { return m_monoObject.ptr != nullptr; }
 
     // 通用方法调用
     template<typename... Args>
@@ -50,32 +60,39 @@ public:
     }
 
 private:
-    MonoDomain* m_domain = nullptr;
-    ::MonoObject* m_monoObject = nullptr;
-    MonoClass* m_class = nullptr;
+    MonoDomainPtr* m_domain = nullptr;
+    MonoObjectPtr* m_monoObject = nullptr;
+    MonoClassPtr* m_class = nullptr;
 };
 
 // Mono域管理
-class MonoDomain {
+class MonoDomainManager {
 public:
-    MonoDomain() = default;
-    ~MonoDomain() = default;
+    MonoDomainManager() = default;
+    ~MonoDomainManager() = default;
 
     bool Initialize(const std::string& domainName) { return false; }
     void Shutdown() {}
     bool IsInitialized() const { return false; }
     void* GetNativeDomain() const { return nullptr; }
+
+private:
+    MonoDomainPtr* m_domain = nullptr;
 };
 
 // 程序集管理
-class MonoAssembly {
+class MonoAssemblyManager {
 public:
-    MonoAssembly() = default;
-    ~MonoAssembly() = default;
+    MonoAssemblyManager() = default;
+    ~MonoAssemblyManager() = default;
 
     bool Load(const std::string& assemblyPath) { return false; }
     bool IsLoaded() const { return false; }
     ManagedObject CreateInstance(const std::string& className) { return ManagedObject(); }
+
+private:
+    MonoAssemblyPtr* m_assembly = nullptr;
+    MonoImagePtr* m_image = nullptr;
 };
 
 // Mono运行时管理器
