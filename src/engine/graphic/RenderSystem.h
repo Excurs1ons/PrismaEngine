@@ -1,10 +1,11 @@
 #pragma once
 #include "ManagerBase.h"
 #include "RenderBackend.h"
-#include "RenderThread.h"
+#include "WorkerThread.h"
 #include "ScriptableRenderPipeline.h"
 #include "pipelines/forward/ForwardPipeline.h"
 #include <memory>
+#include <functional>
 
 namespace Engine {
 
@@ -14,6 +15,7 @@ public:
 
 public:
     static constexpr std::string GetName() { return R"(RenderSystem)"; }
+
     // 添加带参数的初始化方法
     bool Initialize(
         Platform* platform, RenderBackendType renderBackendType, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height);
@@ -39,6 +41,9 @@ private:
     std::unique_ptr<ScriptableRenderPipeline> renderPipe;
     std::unique_ptr<Graphic::Pipelines::Forward::ForwardPipeline> forwardPipeline;
     WorkerThread renderThread;
+
+    // 渲染任务函数
+    std::function<void()> m_renderTask;
 
 };
 }  // namespace Engine

@@ -1,8 +1,9 @@
 #pragma once
 #include "ISubSystem.h"
 #include "ManagerBase.h"
-#include "PhysicsThread.h"
+#include "WorkerThread.h"
 #include <string>
+
 namespace Engine {
 
 class PhysicsSystem : public ManagerBase<PhysicsSystem> {
@@ -15,6 +16,6 @@ public:
     void Update(float deltaTime) override;
 
 private:
-    PhysicsThread workerThread;
+    WorkerThread workerThread;
 };
 }  // namespace Engine
