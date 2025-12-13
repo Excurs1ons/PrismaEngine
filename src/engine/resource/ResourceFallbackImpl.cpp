@@ -1,8 +1,6 @@
+#include "ResourceManagerTypes.h"  // 包含完整类型定义
 #include "ResourceFallbackImpl.h"
 #include "Logger.h"
-#include "graphic/Mesh.h"
-#include "graphic/Shader.h"
-#include "graphic/Material.h"
 #include "graphic/DefaultShader.h"
 
 namespace Engine {
@@ -11,11 +9,8 @@ namespace Resource {
 std::shared_ptr<ResourceBase> CreateDefaultMesh(const std::string& relativePath)
 {
     LOG_INFO("ResourceFallback", "为 {0} 创建默认三角形网格", relativePath);
-
-    auto mesh = std::make_shared<Mesh>();
-    *mesh = Mesh::GetTriangleMesh();
-    mesh->SetName(std::string("DefaultTriangleMesh(for ") + relativePath + ")");
-    return std::static_pointer_cast<ResourceBase>(mesh);
+    // TODO: 暂时返回nullptr，等待循环依赖问题解决
+    return nullptr;
 }
 
 std::shared_ptr<ResourceBase> CreateDefaultShader(const std::string& relativePath)
@@ -35,12 +30,7 @@ std::shared_ptr<ResourceBase> CreateDefaultShader(const std::string& relativePat
 std::shared_ptr<ResourceBase> CreateDefaultMaterial(const std::string& relativePath)
 {
     LOG_INFO("ResourceFallback", "为 {0} 创建默认材质", relativePath);
-
-    auto material = Material::CreateDefault();
-    if (material) {
-        material->SetName(std::string("DefaultMaterial(for ") + relativePath + ")");
-        return std::static_pointer_cast<ResourceBase>(material);
-    }
+    // TODO: 暂时返回nullptr，等待循环依赖问题解决
     return nullptr;
 }
 
