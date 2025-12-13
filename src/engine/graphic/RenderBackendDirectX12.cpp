@@ -14,7 +14,6 @@
 #include "ResourceManager.h"
 #include "Shader.h"
 #include "DefaultShader.h"
-#include "RenderThread.h"
 #include "Logger.h"
 #include "GameObject.h"
 #include "Transform.h"
@@ -316,34 +315,26 @@ bool RenderBackendDirectX12::Supports(RendererFeature feature) const {
 }
 
 void RenderBackendDirectX12::Present() {
-    LOG_TRACE("DirectX", "Present 开始");
-
     // 呈现帧到屏幕
     if (m_swapChain) {
         HRESULT hr = m_swapChain->Present(0, 0);  // SyncInterval=0 (不等待垂直同步)，避免阻塞
         if (FAILED(hr)) {
             LOG_ERROR("DirectX", "SwapChain Present 失败: {0}", HrToString(hr));
-        } else {
-            LOG_TRACE("DirectX", "SwapChain Present 成功");
         }
 
         // 异步等待GPU完成当前帧，不阻塞主线程
         // 只有在GPU落后太多时才等待
         if (m_fence->GetCompletedValue() < m_fenceValue - 2) {
-            LOG_TRACE("DirectX", "GPU落后超过2帧，短暂等待");
             WaitForPreviousFrame();
         } else {
             // 仅发送fence信号，不等待
             const UINT64 fence = m_fenceValue;
             m_commandQueue->Signal(m_fence.Get(), fence);
             m_fenceValue++;
-            LOG_TRACE("DirectX", "发送fence信号，不等待");
         }
     } else {
         LOG_ERROR("DirectX", "SwapChain 为空，无法 Present");
     }
-
-    LOG_TRACE("DirectX", "Present 完成");
 }
 
 bool RenderBackendDirectX12::LoadPipeline() {
@@ -899,8 +890,6 @@ D3D12_GPU_VIRTUAL_ADDRESS RenderBackendDirectX12::GetDynamicConstantBufferAddres
 }
 
 void RenderBackendDirectX12::WaitForPreviousFrame() {
-    LOG_TRACE("DirectX", "WaitForPreviousFrame 开始");
-
     // 等待帧渲染完成并不是最佳实践
     // This is code implemented as such for simplicity. More advanced samples
     // illustrate how to use fences for efficient resource usage.
@@ -913,7 +902,6 @@ void RenderBackendDirectX12::WaitForPreviousFrame() {
         return;
     }
 
-    LOG_TRACE("DirectX", "发送 fence 信号: {0}", fence);
     HRESULT hr = m_commandQueue->Signal(m_fence.Get(), fence);
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "CommandQueue Signal 失败: {0}", HrToString(hr));
@@ -922,37 +910,25 @@ void RenderBackendDirectX12::WaitForPreviousFrame() {
     m_fenceValue++;
 
     // Wait until the previous frame is finished.
-    LOG_TRACE("DirectX", "检查 fence 完成状态: 当前={0}, 目标={1}", m_fence->GetCompletedValue(), fence);
     if (m_fence->GetCompletedValue() < fence) {
-        LOG_TRACE("DirectX", "等待 fence 完成，使用有限超时");
         HRESULT eventHr = m_fence->SetEventOnCompletion(fence, m_fenceEvent);
         if (FAILED(eventHr)) {
             LOG_ERROR("DirectX", "SetEventOnCompletion 失败: {0}", HrToString(eventHr));
             return;
         }
 
-        LOG_TRACE("DirectX", "调用 WaitForSingleObject (超时: 16ms)");
         // 使用16ms超时（约60FPS），避免长时间阻塞主线程
         DWORD waitResult = WaitForSingleObject(m_fenceEvent, 16);
-        if (waitResult == WAIT_OBJECT_0) {
-            LOG_TRACE("DirectX", "WaitForSingleObject 成功");
-        } else if (waitResult == WAIT_TIMEOUT) {
+        if (waitResult == WAIT_TIMEOUT) {
             LOG_WARNING("DirectX", "WaitForSingleObject 超时，GPU可能延迟");
-        } else {
-            LOG_ERROR("DirectX", "WaitForSingleObject 失败，结果: {0}", waitResult);
         }
-    } else {
-        LOG_TRACE("DirectX", "fence 已完成，无需等待");
     }
 
     if (m_swapChain) {
         m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-        LOG_TRACE("DirectX", "切换到帧索引: {0}", m_frameIndex);
     } else {
         LOG_ERROR("DirectX", "SwapChain 为空，无法获取帧索引");
     }
-
-    LOG_TRACE("DirectX", "WaitForPreviousFrame 完成");
 }
 
 void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter) {

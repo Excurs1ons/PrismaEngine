@@ -45,5 +45,8 @@ private:
     // 渲染任务函数
     std::function<void()> m_renderTask;
 
+    // 在渲染线程中执行
+    void RenderFrame();
+
 };
 }  // namespace Engine

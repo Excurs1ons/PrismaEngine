@@ -19,12 +19,13 @@ CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
     switch (level) {
     case LogLevel::Trace:
     case LogLevel::Debug:
-        return CallStackOutput::Full;     // Trace/Debug级别输出完整调用堆栈
+        return CallStackOutput::None;     // Trace/Debug级别不捕获调用堆栈（性能优化）
     case LogLevel::Info:
         return CallStackOutput::None;     // Info级别不输出调用堆栈
     case LogLevel::Warning:
+        return CallStackOutput::CallerOnly;  // Warning级别仅输出调用点
     case LogLevel::Error:
-        return CallStackOutput::CallerOnly;  // Warning/Error级别仅输出调用点
+        return CallStackOutput::CallerOnly;  // Error级别仅输出调用点
     case LogLevel::Fatal:
         return CallStackOutput::Full;     // Fatal级别输出完整调用堆栈
     default:
