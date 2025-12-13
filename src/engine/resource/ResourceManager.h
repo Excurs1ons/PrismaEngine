@@ -210,18 +210,8 @@ public:
             else if constexpr (std::is_same_v<T, Material>) resourceType = ResourceType::Material;
 
             if (resourceType != ResourceType::Unknown) {
-                auto defaultResource = Resource::ResourceFallback::CreateDefaultResource(resourceType, relative_path);
-                if (defaultResource) {
-                    auto typedResource = std::dynamic_pointer_cast<T>(defaultResource);
-                    if (typedResource) {
-                        // 缓存默认资源
-                        {
-                            std::unique_lock<std::shared_mutex> write_lock(m_resourcesMutex);
-                            m_resources[relative_path] = defaultResource;
-                        }
-                        return ResourceHandle<T>(typedResource);
-                    }
-                }
+                // TODO: 暂时禁用ResourceFallback，等待循环依赖问题解决
+                LOG_WARNING("Resource", "Resource fallback 暂时禁用，无法加载资源: {0}", relative_path);
             }
 
             LOG_ERROR("Resource", "无法为 {0} 创建默认资源", relative_path);
@@ -241,19 +231,9 @@ public:
             else if constexpr (std::is_same_v<T, Material>) resourceType = ResourceType::Material;
 
             if (resourceType != ResourceType::Unknown) {
-                auto fallbackResource = Resource::ResourceFallback::CreateFallbackResource(resourceType, relative_path, resource);
-                if (fallbackResource) {
-                    auto typedResource = std::dynamic_pointer_cast<T>(fallbackResource);
-                    if (typedResource) {
-                        resource = typedResource;
-                    } else {
-                        LOG_ERROR("Resource", "无法转换回退资源类型: {0}", relative_path);
-                        return ResourceHandle<T>();
-                    }
-                } else {
-                    LOG_ERROR("Resource", "无法创建回退资源: {0}", relative_path);
-                    return ResourceHandle<T>();
-                }
+                // TODO: 暂时禁用ResourceFallback，等待循环依赖问题解决
+                LOG_WARNING("Resource", "Resource fallback 暂时禁用，资源加载失败: {0}", relative_path);
+                return ResourceHandle<T>();
             } else {
                 LOG_ERROR("Resource", "资源加载失败且无默认回退: {0}", relative_path);
                 return ResourceHandle<T>();
