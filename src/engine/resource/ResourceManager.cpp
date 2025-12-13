@@ -2,7 +2,7 @@
 #include "AssetSerializer.h"
 #include "MeshAsset.h"
 #include "TextureAsset.h"
-#include "../graphic/Mesh.h"
+#include "graphic/Mesh.h"
 #include <fstream>
 
 namespace Engine {
