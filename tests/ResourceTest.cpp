@@ -70,9 +70,9 @@ public:
 
 private:
     // 加载资源测试
-    class LoadResourceTest : public TestCase {
+    class LoadResourceTest : public TestFramework::TestCase {
     public:
-        LoadResourceTest() : TestCase("LoadResource") {}
+        LoadResourceTest() : TestFramework::TestCase("LoadResource") {}
     protected:
         void RunTest() override {
             auto& manager = ResourceManager::GetInstance();
@@ -86,9 +86,9 @@ private:
     };
 
     // 缓存测试
-    class CacheTest : public TestCase {
+    class CacheTest : public TestFramework::TestCase {
     public:
-        CacheTest() : TestCase("Cache") {}
+        CacheTest() : TestFramework::TestCase("Cache") {}
     protected:
         void RunTest() override {
             auto& manager = ResourceManager::GetInstance();
@@ -103,9 +103,9 @@ private:
     };
 
     // 异步加载测试
-    class AsyncLoadTest : public TestCase {
+    class AsyncLoadTest : public TestFramework::TestCase {
     public:
-        AsyncLoadTest() : TestCase("AsyncLoad") {}
+        AsyncLoadTest() : TestFramework::TestCase("AsyncLoad") {}
     protected:
         void RunTest() override {
             auto& manager = ResourceManager::GetInstance();
@@ -119,9 +119,9 @@ private:
     };
 
     // 内存限制测试
-    class MemoryLimitTest : public TestCase {
+    class MemoryLimitTest : public TestFramework::TestCase {
     public:
-        MemoryLimitTest() : TestCase("MemoryLimit") {}
+        MemoryLimitTest() : TestFramework::TestCase("MemoryLimit") {}
     protected:
         void RunTest() override {
             auto& manager = ResourceManager::GetInstance();
