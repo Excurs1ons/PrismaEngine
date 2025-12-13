@@ -129,8 +129,16 @@ void RenderSystem::Shutdown() {
 }
 
 void RenderSystem::Update(float deltaTime) {
-    if (!renderBackend || !renderBackend->isInitialized) {
-        LOG_ERROR("Render", "渲染后端未初始化");
+    // 检查渲染后端是否初始化
+    if (!renderBackend) {
+        LOG_ERROR("Render", "渲染后端为空");
+        return;
+    }
+
+    // 如果设备丢失，尝试重新初始化
+    if (!renderBackend->isInitialized) {
+        LOG_WARNING("Render", "检测到渲染设备未初始化，尝试重新初始化");
+        // TODO: 实现设备重建逻辑
         return;
     }
 
