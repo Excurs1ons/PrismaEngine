@@ -63,6 +63,9 @@ void Material::Apply(RenderCommandContext* context) {
 
     LOG_DEBUG("Material", "应用材质 '{0}' 到渲染上下文", m_name);
 
+    // TODO: 设置材质特定的PSO
+    // 注意：当前使用的是RenderBackend的默认PSO
+
     // 1. 设置基础颜色常量缓冲区 (寄存器 b2)
     context->SetConstantBuffer("BaseColor", reinterpret_cast<const float*>(&m_properties.baseColor), 4);
 
