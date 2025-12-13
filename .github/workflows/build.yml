@@ -85,10 +85,13 @@ jobs:
       id: cache-vcpkg
       with:
         path: |
+          C:/vcpkg/installed
+          C:/vcpkg/buildtrees
+          C:/vcpkg/downloads
           ./vcpkg_installed
-          ./build/vcpkg_installed
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('vcpkg.json') }}
+        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}-v2
         restore-keys: |
+          ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}-
           ${{ runner.os }}-vcpkg-
     
     - name: Cache CMake build
@@ -106,7 +109,13 @@ jobs:
         git fetch --all
       
     - name: Setup vcpkg
+      shell: powershell
       run: |
+        if ('${{ steps.cache-vcpkg.outputs.cache-hit }}' -eq 'true') {
+          Write-Host "Cache hit! vcpkg dependencies restored from cache"
+        } else {
+          Write-Host "Cache miss. Will install vcpkg dependencies..."
+        }
         ./vcpkg/bootstrap-vcpkg.bat
       
     - name: Configure CMake

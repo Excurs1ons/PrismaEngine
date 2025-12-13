@@ -13,7 +13,6 @@
       "name": "imgui",
       "features": [ "sdl3-binding", "vulkan-binding", "dx12-binding", "docking-experimental" ]
     },
-    "openfbx",
-    "gtest"
+    "openfbx"
   ]
 }
