@@ -1,0 +1,76 @@
+From aad972ac1be7bc4543784b9447ea5fc7c6610e3b Mon Sep 17 00:00:00 2001
+From: JasonGu <1456970218@qq.com>
+Date: Sat, 13 Dec 2025 06:09:41 +0800
+Subject: [PATCH 1/2] =?UTF-8?q?fix(InputManager):=20=E4=BF=AE=E5=A4=8D?=
+ =?UTF-8?q?=E6=9E=84=E9=80=A0=E5=87=BD=E6=95=B0=E5=88=9D=E5=A7=8B=E5=8C=96?=
+ =?UTF-8?q?=E5=88=97=E8=A1=A8=E6=A0=BC=E5=BC=8F=E9=94=99=E8=AF=AF?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+修正了InputBinding构造函数的初始化列表格式，
+使用逗号分隔而不是行末逗号。
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ src/engine/input/InputManager.cpp | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/engine/input/InputManager.cpp b/src/engine/input/InputManager.cpp
+index 89f86bc..1c40743 100644
+--- a/src/engine/input/InputManager.cpp
++++ b/src/engine/input/InputManager.cpp
+@@ -332,10 +332,10 @@ void InputManager::SendEvent(const InputEvent& event)
+ 
+ // InputBinding 实现
+ InputBinding::InputBinding(const std::string& name, KeyCode key, InputAction action, Callback callback)
+-    : m_name(name)
+-    , m_key(key)
+-    , m_action(action)
+-    , m_callback(callback)
++    : m_name(name),
++      m_key(key),
++      m_action(action),
++      m_callback(callback)
+ {
+ }
+ 
+-- 
+2.52.0
+
+
+From 82a53dee6e09031e9e3d6df4e66411fad3d078c9 Mon Sep 17 00:00:00 2001
+From: JasonGu <1456970218@qq.com>
+Date: Sat, 13 Dec 2025 08:01:01 +0800
+Subject: [PATCH 2/2] =?UTF-8?q?fix(InputManager):=20=E6=B7=BB=E5=8A=A0?=
+ =?UTF-8?q?=E7=BC=BA=E5=A4=B1=E7=9A=84string=E5=A4=B4=E6=96=87=E4=BB=B6?=
+ =?UTF-8?q?=E5=8C=85=E5=90=AB?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+修复了std::string未定义的编译错误。
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+---
+ src/engine/input/InputManager.h | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/src/engine/input/InputManager.h b/src/engine/input/InputManager.h
+index b9c4a75..32dc8b0 100644
+--- a/src/engine/input/InputManager.h
++++ b/src/engine/input/InputManager.h
+@@ -1,5 +1,6 @@
+ #pragma once
+ 
++#include <string>
+ #include <unordered_map>
+ #include <functional>
+ #include <vector>
+-- 
+2.52.0
+
