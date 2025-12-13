@@ -173,7 +173,7 @@ private:
     ResourceManager& operator=(const ResourceManager&) = delete;
 
     // 更新统计
-    void UpdateStats();
+    void UpdateStats() const;
 
     // 查找资源路径
     std::string FindResourcePath(const std::string& relativePath) const;
