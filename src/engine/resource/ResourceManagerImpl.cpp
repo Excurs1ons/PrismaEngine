@@ -9,52 +9,8 @@ namespace Engine {
 
 void ResourceManager::CreateDefaultMeshes(const std::filesystem::path& meshesDir) {
     LOG_INFO("Resource", "创建默认网格资产...");
-
-    // 创建立方体网格
-    Mesh cubeMesh = Mesh::GetCubeMesh();
-    cubeMesh.Load(meshesDir / "Cube.mesh");
-
-    // 创建三角形网格
-    Mesh triangleMesh = Mesh::GetTriangleMesh();
-    triangleMesh.Load(meshesDir / "Triangle.mesh");
-
-    // 创建四边形网格
-    Mesh quadMesh = Mesh::GetQuadMesh();
-    quadMesh.Load(meshesDir / "Quad.mesh");
-
-    // 使用序列化系统保存网格
-    try {
-        // TODO: 暂时注释掉，避免编译错误
-        /*
-        MeshAsset cubeAsset;
-        cubeAsset.SetMetadata("Cube", "默认立方体网格");
-        for (const auto& subMesh : cubeMesh.subMeshes) {
-            cubeAsset.AddSubMesh(subMesh);
-        }
-        cubeAsset.SetBoundingBox(cubeMesh.globalBoundingBox);
-        cubeAsset.SerializeToFile(meshesDir / "Cube.mesh", Serialization::SerializationFormat::JSON);
-
-        MeshAsset triangleAsset;
-        triangleAsset.SetMetadata("Triangle", "默认三角形网格");
-        for (const auto& subMesh : triangleMesh.subMeshes) {
-            triangleAsset.AddSubMesh(subMesh);
-        }
-        triangleAsset.SetBoundingBox(triangleMesh.globalBoundingBox);
-        triangleAsset.SerializeToFile(meshesDir / "Triangle.mesh", Serialization::SerializationFormat::JSON);
-
-        MeshAsset quadAsset;
-        quadAsset.SetMetadata("Quad", "默认四边形网格");
-        for (const auto& subMesh : quadMesh.subMeshes) {
-            quadAsset.AddSubMesh(subMesh);
-        }
-        quadAsset.SetBoundingBox(quadMesh.globalBoundingBox);
-        quadAsset.SerializeToFile(meshesDir / "Quad.mesh", Serialization::SerializationFormat::JSON);
-        */
-
-        LOG_INFO("Resource", "默认网格资产创建完成（序列化已暂时禁用）");
-    } catch (const std::exception& e) {
-        LOG_ERROR("Resource", "创建网格资产失败: {0}", e.what());
-    }
+    // TODO: 暂时禁用，等待循环依赖问题完全解决
+    LOG_INFO("Resource", "网格资产创建已暂时禁用");
 }
 
 void ResourceManager::CreateDefaultShaders(const std::filesystem::path& shadersDir) {
