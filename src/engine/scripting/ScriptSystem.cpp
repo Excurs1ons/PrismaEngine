@@ -92,7 +92,7 @@ void ScriptSystem::AddScript(Engine::Core::ECS::EntityID entity, const std::stri
 
     // 检查是否已存在相同的脚本
     for (const auto& script : entityScripts->scripts) {
-        if (script->GetScriptPath() == scriptPath) {
+        if (!script->scriptPaths.empty() && script->scriptPaths[0] == scriptPath) {
             LOG_WARNING("ScriptSystem", "实体 {0} 已有脚本: {1}", entity, scriptPath);
             return;
         }
@@ -120,11 +120,11 @@ void ScriptSystem::RemoveScript(Engine::Core::ECS::EntityID entity, const std::s
 
     auto it = std::find_if(entityScripts->scripts.begin(), entityScripts->scripts.end(),
                           [&scriptPath](const std::shared_ptr<ScriptComponent>& script) {
-                              return script->GetScriptPath() == scriptPath;
+                              return !script->scriptPaths.empty() && script->scriptPaths[0] == scriptPath;
                           });
 
     if (it != entityScripts->scripts.end()) {
-        (*it)->Destroy();
+        // TODO: 销毁脚本实例
         entityScripts->scripts.erase(it);
         LOG_INFO("ScriptSystem", "从实体 {0} 移除脚本: {1}", entity, scriptPath);
     }
@@ -138,7 +138,7 @@ void ScriptSystem::ClearScripts(Engine::Core::ECS::EntityID entity) {
 
     // 销毁所有脚本
     for (auto& script : entityScripts->scripts) {
-        script->Destroy();
+        // TODO: 销毁脚本实例
     }
     entityScripts->scripts.clear();
 
@@ -158,7 +158,9 @@ void ScriptSystem::ReloadScripts() {
     // 重新创建脚本
     for (const auto& entityScripts : backup) {
         for (const auto& script : entityScripts.scripts) {
-            AddScript(entityScripts.entity, script->GetScriptPath());
+            if (!script->scriptPaths.empty()) {
+                AddScript(entityScripts.entity, script->scriptPaths[0]);
+            }
         }
     }
 }
@@ -191,7 +193,7 @@ void ScriptSystem::CleanupDestroyedEntities() {
         if (!world.IsEntityValid(it->entity)) {
             // 实体已被销毁，清理脚本
             for (auto& script : it->scripts) {
-                script->Destroy();
+                // TODO: 销毁脚本实例
             }
 
             // 更新索引
@@ -208,8 +210,9 @@ void ScriptSystem::CleanupDestroyedEntities() {
 void ScriptSystem::ProcessScriptAwake() {
     for (auto& entityScripts : m_entityScripts) {
         for (auto& script : entityScripts.scripts) {
-            if (script && !script->IsInitialized()) {
-                script->Initialize();
+            if (script && !script->initialized) {
+                script->initialized = true;
+                // TODO: 调用脚本Awake方法
             }
         }
     }
@@ -218,8 +221,8 @@ void ScriptSystem::ProcessScriptAwake() {
 void ScriptSystem::ProcessScriptStart() {
     for (auto& entityScripts : m_entityScripts) {
         for (auto& script : entityScripts.scripts) {
-            if (script && script->IsInitialized()) {
-                // TODO: 调用Start方法
+            if (script && script->initialized) {
+                // TODO: 调用脚本Start方法
             }
         }
     }
@@ -228,8 +231,8 @@ void ScriptSystem::ProcessScriptStart() {
 void ScriptSystem::ProcessScriptUpdate(float deltaTime) {
     for (auto& entityScripts : m_entityScripts) {
         for (auto& script : entityScripts.scripts) {
-            if (script && script->IsInitialized()) {
-                script->Update(deltaTime);
+            if (script && script->initialized) {
+                // TODO: 调用脚本Update方法
             }
         }
     }
@@ -239,7 +242,8 @@ void ScriptSystem::ProcessScriptDestroy() {
     for (auto& entityScripts : m_entityScripts) {
         for (auto& script : entityScripts.scripts) {
             if (script) {
-                script->Destroy();
+                script->initialized = false;
+                // TODO: 调用脚本Destroy方法
             }
         }
     }
