@@ -141,6 +141,15 @@ public:
         D3D12_RECT rect = {left, top, right, bottom};
         m_commandList->RSSetScissorRects(1, &rect);
     }
+    void SetPipelineState(void* pso) override {
+        if (!m_commandList || !pso) {
+            LOG_ERROR("DXContext", "SetPipelineState: 无效的命令列表或PSO");
+            return;
+        }
+        ID3D12PipelineState* pipelineState = static_cast<ID3D12PipelineState*>(pso);
+        m_commandList->SetPipelineState(pipelineState);
+        LOG_DEBUG("DXContext", "设置管线状态成功");
+    }
 
 private:
     ID3D12GraphicsCommandList* m_commandList = nullptr;
@@ -586,9 +595,78 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
         LOG_INFO("DirectX", "成功创建根签名");
     }
 
-    // 注意：管线状态（PSO）现在由材质系统动态管理，而不是在渲染后端硬编码
-    // 这是为了支持多种着色器和材质的灵活切换
-    // 渲染组件（RenderComponent）会通过材质应用正确的 PSO
+    // 创建一个默认的管线状态对象（PSO）用于初始化
+    // 注意：这个 PSO 只是临时的，实际的渲染应该由材质系统管理的 PSO 来执行
+    {
+        // 加载默认着色器
+        auto resourceManager = ResourceManager::GetInstance();
+        auto shaderHandle = resourceManager->Load<Shader>("assets/shaders/default.hlsl");
+
+        if (!shaderHandle.IsValid()) {
+            LOG_ERROR("DirectX", "无法加载默认着色器");
+            // 创建一个最小的空 PSO 以避免崩溃
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+            psoDesc.pRootSignature = m_rootSignature.Get();
+            psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+            psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+            psoDesc.DepthStencilState.DepthEnable = FALSE;
+            psoDesc.DepthStencilState.StencilEnable = FALSE;
+            psoDesc.SampleMask = UINT_MAX;
+            psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            psoDesc.NumRenderTargets = 1;
+            psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+            psoDesc.SampleDesc.Count = 1;
+
+            // 创建空的着色器（会导致黑屏但不会崩溃）
+            psoDesc.VS = CD3DX12_SHADER_BYTECODE(nullptr, 0);
+            psoDesc.PS = CD3DX12_SHADER_BYTECODE(nullptr, 0);
+
+            HRESULT hr = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
+            if (FAILED(hr)) {
+                LOG_ERROR("DirectX", "创建默认 PSO 失败: {0}", HrToString(hr));
+                return false;
+            }
+        } else {
+            LOG_INFO("DirectX", "成功加载默认着色器");
+            auto* shader = shaderHandle.Get();
+            auto vertexShader = shader->GetVertexShaderBlob();
+            auto pixelShader = shader->GetPixelShaderBlob();
+
+            // 定义顶点输入布局
+            D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
+                {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+                {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
+
+            // 创建图形管线状态对象（PSO）
+            D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+            psoDesc.InputLayout = {inputElementDescs, _countof(inputElementDescs)};
+            psoDesc.pRootSignature = m_rootSignature.Get();
+            psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+            psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+            psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+            psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+            psoDesc.DepthStencilState.DepthEnable = TRUE;
+            psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+            psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+            psoDesc.DepthStencilState.StencilEnable = FALSE;
+            psoDesc.DSVFormat = DXGI_FORMAT_D32_FLOAT;
+            psoDesc.SampleMask = UINT_MAX;
+            psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+            psoDesc.NumRenderTargets = 1;
+            psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+            psoDesc.SampleDesc.Count = 1;
+
+            HRESULT hr = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
+            if (FAILED(hr)) {
+                LOG_ERROR("DirectX", "创建图形管线状态失败: {0}", HrToString(hr));
+                return false;
+            }
+            LOG_INFO("DirectX", "成功创建默认图形管线状态");
+        }
+    }
+
+    // 注意：完整的管线状态（PSO）应该由材质系统动态管理
+    // 这个默认 PSO 仅用于初始化，实际的渲染应该使用材质提供的 PSO
 
     // 创建动态上传缓冲区（用于每帧小批量顶点上传）
     {
