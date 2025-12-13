@@ -32,4 +32,7 @@ public:
     // 设置渲染状态
     virtual void SetViewport(float x, float y, float width, float height) = 0;
     virtual void SetScissorRect(int left, int top, int right, int bottom) = 0;
+
+    // 设置管线状态（PSO）- 仅适用于需要显式PSO管理的后端（如DirectX 12）
+    virtual void SetPipelineState(void* pso) {}
 };
