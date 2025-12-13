@@ -381,6 +381,8 @@ void RenderBackendVulkan::BeginFrame() {
 
     // 保存 imageIndex 以便 EndFrame 使用（线程本地存储，无需锁）
     s_acquiredImageIndex[this] = imageIndex;
+    // 更新当前帧索引
+    currentFrame = imageIndex;
 
     // 重置命令缓冲区
     vkResetCommandBuffer(commandBuffers[imageIndex], 0);
@@ -932,14 +934,14 @@ void* RenderBackendVulkan::GetDefaultRenderTarget()
 
 void* RenderBackendVulkan::GetDefaultDepthBuffer()
 {
-    // 返回深度图像视图
-    return &depthImageView;
+    // TODO: Vulkan 深度缓冲区尚未实现
+    return nullptr;
 }
 
 void RenderBackendVulkan::GetRenderTargetSize(uint32_t& width, uint32_t& height)
 {
-    width = swapChainExtent.width;
-    height = swapChainExtent.height;
+    width = m_swapchainExtent.width;
+    height = m_swapchainExtent.height;
 }
 
 }  // namespace Engine

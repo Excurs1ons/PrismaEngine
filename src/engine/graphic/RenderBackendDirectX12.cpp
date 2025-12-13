@@ -586,82 +586,38 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
         LOG_INFO("DirectX", "成功创建根签名");
     }
 
-    // 创建管线状态，包括编译和加载着色器
-    // {
-    //     // 使用资源管理器加载着色器
-    //     auto resourceManager = ResourceManager::GetInstance();
-    //     auto shaderHandle     = resourceManager->Load<Shader>("shader.hlsl");
-    //
-    //     if (!shaderHandle.IsValid()) {
-    //         LOG_ERROR("DirectX", "通过资源管理器加载着色器失败");
-    //         return false;
-    //     }
-    //     LOG_INFO("DirectX", "成功加载着色器");
-    //     auto* shader      = shaderHandle.Get();
-    //     auto vertexShader = shader->GetVertexShaderBlob();
-    //     auto pixelShader  = shader->GetPixelShaderBlob();
-    //
-    //     // 定义顶点输入布局
-    //     D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {
-    //         {"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-    //         {"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}};
-    //
-    //     // 创建图形管线状态对象（PSO）
-    //     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-    //     psoDesc.InputLayout                        = {inputElementDescs, _countof(inputElementDescs)};
-    //     psoDesc.pRootSignature                     = m_rootSignature.Get();
-    //     psoDesc.VS                                 = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-    //     psoDesc.PS                                 = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-    //     psoDesc.RasterizerState                    = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-    //     psoDesc.BlendState                         = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-    //     psoDesc.DepthStencilState.DepthEnable      = TRUE;
-    //     psoDesc.DepthStencilState.DepthWriteMask   = D3D12_DEPTH_WRITE_MASK_ALL;
-    //     psoDesc.DepthStencilState.DepthFunc       = D3D12_COMPARISON_FUNC_LESS;
-    //     psoDesc.DepthStencilState.StencilEnable    = FALSE;
-    //     psoDesc.DSVFormat                         = DXGI_FORMAT_D32_FLOAT;
-    //     psoDesc.SampleMask                         = UINT_MAX;
-    //     psoDesc.PrimitiveTopologyType              = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-    //     psoDesc.NumRenderTargets                   = 1;
-    //     psoDesc.RTVFormats[0]                      = DXGI_FORMAT_R8G8B8A8_UNORM;
-    //     psoDesc.SampleDesc.Count                   = 1;
-    //     HRESULT hRcreatePSO = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
-    //     if (FAILED(hRcreatePSO)) {
-    //         LOG_ERROR("DirectX", "创建图形管线状态失败: {0}", HrToString(hRcreatePSO));
-    //         return false;
-    //     }
-    //     LOG_INFO("DirectX", "成功创建图形管线状态");
-    // }
-    //
-    // // 顶点缓冲区现在由动态渲染系统管理，不再需要硬编码几何体
-    //
-    // // 创建动态上传缓冲区（用于每帧小批量顶点上传）
-    // {
-    //     // 4MB per-frame upload buffer
-    //     const uint64_t dynamicSize = 4ULL * 1024ULL * 1024ULL;
-    //     auto heapProps             = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-    //     auto resourceDesc          = CD3DX12_RESOURCE_DESC::Buffer(dynamicSize);
-    //     HRESULT hr                 = m_device->CreateCommittedResource(&heapProps,
-    //                                                    D3D12_HEAP_FLAG_NONE,
-    //                                                    &resourceDesc,
-    //                                                    D3D12_RESOURCE_STATE_GENERIC_READ,
-    //                                                    nullptr,
-    //                                                    IID_PPV_ARGS(&m_dynamicVertexBuffer));
-    //     if (FAILED(hr)) {
-    //         LOG_ERROR("DirectX", "创建动态顶点上传缓冲区失败: {0}", HrToString(hr));
-    //         return false;
-    //     }
-    //     m_dynamicVBSize = dynamicSize;
-    //     // 映射一次，保持 CPU 指针直到销毁
-    //     CD3DX12_RANGE readRange(0, 0);
-    //     uint8_t* ptr = nullptr;
-    //     hr           = m_dynamicVertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr));
-    //     if (FAILED(hr)) {
-    //         LOG_ERROR("DirectX", "映射动态顶点缓冲区失败: {0}", HrToString(hr));
-    //         return false;
-    //     }
-    //     m_dynamicVBCPUAddress = ptr;
-    //     m_dynamicVBOffset     = 0;
-    // }
+    // 注意：管线状态（PSO）现在由材质系统动态管理，而不是在渲染后端硬编码
+    // 这是为了支持多种着色器和材质的灵活切换
+    // 渲染组件（RenderComponent）会通过材质应用正确的 PSO
+
+    // 创建动态上传缓冲区（用于每帧小批量顶点上传）
+    {
+        // 4MB per-frame upload buffer
+        const uint64_t dynamicSize = 4ULL * 1024ULL * 1024ULL;
+        auto heapProps             = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+        auto resourceDesc          = CD3DX12_RESOURCE_DESC::Buffer(dynamicSize);
+        HRESULT hr                 = m_device->CreateCommittedResource(&heapProps,
+                                                       D3D12_HEAP_FLAG_NONE,
+                                                       &resourceDesc,
+                                                       D3D12_RESOURCE_STATE_GENERIC_READ,
+                                                       nullptr,
+                                                       IID_PPV_ARGS(&m_dynamicVertexBuffer));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "创建动态顶点上传缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicVBSize = dynamicSize;
+        // 映射一次，保持 CPU 指针直到销毁
+        CD3DX12_RANGE readRange(0, 0);
+        uint8_t* ptr = nullptr;
+        hr           = m_dynamicVertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&ptr));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "映射动态顶点缓冲区失败: {0}", HrToString(hr));
+            return false;
+        }
+        m_dynamicVBCPUAddress = ptr;
+        m_dynamicVBOffset     = 0;
+    }
 
     // 创建动态索引上传缓冲区（每帧临时索引数据）
     {

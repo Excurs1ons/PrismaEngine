@@ -60,7 +60,6 @@ bool RenderSystem::Initialize(
     // 获取并设置默认渲染目标和深度缓冲
     auto defaultRenderTarget = this->renderBackend->GetDefaultRenderTarget();
     auto defaultDepthBuffer = this->renderBackend->GetDefaultDepthBuffer();
-    uint32_t width, height;
     this->renderBackend->GetRenderTargetSize(width, height);
 
     if (defaultRenderTarget && defaultDepthBuffer) {

@@ -168,14 +168,25 @@ void OpaquePass::Execute(RenderCommandContext* context)
 
                 // 渲染所有子网格
                 for (const auto& subMesh : mesh->subMeshes) {
-                    // 设置顶点和索引缓冲区（使用GPU句柄）
-                    context->SetVertexBuffer(nullptr, 0, Vertex::GetVertexStride());
-                    context->SetIndexBuffer(nullptr, 0, false);
+                    // 设置顶点和索引缓冲区
+                    if (!subMesh.vertices.empty()) {
+                        const uint32_t vertexSizeInBytes = subMesh.verticesCount() * Vertex::GetVertexStride();
+                        context->SetVertexBuffer(subMesh.vertices.data(), vertexSizeInBytes, Vertex::GetVertexStride());
+                    }
+
+                    if (!subMesh.indices.empty()) {
+                        context->SetIndexBuffer(subMesh.indices.data(), subMesh.indicesCount(), true);
+                    }
 
                     // 执行绘制
-                    context->DrawIndexed(subMesh.indicesCount());
+                    if (subMesh.indicesCount() > 0) {
+                        context->DrawIndexed(subMesh.indicesCount());
+                        m_stats.triangles += subMesh.indicesCount() / 3;
+                    } else if (subMesh.verticesCount() > 0) {
+                        context->Draw(subMesh.verticesCount());
+                        m_stats.triangles += subMesh.verticesCount() / 3;
+                    }
                     m_stats.drawCalls++;
-                    m_stats.triangles += subMesh.indicesCount() / 3;
                 }
             } else {
                 // 对于纯RenderComponent，直接调用其Render方法
