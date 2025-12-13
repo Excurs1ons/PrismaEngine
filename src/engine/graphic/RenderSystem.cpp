@@ -130,8 +130,23 @@ void RenderSystem::Update(float deltaTime) {
 
     // 如果设备丢失，尝试重新初始化
     if (!renderBackend->isInitialized) {
-        LOG_WARNING("Render", "检测到渲染设备未初始化，尝试重新初始化");
-        // TODO: 实现设备重建逻辑
+        static uint32_t lastRetryTime = 0;
+        uint32_t currentTime = GetTickCount() / 1000;
+
+        // 每5秒尝试一次重建
+        if (currentTime - lastRetryTime >= 5) {
+            LOG_WARNING("Render", "检测到渲染设备未初始化，尝试重新初始化...");
+
+            // 尝试重新初始化设备
+            Platform* platform = PlatformWindows::GetInstance().get();
+            if (platform && renderBackend->Initialize(platform, platform->GetWindowHandle(),
+                                                   nullptr, 1600, 900)) {
+                LOG_INFO("Render", "渲染设备重新初始化成功");
+            } else {
+                LOG_ERROR("Render", "渲染设备重新初始化失败");
+            }
+            lastRetryTime = currentTime;
+        }
         return;
     }
 

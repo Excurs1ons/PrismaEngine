@@ -317,20 +317,53 @@ bool RenderBackendDirectX12::Supports(RendererFeature feature) const {
 void RenderBackendDirectX12::Present() {
     // 呈现帧到屏幕
     if (m_swapChain) {
-        HRESULT hr = m_swapChain->Present(1, 0);  // SyncInterval=1 (等待垂直同步)，更稳定
+        HRESULT hr = m_swapChain->Present(0, 0);  // SyncInterval=0 (不等待垂直同步)，避免阻塞
         if (FAILED(hr)) {
-            // 设备丢失错误 - 在某些情况下是临时的（如显示器模式切换）
+            // 设备丢失错误
             if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET) {
-                static int deviceRemovedCount = 0;
-                deviceRemovedCount++;
+                static uint32_t errorCount = 0;
+                errorCount++;
 
-                // 只记录前几次错误，避免刷屏
+                // 每60秒只记录一次错误，避免刷屏
+                static uint32_t lastLogTime = 0;
+                uint32_t currentTime = GetTickCount() / 1000;
+                if (currentTime - lastLogTime >= 60 || errorCount <= 3) {
+                    HRESULT deviceRemovedReason = m_device ? m_device->GetDeviceRemovedReason() : E_FAIL;
 
-                HRESULT deviceRemovedReason = m_device ? m_device->GetDeviceRemovedReason() : E_FAIL;
-                LOG_WARNING("DirectX", "设备暂时不可用 (可能因显示器切换等原因), 尝试继续运行");
+                    const char* reasonStr = "未知原因";
+                    switch (deviceRemovedReason) {
+                        case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
+                            reasonStr = "驱动程序内部错误";
+                            break;
+                        case DXGI_ERROR_INVALID_CALL:
+                            reasonStr = "无效的API调用";
+                            break;
+                        case E_OUTOFMEMORY:
+                            reasonStr = "内存不足";
+                            break;
+                        case D3D12_ERROR_ADAPTER_REMOVED:
+                            reasonStr = "适配器被移除";
+                            break;
+                        case D3D12_ERROR_DRIVER_VERSION_MISMATCH:
+                            reasonStr = "驱动版本不匹配";
+                            break;
+                    }
 
+                    LOG_ERROR("DirectX", "设备丢失! 原因: {0} (HRESULT: 0x{1:X8})",
+                            reasonStr, static_cast<uint32_t>(deviceRemovedReason));
 
-                // 不立即标记为未初始化，给设备恢复的机会
+                    // 建议用户操作
+                    LOG_WARNING("DirectX", "请尝试:");
+                    LOG_WARNING("DirectX", "  1. 更新显卡驱动程序");
+                    LOG_WARNING("DirectX", "  2. 检查显示器连接");
+                    LOG_WARNING("DirectX", "  3. 关闭其他占用GPU的程序");
+                    LOG_WARNING("DirectX", "  4. 重启应用程序");
+
+                    lastLogTime = currentTime;
+                }
+
+                // 标记设备为未初始化，触发重建
+                isInitialized = false;
                 return;
             }
 
