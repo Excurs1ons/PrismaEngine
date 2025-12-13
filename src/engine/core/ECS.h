@@ -105,6 +105,16 @@ private:
 
     std::vector<ComponentData> m_componentArrays;
     std::mutex m_mutex;
+
+public:
+    // 用于清理操作
+    void ClearComponents() {
+        for (auto& data : m_componentArrays) {
+            data.components.clear();
+            data.entityToIndex.clear();
+            data.indexToEntity.clear();
+        }
+    }
 };
 
 // 实体管理器
@@ -138,6 +148,17 @@ private:
     EntityID m_nextEntity = 1;
 
     ComponentManager* m_componentManager;
+
+public:
+    // 用于World类初始化
+    void SetComponentManager(ComponentManager* manager) { m_componentManager = manager; }
+
+    // 用于清理操作
+    void ClearEntities() {
+        m_aliveEntities.clear();
+        m_freeEntities.clear();
+        m_nextEntity = 1;
+    }
 };
 
 // 世界 - 管理所有实体、组件和系统
