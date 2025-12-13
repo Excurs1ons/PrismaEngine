@@ -34,6 +34,13 @@ bool ScriptableRenderPipeline::Initialize(RenderBackend* renderBackend)
 void ScriptableRenderPipeline::Shutdown()
 {
     LOG_DEBUG("ScriptableRenderPipeline", "关闭渲染管线");
+
+    // 清理缓存的命令上下文
+    if (m_cachedContext) {
+        delete m_cachedContext;
+        m_cachedContext = nullptr;
+    }
+
     m_renderPasses.clear();
     m_renderBackend = nullptr;
     LOG_INFO("ScriptableRenderPipe", "Scriptable render pipe shutdown completed");
@@ -48,23 +55,22 @@ void ScriptableRenderPipeline::Execute()
         return;
     }
 
+    // 创建或复用命令上下文
+    if (!m_cachedContext) {
+        m_cachedContext = m_renderBackend->CreateCommandContext();
+        if (!m_cachedContext) {
+            LOG_ERROR("ScriptableRenderPipeline", "无法创建命令上下文");
+            return;
+        }
+        LOG_DEBUG("ScriptableRenderPipeline", "创建并缓存命令上下文: 0x{0:x}", reinterpret_cast<uintptr_t>(m_cachedContext));
+    }
+
     // 执行所有渲染通道
     for (size_t i = 0; i < m_renderPasses.size(); ++i) {
         auto& renderPass = m_renderPasses[i];
         if (renderPass) {
             LOG_DEBUG("ScriptableRenderPipeline", "执行第 {0} 个渲染通道", i);
-            // 创建渲染命令上下文
-            // 从渲染后端获取上下文
-            auto context = m_renderBackend->CreateCommandContext();
-            if (context) {
-                LOG_DEBUG("ScriptableRenderPipeline", "成功创建命令上下文: 0x{0:x}", reinterpret_cast<uintptr_t>(context));
-                renderPass->Execute(context);
-            } else {
-                LOG_ERROR("ScriptableRenderPipeline", "无法创建命令上下文");
-            }
-            
-            // 释放上下文
-            delete context;
+            renderPass->Execute(m_cachedContext);
         }
     }
     

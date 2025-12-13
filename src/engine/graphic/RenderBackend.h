@@ -49,7 +49,14 @@ public:
     
     // 创建渲染命令上下文
     virtual RenderCommandContext* CreateCommandContext() = 0;
-    
+
+    // 获取默认渲染目标和深度缓冲
+    virtual void* GetDefaultRenderTarget() = 0;
+    virtual void* GetDefaultDepthBuffer() = 0;
+
+    // 获取当前渲染目标尺寸
+    virtual void GetRenderTargetSize(uint32_t& width, uint32_t& height) = 0;
+
     bool isInitialized     = false;
 
 protected:

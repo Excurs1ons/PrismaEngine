@@ -1,9 +1,11 @@
 #pragma once
 #include "Component.h"
+#include "graphic/ICamera.h"
 
 #include <DirectXMath.h>
 using namespace DirectX;
-class Camera : public Component {
+
+class Camera : public Component, public Engine::Graphic::ICamera {
 public:
     // 设置和获取清除颜色
     void SetClearColor(float r, float g, float b, float a = 1.0f) { m_clearColor = XMVectorSet(r, g, b, a); }
