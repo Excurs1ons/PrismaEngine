@@ -80,7 +80,7 @@ bool EntityManager::IsEntityValid(EntityID entity) const {
 
 // World 实现
 World::World() : m_entityManager(), m_componentManager() {
-    m_entityManager.m_componentManager = &m_componentManager;
+    m_entityManager.SetComponentManager(&m_componentManager);
     LOG_INFO("ECS", "ECS世界初始化");
 }
 
@@ -124,16 +124,10 @@ void World::Clear() {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     // 清空所有实体
-    m_entityManager.m_aliveEntities.clear();
-    m_entityManager.m_freeEntities.clear();
-    m_entityManager.m_nextEntity = 1;
+    m_entityManager.ClearEntities();
 
     // 清空所有组件
-    for (auto& data : m_componentManager.m_componentArrays) {
-        data.components.clear();
-        data.entityToIndex.clear();
-        data.indexToEntity.clear();
-    }
+    m_componentManager.ClearComponents();
 
     // 清空系统
     m_systems.clear();
