@@ -3,7 +3,6 @@
 #include "Logger.h"
 #include "ManagerBase.h"
 #include "ResourceBase.h"
-#include "ResourceFallback.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -24,6 +23,12 @@ namespace Engine {
     class Material;
     class Mesh;
     class Shader;
+}
+
+namespace Engine {
+namespace Resource {
+    class ResourceFallback;
+}
 }
 
 namespace Engine {

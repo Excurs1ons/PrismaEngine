@@ -1,11 +1,9 @@
+#include "ResourceManagerTypes.h"  // 包含完整类型定义
 #include "ResourceManager.h"
 #include "AssetSerializer.h"
 #include "MeshAsset.h"
 #include "TextureAsset.h"
 #include <fstream>
-#include "graphic/Mesh.h"
-#include "graphic/Shader.h"
-#include "graphic/Material.h"
 
 namespace Engine {
 
