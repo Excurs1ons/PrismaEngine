@@ -135,6 +135,21 @@ add_custom_target(Prisma ALL
         DEPENDS Engine Editor Runtime Game
 )
 
+# 添加资源复制目标 - 将资源从源目录直接复制到运行目录
+add_custom_target(copy-runtime-resources ALL
+    COMMAND ${CMAKE_COMMAND} -E echo "Copying resources to runtime directories..."
+    # 为 Runtime 复制资源
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Runtime>/Assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Runtime>/Assets
+    # 为 Editor 复制资源（如果需要）
+    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Editor>/Assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Editor>/Assets
+    COMMENT "Copying resources to runtime directories"
+)
+
+# 确保在构建后复制资源
+add_dependencies(copy-runtime-resources Prisma)
+
 # CPack打包配置
 set(CPACK_PACKAGE_NAME "PrismaEngine")
 set(CPACK_PACKAGE_VENDOR "Prisma")

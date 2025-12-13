@@ -13,6 +13,7 @@
 #include "Helper.h"
 #include "ResourceManager.h"
 #include "Shader.h"
+#include "DefaultShader.h"
 #include "RenderThread.h"
 #include "Logger.h"
 #include "GameObject.h"
@@ -598,12 +599,10 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
     // 创建一个默认的管线状态对象（PSO）用于初始化
     // 注意：这个 PSO 只是临时的，实际的渲染应该由材质系统管理的 PSO 来执行
     {
-        // 加载默认着色器
-        auto resourceManager = ResourceManager::GetInstance();
-        auto shaderHandle = resourceManager->Load<Shader>("assets/shaders/default.hlsl");
-
-        if (!shaderHandle.IsValid()) {
-            LOG_ERROR("DirectX", "无法加载默认着色器");
+        // 创建默认着色器并从硬编码字符串编译
+        auto defaultShader = std::make_shared<Shader>();
+        if (!defaultShader->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
+            LOG_ERROR("DirectX", "无法编译默认着色器");
             // 创建一个最小的空 PSO 以避免崩溃
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
             psoDesc.pRootSignature = m_rootSignature.Get();
@@ -627,10 +626,9 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
                 return false;
             }
         } else {
-            LOG_INFO("DirectX", "成功加载默认着色器");
-            auto* shader = shaderHandle.Get();
-            auto vertexShader = shader->GetVertexShaderBlob();
-            auto pixelShader = shader->GetPixelShaderBlob();
+            LOG_INFO("DirectX", "成功编译默认着色器");
+            auto vertexShader = defaultShader->GetVertexShaderBlob();
+            auto pixelShader = defaultShader->GetPixelShaderBlob();
 
             // 定义顶点输入布局
             D3D12_INPUT_ELEMENT_DESC inputElementDescs[] = {

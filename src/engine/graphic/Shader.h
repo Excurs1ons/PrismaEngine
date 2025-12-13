@@ -27,6 +27,9 @@ public:
     const std::string& GetModel() const { return m_model; }
     void SetModel(const std::string& model) { m_model = model; }
 
+    // 从字符串编译着色器
+    bool CompileFromString(const char* vsSource, const char* psSource);
+
 private:
     ComPtr<ID3DBlob> m_vertexShader;
     ComPtr<ID3DBlob> m_pixelShader;
