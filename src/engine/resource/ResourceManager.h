@@ -6,6 +6,7 @@
 #include "Mesh.h"
 #include "Shader.h"
 #include "ResourceBase.h"
+#include "../graphic/DefaultShader.h"
 #include <algorithm>
 #include <filesystem>
 #include <iostream>
@@ -170,7 +171,7 @@ public:
             LOG_WARNING("Resource", "资源管理器未初始化，尝试使用默认路径初始化: {0}", default_path.string());
             Initialize(default_path);
         }
-        
+
         // ✅ 第一阶段：检查是否已加载（共享锁）
         {
             std::shared_lock<std::shared_mutex> read_lock(m_resourcesMutex);
@@ -188,7 +189,52 @@ public:
         // ✅ 第二阶段：查找资源文件（不需要锁）
         auto fullPath = FindResource(relative_path);
         if (!fullPath) {
-            LOG_ERROR("Resource", "找不到资源: {0}", relative_path);
+            LOG_WARNING("Resource", "找不到资源: {0}", relative_path);
+
+            // 特化处理 Shader 类型 - 使用默认着色器
+            if constexpr (std::is_same_v<T, Shader>) {
+                LOG_INFO("Resource", "为 {0} 创建默认着色器", relative_path);
+                auto resource = std::make_shared<Shader>();
+                if (resource->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
+                    resource->m_name = "DefaultShader(for " + relative_path + ")";
+                    // 缓存默认资源
+                    {
+                        std::unique_lock<std::shared_mutex> write_lock(m_resourcesMutex);
+                        m_resources[relative_path] = resource;
+                    }
+                    return ResourceHandle<T>(resource);
+                }
+            }
+            // 特化处理 Mesh 类型 - 创建默认三角形网格
+            else if constexpr (std::is_same_v<T, Mesh>) {
+                LOG_INFO("Resource", "为 {0} 创建默认三角形网格", relative_path);
+                auto resource = std::make_shared<Mesh>();
+                *resource = Mesh::GetTriangleMesh(); // 使用静态方法创建默认三角形
+                resource->m_name = "DefaultTriangleMesh(for " + relative_path + ")";
+                resource->m_isLoaded = true;
+                // 缓存默认资源
+                {
+                    std::unique_lock<std::shared_mutex> write_lock(m_resourcesMutex);
+                    m_resources[relative_path] = resource;
+                }
+                return ResourceHandle<T>(resource);
+            }
+            // 特化处理 Material 类型 - 创建默认材质
+            else if constexpr (std::is_same_v<T, Material>) {
+                LOG_INFO("Resource", "为 {0} 创建默认材质", relative_path);
+                auto resource = Material::CreateDefault();
+                if (resource) {
+                    resource->m_name = "DefaultMaterial(for " + relative_path + ")";
+                    // 缓存默认资源
+                    {
+                        std::unique_lock<std::shared_mutex> write_lock(m_resourcesMutex);
+                        m_resources[relative_path] = resource;
+                    }
+                    return ResourceHandle<T>(resource);
+                }
+            }
+
+            LOG_ERROR("Resource", "无法为 {0} 创建默认资源", relative_path);
             return ResourceHandle<T>();
         }
         LOG_INFO("Resource", "在以下位置找到资源: {0}", fullPath->string());
@@ -196,10 +242,42 @@ public:
         // ✅ 第三阶段：加载资源（耗时操作，无锁）
         auto resource = std::make_shared<T>(std::forward<Args>(args)...);
         if (!resource->Load(*fullPath)) {
-            LOG_ERROR("Resource", "资源加载失败: {0}", relative_path);
-            return ResourceHandle<T>();
+            LOG_WARNING("Resource", "从文件加载失败，尝试使用默认资源: {0}", relative_path);
+
+            // 对于 Shader 类型，使用 LoadWithFallback
+            if constexpr (std::is_same_v<T, Shader>) {
+                auto shaderResource = std::static_pointer_cast<Shader>(resource);
+                if (shaderResource->LoadWithFallback(*fullPath)) {
+                    LOG_INFO("Resource", "成功使用回退着色器: {0}", relative_path);
+                } else {
+                    LOG_ERROR("Resource", "连默认着色器也无法加载: {0}", relative_path);
+                    return ResourceHandle<T>();
+                }
+            }
+            // 对于 Mesh 类型，使用默认三角形网格
+            else if constexpr (std::is_same_v<T, Mesh>) {
+                LOG_WARNING("Resource", "网格加载失败，使用默认三角形: {0}", relative_path);
+                *resource = Mesh::GetTriangleMesh();
+                resource->m_name = "DefaultTriangleMesh(fallback from " + relative_path + ")";
+                resource->m_isLoaded = true;
+            }
+            // 对于 Material 类型，使用默认材质
+            else if constexpr (std::is_same_v<T, Material>) {
+                LOG_WARNING("Resource", "材质加载失败，使用默认材质: {0}", relative_path);
+                auto defaultMaterial = Material::CreateDefault();
+                if (defaultMaterial) {
+                    *std::static_pointer_cast<Material>(resource) = *defaultMaterial;
+                    resource->m_name = "DefaultMaterial(fallback from " + relative_path + ")";
+                    resource->m_isLoaded = true;
+                }
+            }
+            else {
+                LOG_ERROR("Resource", "资源加载失败且无默认回退: {0}", relative_path);
+                return ResourceHandle<T>();
+            }
+        } else {
+            LOG_INFO("Resource", "从文件加载资源: {0}", fullPath->string());
         }
-        LOG_INFO("Resource", "从文件加载资源: {0}", fullPath->string());
 
         // ✅ 第四阶段：缓存资源（独占锁，仅在插入时）
         {
