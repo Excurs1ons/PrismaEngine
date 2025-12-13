@@ -172,3 +172,25 @@ bool Shader::CompileFromString(const char* vsSource, const char* psSource)
     LOG_INFO("Shader", "默认着色器编译成功");
     return true;
 }
+
+bool Shader::LoadWithFallback(const std::filesystem::path& path)
+{
+    // 首先尝试加载指定路径的着色器
+    if (Load(path)) {
+        LOG_INFO("Shader", "成功加载着色器: {0}", path.string());
+        return true;
+    }
+
+    // 加载失败，尝试使用默认着色器
+    LOG_WARNING("Shader", "无法加载着色器 {0}，回退到默认着色器", path.string());
+
+    if (CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
+        m_name = "DefaultShader(Fallback from " + path.filename().string() + ")";
+        m_path = path; // 保留原始路径信息
+        LOG_INFO("Shader", "成功使用默认着色器作为回退");
+        return true;
+    }
+
+    LOG_ERROR("Shader", "连默认着色器也无法编译，着色器加载完全失败");
+    return false;
+}

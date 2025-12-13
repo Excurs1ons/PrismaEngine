@@ -30,6 +30,9 @@ public:
     // 从字符串编译着色器
     bool CompileFromString(const char* vsSource, const char* psSource);
 
+    // 尝试加载着色器，失败时回退到默认着色器
+    bool LoadWithFallback(const std::filesystem::path& path);
+
 private:
     ComPtr<ID3DBlob> m_vertexShader;
     ComPtr<ID3DBlob> m_pixelShader;
