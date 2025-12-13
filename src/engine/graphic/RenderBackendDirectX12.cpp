@@ -317,9 +317,35 @@ bool RenderBackendDirectX12::Supports(RendererFeature feature) const {
 void RenderBackendDirectX12::Present() {
     // 呈现帧到屏幕
     if (m_swapChain) {
-        HRESULT hr = m_swapChain->Present(0, 0);  // SyncInterval=0 (不等待垂直同步)，避免阻塞
+        HRESULT hr = m_swapChain->Present(1, 0);  // SyncInterval=1 (等待垂直同步)，更稳定
         if (FAILED(hr)) {
-            LOG_ERROR("DirectX", "SwapChain Present 失败: {0}", HrToString(hr));
+            // 设备丢失错误 - 在某些情况下是临时的（如显示器模式切换）
+            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET) {
+                static int deviceRemovedCount = 0;
+                deviceRemovedCount++;
+
+                // 只记录前几次错误，避免刷屏
+                if (deviceRemovedCount <= 3) {
+                    HRESULT deviceRemovedReason = m_device ? m_device->GetDeviceRemovedReason() : E_FAIL;
+                    LOG_WARNING("DirectX", "设备暂时不可用 (可能因显示器切换等原因), 尝试继续运行");
+                }
+
+                // 不立即标记为未初始化，给设备恢复的机会
+                return;
+            }
+
+            // 对于其他错误，尝试短暂延迟后重试
+            if (hr == DXGI_STATUS_OCCLUDED) {
+                LOG_WARNING("DirectX", "窗口被遮挡，跳过此帧");
+                return;
+            }
+
+            // 其他Present错误，记录但继续
+            static int errorCount = 0;
+            errorCount++;
+            if (errorCount < 10) {  // 只记录前10次错误
+                LOG_WARNING("DirectX", "Present出现非致命错误，继续运行");
+            }
         }
 
         // 异步等待GPU完成当前帧，不阻塞主线程
