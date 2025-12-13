@@ -296,7 +296,7 @@ void ResourceManager::UpdateStats() const
     m_stats.meshMemoryUsage = 0;
     m_stats.audioMemoryUsage = 0;
 
-    for (const auto& pair : m_resources) {
+    for (const std::pair<const std::string, std::shared_ptr<IResource>>& pair : m_resources) {
         if (!pair.second) {
             continue; // 跳过空指针
         }
