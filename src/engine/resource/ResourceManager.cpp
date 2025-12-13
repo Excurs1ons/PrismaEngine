@@ -1,4 +1,5 @@
 #include "ResourceManager.h"
+#include "ResourceFallback.h"
 #include "AssetSerializer.h"
 #include "MeshAsset.h"
 #include "TextureAsset.h"
