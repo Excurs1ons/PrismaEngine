@@ -36,7 +36,7 @@ SkyboxRenderPass::~SkyboxRenderPass()
 
 void SkyboxRenderPass::Execute(RenderCommandContext* context)
 {
-    LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法开始");
+    //LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法开始");
 
     if (!context) {
         LOG_WARNING("SkyboxRenderPass", "Render context is null");
@@ -49,13 +49,11 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
         return;
     }
 
-    if (!m_cubeMapTexture) {
-        LOG_DEBUG("SkyboxRenderPass", "No cubemap texture set, skipping skybox render");
-        return;
-    }
+    // 即使没有立方体贴图，天空盒着色器也会渲染默认的粉红色背景
+  // 所以我们不需要跳过渲染
 
-    LOG_DEBUG("SkyboxRenderPass", "上下文有效，开始渲染逻辑");
-    LOG_DEBUG("SkyboxRenderPass", "着色器和网格数据有效");
+    //LOG_DEBUG("SkyboxRenderPass", "上下文有效，开始渲染逻辑");
+    //LOG_DEBUG("SkyboxRenderPass", "着色器和网格数据有效");
 
     try {
         // 1. 设置常量缓冲区（视图投影矩阵）
@@ -79,10 +77,10 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
                               true); // 使用16位索引
         
         // 3. 绘制立方体
-        LOG_DEBUG("SkyboxRenderPass", "调用 DrawIndexed，索引数量: {0}", m_indices.size());
+        //LOG_DEBUG("SkyboxRenderPass", "调用 DrawIndexed，索引数量: {0}", m_indices.size());
         context->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
 
-        LOG_INFO("SkyboxRenderPass", "天空盒渲染完成");
+        //LOG_VERBOSE("SkyboxRenderPass", "天空盒渲染完成");
 
         // 设置立方体贴图
         if (m_cubeMapTexture) {
@@ -93,7 +91,7 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
         LOG_ERROR("SkyboxRenderPass", "Exception during execute: {0}", e.what());
     }
     
-    LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法结束");
+    //LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法结束");
 }
 
 void SkyboxRenderPass::SetRenderTarget(void* renderTarget)
