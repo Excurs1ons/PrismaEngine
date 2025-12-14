@@ -26,15 +26,18 @@ HWND g_hWnd = nullptr;
 
 namespace Engine {
 
-// Minimal DirectX implementation of IRenderCommandContext to forward calls to the D3D12 command list
+// DirectX implementation of RenderCommandContext
 class DXRenderCommandContext : public RenderCommandContext {
 public:
     DXRenderCommandContext(ID3D12GraphicsCommandList* cmdList,
                            D3D12_VIEWPORT* vp,
                            D3D12_RECT* sc,
                            RenderBackendDirectX12* backend)
-        : m_commandList(cmdList), m_viewport(vp ? *vp : D3D12_VIEWPORT{}), m_scissorRect(sc ? *sc : D3D12_RECT{}),
-          m_backend(backend) {}
+        : m_commandList(cmdList), m_viewport(vp ? *vp : D3D12_VIEWPORT{}),
+          m_scissorRect(sc ? *sc : D3D12_RECT{}), m_backend(backend) {
+
+        LOG_DEBUG("DXRenderCommandContext", "创建命令上下文");
+    }
 
     void SetConstantBuffer(const char* name, FXMMATRIX matrix) override {
         LOG_DEBUG("DXContext", "SetConstantBuffer(matrix) name={0}", name);
@@ -43,12 +46,25 @@ public:
         uint32_t registerIndex = 0;
         if (strcmp(name, "ViewProjection") == 0) {
             registerIndex = 0;
-        } else if (strcmp(name, "World") == 0) {
+        } else if (strcmp(name, "View") == 0) {
+            registerIndex = 0;
+        } else if (strcmp(name, "Projection") == 0) {
             registerIndex = 1;
-        } else if (strcmp(name, "BaseColor") == 0) {
+        } else if (strcmp(name, "World") == 0) {
             registerIndex = 2;
-        } else if (strcmp(name, "MaterialParams") == 0) {
+        } else if (strcmp(name, "BaseColor") == 0) {
             registerIndex = 3;
+        } else if (strcmp(name, "MaterialParams") == 0) {
+            registerIndex = 4;
+        } else if (strcmp(name, "AmbientLight") == 0) {
+            registerIndex = 5;
+        } else if (strcmp(name, "Lights") == 0) {
+            registerIndex = 6;
+        } else if (strcmp(name, "LightCount") == 0) {
+            registerIndex = 7;
+        } else if (strcmp(name, "DepthWrite") == 0) {
+            // DepthWrite 是布尔值，不是常量缓冲区
+            return;
         } else if (strcmp(name, "ConstantBuffer") == 0) {
             registerIndex = 0;
         } else {
@@ -69,12 +85,25 @@ public:
         uint32_t registerIndex = 0;
         if (strcmp(name, "ViewProjection") == 0) {
             registerIndex = 0;
-        } else if (strcmp(name, "World") == 0) {
+        } else if (strcmp(name, "View") == 0) {
+            registerIndex = 0;
+        } else if (strcmp(name, "Projection") == 0) {
             registerIndex = 1;
-        } else if (strcmp(name, "BaseColor") == 0) {
+        } else if (strcmp(name, "World") == 0) {
             registerIndex = 2;
-        } else if (strcmp(name, "MaterialParams") == 0) {
+        } else if (strcmp(name, "BaseColor") == 0) {
             registerIndex = 3;
+        } else if (strcmp(name, "MaterialParams") == 0) {
+            registerIndex = 4;
+        } else if (strcmp(name, "AmbientLight") == 0) {
+            registerIndex = 5;
+        } else if (strcmp(name, "Lights") == 0) {
+            registerIndex = 6;
+        } else if (strcmp(name, "LightCount") == 0) {
+            registerIndex = 7;
+        } else if (strcmp(name, "DepthWrite") == 0) {
+            // DepthWrite 是布尔值，不是常量缓冲区
+            return;
         } else if (strcmp(name, "ConstantBuffer") == 0) {
             registerIndex = 0;
         } else {
@@ -278,45 +307,34 @@ void RenderBackendDirectX12::BeginFrame() {
         return;
     }
 
-    // 创建渲染帧日志作用域
-    LogScope* frameScope = LogScopeManager::GetInstance().CreateScope("DirectXFrame");
-    Logger::GetInstance().PushLogScope(frameScope);
-
     // 重置每帧动态缓冲区偏移量
     m_dynamicVBOffset = 0;
     m_dynamicIBOffset = 0;
     m_dynamicCBOffset = 0;
 
-    // 指令列表分配器只能在关联的指令列表在GPU完成执行之后才能重置，
-    // apps should use
-    // fences to determine GPU execution progress.
+    // 重置命令分配器和命令列表
     HRESULT hr = m_commandAllocator->Reset();
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法重置命令分配器: {0}", HrToString(hr));
-        Logger::GetInstance().PopLogScope(frameScope);
-        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
         return;
     }
 
-    // However, when ExecuteCommandList() is called on a particular command
-    // list, that command list can then be reset at any time and must be before
-    // re-recording.
     hr = m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get());
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法重置命令列表: {0}", HrToString(hr));
-        Logger::GetInstance().PopLogScope(frameScope);
-        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
         return;
     }
 
-    // 设置必需的状态
+    // 设置基本渲染状态
     m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
     m_commandList->RSSetViewports(1, &m_viewport);
     m_commandList->RSSetScissorRects(1, &m_scissorRect);
 
-    // 将后台缓冲区作为渲染目标
+    // 准备渲染目标
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_PRESENT, D3D12_RESOURCE_STATE_RENDER_TARGET);
+        m_renderTargets[m_frameIndex].Get(),
+        D3D12_RESOURCE_STATE_PRESENT,
+        D3D12_RESOURCE_STATE_RENDER_TARGET);
     m_commandList->ResourceBarrier(1, &barrier);
 
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
@@ -324,37 +342,12 @@ void RenderBackendDirectX12::BeginFrame() {
     CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
     m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
 
-    // 从场景获取主相机和清除颜色，默认为青色
-    float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};  // 黑色
-    //auto& app           = Singleton<ApplicationWindows>::GetInstance();
-    auto scene = SceneManager::GetInstance()->GetCurrentScene();
-    if (scene) {
-        // 尝试从场景中获取主相机
-        Engine::Graphic::ICamera* mainCamera = scene->GetMainCamera();
-        if (mainCamera) {
-            // 从主相机获取清除颜色
-            XMVECTOR cameraClearColor = mainCamera->GetClearColor();
-            clearColor[0]             = XMVectorGetX(cameraClearColor);
-            clearColor[1]             = XMVectorGetY(cameraClearColor);
-            clearColor[2]             = XMVectorGetZ(cameraClearColor);
-            clearColor[3]             = XMVectorGetW(cameraClearColor);
-            LOG_DEBUG("RenderBackendDirectX12",
-                      "Using main camera clear color: ({0}, {1}, {2}, {3})",
-                      clearColor[0],
-                      clearColor[1],
-                      clearColor[2],
-                      clearColor[3]);
-        } else {
-            LOG_DEBUG("RenderBackendDirectX12", "No main camera found in scene, using default clear color");
-        }
-    }
-
-    // 录制渲染指令
+    // 清除渲染目标
+    float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
     m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->ClearDepthStencilView(m_dsvHeap->GetCPUDescriptorHandleForHeapStart(), D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-    m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
-    LOG_DEBUG("RenderBackendDirectX12", "BeginFrame completed, ready for pipeline execution");
+    LOG_DEBUG("RenderBackendDirectX12", "BeginFrame completed");
 }
 
 void RenderBackendDirectX12::EndFrame() {
@@ -364,33 +357,30 @@ void RenderBackendDirectX12::EndFrame() {
         return;
     }
 
-    // 获取当前日志作用域
-    LogScope* frameScope = Logger::GetInstance().GetCurrentLogScope();
-
     // 将后台缓冲区切换到呈现状态
     auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        m_renderTargets[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+        m_renderTargets[m_frameIndex].Get(),
+        D3D12_RESOURCE_STATE_RENDER_TARGET,
+        D3D12_RESOURCE_STATE_PRESENT);
     m_commandList->ResourceBarrier(1, &barrier);
 
+    // 关闭命令列表
     HRESULT hr = m_commandList->Close();
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法关闭命令列表: {0}", HrToString(hr));
-        Logger::GetInstance().PopLogScope(frameScope);
-        LogScopeManager::GetInstance().DestroyScope(frameScope, false);  // 出错，输出日志
         return;
     }
 
-    // 执行渲染指令
+    // 执行命令列表
     ID3D12CommandList* ppCommandLists[] = {m_commandList.Get()};
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-    LOG_DEBUG("RenderBackendDirectX12", "EndFrame completed");
+    // 设置fence以等待GPU完成
+    const UINT64 fence = m_fenceValue;
+    m_commandQueue->Signal(m_fence.Get(), fence);
+    m_fenceValue++;
 
-    // DirectX的EndFrame目前没有太多逻辑，主要是通知作用域结束
-    if (frameScope) {
-        Logger::GetInstance().PopLogScope(frameScope);
-        LogScopeManager::GetInstance().DestroyScope(frameScope, true);  // 正常结束，不输出日志
-    }
+    LOG_DEBUG("RenderBackendDirectX12", "EndFrame completed");
 }
 
 /// <summary>
@@ -408,81 +398,29 @@ bool RenderBackendDirectX12::Supports(RendererFeature feature) const {
 void RenderBackendDirectX12::Present() {
     // 呈现帧到屏幕
     if (m_swapChain != nullptr) {
-        // 使用垂直同步（SyncInterval=1）以避免设备丢失
+        // 使用垂直同步（SyncInterval=1）
         const HRESULT hr = m_swapChain->Present(1, 0);
+
+        // 处理设备移除错误 - 标记设备为未初始化状态
+        if (hr == DXGI_ERROR_DEVICE_REMOVED) {
+            isInitialized = false;
+            LOG_ERROR("DirectX", "设备已移除，停止渲染。请重启应用程序。");
+            return;
+        }
+
+        // 处理其他错误
+        if (hr == DXGI_STATUS_OCCLUDED) {
+            // 窗口被遮挡是正常情况，不需要记录错误
+            return;
+        }
+
         if (FAILED(hr)) {
-            // 提前声明并初始化所有可能在switch语句中使用的变量，避免跳过初始化
-            HRESULT device_removed_reason = E_FAIL;
-            const char* reason_str = "未知原因";
-            
-            // 设备重置错误 - 通常可以恢复
-            switch (hr) {
-                case DXGI_ERROR_DEVICE_RESET:
-                    LOG_ERROR("DirectX", "设备已重置");
-                    break;
-
-                case DXGI_ERROR_ACCESS_LOST:
-                    LOG_ERROR("DirectX", "访问丢失");
-                    break;
-                // 设备移除错误 - 严重错误，通常需要完全重新创建
-                case DXGI_STATUS_OCCLUDED:
-                    LOG_ERROR("DirectX", "被遮挡");
-                    break;
-                case DXGI_ERROR_DEVICE_REMOVED:
-                    device_removed_reason = (m_device != nullptr) ? m_device->GetDeviceRemovedReason() : E_FAIL;
-                    // 内部switch语句也需提前声明变量
-                    switch (device_removed_reason) {
-                        case DXGI_ERROR_ACCESS_DENIED:
-                            reason_str = "访问被拒绝";
-                            break;
-                        case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
-                            reason_str = "驱动程序内部错误";
-                            break;
-                        case DXGI_ERROR_INVALID_CALL:
-                            reason_str = "无效的API调用";
-                            break;
-                        case DXGI_ERROR_DEVICE_HUNG:
-                            reason_str = "设备挂起（可能由于无效命令）";
-                            break;
-                        case E_OUTOFMEMORY:
-                            reason_str = "内存不足";
-                            break;
-                        case D3D12_ERROR_DRIVER_VERSION_MISMATCH:
-                            reason_str = "驱动版本不匹配";
-                            break;
-                        default:
-                            reason_str = "未知原因";
-                            break;
-                    }
-                    LOG_ERROR("DirectX",
-                              "设备被移除! Reason: {} (HRESULT: 0x{:08X})",
-                              reason_str,
-                              static_cast<unsigned int>(device_removed_reason));
-                    break;
-                default:
-                    LOG_ERROR("DirectX", "未知错误: {0}", HrToString(hr));
-                    break;
-            }
-
-            // 对于其他错误，尝试短暂延迟后重试
-            if (hr == DXGI_STATUS_OCCLUDED) {
-                LOG_WARNING("DirectX", "窗口被遮挡，跳过此帧");
-                return;
-            }
+            LOG_ERROR("DirectX", "Present 失败: {0}", HrToString(hr));
+            return;
         }
 
-        // 异步等待GPU完成当前帧，不阻塞主线程
-        // 只有在GPU落后太多时才等待
-        if (m_fence->GetCompletedValue() < m_fenceValue - 2) {
-            WaitForPreviousFrame();
-        } else {
-            // 仅发送fence信号，不等待
-            const UINT64 fence = m_fenceValue;
-            m_commandQueue->Signal(m_fence.Get(), fence);
-            m_fenceValue++;
-        }
-    } else {
-        LOG_ERROR("DirectX", "SwapChain 为空，无法 Present");
+        // 更新帧索引
+        m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
     }
 }
 
@@ -508,7 +446,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
         LOG_ERROR("DirectX", "无法创建DXGI工厂: {0}", HrToString(hr));
         return false;
     }
-    LOG_INFO("DirectX", "成功创建DXGI工厂");
+    LOG_VERBOSE("DirectX", "成功创建DXGI工厂");
 
     if (g_hWnd == nullptr) {
         LOG_ERROR("DirectX", "无效的窗口句柄");
@@ -529,7 +467,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
         LOG_ERROR("DirectX", "无法创建D3D12设备: {0}", HrToString(hr));
         return false;
     }
-    LOG_INFO("DirectX", "成功创建D3D12设备");
+    LOG_VERBOSE("DirectX", "成功创建D3D12设备");
 
     // 描述符大小对于分配增量描述符非常重要
     m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
@@ -544,7 +482,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
         LOG_ERROR("DirectX", "无法创建命令队列: {0}", HrToString(hr));
         return false;
     }
-    LOG_INFO("DirectX", "成功创建命令队列");
+    LOG_VERBOSE("DirectX", "成功创建命令队列");
 
     // 创建交换链
     DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
@@ -579,7 +517,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
 
     hr = swapChain.As(&m_swapChain);
     if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法转换交换链: {0}", HrToString(hr));
+        LOG_VERBOSE("DirectX", "无法转换交换链: {0}", HrToString(hr));
         return false;
     }
 
@@ -596,7 +534,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
             LOG_ERROR("DirectX", "无法创建RTV描述符堆: {0}", HrToString(hr));
             return false;
         }
-        LOG_INFO("DirectX", "成功创建RTV描述符堆");
+        LOG_VERBOSE("DirectX", "成功创建RTV描述符堆");
     }
 
     // 创建帧资源
@@ -614,7 +552,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
             m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
             rtvHandle.Offset(1, m_rtvDescriptorSize);
 
-            LOG_INFO("DirectX", "成功创建渲染目标视图 {0}", n);
+            LOG_VERBOSE("DirectX", "成功创建渲染目标视图 {0}", n);
         }
     }
 
@@ -630,7 +568,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
             LOG_ERROR("DirectX", "无法创建DSV描述符堆: {0}", HrToString(hr));
             return false;
         }
-        LOG_INFO("DirectX", "成功创建DSV描述符堆");
+        LOG_VERBOSE("DirectX", "成功创建DSV描述符堆");
 
         // 创建深度缓冲区资源
         D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
@@ -665,11 +603,11 @@ bool RenderBackendDirectX12::LoadPipeline() {
             LOG_ERROR("DirectX", "无法创建深度缓冲区: {0}", HrToString(hr));
             return false;
         }
-        LOG_INFO("DirectX", "成功创建深度缓冲区");
+        LOG_VERBOSE("DirectX", "成功创建深度缓冲区");
 
         // 创建深度模板视图
         m_device->CreateDepthStencilView(m_depthStencil.Get(), &depthStencilDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-        LOG_INFO("DirectX", "成功创建深度模板视图");
+        LOG_VERBOSE("DirectX", "成功创建深度模板视图");
     }
 
     hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
@@ -677,7 +615,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
         LOG_ERROR("DirectX", "无法创建命令分配器: {0}", HrToString(hr));
         return false;
     }
-    LOG_INFO("DirectX", "成功创建命令分配器");
+    LOG_VERBOSE("DirectX", "成功创建命令分配器");
 
     // 创建命令列表
     hr = m_device->CreateCommandList(
@@ -686,7 +624,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
         LOG_ERROR("DirectX", "无法创建命令列表: {0}", HrToString(hr));
         return false;
     }
-    LOG_INFO("DirectX", "成功创建命令列表");
+    LOG_VERBOSE("DirectX", "成功创建命令列表");
 
     // 命令列表在首次创建时处于打开状态，但不需要它处于打开状态，因此将其关闭
     hr = m_commandList->Close();
@@ -702,7 +640,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
             LOG_ERROR("DirectX", "无法创建围栏: {0}", HrToString(hr));
             return false;
         }
-        LOG_INFO("DirectX", "成功创建围栏");
+        LOG_VERBOSE("DirectX", "成功创建围栏");
 
         m_fenceValue = 1;
 
@@ -713,7 +651,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
             LOG_ERROR("DirectX", "无法创建围栏事件: {0}", HrToString(hr));
             return false;
         }
-        LOG_INFO("DirectX", "成功创建围栏事件");
+        LOG_VERBOSE("DirectX", "成功创建围栏事件");
     }
 
     return true;
@@ -753,7 +691,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
             }
             return false;
         }
-        LOG_INFO("DirectX", "成功序列化根签名");
+        LOG_VERBOSE("DirectX", "成功序列化根签名");
         HRESULT hRcreateRootSignature;
         hRcreateRootSignature = m_device->CreateRootSignature(
             0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
@@ -761,7 +699,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
             LOG_ERROR("DirectX", "创建根签名失败: {0}", HrToString(hRcreateRootSignature));
             return false;
         }
-        LOG_INFO("DirectX", "成功创建根签名");
+        LOG_VERBOSE("DirectX", "成功创建根签名");
     }
 
     // 创建一个默认的管线状态对象（PSO）用于初始化
@@ -794,7 +732,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
                 return false;
             }
         } else {
-            LOG_INFO("DirectX", "成功编译默认着色器");
+            LOG_VERBOSE("DirectX", "成功编译默认着色器");
             auto vertexShader = defaultShader->GetVertexShaderBlob();
             auto pixelShader = defaultShader->GetPixelShaderBlob();
 
@@ -827,7 +765,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
                 LOG_ERROR("DirectX", "创建图形管线状态失败: {0}", HrToString(hr));
                 return false;
             }
-            LOG_INFO("DirectX", "成功创建默认图形管线状态");
+            LOG_VERBOSE("DirectX", "成功创建默认图形管线状态");
         }
     }
 
@@ -850,6 +788,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
             LOG_ERROR("DirectX", "创建动态顶点上传缓冲区失败: {0}", HrToString(hr));
             return false;
         }
+        LOG_VERBOSE("DirectX", "成功创建动态顶点缓冲区");
         m_dynamicVBSize = dynamicSize;
         // 映射一次，保持 CPU 指针直到销毁
         CD3DX12_RANGE readRange(0, 0);
@@ -859,6 +798,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
             LOG_ERROR("DirectX", "映射动态顶点缓冲区失败: {0}", HrToString(hr));
             return false;
         }
+        LOG_VERBOSE("DirectX", "成功创建动态顶点上传缓冲区");
         m_dynamicVBCPUAddress = ptr;
         m_dynamicVBOffset     = 0;
     }
@@ -919,7 +859,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
         }
         m_dynamicCBCPUAddress = ptr;
         m_dynamicCBOffset     = 0;
-        LOG_INFO("DirectX", "成功创建动态常量缓冲区");
+        LOG_VERBOSE("DirectX", "成功创建动态常量缓冲区");
     }
 
     return true;
@@ -932,7 +872,7 @@ RenderCommandContext* RenderBackendDirectX12::CreateCommandContext() {
         return nullptr;
     }
 
-    // 创建一个新的渲染命令上下文实例
+    // 创建一个新的渲染命令上下文实例，使用 backend 的命令列表
     LOG_DEBUG("RenderBackendDirectX12", "创建命令上下文");
     return new DXRenderCommandContext(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
 }

@@ -31,19 +31,9 @@ void Camera3DController::Initialize() {
 }
 
 void Camera3DController::Update(float deltaTime) {
-    if (!m_camera) {
+    if (m_camera == nullptr) {
         LOG_WARNING("Camera3DController", "Camera3D not found on GameObject");
         return;
-    }
-
-    // 每秒输出一次相机信息
-    static float logTimer = 0.0f;
-    logTimer += deltaTime;
-    if (logTimer >= 1.0f) {
-        auto pos = m_camera->GetPosition();
-        LOG_INFO("Camera3DController", "Camera pos({0}, {1}, {2})",
-            XMVectorGetX(pos), XMVectorGetY(pos), XMVectorGetZ(pos));
-        logTimer = 0.0f;
     }
 
     HandleKeyboardInput(deltaTime);

@@ -171,7 +171,7 @@ bool Shader::CompileFromString(const char* vsSource, const char* psSource)
 
     m_name = "DefaultShader";
     m_isLoaded = true;
-    LOG_INFO("Shader", "默认着色器编译成功");
+    //LOG_INFO("Shader", "默认着色器编译成功");
     return true;
 }
 

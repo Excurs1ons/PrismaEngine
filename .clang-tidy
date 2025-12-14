@@ -47,6 +47,6 @@ CheckOptions:
   - key: readability-identifier-naming.PublicMemberPrefix
     value: ''
   - key: readability-identifier-naming.ParameterCase
-    value: lower_case
+    value: lowerCamelCase
   - key: readability-identifier-naming.LocalConstCase
     value: lowerCamelCase
