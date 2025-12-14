@@ -4,6 +4,7 @@
 #include "graphic/RenderBackend.h"
 #include "graphic/RenderCommandContext.h"
 #include "graphic/RenderComponent.h"
+#include "graphic/ICamera.h"
 #include "SceneNode.h"
 #include <memory>
 #include <vector>
@@ -30,12 +31,12 @@ public:
     const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
     
     // 获取主相机
-    Camera* GetMainCamera();
-    
+    Engine::Graphic::ICamera* GetMainCamera();
+
     // 设置主相机 (非拥有引用)
-    void SetMainCamera(Camera* camera);
+    void SetMainCamera(Engine::Graphic::ICamera* camera);
 
 private:
     std::vector<std::shared_ptr<GameObject>> m_gameObjects;
-    Camera* m_mainCamera = nullptr;
+    Engine::Graphic::ICamera* m_mainCamera = nullptr;
 };
