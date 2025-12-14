@@ -16,6 +16,7 @@ class Transform : public Component
 public:
     // 添加简单的变换属性
     XMFLOAT3 position = {0.0f, 0.0f, 0.0f};
+    XMFLOAT3 eulerAngles = { 0.0f, 0.0f, 0.0f };
     Quaternion rotation = Quaternion::Identity;
     XMFLOAT3 scale = { 1.0f, 1.0f, 1.0f };
 
