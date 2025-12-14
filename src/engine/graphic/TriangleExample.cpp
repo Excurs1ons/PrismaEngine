@@ -24,39 +24,39 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
         scene->SetMainCamera(camera);
         LOG_INFO("TriangleExample", "Main camera set for scene");
     }
-    //
-    // // 创建几个三角形
-    // auto triangle1 = CreateTriangle("Triangle1", {-0.7f, 0.0f, 1.0f}, {0.0f,1.0f, 0.0f,1.0f}); // 红色
-    // auto triangle2 = CreateTriangle("Triangle2", {0.7f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}); // 绿色
-    //
-    // // 创建一个四边形来测试索引缓冲区
-    // auto quad = CreateQuad("TestQuad", {0.0f, 0.0f, 0.3f}, {0.0f, 0.0f, 0.0f, 1.0f}, 0.3f); // 蓝色四边形
-    //
-    // // 创建一个立方体
-    // auto cube = CreateCube("ExampleCube", {0.0f, 0.5f, 0.8f}, {1.0f, 0.8f, 0.0f, 1.0f}, 0.5f); // 黄色立方体
-    //
-    // // 创建一个地面四边形
-    // auto ground = CreateGround("Ground", {0.0f, -0.5f, 0.0f}, {0.0f, 0.3f, 0.0f, 1.0f}, 0.3f); // 深绿色地面
-    //
-    // // 添加更多参考对象来观察相机移动
-    // auto referenceQuad1 = CreateQuad("RefQuad1", {-2.0f, 1.5f, 0.2f}, {1.0f, 1.0f, 0.0f, 1.0f},0.5f); // 黄色
-    // auto referenceQuad2 = CreateQuad("RefQuad2", {2.0f, -1.5f, 0.2f}, {1.0f, 0.0f, 1.0f,1.0f},1.0f); // 品红色
-    // auto referenceTriangle1 = CreateTriangle("RefTri1",{ 0.0f, 2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 粉色
-    // auto referenceTriangle2 = CreateTriangle("RefTri2",{ 0.0f, -2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 浅蓝色
-    //
-    // // 添加到场景
-    // scene->AddGameObject(triangle1);
-    // scene->AddGameObject(triangle2);
-    // scene->AddGameObject(quad);
-    // scene->AddGameObject(cube);
-    // scene->AddGameObject(ground);
-    // scene->AddGameObject(referenceQuad1);
-    // scene->AddGameObject(referenceQuad2);
-    // scene->AddGameObject(referenceTriangle1);
-    // scene->AddGameObject(referenceTriangle2);
-    //
-    // LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形，1个立方体，1个地面（索引缓冲区测试）");
-    //
+
+    // 创建几个三角形
+    auto triangle1 = CreateTriangle("Triangle1", {-0.7f, 0.0f, 1.0f}, {0.0f,1.0f, 0.0f,1.0f}); // 红色
+    auto triangle2 = CreateTriangle("Triangle2", {0.7f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}); // 绿色
+
+    // 创建一个四边形来测试索引缓冲区
+    auto quad = CreateQuad("TestQuad", {0.0f, 0.0f, 0.3f}, {0.0f, 0.0f, 0.0f, 1.0f}, 0.3f); // 蓝色四边形
+
+    // 创建一个立方体
+    auto cube = CreateCube("ExampleCube", {0.0f, 0.5f, 0.8f}, {1.0f, 0.8f, 0.0f, 1.0f}, 0.5f); // 黄色立方体
+
+    // 创建一个地面四边形
+    auto ground = CreateGround("Ground", {0.0f, -0.5f, 0.0f}, {0.0f, 0.3f, 0.0f, 1.0f}, 0.3f); // 深绿色地面
+
+    // 添加更多参考对象来观察相机移动
+    auto referenceQuad1 = CreateQuad("RefQuad1", {-2.0f, 1.5f, 0.2f}, {1.0f, 1.0f, 0.0f, 1.0f},0.5f); // 黄色
+    auto referenceQuad2 = CreateQuad("RefQuad2", {2.0f, -1.5f, 0.2f}, {1.0f, 0.0f, 1.0f,1.0f},1.0f); // 品红色
+    auto referenceTriangle1 = CreateTriangle("RefTri1",{ 0.0f, 2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 粉色
+    auto referenceTriangle2 = CreateTriangle("RefTri2",{ 0.0f, -2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 浅蓝色
+
+    // 添加到场景
+    scene->AddGameObject(triangle1);
+    scene->AddGameObject(triangle2);
+    scene->AddGameObject(quad);
+    scene->AddGameObject(cube);
+    scene->AddGameObject(ground);
+    scene->AddGameObject(referenceQuad1);
+    scene->AddGameObject(referenceQuad2);
+    scene->AddGameObject(referenceTriangle1);
+    scene->AddGameObject(referenceTriangle2);
+
+    LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形，1个立方体，1个地面（索引缓冲区测试）");
+
     return scene;
 }
 
