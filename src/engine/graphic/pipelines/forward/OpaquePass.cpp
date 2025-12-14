@@ -109,10 +109,10 @@ void OpaquePass::Execute(RenderCommandContext* context)
             auto transform = gameObject->transform();
             XMMATRIX worldMatrix;
             if (transform) {
-                // Transform::GetMatrix() 返回的是转置后的矩阵
+                // Transform::GetMatrix() 返回的是标准的行主序矩阵
                 float* matrixData = transform->GetMatrix();
                 worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrixData));
-                // 再次转置回来，因为GetMatrix()为了HLSL已经转置了一次
+                // 转置矩阵以适应HLSL的列主序要求
                 worldMatrix = XMMatrixTranspose(worldMatrix);
             } else {
                 worldMatrix = DirectX::XMMatrixIdentity();
