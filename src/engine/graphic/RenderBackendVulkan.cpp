@@ -411,7 +411,7 @@ void RenderBackendVulkan::BeginFrame() {
     XMVECTOR clearColorValue = XMVectorSet(0.0f, 1.0f, 1.0f, 1.0f);  // 默认青色
     auto scene = SceneManager::GetInstance()->GetCurrentScene();
     // 尝试从场景中获取主相机
-    Camera* mainCamera = nullptr;
+    Engine::Graphic::ICamera* mainCamera = nullptr;
     if (scene) {
         mainCamera = scene->GetMainCamera();
     }

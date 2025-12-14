@@ -61,6 +61,12 @@ public:
 
     // 设置活动状态
     virtual void SetActive(bool active) = 0;
+
+    // 获取清除颜色
+    virtual DirectX::XMVECTOR GetClearColor() const = 0;
+
+    // 设置清除颜色
+    virtual void SetClearColor(float r, float g, float b, float a = 1.0f) = 0;
 };
 
 } // namespace Graphic

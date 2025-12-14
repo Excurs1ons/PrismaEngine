@@ -13,6 +13,7 @@ public:
     Quaternion();
     Quaternion(float x, float y, float z, float w);
     Quaternion(const DirectX::XMVECTOR& vector);
+    Quaternion(const DirectX::XMFLOAT3& euler); // 从欧拉角构造
 
     // 静态常量
     static const Quaternion Identity;
@@ -27,6 +28,17 @@ public:
     float LengthSquared() const;
     Quaternion Normalized() const;
     Quaternion Inverse() const;
+
+    // 欧拉角转换
+    DirectX::XMFLOAT3 ToEulerAngles() const;
+
+    // 点乘
+    float Dot(const Quaternion& other) const;
+
+    // 静态方法
+    static Quaternion IdentityQuaternion();
+    static Quaternion LookRotation(const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& up = DirectX::XMFLOAT3(0, 1, 0));
+    static float Angle(const Quaternion& a, const Quaternion& b);
 
     // 静态创建方法
     static Quaternion FromEulerAngles(float pitch, float yaw, float roll);

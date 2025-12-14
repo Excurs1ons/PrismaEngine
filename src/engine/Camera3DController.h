@@ -3,7 +3,13 @@
 #include "KeyCode.h"
 #include "InputManager.h"
 
+namespace Engine {
+namespace Graphic {
+
 class Camera3D;
+
+}
+}
 
 namespace Engine {
 
@@ -33,7 +39,7 @@ private:
     float m_rotationSpeed = 90.0f;   // 相机旋转速度 (度/秒)
     bool m_mouseControl = true;      // 是否启用鼠标控制
 
-    Camera3D* m_camera = nullptr;
+    Engine::Graphic::Camera3D* m_camera = nullptr;
     float m_lastMouseX = 0.0f;
     float m_lastMouseY = 0.0f;
     bool m_firstMouse = true;

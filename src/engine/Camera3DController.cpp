@@ -8,10 +8,13 @@
 #include <cmath>
 
 using namespace DirectX;
+using namespace Engine::Graphic;
 
 namespace Engine {
 
 Camera3DController::Camera3DController() : Component() {
+    m_mouseControl = false;  // 默认关闭鼠标控制
+    m_firstMouse = true;
 }
 
 void Camera3DController::Initialize() {

@@ -3,6 +3,7 @@
 #include "Material.h"
 #include "ResourceManager.h"
 #include "../Camera3DController.h"
+#include "../Camera3D.h"
 
 TriangleExample::TriangleExample()
 {
@@ -18,44 +19,44 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
-    auto camera = cameraObj->GetComponent<Camera3D>();
+    auto camera = cameraObj->GetComponent<Engine::Graphic::Camera3D>();
     if (camera) {
         scene->SetMainCamera(camera);
         LOG_INFO("TriangleExample", "Main camera set for scene");
     }
-    
-    // 创建几个三角形
-    auto triangle1 = CreateTriangle("Triangle1", {-0.7f, 0.0f, 1.0f}, {0.0f,1.0f, 0.0f,1.0f}); // 红色
-    auto triangle2 = CreateTriangle("Triangle2", {0.7f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}); // 绿色
-
-    // 创建一个四边形来测试索引缓冲区
-    auto quad = CreateQuad("TestQuad", {0.0f, 0.0f, 0.3f}, {0.0f, 0.0f, 0.0f, 1.0f}, 0.3f); // 蓝色四边形
-
-    // 创建一个立方体
-    auto cube = CreateCube("ExampleCube", {0.0f, 0.5f, 0.8f}, {1.0f, 0.8f, 0.0f, 1.0f}, 0.5f); // 黄色立方体
-
-    // 创建一个地面四边形
-    auto ground = CreateGround("Ground", {0.0f, -0.5f, 0.0f}, {0.0f, 0.3f, 0.0f, 1.0f}, 0.3f); // 深绿色地面
-
-    // 添加更多参考对象来观察相机移动
-    auto referenceQuad1 = CreateQuad("RefQuad1", {-2.0f, 1.5f, 0.2f}, {1.0f, 1.0f, 0.0f, 1.0f},0.5f); // 黄色
-    auto referenceQuad2 = CreateQuad("RefQuad2", {2.0f, -1.5f, 0.2f}, {1.0f, 0.0f, 1.0f,1.0f},1.0f); // 品红色
-    auto referenceTriangle1 = CreateTriangle("RefTri1",{ 0.0f, 2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 粉色
-    auto referenceTriangle2 = CreateTriangle("RefTri2",{ 0.0f, -2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 浅蓝色
-
-    // 添加到场景
-    scene->AddGameObject(triangle1);
-    scene->AddGameObject(triangle2);
-    scene->AddGameObject(quad);
-    scene->AddGameObject(cube);
-    scene->AddGameObject(ground);
-    scene->AddGameObject(referenceQuad1);
-    scene->AddGameObject(referenceQuad2);
-    scene->AddGameObject(referenceTriangle1);
-    scene->AddGameObject(referenceTriangle2);
-    
-    LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形，1个立方体，1个地面（索引缓冲区测试）");
-    
+    //
+    // // 创建几个三角形
+    // auto triangle1 = CreateTriangle("Triangle1", {-0.7f, 0.0f, 1.0f}, {0.0f,1.0f, 0.0f,1.0f}); // 红色
+    // auto triangle2 = CreateTriangle("Triangle2", {0.7f, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}); // 绿色
+    //
+    // // 创建一个四边形来测试索引缓冲区
+    // auto quad = CreateQuad("TestQuad", {0.0f, 0.0f, 0.3f}, {0.0f, 0.0f, 0.0f, 1.0f}, 0.3f); // 蓝色四边形
+    //
+    // // 创建一个立方体
+    // auto cube = CreateCube("ExampleCube", {0.0f, 0.5f, 0.8f}, {1.0f, 0.8f, 0.0f, 1.0f}, 0.5f); // 黄色立方体
+    //
+    // // 创建一个地面四边形
+    // auto ground = CreateGround("Ground", {0.0f, -0.5f, 0.0f}, {0.0f, 0.3f, 0.0f, 1.0f}, 0.3f); // 深绿色地面
+    //
+    // // 添加更多参考对象来观察相机移动
+    // auto referenceQuad1 = CreateQuad("RefQuad1", {-2.0f, 1.5f, 0.2f}, {1.0f, 1.0f, 0.0f, 1.0f},0.5f); // 黄色
+    // auto referenceQuad2 = CreateQuad("RefQuad2", {2.0f, -1.5f, 0.2f}, {1.0f, 0.0f, 1.0f,1.0f},1.0f); // 品红色
+    // auto referenceTriangle1 = CreateTriangle("RefTri1",{ 0.0f, 2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 粉色
+    // auto referenceTriangle2 = CreateTriangle("RefTri2",{ 0.0f, -2.0f, 1.0f}, {0.5f, 0.5f, 1.0f, 1.0f}); // 浅蓝色
+    //
+    // // 添加到场景
+    // scene->AddGameObject(triangle1);
+    // scene->AddGameObject(triangle2);
+    // scene->AddGameObject(quad);
+    // scene->AddGameObject(cube);
+    // scene->AddGameObject(ground);
+    // scene->AddGameObject(referenceQuad1);
+    // scene->AddGameObject(referenceQuad2);
+    // scene->AddGameObject(referenceTriangle1);
+    // scene->AddGameObject(referenceTriangle2);
+    //
+    // LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形，1个立方体，1个地面（索引缓冲区测试）");
+    //
     return scene;
 }
 
@@ -272,6 +273,8 @@ std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& nam
 
 std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& name, XMFLOAT3 pos, Quaternion rotation)
 {
+    using namespace Engine::Graphic;
+
     // 创建游戏对象
     auto game_object = std::make_shared<GameObject>(name);
 
@@ -280,22 +283,17 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     transform->position.x = pos.x;
     transform->position.y = pos.y;
     transform->position.z = pos.z;
+    transform->rotation = rotation;
 
     // 添加3D相机组件
     auto *camera = game_object->AddComponent<Camera3D>();
-
-    // 设置相机位置
-    camera->SetPosition(pos.x, pos.y, pos.z);
 
     // 设置透视投影
     float aspect_ratio = 16.0f / 9.0f;
     camera->SetPerspectiveProjection(XM_PIDIV4, aspect_ratio, 0.1F, 1000.0F);
 
     // 设置清除颜色为深蓝色
-    camera->SetClearColor(0.0F, 0.2f, 0.0f, 1.0f);
-
-    // 设置相机旋转，使其看向原点
-    camera->LookAt(0.0f, 0.0f, 0.0f);
+    camera->SetClearColor(0.0F, 1.0f, 0.5f, 1.0f);
 
     // 添加3D相机控制器组件
     auto camera_controller = game_object->AddComponent<Camera3DController>();
