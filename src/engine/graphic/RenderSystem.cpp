@@ -148,6 +148,24 @@ void RenderSystem::Update(float deltaTime) {
                 if (dxBackend) {
                     if (dxBackend->Reinitialize(platform.get(), windowHandle, nullptr, width, height)) {
                         LOG_INFO("Render", "设备重建成功");
+
+                        // 重新初始化渲染管线
+                        if (forwardPipeline) {
+                            // 重新获取默认渲染目标和深度缓冲
+                            auto defaultRenderTarget = renderBackend->GetDefaultRenderTarget();
+                            auto defaultDepthBuffer = renderBackend->GetDefaultDepthBuffer();
+
+                            if (defaultRenderTarget && defaultDepthBuffer) {
+                                forwardPipeline->SetRenderTargets(defaultRenderTarget, defaultDepthBuffer, width, height);
+                                LOG_INFO("Render", "设备重建后重新设置渲染目标: {0}x{1}", width, height);
+                            }
+                        }
+
+                        // 重新初始化可编程渲染管线
+                        if (renderPipe) {
+                            LOG_INFO("Render", "设备重建后重新初始化可编程渲染管线");
+                            // 不需要重新创建，只需确保它使用新的设备
+                        }
                     } else {
                         LOG_ERROR("Render", "设备重建失败，将在5秒后重试");
                     }
@@ -221,19 +239,26 @@ void RenderSystem::Resize(uint32_t width, uint32_t height)
 
 void RenderSystem::RenderFrame() {
     if (!renderBackend || !renderBackend->isInitialized) {
+        LOG_WARNING("Render", "渲染后端未初始化，跳过渲染帧");
         return;
     }
+
+    LOG_DEBUG("Render", "开始渲染帧");
 
     // 执行渲染帧
     renderBackend->BeginFrame();
 
     // 执行可编程渲染管线
     if (renderPipe) {
+        LOG_DEBUG("Render", "执行可编程渲染管线");
         renderPipe->Execute();
     }
 
+    LOG_DEBUG("Render", "结束渲染帧");
     renderBackend->EndFrame();
+    LOG_DEBUG("Render", "Present帧");
     renderBackend->Present();
+    LOG_DEBUG("Render", "渲染帧完成");
 }
 
 }  // namespace Engine

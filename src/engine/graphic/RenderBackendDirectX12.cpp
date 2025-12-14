@@ -197,130 +197,64 @@ bool RenderBackendDirectX12::Reinitialize(Platform* platform, WindowHandle windo
     m_viewport = {0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f};
     m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
 
-    // 释放旧资源但保留设备
-    // 先等待GPU完成所有工作
-    WaitForPreviousFrame();
+    // 设备丢失后需要完全重新初始化
+    // 先等待GPU完成所有工作（如果可能）
+    if (m_fence && m_fenceEvent) {
+        WaitForPreviousFrame();
+    }
 
-    // 释放交换链相关资源
+    // 释放所有资源
     for (UINT n = 0; n < FrameCount; n++) {
         m_renderTargets[n].Reset();
     }
     m_swapChain.Reset();
+    m_commandAllocator.Reset();
+    m_commandList.Reset();
+    m_pipelineState.Reset();
+    m_rootSignature.Reset();
+    m_rtvHeap.Reset();
+    m_dsvHeap.Reset();
+    m_depthStencil.Reset();
+
+    // 释放动态缓冲区
+    m_dynamicVertexBuffer.Reset();
+    m_dynamicIndexBuffer.Reset();
+    m_dynamicConstantBuffer.Reset();
+
+    // 重置动态缓冲区指针和偏移量
+    m_dynamicVBCPUAddress = nullptr;
+    m_dynamicVBSize = 0;
+    m_dynamicVBOffset = 0;
+    m_dynamicIBCPUAddress = nullptr;
+    m_dynamicIBSize = 0;
+    m_dynamicIBOffset = 0;
+    m_dynamicCBCPUAddress = nullptr;
+    m_dynamicCBSize = 0;
+    m_dynamicCBOffset = 0;
 
     // 关闭句柄
-    CloseHandle(m_fenceEvent);
+    if (m_fenceEvent) {
+        CloseHandle(m_fenceEvent);
+        m_fenceEvent = nullptr;
+    }
     m_fence.Reset();
+    m_commandQueue.Reset();
+    m_device.Reset();
 
     // 重置帧索引
     m_frameIndex = 0;
 
-    // 创建新的事件句柄
-    m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    if (m_fenceEvent == nullptr) {
-        LOG_ERROR("DirectX", "无法创建事件句柄");
+      // 设备丢失后，需要重新创建整个管道
+    // 调用LoadPipeline重新创建所有资源
+    if (!LoadPipeline()) {
+        LOG_ERROR("DirectX", "重新创建管道失败");
         return false;
     }
 
-    // 创建新的交换链
-    ComPtr<IDXGIFactory4> factory;
-    HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法创建DXGI工厂: {0}", HrToString(hr));
+    // 重新创建渲染对象（包括动态缓冲区等）
+    if (!InitializeRenderObjects()) {
+        LOG_ERROR("DirectX", "重新创建渲染对象失败");
         return false;
-    }
-
-    if (g_hWnd == nullptr) {
-        LOG_ERROR("DirectX", "无效的窗口句柄");
-        return false;
-    }
-
-    // 重新创建交换链
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = FrameCount;
-    swapChainDesc.Width = m_width;
-    swapChainDesc.Height = m_height;
-    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.SampleDesc.Count = 1;
-
-    ComPtr<IDXGISwapChain1> swapChain;
-    hr = factory->CreateSwapChainForHwnd(m_commandQueue.Get(), g_hWnd, &swapChainDesc, nullptr, nullptr, &swapChain);
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法创建交换链: {0}", HrToString(hr));
-        return false;
-    }
-
-    // 获取交换链接口
-    hr = swapChain.As(&m_swapChain);
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法获取交换链接口: {0}", HrToString(hr));
-        return false;
-    }
-
-    // 设置窗口关联
-    hr = factory->MakeWindowAssociation(g_hWnd, DXGI_MWA_NO_ALT_ENTER);
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法设置窗口关联: {0}", HrToString(hr));
-        return false;
-    }
-
-    // 创建深度缓冲区
-    D3D12_DEPTH_STENCIL_DESC depthStencilDesc = {};
-    depthStencilDesc.DepthEnable = TRUE;
-    depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-    depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-    depthStencilDesc.StencilEnable = FALSE;
-    depthStencilDesc.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
-    depthStencilDesc.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
-
-    D3D12_CLEAR_VALUE depthOpt = {};
-    depthOpt.Format = DXGI_FORMAT_D32_FLOAT;
-    depthOpt.DepthStencil.Depth = 1.0f;
-    depthOpt.DepthStencil.Stencil = 0;
-
-    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-    CD3DX12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, m_width, m_height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-
-    hr = m_device->CreateCommittedResource(
-        &heapProps,
-        D3D12_HEAP_FLAG_NONE,
-        &texDesc,
-        D3D12_RESOURCE_STATE_DEPTH_WRITE,
-        &depthOpt,
-        IID_PPV_ARGS(&m_depthStencil)
-    );
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法创建深度缓冲区: {0}", HrToString(hr));
-        return false;
-    }
-
-    // 创建DSV描述符堆
-    D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-    dsvHeapDesc.NumDescriptors = 1;
-    dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    hr = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap));
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法创建DSV描述符堆: {0}", HrToString(hr));
-        return false;
-    }
-
-    // 创建DSV
-    D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
-    depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
-    depthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-    depthStencilViewDesc.Texture2D.MipSlice = 0;
-    m_device->CreateDepthStencilView(m_depthStencil.Get(), &depthStencilViewDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-
-    // 创建帧资源
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-    for (UINT n = 0; n < FrameCount; n++) {
-        hr = m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n]));
-        if (FAILED(hr)) {
-            LOG_ERROR("DirectX", "无法获取后台缓冲区: {0}", HrToString(hr));
-            return false;
-        }
     }
 
     // 标记为已初始化
@@ -338,6 +272,12 @@ void RenderBackendDirectX12::Shutdown() {
 }
 
 void RenderBackendDirectX12::BeginFrame() {
+    // 检查设备是否已初始化
+    if (!isInitialized) {
+        LOG_WARNING("DirectX", "设备未初始化，跳过BeginFrame");
+        return;
+    }
+
     // 创建渲染帧日志作用域
     LogScope* frameScope = LogScopeManager::GetInstance().CreateScope("DirectXFrame");
     Logger::GetInstance().PushLogScope(frameScope);
@@ -418,6 +358,12 @@ void RenderBackendDirectX12::BeginFrame() {
 }
 
 void RenderBackendDirectX12::EndFrame() {
+    // 检查设备是否已初始化
+    if (!isInitialized) {
+        LOG_WARNING("DirectX", "设备未初始化，跳过EndFrame");
+        return;
+    }
+
     // 获取当前日志作用域
     LogScope* frameScope = Logger::GetInstance().GetCurrentLogScope();
 
@@ -461,65 +407,67 @@ bool RenderBackendDirectX12::Supports(RendererFeature feature) const {
 
 void RenderBackendDirectX12::Present() {
     // 呈现帧到屏幕
-    if (m_swapChain) {
-        HRESULT hr = m_swapChain->Present(0, 0);  // SyncInterval=0 (不等待垂直同步)，避免阻塞
+    if (m_swapChain != nullptr) {
+        // 使用垂直同步（SyncInterval=1）以避免设备丢失
+        const HRESULT hr = m_swapChain->Present(1, 0);
         if (FAILED(hr)) {
-            // 设备丢失错误
-            if (hr == DXGI_ERROR_DEVICE_REMOVED || hr == DXGI_ERROR_DEVICE_RESET) {
-                static uint32_t errorCount = 0;
-                errorCount++;
+            // 提前声明并初始化所有可能在switch语句中使用的变量，避免跳过初始化
+            HRESULT device_removed_reason = E_FAIL;
+            const char* reason_str = "未知原因";
+            
+            // 设备重置错误 - 通常可以恢复
+            switch (hr) {
+                case DXGI_ERROR_DEVICE_RESET:
+                    LOG_ERROR("DirectX", "设备已重置");
+                    break;
 
-                // 每60秒只记录一次错误，避免刷屏
-                static uint32_t lastLogTime = 0;
-                uint32_t currentTime = GetTickCount() / 1000;
-                if (currentTime - lastLogTime >= 60 || errorCount <= 3) {
-                    HRESULT deviceRemovedReason = m_device ? m_device->GetDeviceRemovedReason() : E_FAIL;
-
-                    const char* reasonStr = "未知原因";
-                    switch (deviceRemovedReason) {
+                case DXGI_ERROR_ACCESS_LOST:
+                    LOG_ERROR("DirectX", "访问丢失");
+                    break;
+                // 设备移除错误 - 严重错误，通常需要完全重新创建
+                case DXGI_STATUS_OCCLUDED:
+                    LOG_ERROR("DirectX", "被遮挡");
+                    break;
+                case DXGI_ERROR_DEVICE_REMOVED:
+                    device_removed_reason = (m_device != nullptr) ? m_device->GetDeviceRemovedReason() : E_FAIL;
+                    // 内部switch语句也需提前声明变量
+                    switch (device_removed_reason) {
+                        case DXGI_ERROR_ACCESS_DENIED:
+                            reason_str = "访问被拒绝";
+                            break;
                         case DXGI_ERROR_DRIVER_INTERNAL_ERROR:
-                            reasonStr = "驱动程序内部错误";
+                            reason_str = "驱动程序内部错误";
                             break;
                         case DXGI_ERROR_INVALID_CALL:
-                            reasonStr = "无效的API调用";
+                            reason_str = "无效的API调用";
+                            break;
+                        case DXGI_ERROR_DEVICE_HUNG:
+                            reason_str = "设备挂起（可能由于无效命令）";
                             break;
                         case E_OUTOFMEMORY:
-                            reasonStr = "内存不足";
+                            reason_str = "内存不足";
                             break;
                         case D3D12_ERROR_DRIVER_VERSION_MISMATCH:
-                            reasonStr = "驱动版本不匹配";
+                            reason_str = "驱动版本不匹配";
+                            break;
+                        default:
+                            reason_str = "未知原因";
                             break;
                     }
-
-                    LOG_ERROR("DirectX", "Device lost! Reason: {} (HRESULT: 0x{:08X})",
-                            reasonStr, static_cast<unsigned int>(deviceRemovedReason));
-
-                    // 建议用户操作
-                    LOG_WARNING("DirectX", "Please try:");
-                    LOG_WARNING("DirectX", "  1. Update graphics driver");
-                    LOG_WARNING("DirectX", "  2. Check display connection");
-                    LOG_WARNING("DirectX", "  3. Close other GPU-intensive programs");
-                    LOG_WARNING("DirectX", "  4. Restart the application");
-
-                    lastLogTime = currentTime;
-                }
-
-                // 标记设备为未初始化，触发重建
-                isInitialized = false;
-                return;
+                    LOG_ERROR("DirectX",
+                              "设备被移除! Reason: {} (HRESULT: 0x{:08X})",
+                              reason_str,
+                              static_cast<unsigned int>(device_removed_reason));
+                    break;
+                default:
+                    LOG_ERROR("DirectX", "未知错误: {0}", HrToString(hr));
+                    break;
             }
 
             // 对于其他错误，尝试短暂延迟后重试
             if (hr == DXGI_STATUS_OCCLUDED) {
                 LOG_WARNING("DirectX", "窗口被遮挡，跳过此帧");
                 return;
-            }
-
-            // 其他Present错误，记录但继续
-            static int errorCount = 0;
-            errorCount++;
-            if (errorCount < 10) {  // 只记录前10次错误
-                LOG_WARNING("DirectX", "Present出现非致命错误，继续运行");
             }
         }
 
@@ -539,22 +487,23 @@ void RenderBackendDirectX12::Present() {
 }
 
 bool RenderBackendDirectX12::LoadPipeline() {
-    UINT dxgiFactoryFlags = 0;
-#if defined(_DEBUG)
-    // 在调试模式下启用调试层
-    {
-        ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
-            debugController->EnableDebugLayer();
-
-            // 启用额外的调试层（需要安装SDK配置）
-            dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-        }
-    }
-#endif
+    UINT dxgi_factory_flags = 0;
+// 暂时禁用调试层，可能导致设备丢失问题
+// #if defined(_DEBUG)
+//     // 在调试模式下启用调试层
+//     {
+//         ComPtr<ID3D12Debug> debugController;
+//         if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+//             debugController->EnableDebugLayer();
+//
+//             // 启用额外的调试层（需要安装SDK配置）
+//             dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+//         }
+//     }
+// #endif
 
     ComPtr<IDXGIFactory4> factory;
-    HRESULT hr = CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory));
+    HRESULT hr = CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&factory));
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法创建DXGI工厂: {0}", HrToString(hr));
         return false;
@@ -572,10 +521,10 @@ bool RenderBackendDirectX12::LoadPipeline() {
     m_height = rc.bottom - rc.top;
 
     // 创建设备
-    ComPtr<IDXGIAdapter1> hardwareAdapter;
-    GetHardwareAdapter(factory.Get(), &hardwareAdapter);
+    ComPtr<IDXGIAdapter1> hardware_adapter;
+    GetHardwareAdapter(factory.Get(), &hardware_adapter);
 
-    hr = D3D12CreateDevice(hardwareAdapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+    hr = D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法创建D3D12设备: {0}", HrToString(hr));
         return false;
@@ -586,11 +535,11 @@ bool RenderBackendDirectX12::LoadPipeline() {
     m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
     // 创建命令队列
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Flags                    = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    queueDesc.Type                     = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    D3D12_COMMAND_QUEUE_DESC queue_desc = {};
+    queue_desc.Flags                    = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    queue_desc.Type                     = D3D12_COMMAND_LIST_TYPE_DIRECT;
 
-    hr = m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
+    hr = m_device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&m_commandQueue));
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法创建命令队列: {0}", HrToString(hr));
         return false;
@@ -598,19 +547,19 @@ bool RenderBackendDirectX12::LoadPipeline() {
     LOG_INFO("DirectX", "成功创建命令队列");
 
     // 创建交换链
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount           = FrameCount;
-    swapChainDesc.Width                 = m_width;
-    swapChainDesc.Height                = m_height;
-    swapChainDesc.Format                = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.BufferUsage           = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.SwapEffect            = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.SampleDesc.Count      = 1;
+    DXGI_SWAP_CHAIN_DESC1 swap_chain_desc = {};
+    swap_chain_desc.BufferCount           = FrameCount;
+    swap_chain_desc.Width                 = m_width;
+    swap_chain_desc.Height                = m_height;
+    swap_chain_desc.Format                = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swap_chain_desc.BufferUsage           = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swap_chain_desc.SwapEffect            = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swap_chain_desc.SampleDesc.Count      = 1;
 
     ComPtr<IDXGISwapChain1> swapChain;
     hr = factory->CreateSwapChainForHwnd(m_commandQueue.Get(),  // 交换链需要对设备的命令队列进行引用
                                          g_hWnd,
-                                         &swapChainDesc,
+                                         &swap_chain_desc,
                                          nullptr,
                                          nullptr,
                                          &swapChain);
@@ -977,6 +926,12 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
 }
 
 RenderCommandContext* RenderBackendDirectX12::CreateCommandContext() {
+    // 检查设备是否已初始化
+    if (!isInitialized) {
+        LOG_WARNING("DirectX", "设备未初始化，无法创建命令上下文");
+        return nullptr;
+    }
+
     // 创建一个新的渲染命令上下文实例
     LOG_DEBUG("RenderBackendDirectX12", "创建命令上下文");
     return new DXRenderCommandContext(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
@@ -999,8 +954,14 @@ void RenderBackendDirectX12::UploadAndBindVertexBuffer(ID3D12GraphicsCommandList
                                                 const void* data,
                                                 uint32_t sizeInBytes,
                                                 uint32_t strideInBytes) {
+    // 检查设备是否已初始化
+    if (!isInitialized) {
+        LOG_WARNING("DirectX", "设备未初始化，无法上传顶点缓冲区");
+        return;
+    }
+
     LOG_DEBUG("RenderBackendDirectX12", "上传并绑定顶点缓冲区，大小: {0} 字节，步长: {1} 字节", sizeInBytes, strideInBytes);
-                                                    
+
     if (!m_dynamicVertexBuffer || !m_dynamicVBCPUAddress) {
         LOG_ERROR("DirectX", "UploadAndBindVertexBuffer: dynamic buffer not created");
         return;
@@ -1031,8 +992,14 @@ void RenderBackendDirectX12::UploadAndBindIndexBuffer(ID3D12GraphicsCommandList*
                                                      const void* data,
                                                      uint32_t sizeInBytes,
                                                      bool use16BitIndices) {
+    // 检查设备是否已初始化
+    if (!isInitialized) {
+        LOG_WARNING("DirectX", "设备未初始化，无法上传索引缓冲区");
+        return;
+    }
+
     LOG_DEBUG("RenderBackendDirectX12", "上传并绑定索引缓冲区，大小: {0} 字节，使用16位索引: {1}", sizeInBytes, use16BitIndices);
-                                                     
+
     if (!m_dynamicIndexBuffer || !m_dynamicIBCPUAddress) {
         LOG_ERROR("DirectX", "UploadAndBindIndexBuffer: 动态索引缓冲区未创建");
         return;

@@ -27,7 +27,7 @@ CheckOptions:
   - key: readability-identifier-naming.FunctionCase
     value: CamelCase
   - key: readability-identifier-naming.VariableCase
-    value: lower_case
+    value: lowerCamelCase
   - key: readability-identifier-naming.ConstantCase
     value: UPPER_CASE
   - key: readability-identifier-naming.MemberCase
@@ -48,3 +48,5 @@ CheckOptions:
     value: ''
   - key: readability-identifier-naming.ParameterCase
     value: lower_case
+  - key: readability-identifier-naming.LocalConstCase
+    value: lowerCamelCase
