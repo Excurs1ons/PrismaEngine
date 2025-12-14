@@ -137,14 +137,8 @@ void RenderSystem::Update(float deltaTime) {
         if (currentTime - lastRetryTime >= 5) {
             LOG_WARNING("Render", "检测到渲染设备未初始化，尝试重新初始化...");
 
-            // 尝试重新初始化设备
-            Platform* platform = PlatformWindows::GetInstance().get();
-            if (platform && renderBackend->Initialize(platform, platform->GetWindowHandle(),
-                                                   nullptr, 1600, 900)) {
-                LOG_INFO("Render", "渲染设备重新初始化成功");
-            } else {
-                LOG_ERROR("Render", "渲染设备重新初始化失败");
-            }
+            // 暂时不支持设备重建
+            LOG_ERROR("Render", "设备重建功能尚未实现");
             lastRetryTime = currentTime;
         }
         return;

@@ -48,7 +48,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/RenderGraph.h
     graphic/RenderPass.h
     graphic/RenderSystem.h
-    graphic/RenderThread.h
     graphic/ScriptableRenderPipeline.h
     graphic/Shader.h
     graphic/TriangleExample.h

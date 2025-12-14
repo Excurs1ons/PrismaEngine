@@ -7,6 +7,7 @@
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
+#include <format>
 #include <iostream>
 #include <wrl.h>
 
@@ -341,23 +342,20 @@ void RenderBackendDirectX12::Present() {
                         case E_OUTOFMEMORY:
                             reasonStr = "内存不足";
                             break;
-                        case D3D12_ERROR_ADAPTER_REMOVED:
-                            reasonStr = "适配器被移除";
-                            break;
                         case D3D12_ERROR_DRIVER_VERSION_MISMATCH:
                             reasonStr = "驱动版本不匹配";
                             break;
                     }
 
-                    LOG_ERROR("DirectX", "设备丢失! 原因: {0} (HRESULT: 0x{1:X8})",
-                            reasonStr, static_cast<uint32_t>(deviceRemovedReason));
+                    LOG_ERROR("DirectX", "Device lost! Reason: {} (HRESULT: 0x{:08X})",
+                            reasonStr, static_cast<unsigned int>(deviceRemovedReason));
 
                     // 建议用户操作
-                    LOG_WARNING("DirectX", "请尝试:");
-                    LOG_WARNING("DirectX", "  1. 更新显卡驱动程序");
-                    LOG_WARNING("DirectX", "  2. 检查显示器连接");
-                    LOG_WARNING("DirectX", "  3. 关闭其他占用GPU的程序");
-                    LOG_WARNING("DirectX", "  4. 重启应用程序");
+                    LOG_WARNING("DirectX", "Please try:");
+                    LOG_WARNING("DirectX", "  1. Update graphics driver");
+                    LOG_WARNING("DirectX", "  2. Check display connection");
+                    LOG_WARNING("DirectX", "  3. Close other GPU-intensive programs");
+                    LOG_WARNING("DirectX", "  4. Restart the application");
 
                     lastLogTime = currentTime;
                 }
