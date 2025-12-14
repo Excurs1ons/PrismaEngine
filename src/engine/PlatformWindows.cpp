@@ -17,6 +17,9 @@ namespace Engine {
 static LARGE_INTEGER s_frequency;
 static bool s_use_qpc = false;
 
+// 全局键盘状态数组
+static bool g_keyStates[256] = { false };
+
 PlatformWindows::PlatformWindows() {
 }
 
@@ -29,6 +32,24 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         case WM_DESTROY:
             LOG_INFO("Platform", "窗口已关闭");
             PostQuitMessage(0);
+            return 0;
+        case WM_KEYDOWN:
+            // 处理按键按下
+            if (wParam < 256) {
+                if (!g_keyStates[wParam]) {
+                    g_keyStates[wParam] = true;
+                    char keyChar = (wParam >= 'A' && wParam <= 'Z') ? static_cast<char>(wParam) : ' ';
+                    LOG_INFO("Platform", "KeyDown: key={0} char='{1}'", static_cast<int>(wParam), keyChar);
+                }
+            }
+            return 0;
+        case WM_KEYUP:
+            // 处理按键释放
+            if (wParam < 256) {
+                g_keyStates[wParam] = false;
+                char keyChar = (wParam >= 'A' && wParam <= 'Z') ? static_cast<char>(wParam) : ' ';
+                LOG_INFO("Platform", "KeyUp: key={0} char='{1}'", static_cast<int>(wParam), keyChar);
+            }
             return 0;
         default:
             return DefWindowProcA(hwnd, msg, wParam, lParam);
@@ -463,9 +484,9 @@ bool PlatformWindows::IsKeyDown(KeyCode key) const {
         default: return false;
     }
 
-    // 检查键盘按键状态
-    SHORT state = GetAsyncKeyState(virtualKey);
-    return (state & 0x8000) != 0;
+    // 使用事件驱动的键盘状态
+    bool pressed = g_keyStates[virtualKey];
+    return pressed;
 }
 
 void PlatformWindows::PumpEvents() {
