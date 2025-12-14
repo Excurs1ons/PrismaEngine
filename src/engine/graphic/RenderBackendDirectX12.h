@@ -15,6 +15,7 @@ class RenderBackendDirectX12 : public RenderBackend {
 public:
     RenderBackendDirectX12(std::wstring name);
     bool Initialize(Platform* platform, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) override;
+    bool Reinitialize(Platform* platform, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height);
 
     ~RenderBackendDirectX12() override;
 
