@@ -3,6 +3,8 @@
 #include "Camera.h"
 #include "MeshRenderer.h"
 #include "Material.h"
+#include "Shader.h"
+#include "DefaultShader.h"
 #include "Logger.h"
 #include <algorithm>
 
@@ -15,6 +17,16 @@ GeometryPass::GeometryPass()
 {
     LOG_DEBUG("GeometryPass", "几何通道构造函数被调用");
     m_stats = {};
+
+    // 创建延迟渲染几何通道着色器
+    m_shader = std::make_shared<Shader>();
+    if (m_shader && m_shader->CompileFromString(Graphic::DEFERRED_GEOMETRY_VERTEX_SHADER, Graphic::DEFERRED_GEOMETRY_PIXEL_SHADER)) {
+        m_shader->SetName("DeferredGeometryPass");
+        LOG_INFO("GeometryPass", "延迟渲染几何通道着色器编译成功");
+    } else {
+        LOG_ERROR("GeometryPass", "延迟渲染几何通道着色器编译失败");
+        m_shader.reset();
+    }
 }
 
 GeometryPass::~GeometryPass()
@@ -26,6 +38,11 @@ void GeometryPass::Execute(RenderCommandContext* context)
 {
     if (!context || !m_gbuffer) {
         LOG_ERROR("GeometryPass", "无效的上下文或G-Buffer");
+        return;
+    }
+
+    if (!m_shader || !m_shader->IsLoaded()) {
+        LOG_ERROR("GeometryPass", "几何通道着色器无效或未加载");
         return;
     }
 
@@ -42,10 +59,11 @@ void GeometryPass::Execute(RenderCommandContext* context)
         // 清除G-Buffer
         m_gbuffer->Clear(context);
 
+        // 设置着色器
+        context->SetShader(m_shader.get());
+
         // 设置着色器常量
-        context->SetConstantBuffer("View", m_view);
-        context->SetConstantBuffer("Projection", m_projection);
-        context->SetConstantBuffer("ViewProjection", m_viewProjection);
+        context->SetConstantBuffer("ViewProjectionBuffer", &m_viewProjection, sizeof(DirectX::XMMATRIX));
 
         // 获取场景
         auto scene = SceneManager::GetInstance()->GetCurrentScene();
@@ -134,30 +152,35 @@ void GeometryPass::Execute(RenderCommandContext* context)
             context->SetConstantBuffer("WorldInverseTranspose", worldInverseTranspose);
 
             // 设置材质参数
-            if (material) {
-                context->SetConstantBuffer("MaterialAlbedo", &material->albedo, sizeof(DirectX::XMFLOAT3));
-                context->SetConstantBuffer("MaterialMetallic", &material->metallic, sizeof(float));
-                context->SetConstantBuffer("MaterialRoughness", &material->roughness, sizeof(float));
-                context->SetConstantBuffer("MaterialAO", &material->ao, sizeof(float));
-                context->SetConstantBuffer("MaterialEmissive", &material->emissive, sizeof(DirectX::XMFLOAT3));
+            struct MaterialParams {
+                DirectX::XMFLOAT4 baseColor;
+                float metallic;
+                float roughness;
+                float emissive;
+                float ao;
+                uint32_t materialID;
+                float padding[3];
+            };
 
-                // 绑定纹理
-                if (material->albedoTexture) {
-                    context->SetShaderResource("AlbedoTexture", material->albedoTexture);
-                }
-                if (material->normalTexture) {
-                    context->SetShaderResource("NormalTexture", material->normalTexture);
-                }
-                if (material->metallicTexture) {
-                    context->SetShaderResource("MetallicTexture", material->metallicTexture);
-                }
-                if (material->roughnessTexture) {
-                    context->SetShaderResource("RoughnessTexture", material->roughnessTexture);
-                }
-                if (material->aoTexture) {
-                    context->SetShaderResource("AOTexture", material->aoTexture);
-                }
+            MaterialParams matParams;
+            if (material) {
+                matParams.baseColor = DirectX::XMFLOAT4(material->albedo.x, material->albedo.y, material->albedo.z, 1.0f);
+                matParams.metallic = material->metallic;
+                matParams.roughness = material->roughness;
+                matParams.emissive = material->emissive;
+                matParams.ao = material->ao;
+                matParams.materialID = 1; // 默认材质ID
+            } else {
+                // 默认材质
+                matParams.baseColor = DirectX::XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f);
+                matParams.metallic = 0.0f;
+                matParams.roughness = 0.5f;
+                matParams.emissive = 0.0f;
+                matParams.ao = 1.0f;
+                matParams.materialID = 0;
             }
+
+            context->SetConstantBuffer("MaterialBuffer", &matParams, sizeof(MaterialParams));
 
             // 设置顶点和索引缓冲区
             const auto& vertices = mesh->GetVertices();
