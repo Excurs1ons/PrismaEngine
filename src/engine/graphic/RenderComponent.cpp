@@ -63,6 +63,8 @@ void RenderComponent::Render(RenderCommandContext* context)
     if (auto* transform = m_owner->transform()) {
         float* matrix = transform->GetMatrix();
         XMMATRIX worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrix));
+        // 转置矩阵以适应HLSL的列主序要求
+        worldMatrix = XMMatrixTranspose(worldMatrix);
         context->SetConstantBuffer("World", reinterpret_cast<const float*>(&worldMatrix), 16);
     }
 
