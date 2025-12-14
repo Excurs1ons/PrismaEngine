@@ -12,8 +12,6 @@ namespace Engine {
 class RenderSystem : public ManagerBase<RenderSystem> {
 public:
     friend class ManagerBase<RenderSystem>;
-
-public:
     static constexpr std::string GetName() { return R"(RenderSystem)"; }
 
     // 添加带参数的初始化方法
