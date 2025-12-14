@@ -12,7 +12,7 @@ public:
     static constexpr std::string GetName() { return R"(SceneManager)"; }
     void Shutdown() override;
     void Update(float deltaTime) override;
-    Scene* GetCurrentScene();
+    Scene* GetCurrentScene() const;
     bool Initialize() override;
 
 private:
