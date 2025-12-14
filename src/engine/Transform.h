@@ -55,9 +55,6 @@ public:
             std::abs(rotation.y - lastRot[1]) > 0.01f ||
             std::abs(rotation.z - lastRot[2]) > 0.01f) {
 
-            // 输出调试信息（暂时简化以避免格式问题）
-            LOG_INFO("Transform", "Transform updated - pos: ({0}, {1}, {2})",
-                position.x, position.y, position.z);
 
             lastPos[0] = position.x;
             lastPos[1] = position.y;

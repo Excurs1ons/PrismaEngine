@@ -128,52 +128,10 @@ void RenderSystem::Update(float deltaTime) {
         return;
     }
 
-    // 如果设备丢失，尝试重新初始化
+    // 检查设备状态
     if (!renderBackend->isInitialized) {
-        static uint32_t lastRetryTime = 0;
-        uint32_t currentTime = GetTickCount() / 1000;
-
-        // 每5秒尝试一次重建
-        if (currentTime - lastRetryTime >= 5) {
-            LOG_WARNING("Render", "检测到渲染设备未初始化，尝试重新初始化...");
-
-            // 尝试重建设备
-            auto platform = PlatformWindows::GetInstance();
-            if (platform) {
-                WindowHandle windowHandle = platform->GetWindowHandle();
-                int width = 0, height = 0;
-                platform->GetWindowSize(windowHandle, width, height);
-
-                auto dxBackend = dynamic_cast<RenderBackendDirectX12*>(renderBackend.get());
-                if (dxBackend) {
-                    if (dxBackend->Reinitialize(platform.get(), windowHandle, nullptr, width, height)) {
-                        LOG_INFO("Render", "设备重建成功");
-
-                        // 重新初始化渲染管线
-                        if (forwardPipeline) {
-                            // 重新获取默认渲染目标和深度缓冲
-                            auto defaultRenderTarget = renderBackend->GetDefaultRenderTarget();
-                            auto defaultDepthBuffer = renderBackend->GetDefaultDepthBuffer();
-
-                            if (defaultRenderTarget && defaultDepthBuffer) {
-                                forwardPipeline->SetRenderTargets(defaultRenderTarget, defaultDepthBuffer, width, height);
-                                LOG_INFO("Render", "设备重建后重新设置渲染目标: {0}x{1}", width, height);
-                            }
-                        }
-
-                        // 重新初始化可编程渲染管线
-                        if (renderPipe) {
-                            LOG_INFO("Render", "设备重建后重新初始化可编程渲染管线");
-                            // 不需要重新创建，只需确保它使用新的设备
-                        }
-                    } else {
-                        LOG_ERROR("Render", "设备重建失败，将在5秒后重试");
-                    }
-                }
-            }
-            lastRetryTime = currentTime;
-        }
-        return;
+        LOG_ERROR("Render", "渲染设备未初始化，无法继续渲染");
+        throw std::runtime_error("渲染设备未初始化");
     }
 
     // 更新前向渲染管线（从Scene获取相机等数据）

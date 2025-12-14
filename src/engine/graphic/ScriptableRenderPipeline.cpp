@@ -73,7 +73,7 @@ void ScriptableRenderPipeline::Execute()
             renderPass->Execute(m_cachedContext);
         }
     }
-    
+
     LOG_DEBUG("ScriptableRenderPipeline", "渲染管线执行完成，共执行 {0} 个渲染通道", m_renderPasses.size());
 }
 

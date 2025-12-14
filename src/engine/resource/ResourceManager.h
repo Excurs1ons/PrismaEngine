@@ -108,16 +108,16 @@ public:
             
             if (!found) {
                 m_searchPaths.push_back(absolute_path);
-                LOG_INFO("Resource", "已添加搜索路径: {0}", absolute_path.string());
+                LOG_VERBOSE("Resource", "已添加搜索路径: {0}", absolute_path.string());
             } else {
-                LOG_INFO("Resource", "搜索路径已存在: {0}", absolute_path.string());
+                LOG_VERBOSE("Resource", "搜索路径已存在: {0}", absolute_path.string());
             }
         }
     }
 
     /// @brief 查找资源（读操作，使用共享锁）
     std::optional<std::filesystem::path> FindResource(const std::string& relative_path) const {
-        LOG_INFO("Resource", "正在查找资源: {0}", relative_path);
+        LOG_VERBOSE("Resource", "正在查找资源: {0}", relative_path);
         std::vector<std::filesystem::path> tried_paths;
         // 1. 尝试作为绝对路径（不需要锁）
         std::filesystem::path absolute_path(relative_path);

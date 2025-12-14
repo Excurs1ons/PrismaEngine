@@ -1,11 +1,13 @@
 #pragma once
-// 默认着色器硬编码 - 避免外部文件依赖
+#include <string>
 
-namespace Engine {
-namespace Graphic {
+namespace Engine::Resource {
 
-// 默认顶点着色器 (HLSL)
-inline const char* DEFAULT_VERTEX_SHADER = R"(
+class DefaultShaders {
+public:
+    // 默认着色器（用于基本渲染）
+    static const char* GetDefaultVertexShader() {
+        return R"(
 cbuffer ViewProjectionBuffer : register(b0)
 {
     matrix ViewProjection;
@@ -55,9 +57,25 @@ PS_IN VSMain(VS_IN input)
     return output;
 }
 )";
+    }
 
-// 默认像素着色器 (HLSL)
-inline const char* DEFAULT_PIXEL_SHADER = R"(
+    static const char* GetDefaultPixelShader() {
+        return R"(
+cbuffer ViewProjectionBuffer : register(b0)
+{
+    matrix ViewProjection;
+}
+
+cbuffer WorldBuffer : register(b1)
+{
+    matrix World;
+}
+
+cbuffer BaseColorBuffer : register(b2)
+{
+    float4 BaseColor;
+}
+
 cbuffer MaterialParamsBuffer : register(b3)
 {
     float Metallic;
@@ -65,6 +83,12 @@ cbuffer MaterialParamsBuffer : register(b3)
     float Emissive;
     float NormalScale;
 }
+
+struct VS_IN
+{
+    float3 pos : POSITION;
+    float4 col : COLOR;
+};
 
 struct PS_IN
 {
@@ -74,57 +98,14 @@ struct PS_IN
 
 float4 PSMain(PS_IN input) : SV_TARGET
 {
-    // 简单地返回输入颜色
-    // 添加自发光效果
-    float3 emissiveColor = input.col.rgb * Emissive;
-    return float4(input.col.rgb + emissiveColor, input.col.a);
+    return input.col;
 }
 )";
+    }
 
-// 清屏用着色器 - 仅顶点着色器
-inline const char* CLEAR_VERTEX_SHADER = R"(
-struct VS_IN
-{
-    float3 pos : POSITION;
-    float2 uv : TEXCOORD;
-};
-
-struct PS_IN
-{
-    float4 pos : SV_POSITION;
-    float2 uv : TEXCOORD;
-};
-
-PS_IN VSMain(VS_IN input)
-{
-    PS_IN output;
-    output.pos = float4(input.pos, 1.0);
-    output.uv = input.uv;
-    return output;
-}
-)";
-
-// 清屏用着色器 - 像素着色器
-inline const char* CLEAR_PIXEL_SHADER = R"(
-cbuffer ClearColorBuffer : register(b0)
-{
-    float4 ClearColor;
-};
-
-struct PS_IN
-{
-    float4 pos : SV_POSITION;
-    float2 uv : TEXCOORD;
-};
-
-float4 PSMain(PS_IN input) : SV_TARGET
-{
-    return ClearColor;
-}
-)";
-
-// 天空盒顶点着色器 (HLSL)
-inline const char* SKYBOX_VERTEX_SHADER = R"(
+    // 天空盒着色器
+    static const char* GetSkyboxVertexShader() {
+        return R"(
 cbuffer ConstantBuffer : register(b0)
 {
     float4x4 mViewProjection;
@@ -167,9 +148,10 @@ PS_INPUT VSMain(VS_INPUT input)
     return output;
 }
 )";
+    }
 
-// 天空盒像素着色器 (HLSL)
-inline const char* SKYBOX_PIXEL_SHADER = R"(
+    static const char* GetSkyboxPixelShader() {
+        return R"(
 #ifdef USE_TEXTURE
 TextureCube skyboxTexture : register(t0);
 SamplerState skyboxSampler : register(s0);
@@ -194,6 +176,22 @@ float4 PSMain(PS_INPUT input) : SV_TARGET
 #endif
 }
 )";
+    }
 
-} // namespace Graphic
-} // namespace Engine
+    // 获取默认着色器的完整字符串（方便一次性编译）
+    static std::string GetDefaultShaderString() {
+        std::string shader = GetDefaultVertexShader();
+        shader += "\n";
+        shader += GetDefaultPixelShader();
+        return shader;
+    }
+
+    static std::string GetSkyboxShaderString() {
+        std::string shader = GetSkyboxVertexShader();
+        shader += "\n";
+        shader += GetSkyboxPixelShader();
+        return shader;
+    }
+};
+
+} // namespace Engine::Resource

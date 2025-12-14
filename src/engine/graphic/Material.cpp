@@ -2,6 +2,7 @@
 #include "Shader.h"
 #include "Logger.h"
 #include "ResourceManager.h"
+#include "DefaultShader.h"
 
 using namespace Engine;
 using namespace DirectX;
@@ -101,14 +102,14 @@ std::shared_ptr<Material> Material::CreateDefault() {
     material->SetRoughness(0.5f);                       // 中等粗糙度
     material->SetEmissive(0.0f);                        // 无自发光
 
-    // 加载默认着色器
-    auto resourceManager = ResourceManager::GetInstance();
-    auto shaderHandle = resourceManager->Load<Shader>("assets/shaders/default.hlsl");
-    if (shaderHandle.IsValid()) {
-        material->SetShader(std::shared_ptr<Shader>(shaderHandle.Get(), [](Shader*){})); // 临时解决方案
-        LOG_INFO("Material", "默认材质加载了默认着色器");
+    // 使用硬编码的默认着色器
+    auto defaultShader = std::make_shared<Shader>();
+    if (defaultShader->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
+        defaultShader->SetName("DefaultMaterialShader");
+        material->SetShader(defaultShader);
+        //LOG_INFO("Material", "默认材质加载了硬编码着色器");
     } else {
-        LOG_WARNING("Material", "默认材质无法加载默认着色器");
+        //LOG_ERROR("Material", "默认材质无法编译硬编码着色器");
     }
 
     material->m_isLoaded = true;

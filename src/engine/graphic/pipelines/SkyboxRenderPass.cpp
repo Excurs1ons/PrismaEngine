@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "ResourceManager.h"
 #include "Shader.h"
+#include "DefaultShader.h"
 #include <DirectXColors.h>
 
 namespace Engine {
@@ -16,14 +17,15 @@ SkyboxRenderPass::SkyboxRenderPass()
 {
     LOG_DEBUG("SkyboxRenderPass", "构造函数被调用");
     InitializeSkyboxMesh();
-    // 加载天空盒着色器
-    auto resourceManager = ResourceManager::GetInstance();
-    auto shaderHandle = resourceManager->Load<Shader>("assets/shaders/Skybox.hlsl");
-    if (shaderHandle.IsValid()) {
-        m_skyboxShader = std::shared_ptr<Shader>(shaderHandle.Get(), [](Shader*){});
-        LOG_DEBUG("SkyboxRenderPass", "天空盒着色器加载成功");
+
+    // 使用硬编码的天空盒着色器
+    m_skyboxShader = std::make_shared<Shader>();
+    if (m_skyboxShader->CompileFromString(Graphic::SKYBOX_VERTEX_SHADER, Graphic::SKYBOX_PIXEL_SHADER)) {
+        m_skyboxShader->SetName("SkyboxDefault");
+        LOG_DEBUG("SkyboxRenderPass", "天空盒着色器编译成功");
     } else {
-        LOG_ERROR("SkyboxRenderPass", "天空盒着色器加载失败");
+        LOG_ERROR("SkyboxRenderPass", "天空盒着色器编译失败");
+        m_skyboxShader.reset();
     }
 }
 
