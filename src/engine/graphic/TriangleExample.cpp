@@ -2,7 +2,7 @@
 #include "Logger.h"
 #include "Material.h"
 #include "ResourceManager.h"
-#include "../CameraController.h"
+#include "../Camera3DController.h"
 
 TriangleExample::TriangleExample()
 {
@@ -14,11 +14,11 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     auto scene = std::make_shared<Scene>();
     
     // 创建相机
-    auto cameraObj = CreateCamera("MainCamera", 0.0f, 0.0f);
+    auto cameraObj = CreateCamera("MainCamera", 0.0f, 1.0f,-5.0f);
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
-    auto camera = cameraObj->GetComponent<Camera2D>();
+    auto camera = cameraObj->GetComponent<Camera3D>();
     if (camera) {
         scene->SetMainCamera(camera);
         LOG_INFO("TriangleExample", "Main camera set for scene");
@@ -31,6 +31,12 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     // 创建一个四边形来测试索引缓冲区
     auto quad = CreateQuad("TestQuad", 0.0f, 0.0f, 0.3f, 0.0f, 0.0f, 1.0f); // 蓝色四边形
 
+    // 创建一个立方体
+    auto cube = CreateCube("ExampleCube", 0.0f, 0.5f, 0.8f, 1.0f, 0.8f, 0.0f); // 黄色立方体
+
+    // 创建一个地面四边形
+    auto ground = CreateGround("Ground", 0.0f, 0.0f, 4.0f, 0.3f, 0.5f, 0.3f, 1.0f); // 深绿色地面
+
     // 添加更多参考对象来观察相机移动
     auto referenceQuad1 = CreateQuad("RefQuad1", -2.0f, 1.5f, 0.2f, 1.0f, 1.0f, 0.0f); // 黄色
     auto referenceQuad2 = CreateQuad("RefQuad2", 2.0f, -1.5f, 0.2f, 1.0f, 0.0f, 1.0f); // 品红色
@@ -41,17 +47,19 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     scene->AddGameObject(triangle1);
     scene->AddGameObject(triangle2);
     scene->AddGameObject(quad);
+    scene->AddGameObject(cube);
+    scene->AddGameObject(ground);
     scene->AddGameObject(referenceQuad1);
     scene->AddGameObject(referenceQuad2);
     scene->AddGameObject(referenceTriangle1);
     scene->AddGameObject(referenceTriangle2);
     
-    LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形（索引缓冲区测试）");
+    LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形，1个立方体，1个地面（索引缓冲区测试）");
     
     return scene;
 }
 
-std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& name, float posX, float posY, 
+std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& name, float posX, float posY, float posZ,
                                                           float r, float g, float b, float a)
 {
     // 创建游戏对象
@@ -61,7 +69,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     auto transform = gameObject->transform();
     transform->position.x = posX;
     transform->position.y = posY;
-    transform->position.z = 0.0f;
+    transform->position.z = posZ;
     
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
@@ -139,39 +147,163 @@ std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name,
     return gameObject;
 }
 
-std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& name, float posX, float posY)
+std::shared_ptr<GameObject> TriangleExample::CreateCube(const std::string& name, float posX, float posY,
+                                                       float size, float r, float g, float b, float a)
 {
     // 创建游戏对象
     auto gameObject = std::make_shared<GameObject>(name);
-    
+
     // 添加变换组件并设置位置
     auto transform = gameObject->transform();
     transform->position.x = posX;
     transform->position.y = posY;
     transform->position.z = 0.0f;
-    
-    // 添加相机组件
-    auto camera = gameObject->AddComponent<Camera2D>();
+
+    // 为立方体添加一些旋转使其看起来更有立体感
+    transform->rotation.x = 45.0f;  // 绕X轴旋转45度
+    transform->rotation.y = 45.0f;  // 绕Y轴旋转45度
+
+    // 添加渲染组件
+    auto renderComponent = gameObject->AddComponent<RenderComponent>();
+
+    // 创建立方体的顶点数据 - 真正的立方体，使用世界坐标
+    float halfSize = size / 2.0f;
+    float cubeVertices[] = {
+        // 位置 (x, y, z)              颜色 (r, g, b, a)
+        // 立方体的8个顶点
+        // 前面4个顶点 (Z = halfSize)
+        posX - halfSize, posY + halfSize, halfSize,  r, g, b, a,  // 0 - 左上
+        posX + halfSize, posY + halfSize, halfSize,  r, g, b, a,  // 1 - 右上
+        posX + halfSize, posY - halfSize, halfSize,  r, g, b, a,  // 2 - 右下
+        posX - halfSize, posY - halfSize, halfSize,  r, g, b, a,  // 3 - 左下
+
+        // 后面4个顶点 (Z = -halfSize)
+        posX - halfSize, posY + halfSize, -halfSize,  r * 0.8f, g * 0.8f, b * 0.8f, a,  // 4 - 左上
+        posX + halfSize, posY + halfSize, -halfSize,  r * 0.8f, g * 0.8f, b * 0.8f, a,  // 5 - 右上
+        posX + halfSize, posY - halfSize, -halfSize,  r * 0.8f, g * 0.8f, b * 0.8f, a,  // 6 - 右下
+        posX - halfSize, posY - halfSize, -halfSize,  r * 0.8f, g * 0.8f, b * 0.8f, a   // 7 - 左下
+    };
+
+    // 定义索引数据 - 12个三角形（6个面 × 2个三角形）
+    uint16_t cubeIndices[] = {
+        // 前面 (Z = halfSize)
+        0, 1, 2,  0, 2, 3,
+        // 后面 (Z = -halfSize)
+        4, 7, 6,  4, 6, 5,
+        // 左面 (X = -halfSize)
+        0, 3, 7,  0, 7, 4,
+        // 右面 (X = +halfSize)
+        1, 5, 6,  1, 6, 2,
+        // 顶面 (Y = +halfSize)
+        0, 4, 5,  0, 5, 1,
+        // 底面 (Y = -halfSize)
+        3, 2, 6,  3, 6, 7
+    };
+
+    // 设置顶点数据
+    renderComponent->SetVertexData(cubeVertices, 12);
+
+    // 设置索引数据
+    renderComponent->SetIndexData(cubeIndices, 18);
+
+    // 创建特殊材质
+    auto material = Material::CreateDefault();
+    material->SetBaseColor(r, g, b, a);
+    material->SetMetallic(0.3f);   // 中等金属度
+    material->SetRoughness(0.5f);  // 中等粗糙度
+    renderComponent->SetMaterial(material);
+
+    LOG_DEBUG("TriangleExample", "创建立方体 '{0}' 在位置 ({1}, {2})，大小 {3}，颜色 ({4}, {5}, {6}, {7})",
+        name, posX, posY, size, r, g, b, a);
+
+    return gameObject;
+}
+
+std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& name, float posX, float posY,
+                                                         float size, float r, float g, float b, float a)
+{
+    // 创建游戏对象
+    auto gameObject = std::make_shared<GameObject>(name);
+
+    // 添加变换组件并设置位置
+    auto transform = gameObject->transform();
+    transform->position.x = posX;
+    transform->position.y = posY;
+    transform->position.z = 0.0f;
+
+    // 将四边形旋转90度，使其平放在地上（绕X轴旋转）
+    transform->rotation.x = 90.0f;  // 绕X轴旋转90度，使Z轴向上
+
+    // 添加渲染组件
+    auto renderComponent = gameObject->AddComponent<RenderComponent>();
+
+    // 定义四边形顶点数据 (位置 + 颜色) - 4个顶点
+    float groundVertices[] = {
+        // 位置 (x, y, z)              颜色 (r, g, b, a)
+        posX - size/2, posY - size/2, 0.0f,  r, g, b, a,  // 后下
+        posX + size/2, posY - size/2, 0.0f,  r, g, b, a,  // 后上
+        posX + size/2, posY + size/2, 0.0f,  r, g, b, a,  // 前上
+        posX - size/2, posY + size/2, 0.0f,  r, g, b, a   // 前下
+    };
+
+    // 定义索引数据 - 2个三角形，共6个索引
+    uint16_t groundIndices[] = {
+        0, 1, 2,  // 第一个三角形
+        0, 2, 3   // 第二个三角形
+    };
+
+    // 设置顶点数据
+    renderComponent->SetVertexData(groundVertices, 4);
+
+    // 设置索引数据
+    renderComponent->SetIndexData(groundIndices, 6);
+
+    // 创建特殊材质
+    auto material = Material::CreateDefault();
+    material->SetBaseColor(r, g, b, a);
+    material->SetMetallic(0.1f);   // 低金属度
+    material->SetRoughness(0.8f);  // 高粗糙度（更像地面）
+    renderComponent->SetMaterial(material);
+
+    LOG_DEBUG("TriangleExample", "创建地面 '{0}' 在位置 ({1}, {2})，大小 {3}，颜色 ({4}, {5}, {6}, {7})",
+        name, posX, posY, size, r, g, b, a);
+
+    return gameObject;
+}
+
+std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& name, float posX, float posY, float posZ)
+{
+    // 创建游戏对象
+    auto game_object = std::make_shared<GameObject>(name);
+
+    // 添加变换组件并设置位置
+    auto *transform = game_object->transform();
+    transform->position.x = posX;
+    transform->position.y = posY;
+    transform->position.z = posZ;
+
+    // 添加3D相机组件
+    auto *camera = game_object->AddComponent<Camera3D>();
 
     // 设置相机位置
-    camera->SetPosition(posX, posY, 0.0f);
+    camera->SetPosition(posX, posY, posZ);
 
-    // 设置正交投影 - 使用基于宽高比的投影
-    // 假设窗口大小，这里使用16:9的宽高比作为默认值
-    float aspectRatio = 16.0f / 9.0f;
-    float viewHeight = 2.0f;  // 视口高度为2个单位
-    float viewWidth = viewHeight * aspectRatio;  // 根据宽高比计算宽度
-
-    camera->SetOrthographicProjection(-viewWidth/2, viewWidth/2, -viewHeight/2, viewHeight/2, 0.1f, 1000.0f);
+    // 设置透视投影
+    float aspect_ratio = 16.0f / 9.0f;
+    camera->SetPerspectiveProjection(XM_PIDIV4, aspect_ratio, 0.1F, 1000.0F);
 
     // 设置清除颜色为深蓝色
-    camera->SetClearColor(0.1f, 0.2f, 0.3f, 1.0f);
+    camera->SetClearColor(0.0F, 0.2f, 0.0f, 1.0f);
 
-    // 添加相机控制器组件
-    auto cameraController = gameObject->AddComponent<CameraController>();
-    cameraController->SetMoveSpeed(2.0f);  // 设置移动速度
-    
-    LOG_DEBUG("TriangleExample", "Created camera '{0}' at position ({1}, {2})", name, posX, posY);
-    
-    return gameObject;
+    // 设置相机旋转，使其看向原点
+    camera->LookAt(0.0f, 0.0f, 0.0f);
+
+    // 添加3D相机控制器组件
+    auto camera_controller = game_object->AddComponent<Camera3DController>();
+    camera_controller->SetMoveSpeed(5.0f);      // 设置移动速度
+    camera_controller->SetRotationSpeed(90.0f);  // 设置旋转速度
+
+    LOG_DEBUG("TriangleExample", "Created 3D camera '{0}' at position ({1}, {2}, {3})", name, posX, posY, posZ);
+
+    return game_object;
 }
