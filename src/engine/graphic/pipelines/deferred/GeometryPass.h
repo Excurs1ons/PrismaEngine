@@ -6,6 +6,8 @@
 #include <memory>
 
 namespace Engine {
+class Shader;
+
 namespace Graphic {
 namespace Pipelines {
 namespace Deferred {
@@ -63,6 +65,9 @@ private:
         uint32_t culledObjects = 0;
         uint32_t triangles = 0;
     } m_stats;
+
+    // 延迟渲染几何通道着色器
+    std::shared_ptr<Shader> m_shader;
 };
 
 } // namespace Deferred

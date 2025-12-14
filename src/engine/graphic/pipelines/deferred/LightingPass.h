@@ -120,6 +120,14 @@ private:
         uint32_t shadowCastingLights = 0;
     } m_stats;
 
+    // 延迟渲染光照通道着色器
+    std::shared_ptr<Shader> m_shader;
+
+    // 全屏四边形几何体
+    void CreateFullScreenQuad();
+    std::vector<float> m_fullScreenVertices;
+    std::vector<uint16_t> m_fullScreenIndices;
+
     // 渲染全屏四边形
     void RenderFullScreenQuad(RenderCommandContext* context);
 
