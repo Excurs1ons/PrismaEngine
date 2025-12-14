@@ -4,6 +4,7 @@
 // #include "ApplicationWindows.h"
 #include "Camera2D.h"
 #include "LogScope.h"
+#include "RenderException.h"
 #include <d3d12.h>
 #include <d3dcompiler.h>
 #include <dxgi.h>
@@ -316,13 +317,13 @@ void RenderBackendDirectX12::BeginFrame() {
     HRESULT hr = m_commandAllocator->Reset();
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法重置命令分配器: {0}", HrToString(hr));
-        return;
+        throw Graphic::RenderException("无法重置命令分配器");
     }
 
     hr = m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get());
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法重置命令列表: {0}", HrToString(hr));
-        return;
+        throw Graphic::RenderException("无法重置命令列表");
     }
 
     // 设置基本渲染状态
@@ -368,7 +369,7 @@ void RenderBackendDirectX12::EndFrame() {
     HRESULT hr = m_commandList->Close();
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法关闭命令列表: {0}", HrToString(hr));
-        return;
+        throw Graphic::RenderException("无法关闭命令列表");
     }
 
     // 执行命令列表
@@ -416,7 +417,7 @@ void RenderBackendDirectX12::Present() {
 
         if (FAILED(hr)) {
             LOG_ERROR("DirectX", "Present 失败: {0}", HrToString(hr));
-            return;
+            throw Graphic::RenderException("Present 失败");
         }
 
         // 更新帧索引
@@ -444,13 +445,13 @@ bool RenderBackendDirectX12::LoadPipeline() {
     HRESULT hr = CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&factory));
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法创建DXGI工厂: {0}", HrToString(hr));
-        return false;
+        throw Graphic::RenderException("无法创建DXGI工厂");
     }
     LOG_VERBOSE("DirectX", "成功创建DXGI工厂");
 
     if (g_hWnd == nullptr) {
         LOG_ERROR("DirectX", "无效的窗口句柄");
-        return false;
+        throw Graphic::RenderException("无效的窗口句柄");
     }
 
     RECT rc;
@@ -465,7 +466,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
     hr = D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法创建D3D12设备: {0}", HrToString(hr));
-        return false;
+        throw Graphic::RenderException("无法创建D3D12设备");
     }
     LOG_VERBOSE("DirectX", "成功创建D3D12设备");
 
@@ -480,7 +481,7 @@ bool RenderBackendDirectX12::LoadPipeline() {
     hr = m_device->CreateCommandQueue(&queue_desc, IID_PPV_ARGS(&m_commandQueue));
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法创建命令队列: {0}", HrToString(hr));
-        return false;
+        throw Graphic::RenderException("无法创建命令队列");
     }
     LOG_VERBOSE("DirectX", "成功创建命令队列");
 
@@ -904,7 +905,7 @@ void RenderBackendDirectX12::UploadAndBindVertexBuffer(ID3D12GraphicsCommandList
 
     if (!m_dynamicVertexBuffer || !m_dynamicVBCPUAddress) {
         LOG_ERROR("DirectX", "UploadAndBindVertexBuffer: dynamic buffer not created");
-        return;
+        throw Graphic::RenderException("动态顶点缓冲区未创建");
     }
     // Simple linear allocator with wrap when necessary. Ensure 16-byte alignment for safety.
     const uint64_t align = 16;
@@ -942,7 +943,7 @@ void RenderBackendDirectX12::UploadAndBindIndexBuffer(ID3D12GraphicsCommandList*
 
     if (!m_dynamicIndexBuffer || !m_dynamicIBCPUAddress) {
         LOG_ERROR("DirectX", "UploadAndBindIndexBuffer: 动态索引缓冲区未创建");
-        return;
+        throw Graphic::RenderException("动态索引缓冲区未创建");
     }
 
     // 简单的线性分配器，必要时回绕。确保对齐到4字节边界。
@@ -971,7 +972,7 @@ void RenderBackendDirectX12::UploadAndBindIndexBuffer(ID3D12GraphicsCommandList*
 D3D12_GPU_VIRTUAL_ADDRESS RenderBackendDirectX12::GetDynamicConstantBufferAddress(const void* data, size_t sizeInBytes) {
     if (!m_dynamicConstantBuffer || !m_dynamicCBCPUAddress) {
         LOG_ERROR("DirectX", "动态常量缓冲区未初始化");
-        return 0;
+        throw Graphic::RenderException("动态常量缓冲区未初始化");
     }
 
     // 对齐到256字节边界（DirectX 12常量缓冲区要求）
