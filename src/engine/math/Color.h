@@ -75,24 +75,24 @@ public:
     /**
      * @brief 从32位整数创建颜色
      */
-    static constexpr Color FromARGB(uint32_t argb) { return Color(argb); }
-    static constexpr Color FromRGBA(uint32_t rgba);
+    static Color FromARGB(uint32_t argb) { return Color(argb); }
+    static Color FromRGBA(uint32_t rgba);
 
     // ========== 预定义颜色常量 ==========
 
-    static constexpr Color Clear()      { return Color(0.0f, 0.0f, 0.0f, 0.0f); }
-    static constexpr Color Black()      { return Color(0.0f, 0.0f, 0.0f, 1.0f); }
-    static constexpr Color White()      { return Color(1.0f, 1.0f, 1.0f, 1.0f); }
-    static constexpr Color Red()        { return Color(1.0f, 0.0f, 0.0f, 1.0f); }
-    static constexpr Color Green()      { return Color(0.0f, 1.0f, 0.0f, 1.0f); }
-    static constexpr Color Blue()       { return Color(0.0f, 0.0f, 1.0f, 1.0f); }
-    static constexpr Color Yellow()     { return Color(1.0f, 1.0f, 0.0f, 1.0f); }
-    static constexpr Color Magenta()    { return Color(1.0f, 0.0f, 1.0f, 1.0f); }
-    static constexpr Color Cyan()       { return Color(0.0f, 1.0f, 1.0f, 1.0f); }
-    static constexpr Color Gray()       { return Color(0.5f, 0.5f, 0.5f, 1.0f); }
-    static constexpr Color Grey()       { return Gray(); }
-    static constexpr Color Orange()     { return Color(1.0f, 0.5f, 0.0f, 1.0f); }
-    static constexpr Color Purple()     { return Color(0.5f, 0.0f, 0.5f, 1.0f); }
+    static Color Clear()      { return Color(0.0f, 0.0f, 0.0f, 0.0f); }
+    static Color Black()      { return Color(0.0f, 0.0f, 0.0f, 1.0f); }
+    static Color White()      { return Color(1.0f, 1.0f, 1.0f, 1.0f); }
+    static Color Red()        { return Color(1.0f, 0.0f, 0.0f, 1.0f); }
+    static Color Green()      { return Color(0.0f, 1.0f, 0.0f, 1.0f); }
+    static Color Blue()       { return Color(0.0f, 0.0f, 1.0f, 1.0f); }
+    static Color Yellow()     { return Color(1.0f, 1.0f, 0.0f, 1.0f); }
+    static Color Magenta()    { return Color(1.0f, 0.0f, 1.0f, 1.0f); }
+    static Color Cyan()       { return Color(0.0f, 1.0f, 1.0f, 1.0f); }
+    static Color Gray()       { return Color(0.5f, 0.5f, 0.5f, 1.0f); }
+    static Color Grey()       { return Gray(); }
+    static Color Orange()     { return Color(1.0f, 0.5f, 0.0f, 1.0f); }
+    static Color Purple()     { return Color(0.5f, 0.0f, 0.5f, 1.0f); }
 
     // ========== 访问器 ==========
 
