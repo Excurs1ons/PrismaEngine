@@ -137,8 +137,22 @@ void RenderSystem::Update(float deltaTime) {
         if (currentTime - lastRetryTime >= 5) {
             LOG_WARNING("Render", "检测到渲染设备未初始化，尝试重新初始化...");
 
-            // 暂时不支持设备重建
-            LOG_ERROR("Render", "设备重建功能尚未实现");
+            // 尝试重建设备
+            auto platform = PlatformWindows::GetInstance();
+            if (platform) {
+                WindowHandle windowHandle = platform->GetWindowHandle();
+                int width = 0, height = 0;
+                platform->GetWindowSize(windowHandle, width, height);
+
+                auto dxBackend = dynamic_cast<RenderBackendDirectX12*>(renderBackend.get());
+                if (dxBackend) {
+                    if (dxBackend->Reinitialize(platform.get(), windowHandle, nullptr, width, height)) {
+                        LOG_INFO("Render", "设备重建成功");
+                    } else {
+                        LOG_ERROR("Render", "设备重建失败，将在5秒后重试");
+                    }
+                }
+            }
             lastRetryTime = currentTime;
         }
         return;
