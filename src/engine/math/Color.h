@@ -20,39 +20,39 @@ public:
     /**
      * @brief 默认构造 - 白色 (1, 1, 1, 1)
      */
-    constexpr Color() : m_value(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f)) {}
+    Color() : m_value(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f)) {}
 
     /**
      * @brief RGB构造 - Alpha = 1.0
      */
-    constexpr Color(float r, float g, float b) : m_value(DirectX::XMVectorSet(r, g, b, 1.0f)) {}
+    Color(float r, float g, float b) : m_value(DirectX::XMVectorSet(r, g, b, 1.0f)) {}
 
     /**
      * @brief RGBA构造
      */
-    constexpr Color(float r, float g, float b, float a) : m_value(DirectX::XMVectorSet(r, g, b, a)) {}
+    Color(float r, float g, float b, float a) : m_value(DirectX::XMVectorSet(r, g, b, a)) {}
 
     /**
      * @brief 从XMVECTOR构造
      */
-    explicit constexpr Color(const DirectX::XMVECTOR& vec) : m_value(vec) {}
+    explicit Color(const DirectX::XMVECTOR& vec) : m_value(vec) {}
 
     /**
      * @brief 从XMFLOAT4构造
      */
-    explicit constexpr Color(const DirectX::XMFLOAT4& color)
+    explicit Color(const DirectX::XMFLOAT4& color)
         : m_value(DirectX::XMVectorSet(color.x, color.y, color.z, color.w)) {}
 
     /**
      * @brief 从XMFLOAT3构造 - Alpha = 1.0
      */
-    explicit constexpr Color(const DirectX::XMFLOAT3& color)
+    explicit Color(const DirectX::XMFLOAT3& color)
         : m_value(DirectX::XMVectorSet(color.x, color.y, color.z, 1.0f)) {}
 
     /**
      * @brief 从32位ARGB整数构造 (0xAARRGGBB)
      */
-    explicit constexpr Color(uint32_t argb)
+    explicit Color(uint32_t argb)
         : m_value(DirectX::XMVectorSet(
             static_cast<float>((argb >> 16) & 0xFF) / 255.0f,  // R
             static_cast<float>((argb >> 8) & 0xFF) / 255.0f,   // G
@@ -96,10 +96,10 @@ public:
 
     // ========== 访问器 ==========
 
-    constexpr float r() const { return DirectX::XMVectorGetX(m_value); }
-    constexpr float g() const { return DirectX::XMVectorGetY(m_value); }
-    constexpr float b() const { return DirectX::XMVectorGetZ(m_value); }
-    constexpr float a() const { return DirectX::XMVectorGetW(m_value); }
+    float r() const { return DirectX::XMVectorGetX(m_value); }
+    float g() const { return DirectX::XMVectorGetY(m_value); }
+    float b() const { return DirectX::XMVectorGetZ(m_value); }
+    float a() const { return DirectX::XMVectorGetW(m_value); }
 
     void SetR(float r) { m_value = DirectX::XMVectorSetX(m_value, r); }
     void SetG(float g) { m_value = DirectX::XMVectorSetY(m_value, g); }
@@ -113,36 +113,36 @@ public:
     // ========== 运算符重载 ==========
 
     // 相等性比较
-    constexpr bool operator==(const Color& other) const {
+    bool operator==(const Color& other) const {
         return DirectX::XMVector4NearEqual(m_value, other.m_value, DirectX::XMVectorSplatEpsilon());
     }
 
-    constexpr bool operator!=(const Color& other) const {
+    bool operator!=(const Color& other) const {
         return !(*this == other);
     }
 
     // 算术运算
-    constexpr Color operator+(const Color& other) const {
+    Color operator+(const Color& other) const {
         return Color(DirectX::XMVectorAdd(m_value, other.m_value));
     }
 
-    constexpr Color operator-(const Color& other) const {
+    Color operator-(const Color& other) const {
         return Color(DirectX::XMVectorSubtract(m_value, other.m_value));
     }
 
-    constexpr Color operator*(const Color& other) const {
+    Color operator*(const Color& other) const {
         return Color(DirectX::XMVectorMultiply(m_value, other.m_value));
     }
 
-    constexpr Color operator*(float scalar) const {
+    Color operator*(float scalar) const {
         return Color(DirectX::XMVectorScale(m_value, scalar));
     }
 
-    constexpr Color operator/(const Color& other) const {
+    Color operator/(const Color& other) const {
         return Color(DirectX::XMVectorDivide(m_value, other.m_value));
     }
 
-    constexpr Color operator/(float scalar) const {
+    Color operator/(float scalar) const {
         return Color(DirectX::XMVectorScale(m_value, 1.0f / scalar));
     }
 
@@ -265,26 +265,26 @@ public:
     /**
      * @brief 转换为XMVECTOR (隐式转换)
      */
-    constexpr operator DirectX::XMVECTOR() const { return m_value; }
+    operator DirectX::XMVECTOR() const { return m_value; }
 
     /**
      * @brief 转换为XMFLOAT4
      */
-    constexpr DirectX::XMFLOAT4 ToXMFLOAT4() const {
+    DirectX::XMFLOAT4 ToXMFLOAT4() const {
         return DirectX::XMFLOAT4(r(), g(), b(), a());
     }
 
     /**
      * @brief 转换为XMFLOAT3 (忽略Alpha)
      */
-    constexpr DirectX::XMFLOAT3 ToXMFLOAT3() const {
+    DirectX::XMFLOAT3 ToXMFLOAT3() const {
         return DirectX::XMFLOAT3(r(), g(), b());
     }
 
     /**
      * @brief 转换为32位ARGB整数
      */
-    constexpr uint32_t ToARGB() const {
+    uint32_t ToARGB() const {
         return (
             (static_cast<uint32_t>(a() * 255.0f) << 24) |
             (static_cast<uint32_t>(r() * 255.0f) << 16) |
@@ -296,7 +296,7 @@ public:
     /**
      * @brief 转换为32位RGBA整数
      */
-    constexpr uint32_t ToRGBA() const {
+    uint32_t ToRGBA() const {
         return (
             (static_cast<uint32_t>(r() * 255.0f) << 24) |
             (static_cast<uint32_t>(g() * 255.0f) << 16) |
@@ -354,7 +354,7 @@ inline constexpr Color operator*(float scalar, const Color& color) {
 
 // ========== RGBA构造函数实现 ==========
 
-constexpr Color Color::FromRGBA(uint32_t rgba) {
+Color Color::FromRGBA(uint32_t rgba) {
     return Color(
         static_cast<float>((rgba >> 24) & 0xFF) / 255.0f,  // R
         static_cast<float>((rgba >> 16) & 0xFF) / 255.0f,  // G
