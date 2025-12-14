@@ -20,13 +20,14 @@ SkyboxRenderPass::SkyboxRenderPass()
 
     // 使用硬编码的天空盒着色器
     m_skyboxShader = std::make_shared<Shader>();
-    if (m_skyboxShader->CompileFromString(Graphic::SKYBOX_VERTEX_SHADER, Graphic::SKYBOX_PIXEL_SHADER)) {
-        m_skyboxShader->SetName("SkyboxDefault");
-        LOG_DEBUG("SkyboxRenderPass", "天空盒着色器编译成功");
-    } else {
+    if (!m_skyboxShader || !m_skyboxShader->CompileFromString(Graphic::SKYBOX_VERTEX_SHADER, Graphic::SKYBOX_PIXEL_SHADER)) {
         LOG_ERROR("SkyboxRenderPass", "天空盒着色器编译失败");
         m_skyboxShader.reset();
+        return;
     }
+
+    m_skyboxShader->SetName("SkyboxDefault");
+    LOG_DEBUG("SkyboxRenderPass", "天空盒着色器编译成功");
 }
 
 SkyboxRenderPass::~SkyboxRenderPass()
@@ -43,9 +44,24 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
         return;
     }
 
-    // 验证必要资源
-    if (!IsInitialized()) {
-        LOG_WARNING("SkyboxRenderPass", "Skybox not properly initialized, skipping render");
+    // 验证必要资源 - 增强的安全检查
+    if (!m_skyboxShader) {
+        LOG_ERROR("SkyboxRenderPass", "Skybox shader is null, skipping render");
+        return;
+    }
+
+    if (!m_skyboxShader->IsLoaded()) {
+        LOG_ERROR("SkyboxRenderPass", "Skybox shader not loaded, skipping render");
+        return;
+    }
+
+    if (m_vertices.empty()) {
+        LOG_ERROR("SkyboxRenderPass", "Skybox vertices not initialized, skipping render");
+        return;
+    }
+
+    if (m_indices.empty()) {
+        LOG_ERROR("SkyboxRenderPass", "Skybox indices not initialized, skipping render");
         return;
     }
 
@@ -54,11 +70,23 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
         return;
     }
 
+    // 检查视口是否有效
+    if (m_width == 0 || m_height == 0) {
+        LOG_WARNING("SkyboxRenderPass", "Invalid viewport dimensions ({0}x{1}), skipping render", m_width, m_height);
+        return;
+    }
+
     LOG_DEBUG("SkyboxRenderPass", "上下文有效，开始渲染逻辑");
     LOG_DEBUG("SkyboxRenderPass", "着色器和网格数据有效");
 
     try {
-        // 1. 设置常量缓冲区（视图投影矩阵）
+        // 1. 设置着色器资源（必须在绘制之前）
+        if (m_cubeMapTexture) {
+            LOG_DEBUG("SkyboxRenderPass", "设置立方体贴图纹理");
+            context->SetShaderResource("CubeMap", m_cubeMapTexture);
+        }
+
+        // 2. 设置常量缓冲区（视图投影矩阵）
         if (!m_constantBuffer.empty()) {
             LOG_DEBUG("SkyboxRenderPass", "设置常量缓冲区");
             // 天空盒需要特殊的视图矩阵处理（移除平移）
@@ -66,28 +94,23 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
             modifiedViewProjection.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
             context->SetConstantBuffer("ConstantBuffer", modifiedViewProjection);
         }
-        
-        // 2. 设置顶点和索引缓冲区
+
+        // 3. 设置顶点和索引缓冲区
         LOG_DEBUG("SkyboxRenderPass", "设置顶点缓冲区，顶点数量: {0}", m_vertices.size());
-        context->SetVertexBuffer(m_vertices.data(), 
-                               static_cast<uint32_t>(m_vertices.size() * sizeof(float)), 
+        context->SetVertexBuffer(m_vertices.data(),
+                               static_cast<uint32_t>(m_vertices.size() * sizeof(float)),
                                3 * sizeof(float)); // 3个float表示一个顶点位置
-        
+
         LOG_DEBUG("SkyboxRenderPass", "设置索引缓冲区，索引数量: {0}", m_indices.size());
-        context->SetIndexBuffer(m_indices.data(), 
-                              static_cast<uint32_t>(m_indices.size() * sizeof(uint16_t)), 
+        context->SetIndexBuffer(m_indices.data(),
+                              static_cast<uint32_t>(m_indices.size() * sizeof(uint16_t)),
                               true); // 使用16位索引
-        
-        // 3. 绘制立方体
+
+        // 4. 绘制立方体
         LOG_DEBUG("SkyboxRenderPass", "调用 DrawIndexed，索引数量: {0}", m_indices.size());
         context->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
 
         LOG_INFO("SkyboxRenderPass", "天空盒渲染完成");
-
-        // 设置立方体贴图
-        if (m_cubeMapTexture) {
-            context->SetShaderResource("CubeMap", m_cubeMapTexture);
-        }
 
     } catch (const std::exception& e) {
         LOG_ERROR("SkyboxRenderPass", "Exception during execute: {0}", e.what());
@@ -238,6 +261,7 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
 
 bool SkyboxRenderPass::IsInitialized() const {
     return m_skyboxShader != nullptr &&
+           m_skyboxShader->IsLoaded() &&
            !m_vertices.empty() &&
            !m_indices.empty() &&
            m_width > 0 &&
