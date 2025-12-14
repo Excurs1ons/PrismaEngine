@@ -186,6 +186,150 @@ RenderBackendDirectX12::~RenderBackendDirectX12() {}
 void RenderBackendDirectX12::OnRender() {}
 void GetHardwareAdapter(IDXGIFactory1* pFactory, IDXGIAdapter1** ppAdapter);
 
+bool RenderBackendDirectX12::Reinitialize(Platform* platform, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
+    LOG_INFO("DirectX", "开始重新初始化渲染设备...");
+
+    // 更新窗口句柄和尺寸
+    g_hWnd = (HWND)windowHandle;
+    m_height = height;
+    m_width = width;
+    m_scissorRect = {0, 0, static_cast<LONG>(width), static_cast<LONG>(height)};
+    m_viewport = {0.0f, 0.0f, static_cast<float>(width), static_cast<float>(height), 0.0f, 1.0f};
+    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+
+    // 释放旧资源但保留设备
+    // 先等待GPU完成所有工作
+    WaitForPreviousFrame();
+
+    // 释放交换链相关资源
+    for (UINT n = 0; n < FrameCount; n++) {
+        m_renderTargets[n].Reset();
+    }
+    m_swapChain.Reset();
+
+    // 关闭句柄
+    CloseHandle(m_fenceEvent);
+    m_fence.Reset();
+
+    // 重置帧索引
+    m_frameIndex = 0;
+
+    // 创建新的事件句柄
+    m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (m_fenceEvent == nullptr) {
+        LOG_ERROR("DirectX", "无法创建事件句柄");
+        return false;
+    }
+
+    // 创建新的交换链
+    ComPtr<IDXGIFactory4> factory;
+    HRESULT hr = CreateDXGIFactory2(0, IID_PPV_ARGS(&factory));
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建DXGI工厂: {0}", HrToString(hr));
+        return false;
+    }
+
+    if (g_hWnd == nullptr) {
+        LOG_ERROR("DirectX", "无效的窗口句柄");
+        return false;
+    }
+
+    // 重新创建交换链
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
+    swapChainDesc.BufferCount = FrameCount;
+    swapChainDesc.Width = m_width;
+    swapChainDesc.Height = m_height;
+    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
+    swapChainDesc.SampleDesc.Count = 1;
+
+    ComPtr<IDXGISwapChain1> swapChain;
+    hr = factory->CreateSwapChainForHwnd(m_commandQueue.Get(), g_hWnd, &swapChainDesc, nullptr, nullptr, &swapChain);
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建交换链: {0}", HrToString(hr));
+        return false;
+    }
+
+    // 获取交换链接口
+    hr = swapChain.As(&m_swapChain);
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法获取交换链接口: {0}", HrToString(hr));
+        return false;
+    }
+
+    // 设置窗口关联
+    hr = factory->MakeWindowAssociation(g_hWnd, DXGI_MWA_NO_ALT_ENTER);
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法设置窗口关联: {0}", HrToString(hr));
+        return false;
+    }
+
+    // 创建深度缓冲区
+    D3D12_DEPTH_STENCIL_DESC depthStencilDesc = {};
+    depthStencilDesc.DepthEnable = TRUE;
+    depthStencilDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+    depthStencilDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+    depthStencilDesc.StencilEnable = FALSE;
+    depthStencilDesc.StencilReadMask = D3D12_DEFAULT_STENCIL_READ_MASK;
+    depthStencilDesc.StencilWriteMask = D3D12_DEFAULT_STENCIL_WRITE_MASK;
+
+    D3D12_CLEAR_VALUE depthOpt = {};
+    depthOpt.Format = DXGI_FORMAT_D32_FLOAT;
+    depthOpt.DepthStencil.Depth = 1.0f;
+    depthOpt.DepthStencil.Stencil = 0;
+
+    CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
+    CD3DX12_RESOURCE_DESC texDesc = CD3DX12_RESOURCE_DESC::Tex2D(DXGI_FORMAT_D32_FLOAT, m_width, m_height, 1, 0, 1, 0, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+
+    hr = m_device->CreateCommittedResource(
+        &heapProps,
+        D3D12_HEAP_FLAG_NONE,
+        &texDesc,
+        D3D12_RESOURCE_STATE_DEPTH_WRITE,
+        &depthOpt,
+        IID_PPV_ARGS(&m_depthStencil)
+    );
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建深度缓冲区: {0}", HrToString(hr));
+        return false;
+    }
+
+    // 创建DSV描述符堆
+    D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
+    dsvHeapDesc.NumDescriptors = 1;
+    dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
+    dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+    hr = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap));
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法创建DSV描述符堆: {0}", HrToString(hr));
+        return false;
+    }
+
+    // 创建DSV
+    D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilViewDesc = {};
+    depthStencilViewDesc.Format = DXGI_FORMAT_D32_FLOAT;
+    depthStencilViewDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+    depthStencilViewDesc.Texture2D.MipSlice = 0;
+    m_device->CreateDepthStencilView(m_depthStencil.Get(), &depthStencilViewDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+
+    // 创建帧资源
+    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+    for (UINT n = 0; n < FrameCount; n++) {
+        hr = m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n]));
+        if (FAILED(hr)) {
+            LOG_ERROR("DirectX", "无法获取后台缓冲区: {0}", HrToString(hr));
+            return false;
+        }
+    }
+
+    // 标记为已初始化
+    isInitialized = true;
+    LOG_INFO("DirectX", "渲染设备重新初始化成功");
+
+    return true;
+}
+
 void RenderBackendDirectX12::Shutdown() {
     // Wait for the GPU to be done with all resources.
     // WaitForPreviousFrame();
