@@ -390,7 +390,7 @@ void RenderBackendDirectX12::BeginFrame() {
     auto scene = SceneManager::GetInstance()->GetCurrentScene();
     if (scene) {
         // 尝试从场景中获取主相机
-        Camera* mainCamera = scene->GetMainCamera();
+        Engine::Graphic::ICamera* mainCamera = scene->GetMainCamera();
         if (mainCamera) {
             // 从主相机获取清除颜色
             XMVECTOR cameraClearColor = mainCamera->GetClearColor();
@@ -1092,10 +1092,6 @@ D3D12_GPU_VIRTUAL_ADDRESS RenderBackendDirectX12::GetDynamicConstantBufferAddres
 
 void RenderBackendDirectX12::WaitForPreviousFrame() {
     // 等待帧渲染完成并不是最佳实践
-    // This is code implemented as such for simplicity. More advanced samples
-    // illustrate how to use fences for efficient resource usage.
-
-    // Signal and increment the fence value.
     const UINT64 fence = m_fenceValue;
     if (!m_fence) {
         // 错误处理：记录/返回，避免调用 Signal(nullptr,...)
