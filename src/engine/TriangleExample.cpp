@@ -1,9 +1,9 @@
 #include "TriangleExample.h"
+#include "Camera3D.h"
+#include "Camera3DController.h"
 #include "Logger.h"
-#include "Material.h"
 #include "ResourceManager.h"
-#include "../Camera3DController.h"
-#include "../Camera3D.h"
+#include "graphic/Material.h"
 
 TriangleExample::TriangleExample()
 {

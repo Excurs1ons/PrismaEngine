@@ -1,10 +1,10 @@
 #pragma once
-#include "Scene.h"
-#include "GameObject.h"
-#include "Transform.h"
-#include "RenderComponent.h"
 #include "Camera3D.h"
 #include "Camera3DController.h"
+#include "GameObject.h"
+#include "Scene.h"
+#include "Transform.h"
+#include "graphic/RenderComponent.h"
 #include <memory>
 
 // 三角形示例类，展示如何创建场景、相机和渲染组件
