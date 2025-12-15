@@ -308,47 +308,25 @@ void RenderBackendDirectX12::BeginFrame() {
         return;
     }
 
+    // 确保前一帧已完成
+    if (m_fence && m_fence->GetCompletedValue() < m_fenceValue - 1) {
+        LOG_DEBUG("DirectX", "等待前一帧完成");
+        WaitForPreviousFrame();
+    }
+
     // 重置每帧动态缓冲区偏移量
     m_dynamicVBOffset = 0;
     m_dynamicIBOffset = 0;
     m_dynamicCBOffset = 0;
 
-    // 重置命令分配器和命令列表
+    // 重置命令分配器（但不重置命令列表，让渲染管线处理）
     HRESULT hr = m_commandAllocator->Reset();
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法重置命令分配器: {0}", HrToString(hr));
         throw Graphic::RenderException("无法重置命令分配器");
     }
 
-    hr = m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get());
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法重置命令列表: {0}", HrToString(hr));
-        throw Graphic::RenderException("无法重置命令列表");
-    }
-
-    // 设置基本渲染状态
-    m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-    m_commandList->RSSetViewports(1, &m_viewport);
-    m_commandList->RSSetScissorRects(1, &m_scissorRect);
-
-    // 准备渲染目标
-    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        m_renderTargets[m_frameIndex].Get(),
-        D3D12_RESOURCE_STATE_PRESENT,
-        D3D12_RESOURCE_STATE_RENDER_TARGET);
-    m_commandList->ResourceBarrier(1, &barrier);
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
-        m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-
-    // 清除渲染目标
-    float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
-    m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
-    LOG_DEBUG("RenderBackendDirectX12", "BeginFrame completed");
+    LOG_DEBUG("RenderBackendDirectX12", "BeginFrame completed, frame index: {0}", m_frameIndex);
 }
 
 void RenderBackendDirectX12::EndFrame() {
@@ -376,12 +354,12 @@ void RenderBackendDirectX12::EndFrame() {
     ID3D12CommandList* ppCommandLists[] = {m_commandList.Get()};
     m_commandQueue->ExecuteCommandLists(_countof(ppCommandLists), ppCommandLists);
 
-    // 设置fence以等待GPU完成
+    // 设置 fence 信号
     const UINT64 fence = m_fenceValue;
     m_commandQueue->Signal(m_fence.Get(), fence);
     m_fenceValue++;
 
-    LOG_DEBUG("RenderBackendDirectX12", "EndFrame completed");
+    LOG_DEBUG("RenderBackendDirectX12", "EndFrame completed, fence value: {0}", fence);
 }
 
 /// <summary>
@@ -399,6 +377,9 @@ bool RenderBackendDirectX12::Supports(RendererFeature feature) const {
 void RenderBackendDirectX12::Present() {
     // 呈现帧到屏幕
     if (m_swapChain != nullptr) {
+        // 等待GPU完成当前帧的渲染
+        WaitForPreviousFrame();
+
         // 使用垂直同步（SyncInterval=1）
         const HRESULT hr = m_swapChain->Present(1, 0);
 
@@ -420,8 +401,10 @@ void RenderBackendDirectX12::Present() {
             throw Graphic::RenderException("Present 失败");
         }
 
-        // 更新帧索引
+        // 更新帧索引 - 在Present之后更新确保同步正确
         m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+
+        LOG_DEBUG("RenderBackendDirectX12", "Present completed, frame index: {0}", m_frameIndex);
     }
 }
 
@@ -872,6 +855,35 @@ RenderCommandContext* RenderBackendDirectX12::CreateCommandContext() {
         LOG_WARNING("DirectX", "设备未初始化，无法创建命令上下文");
         return nullptr;
     }
+
+    // 重置命令列表并设置初始状态
+    HRESULT hr = m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get());
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法重置命令列表: {0}", HrToString(hr));
+        return nullptr;
+    }
+
+    // 设置基本渲染状态
+    m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+    m_commandList->RSSetViewports(1, &m_viewport);
+    m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+    // 准备渲染目标 - 从PRESENT状态转换到RENDER_TARGET状态
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        m_renderTargets[m_frameIndex].Get(),
+        D3D12_RESOURCE_STATE_PRESENT,
+        D3D12_RESOURCE_STATE_RENDER_TARGET);
+    m_commandList->ResourceBarrier(1, &barrier);
+
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+        m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+    // 清除渲染目标和深度缓冲区
+    float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
+    m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+    m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
 
     // 创建一个新的渲染命令上下文实例，使用 backend 的命令列表
     LOG_DEBUG("RenderBackendDirectX12", "创建命令上下文");

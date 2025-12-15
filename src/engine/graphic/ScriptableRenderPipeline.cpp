@@ -1,5 +1,6 @@
 #include "ScriptableRenderPipeline.h"
 #include "Logger.h"
+#include "RenderBackendDirectX12.h"
 
 namespace Engine {
 
@@ -55,15 +56,19 @@ void ScriptableRenderPipeline::Execute()
         return;
     }
 
-    // 创建或复用命令上下文
-    if (!m_cachedContext) {
-        m_cachedContext = m_renderBackend->CreateCommandContext();
-        if (!m_cachedContext) {
-            LOG_ERROR("ScriptableRenderPipeline", "无法创建命令上下文");
-            return;
-        }
-        LOG_DEBUG("ScriptableRenderPipeline", "创建并缓存命令上下文: 0x{0:x}", reinterpret_cast<uintptr_t>(m_cachedContext));
+    // 每帧创建新的命令上下文
+    // 这样确保命令列表的状态是正确的
+    if (m_cachedContext) {
+        delete m_cachedContext;
+        m_cachedContext = nullptr;
     }
+
+    m_cachedContext = m_renderBackend->CreateCommandContext();
+    if (!m_cachedContext) {
+        LOG_ERROR("ScriptableRenderPipeline", "无法创建命令上下文");
+        return;
+    }
+    LOG_DEBUG("ScriptableRenderPipeline", "创建命令上下文: 0x{0:x}", reinterpret_cast<uintptr_t>(m_cachedContext));
 
     // 执行所有渲染通道
     for (size_t i = 0; i < m_renderPasses.size(); ++i) {
@@ -73,6 +78,8 @@ void ScriptableRenderPipeline::Execute()
             renderPass->Execute(m_cachedContext);
         }
     }
+
+    LOG_DEBUG("ScriptableRenderPipeline", "所有渲染通道执行完成");
 
     LOG_DEBUG("ScriptableRenderPipeline", "渲染管线执行完成，共执行 {0} 个渲染通道", m_renderPasses.size());
 }
