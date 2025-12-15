@@ -2,7 +2,7 @@
 #include "Game.h"
 
 #include "../engine/SceneManager.h"
-#include "../engine/graphic/TriangleExample.h"
+#include "../engine/TriangleExample.h"
 #include "Common.h"
 #include "IApplication.h"
 #include "pch.h"
