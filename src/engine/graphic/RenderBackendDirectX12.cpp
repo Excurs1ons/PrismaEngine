@@ -739,6 +739,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
             psoDesc.SampleDesc.Count = 1;
 
             // 创建空的着色器（会导致黑屏但不会崩溃）
+            LOG_WARNING("DirectX", "使用空着色器创建PSO - 这将导致黑屏！");
             psoDesc.VS = CD3DX12_SHADER_BYTECODE(nullptr, 0);
             psoDesc.PS = CD3DX12_SHADER_BYTECODE(nullptr, 0);
 
