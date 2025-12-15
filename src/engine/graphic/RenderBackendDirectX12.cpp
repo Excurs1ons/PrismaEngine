@@ -46,17 +46,17 @@ public:
         // 确定常量缓冲区寄存器
         uint32_t registerIndex = 0;
         if (strcmp(name, "ViewProjection") == 0) {
-            registerIndex = 0;
+            registerIndex = 0;  // b0 - ViewProjection
         } else if (strcmp(name, "View") == 0) {
-            registerIndex = 0;
+            registerIndex = 0;  // b0 - View (与ViewProjection共享，会覆盖)
         } else if (strcmp(name, "Projection") == 0) {
-            registerIndex = 1;
+            registerIndex = 0;  // b0 - Projection (与ViewProjection共享，会覆盖)
         } else if (strcmp(name, "World") == 0) {
-            registerIndex = 2;
+            registerIndex = 1;  // b1 - World
         } else if (strcmp(name, "BaseColor") == 0) {
-            registerIndex = 3;
+            registerIndex = 2;  // b2 - BaseColor
         } else if (strcmp(name, "MaterialParams") == 0) {
-            registerIndex = 4;
+            registerIndex = 3;  // b3 - MaterialParams
         } else if (strcmp(name, "AmbientLight") == 0) {
             registerIndex = 5;
         } else if (strcmp(name, "Lights") == 0) {
@@ -85,17 +85,17 @@ public:
         // 确定常量缓冲区寄存器
         uint32_t registerIndex = 0;
         if (strcmp(name, "ViewProjection") == 0) {
-            registerIndex = 0;
+            registerIndex = 0;  // b0 - ViewProjection
         } else if (strcmp(name, "View") == 0) {
-            registerIndex = 0;
+            registerIndex = 0;  // b0 - View (与ViewProjection共享，会覆盖)
         } else if (strcmp(name, "Projection") == 0) {
-            registerIndex = 1;
+            registerIndex = 0;  // b0 - Projection (与ViewProjection共享，会覆盖)
         } else if (strcmp(name, "World") == 0) {
-            registerIndex = 2;
+            registerIndex = 1;  // b1 - World
         } else if (strcmp(name, "BaseColor") == 0) {
-            registerIndex = 3;
+            registerIndex = 2;  // b2 - BaseColor
         } else if (strcmp(name, "MaterialParams") == 0) {
-            registerIndex = 4;
+            registerIndex = 3;  // b3 - MaterialParams
         } else if (strcmp(name, "AmbientLight") == 0) {
             registerIndex = 5;
         } else if (strcmp(name, "Lights") == 0) {
@@ -301,7 +301,7 @@ void RenderBackendDirectX12::Shutdown() {
     CloseHandle(m_fenceEvent);
 }
 
-void RenderBackendDirectX12::BeginFrame() {
+void RenderBackendDirectX12::BeginFrame(XMFLOAT4 clearColor) {
     // 检查设备是否已初始化
     if (!isInitialized) {
         LOG_WARNING("DirectX", "设备未初始化，跳过BeginFrame");
@@ -319,14 +319,45 @@ void RenderBackendDirectX12::BeginFrame() {
     m_dynamicIBOffset = 0;
     m_dynamicCBOffset = 0;
 
-    // 重置命令分配器（但不重置命令列表，让渲染管线处理）
+    // 重置命令分配器
     HRESULT hr = m_commandAllocator->Reset();
     if (FAILED(hr)) {
         LOG_ERROR("DirectX", "无法重置命令分配器: {0}", HrToString(hr));
         throw Graphic::RenderException("无法重置命令分配器");
     }
 
-    LOG_DEBUG("RenderBackendDirectX12", "BeginFrame completed, frame index: {0}", m_frameIndex);
+    // 重置命令列表并设置初始PSO
+    hr = m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get());
+    if (FAILED(hr)) {
+        LOG_ERROR("DirectX", "无法重置命令列表: {0}", HrToString(hr));
+        throw Graphic::RenderException("无法重置命令列表");
+    }
+
+    // 设置基本渲染状态
+    m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
+    m_commandList->RSSetViewports(1, &m_viewport);
+    m_commandList->RSSetScissorRects(1, &m_scissorRect);
+
+    // 准备渲染目标 - 从PRESENT状态转换到RENDER_TARGET状态
+    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
+        m_renderTargets[m_frameIndex].Get(),
+        D3D12_RESOURCE_STATE_PRESENT,
+        D3D12_RESOURCE_STATE_RENDER_TARGET);
+    m_commandList->ResourceBarrier(1, &barrier);
+
+    // 设置渲染目标和深度缓冲区
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
+        m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
+    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
+
+    // 清除渲染目标和深度缓冲区（使用传入的清除颜色）
+    float clearColorArray[] = {clearColor.x, clearColor.y, clearColor.z, clearColor.w};
+    m_commandList->ClearRenderTargetView(rtvHandle, clearColorArray, 0, nullptr);
+    m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
+
+    LOG_DEBUG("RenderBackendDirectX12", "BeginFrame completed, frame index: {0}, clear color: ({1}, {2}, {3}, {4})",
+              m_frameIndex, clearColor.x, clearColor.y, clearColor.z, clearColor.w);
 }
 
 void RenderBackendDirectX12::EndFrame() {
@@ -691,6 +722,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
     {
         // 创建默认着色器并从硬编码字符串编译
         auto defaultShader = std::make_shared<Shader>();
+        LOG_DEBUG("DirectX", "开始编译默认着色器");
         if (!defaultShader->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
             LOG_ERROR("DirectX", "无法编译默认着色器");
             // 创建一个最小的空 PSO 以避免崩溃
@@ -716,7 +748,7 @@ bool RenderBackendDirectX12::InitializeRenderObjects() {
                 return false;
             }
         } else {
-            LOG_VERBOSE("DirectX", "成功编译默认着色器");
+            LOG_INFO("DirectX", "成功编译默认着色器");
             auto vertexShader = defaultShader->GetVertexShaderBlob();
             auto pixelShader = defaultShader->GetPixelShaderBlob();
 
@@ -856,36 +888,8 @@ RenderCommandContext* RenderBackendDirectX12::CreateCommandContext() {
         return nullptr;
     }
 
-    // 重置命令列表并设置初始状态
-    HRESULT hr = m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get());
-    if (FAILED(hr)) {
-        LOG_ERROR("DirectX", "无法重置命令列表: {0}", HrToString(hr));
-        return nullptr;
-    }
-
-    // 设置基本渲染状态
-    m_commandList->SetGraphicsRootSignature(m_rootSignature.Get());
-    m_commandList->RSSetViewports(1, &m_viewport);
-    m_commandList->RSSetScissorRects(1, &m_scissorRect);
-
-    // 准备渲染目标 - 从PRESENT状态转换到RENDER_TARGET状态
-    auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-        m_renderTargets[m_frameIndex].Get(),
-        D3D12_RESOURCE_STATE_PRESENT,
-        D3D12_RESOURCE_STATE_RENDER_TARGET);
-    m_commandList->ResourceBarrier(1, &barrier);
-
-    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(
-        m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
-    CD3DX12_CPU_DESCRIPTOR_HANDLE dsvHandle(m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
-    m_commandList->OMSetRenderTargets(1, &rtvHandle, FALSE, &dsvHandle);
-
-    // 清除渲染目标和深度缓冲区
-    float clearColor[] = {0.0f, 0.0f, 0.0f, 1.0f};
-    m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-    m_commandList->ClearDepthStencilView(dsvHandle, D3D12_CLEAR_FLAG_DEPTH, 1.0f, 0, 0, nullptr);
-
     // 创建一个新的渲染命令上下文实例，使用 backend 的命令列表
+    // 注意：命令列表已经在 BeginFrame() 中重置并设置了基本状态
     LOG_DEBUG("RenderBackendDirectX12", "创建命令上下文");
     return new DXRenderCommandContext(m_commandList.Get(), &m_viewport, &m_scissorRect, this);
 }
@@ -1034,8 +1038,8 @@ void RenderBackendDirectX12::WaitForPreviousFrame() {
             return;
         }
 
-        // 使用16ms超时（约60FPS），避免长时间阻塞主线程
-        DWORD waitResult = WaitForSingleObject(m_fenceEvent, 16);
+        // 使用100ms超时，给GPU足够的时间完成渲染
+        DWORD waitResult = WaitForSingleObject(m_fenceEvent, 100);
         if (waitResult == WAIT_TIMEOUT) {
             LOG_WARNING("DirectX", "WaitForSingleObject 超时，GPU可能延迟");
         }

@@ -23,7 +23,7 @@ public:
 
     void Shutdown() override;
 
-    void BeginFrame() override;
+    void BeginFrame(DirectX::XMFLOAT4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f}) override;
     void EndFrame() override;
 
     void SubmitRenderCommand(const RenderCommand& cmd) override;
