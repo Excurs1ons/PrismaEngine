@@ -40,7 +40,6 @@ void OpaquePass::Execute(RenderCommandContext* context)
         m_viewProjection = m_view * m_projection;
 
         // 设置着色器常量
-        LOG_DEBUG("OpaquePass", "设置ViewProjection矩阵");
         context->SetConstantBuffer("ViewProjection", m_viewProjection);
         // Note: 不单独设置View和Projection，因为默认着色器只使用ViewProjection
         // context->SetConstantBuffer("View", m_view);
