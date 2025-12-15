@@ -75,12 +75,12 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
 
-    // 定义三角形顶点数据 (位置 + 颜色)
+    // 定义三角形顶点数据 (位置 + 颜色) - 使用局部坐标
     float triangleVertices[] = {
         // 位置 (x, y, z)     颜色 (r, g, b, a)
-        pos.x, pos.y + 0.25f, 0.0f,  color.x, color.y, color.z, color.w,  // 顶点1
-        pos.x + 0.25f, pos.y - 0.25f, 0.0f,  color.x, color.y, color.z, color.w,  // 顶点2
-        pos.x - 0.25f, pos.y - 0.25f, 0.0f,  color.x, color.y, color.z, color.w   // 顶点3
+        0.0f, 0.25f, 0.0f,  color.x, color.y, color.z, color.w,  // 顶点1 (顶部)
+        0.25f, -0.25f, 0.0f,  color.x, color.y, color.z, color.w,  // 顶点2 (右下)
+        -0.25f, -0.25f, 0.0f,  color.x, color.y, color.z, color.w   // 顶点3 (左下)
     };
 
     // 设置顶点数据
@@ -115,10 +115,10 @@ std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name,
     // 定义四边形顶点数据 (位置 + 颜色) - 4个顶点
     float quadVertices[] = {
         // 位置 (x, y, z)              颜色 (r, g, b, a)
-        pos.x - size/2, pos.y + size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 左上
-        pos.x + size/2, pos.y + size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 右上
-        pos.x + size/2, pos.y - size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 右下
-        pos.x - size/2, pos.y - size/2, 0.0f,  color.x, color.y, color.z, color.w   // 左下
+        -size/2, size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 左上
+        size/2, size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 右上
+        size/2, -size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 右下
+        -size/2, -size/2, 0.0f,  color.x, color.y, color.z, color.w   // 左下
     };
 
     // 定义索引数据 - 2个三角形，共6个索引
@@ -170,18 +170,18 @@ std::shared_ptr<GameObject> TriangleExample::CreateCube(const std::string& name,
     float halfSize = size / 2.0f;
     float cubeVertices[] = {
         // 位置 (x, y, z)              颜色 (r, g, b, a)
-        // 立方体的8个顶点
-        // 前面4个顶点 (Z = halfSize)
-        pos.x - halfSize, pos.y + halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 0 - 左上
-        pos.x + halfSize, pos.y + halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 1 - 右上
-        pos.x + halfSize, pos.y - halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 2 - 右下
-        pos.x - halfSize, pos.y - halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 3 - 左下
+        // 立方体的8个顶点 - 局部坐标
+        // 前面4个顶点 (Z = +halfSize)
+        -halfSize, halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 0 - 左上
+        halfSize, halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 1 - 右上
+        halfSize, -halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 2 - 右下
+        -halfSize, -halfSize, halfSize,  color.x, color.y, color.z, color.w,  // 3 - 左下
 
         // 后面4个顶点 (Z = -halfSize)
-        pos.x - halfSize, pos.y + halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w,  // 4 - 左上
-        pos.x + halfSize, pos.y + halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w,  // 5 - 右上
-        pos.x + halfSize, pos.y - halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w,  // 6 - 右下
-        pos.x - halfSize, pos.y - halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w   // 7 - 左下
+        -halfSize, halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w,  // 4 - 左上
+        halfSize, halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w,  // 5 - 右上
+        halfSize, -halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w,  // 6 - 右下
+        -halfSize, -halfSize, -halfSize,  color.x * 0.8f, color.y * 0.8f, color.z * 0.8f, color.w   // 7 - 左下
     };
 
     // 定义索引数据 - 12个三角形（6个面 × 2个三角形）
