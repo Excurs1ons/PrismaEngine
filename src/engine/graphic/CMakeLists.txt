@@ -28,7 +28,6 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/RenderSystem.cpp
     graphic/ScriptableRenderPipeline.cpp
     graphic/Shader.cpp
-    graphic/TriangleExample.cpp
 )
 
 set(ENGINE_GRAPHIC_HEADERS
@@ -48,5 +47,5 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/RenderSystem.h
     graphic/ScriptableRenderPipeline.h
     graphic/Shader.h
-    graphic/TriangleExample.h
+
 )
