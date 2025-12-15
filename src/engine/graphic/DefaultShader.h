@@ -45,16 +45,15 @@ PS_IN VSMain(VS_IN input)
 {
     PS_IN output;
 
-    // 临时解决方案：简化的投影
-    // 假设input.pos已经在世界空间（这是当前TriangleExample的实现方式）
-    // 使用简单的正交投影将世界坐标映射到NDC空间
+    // 临时回退方案：使用世界矩阵但应用简单的缩放和偏移
+    float4 worldPos = mul(float4(input.pos, 1.0), World);
 
-    // 假设相机在(0, 0, -5)，朝向原点
-    // 可见范围大约是 -3 到 +3
-    float ndcX = input.pos.x / 3.0f;
-    float ndcY = input.pos.y / 3.0f;
-
-    output.pos = float4(ndcX, ndcY, 0.5, 1.0);
+    // 简单的屏幕空间映射
+    // 调整缩放因子，使所有物体可见
+    output.pos.x = worldPos.x * 0.15f;
+    output.pos.y = worldPos.y * 0.15f;
+    output.pos.z = 0.5f;
+    output.pos.w = 1.0f;
 
     // 使用顶点颜色和基础颜色的混合
     output.col = input.col * BaseColor;
