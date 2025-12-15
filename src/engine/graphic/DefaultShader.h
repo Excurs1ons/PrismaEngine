@@ -45,14 +45,16 @@ PS_IN VSMain(VS_IN input)
 {
     PS_IN output;
 
-    // TODO: 调查世界矩阵的正确传递方式
-    // 临时解决方案：使用屏幕坐标
-    output.pos = float4(input.pos.x * 0.5, input.pos.y * 0.5, 0.0, 1.0);
+    // 临时解决方案：简化的投影
+    // 假设input.pos已经在世界空间（这是当前TriangleExample的实现方式）
+    // 使用简单的正交投影将世界坐标映射到NDC空间
 
-    // 尝试过的方案：
-    // 方案1: 转置矩阵 + mul(worldPos, ViewProjection) - 失败
-    // 方案2: 不转置矩阵 + mul(ViewProjection, worldPos) - 成功
-    // 方案3: 不转置矩阵 + mul(World, pos) + mul(ViewProjection, worldPos) - 失败
+    // 假设相机在(0, 0, -5)，朝向原点
+    // 可见范围大约是 -3 到 +3
+    float ndcX = input.pos.x / 3.0f;
+    float ndcY = input.pos.y / 3.0f;
+
+    output.pos = float4(ndcX, ndcY, 0.5, 1.0);
 
     // 使用顶点颜色和基础颜色的混合
     output.col = input.col * BaseColor;

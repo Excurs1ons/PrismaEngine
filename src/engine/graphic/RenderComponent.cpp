@@ -68,8 +68,22 @@ void RenderComponent::Render(RenderCommandContext* context)
 
     // 设置世界矩阵 (寄存器 b1)
     if (auto* transform = m_owner->transform()) {
-        float* matrix = transform->GetMatrix();
-        XMMATRIX worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrix));
+        // 手动构建世界矩阵：位置 * 旋转 * 缩放
+        // 注意：DXMath使用行主序，所以顺序是：缩放 * 旋转 * 平移
+        XMMATRIX translation = XMMatrixTranslation(transform->position.x, transform->position.y, transform->position.z);
+        XMMATRIX rotation = XMMatrixRotationQuaternion(transform->rotation.ToXMVector());
+        XMMATRIX scale = XMMatrixScaling(transform->scale.x, transform->scale.y, transform->scale.z);
+
+        // 组合矩阵：S * R * T
+        XMMATRIX worldMatrix = scale * rotation * translation;
+
+        // 输出矩阵值用于调试
+        XMFLOAT4X4 wMatrix;
+        XMStoreFloat4x4(&wMatrix, worldMatrix);
+        LOG_DEBUG("RenderComponent", "世界矩阵计算完成，位置:({0},{1},{2}), 缩放:({3},{4},{5})",
+                  transform->position.x, transform->position.y, transform->position.z,
+                  transform->scale.x, transform->scale.y, transform->scale.z);
+
         context->SetConstantBuffer("World", reinterpret_cast<const float*>(&worldMatrix), 16);
     }
 
