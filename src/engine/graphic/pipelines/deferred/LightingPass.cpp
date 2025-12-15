@@ -1,7 +1,10 @@
 #include "LightingPass.h"
 #include "Camera.h"
 #include "SceneManager.h"
+#include "Shader.h"
+#include "DefaultShader.h"
 #include "Logger.h"
+#include <vector>
 
 namespace Engine {
 namespace Graphic {
@@ -12,6 +15,19 @@ LightingPass::LightingPass()
 {
     LOG_DEBUG("LightingPass", "光照通道构造函数被调用");
     m_stats = {};
+
+    // 创建延迟渲染光照通道着色器
+    m_shader = std::make_shared<Shader>();
+    if (m_shader && m_shader->CompileFromString(Graphic::DEFERRED_LIGHTING_VERTEX_SHADER, Graphic::DEFERRED_LIGHTING_PIXEL_SHADER)) {
+        m_shader->SetName("DeferredLightingPass");
+        LOG_INFO("LightingPass", "延迟渲染光照通道着色器编译成功");
+    } else {
+        LOG_ERROR("LightingPass", "延迟渲染光照通道着色器编译失败");
+        m_shader.reset();
+    }
+
+    // 创建全屏四边形几何体
+    CreateFullScreenQuad();
 }
 
 LightingPass::~LightingPass()
@@ -21,27 +37,23 @@ LightingPass::~LightingPass()
 
 void LightingPass::Execute(RenderCommandContext* context)
 {
-    if (!context || !m_gbuffer || !m_renderTarget) {
-        LOG_ERROR("LightingPass", "无效的上下文、G-Buffer或渲染目标");
+    if (!context || !m_gbuffer || !m_renderTarget || !m_shader) {
+        LOG_ERROR("LightingPass", "无效的上下文、G-Buffer、渲染目标或着色器");
         return;
     }
 
     LOG_DEBUG("LightingPass", "开始执行光照通道");
     m_stats = {};
-    m_stats.shadowCastingLights = 0;
 
     try {
         // 设置渲染目标
-        context->SetRenderTargets(&m_renderTarget, 1, m_gbuffer->GetDepthStencilView());
+        context->SetRenderTargets(&m_renderTarget, 1, nullptr);
 
         // 设置视口
         context->SetViewport(0.0f, 0.0f, static_cast<float>(m_width), static_cast<float>(m_height));
 
-        // 清除渲染目标为环境光
-        context->ClearRenderTarget(m_renderTarget,
-                                   m_ambientLight.x,
-                                   m_ambientLight.y,
-                                   m_ambientLight.z, 1.0f);
+        // 清除渲染目标
+        context->ClearRenderTarget(m_renderTarget, 0.0f, 0.0f, 0.0f, 1.0f);
 
         // 获取相机
         auto scene = SceneManager::GetInstance()->GetCurrentScene();
@@ -56,10 +68,11 @@ void LightingPass::Execute(RenderCommandContext* context)
             return;
         }
 
-        // 获取相机位置和矩阵
+        // 获取相机位置
         DirectX::XMMATRIX view = camera->GetViewMatrix();
         DirectX::XMMATRIX projection = camera->GetProjectionMatrix();
         DirectX::XMMATRIX viewProjection = view * projection;
+        DirectX::XMMATRIX invViewProjection = DirectX::XMMatrixInverse(nullptr, viewProjection);
 
         DirectX::XMMATRIX cameraWorld = DirectX::XMMatrixInverse(view, nullptr);
         DirectX::XMFLOAT3 cameraPos = DirectX::XMFLOAT3(
@@ -68,59 +81,72 @@ void LightingPass::Execute(RenderCommandContext* context)
             DirectX::XMVectorGetZ(cameraWorld.r[3])
         );
 
-        // 设置相机参数
-        context->SetConstantBuffer("CameraPosition", &cameraPos, sizeof(DirectX::XMFLOAT3));
-        context->SetConstantBuffer("ViewMatrix", view);
-        context->SetConstantBuffer("ProjectionMatrix", projection);
-        context->SetConstantBuffer("ViewProjectionMatrix", viewProjection);
-
-        // 设置环境光
-        context->SetConstantBuffer("AmbientLight", &m_ambientLight, sizeof(DirectX::XMFLOAT3));
-
         // 绑定G-Buffer作为着色器资源
         m_gbuffer->SetAsShaderResources(context);
 
-        // 绑定IBL纹理（如果启用）
-        if (m_iblEnabled) {
-            if (m_irradianceMap) {
-                context->SetShaderResource("IrradianceMap", m_irradianceMap);
-            }
-            if (m_prefilterMap) {
-                context->SetShaderResource("PrefilterMap", m_prefilterMap);
-            }
-            if (m_brdfLUT) {
-                context->SetShaderResource("BRDFLUT", m_brdfLUT);
-            }
-        }
+        // 设置着色器常量
+        context->SetShader(m_shader.get());
 
-        // 设置混合模式（加法混合）
-        context->SetBlendState(true);
+        // 相机缓冲区
+        struct CameraBuffer {
+            DirectX::XMFLOAT3 cameraPosition;
+            float padding1;
+            DirectX::XMMATRIX inverseViewProjection;
+        } cameraBuffer;
+        cameraBuffer.cameraPosition = cameraPos;
+        cameraBuffer.inverseViewProjection = invViewProjection;
+        context->SetConstantBuffer("CameraBuffer", &cameraBuffer, sizeof(CameraBuffer));
 
-        // 渲染光照
+        // 环境光缓冲区
+        struct AmbientBuffer {
+            DirectX::XMFLOAT3 ambientColor;
+            float ambientIntensity;
+        } ambientBuffer;
+        ambientBuffer.ambientColor = m_ambientLight;
+        ambientBuffer.ambientIntensity = 1.0f;
+        context->SetConstantBuffer("AmbientBuffer", &ambientBuffer, sizeof(AmbientBuffer));
+
+        // 渲染所有光源（简化版本 - 目前只支持单个方向光）
         for (const auto& light : m_lights) {
             m_stats.lightsRendered++;
 
-            switch (light.type) {
-            case LightType::Directional:
-                ApplyDirectionalLight(context, light);
-                if (light.castShadows) m_stats.shadowCastingLights++;
-                break;
-            case LightType::Point:
-                ApplyPointLight(context, light);
-                if (light.castShadows) m_stats.shadowCastingLights++;
-                break;
-            case LightType::Spot:
-                ApplySpotLight(context, light);
-                if (light.castShadows) m_stats.shadowCastingLights++;
-                break;
+            // 光照缓冲区
+            struct LightBuffer {
+                DirectX::XMFLOAT3 lightDirection;
+                float lightType;
+                DirectX::XMFLOAT3 lightColor;
+                float lightIntensity;
+                DirectX::XMFLOAT3 lightPosition;
+                float lightRadius;
+                DirectX::XMFLOAT3 lightAttenuation;
+                float padding2;
+                DirectX::XMMATRIX lightViewProjection;
+            } lightBuffer;
+
+            lightBuffer.lightDirection = light.direction;
+            lightBuffer.lightType = static_cast<float>(light.type);
+            lightBuffer.lightColor = light.color;
+            lightBuffer.lightIntensity = light.intensity;
+            lightBuffer.lightPosition = light.position;
+            lightBuffer.lightRadius = light.range;
+            lightBuffer.lightAttenuation = DirectX::XMFLOAT3(1.0f, 0.1f, 0.01f); // 默认衰减
+            lightBuffer.lightViewProjection = light.shadowMatrix;
+
+            context->SetConstantBuffer("LightBuffer", &lightBuffer, sizeof(LightBuffer));
+
+            // 渲染全屏四边形
+            RenderFullScreenQuad(context);
+
+            // 如果需要渲染多个光源，使用加法混合
+            if (m_lights.size() > 1) {
+                context->SetBlendState(true);
             }
         }
 
         // 禁用混合
         context->SetBlendState(false);
 
-        LOG_DEBUG("LightingPass", "光照通道完成 - 光源数: {0}, 投影光源: {1}",
-                  m_stats.lightsRendered, m_stats.shadowCastingLights);
+        LOG_DEBUG("LightingPass", "光照通道完成 - 光源数: {0}", m_stats.lightsRendered);
     }
     catch (const std::exception& e) {
         LOG_ERROR("LightingPass", "执行异常: {0}", e.what());
@@ -194,10 +220,52 @@ void LightingPass::SetIBLTextures(void* irradianceMap, void* prefilterMap, void*
     LOG_DEBUG("LightingPass", "设置IBL纹理");
 }
 
+void LightingPass::CreateFullScreenQuad()
+{
+    // 创建全屏四边形顶点 (位置 + UV)
+    m_fullScreenVertices = {
+        // Position (x, y, z)    UV (u, v)
+        -1.0f,  1.0f, 0.0f,    0.0f, 0.0f,  // 左上
+         1.0f,  1.0f, 0.0f,    1.0f, 0.0f,  // 右上
+         1.0f, -1.0f, 0.0f,    1.0f, 1.0f,  // 右下
+        -1.0f, -1.0f, 0.0f,    0.0f, 1.0f   // 左下
+    };
+
+    // 创建索引
+    m_fullScreenIndices = {
+        0, 1, 2,  // 第一个三角形
+        0, 2, 3   // 第二个三角形
+    };
+
+    LOG_DEBUG("LightingPass", "创建全屏四边形几何体");
+}
+
 void LightingPass::RenderFullScreenQuad(RenderCommandContext* context)
 {
-    // TODO: 渲染全屏四边形
-    // 这需要使用预先准备的顶点缓冲区或使用顶点着色器生成
+    if (!context || m_fullScreenVertices.empty() || m_fullScreenIndices.empty()) {
+        LOG_ERROR("LightingPass", "无效的上下文或全屏四边形数据");
+        return;
+    }
+
+    // 设置着色器
+    context->SetShader(m_shader.get());
+
+    // 设置顶点缓冲区
+    context->SetVertexBuffer(
+        m_fullScreenVertices.data(),
+        static_cast<uint32_t>(m_fullScreenVertices.size() * sizeof(float)),
+        5 * sizeof(float) // 3个位置 + 2个UV
+    );
+
+    // 设置索引缓冲区
+    context->SetIndexBuffer(
+        m_fullScreenIndices.data(),
+        static_cast<uint32_t>(m_fullScreenIndices.size() * sizeof(uint16_t)),
+        true
+    );
+
+    // 绘制
+    context->DrawIndexed(static_cast<uint32_t>(m_fullScreenIndices.size()));
 }
 
 void LightingPass::ApplyDirectionalLight(RenderCommandContext* context, const Light& light)
