@@ -76,9 +76,89 @@ public:
         float lightingPassTime = 0.0f;
         float transparentPassTime = 0.0f;
         float compositionPassTime = 0.0f;
+
+        // RTXGI统计 (预留)
+        uint32_t rtxgiActiveProbes = 0;
+        float rtxgiUpdateTime = 0.0f;
+        float rtxgiMemoryUsage = 0.0f;
     };
 
     const RenderStats& GetRenderStats() const { return m_stats; }
+
+    // ========== RTXGI集成接口 (预留) ==========
+
+    /**
+     * @brief 初始化RTXGI DDGI系统
+     * @param config RTXGI配置参数
+     * @return 是否初始化成功
+     *
+     * 此接口为NVIDIA RTXGI集成预留，未来将支持：
+     * - 实时全局光照 (DDGI)
+     * - 光线追踪反射
+     * - 动态环境光照
+     * - AI驱动的光照优化
+     */
+    bool InitializeRTXGI(void* config);
+
+    /**
+     * @brief 更新RTXGI系统
+     * @param deltaTime 帧时间
+     *
+     * 更新DDGI体积、探头数据等
+     */
+    void UpdateRTXGI(float deltaTime);
+
+    /**
+     * @brief 应用RTXGI全局照明
+     * @param context 渲染命令上下文
+     *
+     * 在光照通道中应用RTXGI计算的全局照明
+     */
+    void ApplyRTXGIIllumination(RenderCommandContext* context);
+
+    /**
+     * @brief 获取RTXGI渲染目标
+     * @return RTXGI DDGI渲染目标数组
+     *
+     * 返回DDGI纹理供着色器使用：
+     * - Irradiance纹理 (漫反射照明)
+     * - Distance纹理 (距离信息)
+     * - Offsets纹理 (探头偏移)
+     */
+    void** GetRTXGITargets();
+
+    /**
+     * @brief 设置RTXGI质量级别
+     * @param quality 质量级别 (0=Off, 1=Low, 2=Medium, 3=High, 4=Ultra)
+     */
+    void SetRTXGIQuality(int quality);
+
+    /**
+     * @brief 检查RTXGI是否可用
+     * @return RTXGI支持状态
+     */
+    bool IsRTXGIAvailable() const;
+
+    /**
+     * @brief 启用/禁用RTXGI
+     * @param enabled 是否启用
+     */
+    void SetRTXGIEnabled(bool enabled);
+
+    /**
+     * @brief RTXGI调试接口
+     * @param debugMode 调试模式
+     *
+     * 支持的调试模式：
+     * - 0: 关闭
+     * - 1: 显示DDGI探头
+     * - 2: 显示辐照度纹理
+     * - 3: 显示距离纹理
+     * - 4: 显示探头更新区域
+     */
+    void SetRTXGIDebugMode(int debugMode);
+
+    // ========== RTXGI集成接口结束 ==========
 
 private:
     // 渲染管线引用
