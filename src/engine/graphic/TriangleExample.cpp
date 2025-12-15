@@ -15,7 +15,7 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     auto scene = std::make_shared<Scene>();
     
     // 创建相机
-    auto cameraObj = CreateCamera("MainCamera", {0.0f, 1.0f, -5.0f}, Quaternion::Identity);
+    auto cameraObj = CreateCamera("MainCamera", {0.0f, 2.0f, -8.0f}, Quaternion::Identity);
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
@@ -240,10 +240,10 @@ std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& nam
     // 定义四边形顶点数据 (位置 + 颜色) - 4个顶点
     float groundVertices[] = {
         // 位置 (x, y, z)              颜色 (r, g, b, a)
-        pos.x - size/2, pos.y - size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 后下
-        pos.x + size/2, pos.y - size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 后上
-        pos.x + size/2, pos.y + size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 前上
-        pos.x - size/2, pos.y + size/2, 0.0f,  color.x, color.y, color.z, color.w   // 前下
+        -size/2, -size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 后下
+        size/2, -size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 后上
+        size/2, size/2, 0.0f,  color.x, color.y, color.z, color.w,  // 前上
+        -size/2, size/2, 0.0f,  color.x, color.y, color.z, color.w   // 前下
     };
 
     // 定义索引数据 - 2个三角形，共6个索引
