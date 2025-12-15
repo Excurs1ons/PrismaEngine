@@ -45,9 +45,15 @@ PS_IN VSMain(VS_IN input)
 {
     PS_IN output;
 
-    // 应用世界矩阵和视图投影矩阵
-    float4 worldPos = mul(float4(input.pos, 1.0), World);
-    output.pos = mul(worldPos, ViewProjection);
+    // TODO: 修复矩阵变换问题 - 顶点着色器中的矩阵乘法导致几何体不可见
+    // 临时测试：直接在屏幕中心渲染一个固定大小的正方形
+    // 忽略所有矩阵变换，只使用顶点的XY坐标
+    output.pos = float4(input.pos.x * 0.5, input.pos.y * 0.5, 0.0, 1.0);
+
+    // 原始代码（需要修复）：
+    // // 应用世界矩阵和视图投影矩阵
+    // float4 worldPos = mul(float4(input.pos, 1.0), World);
+    // output.pos = mul(worldPos, ViewProjection);
 
     // 使用顶点颜色和基础颜色的混合
     output.col = input.col * BaseColor;

@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 
     // 添加动作选项示例
     cmdParser.AddActionOption("version", "V", "显示版本信息", false, [](const std::string&) {
-        std::cout << "YAGE Runtime 版本 1.0.0" << std::endl;
+        std::cout << "YAGE Runtime 版本 1.0.0" << '\n';
         return true;  // 执行后退出
     });
 #endif
