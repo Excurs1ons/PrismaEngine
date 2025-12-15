@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "SceneManager.h"
 #include "RenderErrorHandling.h"
+#include <DirectXMath.h>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
@@ -334,7 +335,7 @@ void RenderBackendVulkan::Shutdown() {
     LOG_INFO("Vulkan", "Vulkan renderer shutdown completed");
 }
 
-void RenderBackendVulkan::BeginFrame() {
+void RenderBackendVulkan::BeginFrame(DirectX::XMFLOAT4 clearColor) {
     if (isFrameActive) {
         LOG_WARNING("RendererVulkan", "BeginFrame called while frame is already active");
         return;
@@ -407,41 +408,14 @@ void RenderBackendVulkan::BeginFrame() {
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = m_swapchainExtent;
 
-    // 从场景获取主相机和清除颜色，默认为青色
-    XMVECTOR clearColorValue = XMVectorSet(0.0f, 1.0f, 1.0f, 1.0f);  // 默认青色
-    auto scene = SceneManager::GetInstance()->GetCurrentScene();
-    // 尝试从场景中获取主相机
-    Engine::Graphic::ICamera* mainCamera = nullptr;
-    if (scene) {
-        mainCamera = scene->GetMainCamera();
-    }
-
-    if (mainCamera) {
-        // 从主相机获取清除颜色
-        clearColorValue = mainCamera->GetClearColor();
-        // 减少日志频率，只在实际改变时输出
-        #ifdef _DEBUG
-        static XMVECTOR lastClearColor = XMVectorSet(-1.0f, -1.0f, -1.0f, -1.0f);
-        if (!XMVector4Equal(lastClearColor, clearColorValue)) {
-            LOG_DEBUG("RendererVulkan",
-                        "Using main camera clear color: ({0}, {1}, {2}, {3})",
-                        XMVectorGetX(clearColorValue),
-                        XMVectorGetY(clearColorValue),
-                        XMVectorGetZ(clearColorValue),
-                        XMVectorGetW(clearColorValue));
-            lastClearColor = clearColorValue;
-        }
-        #endif
-    }
-
     // 转换DirectXMath向量为Vulkan清除颜色
-    VkClearValue clearColor = {{{XMVectorGetX(clearColorValue),
-                                 XMVectorGetY(clearColorValue),
-                                 XMVectorGetZ(clearColorValue),
-                                 XMVectorGetW(clearColorValue)}}};
+    VkClearValue vkClearColor = {{{clearColor.x, clearColor.y, clearColor.z, clearColor.w}}};
+
+    LOG_DEBUG("RendererVulkan", "Using clear color: ({0}, {1}, {2}, {3})",
+              clearColor.x, clearColor.y, clearColor.z, clearColor.w);
 
     renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues    = &clearColor;
+    renderPassInfo.pClearValues    = &vkClearColor;
 
     vkCmdBeginRenderPass(commandBuffers[imageIndex], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 

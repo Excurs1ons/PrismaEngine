@@ -4,6 +4,8 @@
 #include "RenderBackendDirectX12.h"
 #include "RenderBackendVulkan.h"
 #include "pipelines/forward/ForwardPipeline.h"
+#include "../SceneManager.h"
+#include "../Camera3D.h"
 #if defined(_WIN32)
 #include <Windows.h>
 extern HWND g_hWnd;
@@ -203,8 +205,25 @@ void RenderSystem::RenderFrame() {
 
     LOG_DEBUG("Render", "开始渲染帧");
 
-    // 执行渲染帧
-    renderBackend->BeginFrame();
+    // 获取当前场景的清除颜色
+    XMFLOAT4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f}; // 默认黑色
+    auto sceneManager = SceneManager::GetInstance();
+    if (sceneManager) {
+        auto scene = sceneManager->GetCurrentScene();
+        if (scene) {
+            auto camera = scene->GetMainCamera();
+            if (camera) {
+                auto colorVec = camera->GetClearColor();
+                clearColor = XMFLOAT4(XMVectorGetX(colorVec), XMVectorGetY(colorVec),
+                                     XMVectorGetZ(colorVec), XMVectorGetW(colorVec));
+                LOG_DEBUG("Render", "使用相机清除颜色: ({0}, {1}, {2}, {3})",
+                          clearColor.x, clearColor.y, clearColor.z, clearColor.w);
+            }
+        }
+    }
+
+    // 执行渲染帧（传入清除颜色）
+    renderBackend->BeginFrame(clearColor);
 
     // 执行可编程渲染管线
     if (renderPipe) {

@@ -40,9 +40,11 @@ void OpaquePass::Execute(RenderCommandContext* context)
         m_viewProjection = m_view * m_projection;
 
         // 设置着色器常量
-        context->SetConstantBuffer("View", m_view);
-        context->SetConstantBuffer("Projection", m_projection);
+        LOG_DEBUG("OpaquePass", "设置ViewProjection矩阵");
         context->SetConstantBuffer("ViewProjection", m_viewProjection);
+        // Note: 不单独设置View和Projection，因为默认着色器只使用ViewProjection
+        // context->SetConstantBuffer("View", m_view);
+        // context->SetConstantBuffer("Projection", m_projection);
         context->SetConstantBuffer("AmbientLight", reinterpret_cast<const float*>(&m_ambientLight), sizeof(XMFLOAT3));
 
         // 设置光源数据
@@ -70,6 +72,7 @@ void OpaquePass::Execute(RenderCommandContext* context)
 
         // 遍历所有带有MeshRenderer的游戏对象
         const auto& gameObjects = scene->GetGameObjects();
+        LOG_DEBUG("OpaquePass", "场景中总共有 {0} 个游戏对象", gameObjects.size());
 
         // 收集所有需要渲染的对象
         struct RenderObject {
@@ -83,6 +86,8 @@ void OpaquePass::Execute(RenderCommandContext* context)
         for (const auto& gameObject : gameObjects) {
             if (!gameObject) continue;
 
+            LOG_DEBUG("OpaquePass", "检查游戏对象: '{0}'", gameObject->name);
+
             // 优先检查RenderComponent
             auto renderComponent = gameObject->GetComponent<RenderComponent>();
             MeshRenderer* meshRenderer = nullptr;
@@ -90,20 +95,34 @@ void OpaquePass::Execute(RenderCommandContext* context)
             // 如果没有RenderComponent，尝试获取MeshRenderer（向后兼容）
             if (!renderComponent) {
                 meshRenderer = gameObject->GetComponent<MeshRenderer>();
-                if (!meshRenderer) continue;
+                if (!meshRenderer) {
+                    LOG_DEBUG("OpaquePass", "  - 没有RenderComponent或MeshRenderer，跳过");
+                    continue;
+                }
                 renderComponent = meshRenderer;
+                LOG_DEBUG("OpaquePass", "  - 找到MeshRenderer");
             } else {
                 // 如果有RenderComponent，检查它是否也是MeshRenderer
                 meshRenderer = dynamic_cast<MeshRenderer*>(renderComponent);
+                LOG_DEBUG("OpaquePass", "  - 找到RenderComponent");
             }
 
             // 检查是否有有效的网格数据
             if (meshRenderer) {
                 auto mesh = meshRenderer->GetMesh();
-                if (!mesh || mesh->subMeshes.empty()) continue;
+                if (!mesh || mesh->subMeshes.empty()) {
+                    LOG_DEBUG("OpaquePass", "  - MeshRenderer没有有效的网格数据，跳过");
+                    continue;
+                }
+                LOG_DEBUG("OpaquePass", "  - MeshRenderer有 {0} 个子网格", mesh->subMeshes.size());
             } else {
                 // 对于纯RenderComponent，检查顶点数据
-                if (renderComponent->GetVertexCount() == 0) continue;
+                uint32_t vertexCount = renderComponent->GetVertexCount();
+                if (vertexCount == 0) {
+                    LOG_DEBUG("OpaquePass", "  - RenderComponent没有顶点数据，跳过");
+                    continue;
+                }
+                LOG_DEBUG("OpaquePass", "  - RenderComponent有 {0} 个顶点", vertexCount);
             }
 
             auto transform = gameObject->transform();
@@ -130,9 +149,12 @@ void OpaquePass::Execute(RenderCommandContext* context)
                 powf(objectPos.z - cameraPos.z, 2)
             );
 
+            LOG_DEBUG("OpaquePass", "  - 添加对象到渲染列表，距离相机: {0}", distance);
             renderObjects.push_back({ renderComponent, meshRenderer, worldMatrix, distance });
             m_stats.objects++;
         }
+
+        LOG_DEBUG("OpaquePass", "总共找到 {0} 个可渲染对象", renderObjects.size());
 
         // 按距离排序（从远到近，为了正确的深度缓冲和早期深度测试）
         std::sort(renderObjects.begin(), renderObjects.end(),
@@ -192,6 +214,15 @@ void OpaquePass::Execute(RenderCommandContext* context)
                 // 对于纯RenderComponent，直接调用其Render方法
                 renderComponent->Render(context);
                 m_stats.drawCalls++;
+
+                // 统计三角形数量
+                uint32_t indexCount = renderComponent->GetIndexCount();
+                uint32_t vertexCount = renderComponent->GetVertexCount();
+                if (indexCount > 0) {
+                    m_stats.triangles += indexCount / 3;
+                } else if (vertexCount > 0) {
+                    m_stats.triangles += vertexCount / 3;
+                }
             }
         }
 

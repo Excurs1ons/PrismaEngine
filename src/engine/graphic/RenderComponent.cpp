@@ -50,12 +50,19 @@ void RenderComponent::SetIndexData(const uint16_t* indices, uint32_t indexCount)
 
 void RenderComponent::Render(RenderCommandContext* context)
 {
+    LOG_DEBUG("RenderComponent", "Render called - vertexCount={0}, indexCount={1}", m_vertexCount, m_indexCount);
+
     if (!context || m_vertexCount == 0)
+    {
+        LOG_WARNING("RenderComponent", "Render failed - context={0}, vertexCount={1}",
+                   context ? "valid" : "null", m_vertexCount);
         return;
+    }
 
     // 应用材质 (这会设置颜色、纹理等参数)
     auto material = GetOrCreateMaterial();
     if (material) {
+        LOG_DEBUG("RenderComponent", "应用材质");
         material->Apply(context);
     }
 
@@ -72,10 +79,13 @@ void RenderComponent::Render(RenderCommandContext* context)
     // 顶点布局: 7 floats per vertex (x,y,z,r,g,b,a)
     const uint32_t stride = 7 * sizeof(float);
     const uint32_t vertexSizeInBytes = m_vertexCount * stride;
+    LOG_DEBUG("RenderComponent", "设置顶点缓冲区: {0} 个顶点, 总大小 {1} 字节, stride={2}",
+               m_vertexCount, vertexSizeInBytes, stride);
     context->SetVertexBuffer(m_vertices.data(), vertexSizeInBytes, stride);
 
     // 如果有索引数据，绑定索引缓冲区
     if (m_indexCount > 0) {
+        LOG_DEBUG("RenderComponent", "设置索引缓冲区: {0} 个索引, 16位={1}", m_indexCount, m_use16BitIndices);
         if (m_use16BitIndices) {
             // 转换为16位索引数组
             std::vector<uint16_t> indices16(m_indexCount);
@@ -88,11 +98,15 @@ void RenderComponent::Render(RenderCommandContext* context)
         }
 
         // 执行索引绘制
+        LOG_DEBUG("RenderComponent", "执行索引绘制: {0} 个索引", m_indexCount);
         context->DrawIndexed(m_indexCount);
     } else {
         // 执行普通顶点绘制
+        LOG_DEBUG("RenderComponent", "执行顶点绘制: {0} 个顶点", m_vertexCount);
         context->Draw(m_vertexCount);
     }
+
+    LOG_DEBUG("RenderComponent", "Render completed");
 }
 
 void RenderComponent::SetColor(float r, float g, float b, float a)

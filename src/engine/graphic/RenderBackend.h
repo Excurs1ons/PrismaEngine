@@ -3,6 +3,7 @@
 #include "RenderCommandContext.h"
 #include <cstdint>
 #include <functional>
+#include <DirectXMath.h>
 
 namespace Engine {
 enum class RenderBackendType {
@@ -36,7 +37,7 @@ public:
     using GuiRenderCallback = std::function<void(void*)>;
     virtual void SetGuiRenderCallback(GuiRenderCallback callback) {}
 
-    virtual void BeginFrame() = 0;
+    virtual void BeginFrame(DirectX::XMFLOAT4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f}) = 0;
     virtual void EndFrame()   = 0;
 
     virtual void Resize(uint32_t width, uint32_t height) {}
