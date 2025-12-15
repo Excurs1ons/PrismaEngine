@@ -45,15 +45,17 @@ PS_IN VSMain(VS_IN input)
 {
     PS_IN output;
 
-    // 临时回退方案：使用世界矩阵但应用简单的缩放和偏移
+    // 计算世界空间位置
     float4 worldPos = mul(float4(input.pos, 1.0), World);
 
-    // 简单的屏幕空间映射
-    // 调整缩放因子，使所有物体可见
-    output.pos.x = worldPos.x * 0.15f;
-    output.pos.y = worldPos.y * 0.15f;
-    output.pos.z = 0.5f;
-    output.pos.w = 1.0f;
+    // 调试：直接在世界空间位置加上偏移，确保可见
+    // 在屏幕中心显示一个小三角形
+    output.pos = float4(
+        worldPos.x * 0.1,    // 缩小x坐标
+        worldPos.y * 0.1,    // 缩小y坐标
+        0.5,                // 固定z值
+        1.0                 // w值
+    );
 
     // 使用顶点颜色和基础颜色的混合
     output.col = input.col * BaseColor;

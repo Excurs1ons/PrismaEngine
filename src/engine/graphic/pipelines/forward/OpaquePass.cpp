@@ -39,6 +39,15 @@ void OpaquePass::Execute(RenderCommandContext* context)
         // 计算视图投影矩阵
         m_viewProjection = m_view * m_projection;
 
+        // 调试：输出矩阵值
+        XMFLOAT4X4 vpMatrix;
+        XMStoreFloat4x4(&vpMatrix, m_viewProjection);
+        LOG_DEBUG("OpaquePass", "ViewProjection矩阵:");
+        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._11, vpMatrix._12, vpMatrix._13, vpMatrix._14);
+        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._21, vpMatrix._22, vpMatrix._23, vpMatrix._24);
+        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._31, vpMatrix._32, vpMatrix._33, vpMatrix._34);
+        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._41, vpMatrix._42, vpMatrix._43, vpMatrix._44);
+
         // 设置着色器常量
         context->SetConstantBuffer("ViewProjection", m_viewProjection);
         // Note: 不单独设置View和Projection，因为默认着色器只使用ViewProjection
