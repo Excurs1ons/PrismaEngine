@@ -194,7 +194,7 @@ public:
     /**
      * @brief 获取亮度 (灰度值)
      */
-    constexpr float GetLuminance() const {
+    float GetLuminance() const {
         // 使用标准亮度权重: 0.2126*R + 0.7152*G + 0.0722*B
         return r() * 0.2126f + g() * 0.7152f + b() * 0.0722f;
     }
@@ -348,7 +348,7 @@ private:
 
 // ========== 全局运算符 ==========
 
-inline constexpr Color operator*(float scalar, const Color& color) {
+inline Color operator*(float scalar, const Color& color) {
     return color * scalar;
 }
 
