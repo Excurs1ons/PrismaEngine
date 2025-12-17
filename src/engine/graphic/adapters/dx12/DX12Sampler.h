@@ -16,8 +16,7 @@ public:
     /// @brief 构造函数
     /// @param device DirectX12渲染设备
     /// @param desc 采样器描述
-    /// @param handle 采样器句柄
-    DX12Sampler(DX12RenderDevice* device, const SamplerDesc& desc, uint64_t handle);
+    DX12Sampler(DX12RenderDevice* device, const SamplerDesc& desc);
 
     /// @brief 析构函数
     ~DX12Sampler() override;
@@ -40,10 +39,14 @@ public:
     /// @brief 创建D3D12采样器描述
     D3D12_SAMPLER_DESC GetD3D12SamplerDesc() const;
 
+    /// @brief 创建采样器描述符
+    /// @param handle 描述符句柄
+    void CreateSampler(D3D12_CPU_DESCRIPTOR_HANDLE handle);
+
 private:
     DX12RenderDevice* m_device;
     SamplerDesc m_desc;
-    uint64_t m_handle;
+    uint64_t m_handle = 0;
 };
 
 } // namespace PrismaEngine::Graphic::DX12
