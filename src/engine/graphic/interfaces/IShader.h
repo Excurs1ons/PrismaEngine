@@ -173,7 +173,7 @@ public:
     /// @param options 编译选项
     /// @param[out] errors 编译错误信息
     /// @return 是否编译成功
-    virtual bool Recompile(const ShaderCompileOptions* options = nullptr, std::string& errors = std::string()) = 0;
+    virtual bool Recompile(const ShaderCompileOptions* options = nullptr, std::string* errors = nullptr) = 0;
 
     /// @brief 从源码重新编译
     /// @param source 新的源码
@@ -182,12 +182,12 @@ public:
     /// @return 是否编译成功
     virtual bool RecompileFromSource(const std::string& source,
                                      const ShaderCompileOptions* options = nullptr,
-                                     std::string& errors = std::string()) = 0;
+                                     std::string* errors = nullptr) = 0;
 
     /// @brief 从文件重新加载
     /// @param[out] errors 错误信息
     /// @return 是否加载成功
-    virtual bool ReloadFromFile(std::string& errors = std::string()) = 0;
+    virtual bool ReloadFromFile(std::string* errors = nullptr) = 0;
 
     // === 热重载 ===
 

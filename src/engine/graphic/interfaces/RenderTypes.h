@@ -205,4 +205,55 @@ struct DeviceDesc {
     uint32_t maxFramesInFlight = 2;
 };
 
+// 纹理过滤模式
+enum class TextureFilter : uint32_t {
+    Point,
+    Linear,
+    Anisotropic,
+    ComparisonPoint,
+    ComparisonLinear,
+    ComparisonAnisotropic,
+    MinPointMagLinearMipPoint,
+    MinPointMagLinearMipLinear,
+    MinLinearMagPointMipPoint,
+    MinLinearMagPointMipLinear,
+    MinMagPointMipLinear,
+    MinLinearMagMipPoint
+};
+
+// 纹理寻址模式
+enum class TextureAddressMode : uint32_t {
+    Wrap,
+    Mirror,
+    Clamp,
+    Border,
+    MirrorOnce
+};
+
+// 纹理比较函数
+enum class TextureComparisonFunc : uint32_t {
+    Never,
+    Less,
+    Equal,
+    LessEqual,
+    Greater,
+    NotEqual,
+    GreaterEqual,
+    Always
+};
+
+// 采样器描述
+struct SamplerDesc {
+    TextureFilter filter = TextureFilter::Linear;
+    TextureAddressMode addressU = TextureAddressMode::Wrap;
+    TextureAddressMode addressV = TextureAddressMode::Wrap;
+    TextureAddressMode addressW = TextureAddressMode::Wrap;
+    float mipLODBias = 0.0f;
+    uint32_t maxAnisotropy = 16;
+    TextureComparisonFunc comparisonFunc = TextureComparisonFunc::Always;
+    float borderColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    float minLOD = 0.0f;
+    float maxLOD = 3.402823466e+38f; // FLT_MAX
+};
+
 } // namespace PrismaEngine::Graphic

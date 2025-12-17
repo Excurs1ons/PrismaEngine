@@ -128,47 +128,7 @@ struct PipelineDesc : public ResourceDesc {
     uint32_t primitiveTopology = 4;  // 4=trianglelist
 };
 
-/// @brief 采样器描述
-struct SamplerDesc : public ResourceDesc {
-    TextureFilter filter = TextureFilter::Linear;
-    TextureAddressMode addressU = TextureAddressMode::Wrap;
-    TextureAddressMode addressV = TextureAddressMode::Wrap;
-    TextureAddressMode addressW = TextureAddressMode::Wrap;
-    float mipLODBias = 0.0f;
-    uint32_t maxAnisotropy = 16;
-    TextureComparisonFunc comparisonFunc = TextureComparisonFunc::Never;
-    float borderColor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    float minLOD = -FLT_MAX;
-    float maxLOD = FLT_MAX;
-};
-
-/// @brief 纹理过滤模式
-enum class TextureFilter {
-    Point,
-    Linear,
-    Anisotropic
-};
-
-/// @brief 纹理寻址模式
-enum class TextureAddressMode {
-    Wrap,
-    Mirror,
-    Clamp,
-    Border,
-    MirrorOnce
-};
-
-/// @brief 纹理比较函数
-enum class TextureComparisonFunc {
-    Never,
-    Less,
-    Equal,
-    LessEqual,
-    Greater,
-    NotEqual,
-    GreaterEqual,
-    Always
-};
+// 注意：TextureFilter, TextureAddressMode, TextureComparisonFunc, SamplerDesc 已在 RenderTypes.h 中定义
 
 /// @brief 资源管理器抽象接口
 /// 提供统一的资源加载、创建和管理功能
@@ -244,7 +204,7 @@ public:
     /// @param desc 着色器描述
     /// @param[out] errors 编译错误信息
     /// @return 是否编译成功
-    virtual bool CompileShader(const ShaderDesc& desc, std::string& errors) = 0;
+    virtual bool CompileShader(const ShaderDesc& desc, std::string* errors = nullptr) = 0;
 
     // === 管线管理 ===
 

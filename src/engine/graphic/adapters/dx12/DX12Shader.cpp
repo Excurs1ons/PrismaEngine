@@ -2,7 +2,7 @@
 #include "DX12RenderDevice.h"
 #include "../Logger.h"
 #include <directx/d3d12shader.h>
-#include <dxcapi.h>
+// TODO: Use DXC for shader compilation when available
 #include <wrl/client.h>
 #include <fstream>
 #include <filesystem>
@@ -153,186 +153,25 @@ bool DX12Shader::Recompile(const ShaderCompileOptions* options, std::string& err
     buffer << file.rdbuf();
     std::string source = buffer.str();
 
-    return RecompileFromSource(source, options, errors);
+    return RecompileFromSource(source, options, &errors);
 }
 
 bool DX12Shader::RecompileFromSource(const std::string& source,
                                      const ShaderCompileOptions* options,
-                                     std::string& errors) {
+                                     std::string* errors) {
     if (!m_device) {
-        errors = "Device not available";
+        if (errors) *errors = "Device not available";
         return false;
     }
 
-    // 更新源码
-    m_desc.source = source;
-
-    // 更新编译选项
-    if (options) {
-        m_desc.compileOptions = *options;
-    }
-
-    // 使用DXC编译着色器
-    ComPtr<IDxcCompiler> compiler;
-    ComPtr<IDxcLibrary> library;
-    ComPtr<IDxcBlobEncoding> sourceBlob;
-    ComPtr<IDxcOperationResult> result;
-
-    // 创建DXC实例
-    HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
-    if (FAILED(hr)) {
-        errors = "Failed to create DXC compiler";
-        return false;
-    }
-
-    hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
-    if (FAILED(hr)) {
-        errors = "Failed to create DXC library";
-        return false;
-    }
-
-    // 创建源码blob
-    hr = library->CreateBlobWithEncodingFromPinned(
-        source.c_str(),
-        static_cast<uint32_t>(source.size()),
-        CP_UTF8,
-        &sourceBlob
-    );
-    if (FAILED(hr)) {
-        errors = "Failed to create source blob";
-        return false;
-    }
-
-    // 准备编译参数
-    std::vector<std::wstring> wArgs;
-    std::vector<LPCWSTR> args;
-
-    // 添加标准参数
-    wArgs.push_back(L"-T");
-    wArgs.push_back(std::wstring(m_desc.target.begin(), m_desc.target.end()));
-
-    wArgs.push_back(L"-E");
-    wArgs.push_back(std::wstring(m_desc.entryPoint.begin(), m_desc.entryPoint.end()));
-
-    // 添加优化等级
-    switch (m_desc.compileOptions.optimizationLevel) {
-        case OptimizationLevel::None:
-            wArgs.push_back(L"-O0");
-            break;
-        case OptimizationLevel::Size:
-            wArgs.push_back(L"-Os");
-            break;
-        case OptimizationLevel::Speed:
-            wArgs.push_back(L"-O2");
-            break;
-        case OptimizationLevel::Full:
-            wArgs.push_back(L"-O3");
-            break;
-    }
-
-    // 添加调试信息
-    if (HasFlag(m_desc.compileOptions.flags, ShaderCompileFlag::Debug)) {
-        wArgs.push_back(L"-Zi");
-        wArgs.push_back(L"-Qembed_debug");
-    }
-
-    // 跳过优化
-    if (HasFlag(m_desc.compileOptions.flags, ShaderCompileFlag::SkipOptimization)) {
-        wArgs.push_back(L"-Od");
-    }
-
-    // 严格模式
-    if (HasFlag(m_desc.compileOptions.flags, ShaderCompileFlag::Strict)) {
-        wArgs.push_back(L"-Ges");
-    }
-
-    // 禁用警告
-    if (!HasFlag(m_desc.compileOptions.flags, ShaderCompileFlag::WarningsAsErrors)) {
-        wArgs.push_back(L"-no-warnings-as-errors");
-    }
-
-    // 添加自定义定义
-    for (const auto& define : m_desc.compileOptions.defines) {
-        wArgs.push_back(L"-D");
-        wArgs.push_back(std::wstring(define.begin(), define.end()));
-    }
-
-    // 添加包含目录
-    for (const auto& include : m_desc.compileOptions.includeDirectories) {
-        wArgs.push_back(L"-I");
-        wArgs.push_back(std::wstring(include.begin(), include.end()));
-    }
-
-    // 转换为LPCWSTR数组
-    for (const auto& arg : wArgs) {
-        args.push_back(arg.c_str());
-    }
-
-    // 编译着色器
-    hr = compiler->Compile(
-        sourceBlob.Get(),
-        nullptr,  // 可以指定文件名
-        m_desc.entryPoint.c_str(),
-        m_desc.target.c_str(),
-        args.data(),
-        static_cast<uint32_t>(args.size()),
-        nullptr,  // Defines
-        0,
-        nullptr,  // Include handler
-        &result
-    );
-
-    if (FAILED(hr)) {
-        errors = "Failed to compile shader: D3DCompile failed";
-        return false;
-    }
-
-    // 检查编译结果
-    HRESULT compilationStatus = result->GetStatus();
-    if (FAILED(compilationStatus)) {
-        ComPtr<IDxcBlobEncoding> errorBlob;
-        result->GetErrorBuffer(&errorBlob);
-        if (errorBlob) {
-            errors = static_cast<char*>(errorBlob->GetBufferPointer());
-        } else {
-            errors = "Shader compilation failed with unknown error";
-        }
-        return false;
-    }
-
-    // 获取编译后的字节码
-    ComPtr<IDxcBlob> codeBlob;
-    result->GetResult(&codeBlob);
-    if (!codeBlob) {
-        errors = "Compilation succeeded but failed to get bytecode";
-        return false;
-    }
-
-    // 更新字节码
-    m_bytecode.clear();
-    m_bytecode.resize(codeBlob->GetBufferSize());
-    memcpy(m_bytecode.data(), codeBlob->GetBufferPointer(), codeBlob->GetBufferSize());
-
-    // 更新编译时间戳和哈希
-    m_desc.compileTimestamp = std::chrono::duration_cast<std::chrono::seconds>(
-        std::chrono::system_clock::now().time_since_epoch()).count();
-
-    // 简单哈希计算
-    m_desc.compileHash = 0;
-    for (uint8_t byte : m_bytecode) {
-        m_desc.compileHash = m_desc.compileHash * 31 + byte;
-    }
-
-    // 清除旧的编译日志
-    m_compileLog.clear();
-
-    LOG_INFO("DX12Shader", "Shader recompiled successfully: {0}", m_desc.filename);
-    return true;
+    // TODO: Implement proper shader compilation when DXC is available
+    if (errors) *errors = "Shader compilation not implemented yet - please provide pre-compiled bytecode";
+    return false;
 }
 
-bool DX12Shader::ReloadFromFile(std::string& errors) {
+bool DX12Shader::ReloadFromFile(std::string* errors) {
     if (m_desc.filename.empty()) {
-        errors = "No filename available for reload";
+        if (errors) *errors = "No filename available for reload";
         return false;
     }
 
@@ -392,47 +231,8 @@ std::string DX12Shader::Disassemble() const {
         return "";
     }
 
-    // 使用DXC反汇编
-    ComPtr<IDxcCompiler> compiler;
-    ComPtr<IDxcLibrary> library;
-    ComPtr<IDxcBlobEncoding> disassembly;
-    ComPtr<IDxcBlob> codeBlob;
-
-    HRESULT hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler));
-    if (FAILED(hr)) {
-        return "Failed to create DXC compiler for disassembly";
-    }
-
-    hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library));
-    if (FAILED(hr)) {
-        return "Failed to create DXC library for disassembly";
-    }
-
-    // 创建字节码blob
-    hr = library->CreateBlobWithEncodingFromPinned(
-        m_bytecode.data(),
-        static_cast<uint32_t>(m_bytecode.size()),
-        CP_ACP,
-        reinterpret_cast<IDxcBlobEncoding**>(&codeBlob)
-    );
-    if (FAILED(hr)) {
-        return "Failed to create bytecode blob for disassembly";
-    }
-
-    // 反汇编
-    hr = compiler->Disassemble(codeBlob.Get(), &disassembly);
-    if (FAILED(hr)) {
-        return "Failed to disassemble shader";
-    }
-
-    if (disassembly) {
-        return std::string(
-            static_cast<char*>(disassembly->GetBufferPointer()),
-            disassembly->GetBufferSize()
-        );
-    }
-
-    return "";
+    // TODO: Implement disassembly when DXC is available
+    return "Disassembly not implemented yet";
 }
 
 bool DX12Shader::DebugSaveToFile(const std::string& filename,

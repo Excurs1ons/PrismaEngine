@@ -10,9 +10,9 @@
 #include "../Logger.h"
 #include <directx/d3dx12.h>
 #include <directx/d3d12shader.h>
-#include <dxcapi.h>
+// TODO: Use DXC for shader compilation when available
 #include <wrl/client.h>
-#include <stb_image.h>
+// TODO: Implement image loading without stb_image
 #include <fstream>
 #include <filesystem>
 #include <algorithm>
@@ -717,9 +717,10 @@ void DX12ResourceFactory::ProcessDeferredDestructions() {
 bool DX12ResourceFactory::CompileShader(const ShaderDesc& desc,
                                        std::vector<uint8_t>& bytecode,
                                        ShaderReflection& reflection,
-                                       std::string& errors) {
-    // TODO: 实现着色器编译
-    // 这个方法应该调用DXC来编译着色器并生成反射信息
+                                       std::string* errors) {
+    // TODO: Implement shader compilation when DXC is available
+    // This method should call DXC to compile shaders and generate reflection info
+    if (errors) *errors = "Shader compilation not implemented yet - please provide pre-compiled bytecode";
     return false;
 }
 
@@ -893,29 +894,9 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DX12ResourceFactory::CreateCommittedResou
 bool DX12ResourceFactory::LoadImageFromFile(const std::string& filename,
                                            std::vector<uint8_t>& imageData,
                                            TextureDesc& desc) {
-    int width, height, channels;
-    stbi_uc* data = stbi_load(filename.c_str(), &width, &height, &channels, 4);
-    if (!data) {
-        LOG_ERROR("DX12ResourceFactory", "Failed to load image with stb_image: {0}", filename);
-        return false;
-    }
-
-    uint64_t dataSize = width * height * 4;
-    imageData.resize(dataSize);
-    memcpy(imageData.data(), data, dataSize);
-
-    desc.type = TextureType::Texture2D;
-    desc.format = TextureFormat::RGBA8_UNorm;
-    desc.width = static_cast<uint32_t>(width);
-    desc.height = static_cast<uint32_t>(height);
-    desc.depth = 1;
-    desc.mipLevels = 1;
-    desc.arraySize = 1;
-    desc.sampleCount = 1;
-    desc.sampleQuality = 0;
-
-    stbi_image_free(data);
-    return true;
+    // TODO: Implement proper image loading without stb_image
+    LOG_ERROR("DX12ResourceFactory", "Image loading from file not implemented yet: {0}", filename);
+    return false;
 }
 
 uint64_t DX12ResourceFactory::CalculateTexturePoolKey(const TextureDesc& desc) const {
