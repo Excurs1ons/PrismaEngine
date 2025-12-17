@@ -30,6 +30,17 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Shader.cpp
     # New interface files
     graphic/interfaces/RenderTypes.cpp
+    # New adapter files
+    graphic/adapters/dx12/DX12RenderDevice.cpp
+    graphic/adapters/dx12/DX12CommandBuffer.cpp
+    graphic/adapters/dx12/DX12Fence.cpp
+    graphic/adapters/dx12/DX12SwapChain.cpp
+    graphic/adapters/dx12/DX12Texture.cpp
+    graphic/adapters/dx12/DX12Buffer.cpp
+    graphic/adapters/dx12/DX12Shader.cpp
+    graphic/adapters/dx12/DX12PipelineState.cpp
+    graphic/adapters/dx12/DX12Sampler.cpp
+    graphic/adapters/dx12/DX12ResourceFactory.cpp
 )
 
 set(ENGINE_GRAPHIC_HEADERS
@@ -60,8 +71,21 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/interfaces/ITexture.h
     graphic/interfaces/IBuffer.h
     graphic/interfaces/IShader.h
+    graphic/interfaces/IPipelineState.h
     graphic/interfaces/IPipeline.h
     graphic/interfaces/ISampler.h
     graphic/interfaces/ISwapChain.h
     graphic/interfaces/IFence.h
+    # New adapter headers
+    graphic/adapters/dx12/DX12Adapters.h
+    graphic/adapters/dx12/DX12RenderDevice.h
+    graphic/adapters/dx12/DX12CommandBuffer.h
+    graphic/adapters/dx12/DX12Fence.h
+    graphic/adapters/dx12/DX12SwapChain.h
+    graphic/adapters/dx12/DX12Texture.h
+    graphic/adapters/dx12/DX12Buffer.h
+    graphic/adapters/dx12/DX12Shader.h
+    graphic/adapters/dx12/DX12PipelineState.h
+    graphic/adapters/dx12/DX12Sampler.h
+    graphic/adapters/dx12/DX12ResourceFactory.h
 )

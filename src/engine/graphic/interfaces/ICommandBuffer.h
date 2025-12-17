@@ -1,6 +1,7 @@
 #pragma once
 
 #include "RenderTypes.h"
+#include "IPipelineState.h"
 #include <memory>
 
 namespace PrismaEngine::Graphic {
@@ -53,9 +54,9 @@ public:
 
     // === 管线状态 ===
 
-    /// @brief 设置渲染管线
-    /// @param pipeline 渲染管线
-    virtual void SetPipeline(IPipeline* pipeline) = 0;
+    /// @brief 设置渲染管线状态对象(PSO)
+    /// @param pipelineState 管线状态对象
+    virtual void SetPipelineState(IPipelineState* pipelineState) = 0;
 
     // === 资源绑定 ===
 
