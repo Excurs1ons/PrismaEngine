@@ -1,8 +1,8 @@
 // dllmain.cpp : 定义 DLL 应用程序的入口点。
 #include "Game.h"
 
-#include "../engine/SceneManager.h"
-#include "../engine/TriangleExample.h"
+#include "SceneManager.h"
+#include "TriangleExample.h"
 #include "Common.h"
 #include "IApplication.h"
 #include "pch.h"
@@ -18,10 +18,10 @@ bool Game::Initialize() {
     return true;
 }
 int Game::Run() {
-    return 0;
+    return Application::Run();
 }
 void Game::Shutdown() {
-
+    Application::Shutdown();
 }
 
 // Platform->Engine->Application->Game|Editor
