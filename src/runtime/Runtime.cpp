@@ -17,6 +17,7 @@
 #include "../engine/DynamicLoader.h"
 #include "Export.h"
 #include "../engine/graphic/RenderSystemTest.h"
+#include "../engine/PlatformWindows.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -191,40 +192,32 @@ int RunRenderTest() {
         // 创建测试实例
         PrismaEngine::Graphic::RenderSystemTest test;
 
-        // 创建一个简单的窗口用于测试
-        // 由于DirectX12需要有效的窗口句柄，我们创建一个隐藏窗口
-        void* windowHandle = nullptr;
+        // 使用Platform系统创建测试窗口
         uint32_t width = 800;
         uint32_t height = 600;
 
 #if defined(_WIN32)
-        // 创建一个隐藏的窗口用于DirectX12渲染
-        WNDCLASSA wc = {};
-        wc.lpfnWndProc = DefWindowProcA;
-        wc.hInstance = GetModuleHandle(nullptr);
-        wc.lpszClassName = "RenderTestWindow";
-        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
-
-        if (RegisterClassA(&wc)) {
-            windowHandle = CreateWindowA(
-                "RenderTestWindow",
-                "Render Test",
-                WS_OVERLAPPEDWINDOW,
-                0, 0, width, height,
-                nullptr, nullptr, GetModuleHandle(nullptr), nullptr
-            );
-
-            if (windowHandle) {
-                // 隐藏窗口，因为我们只需要窗口句柄用于渲染测试
-                ShowWindow(static_cast<HWND>(windowHandle), SW_HIDE);
-                LOG_INFO("Runtime", "创建隐藏窗口用于渲染测试: {0}", reinterpret_cast<uintptr_t>(windowHandle));
-            }
+        // 初始化Platform系统
+        auto platform = PlatformWindows::GetInstance();
+        if (!platform || !platform->Initialize()) {
+            LOG_ERROR("Runtime", "无法初始化Platform系统");
+            return -1;
         }
 
+        // 创建窗口属性
+        Engine::WindowProps windowProps("新渲染系统测试 - 彩色三角形", width, height);
+        windowProps.Resizable = false;
+        windowProps.ShowState = Engine::WindowShowState::Show;
+
+        // 创建窗口
+        auto windowHandle = platform->CreateWindow(windowProps);
         if (!windowHandle) {
             LOG_ERROR("Runtime", "无法创建测试窗口");
             return -1;
         }
+
+        LOG_INFO("Runtime", "使用Platform创建测试窗口: {0}x{1}", width, height);
+        LOG_INFO("Runtime", "窗口标题: {0}", windowProps.Title);
 #else
         LOG_ERROR("Runtime", "渲染测试仅在Windows平台上支持");
         return -1;
@@ -242,14 +235,34 @@ int RunRenderTest() {
         if (allTestsPassed) {
             LOG_INFO("Runtime", "新渲染系统测试完成 - 所有测试通过");
 
-            // 运行前两帧渲染测试进行验证
-            LOG_INFO("Runtime", "=== 开始渲染流程验证 - 前2帧测试 ===");
-            for (int i = 0; i < 2; ++i) {
-                LOG_INFO("Runtime", "开始渲染第 {0} 帧", i + 1);
+            // 运行渲染测试进行可视化验证
+            LOG_INFO("Runtime", "=== 开始渲染流程验证 - 可视化测试 ===");
+            LOG_INFO("Runtime", "窗口将显示5秒，您可以查看渲染的三角形");
+
+            // 渲染更多帧并处理窗口消息，让用户能看到结果
+            for (int i = 0; i < 300; ++i) {  // 约5秒，60FPS
                 test.RenderFrame();
-                // 简单延时，避免渲染太快
+
+#if defined(_WIN32)
+                // 使用Platform系统处理窗口消息，确保窗口能正常显示和响应
+                if (platform) {
+                    platform->PumpEvents();
+
+                    // 检查窗口是否应该关闭
+                    if (platform->ShouldClose(windowHandle)) {
+                        LOG_INFO("Runtime", "用户关闭了测试窗口");
+                        break;
+                    }
+                }
+#endif
+
+                // 控制帧率约为60FPS
                 std::this_thread::sleep_for(std::chrono::milliseconds(16));
-                LOG_INFO("Runtime", "第 {0} 帧完成", i + 1);
+
+                // 每60帧（约1秒）输出一次进度
+                if (i % 60 == 0) {
+                    LOG_INFO("Runtime", "渲染进度: {0}/300 帧 ({1:.1f}秒)", i + 1, (i + 1) / 60.0f);
+                }
             }
             LOG_INFO("Runtime", "=== 渲染流程验证完成 ===");
 
@@ -257,9 +270,9 @@ int RunRenderTest() {
             test.Shutdown();
 
 #if defined(_WIN32)
-            // 销毁测试窗口
-            if (windowHandle) {
-                DestroyWindow(static_cast<HWND>(windowHandle));
+            // 使用Platform销毁测试窗口
+            if (platform && windowHandle) {
+                platform->DestroyWindow(windowHandle);
                 LOG_INFO("Runtime", "测试窗口已销毁");
             }
 #endif
@@ -270,9 +283,9 @@ int RunRenderTest() {
             test.Shutdown();
 
 #if defined(_WIN32)
-            // 销毁测试窗口
-            if (windowHandle) {
-                DestroyWindow(static_cast<HWND>(windowHandle));
+            // 使用Platform销毁测试窗口
+            if (platform && windowHandle) {
+                platform->DestroyWindow(windowHandle);
                 LOG_INFO("Runtime", "测试窗口已销毁");
             }
 #endif
@@ -284,9 +297,9 @@ int RunRenderTest() {
         LOG_ERROR("Runtime", "渲染系统测试异常: {0}", e.what());
 
 #if defined(_WIN32)
-        // 销毁测试窗口（如果存在）
-        if (windowHandle) {
-            DestroyWindow(static_cast<HWND>(windowHandle));
+        // 使用Platform销毁测试窗口（如果存在）
+        if (platform && windowHandle) {
+            platform->DestroyWindow(windowHandle);
             LOG_INFO("Runtime", "测试窗口已销毁（异常清理）");
         }
 #endif

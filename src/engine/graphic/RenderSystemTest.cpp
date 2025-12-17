@@ -100,6 +100,7 @@ bool RenderSystemTest::RunTests() {
     allPassed &= TestPipelineState();
     allPassed &= TestRenderPipeline();
     allPassed &= TestResourceCleanup();
+    allPassed &= TestMemoryUsage();
 
     // 输出测试结果
     LOG_INFO("RenderSystemTest", "=== 测试结果汇总 ===");
@@ -293,6 +294,55 @@ bool RenderSystemTest::TestRenderPipeline() {
     } catch (const std::exception& e) {
         LOG_ERROR("RenderSystemTest", "渲染流程测试异常: {0}", e.what());
         m_testResults.push_back("渲染流程测试: 失败 - 异常");
+        return false;
+    }
+}
+
+bool RenderSystemTest::TestMemoryUsage() {
+    LOG_INFO("RenderSystemTest", "测试内存使用情况");
+
+    if (!m_resourceManager) {
+        m_testResults.push_back("内存使用测试: 失败 - 资源管理器为空");
+        return false;
+    }
+
+    try {
+        // 获取资源统计信息
+        auto stats = m_resourceManager->GetResourceStats();
+
+        LOG_INFO("RenderSystemTest", "=== 内存使用统计 ===");
+        LOG_INFO("RenderSystemTest", "总资源数: {0}", stats.totalResources);
+        LOG_INFO("RenderSystemTest", "纹理资源: {0}", stats.textureCount);
+        LOG_INFO("RenderSystemTest", "缓冲区资源: {0}", stats.bufferCount);
+        LOG_INFO("RenderSystemTest", "着色器资源: {0}", stats.shaderCount);
+        LOG_INFO("RenderSystemTest", "管线资源: {0}", stats.pipelineCount);
+        LOG_INFO("RenderSystemTest", "GPU内存使用: {0} MB", stats.gpuMemoryUsage / (1024 * 1024));
+        LOG_INFO("RenderSystemTest", "CPU内存使用: {0} MB", stats.cpuMemoryUsage / (1024 * 1024));
+
+        // 验证内存使用是否合理
+        bool memoryUsageReasonable = true;
+
+        // 检查是否有资源泄露
+        if (stats.totalResources > 10) {  // 我们的测试应该只创建少量资源
+            LOG_WARNING("RenderSystemTest", "资源数量可能过多: {0}", stats.totalResources);
+            memoryUsageReasonable = false;
+        }
+
+        // 检查GPU内存使用（应该小于100MB用于简单测试）
+        if (stats.gpuMemoryUsage > 100 * 1024 * 1024) {
+            LOG_WARNING("RenderSystemTest", "GPU内存使用过高: {0} MB", stats.gpuMemoryUsage / (1024 * 1024));
+            memoryUsageReasonable = false;
+        }
+
+        std::ostringstream oss;
+        oss << "内存使用测试: " << (memoryUsageReasonable ? "通过" : "失败 - 内存使用异常");
+        m_testResults.push_back(oss.str());
+
+        return memoryUsageReasonable;
+
+    } catch (const std::exception& e) {
+        LOG_ERROR("RenderSystemTest", "内存使用测试异常: {0}", e.what());
+        m_testResults.push_back("内存使用测试: 失败 - 异常");
         return false;
     }
 }
