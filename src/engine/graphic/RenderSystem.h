@@ -53,6 +53,8 @@ private:
         Adapter(RenderSystem* renderSystem);
         bool Initialize(Platform* platform, RenderBackendType renderBackendType,
                        WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height);
+        void Shutdown();
+        void Update(float deltaTime);
         void BeginFrame();
         void EndFrame();
         void Present();

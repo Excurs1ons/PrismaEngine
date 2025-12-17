@@ -51,13 +51,13 @@ bool RenderSystem::Initialize() {
         LOG_ERROR("Render", "无法创建默认窗口");
         return false;
     }
-    bool result = Initialize(platform, RenderBackendType::DirectX12, windowHandle, nullptr, 1600, 900);
+    bool result = Initialize(platform, Engine::RenderBackendType::DirectX12, windowHandle, nullptr, 1600, 900);
     if (result && renderBackend) {
         renderBackend->isInitialized = true;
     }
     return result;
 #else
-    bool result = Initialize(platform, RenderBackendType::DirectX12, nullptr, nullptr, 1600, 900);
+    bool result = Initialize(platform, Engine::RenderBackendType::DirectX12, nullptr, nullptr, 1600, 900);
     if (result && renderBackend) {
         renderBackend->isInitialized = true;
     }
@@ -113,7 +113,19 @@ bool RenderSystem::Adapter::Initialize(Platform* platform, RenderBackendType ren
                                      WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
     // 创建新的渲染系统描述
     PrismaEngine::Graphic::RenderSystemDesc desc;
-    desc.backendType = renderBackendType;
+    // 转换Engine::RenderBackendType到PrismaEngine::Graphic::RenderBackendType
+    switch (renderBackendType) {
+        case Engine::RenderBackendType::DirectX12:
+            desc.backendType = PrismaEngine::Graphic::RenderBackendType::DirectX12;
+            break;
+        case Engine::RenderBackendType::Vulkan:
+            desc.backendType = PrismaEngine::Graphic::RenderBackendType::Vulkan;
+            break;
+        case Engine::RenderBackendType::SDL3:
+        default:
+            desc.backendType = PrismaEngine::Graphic::RenderBackendType::OpenGL; // Fallback
+            break;
+    }
     desc.windowHandle = windowHandle;
     desc.surface = surface;
     desc.width = width;
@@ -156,6 +168,14 @@ void RenderSystem::Adapter::Resize(uint32_t width, uint32_t height) {
 
 void RenderSystem::Adapter::SetGuiRenderCallback(GuiRenderCallback callback) {
     m_newRenderSystem.SetGuiRenderCallback(callback);
+}
+
+void RenderSystem::Adapter::Shutdown() {
+    m_newRenderSystem.Shutdown();
+}
+
+void RenderSystem::Adapter::Update(float deltaTime) {
+    m_newRenderSystem.Update(deltaTime);
 }
 
 }  // namespace Engine

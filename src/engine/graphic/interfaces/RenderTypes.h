@@ -29,6 +29,14 @@ enum class ResourceType {
     Sampler
 };
 
+// 渲染后端类型
+enum class RenderBackendType {
+    DirectX12,
+    Vulkan,
+    Metal,
+    OpenGL
+};
+
 // 缓冲区类型
 enum class BufferType {
     Vertex,
@@ -254,6 +262,137 @@ struct SamplerDesc {
     float borderColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     float minLOD = 0.0f;
     float maxLOD = 3.402823466e+38f; // FLT_MAX
+};
+
+// 混合操作
+enum class BlendOp {
+    Add,
+    Subtract,
+    RevSubtract,
+    Min,
+    Max
+};
+
+// 混合因子
+enum class BlendFactor {
+    Zero,
+    One,
+    SrcColor,
+    InvSrcColor,
+    SrcAlpha,
+    InvSrcAlpha,
+    DstAlpha,
+    InvDstAlpha,
+    DstColor,
+    InvDstColor,
+    SrcAlphaSat,
+    BlendFactor,
+    InvBlendFactor,
+    Src1Color,
+    InvSrc1Color,
+    Src1Alpha,
+    InvSrc1Alpha
+};
+
+// 填充模式
+enum class FillMode {
+    Wireframe,
+    Solid
+};
+
+// 裁剪模式
+enum class CullMode {
+    None,
+    Front,
+    Back
+};
+
+// 比较函数
+enum class ComparisonFunc {
+    Never,
+    Less,
+    Equal,
+    LessEqual,
+    Greater,
+    NotEqual,
+    GreaterEqual,
+    Always
+};
+
+// 图元拓扑
+enum class PrimitiveTopology {
+    PointList,
+    LineList,
+    LineStrip,
+    TriangleList,
+    TriangleStrip,
+    PatchList_1ControlPoints,
+    PatchList_2ControlPoints,
+    PatchList_3ControlPoints,
+    PatchList_4ControlPoints,
+    PatchList_5ControlPoints,
+    PatchList_6ControlPoints,
+    PatchList_7ControlPoints,
+    PatchList_8ControlPoints,
+    PatchList_9ControlPoints,
+    PatchList_10ControlPoints,
+    PatchList_11ControlPoints,
+    PatchList_12ControlPoints,
+    PatchList_13ControlPoints,
+    PatchList_14ControlPoints,
+    PatchList_15ControlPoints,
+    PatchList_16ControlPoints,
+    PatchList_17ControlPoints,
+    PatchList_18ControlPoints,
+    PatchList_19ControlPoints,
+    PatchList_20ControlPoints,
+    PatchList_21ControlPoints,
+    PatchList_22ControlPoints,
+    PatchList_23ControlPoints,
+    PatchList_24ControlPoints,
+    PatchList_25ControlPoints,
+    PatchList_26ControlPoints,
+    PatchList_27ControlPoints,
+    PatchList_28ControlPoints,
+    PatchList_29ControlPoints,
+    PatchList_30ControlPoints,
+    PatchList_31ControlPoints,
+    PatchList_32ControlPoints
+};
+
+// 管线类型
+enum class PipelineType {
+    Graphics,
+    Compute
+};
+
+// 优化等级
+enum class OptimizationLevel {
+    None,
+    Size,
+    Speed,
+    Full
+};
+
+// 着色器编译标志
+enum class ShaderCompileFlag : uint32_t {
+    None = 0,
+    Debug = 1 << 0,
+    SkipOptimization = 1 << 1,
+    Strict = 1 << 2,
+    WarningsAsErrors = 1 << 3
+};
+
+// 模板操作
+enum class StencilOp {
+    Keep,
+    Zero,
+    Replace,
+    IncrementSat,
+    DecrementSat,
+    Invert,
+    Increment,
+    Decrement
 };
 
 } // namespace PrismaEngine::Graphic
