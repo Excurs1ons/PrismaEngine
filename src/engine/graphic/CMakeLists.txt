@@ -43,6 +43,8 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/adapters/dx12/DX12PipelineState.cpp
     graphic/adapters/dx12/DX12Sampler.cpp
     graphic/adapters/dx12/DX12ResourceFactory.cpp
+    # Test files
+    graphic/RenderSystemTest.cpp
 )
 
 set(ENGINE_GRAPHIC_HEADERS
@@ -92,4 +94,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/adapters/dx12/DX12PipelineState.h
     graphic/adapters/dx12/DX12Sampler.h
     graphic/adapters/dx12/DX12ResourceFactory.h
+    # Test headers
+    graphic/RenderSystemTest.h
 )

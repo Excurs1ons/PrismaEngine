@@ -16,7 +16,15 @@
 
 #include "../engine/DynamicLoader.h"
 #include "Export.h"
+#include "../engine/graphic/RenderSystemTest.h"
 #include <iostream>
+#include <thread>
+#include <chrono>
+
+// ============================================================================
+// 函数声明
+// ============================================================================
+int RunRenderTest();
 
 // ============================================================================
 // 应用程序入口点
@@ -44,6 +52,7 @@ int main(int argc, char* argv[]) {
 
     cmdParser.AddOption("editor", "", "尝试启动编辑器", false);
     cmdParser.AddOption("game", "", "尝试启动游戏", false);
+    cmdParser.AddOption("test-render", "t", "运行新渲染系统测试", false);
 
     // 添加动作选项示例
     cmdParser.AddActionOption("version", "V", "显示版本信息", false, [](const std::string&) {
@@ -102,7 +111,12 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     std::string lib_name;
-    if (cmdParser.IsOptionSet("editor")) {
+    if (cmdParser.IsOptionSet("test-render")) {
+        LOG_INFO("Runtime", "运行新渲染系统测试");
+        // 直接运行渲染测试，不加载DLL
+        return RunRenderTest();
+    }
+    else if (cmdParser.IsOptionSet("editor")) {
         LOG_INFO("Runtime", "尝试启动编辑器");
         lib_name = "PrismaEditor.dll";
     }
@@ -165,4 +179,55 @@ int main(int argc, char* argv[]) {
 
     Logger::GetInstance().Flush();  // 确保日志被写出
     return exit_code;
+}
+
+// ============================================================================
+// 新渲染系统测试函数
+// ============================================================================
+int RunRenderTest() {
+    LOG_INFO("Runtime", "开始新渲染系统测试");
+
+    try {
+        // 创建测试实例
+        PrismaEngine::Graphic::RenderSystemTest test;
+
+        // 创建一个简单的窗口用于测试
+        // 注意：这里需要根据实际情况创建窗口句柄
+        // 为了简化测试，我们先传入nullptr，让渲染系统自己创建窗口
+        void* windowHandle = nullptr;
+        uint32_t width = 800;
+        uint32_t height = 600;
+
+        // 初始化测试
+        if (!test.Initialize(windowHandle, width, height)) {
+            LOG_ERROR("Runtime", "渲染系统测试初始化失败");
+            return -1;
+        }
+
+        // 运行测试
+        bool allTestsPassed = test.RunTests();
+
+        if (allTestsPassed) {
+            LOG_INFO("Runtime", "新渲染系统测试完成 - 所有测试通过");
+
+            // 可选：运行几帧渲染测试
+            for (int i = 0; i < 10; ++i) {
+                test.RenderFrame();
+                // 简单延时，避免渲染太快
+                std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            }
+
+            // 清理
+            test.Shutdown();
+            return 0;
+        } else {
+            LOG_ERROR("Runtime", "新渲染系统测试失败");
+            test.Shutdown();
+            return -1;
+        }
+
+    } catch (const std::exception& e) {
+        LOG_ERROR("Runtime", "渲染系统测试异常: {0}", e.what());
+        return -1;
+    }
 }
