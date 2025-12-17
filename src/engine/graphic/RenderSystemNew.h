@@ -14,6 +14,16 @@ namespace PrismaEngine::Graphic {
 class RenderBackendDirectX12;
 class DX12RenderDevice;
 
+namespace Engine {
+namespace Graphic {
+namespace Pipelines {
+namespace Forward {
+    class ForwardPipeline;
+}
+}
+}
+}
+
 /// @brief 渲染系统描述
 struct RenderSystemDesc {
     RenderBackendType backendType = RenderBackendType::DirectX12;
@@ -129,7 +139,7 @@ private:
     // 旧接口组件（兼容性）
     std::unique_ptr<RenderBackend> m_legacyBackend;
     std::unique_ptr<class ScriptableRenderPipeline> m_legacyPipeline;
-    std::unique_ptr<class Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
+    std::unique_ptr<class Engine::Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
 
     // 渲染线程
     WorkerThread m_renderThread;

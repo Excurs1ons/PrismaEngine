@@ -10,7 +10,7 @@ namespace PrismaEngine::Graphic {
 /// @brief 混合状态描述
 struct BlendState {
     bool blendEnable = false;
-    bool srcBlendAlpha = false;
+    bool logicOpEnable = false;
     uint32_t writeMask = 0xF;  // RGBA all enabled
     BlendOp blendOp = BlendOp::Add;
     BlendFactor srcBlend = BlendFactor::One;
@@ -18,6 +18,8 @@ struct BlendState {
     BlendOp blendOpAlpha = BlendOp::Add;
     BlendFactor srcBlendAlpha = BlendFactor::One;
     BlendFactor destBlendAlpha = BlendFactor::Zero;
+
+    static const BlendState Default;
 };
 
 /// @brief 光栅化器状态描述
@@ -28,11 +30,14 @@ struct RasterizerState {
     bool scissorEnable = false;
     bool multisampleEnable = false;
     bool antialiasedLineEnable = false;
+    bool conservativeRaster = false;
     FillMode fillMode = FillMode::Solid;
     CullMode cullMode = CullMode::Back;
     float depthBias = 0.0f;
     float depthBiasClamp = 0.0f;
     float slopeScaledDepthBias = 0.0f;
+
+    static const RasterizerState Default;
 };
 
 /// @brief 深度模板状态描述
@@ -43,18 +48,20 @@ struct DepthStencilState {
     ComparisonFunc depthFunc = ComparisonFunc::Less;
 
     // 模板操作
-    struct StencilOp {
+    struct StencilOpDesc {
         StencilOp failOp = StencilOp::Keep;
         StencilOp depthFailOp = StencilOp::Keep;
         StencilOp passOp = StencilOp::Keep;
         ComparisonFunc func = ComparisonFunc::Always;
     };
 
-    StencilOp frontFace;
-    StencilOp backFace;
+    StencilOpDesc frontFace;
+    StencilOpDesc backFace;
     uint8_t stencilReadMask = 0xFF;
     uint8_t stencilWriteMask = 0xFF;
     uint8_t stencilRef = 0;
+
+    static const DepthStencilState Default;
 };
 
 /// @brief 顶点输入属性
