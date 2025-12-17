@@ -6,7 +6,7 @@
 #include "DX12Texture.h"
 #include "DX12Buffer.h"
 #include "DX12Shader.h"
-#include "DX12Pipeline.h"
+#include "DX12PipelineState.h"
 #include "DX12Sampler.h"
 
 #include <dxgi1_6.h>

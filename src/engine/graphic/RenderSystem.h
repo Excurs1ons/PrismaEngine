@@ -7,6 +7,10 @@
 #include <memory>
 #include <functional>
 
+namespace PrismaEngine::Graphic {
+    class RenderSystemNew;
+}
+
 namespace Engine {
 
 class RenderSystem : public ManagerBase<RenderSystem> {
@@ -44,7 +48,20 @@ private:
     std::function<void()> m_renderTask;
 
     // 适配器（内部使用新接口）
-    class Adapter;
+    class Adapter {
+    public:
+        Adapter(RenderSystem* renderSystem);
+        bool Initialize(Platform* platform, RenderBackendType renderBackendType,
+                       WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height);
+        void BeginFrame();
+        void EndFrame();
+        void Present();
+        void Resize(uint32_t width, uint32_t height);
+        void SetGuiRenderCallback(GuiRenderCallback callback);
+    private:
+        RenderSystem* m_renderSystem;
+        PrismaEngine::Graphic::RenderSystemNew m_newRenderSystem;
+    };
     std::unique_ptr<Adapter> m_adapter;
 
     // 在渲染线程中执行
