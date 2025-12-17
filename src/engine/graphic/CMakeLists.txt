@@ -28,6 +28,8 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/RenderSystem.cpp
     graphic/ScriptableRenderPipeline.cpp
     graphic/Shader.cpp
+    # New interface files
+    graphic/interfaces/RenderTypes.cpp
 )
 
 set(ENGINE_GRAPHIC_HEADERS
@@ -47,5 +49,19 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/RenderSystem.h
     graphic/ScriptableRenderPipeline.h
     graphic/Shader.h
-
+    # New interface headers
+    graphic/interfaces/RenderTypes.h
+    graphic/interfaces/Interfaces.h
+    graphic/interfaces/IResource.h
+    graphic/interfaces/IRenderDevice.h
+    graphic/interfaces/ICommandBuffer.h
+    graphic/interfaces/IResourceManager.h
+    graphic/interfaces/IResourceFactory.h
+    graphic/interfaces/ITexture.h
+    graphic/interfaces/IBuffer.h
+    graphic/interfaces/IShader.h
+    graphic/interfaces/IPipeline.h
+    graphic/interfaces/ISampler.h
+    graphic/interfaces/ISwapChain.h
+    graphic/interfaces/IFence.h
 )
