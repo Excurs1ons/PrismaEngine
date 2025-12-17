@@ -2,7 +2,7 @@
 #include "DX12RenderDevice.h"
 #include "DX12Texture.h"
 #include "DX12Buffer.h"
-#include "DX12Pipeline.h"
+#include "DX12PipelineState.h"
 #include "DX12Sampler.h"
 
 #include <directx/d3dx12.h>

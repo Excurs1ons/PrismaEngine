@@ -2,12 +2,12 @@
 #include "Logger.h"
 #include "../Engine.h"
 
-// stb_image用于图像加载
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include <stb_image_write.h>
+// TODO: Implement image loading without stb_image
+// #define STB_IMAGE_IMPLEMENTATION
+// #include <stb/stb_image.h>
+//
+// #define STB_IMAGE_WRITE_IMPLEMENTATION
+// #include <stb/stb_image_write.h>
 
 #include <fstream>
 #include <chrono>
@@ -555,28 +555,9 @@ bool ResourceManager::LoadDDSFromFile(const std::string& filename,
 bool ResourceManager::LoadSTBIFromFile(const std::string& filename,
                                       std::vector<uint8_t>& imageData,
                                       TextureDesc& desc) {
-    int width, height, channels;
-    stbi_uc* data = stbi_load(filename.c_str(), &width, &height, &channels, 4);
-
-    if (!data) {
-        LOG_ERROR("Resource", "stb_image加载失败: {0}", filename);
-        return false;
-    }
-
-    desc.width = width;
-    desc.height = height;
-    desc.depth = 1;
-    desc.arraySize = 1;
-    desc.mipLevels = generateMips ? 0 : 1;
-    desc.format = TextureFormat::RGBA8_UNorm;
-    desc.type = TextureType::Texture2D;
-    desc.initialData = data;
-    desc.dataSize = width * height * 4;
-
-    imageData.assign(data, data + desc.dataSize);
-    stbi_image_free(data);
-
-    return true;
+    // TODO: Implement image loading without stb_image
+    LOG_ERROR("Resource", "Image loading from file not implemented yet: {0}", filename);
+    return false;
 }
 
 bool ResourceManager::CompileHLSLShader(const ShaderDesc& desc,
