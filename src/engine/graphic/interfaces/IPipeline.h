@@ -1,348 +1,194 @@
 #pragma once
 
-#include "IResource.h"
 #include "RenderTypes.h"
 #include <memory>
+#include <string>
+#include <vector>
 
 namespace PrismaEngine::Graphic {
 
 // 前置声明
-class IShader;
 class IRenderDevice;
-class IBuffer;
-class ITexture;
+class ICommandBuffer;
+class RenderPass;
 
-/// @brief 管线状态
-enum class PipelineState {
-    Idle,
-    Building,
-    Ready,
-    Failed
+/// @brief 渲染上下文
+struct RenderContext {
+    /// @brief 渲染设备
+    IRenderDevice* device = nullptr;
+
+    /// @brief 主命令缓冲区
+    ICommandBuffer* commandBuffer = nullptr;
+
+    /// @brief 场景数据（如相机信息）
+    void* sceneData = nullptr;
+
+    /// @brief 当前帧索引
+    uint32_t frameIndex = 0;
+
+    /// @brief 时间信息
+    float deltaTime = 0.0f;
+    float totalTime = 0.0f;
+
+    /// @brief 渲染目标尺寸
+    uint32_t renderTargetWidth = 0;
+    uint32_t renderTargetHeight = 0;
+
+    /// @brief 用户数据
+    void* userData = nullptr;
 };
 
-/// @brief 图元拓扑类型
-enum class PrimitiveTopology {
-    Undefined = 0,
-    PointList = 1,
-    LineList = 2,
-    LineStrip = 3,
-    TriangleList = 4,
-    TriangleStrip = 5
-};
-
-/// @brief 混合操作
-enum class BlendOp {
-    Add = 1,
-    Subtract = 2,
-    RevSubtract = 3,
-    Min = 4,
-    Max = 5
-};
-
-/// @brief 混合因子
-enum class BlendFactor {
-    Zero = 0,
-    One = 1,
-    SrcColor = 2,
-    InvSrcColor = 3,
-    SrcAlpha = 4,
-    InvSrcAlpha = 5,
-    DestAlpha = 6,
-    InvDestAlpha = 7,
-    DestColor = 8,
-    InvDestColor = 9,
-    SrcAlphaSat = 10,
-    BlendFactor = 11,
-    InvBlendFactor = 12,
-    Src1Color = 13,
-    InvSrc1Color = 14,
-    Src1Alpha = 15,
-    InvSrc1Alpha = 16
-};
-
-/// @brief 填充模式
-enum class FillMode {
-    Solid = 0,
-    Wireframe = 1
-};
-
-/// @brief 裁剪模式
-enum class CullMode {
-    None = 1,
-    Front = 2,
-    Back = 3
-};
-
-/// @brief 深度比较函数
-enum class ComparisonFunc {
-    Never = 1,
-    Less = 2,
-    Equal = 3,
-    LessEqual = 4,
-    Greater = 5,
-    NotEqual = 6,
-    GreaterEqual = 7,
-    Always = 8
-};
-
-/// @/// @brief 模板操作
-enum class StencilOp {
-    Keep = 1,
-    Zero = 2,
-    Replace = 3,
-    IncreaseSat = 4,
-    DecreaseSat = 5,
-    Invert = 6,
-    Increase = 7,
-    Decrease = 8
-};
-
-/// @brief 渲染管线抽象接口
-class IPipeline : public IResource {
+/// @brief 渲染流程控制器抽象接口
+/// 管理和执行一系列渲染通道(RenderPass)
+class IPipeline {
 public:
     virtual ~IPipeline() = default;
 
-    /// @brief 获取管线状态
-    /// @return 管线状态
-    virtual PipelineState GetState() const = 0;
+    /// @brief 初始化渲染流程
+    /// @param device 渲染设备
+    /// @return 是否初始化成功
+    virtual bool Initialize(IRenderDevice* device) = 0;
 
-    /// @brief 获取图元拓扑类型
-    /// @return 图元拓扑类型
-    virtual PrimitiveTopology GetPrimitiveTopology() const = 0;
+    /// @brief 关闭渲染流程
+    virtual void Shutdown() = 0;
 
-    // === 着色器访问 ===
+    // === 渲染通道管理 ===
 
-    /// @brief 获取顶点着色器
-    /// @return 顶点着色器智能指针
-    virtual std::shared_ptr<IShader> GetVertexShader() const = 0;
+    /// @brief 添加渲染通道
+    /// @param renderPass 渲染通道
+    /// @param index 插入位置（-1表示添加到末尾）
+    /// @return 是否添加成功
+    virtual bool AddRenderPass(std::unique_ptr<RenderPass> renderPass, int index = -1) = 0;
 
-    /// @brief 获取像素着色器
-    /// @return 像素着色器智能指针
-    virtual std::shared_ptr<IShader> GetPixelShader() const = 0;
+    /// @brief 移除渲染通道
+    /// @param name 渲染通道名称
+    /// @return 是否移除成功
+    virtual bool RemoveRenderPass(const std::string& name) = 0;
 
-    /// @brief 获取几何着色器
-    /// @return 几何着色器智能指针
-    virtual std::shared_ptr<IShader> GetGeometryShader() const = 0;
+    /// @brief 获取渲染通道
+    /// @param name 渲染通道名称
+    /// @return 渲染通道指针（如果未找到返回nullptr）
+    virtual RenderPass* GetRenderPass(const std::string& name) = 0;
 
-    /// @brief 获取外壳着色器
-    /// @return 外壳着色器智能指针
-    virtual std::shared_ptr<IShader> GetHullShader() const = 0;
+    /// @brief 获取渲染通道
+    /// @param index 渲染通道索引
+    /// @return 渲染通道指针（如果索引无效返回nullptr）
+    virtual RenderPass* GetRenderPass(uint32_t index) = 0;
 
-    /// @brief 获取域着色器
-    /// @return 域着色器智能指针
-    virtual std::shared_ptr<IShader> GetDomainShader() const = 0;
+    /// @brief 获取所有渲染通道名称
+    /// @return 名称数组
+    virtual std::vector<std::string> GetRenderPassNames() const = 0;
 
-    /// @brief 获取计算着色器
-    /// @return 计算着色器智能指针
-    virtual std::shared_ptr<IShader> GetComputeShader() const = 0;
+    /// @brief 获取渲染通道数量
+    /// @return 数量
+    virtual uint32_t GetRenderPassCount() const = 0;
 
-    // === 渲染目标信息 ===
+    // === 执行控制 ===
 
-    /// @brief 获取渲染目标数量
-    /// @return 渲染目标数量
-    virtual uint32_t GetRenderTargetCount() const = 0;
+    /// @brief 执行渲染流程
+    /// @param context 渲染上下文
+    virtual void Execute(const RenderContext& context) = 0;
 
-    /// @brief 获取渲染目标格式
-    /// @param index 渲染目标索引
-    /// @return 渲染目标格式
-    virtual TextureFormat GetRenderTargetFormat(uint32_t index) const = 0;
+    /// @brief 开始渲染流程
+    /// @param context 渲染上下文
+    virtual void Begin(const RenderContext& context) = 0;
 
-    /// @brief 获取深度模板格式
-    /// @return 深度模板格式
-    virtual TextureFormat GetDepthStencilFormat() const = 0;
+    /// @brief 结束渲染流程
+    virtual void End() = 0;
 
-    /// @brief 获取采样数量
-    /// @return 采样数量
-    virtual uint32_t GetSampleCount() const = 0;
+    /// @brief 设置是否启用某个渲染通道
+    /// @param name 渲染通道名称
+    /// @param enabled 是否启用
+    virtual void SetRenderPassEnabled(const std::string& name, bool enabled) = 0;
 
-    /// @brief 获取采样质量
-    /// @return 采样质量
-    virtual uint32_t GetSampleQuality() const = 0;
+    /// @brief 检查渲染通道是否启用
+    /// @param name 渲染通道名称
+    /// @return 是否启用
+    virtual bool IsRenderPassEnabled(const std::string& name) const = 0;
 
-    // === 状态查询 ===
+    // === 渲染目标管理 ===
 
-    /// @brief 检查是否启用深度测试
-    /// @return 是否启用深度测试
-    virtual bool IsDepthTestEnabled() const = 0;
+    /// @brief 设置主渲染目标
+    /// @param renderTarget 渲染目标纹理
+    /// @param depthStencil 深度模板缓冲区
+    virtual void SetMainRenderTarget(ITexture* renderTarget, ITexture* depthStencil = nullptr) = 0;
 
-    /// @brief 检查是否启用深度写入
-    /// @return 是否启用深度写入
-    virtual bool IsDepthWriteEnabled() const = 0;
+    /// @brief 获取主渲染目标
+    /// @return 渲染目标纹理
+    virtual ITexture* GetMainRenderTarget() const = 0;
 
-    /// @brief 获取深度比较函数
-    /// @return 深度比较函数
-    virtual ComparisonFunc GetDepthFunc() const = 0;
+    /// @brief 获取主深度模板缓冲区
+    /// @return 深度模板缓冲区
+    virtual ITexture* GetMainDepthStencil() const = 0;
 
-    /// @brief 检查是否启用模板测试
-    /// @return 是否启用模板测试
-    virtual bool IsStencilEnabled() const = 0;
+    // === 依赖关系 ===
 
-    /// @brief 检查是否启用裁剪
-    /// @return 是否启用裁剪
-    virtual bool IsCullingEnabled() const = 0;
+    /// @brief 设置渲染通道之间的依赖关系
+    /// @param srcPass 源通道名称
+    /// @param dstPass 目标通道名称
+    /// @return 是否设置成功
+    virtual bool SetRenderPassDependency(const std::string& srcPass, const std::string& dstPass) = 0;
 
-    /// @brief 获取裁剪模式
-    /// @return 裁剪模式
-    virtual CullMode GetCullMode() const = 0;
+    /// @brief 获取渲染通道的依赖
+    /// @param name 渲染通道名称
+    /// @return 依赖的渲染通道名称数组
+    virtual std::vector<std::string> GetRenderPassDependencies(const std::string& name) const = 0;
 
-    /// @brief 获取填充模式
-    /// @return 填充模式
-    virtual FillMode GetFillMode() const = 0;
+    // === 配置 ===
 
-    /// @brief 检查是否启用混合
-    /// @return 是否启用混合
-    virtual bool IsBlendingEnabled() const = 0;
+    /// @brief 设置是否自动清除渲染目标
+    /// @param clear 是否清除
+    /// @param color 清除颜色
+    virtual void SetAutoClearRenderTarget(bool clear, const Color& color = {0.0f, 0.0f, 0.0f, 1.0f}) = 0;
 
-    /// @brief 获取混合操作
-    /// @return 混合操作
-    virtual BlendOp GetBlendOp() const = 0;
+    /// @brief 设置是否自动清除深度模板
+    /// @param clear 是否清除
+    /// @param depth 深度清除值
+    /// @param stencil 模板清除值
+    virtual void SetAutoClearDepthStencil(bool clear, float depth = 1.0f, uint8_t stencil = 0) = 0;
 
-    /// @brief 获取源混合因子
-    /// @return 源混合因子
-    virtual BlendFactor GetSrcBlendFactor() const = 0;
+    // === 调试 ===
 
-    /// @brief 获取目标混合因子
-    /// @return 目标混合因子
-    virtual BlendFactor GetDestBlendFactor() const = 0;
+    /// @brief 获取渲染流程名称
+    /// @return 名称
+    virtual const std::string& GetName() const = 0;
 
-    // === 顶点输入布局 ===
+    /// @brief 设置渲染流程名称
+    /// @param name 名称
+    virtual void SetName(const std::string& name) = 0;
 
-    /// @brief 获取顶点输入元素数量
-    /// @return 顶点输入元素数量
-    virtual uint32_t GetVertexInputElementCount() const = 0;
+    /// @brief 启用/禁用调试标记
+    /// @param enabled 是否启用
+    virtual void SetDebugMarkersEnabled(bool enabled) = 0;
 
-    /// @brief 获取顶点输入元素
-    /// @param index 元素索引
-    /// @param[out] semanticName 语义名称
-    /// @param[out] semanticIndex 语义索引
-    /// @param[out] format 格式
-    /// @param[out] inputSlot 输入槽
-    /// @param[out] alignedByteOffset 对齐字节偏移
-    /// @param[out] inputSlotClass 输入槽类型
-    /// @param[out] instanceDataStepRate 实例数据步率
-    virtual void GetVertexInputElement(uint32_t index,
-                                       std::string& semanticName,
-                                       uint32_t& semanticIndex,
-                                       TextureFormat& format,
-                                       uint32_t& inputSlot,
-                                       uint32_t& alignedByteOffset,
-                                       uint32_t& inputSlotClass,
-                                       uint32_t& instanceDataStepRate) const = 0;
-
-    // === 管线修改 ===
-
-    /// @brief 设置着色器
-    /// @param shader 着色器智能指针
-    /// @return 是否成功
-    virtual bool SetShader(std::shared_ptr<IShader> shader) = 0;
-
-    /// @brief 设置渲染目标格式
-    /// @param index 渲染目标索引
-    /// @param format 格式
-    /// @return 是否成功
-    virtual bool SetRenderTargetFormat(uint32_t index, TextureFormat format) = 0;
-
-    /// @brief 设置深度模板格式
-    /// @param format 格式
-    /// @return 是否成功
-    virtual bool SetDepthStencilFormat(TextureFormat format) = 0;
-
-    /// @brief 设置采样数量
-    /// @param sampleCount 采样数量
-    /// @return 是否成功
-    virtual bool SetSampleCount(uint32_t sampleCount) = 0;
-
-    /// @brief 设置深度状态
-    /// @param enable 是否启用深度测试
-    /// @param write 是否启用深度写入
-    /// @param func 比较函数
-    /// @return 是否成功
-    virtual bool SetDepthState(bool enable, bool write, ComparisonFunc func) = 0;
-
-    /// @brief 设置模板状态
-    /// @param enable 是否启用模板测试
-    /// @param readMask 读取掩码
-    /// @param writeMask 写入掩码
-    /// @return 是否成功
-    virtual bool SetStencilState(bool enable, uint8_t readMask, uint8_t writeMask) = 0;
-
-    /// @brief 设置裁剪状态
-    /// @param enable 是否启用裁剪
-    /// @param mode 裁剪模式
-    /// @param frontCCW 是否正面逆时针
-    /// @return 是否成功
-    virtual bool SetRasterizerState(bool enable, CullMode mode, bool frontCCW) = 0;
-
-    /// @brief 设置填充模式
-    /// @param mode 填充模式
-    /// @return 是否成功
-    virtual bool SetFillMode(FillMode mode) = 0;
-
-    /// @brief 设置混合状态
-    /// @param enable 是否启用混合
-    /// @param srcBlend 源混合因子
-    /// @param destBlend 目标混合因子
-    /// @param blendOp 混合操作
-    /// @param srcBlendAlpha 源Alpha混合因子
-    /// @param destBlendAlpha 目标Alpha混合因子
-    /// @param blendOpAlpha Alpha混合操作
-    /// @return 是否成功
-    virtual bool SetBlendState(bool enable,
-                               BlendFactor srcBlend, BlendFactor destBlend, BlendOp blendOp,
-                               BlendFactor srcBlendAlpha, BlendFactor destBlendAlpha, BlendOp blendOpAlpha) = 0;
-
-    // === 管线构建 ===
-
-    /// @brief 构建管线
-    /// @return 是否构建成功
-    virtual bool Build() = 0;
-
-    /// @brief 重新构建管线（在修改后调用）
-    /// @return 是否重新构建成功
-    virtual bool Rebuild() = 0;
-
-    /// @brief 验证管线配置
-    /// @return 是否有效
-    virtual bool Validate() = 0;
-
-    /// @brief 获取构建错误信息
+    /// @brief 获取上一次执行的错误信息
     /// @return 错误信息
-    virtual const std::string& GetBuildErrors() const = 0;
+    virtual const std::string& GetLastExecutionError() const = 0;
 
-    // === 管线克隆 ===
+    // === 统计 ===
 
-    /// @brief 克隆管线
-    /// @return 克隆的管线智能指针
-    virtual std::shared_ptr<IPipeline> Clone() const = 0;
+    /// @brief 获取执行统计
+    struct ExecutionStats {
+        uint32_t totalPasses = 0;
+        uint32_t executedPasses = 0;
+        uint32_t skippedPasses = 0;
+        float executionTime = 0.0f;  // 毫秒
+        uint32_t drawCalls = 0;
+        uint32_t triangles = 0;
+    };
 
-    // === 调试功能 ===
+    /// @brief 获取执行统计
+    /// @return 统计信息
+    virtual ExecutionStats GetExecutionStats() const = 0;
 
-    /// @brief 打印管线信息
-    virtual void DebugPrintInfo() const = 0;
+    /// @brief 重置统计信息
+    virtual void ResetStats() = 0;
 
-    /// @brief 导出管线配置到文件
-    /// @param filename 文件名
-    /// @return 是否成功
-    virtual bool DebugExportToFile(const std::string& filename) const = 0;
-
-    // === 管线缓存 ===
-
-    /// @brief 启用管线缓存
-    /// @param enable 是否启用
-    virtual void EnableCache(bool enable) = 0;
-
-    /// @brief 获取管线缓存键
-    /// @return 缓存键
-    virtual uint64_t GetCacheKey() const = 0;
-
-    /// @brief 从缓存加载管线
-    /// @param cacheKey 缓存键
-    /// @return 是否加载成功
-    virtual bool LoadFromCache(uint64_t cacheKey) = 0;
-
-    /// @brief 保存管线到缓存
-    /// @return 是否保存成功
-    virtual bool SaveToCache() const = 0;
+protected:
+    std::string m_name;
+    bool m_debugMarkersEnabled = false;
+    mutable ExecutionStats m_stats = {};
+    mutable std::string m_lastError;
 };
 
 } // namespace PrismaEngine::Graphic

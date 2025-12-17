@@ -14,6 +14,7 @@
 #include "ITexture.h"
 #include "IBuffer.h"
 #include "IShader.h"
+#include "IPipelineState.h"
 #include "IPipeline.h"
 #include "ISampler.h"
 
