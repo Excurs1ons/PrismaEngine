@@ -62,6 +62,9 @@ private:
     /// @brief 测试资源清理
     bool TestResourceCleanup();
 
+    /// @brief 测试内存使用情况
+    bool TestMemoryUsage();
+
     // === 辅助方法 ===
 
     /// @brief 创建简单三角形着色器
