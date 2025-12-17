@@ -35,14 +35,14 @@ set(ENGINE_GRAPHIC_SOURCES
     # New adapter files
     graphic/adapters/dx12/DX12RenderDevice.cpp
     graphic/adapters/dx12/DX12CommandBuffer.cpp
-    graphic/adapters/dx12/DX12Fence.cpp
-    graphic/adapters/dx12/DX12SwapChain.cpp
+    # graphic/adapters/dx12/DX12Fence.cpp
+    # graphic/adapters/dx12/DX12SwapChain.cpp
     graphic/adapters/dx12/DX12Texture.cpp
     graphic/adapters/dx12/DX12Buffer.cpp
     graphic/adapters/dx12/DX12Shader.cpp
     graphic/adapters/dx12/DX12PipelineState.cpp
     graphic/adapters/dx12/DX12Sampler.cpp
-    graphic/adapters/dx12/DX12ResourceFactory.cpp
+    # graphic/adapters/dx12/DX12ResourceFactory.cpp
 )
 
 set(ENGINE_GRAPHIC_HEADERS

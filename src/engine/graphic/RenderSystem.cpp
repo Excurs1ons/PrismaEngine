@@ -11,68 +11,97 @@
 extern HWND g_hWnd;
 #endif
 
+// 适配器实现包含在内，不暴露给外部
+#include "RenderSystemAdapter.cpp"
+
 namespace Engine {
 
+// RenderSystem适配器类的完整实现
+class RenderSystem::Adapter {
+public:
+    Adapter(RenderSystem* renderSystem)
+        : m_renderSystem(renderSystem) {}
+
+    bool Initialize(Platform* platform, RenderBackendType renderBackendType,
+                   WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
+        // 创建新的渲染系统描述
+        PrismaEngine::Graphic::RenderSystemDesc desc;
+        desc.backendType = renderBackendType;
+        desc.windowHandle = windowHandle;
+        desc.surface = surface;
+        desc.width = width;
+        desc.height = height;
+        desc.enableDebug = false; // 可以从配置文件读取
+        desc.name = "PrismaRenderSystem";
+
+        // 初始化新的渲染系统
+        if (!m_newRenderSystem.Initialize(desc)) {
+            LOG_ERROR("Render", "新渲染系统初始化失败");
+            return false;
+        }
+
+        // 将旧的后端指针设置到旧RenderSystem中（用于兼容性）
+        m_renderSystem->renderBackend = m_newRenderSystem.GetRenderBackend();
+        m_renderSystem->renderPipe = m_newRenderSystem.GetRenderPipe();
+
+        // 注意：forwardPipeline需要在m_newRenderSystem中获取并移动
+        // 这里我们需要修改RenderSystemNew来公开forwardPipeline的访问
+        m_renderSystem->forwardPipeline = std::make_unique<Graphic::Pipelines::Forward::ForwardPipeline>();
+
+        return true;
+    }
+
+    void Shutdown() {
+        m_newRenderSystem.Shutdown();
+    }
+
+    void Update(float deltaTime) {
+        m_newRenderSystem.Update(deltaTime);
+    }
+
+    void BeginFrame() {
+        m_newRenderSystem.BeginFrame();
+    }
+
+    void EndFrame() {
+        m_newRenderSystem.EndFrame();
+    }
+
+    void Present() {
+        m_newRenderSystem.Present();
+    }
+
+    void Resize(uint32_t width, uint32_t height) {
+        m_newRenderSystem.Resize(width, height);
+    }
+
+    void SetGuiRenderCallback(GuiRenderCallback callback) {
+        m_newRenderSystem.SetGuiRenderCallback(callback);
+    }
+
+private:
+    RenderSystem* m_renderSystem;
+    PrismaEngine::Graphic::RenderSystemNew m_newRenderSystem;
+};
+
+// 静态适配器方法定义
 bool RenderSystem::Initialize(
-    Platform* platform, RenderBackendType renderBackendType, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
-    LOG_INFO("Render", "正在初始化渲染系统: 后端类型={0}", static_cast<int>(renderBackendType));
+    Platform* platform, RenderBackendType renderBackendType,
+    WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
 
-    switch (renderBackendType) {
-        case RenderBackendType::SDL3:
-            LOG_ERROR("Render", "SDL3渲染后端尚未实现");
-            return false;
-        case RenderBackendType::DirectX12:
-            this->renderBackend = std::make_unique<RenderBackendDirectX12>(L"RendererDirectX");
-            LOG_INFO("Render", "DirectX12渲染后端创建完成");
-            break;
-        case RenderBackendType::Vulkan:
-            this->renderBackend = std::make_unique<RenderBackendVulkan>();
-            LOG_INFO("Render", "Vulkan渲染后端创建完成");
-            break;
-        case RenderBackendType::None:
-        default:
-            LOG_ERROR("Render", "未指定渲染后端");
-            return false;
+    // 创建适配器
+    m_adapter = std::make_unique<Adapter>(this);
+
+    // 使用适配器初始化
+    bool result = m_adapter->Initialize(platform, renderBackendType, windowHandle, surface, width, height);
+
+    if (result) {
+        LOG_INFO("Render", "渲染系统（适配器）初始化成功");
+    } else {
+        LOG_ERROR("Render", "渲染系统（适配器）初始化失败");
     }
 
-    if (!this->renderBackend) {
-        LOG_ERROR("Render", "渲染后端创建失败: {0}", static_cast<int>(renderBackendType));
-        return false;
-    }
-
-    if (!this->renderBackend->Initialize(platform, windowHandle, surface, width, height)) {
-        LOG_ERROR("Render", "渲染后端初始化失败");
-        return false;
-    }
-    
-    // 初始化可编程渲染管线
-    this->renderPipe = std::make_unique<ScriptableRenderPipeline>();
-    if (!this->renderPipe->Initialize(this->renderBackend.get())) {
-        LOG_ERROR("Render", "可编程渲染管线初始化失败");
-        return false;
-    }
-    
-    // 初始化前向渲染管线
-    this->forwardPipeline = std::make_unique<Graphic::Pipelines::Forward::ForwardPipeline>();
-    if (!this->forwardPipeline->Initialize(this->renderPipe.get())) {
-        LOG_ERROR("Render", "前向渲染管线初始化失败");
-        return false;
-    }
-
-    // 获取并设置默认渲染目标和深度缓冲
-    auto defaultRenderTarget = this->renderBackend->GetDefaultRenderTarget();
-    auto defaultDepthBuffer = this->renderBackend->GetDefaultDepthBuffer();
-    this->renderBackend->GetRenderTargetSize(width, height);
-
-    if (defaultRenderTarget && defaultDepthBuffer) {
-        // 设置所有RenderPass的渲染目标和深度缓冲
-        this->forwardPipeline->SetRenderTargets(defaultRenderTarget, defaultDepthBuffer, width, height);
-        LOG_INFO("Render", "设置默认渲染目标: {0}x{1}", width, height);
-    }
-
-    this->renderBackend->isInitialized = true;
-    LOG_INFO("Render", "渲染系统初始化完成");
-    return true;
+    return result;
 }
 
 bool RenderSystem::Initialize() {
@@ -101,141 +130,46 @@ bool RenderSystem::Initialize() {
 }
 
 void RenderSystem::Shutdown() {
-    LOG_INFO("Render", "渲染系统开始关闭");
-
-    // 先关闭前向渲染管线
-    if (forwardPipeline) {
-        forwardPipeline->Shutdown();
-        forwardPipeline.reset();
+    if (m_adapter) {
+        m_adapter->Shutdown();
+        m_adapter.reset();
     }
-
-    // 先关闭渲染管线
-    if (renderPipe) {
-        renderPipe->Shutdown();
-        renderPipe.reset();
-    }
-
-    if (renderBackend) {
-        renderBackend->Shutdown();
-        renderBackend.reset();
-    }
-
-    LOG_INFO("Render", "渲染系统关闭完成");
 }
 
 void RenderSystem::Update(float deltaTime) {
-    // 检查渲染后端是否初始化
-    if (!renderBackend) {
-        LOG_ERROR("Render", "渲染后端为空");
-        return;
-    }
-
-    // 检查设备状态
-    if (!renderBackend->isInitialized) {
-        LOG_ERROR("Render", "渲染设备未初始化，无法继续渲染");
-        throw std::runtime_error("渲染设备未初始化");
-    }
-
-    // 更新前向渲染管线（从Scene获取相机等数据）
-    if (forwardPipeline) {
-        forwardPipeline->Update(deltaTime);
-    }
-
-    // 在主线程中执行渲染
-    RenderFrame();
-}
-
-void RenderSystem::SetGuiRenderCallback(GuiRenderCallback callback) {
-    if (renderBackend) {
-        renderBackend->SetGuiRenderCallback(callback);
+    if (m_adapter) {
+        m_adapter->Update(deltaTime);
     }
 }
 
 void RenderSystem::BeginFrame() {
-    if (renderBackend) {
-        renderBackend->BeginFrame();
+    if (m_adapter) {
+        m_adapter->BeginFrame();
     }
 }
 
 void RenderSystem::EndFrame() {
-    if (renderBackend) {
-        renderBackend->EndFrame();
+    if (m_adapter) {
+        m_adapter->EndFrame();
     }
 }
 
 void RenderSystem::Present() {
-    if (renderBackend) {
-        renderBackend->Present();
+    if (m_adapter) {
+        m_adapter->Present();
     }
 }
 
-void RenderSystem::Resize(uint32_t width, uint32_t height)
-{
-    if (!renderBackend) {
-        LOG_ERROR("Render", "渲染后端未初始化，无法调整大小");
-        return;
-    }
-
-    LOG_INFO("Render", "调整渲染大小到: {0}x{1}", width, height);
-
-    // 调整渲染后端大小
-    renderBackend->Resize(width, height);
-
-    if (renderPipe) {
-        renderPipe->SetViewportSize(width, height);
-    }
-
-    // 获取新的渲染目标和尺寸
-    auto renderTarget = renderBackend->GetDefaultRenderTarget();
-    auto depthBuffer = renderBackend->GetDefaultDepthBuffer();
-    uint32_t newWidth, newHeight;
-    renderBackend->GetRenderTargetSize(newWidth, newHeight);
-
-    // 更新所有RenderPass的视口和渲染目标
-    if (forwardPipeline && renderTarget && depthBuffer) {
-        forwardPipeline->SetRenderTargets(renderTarget, depthBuffer, newWidth, newHeight);
+void RenderSystem::Resize(uint32_t width, uint32_t height) {
+    if (m_adapter) {
+        m_adapter->Resize(width, height);
     }
 }
 
-void RenderSystem::RenderFrame() {
-    if (!renderBackend || !renderBackend->isInitialized) {
-        LOG_WARNING("Render", "渲染后端未初始化，跳过渲染帧");
-        return;
+void RenderSystem::SetGuiRenderCallback(GuiRenderCallback callback) {
+    if (m_adapter) {
+        m_adapter->SetGuiRenderCallback(callback);
     }
-
-    LOG_DEBUG("Render", "开始渲染帧");
-
-    // 获取当前场景的清除颜色
-    XMFLOAT4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f}; // 默认黑色
-    auto sceneManager = SceneManager::GetInstance();
-    if (sceneManager) {
-        auto scene = sceneManager->GetCurrentScene();
-        if (scene) {
-            auto camera = scene->GetMainCamera();
-            if (camera) {
-                auto colorVec = camera->GetClearColor();
-                clearColor = XMFLOAT4(XMVectorGetX(colorVec), XMVectorGetY(colorVec),
-                                     XMVectorGetZ(colorVec), XMVectorGetW(colorVec));
-                LOG_DEBUG("Render", "使用相机清除颜色: ({0}, {1}, {2}, {3})",
-                          clearColor.x, clearColor.y, clearColor.z, clearColor.w);
-            }
-        }
-    }
-
-    // 执行渲染帧（传入清除颜色）
-    renderBackend->BeginFrame(clearColor);
-
-    // 执行可编程渲染管线
-    if (renderPipe) {
-        LOG_DEBUG("Render", "执行可编程渲染管线");
-        renderPipe->Execute();
-    }
-
-    LOG_DEBUG("Render", "结束渲染帧");
-    renderBackend->EndFrame();
-    LOG_DEBUG("Render", "Present帧");
-    renderBackend->Present();
-    LOG_DEBUG("Render", "渲染帧完成");
 }
 
 }  // namespace Engine

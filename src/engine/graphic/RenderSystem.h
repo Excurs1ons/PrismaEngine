@@ -43,6 +43,10 @@ private:
     // 渲染任务函数
     std::function<void()> m_renderTask;
 
+    // 适配器（内部使用新接口）
+    class Adapter;
+    std::unique_ptr<Adapter> m_adapter;
+
     // 在渲染线程中执行
     void RenderFrame();
 
