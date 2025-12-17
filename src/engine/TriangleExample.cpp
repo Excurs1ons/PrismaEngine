@@ -15,7 +15,7 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     auto scene = std::make_shared<Scene>();
     
     // 创建相机
-    auto cameraObj = CreateCamera("MainCamera", {0.0f, 2.0f, -8.0f}, Quaternion::Identity);
+    auto cameraObj = CreateCamera("MainCamera", {0.0f, 0.0f, -0.0f}, Quaternion::Identity);
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
@@ -293,7 +293,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     camera->SetPerspectiveProjection(XM_PIDIV4, aspect_ratio, 0.1F, 1000.0F);
 
     // 设置清除颜色为深蓝色
-    camera->SetClearColor(0.0F, 1.0f, 0.5f, 1.0f);
+    //camera->SetClearColor(0.0F, 1.0f, 0.5f, 1.0f);
 
     // 添加3D相机控制器组件
     auto camera_controller = game_object->AddComponent<Camera3DController>();

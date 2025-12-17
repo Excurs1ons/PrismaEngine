@@ -65,7 +65,10 @@ int main(int argc, char* argv[]) {
     LogConfig logConfig = LogConfig();
     // 如果是调试状态，禁用ANSI颜色代码
     // logConfig.enableColors = !isRunningInDebugger();
-    
+#ifdef _DEBUG
+    logConfig.enableCallStack = true;
+#endif
+
     if (cmdParser.IsOptionSet("log-file")) {
         logConfig.logFilePath = cmdParser.GetOptionValue("log-file");
     } else {
