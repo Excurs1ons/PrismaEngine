@@ -2,6 +2,7 @@
 
 #include "interfaces/IResourceManager.h"
 #include "interfaces/IRenderDevice.h"
+#include "interfaces/IPipelineState.h"
 #include <unordered_map>
 #include <shared_mutex>
 #include <queue>
