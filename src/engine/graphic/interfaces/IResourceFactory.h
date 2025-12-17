@@ -2,6 +2,7 @@
 
 #include "RenderTypes.h"
 #include "IResourceManager.h"
+#include "IPipelineState.h"
 #include <memory>
 
 namespace PrismaEngine::Graphic {
@@ -78,7 +79,7 @@ public:
     /// @brief 创建管线实现
     /// @param desc 管线描述
     /// @return 管线智能指针
-    virtual std::unique_ptr<IPipeline> CreatePipelineImpl(const PipelineDesc& desc) = 0;
+    virtual std::unique_ptr<IPipelineState> CreatePipelineStateImpl() = 0;
 
     // === 采样器创建 ===
 
@@ -174,12 +175,7 @@ public:
     /// @return 是否有效
     virtual bool ValidateShaderDesc(const ShaderDesc& desc, std::string& errorMsg) = 0;
 
-    /// @brief 验证管线描述
-    /// @param desc 描述
-    /// @param[out] errorMsg 错误信息
-    /// @return 是否有效
-    virtual bool ValidatePipelineDesc(const PipelineDesc& desc, std::string& errorMsg) = 0;
-
+  
     // === 内存管理 ===
 
     /// @brief 获取内存预算
