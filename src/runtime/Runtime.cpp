@@ -192,11 +192,43 @@ int RunRenderTest() {
         PrismaEngine::Graphic::RenderSystemTest test;
 
         // 创建一个简单的窗口用于测试
-        // 注意：这里需要根据实际情况创建窗口句柄
-        // 为了简化测试，我们先传入nullptr，让渲染系统自己创建窗口
+        // 由于DirectX12需要有效的窗口句柄，我们创建一个隐藏窗口
         void* windowHandle = nullptr;
         uint32_t width = 800;
         uint32_t height = 600;
+
+#if defined(_WIN32)
+        // 创建一个隐藏的窗口用于DirectX12渲染
+        WNDCLASSA wc = {};
+        wc.lpfnWndProc = DefWindowProcA;
+        wc.hInstance = GetModuleHandle(nullptr);
+        wc.lpszClassName = "RenderTestWindow";
+        wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
+
+        if (RegisterClassA(&wc)) {
+            windowHandle = CreateWindowA(
+                "RenderTestWindow",
+                "Render Test",
+                WS_OVERLAPPEDWINDOW,
+                0, 0, width, height,
+                nullptr, nullptr, GetModuleHandle(nullptr), nullptr
+            );
+
+            if (windowHandle) {
+                // 隐藏窗口，因为我们只需要窗口句柄用于渲染测试
+                ShowWindow(static_cast<HWND>(windowHandle), SW_HIDE);
+                LOG_INFO("Runtime", "创建隐藏窗口用于渲染测试: {0}", reinterpret_cast<uintptr_t>(windowHandle));
+            }
+        }
+
+        if (!windowHandle) {
+            LOG_ERROR("Runtime", "无法创建测试窗口");
+            return -1;
+        }
+#else
+        LOG_ERROR("Runtime", "渲染测试仅在Windows平台上支持");
+        return -1;
+#endif
 
         // 初始化测试
         if (!test.Initialize(windowHandle, width, height)) {
@@ -210,24 +242,55 @@ int RunRenderTest() {
         if (allTestsPassed) {
             LOG_INFO("Runtime", "新渲染系统测试完成 - 所有测试通过");
 
-            // 可选：运行几帧渲染测试
-            for (int i = 0; i < 10; ++i) {
+            // 运行前两帧渲染测试进行验证
+            LOG_INFO("Runtime", "=== 开始渲染流程验证 - 前2帧测试 ===");
+            for (int i = 0; i < 2; ++i) {
+                LOG_INFO("Runtime", "开始渲染第 {0} 帧", i + 1);
                 test.RenderFrame();
                 // 简单延时，避免渲染太快
                 std::this_thread::sleep_for(std::chrono::milliseconds(16));
+                LOG_INFO("Runtime", "第 {0} 帧完成", i + 1);
             }
+            LOG_INFO("Runtime", "=== 渲染流程验证完成 ===");
 
             // 清理
             test.Shutdown();
+
+#if defined(_WIN32)
+            // 销毁测试窗口
+            if (windowHandle) {
+                DestroyWindow(static_cast<HWND>(windowHandle));
+                LOG_INFO("Runtime", "测试窗口已销毁");
+            }
+#endif
+
             return 0;
         } else {
             LOG_ERROR("Runtime", "新渲染系统测试失败");
             test.Shutdown();
+
+#if defined(_WIN32)
+            // 销毁测试窗口
+            if (windowHandle) {
+                DestroyWindow(static_cast<HWND>(windowHandle));
+                LOG_INFO("Runtime", "测试窗口已销毁");
+            }
+#endif
+
             return -1;
         }
 
     } catch (const std::exception& e) {
         LOG_ERROR("Runtime", "渲染系统测试异常: {0}", e.what());
+
+#if defined(_WIN32)
+        // 销毁测试窗口（如果存在）
+        if (windowHandle) {
+            DestroyWindow(static_cast<HWND>(windowHandle));
+            LOG_INFO("Runtime", "测试窗口已销毁（异常清理）");
+        }
+#endif
+
         return -1;
     }
 }

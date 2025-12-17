@@ -117,17 +117,28 @@ bool RenderSystemTest::RunTests() {
 }
 
 void RenderSystemTest::RenderFrame() {
+    static int frameCount = 0;
+    frameCount++;
+
+    LOG_INFO("RenderSystemTest", "=== 开始渲染第 {0} 帧 ===", frameCount);
+
     if (!m_initialized || !m_renderSystem) {
+        LOG_ERROR("RenderSystemTest", "渲染系统未初始化，跳过第 {0} 帧", frameCount);
         return;
     }
 
+    LOG_DEBUG("RenderSystemTest", "第 {0} 帧: BeginFrame", frameCount);
     m_renderSystem->BeginFrame();
 
     // 获取命令缓冲区并渲染三角形
+    LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 获取命令缓冲区", frameCount);
     auto commandBuffer = m_device->BeginFrame();
     if (commandBuffer && m_pipelineState && m_vertexBuffer) {
+        LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 设置渲染状态", frameCount);
+
         // 设置渲染状态
         commandBuffer->SetPipelineState(m_pipelineState.get());
+        LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 管线状态设置完成", frameCount);
 
         // 设置视口
         Viewport viewport{};
@@ -136,22 +147,37 @@ void RenderSystemTest::RenderFrame() {
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         commandBuffer->SetViewport(0, viewport);
+        LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 视口设置完成 ({1}x{2})", frameCount, m_width, m_height);
 
         // 设置裁剪矩形
         Rect scissor{};
         scissor.width = static_cast<int>(m_width);
         scissor.height = static_cast<int>(m_height);
         commandBuffer->SetScissor(0, scissor);
+        LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 裁剪矩形设置完成", frameCount);
 
         // 绑定顶点缓冲区
         commandBuffer->SetVertexBuffer(0, m_vertexBuffer.get());
+        LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 顶点缓冲区绑定完成", frameCount);
 
         // 渲染三角形
         commandBuffer->Draw(3, 1, 0, 0);
+        LOG_INFO("RenderSystemTest", "第 {0} 帧: 三角形绘制命令提交完成 (3个顶点)", frameCount);
+    } else {
+        LOG_ERROR("RenderSystemTest", "第 {0} 帧: 渲染资源不完整 - commandBuffer={1}, pipelineState={2}, vertexBuffer={3}",
+                 frameCount,
+                 commandBuffer ? "有效" : "无效",
+                 m_pipelineState ? "有效" : "无效",
+                 m_vertexBuffer ? "有效" : "无效");
     }
 
+    LOG_DEBUG("RenderSystemTest", "第 {0} 帧: EndFrame", frameCount);
     m_renderSystem->EndFrame();
+
+    LOG_DEBUG("RenderSystemTest", "第 {0} 帧: Present", frameCount);
     m_renderSystem->Present();
+
+    LOG_INFO("RenderSystemTest", "=== 第 {0} 帧渲染完成 ===", frameCount);
 }
 
 bool RenderSystemTest::TestDeviceInitialization() {
@@ -400,10 +426,10 @@ bool RenderSystemTest::CreateTriangleGeometry() {
             return false;
         }
 
-        // 上传顶点数据 (这里需要具体的实现来填充数据)
-        // Note: 实际实现中需要有方法来上传数据到缓冲区
+        // 上传顶点数据到缓冲区
+        m_vertexBuffer->UpdateData(vertices.data(), vertices.size() * sizeof(Vertex), 0);
 
-        LOG_INFO("RenderSystemTest", "三角形几何体创建成功");
+        LOG_INFO("RenderSystemTest", "三角形几何体创建成功，上传了 {0} 个顶点", vertices.size());
         return true;
 
     } catch (const std::exception& e) {
