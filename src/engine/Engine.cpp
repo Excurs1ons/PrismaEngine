@@ -48,6 +48,7 @@ namespace Engine {
     }
     
     int EngineCore::MainLoop() {
+
         isRunning_ = true;
         auto platform = PlatformWindows::GetInstance();
 
@@ -56,6 +57,7 @@ namespace Engine {
 
         // 主循环
         while (IsRunning()) {
+            LOG_TRACE("Engine","Ticking...");
             Tick();
             platform->PumpEvents();
             
