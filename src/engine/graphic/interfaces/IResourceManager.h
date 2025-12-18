@@ -330,16 +330,6 @@ public:
 
     // === 资源查询和管理 ===
 
-    /// @brief 根据ID获取资源
-    /// @param id 资源ID
-    /// @return 资源智能指针
-    virtual std::shared_ptr<IResource> GetResource(ResourceId id) = 0;
-
-    /// @brief 根据名称获取资源
-    /// @param name 资源名称
-    /// @return 资源智能指针
-    virtual std::shared_ptr<IResource> GetResource(const std::string& name) = 0;
-
     /// @brief 释放资源
     /// @param id 资源ID
     virtual void ReleaseResource(ResourceId id) = 0;

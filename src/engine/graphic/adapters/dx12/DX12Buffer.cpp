@@ -33,9 +33,7 @@ DX12Buffer::DX12Buffer(DX12RenderDevice* device,
         m_desc.stride = m_stride;
     }
 
-    // 设置资源ID
-    m_id = static_cast<ResourceId>(reinterpret_cast<uintptr_t>(resource.Get()));
-
+  
     // 获取CPU地址（如果是上传缓冲区）
     if (IsUploadHeap()) {
         D3D12_RANGE readRange = {0, 0};
