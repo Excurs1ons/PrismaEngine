@@ -51,6 +51,10 @@ public:
     /// @return 是否初始化成功
     bool Initialize(const RenderSystemDesc& desc);
 
+    /// @brief 初始化渲染系统（实现基类纯虚函数）
+    /// @return 是否初始化成功
+    bool Initialize() override;
+
     /// @brief 关闭渲染系统
     void Shutdown() override;
 
