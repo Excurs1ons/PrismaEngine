@@ -5,7 +5,6 @@
 #include "interfaces/IResourceManager.h"
 #include "interfaces/IPipeline.h"
 #include "WorkerThread.h"
-#include "pipelines/forward/ForwardPipeline.h"
 #include <memory>
 #include <functional>
 
@@ -14,6 +13,7 @@ namespace PrismaEngine::Graphic {
 // 前置声明
 class RenderBackendDirectX12;
 class DX12RenderDevice;
+class ScriptableRenderPipeline;
 
 namespace Engine {
 namespace Graphic {
