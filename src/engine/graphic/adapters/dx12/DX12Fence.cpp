@@ -1,5 +1,8 @@
 #include "DX12Fence.h"
 #include <wrl/client.h>
+#ifdef CreateEvent
+#undef CreateEvent
+#endif
 
 using Microsoft::WRL::ComPtr;
 
@@ -9,7 +12,7 @@ DX12Fence::DX12Fence(ComPtr<ID3D12Fence> fence)
     : m_fence(fence)
     , m_currentValue(0)
     , m_event(nullptr) {
-    if (fence) {
+    if (fence != nullptr) {
         m_currentValue = fence->GetCompletedValue();
     }
 }
@@ -20,7 +23,7 @@ DX12Fence::~DX12Fence() {
 
 // IFence接口实现
 FenceState DX12Fence::GetState() const {
-    if (!m_fence) {
+    if (m_fence == nullptr) {
         return FenceState::Idle;
     }
 
@@ -32,11 +35,11 @@ FenceState DX12Fence::GetState() const {
 }
 
 uint64_t DX12Fence::GetCompletedValue() const {
-    return m_fence ? m_fence->GetCompletedValue() : 0;
+    return (m_fence != nullptr) ? m_fence->GetCompletedValue() : 0;
 }
 
 void DX12Fence::Signal(uint64_t value) {
-    if (!m_fence) {
+    if (m_fence == nullptr) {
         return;
     }
 
@@ -51,7 +54,7 @@ bool DX12Fence::Wait(uint64_t value, uint64_t timeout) {
 }
 
 bool DX12Fence::WaitForValue(uint64_t value, uint64_t timeout) {
-    if (!m_fence) {
+    if (m_fence == nullptr) {
         return true; // 没有fence，认为已就绪
     }
 
@@ -73,7 +76,7 @@ bool DX12Fence::WaitForValue(uint64_t value, uint64_t timeout) {
 }
 
 void DX12Fence::Reset() {
-    if (!m_fence) {
+    if (m_fence == nullptr) {
         return;
     }
 
@@ -82,11 +85,11 @@ void DX12Fence::Reset() {
 }
 
 void DX12Fence::SetEventOnCompletion(uint64_t value, void* event) {
-    if (!m_fence) {
+    if (m_fence == nullptr) {
         return;
     }
 
-    if (event) {
+    if (event != nullptr) {
         // 设置事件，当fence达到指定值时触发
         HRESULT hr = m_fence->SetEventOnCompletion(value, static_cast<HANDLE>(event));
         if (SUCCEEDED(hr)) {
@@ -95,52 +98,10 @@ void DX12Fence::SetEventOnCompletion(uint64_t value, void* event) {
     }
 }
 
-// DirectX12特定方法
-bool DX12Fence::WaitForValue(uint64_t value, uint64_t timeout) {
-    if (!m_fence) {
-        return true;
-    }
-
-    uint64_t startTime = GetTickCount64();
-    uint64_t timeoutMs = timeout;
-
-    // 检查fence值
-    uint64_t completedValue = m_fence->GetCompletedValue();
-    while (completedValue < value) {
-        if (m_event && completedValue < value) {
-            // 使用事件等待
-            DWORD waitResult = WaitForSingleObject(
-                static_cast<HANDLE>(m_event),
-                static_cast<DWORD>(timeoutMs > 0 ? timeoutMs : INFINITE)
-            );
-
-            if (waitResult == WAIT_OBJECT_0) {
-                completedValue = value; // 事件被触发
-            } else if (waitResult == WAIT_TIMEOUT) {
-                return false; // 超时
-            }
-        } else {
-            // 没有事件，使用忙等待
-            uint64_t currentTime = GetTickCount64();
-            if (timeoutMs != 0 && (currentTime - startTime) >= timeoutMs) {
-                return false;
-            }
-
-            // 短暂休眠
-            Sleep(1);
-
-            // 更新完成的值
-            completedValue = m_fence->GetCompletedValue();
-        }
-    }
-
-    return true;
-}
-
 // 辅助方法
 void DX12Fence::CreateEvent() {
-    if (!m_event) {
-        m_event = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    if (m_event == nullptr) {
+        m_event = CreateEventW(nullptr, FALSE, FALSE, nullptr);
     }
 }
 

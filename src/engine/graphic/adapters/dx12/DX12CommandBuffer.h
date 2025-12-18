@@ -31,7 +31,7 @@ public:
     // ICommandBuffer接口实现
     void Begin() override;
     void End() override;
-    void Reset() override;
+    bool Reset() override;
 
     void BeginRenderPass(const RenderPassDesc& desc) override;
     void EndRenderPass() override;
@@ -98,10 +98,6 @@ public:
     /// @brief 关闭命令缓冲区
     /// @return 是否成功
     bool Close();
-
-    /// @brief 重置命令缓冲区
-    /// @return 是否成功
-    bool Reset();
 
     /// @brief 获取绘制调用次数
     /// @return 绘制调用次数

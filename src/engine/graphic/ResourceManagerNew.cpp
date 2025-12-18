@@ -728,7 +728,7 @@ uint64_t ResourceManager::CalculateFileHash(const std::string& filename) {
     uint64_t hash = 0;
     char buffer[1024];
     while (file.read(buffer, sizeof(buffer))) {
-        for (size_t i = 0; i < file.gcount(); ++i) {
+        for (auto i = 0; i < file.gcount(); ++i) {
             hash = hash * 31 + static_cast<uint64_t>(buffer[i]);
         }
     }

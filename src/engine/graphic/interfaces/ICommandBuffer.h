@@ -41,7 +41,7 @@ public:
     virtual void End() = 0;
 
     /// @brief 重置命令缓冲区
-    virtual void Reset() = 0;
+    virtual bool Reset() = 0;
 
     // === 渲染通道 ===
 
