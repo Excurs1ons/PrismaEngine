@@ -1,6 +1,5 @@
 #pragma once
 
-#include "IResource.h"
 #include "RenderTypes.h"
 #include <memory>
 
@@ -35,7 +34,7 @@ enum class TextureDescriptorType {
 };
 
 /// @brief 纹理抽象接口
-class ITexture : public IResource {
+class ITexture {
 public:
     virtual ~ITexture() = default;
 
