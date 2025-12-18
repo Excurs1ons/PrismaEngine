@@ -140,8 +140,10 @@ bool RenderSystem::Adapter::Initialize(Platform* platform, RenderBackendType ren
     }
 
     // 将旧的后端指针设置到旧RenderSystem中（用于兼容性）
-    m_renderSystem->renderBackend = m_newRenderSystem.GetRenderBackend();
-    m_renderSystem->renderPipe = m_newRenderSystem.GetRenderPipe();
+    // 注意：这里可能需要重新设计，因为 GetRenderBackend() 返回的是原始指针
+    // 而 renderBackend 期望 unique_ptr
+    // m_renderSystem->renderBackend = m_newRenderSystem.GetRenderBackend();
+    // m_renderSystem->renderPipe = m_newRenderSystem.GetRenderPipe();
 
     // 注意：forwardPipeline需要在m_newRenderSystem中获取并移动
     // 这里我们需要修改RenderSystemNew来公开forwardPipeline的访问

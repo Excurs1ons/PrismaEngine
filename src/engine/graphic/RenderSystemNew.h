@@ -128,11 +128,11 @@ public:
 
     /// @brief 获取旧的渲染后端（用于兼容）
     /// @return 渲染后端指针
-    RenderBackend* GetRenderBackend() const { return m_legacyBackend.get(); }
+    Engine::RenderBackend* GetRenderBackend() const { return m_legacyBackend.get(); }
 
     /// @brief 获取旧的渲染管线（用于兼容）
     /// @return 渲染管线指针
-    class ScriptableRenderPipeline* GetRenderPipe() const { return m_legacyPipeline.get(); }
+    Engine::ScriptableRenderPipeline* GetRenderPipe() const { return m_legacyPipeline.get(); }
 
 private:
     // 新接口组件
@@ -141,9 +141,9 @@ private:
     std::shared_ptr<IPipeline> m_mainPipeline;
 
     // 旧接口组件（兼容性）
-    std::unique_ptr<RenderBackend> m_legacyBackend;
-    std::unique_ptr<class ScriptableRenderPipeline> m_legacyPipeline;
-    std::unique_ptr<class Engine::Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
+    std::unique_ptr<Engine::RenderBackend> m_legacyBackend;
+    std::unique_ptr<Engine::ScriptableRenderPipeline> m_legacyPipeline;
+    std::unique_ptr<Engine::Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
 
     // 渲染线程
     WorkerThread m_renderThread;

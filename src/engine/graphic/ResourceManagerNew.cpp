@@ -312,7 +312,7 @@ std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc
     if (samplerUnique) {
         // 转换 unique_ptr 到 shared_ptr
         sampler = std::move(samplerUnique);
-        RegisterResource(sampler);
+        RegisterResource(std::static_pointer_cast<IResource>(sampler));
     }
 
     return sampler;
@@ -592,17 +592,6 @@ bool ResourceManager::CompileHLSLShader(const ShaderDesc& desc,
                                         ShaderReflection& reflection,
                                         std::string& errors) {
 #if defined(_WIN32)
-    // 检查是否需要编译为目标格式
-    std::wstring target = L"";
-    switch (desc.type) {
-        case ShaderType::Vertex: target = L"vs_5_0"; break;
-        case ShaderType::Pixel: target = L"ps_5_0"; break;
-        case ShaderType::Geometry: target = L"gs_5_0"; break;
-        case ShaderType::Hull: target = L"hs_5_0"; break;
-        case ShaderType::Domain: target = L"ds_5_0"; break;
-        case ShaderType::Compute: target = L"cs_5_0"; break;
-    }
-
     // 设置编译选项
     D3D_SHADER_MACRO macros[16] = {};
     for (size_t i = 0; i < desc.defines.size() && i < 15; ++i) {
@@ -632,18 +621,30 @@ bool ResourceManager::CompileHLSLShader(const ShaderDesc& desc,
 
     // 编译着色器
     std::wstring filenameW(desc.filename.begin(), desc.filename.end());
-    std::wstring entryPointW(desc.entryPoint.begin(), desc.entryPoint.end());
+    std::string entryPointA(desc.entryPoint.begin(), desc.entryPoint.end());
+    std::string targetA;
+
+    // 转换 target 从 wstring 到 string
+    switch (desc.type) {
+        case ShaderType::Vertex: targetA = "vs_5_0"; break;
+        case ShaderType::Pixel: targetA = "ps_5_0"; break;
+        case ShaderType::Geometry: targetA = "gs_5_0"; break;
+        case ShaderType::Hull: targetA = "hs_5_0"; break;
+        case ShaderType::Domain: targetA = "ds_5_0"; break;
+        case ShaderType::Compute: targetA = "cs_5_0"; break;
+        default: targetA = "vs_5_0"; break;
+    }
 
     HRESULT hr = D3DCompileFromFile(
         filenameW.c_str(),
         macros,
         D3D_COMPILE_STANDARD_FILE_INCLUDE,
-        entryPointW.c_str(),
-        target.c_str(),
+        entryPointA.c_str(),
+        targetA.c_str(),
         compileFlags,
         0,
-        &shaderBlob,
-        &errorBlob
+        shaderBlob.GetAddressOf(),
+        errorBlob.GetAddressOf()
     );
 
     if (FAILED(hr)) {
@@ -698,7 +699,7 @@ uint64_t ResourceManager::CalculateFileHash(const std::string& filename) {
 
 std::string ResourceManager::GetCachePath(const std::string& filename) {
     uint64_t hash = CalculateFileHash(filename);
-    return m_cacheDirectory / (std::to_string(hash) + ".cache");
+    return (m_cacheDirectory / (std::to_string(hash) + ".cache")).string();
 }
 
 bool ResourceManager::LoadFromCache(const std::string& filename, std::vector<uint8_t>& data) {
