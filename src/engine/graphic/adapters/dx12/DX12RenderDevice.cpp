@@ -424,4 +424,67 @@ void DX12RenderDevice::Present() {
     }
 }
 
+ID3D12CommandSignature* DX12RenderDevice::GetCommandSignature() {
+    if (!m_commandSignature) {
+        // 创建绘制命令签名
+        D3D12_COMMAND_SIGNATURE_DESC desc = {};
+        desc.ByteStride = sizeof(D3D12_DRAW_ARGUMENTS);
+        desc.NumArgumentDescs = 1;
+        desc.NodeMask = 0;
+
+        D3D12_INDIRECT_ARGUMENT_DESC argDesc = {};
+        argDesc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+
+        desc.pArgumentDescs = &argDesc;
+
+        auto device = GetD3D12Device();
+        if (device) {
+            device->CreateCommandSignature(&desc, nullptr, IID_PPV_ARGS(&m_commandSignature));
+        }
+    }
+    return m_commandSignature.Get();
+}
+
+ID3D12CommandSignature* DX12RenderDevice::GetIndexedCommandSignature() {
+    if (!m_indexedCommandSignature) {
+        // 创建索引绘制命令签名
+        D3D12_COMMAND_SIGNATURE_DESC desc = {};
+        desc.ByteStride = sizeof(D3D12_DRAW_INDEXED_ARGUMENTS);
+        desc.NumArgumentDescs = 1;
+        desc.NodeMask = 0;
+
+        D3D12_INDIRECT_ARGUMENT_DESC argDesc = {};
+        argDesc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+
+        desc.pArgumentDescs = &argDesc;
+
+        auto device = GetD3D12Device();
+        if (device) {
+            device->CreateCommandSignature(&desc, nullptr, IID_PPV_ARGS(&m_indexedCommandSignature));
+        }
+    }
+    return m_indexedCommandSignature.Get();
+}
+
+ID3D12CommandSignature* DX12RenderDevice::GetDispatchCommandSignature() {
+    if (!m_dispatchCommandSignature) {
+        // 创建计算命令签名
+        D3D12_COMMAND_SIGNATURE_DESC desc = {};
+        desc.ByteStride = sizeof(D3D12_DISPATCH_ARGUMENTS);
+        desc.NumArgumentDescs = 1;
+        desc.NodeMask = 0;
+
+        D3D12_INDIRECT_ARGUMENT_DESC argDesc = {};
+        argDesc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+
+        desc.pArgumentDescs = &argDesc;
+
+        auto device = GetD3D12Device();
+        if (device) {
+            device->CreateCommandSignature(&desc, nullptr, IID_PPV_ARGS(&m_dispatchCommandSignature));
+        }
+    }
+    return m_dispatchCommandSignature.Get();
+}
+
 } // namespace PrismaEngine::Graphic::DX12

@@ -122,6 +122,18 @@ public:
     /// @brief 等待前一帧完成
     void WaitForPreviousFrame();
 
+    /// @brief 获取绘制命令签名
+    /// @return 命令签名指针
+    ID3D12CommandSignature* GetCommandSignature();
+
+    /// @brief 获取索引绘制命令签名
+    /// @return 索引命令签名指针
+    ID3D12CommandSignature* GetIndexedCommandSignature();
+
+    /// @brief 获取计算命令签名
+    /// @return 计算命令签名指针
+    ID3D12CommandSignature* GetDispatchCommandSignature();
+
 private:
     RenderBackendDirectX12* m_backend;  // 原始后端实现
     std::unique_ptr<DX12ResourceFactory> m_resourceFactory;
@@ -135,6 +147,11 @@ private:
     // 调试标记堆
     ComPtr<ID3D12Debug> m_debugController;
     ComPtr<ID3D12InfoQueue> m_infoQueue;
+
+    // 命令签名
+    ComPtr<ID3D12CommandSignature> m_commandSignature;
+    ComPtr<ID3D12CommandSignature> m_indexedCommandSignature;
+    ComPtr<ID3D12CommandSignature> m_dispatchCommandSignature;
 };
 
 } // namespace PrismaEngine::Graphic::DX12

@@ -426,7 +426,7 @@ void DX12Texture::CreateUAV(D3D12_CPU_DESCRIPTOR_HANDLE handle) {
     uavDesc.Texture2D.MipSlice = 0;
     uavDesc.Texture2D.PlaneSlice = 0;
 
-    device->CreateUnorderedAccessView(m_resource.Get(), &uavDesc, handle);
+    device->CreateUnorderedAccessView(m_resource.Get(), nullptr, &uavDesc, handle);
 }
 
 // 辅助方法

@@ -700,7 +700,7 @@ void DX12ResourceFactory::ForceGarbageCollection() {
     LOG_INFO("DX12ResourceFactory", "Forced garbage collection completed");
 }
 
-ResourceCreationStats DX12ResourceFactory::GetCreationStats() const {
+IResourceFactory::ResourceCreationStats DX12ResourceFactory::GetCreationStats() const {
     return m_stats;
 }
 
@@ -746,10 +746,10 @@ void DX12ResourceFactory::ProcessDeferredDestructions() {
 bool DX12ResourceFactory::CompileShader(const ShaderDesc& desc,
                                        std::vector<uint8_t>& bytecode,
                                        ShaderReflection& reflection,
-                                       std::string* errors) {
+                                       std::string& errors) {
     // TODO: Implement shader compilation when DXC is available
     // This method should call DXC to compile shaders and generate reflection info
-    if (errors) *errors = "Shader compilation not implemented yet - please provide pre-compiled bytecode";
+    errors = "Shader compilation not implemented yet - please provide pre-compiled bytecode";
     return false;
 }
 
@@ -810,7 +810,16 @@ D3D12_RESOURCE_DESC DX12ResourceFactory::GetD3D12TextureDesc(const TextureDesc& 
     d3d12Desc.Height = desc.height;
     d3d12Desc.DepthOrArraySize = desc.arraySize;
     d3d12Desc.MipLevels = desc.mipLevels;
-    d3d12Desc.Format = GetDXGIFormat(desc.format);
+    // Convert texture format to DXGI format
+    DXGI_FORMAT dxgiFormat = DXGI_FORMAT_UNKNOWN;
+    switch (desc.format) {
+        case TextureFormat::RGBA8_UNorm: dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM; break;
+        case TextureFormat::RGBA32_Float: dxgiFormat = DXGI_FORMAT_R32G32B32A32_FLOAT; break;
+        case TextureFormat::D32_Float: dxgiFormat = DXGI_FORMAT_D32_FLOAT; break;
+        case TextureFormat::D24_UNorm_S8_UInt: dxgiFormat = DXGI_FORMAT_D24_UNORM_S8_UINT; break;
+        default: dxgiFormat = DXGI_FORMAT_R8G8B8A8_UNORM; break;
+    }
+    d3d12Desc.Format = dxgiFormat;
     d3d12Desc.SampleDesc.Count = desc.sampleCount;
     d3d12Desc.SampleDesc.Quality = desc.sampleQuality;
     d3d12Desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
@@ -843,9 +852,8 @@ D3D12_RESOURCE_DESC DX12ResourceFactory::GetD3D12BufferDesc(const BufferDesc& de
     d3d12Desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
     d3d12Desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
-    if (HasFlag(desc.usage, BufferUsage::ShaderResource)) {
-        d3d12Desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SHADER_RESOURCE;
-    }
+    // In DirectX 12, buffers are shader resources by default unless they have specific flags
+    // that prevent it (like D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE), so no action needed here.
     if (HasFlag(desc.usage, BufferUsage::UnorderedAccess)) {
         d3d12Desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
@@ -939,7 +947,7 @@ uint64_t DX12ResourceFactory::CalculateTexturePoolKey(const TextureDesc& desc) c
     return key;
 }
 
-void DX12ResourceFactory::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t initialCapacity) {
+void DX12ResourceFactory::InitializeDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t initialCapacity) {
     if (m_descriptorHeaps.find(type) != m_descriptorHeaps.end()) {
         return; // 已存在
     }
@@ -951,7 +959,7 @@ void DX12ResourceFactory::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, 
 
     heap->heap = CreateDescriptorHeap(type, initialCapacity);
     if (!heap->heap) {
-        LOG_ERROR("DX12ResourceFactory", "Failed to create descriptor heap for type: {0}", type);
+        LOG_ERROR("DX12ResourceFactory", "Failed to create descriptor heap");
         return;
     }
 
@@ -961,7 +969,7 @@ void DX12ResourceFactory::CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, 
     heap->gpuStart = heap->heap->GetGPUDescriptorHandleForHeapStart();
 
     m_descriptorHeaps[type] = std::move(heap);
-    LOG_INFO("DX12ResourceFactory", "Created descriptor heap type: {0}, capacity: {1}", type, initialCapacity);
+    LOG_INFO("DX12ResourceFactory", "Created descriptor heap");
 }
 
 DXGI_FORMAT DX12ResourceFactory::GetDXGIFormat(TextureFormat format) const {

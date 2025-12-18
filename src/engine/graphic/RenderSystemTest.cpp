@@ -1,4 +1,8 @@
 #include "interfaces/RenderTypes.h"
+#include "interfaces/IBuffer.h"
+#include "interfaces/ITexture.h"
+#include "interfaces/IShader.h"
+#include "interfaces/IResourceManager.h"
 #include "RenderSystemTest.h"
 #include "Logger.h"
 #include <array>
@@ -106,7 +110,7 @@ bool RenderSystemTest::RunTests() {
     // 输出测试结果
     Logger::GetInstance().Info("RenderSystemTest", "=== 测试结果汇总 ===");
     for (const auto& result : m_testResults) {
-        Logger::GetInstance().Info("RenderSystemTest", "{}", result);
+        printf("%s\n", result.c_str());
     }
 
     if (allPassed) {
@@ -498,7 +502,9 @@ bool RenderSystemTest::CreateRenderPipeline() {
 
     try {
         // 创建管线状态对象
-        auto pipelineState = m_resourceManager->CreatePipelineState();
+        PipelineStateDesc desc;
+        desc.type = PipelineType::Graphics;
+        auto pipelineState = m_resourceManager->CreatePipelineState(desc);
         if (!pipelineState) {
             LOG_ERROR("RenderSystemTest", "管线状态对象创建失败");
             return false;

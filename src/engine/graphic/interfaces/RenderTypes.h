@@ -39,6 +39,7 @@ enum class RenderBackendType {
 
 // 缓冲区类型
 enum class BufferType {
+    Unknown = 0,
     Vertex,
     Index,
     Constant,
