@@ -1,5 +1,6 @@
 #pragma once
 
+#include "IPipelineState.h"
 #include "ISampler.h"
 #include "IShader.h"
 #include "RenderTypes.h"
@@ -14,6 +15,7 @@ class ITexture;
 class IBuffer;
 class IShader;
 class IPipeline;
+class IPipelineState;
 class IResource;
 class IRenderDevice;
 
@@ -32,6 +34,9 @@ struct TextureDesc : public ResourceDesc {
     bool allowDepthStencil = false;  // 是否允许作为深度模板缓冲区
     const void* initialData = nullptr;
     uint64_t dataSize = 0;
+    std::string filename;  // 文件名（用于从文件加载）
+    uint32_t sampleCount = 1;    // 多重采样数量
+    uint32_t sampleQuality = 0;  // 多重采样质量
 };
 
 /// @brief 缓冲区描述
@@ -54,7 +59,7 @@ struct ShaderDesc : public ResourceDesc {
     std::string target;    // 如 "vs_5_0", "ps_5_0"
     uint64_t compileTimestamp = 0;
     uint64_t compileHash = 0;
-    ShaderCompileOptions& compileOptions;
+    ShaderCompileOptions compileOptions;
 };
 
 /// @brief 管线描述
@@ -131,6 +136,90 @@ struct PipelineDesc : public ResourceDesc {
 
     // 图元拓扑
     uint32_t primitiveTopology = 4;  // 4=trianglelist
+};
+
+/// @brief 管线状态对象描述
+struct PipelineStateDesc : public ResourceDesc {
+    PipelineType type = PipelineType::Graphics;
+
+    // 着色器
+    std::shared_ptr<IShader> vertexShader;
+    std::shared_ptr<IShader> pixelShader;
+    std::shared_ptr<IShader> geometryShader;
+    std::shared_ptr<IShader> hullShader;
+    std::shared_ptr<IShader> domainShader;
+    std::shared_ptr<IShader> computeShader;
+
+    // 渲染状态
+    PrimitiveTopology primitiveTopology = PrimitiveTopology::TriangleList;
+
+    struct BlendState {
+        bool blendEnable = false;
+        bool logicOpEnable = false;
+        uint32_t writeMask = 0xF;  // RGBA all enabled
+        BlendOp blendOp = BlendOp::Add;
+        BlendFactor srcBlend = BlendFactor::One;
+        BlendFactor destBlend = BlendFactor::Zero;
+        BlendOp blendOpAlpha = BlendOp::Add;
+        BlendFactor srcBlendAlpha = BlendFactor::One;
+        BlendFactor destBlendAlpha = BlendFactor::Zero;
+    };
+    BlendState blendState;
+
+    struct RasterizerState {
+        bool cullEnable = true;
+        bool frontCounterClockwise = false;
+        bool depthClipEnable = true;
+        bool depthBiasEnable = false;
+        float depthBias = 0.0f;
+        float depthBiasClamp = 0.0f;
+        float slopeScaledDepthBias = 0.0f;
+        FillMode fillMode = FillMode::Solid;
+        CullMode cullMode = CullMode::Back;
+    };
+    RasterizerState rasterizerState;
+
+    struct DepthStencilState {
+        bool depthEnable = true;
+        bool depthWriteEnable = true;
+        bool stencilEnable = false;
+        ComparisonFunc depthFunc = ComparisonFunc::Less;
+        uint8_t stencilReadMask = 0xFF;
+        uint8_t stencilWriteMask = 0xFF;
+        StencilOp frontFaceFail = StencilOp::Keep;
+        StencilOp frontFaceDepthFail = StencilOp::Keep;
+        StencilOp frontFacePass = StencilOp::Keep;
+        ComparisonFunc frontFaceFunc = ComparisonFunc::Always;
+        StencilOp backFaceFail = StencilOp::Keep;
+        StencilOp backFaceDepthFail = StencilOp::Keep;
+        StencilOp backFacePass = StencilOp::Keep;
+        ComparisonFunc backFaceFunc = ComparisonFunc::Always;
+    };
+    DepthStencilState depthStencilState;
+
+    // 顶点输入布局
+    struct VertexInputAttribute {
+        std::string semanticName;
+        uint32_t semanticIndex = 0;
+        TextureFormat format = TextureFormat::RGBA32_Float;
+        uint32_t inputSlot = 0;
+        uint32_t alignedByteOffset = 0;
+        bool isPerInstance = false;
+        uint32_t instanceDataStepRate = 0;
+    };
+    std::vector<VertexInputAttribute> inputLayout;
+
+    // 渲染目标格式
+    uint32_t numRenderTargets = 1;
+    TextureFormat renderTargetFormats[8] = {TextureFormat::RGBA8_UNorm};
+    TextureFormat depthStencilFormat = TextureFormat::D32_Float;
+
+    // 多重采样
+    uint32_t sampleCount = 1;
+    uint32_t sampleQuality = 0;
+
+    // 根签名（具体类型取决于后端）
+    void* rootSignature = nullptr;
 };
 
 // 注意：TextureFilter, TextureAddressMode, TextureComparisonFunc, SamplerDesc 已在 RenderTypes.h 中定义
@@ -222,6 +311,11 @@ public:
     /// @param filename 配置文件路径
     /// @return 管线智能指针
     virtual std::shared_ptr<IPipeline> LoadPipeline(const std::string& filename) = 0;
+
+    /// @brief 创建管线状态对象
+    /// @param desc 管线状态描述
+    /// @return 管线状态智能指针
+    virtual std::shared_ptr<IPipelineState> CreatePipelineState(const PipelineStateDesc& desc) = 0;
 
     // === 采样器管理 ===
 
