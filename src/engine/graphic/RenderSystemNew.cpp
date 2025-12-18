@@ -89,6 +89,11 @@ void RenderSystem::Shutdown() {
     LOG_INFO("Render", "渲染系统已关闭");
 }
 
+RenderSystem::~RenderSystem() {
+    // 默认析构函数会自动清理 std::unique_ptr 成员
+    // 由于这是一个显式定义的析构函数，编译器会在看到 ForwardPipeline 完整定义的地方生成代码
+}
+
 void RenderSystem::Update(float deltaTime) {
     UpdateStats(deltaTime);
 
