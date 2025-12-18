@@ -111,6 +111,8 @@ public:
         float averageFrameTime = 0.0f;
         float minFrameTime = FLT_MAX;
         float maxFrameTime = 0.0f;
+        float executionTime    = 0.0f;
+        float frameRate = 0.0f;
     };
     virtual PresentStats GetPresentStats() const = 0;
 
