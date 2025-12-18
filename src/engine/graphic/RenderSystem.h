@@ -4,12 +4,9 @@
 #include "WorkerThread.h"
 #include "ScriptableRenderPipeline.h"
 #include "pipelines/forward/ForwardPipeline.h"
+#include "RenderSystemNew.h"
 #include <memory>
 #include <functional>
-
-namespace PrismaEngine::Graphic {
-    class RenderSystemNew;
-}
 
 namespace Engine {
 
