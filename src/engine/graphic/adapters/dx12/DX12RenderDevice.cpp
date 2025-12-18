@@ -156,7 +156,8 @@ void DX12RenderDevice::SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fe
     // 如果提供了围栏，设置信号
     if (fence) {
         DX12Fence* dx12Fence = static_cast<DX12Fence*>(fence);
-        dx12Fence->Signal();
+        dx12Fence->Signal(m_currentFenceValue);
+        m_currentFenceValue++;
     }
 
     // 更新统计信息
@@ -196,7 +197,8 @@ void DX12RenderDevice::SubmitCommandBuffers(const std::vector<ICommandBuffer*>& 
     // 设置围栏信号
     if (fences.size() > 0 && fences[0]) {
         DX12Fence* dx12Fence = static_cast<DX12Fence*>(fences[0]);
-        dx12Fence->Signal();
+        dx12Fence->Signal(m_currentFenceValue);
+        m_currentFenceValue++;
     }
 
     // 更新统计信息
@@ -227,7 +229,8 @@ void DX12RenderDevice::WaitForFence(IFence* fence) {
     if (!fence) return;
 
     DX12Fence* dx12Fence = static_cast<DX12Fence*>(fence);
-    dx12Fence->Wait();
+    // 等待围栏完成，使用无限超时
+    dx12Fence->Wait(dx12Fence->GetCompletedValue() + 1, UINT64_MAX);
 }
 
 IResourceFactory* DX12RenderDevice::GetResourceFactory() const {
