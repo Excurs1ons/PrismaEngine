@@ -14,7 +14,8 @@ class DX12RenderDevice;
 
 /// @brief DirectX12纹理适配器
 /// 实现ITexture接口，包装ID3D12Resource
-class DX12Texture : public ITexture {
+class DX12Texture : public ITexture //,public ID3D12Resource
+{
 public:
     /// @brief 构造函数
     /// @param device DirectX12渲染设备

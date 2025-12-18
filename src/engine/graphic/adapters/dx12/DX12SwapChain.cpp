@@ -11,10 +11,8 @@ using Microsoft::WRL::ComPtr;
 
 namespace PrismaEngine::Graphic::DX12 {
 
-DX12SwapChain::DX12SwapChain(RenderBackendDirectX12* backend)
-    : m_backend(backend)
-    , m_mode(SwapChainMode::VSync)
-    , m_hdr(false) {
+DX12SwapChain::DX12SwapChain(DX12RenderDevice* device)
+{
 
     // 初始化统计信息
     ResetStats();
@@ -270,12 +268,13 @@ std::unique_ptr<DX12SwapChain> DX12SwapChain::Clone() const {
         return nullptr;
     }
 
-    auto clone = std::make_unique<DX12SwapChain>(m_backend);
-    clone->m_mode = m_mode;
-    clone->m_hdr = m_hdr;
-    clone->m_colorSpace = m_colorSpace;
-
-    return clone;
+    // auto clone = std::make_unique<DX12SwapChain>(GetDevice());
+    // clone->m_mode = m_mode;
+    // clone->m_hdr = m_hdr;
+    // clone->m_colorSpace = m_colorSpace;
+    //
+    // return clone;
+    return nullptr;
 }
 
 IDXGISwapChain3* DX12SwapChain::GetDXGISwapChain() const {
