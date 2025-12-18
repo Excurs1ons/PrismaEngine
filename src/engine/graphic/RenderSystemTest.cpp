@@ -1,5 +1,6 @@
+#include "interfaces/RenderTypes.h"
 #include "RenderSystemTest.h"
-#include "../Logger.h"
+#include "Logger.h"
 #include <array>
 #include <sstream>
 
@@ -133,7 +134,7 @@ void RenderSystemTest::RenderFrame() {
 
     // 获取命令缓冲区并渲染三角形
     LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 获取命令缓冲区", frameCount);
-    auto commandBuffer = m_device->BeginFrame();
+    auto commandBuffer = m_renderSystem->GetDevice()->CreateCommandBuffer(CommandBufferType.Graphics);
     if (commandBuffer && m_pipelineState && m_vertexBuffer) {
         LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 设置渲染状态", frameCount);
 
@@ -147,7 +148,7 @@ void RenderSystemTest::RenderFrame() {
         viewport.height = static_cast<float>(m_height);
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
-        commandBuffer->SetViewport(0, viewport);
+        commandBuffer->SetViewport(viewport);
         LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 视口设置完成 ({1}x{2})", frameCount, m_width, m_height);
 
         // 设置裁剪矩形
@@ -158,7 +159,7 @@ void RenderSystemTest::RenderFrame() {
         LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 裁剪矩形设置完成", frameCount);
 
         // 绑定顶点缓冲区
-        commandBuffer->SetVertexBuffer(0, m_vertexBuffer.get());
+        commandBuffer->SetVertexBuffer(m_vertexBuffer.get(),0);
         LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 顶点缓冲区绑定完成", frameCount);
 
         // 渲染三角形

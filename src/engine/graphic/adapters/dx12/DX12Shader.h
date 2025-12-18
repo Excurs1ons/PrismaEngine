@@ -86,6 +86,7 @@ public:
     /// @return 字节码大小
     size_t GetBytecodeSize() const;
 
+
 private:
     DX12RenderDevice* m_device;
     ShaderDesc m_desc;
