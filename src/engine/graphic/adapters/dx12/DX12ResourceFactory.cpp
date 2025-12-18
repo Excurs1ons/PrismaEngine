@@ -25,27 +25,22 @@ namespace PrismaEngine::Graphic {
                 return 1;
             case TextureFormat::R16_Float:
             case TextureFormat::R16_UNorm:
-            case TextureFormat::RG8_UNorm:
-            case TextureFormat::R24G8_Typeless:
+            case TextureFormat::RG16_UNorm:
+            case TextureFormat::RGB8_UNorm:
                 return 2;
             case TextureFormat::R32_Float:
             case TextureFormat::RG16_Float:
-            case TextureFormat::RG16_UNorm:
-            case TextureFormat::RGB8_UNorm:
-            case TextureFormat::BGR8_UNorm:
             case TextureFormat::D24_UNorm_S8_UInt:
                 return 3;
             case TextureFormat::RGBA8_UNorm:
-            case TextureFormat::BGRA8_UNorm:
-            case TextureFormat::RGBA16_Float:
-            case TextureFormat::RGBA16_UNorm:
-            case TextureFormat::RG32_Float:
-            case TextureFormat::RGB10A2_UNorm:
-            case TextureFormat::R32G32B32A32_Float:
+            case TextureFormat::RGBA8_SNorm:
+            case TextureFormat::RGBA8_UInt:
+            case TextureFormat::RGBA8_SInt:
+            case TextureFormat::RGBA32_Float:
             case TextureFormat::D32_Float:
                 return 4;
-            case TextureFormat::RGBA32_Float:
-                return 16;
+            case TextureFormat::RGB32_Float:
+                return 12; // RGB32 = 3 * 4 bytes
             default:
                 return 4; // 默认4字节
         }
