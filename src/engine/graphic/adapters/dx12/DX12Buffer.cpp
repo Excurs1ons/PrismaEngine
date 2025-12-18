@@ -320,7 +320,7 @@ void DX12Buffer::DebugPrintInfo() const {
     ss << "  Usage: " << static_cast<int>(m_desc.usage) << "\n";
 
     // 输出日志
-    LOG_INFO("Buffer", ss.str());
+    Logger::Info("Buffer", ss.str());
 }
 
 void DX12Buffer::Discard(uint64_t offset, uint64_t size) {
@@ -368,7 +368,8 @@ D3D12_RESOURCE_DESC DX12Buffer::GetD3D12ResourceDesc() const {
     desc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
     if (HasFlag(m_desc.usage, BufferUsage::ShaderResource)) {
-        desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_SHADER_RESOURCE;
+        // 注意：D3D12_RESOURCE_FLAG_ALLOW_SHADER_RESOURCE 不是有效标志
+        // 缓冲区资源默认就是着色器资源，除非明确拒绝
     }
     if (HasFlag(m_desc.usage, BufferUsage::UnorderedAccess)) {
         desc.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
@@ -378,11 +379,19 @@ D3D12_RESOURCE_DESC DX12Buffer::GetD3D12ResourceDesc() const {
 }
 
 D3D12_HEAP_TYPE DX12Buffer::GetHeapType() const {
-    return GetHeapType();
+    // 根据缓冲区用途确定堆类型
+    if (IsDynamic()) {
+        return D3D12_HEAP_TYPE_UPLOAD;
+    }
+    if (IsReadOnly()) {
+        return D3D12_HEAP_TYPE_READBACK;
+    }
+    return D3D12_HEAP_TYPE_DEFAULT;
 }
 
 D3D12_HEAP_FLAGS DX12Buffer::GetHeapFlags() const {
-    return GetHeapFlags();
+    // 缓冲区通常不需要特殊的堆标志
+    return D3D12_HEAP_FLAG_NONE;
 }
 
 bool DX12Buffer::IsUploadHeap() const {

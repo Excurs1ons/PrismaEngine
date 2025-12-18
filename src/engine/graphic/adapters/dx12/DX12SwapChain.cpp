@@ -156,7 +156,7 @@ bool DX12SwapChain::Resize(uint32_t width, uint32_t height) {
         desc.BufferCount,
         width,
         height,
-        desc.Format,
+        desc.BufferDesc.Format,
         desc.Flags
     );
 
