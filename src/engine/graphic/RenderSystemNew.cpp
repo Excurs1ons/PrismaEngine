@@ -295,8 +295,10 @@ void RenderSystem::RenderFrame() {
     // 开始渲染
     m_legacyBackend->BeginFrame(clearColor);
 
-    // 执行渲染管线
-    m_forwardPipeline->Execute(activeScene.get());
+    // 执行渲染管线（注意：ForwardPipeline没有Execute方法）
+    // 这里应该使用渲染管线来渲染场景
+    // 暂时使用旧的渲染管线
+    m_legacyPipeline->Execute(activeScene.get());
 
     // GUI渲染
     if (m_guiCallback) {
