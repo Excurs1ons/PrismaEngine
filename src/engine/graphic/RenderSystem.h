@@ -59,7 +59,7 @@ private:
         void SetGuiRenderCallback(GuiRenderCallback callback);
     private:
         RenderSystem* m_renderSystem;
-        PrismaEngine::Graphic::RenderSystemNew m_newRenderSystem;
+        PrismaEngine::Graphic::RenderSystem m_newRenderSystem;
     };
     std::unique_ptr<Adapter> m_adapter;
 
