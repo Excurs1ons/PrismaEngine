@@ -143,8 +143,23 @@ std::shared_ptr<ITexture> ResourceManager::CreateTexture(const TextureDesc& desc
 std::shared_ptr<ITexture> ResourceManager::CreateTextureFromMemory(const void* data, uint64_t dataSize, const TextureDesc& desc) {
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
 
-    auto texture = std::make_shared<ITexture>();
-    // TODO: 实现从内存创建纹理
+    if (!m_device) {
+        LOG_ERROR("Resource", "设备未初始化");
+        return nullptr;
+    }
+
+    auto factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("Resource", "无法获取资源工厂");
+        return nullptr;
+    }
+
+    auto textureUnique = factory->CreateTextureImpl(desc);
+    std::shared_ptr<ITexture> texture;
+    if (textureUnique) {
+        texture = std::move(textureUnique);
+        // TODO: 从内存数据初始化纹理
+    }
 
     if (!texture) {
         LOG_ERROR("Resource", "从内存创建纹理失败");
@@ -163,8 +178,18 @@ std::shared_ptr<IBuffer> ResourceManager::CreateBuffer(const BufferDesc& desc) {
 
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
 
-    auto buffer = std::make_shared<IBuffer>();
-    // TODO: 实现缓冲区创建
+    auto factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("Resource", "无法获取资源工厂");
+        return nullptr;
+    }
+
+    auto bufferUnique = factory->CreateBufferImpl(desc);
+    std::shared_ptr<IBuffer> buffer;
+    if (bufferUnique) {
+        buffer = std::move(bufferUnique);
+        // TODO: 初始化缓冲区
+    }
 
     if (!buffer) {
         LOG_ERROR("Resource", "创建缓冲区失败");
@@ -234,8 +259,19 @@ std::shared_ptr<IShader> ResourceManager::CreateShader(const std::string& source
     }
 
     // 创建着色器对象
-    // TODO: 实现着色器对象创建
-    auto shader = std::make_shared<IShader>();
+    auto factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("Resource", "无法获取资源工厂");
+        return nullptr;
+    }
+
+    auto shaderUnique = factory->CreateShaderImpl(desc);
+    std::shared_ptr<IShader> shader;
+    if (shaderUnique) {
+        shader = std::move(shaderUnique);
+        // TODO: 使用编译结果初始化着色器
+    }
+
     if (!shader) {
         LOG_ERROR("Resource", "创建着色器对象失败");
         return nullptr;
@@ -312,7 +348,9 @@ std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc
     if (samplerUnique) {
         // 转换 unique_ptr 到 shared_ptr
         sampler = std::move(samplerUnique);
-        RegisterResource(std::static_pointer_cast<IResource>(sampler));
+        // RegisterResource 期望 IResource，但 ISampler 继承自 IResource
+        // 直接传递 sampler，不需要转换
+        RegisterResource(sampler);
     }
 
     return sampler;
