@@ -182,12 +182,12 @@ public:
     /// @return 是否编译成功
     virtual bool RecompileFromSource(const std::string& source,
                                      const ShaderCompileOptions* options = nullptr,
-                                     std::string* errors = nullptr) = 0;
+                                     std::string& errors) = 0;
 
     /// @brief 从文件重新加载
     /// @param[out] errors 错误信息
     /// @return 是否加载成功
-    virtual bool ReloadFromFile(std::string* errors = nullptr) = 0;
+    virtual bool ReloadFromFile(std::string& errors) = 0;
 
     // === 热重载 ===
 
