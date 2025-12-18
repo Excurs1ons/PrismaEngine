@@ -212,9 +212,10 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
     if (desc.backendType == RenderBackendType::DirectX12) {
         auto* dx12Backend = dynamic_cast<RenderBackendDirectX12*>(m_legacyBackend.get());
         // DX12RenderDevice 期望 RenderBackendDirectX12*（无命名空间）
-        m_device = std::make_unique<DX12::DX12RenderDevice>(
+        auto dx12Device = std::make_unique<DX12::DX12RenderDevice>(
             dx12Backend
         );
+        m_device = std::move(dx12Device);
 
         // 初始化设备描述
         DeviceDesc deviceDesc;
@@ -284,7 +285,7 @@ void RenderSystem::RenderFrame() {
 
     // 使用旧的渲染流程（临时）
     auto& world = ::Engine::Core::ECS::World::GetInstance();
-    auto sceneManager = static_cast<::Engine::SceneManager*>(world.GetSystem<::Engine::SceneManager>());
+    auto sceneManager = dynamic_cast<::Engine::SceneManager*>(world.GetSystem<::Engine::SceneManager>());
     if (!sceneManager) {
         return;
     }

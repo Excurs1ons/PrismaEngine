@@ -75,17 +75,16 @@ void DX12CommandBuffer::End() {
     m_isOpen = false;
 }
 
-bool DX12CommandBuffer::Close() {
+void DX12CommandBuffer::Close() {
     if (!m_isOpen) {
-        return true;
+        return;
     }
 
     if (m_isRecording) {
         End();
     }
 
-    HRESULT hr = m_commandList->Close();
-    return SUCCEEDED(hr);
+    m_commandList->Close();
 }
 
 bool DX12CommandBuffer::Reset() {
@@ -274,7 +273,9 @@ void DX12CommandBuffer::SetSampler(ISampler* sampler, uint32_t slot) {
     ValidateAndSetPipelineState();
 
     DX12Sampler* dx12Sampler = static_cast<DX12Sampler*>(sampler);
-    D3D12_GPU_DESCRIPTOR_HANDLE samplerHandle = dx12Sampler->GetHandle();
+    uint64_t samplerHandleValue = dx12Sampler->GetHandle();
+    D3D12_GPU_DESCRIPTOR_HANDLE samplerHandle;
+    samplerHandle.ptr = samplerHandleValue;
 
     // 假设使用描述符表
     m_commandList->SetGraphicsRootDescriptorTable(slot, samplerHandle);

@@ -22,6 +22,8 @@ struct TextureMapDesc {
     void* data = nullptr;
     uint64_t rowPitch = 0;
     uint64_t depthPitch = 0;
+    uint64_t size = 0;
+    uint64_t offset = 0;
 };
 
 /// @brief 纹理描述符

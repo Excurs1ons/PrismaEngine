@@ -96,8 +96,7 @@ public:
     ID3D12CommandAllocator* GetCommandAllocator() const { return m_commandAllocator.Get(); }
 
     /// @brief 关闭命令缓冲区
-    /// @return 是否成功
-    bool Close();
+    void Close() override;
 
     /// @brief 获取绘制调用次数
     /// @return 绘制调用次数

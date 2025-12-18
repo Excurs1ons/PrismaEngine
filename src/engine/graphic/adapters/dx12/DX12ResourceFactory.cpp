@@ -75,8 +75,8 @@ bool DX12ResourceFactory::Initialize(IRenderDevice* device) {
     // 创建默认描述符堆
     CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
     CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
-    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 512);
-    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
+    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 512, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
+    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256, D3D12_DESCRIPTOR_HEAP_FLAG_NONE);
 
     m_initialized = true;
     LOG_INFO("DX12ResourceFactory", "Resource factory initialized successfully");
@@ -199,7 +199,7 @@ std::unique_ptr<ITexture> DX12ResourceFactory::CreateTextureImpl(const TextureDe
 
     // 更新统计信息
     m_stats.texturesCreated++;
-    m_stats.totalTextureMemory += texture->GetSize();
+    m_stats.totalMemoryAllocated += texture->GetSize();
 
     LOG_INFO("DX12ResourceFactory", "Created texture: {0}x{1}, format: {2}",
              desc.width, desc.height, static_cast<uint32_t>(desc.format));
