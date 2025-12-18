@@ -1,6 +1,11 @@
 #include "ResourceManagerNew.h"
 #include "Logger.h"
 #include "../Engine.h"
+#include "interfaces/ITexture.h"
+#include "interfaces/IBuffer.h"
+#include "interfaces/IResource.h"
+#include "interfaces/IRenderDevice.h"
+#include "interfaces/IResourceFactory.h"
 
 // TODO: Implement image loading without stb_image
 // #define STB_IMAGE_IMPLEMENTATION
@@ -36,6 +41,24 @@ ResourceManager::~ResourceManager() {
     Shutdown();
 }
 
+// ISubSystem 接口实现
+bool ResourceManager::Initialize() {
+    // 使用默认设备初始化
+    // 这里可能需要从全局或上下文获取设备
+    return true; // 临时返回true
+}
+
+void ResourceManager::Update(float deltaTime) {
+    // 检查热重载
+    if (m_hotReloadEnabled) {
+        CheckAndReloadResources();
+    }
+
+    // 清理待删除的资源
+    GarbageCollect();
+}
+
+// IResourceManager 接口实现
 bool ResourceManager::Initialize(IRenderDevice* device) {
     if (!device) {
         LOG_ERROR("Resource", "设备指针为空，无法初始化资源管理器");
