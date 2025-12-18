@@ -60,10 +60,10 @@ public:
                                         const std::string& target,
                                         const std::vector<std::string>& defines) override;
     std::shared_ptr<IShader> CreateShader(const std::string& source, const ShaderDesc& desc) override;
-    bool CompileShader(const ShaderDesc& desc, std::string& errors) override;
+    bool CompileShader(const ShaderDesc& desc, std::string& errors); // 不 override，IResourceManager 没有这个方法
 
     // 管线管理
-    std::shared_ptr<IPipelineState> CreatePipelineState() override;
+    std::shared_ptr<IPipelineState> CreatePipelineState(); // 不 override，IResourceManager 没有这个方法
     std::shared_ptr<IPipeline> LoadPipeline(const std::string& filename) override;
 
     // 采样器管理
@@ -97,7 +97,7 @@ private:
 
     IRenderDevice* m_device;
     bool m_initialized = false;
-    std::shared_mutex m_resourceMutex;
+    mutable std::shared_mutex m_resourceMutex;
 
     // 资源存储
     std::unordered_map<ResourceId, std::shared_ptr<IResource>> m_resources;
