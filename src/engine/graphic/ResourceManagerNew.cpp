@@ -22,6 +22,7 @@
 #include <Windows.h>
 #include <d3dcompiler.h>
 #include <filesystem>
+#include <wrl/client.h>
 namespace fs = std::filesystem;
 #else
 #include <sys/stat.h>
@@ -306,8 +307,11 @@ std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc
         return nullptr;
     }
 
-    auto sampler = factory->CreateSamplerImpl(desc);
-    if (sampler) {
+    auto samplerUnique = factory->CreateSamplerImpl(desc);
+    std::shared_ptr<ISampler> sampler;
+    if (samplerUnique) {
+        // 转换 unique_ptr 到 shared_ptr
+        sampler = std::move(samplerUnique);
         RegisterResource(sampler);
     }
 
@@ -466,7 +470,7 @@ void ResourceManager::RegisterResource(std::shared_ptr<IResource> resource, cons
     }
 
     ResourceId id = GenerateId();
-    resource->SetId(id);
+    // TODO: resource->SetId(id); // IResource 接口需要添加 SetId 方法
 
     if (!name.empty()) {
         resource->SetName(name);
@@ -613,10 +617,13 @@ bool ResourceManager::CompileHLSLShader(const ShaderDesc& desc,
     }
 
     UINT compileFlags = D3DCOMPILE_ENABLE_STRICTNESS;
-    if (desc.compileOptions.debug) {
+    // TODO: ShaderDesc 需要添加 compileOptions 成员
+    bool debug = false;
+    bool skipValidation = false;
+    if (debug) {
         compileFlags |= D3DCOMPILE_DEBUG;
     }
-    if (desc.compileOptions.skipValidation) {
+    if (skipValidation) {
         compileFlags |= D3DCOMPILE_SKIP_VALIDATION;
     }
 
@@ -624,7 +631,7 @@ bool ResourceManager::CompileHLSLShader(const ShaderDesc& desc,
     Microsoft::WRL::ComPtr<ID3DBlob> errorBlob;
 
     // 编译着色器
-    std::wstring filenameW(filename.begin(), filename.end());
+    std::wstring filenameW(desc.filename.begin(), desc.filename.end());
     std::wstring entryPointW(desc.entryPoint.begin(), desc.entryPoint.end());
 
     HRESULT hr = D3DCompileFromFile(

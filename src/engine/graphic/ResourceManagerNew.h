@@ -29,9 +29,9 @@ struct ResourceLoadTask {
 };
 
 /// @brief 资源管理器实现
-class ResourceManager : public ManagerBase<ResourceManager>, public IResourceManager {
+class ResourceManager : public Engine::ManagerBase<ResourceManager>, public IResourceManager {
 public:
-    friend class ManagerBase<ResourceManager>;
+    friend class Engine::ManagerBase<ResourceManager>;
     static constexpr std::string GetName() { return "ResourceManager"; }
 public:
     ResourceManager();
