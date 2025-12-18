@@ -1,6 +1,5 @@
 #pragma once
 
-#include "IResource.h"
 #include "RenderTypes.h"
 #include <string>
 #include <vector>
@@ -82,7 +81,7 @@ struct ShaderCompileOptions {
 };
 
 /// @brief 着色器抽象接口
-class IShader : public IResource {
+class IShader {
 public:
     virtual ~IShader() = default;
 
