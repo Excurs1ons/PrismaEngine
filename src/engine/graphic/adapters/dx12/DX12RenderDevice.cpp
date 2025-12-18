@@ -76,7 +76,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
 
             // 过滤某些消息
             D3D12_MESSAGE_ID denyIds[] = {
-                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGCLEARRECT,
+                D3D12_MESSAGE_ID_CLEARRENDERTARGETVIEW_MISMATCHINGRECT,
                 D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
                 D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
             };

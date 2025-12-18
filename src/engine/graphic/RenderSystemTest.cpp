@@ -104,9 +104,9 @@ bool RenderSystemTest::RunTests() {
     allPassed &= TestMemoryUsage();
 
     // 输出测试结果
-    Logger::Info("RenderSystemTest", "=== 测试结果汇总 ===");
+    Logger::GetInstance().Info("RenderSystemTest", "=== 测试结果汇总 ===");
     for (const auto& result : m_testResults) {
-        Logger::Info("RenderSystemTest", result);
+        Logger::GetInstance().Info("RenderSystemTest", "{}", result);
     }
 
     if (allPassed) {
@@ -134,7 +134,7 @@ void RenderSystemTest::RenderFrame() {
 
     // 获取命令缓冲区并渲染三角形
     LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 获取命令缓冲区", frameCount);
-    auto commandBuffer = m_renderSystem->GetDevice()->CreateCommandBuffer(CommandBufferType.Graphics);
+    auto commandBuffer = m_renderSystem->GetDevice()->CreateCommandBuffer(CommandBufferType::Graphics);
     if (commandBuffer && m_pipelineState && m_vertexBuffer) {
         LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 设置渲染状态", frameCount);
 

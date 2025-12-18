@@ -1,5 +1,7 @@
 #include "DX12Sampler.h"
 #include "DX12RenderDevice.h"
+#include <directx/d3dx12.h>
+#include <d3d12.h>
 
 namespace PrismaEngine::Graphic::DX12 {
 
