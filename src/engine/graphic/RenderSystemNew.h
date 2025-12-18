@@ -5,6 +5,7 @@
 #include "interfaces/IResourceManager.h"
 #include "interfaces/IPipeline.h"
 #include "WorkerThread.h"
+#include "pipelines/forward/ForwardPipeline.h"
 #include <memory>
 #include <functional>
 
