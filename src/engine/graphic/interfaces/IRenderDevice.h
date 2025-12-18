@@ -89,6 +89,17 @@ public:
     /// @return 交换链指针
     virtual ISwapChain* GetSwapChain() const = 0;
 
+    // === 帧管理 ===
+
+    /// @brief 开始帧
+    virtual void BeginFrame() = 0;
+
+    /// @brief 结束帧
+    virtual void EndFrame() = 0;
+
+    /// @brief 呈现帧
+    virtual void Present() = 0;
+
     // === 查询支持的功能 ===
 
     /// @brief 检查是否支持多线程

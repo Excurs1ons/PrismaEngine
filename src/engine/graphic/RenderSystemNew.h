@@ -3,6 +3,7 @@
 #include "../ManagerBase.h"
 #include "RenderBackend.h"
 #include "ScriptableRenderPipeline.h"
+#include "pipelines/forward/ForwardPipeline.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceManager.h"
 #include "interfaces/IPipeline.h"
