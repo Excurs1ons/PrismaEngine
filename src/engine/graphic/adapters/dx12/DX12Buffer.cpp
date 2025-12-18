@@ -49,6 +49,9 @@ DX12Buffer::~DX12Buffer() {
         m_resource->Unmap(0, nullptr);
     }
 }
+ResourceType DX12Buffer::GetType() const {
+    return ResourceType::Buffer;
+}
 
 // IBuffer接口实现
 BufferType DX12Buffer::GetBufferType() const {
@@ -405,6 +408,21 @@ bool DX12Buffer::IsReadbackHeap() const {
 bool DX12Buffer::IsDefaultHeap() const {
     return GetHeapType() == D3D12_HEAP_TYPE_DEFAULT;
 }
+ResourceId DX12Buffer::GetId() const {}
+const std::string& DX12Buffer::GetName() const {}
+void DX12Buffer::SetName(const std::string& name) {}
+bool DX12Buffer::IsLoaded() const {}
+bool DX12Buffer::IsValid() const {}
+void DX12Buffer::AddRef() {}
+uint32_t DX12Buffer::Release() {}
+uint32_t DX12Buffer::GetRefCount() const {}
+const std::string& DX12Buffer::GetDebugTag() const {}
+void DX12Buffer::SetDebugTag(const std::string& tag) {}
+uint64_t DX12Buffer::GetCreationTimestamp() const {}
+uint64_t DX12Buffer::GetLastAccessTimestamp() const {}
+void DX12Buffer::MarkDirty() {}
+bool DX12Buffer::IsDirty() const {}
+void DX12Buffer::ClearDirty() {}
 
 // 辅助方法
 D3D12_RESOURCE_STATES DX12Buffer::GetInitialResourceState() const {
