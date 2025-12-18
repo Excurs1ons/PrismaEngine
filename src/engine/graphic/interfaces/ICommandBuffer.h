@@ -43,6 +43,9 @@ public:
     /// @brief 重置命令缓冲区
     virtual bool Reset() = 0;
 
+    /// @brief 关闭命令缓冲区
+    virtual void Close() = 0;
+
     // === 渲染通道 ===
 
     /// @brief 开始渲染通道

@@ -67,6 +67,7 @@ inline bool HasFlag(BufferUsage usage, BufferUsage flag) {
 
 // 纹理类型
 enum class TextureType {
+    Texture1D,
     Texture2D,
     Texture3D,
     TextureCube,
@@ -95,6 +96,11 @@ enum class TextureFormat {
     RG16_Float,
     RG16_UInt,
     RG16_SInt,
+    RGBA16_UNorm,
+    RGBA16_SNorm,
+    RGBA16_Float,
+    RGBA16_UInt,
+    RGBA16_SInt,
 
     // 32位 formats
     R32_Float,
@@ -116,6 +122,8 @@ enum class TextureFormat {
     RGBA8_SNorm,
     RGBA8_UInt,
     RGBA8_SInt,
+    BGRA8_UNorm,
+    BGRA8_UNorm_sRGB,
 
     // Depth-stencil formats
     D16_UNorm,
