@@ -279,7 +279,8 @@ void RenderSystem::RenderFrame() {
     }
 
     // 使用旧的渲染流程（临时）
-    auto sceneManager = Engine::GetSystem<Engine::SceneManager>();
+    auto& world = ::Engine::Core::ECS::World::GetInstance();
+    auto sceneManager = world.GetSystem<::Engine::SceneManager>();
     if (!sceneManager) {
         return;
     }
@@ -345,7 +346,8 @@ RenderContext RenderSystem::GetRenderContext() const {
     context.renderTargetHeight = m_desc.height;
 
     // 添加场景数据
-    auto sceneManager = Engine::GetSystem<Engine::SceneManager>();
+    auto& world = ::Engine::Core::ECS::World::GetInstance();
+    auto sceneManager = world.GetSystem<::Engine::SceneManager>();
     if (sceneManager) {
         auto activeScene = sceneManager->GetActiveScene();
         if (activeScene) {
