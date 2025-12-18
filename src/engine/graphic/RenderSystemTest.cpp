@@ -104,9 +104,9 @@ bool RenderSystemTest::RunTests() {
     allPassed &= TestMemoryUsage();
 
     // 输出测试结果
-    LOG_INFO("RenderSystemTest", "=== 测试结果汇总 ===");
+    Logger::Info("RenderSystemTest", "=== 测试结果汇总 ===");
     for (const auto& result : m_testResults) {
-        LOG_INFO("RenderSystemTest", result);
+        Logger::Info("RenderSystemTest", result);
     }
 
     if (allPassed) {

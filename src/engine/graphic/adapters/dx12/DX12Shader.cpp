@@ -278,8 +278,8 @@ bool DX12Shader::DebugSaveToFile(const std::string& filename,
     // 写入反射信息
     if (includeReflection) {
         file << "Reflection Information:\n";
-        file << "  Input Parameters: " << m_reflection.inputParameters.size() << "\n";
-        file << "  Output Parameters: " << m_reflection.outputParameters.size() << "\n";
+        file << "  Input Parameters: " << m_reflection.inputs.size() << "\n";
+        file << "  Output Parameters: " << m_reflection.outputs.size() << "\n";
         file << "  Resources: " << m_reflection.resources.size() << "\n";
         file << "  Constant Buffers: " << m_reflection.constantBuffers.size() << "\n";
         file << "\n";
@@ -299,7 +299,7 @@ const std::vector<std::string>& DX12Shader::GetIncludes() const {
 }
 
 const std::vector<std::string>& DX12Shader::GetDefines() const {
-    return m_desc.compileOptions.defines;
+    return m_desc.compileOptions.additionalDefines;
 }
 
 // DirectX12特定方法

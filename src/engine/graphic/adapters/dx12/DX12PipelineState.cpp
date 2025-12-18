@@ -12,12 +12,11 @@ namespace PrismaEngine::Graphic::DX12 {
 
 DX12PipelineState::DX12PipelineState(DX12RenderDevice* device)
     : m_device(device)
-    , m_type(PipelineType::Graphics)
     , m_blendStates(8)  // 默认8个渲染目标
     , m_cacheKey(0) {
 
     // 设置默认状态
-    m_primitiveTopology = PrimitiveTopology::TriangleList;
+    m_topology = PrimitiveTopology::TriangleList;
     m_rasterizerState = RasterizerState::Default;
     m_depthStencilState = DepthStencilState::Default;
     m_sampleCount = 1;
@@ -67,11 +66,11 @@ bool DX12PipelineState::HasShader(ShaderType type) const {
 
 // 渲染状态
 void DX12PipelineState::SetPrimitiveTopology(PrimitiveTopology topology) {
-    m_primitiveTopology = topology;
+    m_topology = topology;
 }
 
 PrimitiveTopology DX12PipelineState::GetPrimitiveTopology() const {
-    return m_primitiveTopology;
+    return m_topology;
 }
 
 void DX12PipelineState::SetBlendState(const BlendState& state, uint32_t renderTargetIndex) {
@@ -268,7 +267,7 @@ std::unique_ptr<IPipelineState> DX12PipelineState::Clone() const {
 
     // 复制状态
     clone->m_type = m_type;
-    clone->m_primitiveTopology = m_primitiveTopology;
+    clone->m_topology = m_topology;
     clone->m_rasterizerState = m_rasterizerState;
     clone->m_depthStencilState = m_depthStencilState;
     clone->m_inputLayout = m_inputLayout;

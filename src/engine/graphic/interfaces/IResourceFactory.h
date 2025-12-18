@@ -203,6 +203,7 @@ public:
         uint32_t shadersCreated = 0;
         uint32_t pipelinesCreated = 0;
         uint32_t samplersCreated = 0;
+        uint32_t texturesPooled = 0;  // 从池中获取的纹理数
         uint64_t totalMemoryAllocated = 0;
         uint64_t peakMemoryUsage = 0;
     };
