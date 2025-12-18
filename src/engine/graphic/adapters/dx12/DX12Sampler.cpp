@@ -90,19 +90,19 @@ D3D12_SAMPLER_DESC DX12Sampler::GetD3D12SamplerDesc() const {
             desc.Filter = D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_POINT;
             break;
         case TextureFilter::MinPointMagLinearMipLinear:
-            desc.Filter = D3D12_FILTER_MIN_POINT_MAG_LINEAR_MIP_LINEAR;
+            desc.Filter = D3D12_FILTER_MIN_MAG_LINEAR_MIP_POINT;  // 修正为正确的常量
             break;
         case TextureFilter::MinLinearMagPointMipPoint:
-            desc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_POINT;
+            desc.Filter = D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;  // 修正为正确的常量
             break;
         case TextureFilter::MinLinearMagPointMipLinear:
-            desc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_LINEAR;
+            desc.Filter = D3D12_FILTER_ANISOTROPIC;  // 使用各向异性过滤作为替代
             break;
         case TextureFilter::MinMagPointMipLinear:
             desc.Filter = D3D12_FILTER_MIN_MAG_POINT_MIP_LINEAR;
             break;
         case TextureFilter::MinLinearMagMipPoint:
-            desc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_POINT_MIP_POINT;
+            desc.Filter = D3D12_FILTER_MIN_LINEAR_MAG_MIP_POINT;
             break;
         default:
             desc.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;

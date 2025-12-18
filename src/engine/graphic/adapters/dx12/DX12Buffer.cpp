@@ -228,23 +228,23 @@ uint64_t DX12Buffer::CreateView(BufferDescriptorType descType, const BufferViewD
 }
 
 uint64_t DX12Buffer::GetDefaultSRV() const {
-    return reinterpret_cast<uint64_t>(m_srv.ptr);
+    return m_srv.ptr;
 }
 
 uint64_t DX12Buffer::GetDefaultUAV() const {
-    return reinterpret_cast<uint64_t>(m_uav.ptr);
+    return m_uav.ptr;
 }
 
 uint64_t DX12Buffer::GetDefaultCBV() const {
-    return reinterpret_cast<uint64_t>(m_cbv.ptr);
+    return m_cbv.ptr;
 }
 
 uint64_t DX12Buffer::GetDefaultVBV() const {
-    return reinterpret_cast<uint64_t>(m_vbv.ptr);
+    return m_vbv.ptr;
 }
 
 uint64_t DX12Buffer::GetDefaultIBV() const {
-    return reinterpret_cast<uint64_t>(m_ibv.ptr);
+    return m_ibv.ptr;
 }
 
 uint64_t DX12Buffer::AllocateDynamic(uint64_t size, uint64_t alignment) {
