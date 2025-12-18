@@ -1,9 +1,11 @@
 #pragma once
 
 #include "interfaces/IResourceFactory.h"
+#include <directx/d3d12.h>
+#include <memory>
 #include <unordered_map>
 #include <vector>
-#include <memory>
+#include <wrl/client.h>
 
 namespace PrismaEngine::Graphic::DX12 {
 
@@ -75,7 +77,7 @@ public:
     bool ValidateTextureDesc(const TextureDesc& desc, std::string& errorMsg) override;
     bool ValidateBufferDesc(const BufferDesc& desc, std::string& errorMsg) override;
     bool ValidateShaderDesc(const ShaderDesc& desc, std::string& errorMsg) override;
-    bool ValidatePipelineDesc(const PipelineDesc& desc, std::string& errorMsg) override;
+    bool ValidatePipelineDesc(const PipelineDesc& desc, std::string& errorMsg);
 
     void GetMemoryBudget(uint64_t& budget, uint64_t& usage) const override;
     void SetMemoryLimit(uint64_t limit) override;
