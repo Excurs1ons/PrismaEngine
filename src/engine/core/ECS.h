@@ -444,7 +444,7 @@ T* World::AddSystem(Args&&... args) {
     const std::type_info& typeInfo = typeid(T);
     auto it = m_systemTypes.find(typeInfo.hash_code());
     if (it != m_systemTypes.end()) {
-        return static_cast<T*>(m_systems[it->second - 1].get());
+        return dynamic_cast<T*>(m_systems[it->second - 1].get());
     }
 
     SystemTypeID typeID = m_nextSystemType++;
@@ -471,7 +471,7 @@ T* World::GetSystem() {
         return nullptr;
     }
 
-    return static_cast<T*>(m_systems[it->second - 1].get());
+    return dynamic_cast<T*>(m_systems[it->second - 1].get());
 }
 
 template<typename T>

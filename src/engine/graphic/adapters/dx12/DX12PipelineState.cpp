@@ -371,7 +371,7 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12PipelineState::CreateD3D12PipelineDesc() 
     // 设置深度模板状态
     desc.DepthStencilState = CD3DX12_DEPTH_STENCIL_DESC(D3D12_DEFAULT);
     desc.DepthStencilState.DepthEnable = m_depthStencilState.depthEnable;
-    desc.DepthStencilState.DepthWriteMask = m_depthStencilState.depthWriteMask ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
+    desc.DepthStencilState.DepthWriteMask = m_depthStencilState.depthWriteEnable ? D3D12_DEPTH_WRITE_MASK_ALL : D3D12_DEPTH_WRITE_MASK_ZERO;
     desc.DepthStencilState.DepthFunc = GetD3D12ComparisonFunc(m_depthStencilState.depthFunc);
     desc.DepthStencilState.StencilEnable = m_depthStencilState.stencilEnable;
     desc.DepthStencilState.StencilReadMask = m_depthStencilState.stencilReadMask;
@@ -454,14 +454,19 @@ bool DX12PipelineState::CreateD3D12RootSignature() {
         return false;
     }
 
-    auto rootSignatureDesc = CreateRootSignatureDesc();
+    auto rootSignatureDesc1 = CreateRootSignatureDesc();
+
+    // Convert D3D12_ROOT_SIGNATURE_DESC1 to D3D12_VERSIONED_ROOT_SIGNATURE_DESC
+    D3D12_VERSIONED_ROOT_SIGNATURE_DESC versionedRootSignatureDesc = {};
+    versionedRootSignatureDesc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
+    versionedRootSignatureDesc.Desc_1_1 = rootSignatureDesc1;
 
     ComPtr<ID3DBlob> signature;
     ComPtr<ID3DBlob> error;
 
     HRESULT hr = D3DX12SerializeVersionedRootSignature(
-        &rootSignatureDesc,
-        D3D_ROOT_SIGNATURE_VERSION_1_0,
+        &versionedRootSignatureDesc,
+        D3D_ROOT_SIGNATURE_VERSION_1_1,
         &signature,
         &error
     );
@@ -489,7 +494,7 @@ bool DX12PipelineState::CreateD3D12RootSignature() {
 // 私有辅助方法实现
 
 D3D12_PRIMITIVE_TOPOLOGY_TYPE DX12PipelineState::GetD3D12PrimitiveTopology() const {
-    switch (m_primitiveTopology) {
+    switch (GetPrimitiveTopology()) {
         case PrimitiveTopology::PointList: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
         case PrimitiveTopology::LineList: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
         case PrimitiveTopology::LineStrip: return D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
