@@ -71,8 +71,10 @@ public:
     std::shared_ptr<ISampler> GetDefaultSampler() override;
 
     // 资源查询
-    std::shared_ptr<IResource> GetResource(ResourceId id) override;
-    std::shared_ptr<IResource> GetResource(const std::string& name) override;
+    template<typename T>
+    std::shared_ptr<T> GetResource(ResourceId id);
+    template<typename T>
+    std::shared_ptr<T> GetResource(const std::string& name);
     void ReleaseResource(ResourceId id) override;
     void GarbageCollect() override;
     void ReleaseAllResources() override;

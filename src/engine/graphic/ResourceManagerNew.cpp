@@ -112,7 +112,7 @@ std::shared_ptr<ITexture> ResourceManager::LoadTexture(const std::string& filena
     // 检查是否已加载
     auto it = m_nameToId.find(filename);
     if (it != m_nameToId.end()) {
-        auto resource = GetResource(it->second);
+        auto resource = GetResource<ITexture>(it->second);
         if (resource) {
             return std::static_pointer_cast<ITexture>(resource);
         }
@@ -224,7 +224,7 @@ std::shared_ptr<IShader> ResourceManager::LoadShader(const std::string& filename
 
     auto it = m_nameToId.find(cacheKey);
     if (it != m_nameToId.end()) {
-        auto resource = GetResource(it->second);
+        auto resource = GetResource<IShader>(it->second);
         if (resource) {
             return std::static_pointer_cast<IShader>(resource);
         }
@@ -361,12 +361,13 @@ std::shared_ptr<ISampler> ResourceManager::GetDefaultSampler() {
     return m_defaultSampler;
 }
 
-std::shared_ptr<IResource> ResourceManager::GetResource(ResourceId id) {
+template<typename T>
+std::shared_ptr<T> ResourceManager::GetResource(ResourceId id) {
     // TODO: Implement resource lookup without IResource
     return nullptr;
 }
-
-std::shared_ptr<IResource> ResourceManager::GetResource(const std::string& name) {
+template<typename T>
+std::shared_ptr<T> ResourceManager::GetResource(const std::string& name) {
     // TODO: Implement resource lookup without IResource
     return nullptr;
 }
@@ -386,23 +387,13 @@ void ResourceManager::GarbageCollect() {
         m_pendingDeletion.pop();
     }
 
-    // 清理引用计数为0的资源
-    for (auto it = m_resources.begin(); it != m_resources.end();) {
-        if (it->second.use_count() == 1) {  // 只有 ResourceManager持有引用
-            if (!it->second->GetName().empty()) {
-                m_nameToId.erase(it->second->GetName());
-            }
-            it = m_resources.erase(it);
-        } else {
-            ++it;
-        }
-    }
+    // TODO: 实现资源回收
 }
 
 void ResourceManager::ReleaseAllResources() {
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
 
-    m_resources.clear();
+    //TODO: 实现全部资源释放
     m_nameToId.clear();
     m_statsDirty = true;
 }
@@ -445,7 +436,9 @@ ResourceId ResourceManager::LoadShaderAsync(const std::string& filename) {
 
 bool ResourceManager::IsAsyncLoadingComplete(ResourceId id) {
     std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
-    return m_resources.find(id) != m_resources.end();
+    //return m_resources.find(id) != m_resources.end();
+    //TODO: 实现资源状态查询
+    return false;
 }
 
 ResourceManager::ResourceStats ResourceManager::GetResourceStats() const {
@@ -744,29 +737,29 @@ void ResourceManager::SaveToCache(const std::string& filename, const void* data,
 void ResourceManager::UpdateResourceStats() const {
     std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
 
-    m_cachedStats.totalResources = static_cast<uint32_t>(m_resources.size());
+    m_cachedStats.totalResources = 0;//static_cast<uint32_t>(m_resources.size());
     m_cachedStats.loadedResources = m_cachedStats.totalResources;
     m_cachedStats.loadingResources = 0;  // 暂时计算
     m_cachedStats.totalMemoryUsage = 0;  // 需要计算所有资源大小
     m_cachedStats.textureMemoryUsage = 0;
     m_cachedStats.bufferMemoryUsage = 0;
 
-    // 计算内存使用情况
-    for (const auto& [id, resource] : m_resources) {
-        uint64_t size = resource->GetSize();
-        m_cachedStats.totalMemoryUsage += size;
-
-        switch (resource->GetType()) {
-            case ResourceType::Texture:
-                m_cachedStats.textureMemoryUsage += size;
-                break;
-            case ResourceType::Buffer:
-                m_cachedStats.bufferMemoryUsage += size;
-                break;
-            default:
-                break;
-        }
-    }
+    // // 计算内存使用情况
+    // for (const auto& [id, resource] : m_resources) {
+    //     uint64_t size = resource->GetSize();
+    //     m_cachedStats.totalMemoryUsage += size;
+    //
+    //     switch (resource->GetType()) {
+    //         case ResourceType::Texture:
+    //             m_cachedStats.textureMemoryUsage += size;
+    //             break;
+    //         case ResourceType::Buffer:
+    //             m_cachedStats.bufferMemoryUsage += size;
+    //             break;
+    //         default:
+    //             break;
+    //     }
+    // }
 
     m_statsDirty = false;
 }
@@ -774,16 +767,16 @@ void ResourceManager::UpdateResourceStats() const {
 void ResourceManager::UpdateFileTimestamps() {
     m_fileTimestamps.clear();
 
-    for (const auto& [name, id] : m_nameToId) {
-        auto resource = GetResource(id);
-        if (resource && resource->GetType() == ResourceType::Shader) {
-            std::error_code ec;
-            auto ftime = fs::last_write_time(name, ec);
-            if (!ec) {
-                m_fileTimestamps[name] = ftime;
-            }
-        }
-    }
+    // for (const auto& [name, id] : m_nameToId) {
+    //     auto resource = GetResource(id);
+    //     if (resource && resource->GetType() == ResourceType::Shader) {
+    //         std::error_code ec;
+    //         auto ftime = fs::last_write_time(name, ec);
+    //         if (!ec) {
+    //             m_fileTimestamps[name] = ftime;
+    //         }
+    //     }
+    // }
 }
 
 void ResourceManager::CheckFileModifications() {
