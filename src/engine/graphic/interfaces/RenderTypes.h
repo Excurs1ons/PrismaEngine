@@ -84,6 +84,8 @@ enum class TextureFormat {
     R8_SNorm,
     R8_UInt,
     R8_SInt,
+    RG8_UNorm,
+    RG8_SNorm,
 
     // 16位 formats
     R16_UNorm,

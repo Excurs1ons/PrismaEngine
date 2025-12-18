@@ -334,7 +334,7 @@ std::unique_ptr<IBuffer> DX12ResourceFactory::CreateBufferImpl(const BufferDesc&
 
     // 更新统计信息
     m_stats.buffersCreated++;
-    m_stats.totalBufferMemory += buffer->GetSize();
+    m_stats.totalMemoryAllocated += buffer->GetSize();
 
     LOG_INFO("DX12ResourceFactory", "Created buffer: {0} bytes, type: {1}",
              desc.size, static_cast<uint32_t>(desc.type));
@@ -391,7 +391,6 @@ std::unique_ptr<IPipelineState> DX12ResourceFactory::CreatePipelineStateImpl() {
     auto pipelineState = std::make_unique<DX12PipelineState>(m_device);
 
     // 更新统计信息
-    m_stats.pipelineStatesCreated++;
 
     LOG_INFO("DX12ResourceFactory", "Created pipeline state object");
     return std::move(pipelineState);
@@ -441,7 +440,6 @@ std::unique_ptr<ISwapChain> DX12ResourceFactory::CreateSwapChainImpl(void* windo
     swapChain->SetMode(vsync ? SwapChainMode::VSync : SwapChainMode::Immediate);
 
     // 更新统计信息
-    m_stats.swapChainsCreated++;
 
     LOG_INFO("DX12ResourceFactory", "Created swap chain: {0}x{1}, buffers: {2}",
              width, height, bufferCount);
@@ -472,7 +470,6 @@ std::unique_ptr<IFence> DX12ResourceFactory::CreateFenceImpl() {
     auto dx12Fence = std::make_unique<DX12Fence>(fence);
 
     // 更新统计信息
-    m_stats.fencesCreated++;
 
     LOG_INFO("DX12ResourceFactory", "Created fence");
     return std::move(dx12Fence);
@@ -680,7 +677,7 @@ bool DX12ResourceFactory::ValidatePipelineDesc(const PipelineDesc& desc, std::st
 void DX12ResourceFactory::GetMemoryBudget(uint64_t& budget, uint64_t& usage) const {
     // TODO: 实现内存预算查询
     budget = 0;
-    usage = m_stats.totalTextureMemory + m_stats.totalBufferMemory;
+    usage = m_stats.totalMemoryAllocated;
 }
 
 void DX12ResourceFactory::SetMemoryLimit(uint64_t limit) {
@@ -693,7 +690,7 @@ bool DX12ResourceFactory::IsMemoryLimitExceeded() const {
         return false;
     }
 
-    uint64_t usage = m_stats.totalTextureMemory + m_stats.totalBufferMemory;
+    uint64_t usage = m_stats.totalMemoryAllocated;
     return usage > m_memoryLimit;
 }
 

@@ -59,6 +59,11 @@ public:
                                                bool vsync = true) override;
     ISwapChain* GetSwapChain() const override;
 
+    // 帧管理
+    void BeginFrame() override;
+    void EndFrame() override;
+    void Present() override;
+
     // 查询支持的功能
     bool SupportsMultiThreaded() const override;
     bool SupportsBindlessTextures() const override;
@@ -122,6 +127,7 @@ private:
     std::unique_ptr<DX12ResourceFactory> m_resourceFactory;
     std::unique_ptr<DX12SwapChain> m_swapChain;
     bool m_initialized = false;
+    uint64_t m_currentFenceValue = 1;
 
     // 渲染统计
     mutable RenderStats m_stats = {};
