@@ -1,10 +1,11 @@
 #pragma once
 
+#include "ISampler.h"
+#include "IShader.h"
 #include "RenderTypes.h"
 #include <memory>
-#include <string>
 #include <shared_mutex>
-#include "ISampler.h"
+#include <string>
 
 namespace PrismaEngine::Graphic {
 
@@ -50,6 +51,9 @@ struct ShaderDesc : public ResourceDesc {
     std::string filename;  // 如果从文件加载
     std::vector<std::string> defines;
     std::string target;    // 如 "vs_5_0", "ps_5_0"
+    uint64_t compileTimestamp = 0;
+    uint64_t compileHash = 0;
+    ShaderCompileOptions& compileOptions;
 };
 
 /// @brief 管线描述
@@ -278,6 +282,12 @@ public:
         uint64_t totalMemoryUsage = 0;
         uint64_t textureMemoryUsage = 0;
         uint64_t bufferMemoryUsage = 0;
+        int textureCount = 0;
+        int bufferCount = 0;
+        int shaderCount = 0;
+        int pipelineCount = 0;
+        uint64_t gpuMemoryUsage = 0;
+        uint64_t cpuMemoryUsage = 0;
     };
     virtual ResourceStats GetResourceStats() const = 0;
 
