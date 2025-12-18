@@ -298,7 +298,9 @@ void RenderSystem::RenderFrame() {
     }
 
     // 设置清除颜色
-    XMFLOAT4 clearColor = camera->GetClearColor();
+    XMVECTOR clearColorVec = camera->GetClearColor();
+    XMFLOAT4 clearColor;
+    DirectX::XMStoreFloat4(&clearColor, clearColorVec);
 
     // 开始渲染
     m_legacyBackend->BeginFrame(clearColor);
