@@ -138,6 +138,9 @@ private:
     // 描述符句柄
     D3D12_GPU_DESCRIPTOR_HANDLE m_srv = {};
     D3D12_GPU_DESCRIPTOR_HANDLE m_uav = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE m_cbv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE m_vbv = {};
+    D3D12_GPU_DESCRIPTOR_HANDLE m_ibv = {};
 
     // 状态跟踪
     bool m_mapped = false;

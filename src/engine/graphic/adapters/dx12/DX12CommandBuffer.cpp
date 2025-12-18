@@ -102,7 +102,7 @@ bool DX12CommandBuffer::Reset() {
     }
 
     // 重置状态
-    m_currentPipeline = nullptr;
+    m_currentPipelineState = nullptr;
     m_currentRenderTarget = {};
     ResetStats();
 
@@ -166,7 +166,7 @@ void DX12CommandBuffer::BeginRenderPass(const RenderPassDesc& desc) {
             if (desc.clearDepth) clearFlags |= D3D12_CLEAR_FLAG_DEPTH;
             if (desc.clearStencil) clearFlags |= D3D12_CLEAR_FLAG_STENCIL;
 
-            m_commandList->ClearDepthStencilView(dsv, clearFlags,
+            m_commandList->ClearDepthStencilView(dsv, static_cast<D3D12_CLEAR_FLAGS>(clearFlags),
                                                 desc.clearDepth, desc.clearStencil,
                                                 0, nullptr);
         }
@@ -199,15 +199,15 @@ void DX12CommandBuffer::EndRenderPass() {
     m_currentRenderTarget = {};
 }
 
-void DX12CommandBuffer::SetPipeline(IPipeline* pipeline) {
+void DX12CommandBuffer::SetPipelineState(IPipelineState* pipelineState) {
     if (!m_isRecording) return;
 
-    m_currentPipeline = pipeline;
+    m_currentPipelineState = pipelineState;
 }
 
-void DX12CommandBuffer::ValidateAndSetPipeline() {
-    if (m_currentPipeline) {
-        DX12Pipeline* dx12Pipeline = static_cast<DX12Pipeline*>(m_currentPipeline);
+void DX12CommandBuffer::ValidateAndSetPipelineState() {
+    if (m_currentPipelineState) {
+        DX12PipelineState* dx12Pipeline = static_cast<DX12PipelineState*>(m_currentPipelineState);
         ID3D12PipelineState* pso = dx12Pipeline->GetPipelineState();
         ID3D12RootSignature* rootSig = dx12Pipeline->GetRootSignature();
 
@@ -219,7 +219,7 @@ void DX12CommandBuffer::ValidateAndSetPipeline() {
 void DX12CommandBuffer::SetVertexBuffer(IBuffer* buffer, uint32_t slot, uint32_t offset, uint32_t stride) {
     if (!m_isRecording || !buffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
 
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(buffer);
     D3D12_VERTEX_BUFFER_VIEW vbv = {};
@@ -233,7 +233,7 @@ void DX12CommandBuffer::SetVertexBuffer(IBuffer* buffer, uint32_t slot, uint32_t
 void DX12CommandBuffer::SetIndexBuffer(IBuffer* buffer, bool is32Bit, uint32_t offset) {
     if (!m_isRecording || !buffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
 
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(buffer);
     D3D12_INDEX_BUFFER_VIEW ibv = {};
@@ -247,7 +247,7 @@ void DX12CommandBuffer::SetIndexBuffer(IBuffer* buffer, bool is32Bit, uint32_t o
 void DX12CommandBuffer::SetConstantBuffer(IBuffer* buffer, uint32_t slot, uint32_t offset, uint32_t size) {
     if (!m_isRecording || !buffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
 
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(buffer);
     D3D12_GPU_VIRTUAL_ADDRESS cbvAddress = dx12Buffer->GetGPUAddress() + offset;
@@ -259,7 +259,7 @@ void DX12CommandBuffer::SetConstantBuffer(IBuffer* buffer, uint32_t slot, uint32
 void DX12CommandBuffer::SetTexture(ITexture* texture, uint32_t slot) {
     if (!m_isRecording || !texture) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
 
     DX12Texture* dx12Texture = static_cast<DX12Texture*>(texture);
     D3D12_GPU_DESCRIPTOR_HANDLE srv = dx12Texture->GetSRV();
@@ -271,7 +271,7 @@ void DX12CommandBuffer::SetTexture(ITexture* texture, uint32_t slot) {
 void DX12CommandBuffer::SetSampler(ISampler* sampler, uint32_t slot) {
     if (!m_isRecording || !sampler) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
 
     DX12Sampler* dx12Sampler = static_cast<DX12Sampler*>(sampler);
     D3D12_GPU_DESCRIPTOR_HANDLE samplerHandle = dx12Sampler->GetHandle();
@@ -283,7 +283,7 @@ void DX12CommandBuffer::SetSampler(ISampler* sampler, uint32_t slot) {
 void DX12CommandBuffer::SetShaderResource(IBuffer* buffer, uint32_t slot) {
     if (!m_isRecording || !buffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
 
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(buffer);
     D3D12_GPU_VIRTUAL_ADDRESS srvAddress = dx12Buffer->GetGPUAddress();
@@ -294,7 +294,7 @@ void DX12CommandBuffer::SetShaderResource(IBuffer* buffer, uint32_t slot) {
 void DX12CommandBuffer::SetUnorderedAccess(IBuffer* buffer, uint32_t slot) {
     if (!m_isRecording || !buffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
 
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(buffer);
     D3D12_GPU_VIRTUAL_ADDRESS uavAddress = dx12Buffer->GetGPUAddress();
@@ -341,7 +341,7 @@ void DX12CommandBuffer::SetScissorRects(const Rect* rects, uint32_t count) {
 void DX12CommandBuffer::Draw(uint32_t vertexCount, uint32_t startVertex) {
     if (!m_isRecording) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_commandList->DrawInstanced(vertexCount, 1, startVertex, 0);
 
@@ -351,7 +351,7 @@ void DX12CommandBuffer::Draw(uint32_t vertexCount, uint32_t startVertex) {
 void DX12CommandBuffer::DrawIndexed(uint32_t indexCount, uint32_t startIndex, int32_t baseVertex) {
     if (!m_isRecording) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_commandList->DrawIndexedInstanced(indexCount, 1, startIndex, baseVertex, 0);
 
@@ -362,7 +362,7 @@ void DX12CommandBuffer::DrawInstanced(uint32_t vertexCount, uint32_t instanceCou
                                      uint32_t startVertex, uint32_t startInstance) {
     if (!m_isRecording) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_commandList->DrawInstanced(vertexCount, instanceCount, startVertex, startInstance);
 
@@ -374,7 +374,7 @@ void DX12CommandBuffer::DrawIndexedInstanced(uint32_t indexCount, uint32_t insta
                                             uint32_t startInstance) {
     if (!m_isRecording) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
     m_commandList->DrawIndexedInstanced(indexCount, instanceCount, startIndex, baseVertex, startInstance);
 
@@ -385,7 +385,7 @@ void DX12CommandBuffer::DrawIndirect(IBuffer* indirectBuffer, uint32_t offset) {
     // 实现间接绘制
     if (!m_isRecording || !indirectBuffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(indirectBuffer);
 
     m_commandList->ExecuteIndirect(
@@ -401,7 +401,7 @@ void DX12CommandBuffer::DrawIndexedIndirect(IBuffer* indirectBuffer, uint32_t of
     // 实现间接索引绘制
     if (!m_isRecording || !indirectBuffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(indirectBuffer);
 
     m_commandList->ExecuteIndirect(
@@ -416,14 +416,14 @@ void DX12CommandBuffer::DrawIndexedIndirect(IBuffer* indirectBuffer, uint32_t of
 void DX12CommandBuffer::Dispatch(uint32_t x, uint32_t y, uint32_t z) {
     if (!m_isRecording) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     m_commandList->Dispatch(x, y, z);
 }
 
 void DX12CommandBuffer::DispatchIndirect(IBuffer* indirectBuffer, uint32_t offset) {
     if (!m_isRecording || !indirectBuffer) return;
 
-    ValidateAndSetPipeline();
+    ValidateAndSetPipelineState();
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(indirectBuffer);
 
     m_commandList->ExecuteIndirect(

@@ -153,9 +153,11 @@ void RenderSystemTest::RenderFrame() {
 
         // 设置裁剪矩形
         Rect scissor{};
+        scissor.x = 0;
+        scissor.y = 0;
         scissor.width = static_cast<int>(m_width);
         scissor.height = static_cast<int>(m_height);
-        commandBuffer->SetScissor(0, scissor);
+        commandBuffer->SetScissorRect(scissor);
         LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 裁剪矩形设置完成", frameCount);
 
         // 绑定顶点缓冲区
@@ -163,7 +165,7 @@ void RenderSystemTest::RenderFrame() {
         LOG_DEBUG("RenderSystemTest", "第 {0} 帧: 顶点缓冲区绑定完成", frameCount);
 
         // 渲染三角形
-        commandBuffer->Draw(3, 1, 0, 0);
+        commandBuffer->Draw(3, 0);
         LOG_INFO("RenderSystemTest", "第 {0} 帧: 三角形绘制命令提交完成 (3个顶点)", frameCount);
     } else {
         LOG_ERROR("RenderSystemTest", "第 {0} 帧: 渲染资源不完整 - commandBuffer={1}, pipelineState={2}, vertexBuffer={3}",
