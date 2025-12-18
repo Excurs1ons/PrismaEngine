@@ -18,8 +18,8 @@ struct RenderPassDesc {
     ITexture* renderTarget = nullptr;
     ITexture* depthStencil = nullptr;
     Color clearColor = {0.0f, 0.0f, 0.0f, 1.0f};
-    float clearDepth = 1.0f;
-    uint8_t clearStencil = 0;
+    float clearDepthValue = 1.0f;
+    uint8_t clearStencilValue = 0;
     Rect renderArea = {0, 0, 0, 0};
     bool clearRenderTarget = true;
     bool clearDepth = true;

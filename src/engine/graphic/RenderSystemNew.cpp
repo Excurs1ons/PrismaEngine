@@ -3,6 +3,7 @@
 #include "../SceneManager.h"
 #include "../Camera3D.h"
 #include "RenderBackendDirectX12.h"
+#include "RenderBackendVulkan.h"
 #include "ScriptableRenderPipeline.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
@@ -182,11 +183,11 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
     // 创建旧的渲染后端（临时，用于过渡）
     switch (desc.backendType) {
         case RenderBackendType::DirectX12: {
-            m_legacyBackend = std::make_unique<RenderBackendDirectX12>(L"RendererDirectX");
+            m_legacyBackend = std::make_unique<::Engine::RenderBackendDirectX12>(L"RendererDirectX");
             break;
         }
         case RenderBackendType::Vulkan: {
-            m_legacyBackend = std::make_unique<RenderBackendVulkan>();
+            m_legacyBackend = std::make_unique<::Engine::RenderBackendVulkan>();
             break;
         }
         default: {
@@ -208,8 +209,8 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
 
     // 创建适配器设备
     if (desc.backendType == RenderBackendType::DirectX12) {
-        auto* dx12Backend = static_cast<RenderBackendDirectX12*>(m_legacyBackend.get());
-        m_device = std::make_unique<DX12::DX12RenderDevice>(dx12Backend);
+        auto* dx12Backend = static_cast<::Engine::RenderBackendDirectX12*>(m_legacyBackend.get());
+        m_device = std::make_unique<PrismaEngine::Graphic::DX12::DX12RenderDevice>(dx12Backend);
 
         // 初始化设备描述
         DeviceDesc deviceDesc;
@@ -252,7 +253,7 @@ bool RenderSystem::InitializePipelines() {
     }
 
     // 初始化前向渲染管线
-    m_forwardPipeline = std::make_unique<Graphic::Pipelines::Forward::ForwardPipeline>();
+    m_forwardPipeline = std::make_unique<::Engine::Graphic::Pipelines::Forward::ForwardPipeline>();
     if (!m_forwardPipeline->Initialize(m_legacyPipeline.get())) {
         LOG_ERROR("Render", "前向渲染管线初始化失败");
         return false;
