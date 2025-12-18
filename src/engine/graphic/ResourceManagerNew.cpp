@@ -347,8 +347,9 @@ std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc
         // 转换 unique_ptr 到 shared_ptr
         sampler = std::move(samplerUnique);
         // RegisterResource 期望 IResource，ISampler 继承自 IResource
-        // 直接传递 sampler，shared_ptr 会自动向上转换
-        RegisterResource(sampler);
+        // 使用别名构造函数创建 IResource 的 shared_ptr
+        std::shared_ptr<IResource> resourcePtr = sampler;
+        RegisterResource(resourcePtr);
     }
 
     return sampler;
