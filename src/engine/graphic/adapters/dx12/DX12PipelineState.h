@@ -116,6 +116,12 @@ private:
     // 混合状态（支持多个渲染目标）
     std::vector<BlendState> m_blendStates;
 
+    // 顶点输入布局
+    std::vector<VertexInputAttribute> m_inputLayout;
+
+    // 光栅化状态
+    RasterizerState m_rasterizerState;
+
     // 缓存相关
     bool m_cacheEnabled = true;
     uint64_t m_cacheKey = 0;

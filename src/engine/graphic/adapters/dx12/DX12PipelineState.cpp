@@ -324,20 +324,29 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12PipelineState::CreateD3D12PipelineDesc() 
     // 设置混合状态
     desc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     if (m_blendStates.empty()) {
-        auto defaultBlend = BlendState::Default;
-        desc.BlendState.RenderTarget[0] = CD3DX12_RENDER_TARGET_BLEND_DESC(D3D12_DEFAULT);
+        // 使用默认混合状态
+        desc.BlendState.RenderTarget[0] = {};
+        desc.BlendState.RenderTarget[0].BlendEnable = FALSE;
+        desc.BlendState.RenderTarget[0].LogicOpEnable = FALSE;
+        desc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_ONE;
+        desc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_ZERO;
+        desc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+        desc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+        desc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+        desc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+        desc.BlendState.RenderTarget[0].LogicOp = D3D12_LOGIC_OP_NOOP;
+        desc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
     } else {
         for (size_t i = 0; i < m_blendStates.size() && i < 8; ++i) {
             const auto& blend = m_blendStates[i];
             desc.BlendState.RenderTarget[i].BlendEnable = blend.blendEnable;
             desc.BlendState.RenderTarget[i].LogicOpEnable = blend.logicOpEnable;
-            desc.BlendState.RenderTarget[i].SrcBlend = GetD3D12Blend(blend.srcColor);
-            desc.BlendState.RenderTarget[i].DestBlend = GetD3D12Blend(blend.dstColor);
-            desc.BlendState.RenderTarget[i].BlendOp = GetD3D12BlendOp(blend.colorOp);
-            desc.BlendState.RenderTarget[i].SrcBlendAlpha = GetD3D12Blend(blend.srcAlpha);
-            desc.BlendState.RenderTarget[i].DestBlendAlpha = GetD3D12Blend(blend.dstAlpha);
-            desc.BlendState.RenderTarget[i].BlendOpAlpha = GetD3D12BlendOp(blend.alphaOp);
-            desc.BlendState.RenderTarget[i].LogicOp = static_cast<D3D12_LOGIC_OP>(blend.logicOp);
+            desc.BlendState.RenderTarget[i].SrcBlend = GetD3D12Blend(blend.srcBlend);
+            desc.BlendState.RenderTarget[i].DestBlend = GetD3D12Blend(blend.destBlend);
+            desc.BlendState.RenderTarget[i].BlendOp = GetD3D12BlendOp(blend.blendOp);
+            desc.BlendState.RenderTarget[i].SrcBlendAlpha = GetD3D12Blend(blend.srcBlendAlpha);
+            desc.BlendState.RenderTarget[i].DestBlendAlpha = GetD3D12Blend(blend.destBlendAlpha);
+            desc.BlendState.RenderTarget[i].BlendOpAlpha = GetD3D12BlendOp(blend.blendOpAlpha);
             desc.BlendState.RenderTarget[i].RenderTargetWriteMask = blend.writeMask;
         }
     }
@@ -347,8 +356,8 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12PipelineState::CreateD3D12PipelineDesc() 
 
     // 设置光栅化状态
     desc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-    desc.RasterizerState.FillMode = GetD3D12FillMode(m_rasterizerState.fillMode);
-    desc.RasterizerState.CullMode = GetD3D12CullMode(m_rasterizerState.cullMode);
+    desc.RasterizerState.FillMode = GetD3D12FillMode();
+    desc.RasterizerState.CullMode = GetD3D12CullMode();
     desc.RasterizerState.FrontCounterClockwise = m_rasterizerState.frontCounterClockwise;
     desc.RasterizerState.DepthBias = m_rasterizerState.depthBias;
     desc.RasterizerState.DepthBiasClamp = m_rasterizerState.depthBiasClamp;
