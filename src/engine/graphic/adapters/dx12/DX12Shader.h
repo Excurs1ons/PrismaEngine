@@ -1,8 +1,9 @@
 #pragma once
 
+#include "interfaces/IResourceManager.h"
 #include "interfaces/IShader.h"
-#include <vector>
 #include <string>
+#include <vector>
 
 namespace PrismaEngine::Graphic::DX12 {
 
