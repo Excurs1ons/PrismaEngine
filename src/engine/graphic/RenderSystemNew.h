@@ -16,15 +16,10 @@ namespace PrismaEngine::Graphic {
 class RenderBackendDirectX12;
 class DX12RenderDevice;
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
-namespace Forward {
+// 前向声明 ForwardPipeline 类
+namespace Engine { namespace Graphic { namespace Pipelines { namespace Forward {
     class ForwardPipeline;
-}
-}
-}
-}
+}}}}
 
 /// @brief 渲染系统描述
 struct RenderSystemDesc {
@@ -41,9 +36,9 @@ struct RenderSystemDesc {
 
 /// @brief 新的渲染系统
 /// 使用抽象接口，支持多后端
-class RenderSystem : public Engine::ManagerBase<RenderSystem> {
+class RenderSystem : public ::Engine::ManagerBase<RenderSystem> {
 public:
-    friend class Engine::ManagerBase<RenderSystem>;
+    friend class ::Engine::ManagerBase<RenderSystem>;
     static constexpr std::string GetName() { return "RenderSystem"; }
 
     // === 初始化和关闭 ===
