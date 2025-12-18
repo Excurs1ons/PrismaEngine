@@ -27,6 +27,25 @@ public:
     /// @brief 析构函数
     ~DX12Texture() override;
 
+    // IResource接口实现
+    ResourceType GetType() const override;
+    ResourceId GetId() const override;
+    const std::string& GetName() const override;
+    void SetName(const std::string& name) override;
+    uint64_t GetSize() const override;
+    bool IsLoaded() const override;
+    bool IsValid() const override;
+    void AddRef() override;
+    uint32_t Release() override;
+    uint32_t GetRefCount() const override;
+    const std::string& GetDebugTag() const override;
+    void SetDebugTag(const std::string& tag) override;
+    uint64_t GetCreationTimestamp() const override;
+    uint64_t GetLastAccessTimestamp() const override;
+    void MarkDirty() override;
+    bool IsDirty() const override;
+    void ClearDirty() override;
+
     // ITexture接口实现
     TextureType GetTextureType() const override;
     TextureFormat GetFormat() const override;
@@ -129,6 +148,14 @@ private:
     D3D12_CPU_DESCRIPTOR_HANDLE m_dsv = {};
     D3D12_GPU_DESCRIPTOR_HANDLE m_srv = {};
     D3D12_GPU_DESCRIPTOR_HANDLE m_uav = {};
+
+    // IResource接口数据
+    std::string m_name;
+    std::string m_debugTag;
+    uint32_t m_refCount = 1;
+    uint64_t m_creationTimestamp = 0;
+    uint64_t m_lastAccessTimestamp = 0;
+    bool m_isDirty = false;
 
     // 状态跟踪
     bool m_mapped = false;

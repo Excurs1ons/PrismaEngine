@@ -320,7 +320,7 @@ void DX12Buffer::DebugPrintInfo() const {
     ss << "  Usage: " << static_cast<int>(m_desc.usage) << "\n";
 
     // 输出日志
-    Logger::Info("Buffer", ss.str());
+    Logger::GetInstance().Info("Buffer", "{}", ss.str());
 }
 
 void DX12Buffer::Discard(uint64_t offset, uint64_t size) {
