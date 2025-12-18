@@ -16,10 +16,15 @@ namespace PrismaEngine::Graphic {
 class RenderBackendDirectX12;
 class DX12RenderDevice;
 
-// 前向声明 ForwardPipeline 类
-namespace Engine { namespace Graphic { namespace Pipelines { namespace Forward {
+// 前向声明
+namespace ::Engine {
+    class RenderBackend;
+    class ScriptableRenderPipeline;
+}
+
+namespace ::Engine::Graphic::Pipelines::Forward {
     class ForwardPipeline;
-}}}}
+}
 
 /// @brief 渲染系统描述
 struct RenderSystemDesc {
@@ -128,11 +133,11 @@ public:
 
     /// @brief 获取旧的渲染后端（用于兼容）
     /// @return 渲染后端指针
-    Engine::RenderBackend* GetRenderBackend() const { return m_legacyBackend.get(); }
+    ::Engine::RenderBackend* GetRenderBackend() const { return m_legacyBackend.get(); }
 
     /// @brief 获取旧的渲染管线（用于兼容）
     /// @return 渲染管线指针
-    Engine::ScriptableRenderPipeline* GetRenderPipe() const { return m_legacyPipeline.get(); }
+    ::Engine::ScriptableRenderPipeline* GetRenderPipe() const { return m_legacyPipeline.get(); }
 
 private:
     // 新接口组件
@@ -141,9 +146,9 @@ private:
     std::shared_ptr<IPipeline> m_mainPipeline;
 
     // 旧接口组件（兼容性）
-    std::unique_ptr<Engine::RenderBackend> m_legacyBackend;
-    std::unique_ptr<Engine::ScriptableRenderPipeline> m_legacyPipeline;
-    std::unique_ptr<Engine::Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
+    std::unique_ptr<::Engine::RenderBackend> m_legacyBackend;
+    std::unique_ptr<::Engine::ScriptableRenderPipeline> m_legacyPipeline;
+    std::unique_ptr<::Engine::Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
 
     // 渲染线程
     WorkerThread m_renderThread;
