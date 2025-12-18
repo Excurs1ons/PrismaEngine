@@ -1,6 +1,5 @@
 #pragma once
 
-#include "IResource.h"
 #include "RenderTypes.h"
 #include <memory>
 
@@ -36,7 +35,7 @@ struct BufferViewDesc {
 };
 
 /// @brief 缓冲区抽象接口
-class IBuffer : public IResource {
+class IBuffer {
 public:
     virtual ~IBuffer() = default;
 

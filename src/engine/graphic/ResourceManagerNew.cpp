@@ -362,43 +362,20 @@ std::shared_ptr<ISampler> ResourceManager::GetDefaultSampler() {
 }
 
 std::shared_ptr<IResource> ResourceManager::GetResource(ResourceId id) {
-    std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
-
-    auto it = m_resources.find(id);
-    if (it != m_resources.end()) {
-        return it->second;
-    }
-
+    // TODO: Implement resource lookup without IResource
     return nullptr;
 }
 
 std::shared_ptr<IResource> ResourceManager::GetResource(const std::string& name) {
-    std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
-
-    auto it = m_nameToId.find(name);
-    if (it != m_nameToId.end()) {
-        return GetResource(it->second);
-    }
-
+    // TODO: Implement resource lookup without IResource
     return nullptr;
 }
 
 void ResourceManager::ReleaseResource(ResourceId id) {
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
 
-    auto it = m_resources.find(id);
-    if (it != m_resources.end()) {
-        // 从名称映射中移除
-        if (!it->second->GetName().empty()) {
-            m_nameToId.erase(it->second->GetName());
-        }
-
-        // 加入待删除队列
-        m_pendingDeletion.push(id);
-        m_resources.erase(it);
-
-        m_statsDirty = true;
-    }
+    // TODO: Implement resource release without IResource
+    m_statsDirty = true;
 }
 
 void ResourceManager::GarbageCollect() {
@@ -503,32 +480,25 @@ ResourceId ResourceManager::GenerateId() {
     return m_nextId++;
 }
 
-void ResourceManager::RegisterResource(std::shared_ptr<IResource> resource, const std::string& name) {
+template<typename T>
+void ResourceManager::RegisterResource(std::shared_ptr<T> resource, const std::string& name) {
     if (!resource) {
         return;
     }
 
     ResourceId id = GenerateId();
-    // TODO: resource->SetId(id); // IResource 接口需要添加 SetId 方法
 
     if (!name.empty()) {
-        resource->SetName(name);
         m_nameToId[name] = id;
     }
 
-    m_resources[id] = resource;
+    // TODO: Store resource in type-specific containers
     m_statsDirty = true;
 }
 
 void ResourceManager::UnregisterResource(ResourceId id) {
-    auto it = m_resources.find(id);
-    if (it != m_resources.end()) {
-        if (!it->second->GetName().empty()) {
-            m_nameToId.erase(it->second->GetName());
-        }
-        m_resources.erase(it);
-        m_statsDirty = true;
-    }
+    // TODO: Implement resource cleanup
+    m_statsDirty = true;
 }
 
 void ResourceManager::LoadingThreadFunction() {
@@ -549,11 +519,14 @@ void ResourceManager::LoadingThreadFunction() {
 }
 
 void ResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
-    std::shared_ptr<IResource> resource = nullptr;
-
     switch (task.type) {
         case ResourceLoadTask::LoadTexture:
-            resource = LoadTextureSync(task.path, true);
+            {
+                auto texture = LoadTextureSync(task.path, true);
+                if (texture) {
+                    RegisterResource(texture, task.path);
+                }
+            }
             break;
         case ResourceLoadTask::LoadShader:
             // TODO: 实现着色器异步加载
@@ -561,13 +534,7 @@ void ResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
         default:
             break;
     }
-
-    if (resource) {
-        RegisterResource(resource, task.name);
-        if (task.callback) {
-            task.callback(task.id, resource);
-        }
-    }
+    // TODO: Handle callback for async loading when needed
 }
 
 std::shared_ptr<ITexture> ResourceManager::LoadTextureSync(const std::string& filename, bool generateMips) {

@@ -100,7 +100,7 @@ private:
     mutable std::shared_mutex m_resourceMutex;
 
     // 资源存储
-    std::unordered_map<ResourceId, std::shared_ptr<IResource>> m_resources;
+    // TODO: Redesign resource storage without IResource dependency
     std::unordered_map<std::string, ResourceId> m_nameToId;
     std::queue<ResourceId> m_pendingDeletion;
     ResourceId m_nextId = 1;
@@ -124,7 +124,8 @@ private:
 
     // 资源ID管理
     ResourceId GenerateId();
-    void RegisterResource(std::shared_ptr<IResource> resource, const std::string& name = "");
+    template<typename T>
+    void RegisterResource(std::shared_ptr<T> resource, const std::string& name = "");
     void UnregisterResource(ResourceId id);
 
     // 异步加载

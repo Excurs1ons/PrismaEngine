@@ -1,12 +1,11 @@
 #pragma once
 
-#include "IResource.h"
 #include "RenderTypes.h"
 
 namespace PrismaEngine::Graphic {
 
 /// @brief 采样器抽象接口
-class ISampler : public IResource {
+class ISampler {
 public:
     virtual ~ISampler() = default;
 
