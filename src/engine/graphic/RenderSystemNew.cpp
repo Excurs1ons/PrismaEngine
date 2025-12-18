@@ -16,6 +16,12 @@ extern HWND g_hWnd;
 
 namespace PrismaEngine::Graphic {
 
+bool RenderSystem::Initialize() {
+    // 使用默认描述初始化
+    RenderSystemDesc defaultDesc;
+    return Initialize(defaultDesc);
+}
+
 bool RenderSystem::Initialize(const RenderSystemDesc& desc) {
     LOG_INFO("Render", "正在初始化新的渲染系统");
     m_desc = desc;
