@@ -4,6 +4,7 @@
 #include "IShader.h"
 #include <memory>
 #include <vector>
+#include "IRenderDevice.h"
 
 namespace PrismaEngine::Graphic {
 
@@ -83,11 +84,11 @@ public:
 
     /// @brief 获取管线类型
     /// @return 管线类型
-    virtual PipelineType GetType() const = 0;
+    [[nodiscard]] virtual PipelineType GetType() const = 0;
 
     /// @brief 获取管线状态
     /// @return 是否已创建/有效
-    virtual bool IsValid() const = 0;
+    [[nodiscard]] virtual bool IsValid() const = 0;
 
     // === 着色器管理 ===
 
@@ -99,12 +100,12 @@ public:
     /// @brief 获取着色器
     /// @param type 着色器类型
     /// @return 着色器对象
-    virtual std::shared_ptr<IShader> GetShader(ShaderType type) const = 0;
+    [[nodiscard]] virtual std::shared_ptr<IShader> GetShader(ShaderType type) const = 0;
 
     /// @brief 检查是否有指定类型的着色器
     /// @param type 着色器类型
     /// @return 是否存在
-    virtual bool HasShader(ShaderType type) const = 0;
+    [[nodiscard]] virtual bool HasShader(ShaderType type) const = 0;
 
     // === 渲染状态 ===
 
@@ -114,7 +115,7 @@ public:
 
     /// @brief 获取图元拓扑
     /// @return 图元拓扑
-    virtual PrimitiveTopology GetPrimitiveTopology() const = 0;
+    [[nodiscard]] virtual PrimitiveTopology GetPrimitiveTopology() const = 0;
 
     /// @brief 设置混合状态
     /// @param state 混合状态
@@ -124,7 +125,7 @@ public:
     /// @brief 获取混合状态
     /// @param renderTargetIndex 渲染目标索引
     /// @return 混合状态
-    virtual const BlendState& GetBlendState(uint32_t renderTargetIndex = 0) const = 0;
+    [[nodiscard]] virtual const BlendState& GetBlendState(uint32_t renderTargetIndex = 0) const = 0;
 
     /// @brief 设置光栅化器状态
     /// @param state 光栅化器状态
@@ -132,7 +133,7 @@ public:
 
     /// @brief 获取光栅化器状态
     /// @return 光栅化器状态
-    virtual const RasterizerState& GetRasterizerState() const = 0;
+    [[nodiscard]] virtual const RasterizerState& GetRasterizerState() const = 0;
 
     /// @brief 设置深度模板状态
     /// @param state 深度模板状态
@@ -140,7 +141,7 @@ public:
 
     /// @brief 获取深度模板状态
     /// @return 深度模板状态
-    virtual const DepthStencilState& GetDepthStencilState() const = 0;
+    [[nodiscard]] virtual const DepthStencilState& GetDepthStencilState() const = 0;
 
     // === 顶点输入 ===
 
@@ -150,11 +151,11 @@ public:
 
     /// @brief 获取顶点输入布局
     /// @return 输入属性数组
-    virtual const std::vector<VertexInputAttribute>& GetInputLayout() const = 0;
+    [[nodiscard]] virtual const std::vector<VertexInputAttribute>& GetInputLayout() const = 0;
 
     /// @brief 获取输入属性数量
     /// @return 属性数量
-    virtual uint32_t GetInputAttributeCount() const = 0;
+    [[nodiscard]] virtual uint32_t GetInputAttributeCount() const = 0;
 
     // === 渲染目标 ===
 
@@ -170,11 +171,11 @@ public:
     /// @brief 获取渲染目标格式
     /// @param index 渲染目标索引
     /// @return 格式
-    virtual TextureFormat GetRenderTargetFormat(uint32_t index) const = 0;
+    [[nodiscard]] virtual TextureFormat GetRenderTargetFormat(uint32_t index) const = 0;
 
     /// @brief 获取渲染目标数量
     /// @return 数量
-    virtual uint32_t GetRenderTargetCount() const = 0;
+    [[nodiscard]] virtual uint32_t GetRenderTargetCount() const = 0;
 
     /// @brief 设置深度模板格式
     /// @param format 格式
@@ -182,7 +183,7 @@ public:
 
     /// @brief 获取深度模板格式
     /// @return 格式
-    virtual TextureFormat GetDepthStencilFormat() const = 0;
+    [[nodiscard]] virtual TextureFormat GetDepthStencilFormat() const = 0;
 
     // === 多重采样 ===
 
@@ -193,11 +194,11 @@ public:
 
     /// @brief 获取采样数
     /// @return 采样数
-    virtual uint32_t GetSampleCount() const = 0;
+    [[nodiscard]] virtual uint32_t GetSampleCount() const = 0;
 
     /// @brief 获取采样质量
     /// @return 采样质量
-    virtual uint32_t GetSampleQuality() const = 0;
+    [[nodiscard]] virtual uint32_t GetSampleQuality() const = 0;
 
     // === 缓存和编译 ===
 

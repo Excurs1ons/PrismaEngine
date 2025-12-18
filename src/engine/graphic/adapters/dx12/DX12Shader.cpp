@@ -158,7 +158,7 @@ bool DX12Shader::Recompile(const ShaderCompileOptions* options, std::string& err
 
 bool DX12Shader::RecompileFromSource(const std::string& source,
                                      const ShaderCompileOptions* options,
-                                     std::string* errors) {
+                                     std::string& errors) {
     if (!m_device) {
         if (errors) *errors = "Device not available";
         return false;
@@ -171,11 +171,13 @@ bool DX12Shader::RecompileFromSource(const std::string& source,
 
 bool DX12Shader::ReloadFromFile(std::string* errors) {
     if (m_desc.filename.empty()) {
-        if (errors) *errors = "No filename available for reload";
+        if (errors != nullptr) {
+            *errors = "No filename available for reload";
+        }
         return false;
     }
 
-    return Recompile(nullptr, errors);
+    return Recompile(nullptr, *errors);
 }
 
 void DX12Shader::EnableHotReload(bool enable) {
