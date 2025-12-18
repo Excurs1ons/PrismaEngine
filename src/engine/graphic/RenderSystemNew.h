@@ -14,7 +14,6 @@
 namespace PrismaEngine::Graphic {
 
 // 前置声明
-class RenderBackendDirectX12;
 class DX12RenderDevice;
 
 // 注意：Engine 命名空间中的类将通过 ::Engine:: 前缀引用
