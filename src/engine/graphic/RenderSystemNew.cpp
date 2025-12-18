@@ -211,7 +211,10 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
     // 创建适配器设备
     if (desc.backendType == RenderBackendType::DirectX12) {
         auto* dx12Backend = static_cast<::Engine::RenderBackendDirectX12*>(m_legacyBackend.get());
-        m_device = std::make_unique<PrismaEngine::Graphic::DX12::DX12RenderDevice>(dx12Backend);
+        // DX12RenderDevice 期望 RenderBackendDirectX12*（无命名空间）
+        m_device = std::make_unique<PrismaEngine::Graphic::DX12::DX12RenderDevice>(
+            static_cast<RenderBackendDirectX12*>(dx12Backend)
+        );
 
         // 初始化设备描述
         DeviceDesc deviceDesc;
@@ -281,7 +284,7 @@ void RenderSystem::RenderFrame() {
 
     // 使用旧的渲染流程（临时）
     auto& world = ::Engine::Core::ECS::World::GetInstance();
-    auto sceneManager = world.GetSystem<::Engine::SceneManager>();
+    auto sceneManager = static_cast<::Engine::SceneManager*>(world.GetSystem<::Engine::SceneManager>());
     if (!sceneManager) {
         return;
     }
@@ -350,7 +353,7 @@ RenderContext RenderSystem::GetRenderContext() const {
 
     // 添加场景数据
     auto& world = ::Engine::Core::ECS::World::GetInstance();
-    auto sceneManager = world.GetSystem<::Engine::SceneManager>();
+    auto sceneManager = static_cast<::Engine::SceneManager*>(world.GetSystem<::Engine::SceneManager>());
     if (sceneManager) {
         auto activeScene = sceneManager->GetCurrentScene();
         if (activeScene) {

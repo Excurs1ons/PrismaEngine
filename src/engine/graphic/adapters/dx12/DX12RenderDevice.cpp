@@ -402,4 +402,22 @@ void DX12RenderDevice::WaitForPreviousFrame() {
     }
 }
 
+void DX12RenderDevice::BeginFrame() {
+    if (m_backend) {
+        m_backend->BeginFrame();
+    }
+}
+
+void DX12RenderDevice::EndFrame() {
+    if (m_backend) {
+        m_backend->EndFrame();
+    }
+}
+
+void DX12RenderDevice::Present() {
+    if (m_backend) {
+        m_backend->Present();
+    }
+}
+
 } // namespace PrismaEngine::Graphic::DX12
