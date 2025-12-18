@@ -42,7 +42,7 @@ DX12Texture::DX12Texture(DX12RenderDevice* device,
     }
 
     // 设置资源ID
-    m_id = static_cast<ResourceId>(reinterpret_cast<uintptr_t>(resource.Get()));
+    //m_id = static_cast<ResourceId>(reinterpret_cast<uintptr_t>(resource.Get()));
 }
 
 DX12Texture::~DX12Texture() {
@@ -328,7 +328,8 @@ void DX12Texture::Compact() {
 }
 
 uint64_t DX12Texture::GetMemoryUsage() const {
-    return GetSize();
+    //return GetSize();
+    return m_resource ? m_resource->GetGPUVirtualAddress() : 0; // Return the GPU virtual address as a proxy for memory usage
 }
 
 bool DX12Texture::DebugSaveToFile(const std::string& filename,

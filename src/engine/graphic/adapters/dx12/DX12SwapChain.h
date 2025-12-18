@@ -1,5 +1,6 @@
 #pragma once
 
+#include "DX12RenderDevice.h"
 #include "RenderBackendDirectX12.h"
 #include "RenderSystem.h"
 #include "interfaces/ISwapChain.h"
@@ -15,9 +16,7 @@ namespace PrismaEngine::Graphic::DX12 {
 class DX12SwapChain : public ISwapChain {
 public:
     /// @brief 构造函数
-    /// @param backend DirectX12后端
-    explicit DX12SwapChain(RenderBackendDirectX12* backend);
-
+    DX12SwapChain(DX12RenderDevice* device);
     /// @brief 析构函数
     ~DX12SwapChain() override;
 

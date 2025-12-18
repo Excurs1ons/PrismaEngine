@@ -199,7 +199,7 @@ std::unique_ptr<ITexture> DX12ResourceFactory::CreateTextureImpl(const TextureDe
 
     // 更新统计信息
     m_stats.texturesCreated++;
-    m_stats.totalMemoryAllocated += texture->GetSize();
+    //m_stats.totalMemoryAllocated += texture->GetSize();
 
     LOG_INFO("DX12ResourceFactory", "Created texture: {0}x{1}, format: {2}",
              desc.width, desc.height, static_cast<uint32_t>(desc.format));
