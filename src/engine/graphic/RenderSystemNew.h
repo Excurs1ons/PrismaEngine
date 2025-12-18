@@ -16,15 +16,7 @@ namespace PrismaEngine::Graphic {
 class RenderBackendDirectX12;
 class DX12RenderDevice;
 
-// 前向声明
-namespace ::Engine {
-    class RenderBackend;
-    class ScriptableRenderPipeline;
-}
-
-namespace ::Engine::Graphic::Pipelines::Forward {
-    class ForwardPipeline;
-}
+// 注意：Engine 命名空间中的类将通过 ::Engine:: 前缀引用
 
 /// @brief 渲染系统描述
 struct RenderSystemDesc {
