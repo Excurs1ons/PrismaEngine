@@ -29,6 +29,7 @@ struct TextureDesc : public ResourceDesc {
     bool allowRenderTarget = false;
     bool allowUnorderedAccess = false;
     bool allowShaderResource = true;
+    bool allowDepthStencil = false;  // 是否允许作为深度模板缓冲区
     const void* initialData = nullptr;
     uint64_t dataSize = 0;
 };

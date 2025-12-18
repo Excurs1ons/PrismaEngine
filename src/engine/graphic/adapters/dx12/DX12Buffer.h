@@ -117,6 +117,12 @@ public:
     /// @brief 创建UAV描述符
     void CreateUAV(D3D12_CPU_DESCRIPTOR_HANDLE handle, const BufferViewDesc& desc);
 
+    /// @brief 获取堆标志
+    D3D12_HEAP_FLAGS GetHeapFlags() const;
+
+    /// @brief 获取初始资源状态
+    D3D12_RESOURCE_STATES GetInitialResourceState() const;
+
 private:
     DX12RenderDevice* m_device;
     Microsoft::WRL::ComPtr<ID3D12Resource> m_resource;
@@ -135,6 +141,9 @@ private:
 
     // 状态跟踪
     bool m_mapped = false;
+
+    // 缓冲区步长
+    uint32_t m_stride = 0;
 
     // 辅助方法
     D3D12_RESOURCE_DESC GetD3D12ResourceDesc() const;

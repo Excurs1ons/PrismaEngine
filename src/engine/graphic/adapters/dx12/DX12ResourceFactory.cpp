@@ -17,6 +17,44 @@
 #include <filesystem>
 #include <algorithm>
 
+namespace PrismaEngine::Graphic {
+    // 获取每个像素的字节数
+    uint32_t GetBytesPerPixel(TextureFormat format) {
+        switch (format) {
+            case TextureFormat::R8_UNorm:
+            case TextureFormat::A8_UNorm:
+                return 1;
+            case TextureFormat::R16_Float:
+            case TextureFormat::R16_UNorm:
+            case TextureFormat::RG8_UNorm:
+            case TextureFormat::R24G8_Typeless:
+                return 2;
+            case TextureFormat::R32_Float:
+            case TextureFormat::RG16_Float:
+            case TextureFormat::RG16_UNorm:
+            case TextureFormat::RGB8_UNorm:
+            case TextureFormat::BGR8_UNorm:
+            case TextureFormat::D24_UNorm_S8_UInt:
+                return 3;
+            case TextureFormat::RGBA8_UNorm:
+            case TextureFormat::BGRA8_UNorm:
+            case TextureFormat::RGBA16_Float:
+            case TextureFormat::RGBA16_UNorm:
+            case TextureFormat::RG32_Float:
+            case TextureFormat::RGB10A2_UNorm:
+            case TextureFormat::R32G32B32A32_Float:
+            case TextureFormat::D32_Float:
+                return 4;
+            case TextureFormat::RGBA32_Float:
+                return 16;
+            default:
+                return 4; // 默认4字节
+        }
+    }
+}
+
+using namespace PrismaEngine::Graphic;
+
 using Microsoft::WRL::ComPtr;
 
 namespace PrismaEngine::Graphic::DX12 {
@@ -41,8 +79,8 @@ bool DX12ResourceFactory::Initialize(IRenderDevice* device) {
     }
 
     // 创建默认描述符堆
-    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024);
-    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256);
+    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1024, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
+    CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, 256, D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE);
     CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 512);
     CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
 
@@ -92,7 +130,7 @@ std::unique_ptr<ITexture> DX12ResourceFactory::CreateTextureImpl(const TextureDe
         if (poolIt != m_texturePools.end() && !poolIt->second->freeTextures.empty()) {
             auto texture = std::move(poolIt->second->freeTextures.back());
             poolIt->second->freeTextures.pop_back();
-            m_stats.texturesFromPool++;
+            m_stats.texturesPooled++;  // 修改为有效的成员变量
             return std::move(texture);
         }
     }
