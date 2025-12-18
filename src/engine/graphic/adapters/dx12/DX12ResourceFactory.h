@@ -198,7 +198,10 @@ private:
                            TextureDesc& desc);
 
     uint64_t CalculateTexturePoolKey(const TextureDesc& desc) const;
-    void CreateDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t initialCapacity);
+    void InitializeDescriptorHeap(D3D12_DESCRIPTOR_HEAP_TYPE type, uint32_t initialCapacity);
+
+    /// @brief Convert texture format to DXGI format
+    DXGI_FORMAT GetDXGIFormat(TextureFormat format) const;
 };
 
 } // namespace PrismaEngine::Graphic::DX12
