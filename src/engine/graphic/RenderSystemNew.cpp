@@ -287,7 +287,7 @@ void RenderSystem::RenderFrame() {
     }
 
     // 获取主相机
-    auto activeScene = sceneManager->GetActiveScene();
+    auto activeScene = sceneManager->GetCurrentScene();
     if (!activeScene) {
         return;
     }
@@ -306,7 +306,7 @@ void RenderSystem::RenderFrame() {
     // 执行渲染管线（注意：ForwardPipeline没有Execute方法）
     // 这里应该使用渲染管线来渲染场景
     // 暂时使用旧的渲染管线
-    m_legacyPipeline->Execute(activeScene.get());
+    m_legacyPipeline->Execute();
 
     // GUI渲染
     if (m_guiCallback) {
@@ -350,7 +350,7 @@ RenderContext RenderSystem::GetRenderContext() const {
     auto& world = ::Engine::Core::ECS::World::GetInstance();
     auto sceneManager = world.GetSystem<::Engine::SceneManager>();
     if (sceneManager) {
-        auto activeScene = sceneManager->GetActiveScene();
+        auto activeScene = sceneManager->GetCurrentScene();
         if (activeScene) {
             auto camera = activeScene->GetMainCamera();
             if (camera) {

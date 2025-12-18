@@ -320,16 +320,8 @@ std::shared_ptr<IPipelineState> ResourceManager::CreatePipelineState() {
 std::shared_ptr<IPipeline> ResourceManager::LoadPipeline(const std::string& filename) {
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
 
-    // 检查是否已加载
-    auto it = m_nameToId.find(filename);
-    if (it != m_nameToId.end()) {
-        auto resource = GetResource(it->second);
-        if (resource) {
-            return std::static_pointer_cast<IPipeline>(resource);
-        }
-    }
-
-    // TODO: 实现管线加载
+    // TODO: 实现管线缓存
+    // IPipeline 不继承 IResource，需要单独的缓存系统
     LOG_INFO("Resource", "加载渲染流程: {0}", filename);
     return nullptr;
 }
@@ -354,8 +346,9 @@ std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc
     if (samplerUnique) {
         // 转换 unique_ptr 到 shared_ptr
         sampler = std::move(samplerUnique);
-        // RegisterResource 期望 IResource，需要显式转换 shared_ptr
-        RegisterResource(std::static_pointer_cast<IResource>(sampler));
+        // RegisterResource 期望 IResource，ISampler 继承自 IResource
+        // 直接传递 sampler，shared_ptr 会自动向上转换
+        RegisterResource(sampler);
     }
 
     return sampler;
