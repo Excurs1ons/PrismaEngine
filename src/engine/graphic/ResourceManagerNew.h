@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../ManagerBase.h"
 #include "interfaces/IResourceManager.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IPipelineState.h"
@@ -28,13 +29,20 @@ struct ResourceLoadTask {
 };
 
 /// @brief 资源管理器实现
-class ResourceManager : public IResourceManager {
+class ResourceManager : public ManagerBase<ResourceManager>, public IResourceManager {
+public:
+    friend class ManagerBase<ResourceManager>;
+    static constexpr std::string GetName() { return "ResourceManager"; }
 public:
     ResourceManager();
     ~ResourceManager() override;
 
+    // ISubSystem接口实现（来自ManagerBase）
+    bool Initialize() override;
+    void Update(float deltaTime) override;
+
     // IResourceManager接口实现
-    bool Initialize(IRenderDevice* device) override;
+    bool Initialize(IRenderDevice* device);
     void Shutdown() override;
 
     // 纹理管理
