@@ -58,7 +58,12 @@ public:
 
     // 获取当前渲染目标尺寸
     void GetRenderTargetSize(uint32_t& width, uint32_t& height) override;
+    void WaitForPreviousFrame();
+    static const UINT FrameCount = 2;
+    ComPtr<IDXGISwapChain3> m_swapChain;
+    ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
 
+    D3D12_VIEWPORT m_viewport;
 private:
     bool LoadPipeline();
     bool InitializeRenderObjects();
@@ -67,15 +72,15 @@ private:
     bool CreatePipelineState();
     bool CreateDepthBuffer();
     bool CreateDynamicBuffers();
-    void WaitForPreviousFrame();
-    static const UINT FrameCount = 2;
+
+
 
     // Pipeline objects.
-    D3D12_VIEWPORT m_viewport;
+
     D3D12_RECT m_scissorRect;
-    ComPtr<IDXGISwapChain3> m_swapChain;
+
     ComPtr<ID3D12Device> m_device;
-    ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
+
     ComPtr<ID3D12Resource> m_depthStencil;
     ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
     ComPtr<ID3D12CommandAllocator> m_commandAllocator;

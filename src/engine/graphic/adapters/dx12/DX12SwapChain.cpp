@@ -1,8 +1,11 @@
 #include "DX12SwapChain.h"
-#include "../Logger.h"
+
+#include "DX12Texture.h"
+#include "Logger.h"
+#include "RenderBackendDirectX12.h"
 #include <dxgi1_6.h>
-#include <wrl/client.h>
 #include <sstream>
+#include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
 
@@ -28,7 +31,7 @@ DX12SwapChain::~DX12SwapChain() {
 
 // ISwapChain接口实现
 uint32_t DX12SwapChain::GetBufferCount() const {
-    if (m_backend && m_backend->m_swapChain) {
+    if ((m_backend != nullptr) && m_backend->m_swapChain) {
         return 2; // DirectX12使用双缓冲
     }
     return 0;
@@ -121,7 +124,7 @@ bool DX12SwapChain::Present() {
     auto endTime = std::chrono::high_resolution_clock::now();
     float frameTime = std::chrono::duration<float, std::milli>(endTime - startTime).count();
 
-    m_stats.frameCount++;
+    m_stats.totalFrames++;
     m_stats.executionTime = frameTime;
 
     // 更新帧率
@@ -178,12 +181,12 @@ const char* DX12SwapChain::GetColorSpace() const {
 
 bool DX12SwapChain::SetColorSpace(const char* colorSpace) {
     m_colorSpace = colorSpace;
-    // 颜�要设置DXGI颜色空间
+    // 设置DXGI颜色空间
     return true;
 }
 
 float DX12SwapChain::GetFrameRate() const {
-    return m_stats.fps;
+    return m_stats.frameRate;
 }
 
 float DX12SwapChain::GetFrameTime() const {
@@ -196,7 +199,7 @@ DX12SwapChain::PresentStats DX12SwapChain::GetPresentStats() const {
 
 void DX12SwapChain::ResetStats() {
     m_stats = {};
-    m_stats.frameCount = 0;
+    m_stats.totalFrames = 0;
 }
 
 bool DX12SwapChain::IsFullscreen() const {
@@ -291,7 +294,7 @@ void DX12SwapChain::UpdateStats() const {
     fpsUpdateTime += m_stats.executionTime;
 
     if (fpsUpdateTime >= 1.0f) {
-        m_stats.fps = fpsAccumulator / fpsFrameCount;
+        m_stats.frameRate = fpsAccumulator / fpsFrameCount;
         fpsAccumulator = 0.0f;
         fpsFrameCount = 0;
         fpsUpdateTime = 0.0f;
@@ -299,7 +302,7 @@ void DX12SwapChain::UpdateStats() const {
 }
 
 void DX12SwapChain::CreateRenderTargetAdapters() {
-    if (!m_backend) {
+    if (m_backend == nullptr) {
         return;
     }
 
@@ -323,7 +326,7 @@ void DX12SwapChain::CreateRenderTargetAdapters() {
 
                 // 创建纹理适配器
                 m_renderTargets[i] = std::make_unique<DX12Texture>(
-                    m_device ? nullptr : nullptr, // DX12设备适配器
+                    (m_backend != nullptr) ? nullptr : nullptr, // DX12设备适配器
                     resource,
                     desc
                 );

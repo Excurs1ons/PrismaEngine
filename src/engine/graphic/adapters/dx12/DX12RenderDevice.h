@@ -1,13 +1,14 @@
 #pragma once
 
-#include "interfaces/IRenderDevice.h"
-#include "interfaces/ISwapChain.h"
-#include "interfaces/IFence.h"
-#include "interfaces/ICommandBuffer.h"
-#include "interfaces/IResourceFactory.h"
+#include "DX12Adapters.h"
 #include "RenderBackendDirectX12.h"
-#include <directx/d3dx12.h>
+#include "interfaces/ICommandBuffer.h"
+#include "interfaces/IFence.h"
+#include "interfaces/IRenderDevice.h"
+#include "interfaces/IResourceFactory.h"
+#include "interfaces/ISwapChain.h"
 #include <d3d12.h>
+#include <directx/d3dx12.h>
 #include <dxgi1_4.h>
 #include <memory>
 #include <vector>

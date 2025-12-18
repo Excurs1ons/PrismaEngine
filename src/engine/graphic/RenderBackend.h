@@ -26,6 +26,7 @@ enum RendererFeature : uint32_t {
 
 class RenderBackend {
 public:
+    int m_currentFrame;
     RenderBackend() {}
     virtual ~RenderBackend() {}
 

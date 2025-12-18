@@ -210,10 +210,10 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
 
     // 创建适配器设备
     if (desc.backendType == RenderBackendType::DirectX12) {
-        auto* dx12Backend = static_cast<::Engine::RenderBackendDirectX12*>(m_legacyBackend.get());
+        auto* dx12Backend = dynamic_cast<RenderBackendDirectX12*>(m_legacyBackend.get());
         // DX12RenderDevice 期望 RenderBackendDirectX12*（无命名空间）
-        m_device = std::make_unique<PrismaEngine::Graphic::DX12::DX12RenderDevice>(
-            static_cast<RenderBackendDirectX12*>(dx12Backend)
+        m_device = std::make_unique<DX12::DX12RenderDevice>(
+            dx12Backend
         );
 
         // 初始化设备描述

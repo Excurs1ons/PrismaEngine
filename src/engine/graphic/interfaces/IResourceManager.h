@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <shared_mutex>
+#include "ISampler.h"
 
 namespace PrismaEngine::Graphic {
 
@@ -12,7 +13,6 @@ class ITexture;
 class IBuffer;
 class IShader;
 class IPipeline;
-class ISampler;
 class IResource;
 class IRenderDevice;
 
