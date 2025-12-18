@@ -75,22 +75,6 @@ struct VertexInputAttribute {
     uint32_t instanceDataStepRate = 0;
 };
 
-/// @brief 管线状态类型
-enum class PipelineType {
-    Graphics,   // 图形管线
-    Compute     // 计算管线
-};
-
-/// @brief 图元拓扑
-enum class PrimitiveTopology {
-    PointList,
-    LineList,
-    LineStrip,
-    TriangleList,
-    TriangleStrip,
-    Patch
-};
-
 /// @brief 管线状态抽象接口
 /// 代表一个编译好的渲染管线状态对象(PSO)
 class IPipelineState {

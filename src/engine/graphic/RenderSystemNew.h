@@ -1,6 +1,8 @@
 #pragma once
 
-#include "ManagerBase.h"
+#include "../ManagerBase.h"
+#include "RenderBackend.h"
+#include "ScriptableRenderPipeline.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceManager.h"
 #include "interfaces/IPipeline.h"
@@ -13,7 +15,6 @@ namespace PrismaEngine::Graphic {
 // 前置声明
 class RenderBackendDirectX12;
 class DX12RenderDevice;
-class ScriptableRenderPipeline;
 
 namespace Engine {
 namespace Graphic {
