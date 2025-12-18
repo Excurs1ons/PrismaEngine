@@ -655,8 +655,8 @@ void DX12PipelineState::CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>&
         element.Format = GetDXGIFormat(static_cast<TextureFormat>(attr.format));
         element.InputSlot = attr.inputSlot;
         element.AlignedByteOffset = attr.alignedByteOffset;
-        element.InputSlotClass = attr.instanceStepRate > 0 ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
-        element.InstanceDataStepRate = attr.instanceStepRate;
+        element.InputSlotClass = attr.instanceDataStepRate > 0 ? D3D12_INPUT_CLASSIFICATION_PER_INSTANCE_DATA : D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA;
+        element.InstanceDataStepRate = attr.instanceDataStepRate;
 
         inputElements.push_back(element);
     }
@@ -687,7 +687,7 @@ uint64_t DX12PipelineState::CalculateCacheKey() const {
     }
 
     // 包含状态信息
-    key = key * 31 + static_cast<uint64_t>(m_primitiveTopology);
+    key = key * 31 + static_cast<uint64_t>(GetPrimitiveTopology());
     key = key * 31 + static_cast<uint64_t>(m_rasterizerState.fillMode);
     key = key * 31 + static_cast<uint64_t>(m_rasterizerState.cullMode);
     key = key * 31 + static_cast<uint64_t>(m_depthStencilState.depthFunc);
