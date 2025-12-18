@@ -2,6 +2,7 @@
 #include "../Logger.h"
 #include "../SceneManager.h"
 #include "../Camera3D.h"
+#include "../core/ECS.h"
 #include "RenderBackendDirectX12.h"
 #include "RenderBackendVulkan.h"
 #include "ScriptableRenderPipeline.h"
