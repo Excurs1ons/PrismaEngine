@@ -121,6 +121,7 @@ enum class TextureFormat {
     // Packed formats
     RGB8_UNorm,
     RGBA8_UNorm,
+    RGBA8_UNorm_sRGB,
     RGBA8_SNorm,
     RGBA8_UInt,
     RGBA8_SInt,

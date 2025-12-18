@@ -271,22 +271,22 @@ uint64_t DX12Texture::CreateDescriptor(TextureDescriptorType descType,
 
 uint64_t DX12Texture::GetDefaultSRV() const {
     // 返回SRV句柄
-    return reinterpret_cast<uint64_t>(m_srv.ptr);
+    return static_cast<uint64_t>(m_srv.ptr);
 }
 
 uint64_t DX12Texture::GetDefaultRTV() const {
     // 返回RTV句柄
-    return reinterpret_cast<uint64_t>(m_rtv.ptr);
+    return static_cast<uint64_t>(m_rtv.ptr);
 }
 
 uint64_t DX12Texture::GetDefaultDSV() const {
     // 返回DSV句柄
-    return reinterpret_cast<uint64_t>(m_dsv.ptr);
+    return static_cast<uint64_t>(m_dsv.ptr);
 }
 
 uint64_t DX12Texture::GetDefaultUAV() const {
     // 返回UAV句柄
-    return reinterpret_cast<uint64_t>(m_uav.ptr);
+    return static_cast<uint64_t>(m_uav.ptr);
 }
 
 void DX12Texture::Clear(const Color& color, uint32_t mipLevel, uint32_t arraySlice) {
