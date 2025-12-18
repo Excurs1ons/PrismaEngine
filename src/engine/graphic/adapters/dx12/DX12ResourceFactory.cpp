@@ -22,7 +22,6 @@ namespace PrismaEngine::Graphic {
     uint32_t GetBytesPerPixel(TextureFormat format) {
         switch (format) {
             case TextureFormat::R8_UNorm:
-            case TextureFormat::A8_UNorm:
                 return 1;
             case TextureFormat::R16_Float:
             case TextureFormat::R16_UNorm:
