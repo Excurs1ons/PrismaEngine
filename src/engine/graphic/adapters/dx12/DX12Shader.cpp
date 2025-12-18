@@ -86,8 +86,8 @@ const ShaderReflection& DX12Shader::GetReflection() const {
 }
 
 bool DX12Shader::HasReflection() const {
-    return m_reflection.inputParameters.size() > 0 ||
-           m_reflection.outputParameters.size() > 0 ||
+    return m_reflection.inputs.size() > 0 ||
+           m_reflection.outputs.size() > 0 ||
            m_reflection.resources.size() > 0 ||
            m_reflection.constantBuffers.size() > 0;
 }
@@ -120,19 +120,19 @@ const ShaderReflection::ConstantBuffer* DX12Shader::FindConstantBuffer(const std
 }
 
 uint32_t DX12Shader::GetInputParameterCount() const {
-    return static_cast<uint32_t>(m_reflection.inputParameters.size());
+    return static_cast<uint32_t>(m_reflection.inputs.size());
 }
 
 const ShaderReflection::InputParameter& DX12Shader::GetInputParameter(uint32_t index) const {
-    return m_reflection.inputParameters[index];
+    return m_reflection.inputs[index];
 }
 
 uint32_t DX12Shader::GetOutputParameterCount() const {
-    return static_cast<uint32_t>(m_reflection.outputParameters.size());
+    return static_cast<uint32_t>(m_reflection.outputs.size());
 }
 
 const ShaderReflection::OutputParameter& DX12Shader::GetOutputParameter(uint32_t index) const {
-    return m_reflection.outputParameters[index];
+    return m_reflection.outputs[index];
 }
 
 bool DX12Shader::Recompile(const ShaderCompileOptions* options, std::string& errors) {
@@ -153,31 +153,29 @@ bool DX12Shader::Recompile(const ShaderCompileOptions* options, std::string& err
     buffer << file.rdbuf();
     std::string source = buffer.str();
 
-    return RecompileFromSource(source, options, &errors);
+    return RecompileFromSource(source, options, errors);
 }
 
 bool DX12Shader::RecompileFromSource(const std::string& source,
                                      const ShaderCompileOptions* options,
                                      std::string& errors) {
     if (!m_device) {
-        if (errors) *errors = "Device not available";
+        if (!errors.empty()) errors = "Device not available";
         return false;
     }
 
     // TODO: Implement proper shader compilation when DXC is available
-    if (errors) *errors = "Shader compilation not implemented yet - please provide pre-compiled bytecode";
+    if (!errors.empty()) errors = "Shader compilation not implemented yet - please provide pre-compiled bytecode";
     return false;
 }
 
-bool DX12Shader::ReloadFromFile(std::string* errors) {
+bool DX12Shader::ReloadFromFile(std::string& errors) {
     if (m_desc.filename.empty()) {
-        if (errors != nullptr) {
-            *errors = "No filename available for reload";
-        }
+        if (!errors.empty()) errors = "No filename available for reload";
         return false;
     }
 
-    return Recompile(nullptr, *errors);
+    return Recompile(nullptr, errors);
 }
 
 void DX12Shader::EnableHotReload(bool enable) {
@@ -261,7 +259,7 @@ bool DX12Shader::DebugSaveToFile(const std::string& filename,
     file << "  Optimization Level: " << static_cast<uint32_t>(m_desc.compileOptions.optimizationLevel) << "\n";
     file << "  Flags: " << static_cast<uint32_t>(m_desc.compileOptions.flags) << "\n";
     file << "  Defines:\n";
-    for (const auto& define : m_desc.compileOptions.defines) {
+    for (const auto& define : m_desc.compileOptions.additionalDefines) {
         file << "    " << define << "\n";
     }
     file << "\n";

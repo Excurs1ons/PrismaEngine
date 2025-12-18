@@ -145,7 +145,8 @@ enum class ShaderType {
     Geometry,
     Hull,
     Domain,
-    Compute
+    Compute,
+    Unknown
 };
 
 // 着色器语言
