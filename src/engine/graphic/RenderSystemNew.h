@@ -59,6 +59,9 @@ public:
     /// @brief 关闭渲染系统
     void Shutdown() override;
 
+    /// @brief 析构函数
+    ~RenderSystem();
+
     /// @brief 更新（每帧调用）
     /// @param deltaTime 时间增量
     void Update(float deltaTime) override;
