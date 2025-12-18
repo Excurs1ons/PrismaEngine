@@ -1,6 +1,7 @@
 #pragma once
 
 #include "interfaces/IBuffer.h"
+#include "interfaces/IResourceManager.h"
 #include <directx/d3dx12.h>
 #include <d3d12.h>
 #include <memory>
