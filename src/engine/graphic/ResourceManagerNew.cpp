@@ -3,6 +3,7 @@
 #include "../Engine.h"
 #include "interfaces/ITexture.h"
 #include "interfaces/IBuffer.h"
+#include "interfaces/IShader.h"
 #include "interfaces/IResource.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceFactory.h"
@@ -265,7 +266,12 @@ std::shared_ptr<IShader> ResourceManager::CreateShader(const std::string& source
         return nullptr;
     }
 
-    auto shaderUnique = factory->CreateShaderImpl(desc);
+    // TODO: 提供编译后的字节码和反射信息
+    // 目前使用空的字节码和反射信息
+    std::vector<uint8_t> emptyBytecode;
+    ShaderReflection emptyReflection = {};
+
+    auto shaderUnique = factory->CreateShaderImpl(desc, emptyBytecode, emptyReflection);
     std::shared_ptr<IShader> shader;
     if (shaderUnique) {
         shader = std::move(shaderUnique);
@@ -348,9 +354,8 @@ std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc
     if (samplerUnique) {
         // 转换 unique_ptr 到 shared_ptr
         sampler = std::move(samplerUnique);
-        // RegisterResource 期望 IResource，但 ISampler 继承自 IResource
-        // 直接传递 sampler，不需要转换
-        RegisterResource(sampler);
+        // RegisterResource 期望 IResource，需要显式转换 shared_ptr
+        RegisterResource(std::static_pointer_cast<IResource>(sampler));
     }
 
     return sampler;
