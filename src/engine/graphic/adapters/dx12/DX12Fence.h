@@ -4,6 +4,9 @@
 #include <directx/d3dx12.h>
 #include <d3d12.h>
 #include <windows.h>
+#ifdef CreateEvent
+#undef CreateEvent
+#endif
 
 namespace PrismaEngine::Graphic::DX12 {
 
