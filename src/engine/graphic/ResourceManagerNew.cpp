@@ -699,7 +699,11 @@ uint64_t ResourceManager::CalculateFileHash(const std::string& filename) {
 
 std::string ResourceManager::GetCachePath(const std::string& filename) {
     uint64_t hash = CalculateFileHash(filename);
-    return (m_cacheDirectory / (std::to_string(hash) + ".cache")).string();
+    std::string cacheDir = m_cacheDirectory;
+    if (!cacheDir.empty() && cacheDir.back() != '/' && cacheDir.back() != '\\') {
+        cacheDir += '/';
+    }
+    return cacheDir + std::to_string(hash) + ".cache";
 }
 
 bool ResourceManager::LoadFromCache(const std::string& filename, std::vector<uint8_t>& data) {
