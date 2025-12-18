@@ -405,8 +405,6 @@ void DX12Texture::CreateSRV(D3D12_CPU_DESCRIPTOR_HANDLE handle) {
     srvDesc.Texture2D.MostDetailedMip = 0;
     srvDesc.Texture2D.MipLevels = m_desc.mipLevels;
     srvDesc.Texture2D.PlaneSlice = 0;
-    srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
-    srvDesc.Texture2D.ResourceMaxLODClamp = FLT_MAX;
 
     device->CreateShaderResourceView(m_resource.Get(), &srvDesc, handle);
 }
