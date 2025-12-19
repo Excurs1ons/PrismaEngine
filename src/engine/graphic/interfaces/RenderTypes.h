@@ -2,7 +2,6 @@
 
 #include <cstdint>
 #include <string>
-#include <memory>
 
 namespace PrismaEngine::Graphic {
 
@@ -221,6 +220,9 @@ struct ResourceDesc {
 // 设备描述
 struct DeviceDesc {
     std::string name = "RenderDevice";
+    void* windowHandle = nullptr;
+    uint32_t width = 1920;
+    uint32_t height = 1080;
     bool enableDebug = false;
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;

@@ -1,17 +1,14 @@
 #pragma once
 
-#include "DX12Adapters.h"
-#include "Helper.h"
+
 #include "interfaces/ICommandBuffer.h"
 #include "interfaces/IFence.h"
 #include "interfaces/IRenderDevice.h"
-#include "interfaces/IResourceFactory.h"
 #include "interfaces/ISwapChain.h"
 #include <memory>
 #include <vector>
 #include <d3d12.h>
 #include <dxgi1_6.h>
-#include <directx/d3dx12.h>
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
