@@ -7,6 +7,7 @@
 #include "interfaces/ISwapChain.h"
 #include <memory>
 #include <vector>
+#include <directx/d3dx12.h>
 #include <d3d12.h>
 #include <dxgi1_6.h>
 #include <wrl/client.h>
