@@ -1,144 +1,230 @@
 # GitHub Actions Workflows
 
-这个目录包含项目的CI/CD工作流配置。
+这个目录包含Prisma Engine的CI/CD工作流配置。我们已经重构为模块化的构建系统，分为三个主要组件。
+
+## 工作流架构
+
+### 核心原则
+
+1. **模块化构建**：每个组件独立构建，只在相关代码变更时触发
+2. **智能触发**：基于文件路径自动检测需要构建的组件
+3. **平台支持**：Windows（主要平台）和Android（移动平台）
+4. **自动化发布**：创建标签时自动生成发布包
 
 ## 工作流说明
 
-### 工作流选择策略
+### 1. Build Editor (`build-editor.yml`)
 
-为了优化CI/CD效率，我们采用了互斥的workflow设计：
+**触发条件**：
+- 推送到 `src/editor/` 目录
+- 对 `src/editor/` 的Pull Request
+- 手动触发
 
-1. **Quick Workflow** - 日常开发验证
-   - 当修改了 `src/engine/`、`android/` 或 `vcpkg.json` 时触发
-   - 快速验证代码编译是否正常
+**构建内容**：
+- Windows Editor应用程序（x64, x86）
+- Visual Studio 2022项目
+- 所有依赖项（通过vcpkg）
 
-2. **Complete Workflow** - 发布和完整测试
-   - 当修改了非上述路径时触发（如文档、配置等）
-   - 发布标签时自动触发
-   - 手动触发时使用
+**输出**：
+- `PrismaEditor-win64-Release.zip` - Windows 64位版本
+- `PrismaEditor-win32-Release.zip` - Windows 32位版本
 
-### 1. build-android.yml - 完整Android构建
+**特性**：
+- 完整的编辑器功能
+- 集成开发工具
+- 资源管理器
+- 场景编辑器
 
-触发条件：
-- 推送到 main、develop 分支（当不触发quick workflow时）
-- 创建标签（v开头的标签）
-- 对 main 分支的 Pull Request（当不触发quick workflow时）
-- 手动触发（workflow_dispatch）
+### 2. Build Engine (`build-engine.yml`)
 
-特性：
-- **多架构支持**：并行构建 arm64-v8a、armeabi-v7a
-- **多构建类型**：同时构建 Release 和 Debug 版本
-- **智能缓存**：
-  - Android SDK 缓存（约 1GB）
-  - Android NDK 缓存（约 800MB）
-  - vcpkg 依赖缓存（按架构分别缓存）
-- **自动发布**：创建标签时自动生成 GitHub Release
-- **构建产物**：自动上传构建结果作为 GitHub Artifacts
+**触发条件**：
+- 推送到 `src/engine/` 或 `android/` 目录
+- 对这些目录的Pull Request
+- 手动触发
 
-### 2. build-android-quick.yml - 快速Android构建
+**构建内容**：
+- Windows静态库（SDK）
+- Android动态库
+- 头文件和CMake配置
 
-触发条件：
-- 推送到 main、develop 分支（仅当相关文件变化时）
-- 对 main 分支的 Pull Request（仅当相关文件变化时）
+**输出**：
+- **Windows**: `PrismaEngine-win64-Release.zip`, `PrismaEngine-win32-Release.zip`
+- **Android**: `PrismaEngine-android-arm64-v8a-Release.tar.gz`, `PrismaEngine-android-armeabi-v7a-Release.tar.gz`
 
-监控的路径：
-- `src/engine/**` - 引擎源代码
-- `android/**` - Android特定配置
-- `vcpkg.json` - 依赖配置
+**特性**：
+- 跨平台引擎核心
+- 渲染系统
+- 音频系统
+- 资源管理
 
-特性：
-- **快速验证**：只构建 arm64-v8a Release 版本
-- **轻量级**：使用最小化的依赖
-- **路径过滤**：避免不必要的构建
-- **并发控制**：新推送会取消正在进行的构建
+### 3. Build Game (`build-game.yml`)
 
-## 缓存策略
+**触发条件**：
+- 推送到 `src/game/` 或 `src/runtime/` 目录
+- 对这些目录的Pull Request
+- 手动触发
 
-### Android SDK/NDK 缓存
-- SDK 缓存键：`android-sdk-${version}-v2`
-- NDK 缓存键：`android-ndk-${version}-v1`
-- 缓存有效期：30天（GitHub Actions默认）
+**构建内容**：
+- Windows游戏运行时
+- Android游戏项目模板
+- 示例项目
 
-### vcpkg 缓存
-- 缓存键：`vcpkg-android-${abi}-${hash}`
-- 按架构分别缓存，避免交叉污染
-- 包含所有预编译的依赖库
+**输出**：
+- **Windows**: `PrismaGame-x64-Release.zip`
+- **Android**: `PrismaGame-android-*-Release.tar.gz`
 
-## 性能优化
+**特性**：
+- 独立游戏运行时
+- 项目模板
+- 示例内容
 
-1. **并行构建**：使用 matrix strategy 并行构建多个架构
-2. **增量构建**：利用 CMake 和 ninja 的增量构建能力
-3. **依赖缓存**：避免重复下载和编译大型依赖
-4. **条件触发**：quick workflow 使用路径过滤减少不必要的构建
+### 4. Build All (`build-all.yml`)
+
+**触发条件**：
+- 推送到任何分支
+- 创建版本标签
+- Pull Request
+- 手动触发（可选择组件）
+
+**功能**：
+- 智能检测变更的组件
+- 并行触发需要的构建
+- 创建统一的发布包
+- 生成完整的GitHub Release
 
 ## 使用方法
 
-### 本地运行与CI一致的构建
+### 日常开发
+
+1. **编辑器开发**：
+   - 修改 `src/editor/` 中的文件
+   - 自动触发Editor构建
+   - 快速获取Editor可执行文件
+
+2. **引擎开发**：
+   - 修改 `src/engine/` 中的文件
+   - 自动触发Engine构建
+   - 获取Windows SDK和Android库
+
+3. **游戏开发**：
+   - 修改 `src/game/` 或 `src/runtime/`
+   - 自动触发Game构建
+   - 获取游戏运行时
+
+### 手动触发
+
+在GitHub Actions页面可以手动触发构建：
+
+1. 进入Actions页面
+2. 选择需要的工作流
+3. 点击"Run workflow"
+4. 选择参数：
+   - 平台（Windows/Android/全部）
+   - 构建类型（Release/Debug）
+   - 是否上传构建产物
+
+### 发布版本
+
+创建标签时自动触发完整构建和发布：
 
 ```bash
-# 设置环境变量（根据你的实际路径）
-export ANDROID_NDK_HOME=/path/to/android-ndk-r27
-export ANDROID_HOME=/path/to/android-sdk
-
-# 构建arm64-v8a
-./scripts/build-android.sh --abi arm64-v8a
-
-# 构建所有架构
-./scripts/build-android.sh --all
+# 创建发布标签
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
-### 手动触发完整构建
-
-在 GitHub Actions 页面：
-1. 进入 "Actions" 标签页
-2. 选择 "Build Android" workflow
-3. 点击 "Run workflow"
-4. 选择构建参数（可选）
+自动执行：
+- 构建所有组件
+- 创建GitHub Release
+- 上传所有构建产物
+- 生成发布说明
 
 ## 构建产物
 
-### GitHub Artifacts
-- 文件命名：`libEngine-{abi}-{build_type}.tar.gz`
-- 包含内容：编译好的 `.so` 文件和头文件
-- 保留时间：30天
+### Artifacts
 
-### GitHub Release（仅标签触发）
-- 文件命名：`PrismaEngine-Android-{version}.tar.gz`
-- 包含内容：
-  - 所有架构的 `.so` 文件（按Android标准目录结构）
-  - 公共头文件
-- 与版本标签关联
+所有构建产物都会上传为GitHub Artifacts：
+- 保留期限：30天
+- 可从Actions页面下载
+- 包含完整的使用说明
+
+### Release包
+
+创建标签时生成：
+- `PrismaEngine-Complete-{version}.tar.gz` - 包含所有组件
+- 自动生成Release页面
+- 包含详细的安装说明
+
+## 性能优化
+
+### 智能缓存
+- **vcpkg缓存**：避免重复编译依赖
+- **NDK缓存**：Android NDK下载缓存
+- **增量构建**：只编译变更的部分
+
+### 并行构建
+- 多平台并行构建
+- 多架构并行构建（Android）
+- 矩阵策略优化资源使用
+
+### 条件触发
+- 基于文件路径的智能触发
+- 避免不必要的构建
+- 节省CI/CD资源
 
 ## 故障排除
 
 ### 常见问题
 
-1. **缓存失效**
-   - 如果构建失败，可以手动清除缓存
-   - 在 Actions 页面 -> Settings -> Caches 中管理
+1. **构建失败**
+   - 检查代码编译错误
+   - 查看构建日志
+   - 确认依赖项版本
 
-2. **NDK下载失败**
-   - 检查 NDK 版本是否正确
-   - 确认网络连接正常
+2. **缓存问题**
+   - 清除Actions缓存
+   - 重新触发构建
+   - 检查vcpkg.json配置
 
-3. **vcpkg编译错误**
-   - 可能是依赖版本冲突
-   - 检查 `vcpkg.json` 配置
-
-4. **构建超时**
-   - GitHub Actions 有时间限制（默认6小时）
-   - 大型项目可能需要优化构建步骤
+3. **发布问题**
+   - 确认标签格式（v开头）
+   - 检查GITHUB_TOKEN权限
+   - 查看Release创建日志
 
 ### 调试技巧
 
-1. 使用 `workflow_dispatch` 手动触发，可以：
-   - 选择特定的构建类型
-   - 控制是否上传构建产物
+1. **本地复现**
+   ```bash
+   # 设置环境
+   export ANDROID_NDK_HOME=/path/to/ndk
+   export ANDROID_HOME=/path/to/sdk
 
-2. 查看详细的构建日志：
-   - 注意 "Cache hit/miss" 信息
-   - 检查环境配置是否正确
+   # 构建命令
+   ./scripts/build-android.sh
+   ```
 
-3. 本地复现问题：
-   - 使用与CI相同的脚本
-   - 确保环境变量一致
+2. **查看详细信息**
+   - Actions页面查看完整日志
+   - 注意缓存命中/miss信息
+   - 检查环境配置
+
+3. **联系支持**
+   - 在Issues中报告问题
+   - 提供详细的错误信息
+   - 附上构建日志片段
+
+## 贡献指南
+
+当添加新功能或修复问题时：
+
+1. 确定修改的组件（Editor/Engine/Game）
+2. 在相应的目录中进行修改
+3. 提交PR会自动触发相应的构建
+4. 确保所有构建通过
+
+### 添加新平台支持
+
+1. 更新相应的workflow文件
+2. 添加平台特定的构建步骤
+3. 更新文档和测试
+4. 提交PR进行审核
