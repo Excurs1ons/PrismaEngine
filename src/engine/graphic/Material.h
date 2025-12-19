@@ -1,5 +1,5 @@
 #pragma once
-#include "ResourceBase.h"
+#include "../resource/ResourceBase.h"
 #include "RenderCommandContext.h"
 #include <DirectXMath.h>
 #include <string>

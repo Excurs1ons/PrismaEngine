@@ -1,7 +1,7 @@
 
 #pragma once
 #define NOMINMAX
-#include "ResourceBase.h"
+#include "../resource/ResourceBase.h"
 #include <DirectXMath.h>
 #include <DirectXCollision.h>
 #include <DirectXColors.h>

@@ -24,11 +24,12 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/RenderBackendVulkan.cpp
     graphic/RenderComponent.cpp
     graphic/RenderPass.cpp
-
+    graphic/RenderSystemNew.cpp
     graphic/ScriptableRenderPipeline.cpp
     graphic/Shader.cpp
     # New interface files
     graphic/interfaces/RenderTypes.cpp
+    graphic/interfaces/IPipelineState.cpp
     # New adapter files
     graphic/adapters/dx12/DX12Adapters.cpp
     graphic/adapters/dx12/DX12RenderDevice.cpp
@@ -58,8 +59,8 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/RenderComponent.h
     graphic/RenderGraph.h
     graphic/RenderPass.h
-    graphic/RenderSystem.h
-
+#    graphic/RenderSystem.h
+    graphic/RenderSystemNew.h
     graphic/ScriptableRenderPipeline.h
     graphic/Shader.h
     # New interface headers
