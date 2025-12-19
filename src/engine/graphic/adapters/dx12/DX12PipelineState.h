@@ -132,7 +132,7 @@ private:
     D3D12_CULL_MODE GetD3D12CullMode() const;
     D3D12_COMPARISON_FUNC GetD3D12ComparisonFunc(ComparisonFunc func) const;
     D3D12_BLEND_OP GetD3D12BlendOp(BlendOp op) const;
-    D3D12_BLEND GetD3D12Blend(BlendFactor factor) const;
+    D3D12_BLEND GetD3D12Blend(BlendFactorType factor) const;
     DXGI_FORMAT GetDXGIFormat(TextureFormat format) const;
     void CreateInputLayout(std::vector<D3D12_INPUT_ELEMENT_DESC>& inputElements) const;
     D3D12_ROOT_SIGNATURE_DESC1 CreateRootSignatureDesc() const;

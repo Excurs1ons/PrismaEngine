@@ -19,11 +19,11 @@ struct BlendState {
     BOOL logicOpEnable = false;
     uint32_t writeMask = 0xF;  // RGBA all enabled
     BlendOp blendOp = BlendOp::Add;
-    BlendFactor srcBlend = BlendFactor::One;
-    BlendFactor destBlend = BlendFactor::Zero;
+    BlendFactorType srcBlend = BlendFactorType::One;
+    BlendFactorType destBlend = BlendFactorType::Zero;
     BlendOp blendOpAlpha = BlendOp::Add;
-    BlendFactor srcBlendAlpha = BlendFactor::One;
-    BlendFactor destBlendAlpha = BlendFactor::Zero;
+    BlendFactorType srcBlendAlpha = BlendFactorType::One;
+    BlendFactorType destBlendAlpha = BlendFactorType::Zero;
 
     static const BlendState Default;
 };
