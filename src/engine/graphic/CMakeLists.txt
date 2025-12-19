@@ -21,7 +21,6 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Material.cpp
     graphic/Mesh.cpp
     graphic/MeshRenderer.cpp
-    graphic/RenderBackendDirectX12.cpp
     graphic/RenderBackendVulkan.cpp
     graphic/RenderComponent.cpp
     graphic/RenderPass.cpp
@@ -31,6 +30,7 @@ set(ENGINE_GRAPHIC_SOURCES
     # New interface files
     graphic/interfaces/RenderTypes.cpp
     # New adapter files
+    graphic/adapters/dx12/DX12Adapters.cpp
     graphic/adapters/dx12/DX12RenderDevice.cpp
     graphic/adapters/dx12/DX12CommandBuffer.cpp
     graphic/adapters/dx12/DX12Fence.cpp
@@ -53,7 +53,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/Mesh.h
     graphic/MeshRenderer.h
     graphic/RenderBackend.h
-    graphic/RenderBackendDirectX12.h
     graphic/RenderBackendVulkan.h
     graphic/RenderCommandContext.h
     graphic/RenderComponent.h

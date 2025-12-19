@@ -1,7 +1,6 @@
 #pragma once
 
 #include "DX12RenderDevice.h"
-#include "RenderBackendDirectX12.h"
 #include "RenderSystem.h"
 #include "interfaces/ISwapChain.h"
 #include <d3d12.h>
@@ -62,7 +61,7 @@ public:
     IDXGISwapChain3* GetDXGISwapChain() const;
 
 private:
-    RenderBackendDirectX12* m_backend;
+    DX12RenderDevice* m_device;
     SwapChainMode m_mode = SwapChainMode::VSync;
     bool m_hdr = false;
     std::string m_colorSpace = "sRGB";

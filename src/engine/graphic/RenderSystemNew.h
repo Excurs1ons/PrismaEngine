@@ -123,13 +123,8 @@ public:
 
     // === 兼容性接口 ===
 
-    /// @brief 获取旧的渲染后端（用于兼容）
-    /// @return 渲染后端指针
-    ::Engine::RenderBackend* GetRenderBackend() const { return m_legacyBackend.get(); }
-
-    /// @brief 获取旧的渲染管线（用于兼容）
-    /// @return 渲染管线指针
-    ::Engine::ScriptableRenderPipeline* GetRenderPipe() const { return m_legacyPipeline.get(); }
+    // TODO: 提供获取新接口的方法
+    // IRenderDevice* GetDevice() const { return m_device.get(); }
 
 private:
     // 新接口组件
@@ -137,8 +132,7 @@ private:
     std::unique_ptr<IResourceManager> m_resourceManager;
     std::shared_ptr<IPipeline> m_mainPipeline;
 
-    // 旧接口组件（兼容性）
-    std::unique_ptr<::Engine::RenderBackend> m_legacyBackend;
+    // TODO: 移除或重新设计这些组件
     std::unique_ptr<::Engine::ScriptableRenderPipeline> m_legacyPipeline;
     std::unique_ptr<::Engine::Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
 

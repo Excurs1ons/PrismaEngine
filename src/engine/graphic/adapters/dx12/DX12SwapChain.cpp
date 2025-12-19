@@ -2,7 +2,6 @@
 
 #include "DX12Texture.h"
 #include "Logger.h"
-#include "RenderBackendDirectX12.h"
 #include <dxgi1_6.h>
 #include <sstream>
 #include <wrl/client.h>
@@ -12,8 +11,8 @@ using Microsoft::WRL::ComPtr;
 namespace PrismaEngine::Graphic::DX12 {
 
 DX12SwapChain::DX12SwapChain(DX12RenderDevice* device)
+    : m_device(device)
 {
-
     // 初始化统计信息
     ResetStats();
     InitializeStats();
@@ -29,33 +28,31 @@ DX12SwapChain::~DX12SwapChain() {
 
 // ISwapChain接口实现
 uint32_t DX12SwapChain::GetBufferCount() const {
-    if ((m_backend != nullptr) && m_backend->m_swapChain) {
-        return 2; // DirectX12使用双缓冲
+    if (m_device) {
+        return m_device->GetFrameCount(); // DirectX12使用双缓冲
     }
     return 0;
 }
 
 uint32_t DX12SwapChain::GetCurrentBufferIndex() const {
-    if (m_backend && m_backend->m_currentFrame < 2) {
-        return m_backend->m_currentFrame;
+    if (m_device) {
+        return m_device->GetCurrentFrameIndex();
     }
     return 0;
 }
 
 uint32_t DX12SwapChain::GetWidth() const {
-    if (m_backend) {
-        uint32_t width, height;
-        m_backend->GetRenderTargetSize(width, height);
-        return width;
+    if (m_device) {
+        // TODO: 从DX12RenderDevice获取尺寸
+        return 1920; // 临时返回默认值
     }
     return 0;
 }
 
 uint32_t DX12SwapChain::GetHeight() const {
-    if (m_backend) {
-        uint32_t width, height;
-        m_backend->GetRenderTargetSize(width, height);
-        return height;
+    if (m_device) {
+        // TODO: 从DX12RenderDevice获取尺寸
+        return 1080; // 临时返回默认值
     }
     return 0;
 }
@@ -86,7 +83,7 @@ ITexture* DX12SwapChain::GetCurrentRenderTarget() {
 }
 
 bool DX12SwapChain::Present() {
-    if (!m_backend || !m_backend->m_swapChain) {
+    if (!m_device) {
         return false;
     }
 
@@ -115,7 +112,7 @@ bool DX12SwapChain::Present() {
     }
 
     // 呈现
-    HRESULT hr = m_backend->m_swapChain->Present(syncInterval, flags);
+    HRESULT hr = m_device->Present();
     bool success = SUCCEEDED(hr);
 
     // 更新统计信息
@@ -137,20 +134,22 @@ bool DX12SwapChain::SetMode(SwapChainMode mode) {
 }
 
 bool DX12SwapChain::Resize(uint32_t width, uint32_t height) {
-    if (!m_backend || !m_backend->m_swapChain) {
+    if (!m_device || !m_device->GetSwapChain()) {
         return false;
     }
 
     // 等待GPU完成所有帧
     for (UINT i = 0; i < 2; ++i) {
-        m_backend->WaitForPreviousFrame();
+        m_device->WaitForPreviousFrame();
     }
 
     // 调整大小
     DXGI_SWAP_CHAIN_DESC desc;
-    m_backend->m_swapChain->GetDesc(&desc);
+    if (!m_device->GetSwapChainDesc(&desc)) {
+        return false;
+    }
 
-    HRESULT hr = m_backend->m_swapChain->ResizeBuffers(
+    HRESULT hr = m_device->ResizeBuffers(
         desc.BufferCount,
         width,
         height,
@@ -201,33 +200,35 @@ void DX12SwapChain::ResetStats() {
 }
 
 bool DX12SwapChain::IsFullscreen() const {
-    if (!m_backend || !m_backend->m_swapChain) {
+    if (!m_device || !m_device->GetSwapChain()) {
         return false;
     }
 
     DXGI_SWAP_CHAIN_DESC desc;
-    m_backend->m_swapChain->GetDesc(&desc);
+    if (!m_device->GetSwapChainDesc(&desc)) {
+        return false;
+    }
     return desc.Windowed != 1;
 }
 
 bool DX12SwapChain::SetFullscreen(bool fullscreen) {
-    if (!m_backend || !m_backend->m_swapChain) {
+    if (!m_device || !m_device->GetSwapChain()) {
         return false;
     }
 
     // 设置全屏
-    HRESULT hr = m_backend->m_swapChain->SetFullscreenState(fullscreen, nullptr);
+    HRESULT hr = m_device->SetFullscreenState(fullscreen, nullptr);
     return SUCCEEDED(hr);
 }
 
 bool DX12SwapChain::Screenshot(const std::string& filename, uint32_t bufferIndex) {
-    if (!m_backend || !m_backend->m_swapChain) {
+    if (!m_device || !m_device->GetSwapChain()) {
         return false;
     }
 
     // 获取后台缓冲区
     ComPtr<ID3D12Resource> backBuffer;
-    HRESULT hr = m_backend->m_swapChain->GetBuffer(bufferIndex, IID_PPV_ARGS(&backBuffer));
+    HRESULT hr = m_device->GetSwapChainBuffer(bufferIndex, IID_PPV_ARGS(&backBuffer));
     if (FAILED(hr)) {
         LOG_ERROR("SwapChain", "无法获取后台缓冲区");
         return false;
@@ -264,7 +265,7 @@ void DX12SwapChain::EnableDebugLayer(bool enable) {
 
 // DirectX12特定方法
 std::unique_ptr<DX12SwapChain> DX12SwapChain::Clone() const {
-    if (!m_backend) {
+    if (!m_device) {
         return nullptr;
     }
 
@@ -278,7 +279,7 @@ std::unique_ptr<DX12SwapChain> DX12SwapChain::Clone() const {
 }
 
 IDXGISwapChain3* DX12SwapChain::GetDXGISwapChain() const {
-    return m_backend ? m_backend->m_swapChain.Get() : nullptr;
+    return m_device ? m_device->GetSwapChain() : nullptr;
 }
 
 // 私有方法
@@ -301,7 +302,7 @@ void DX12SwapChain::UpdateStats() const {
 }
 
 void DX12SwapChain::CreateRenderTargetAdapters() {
-    if (m_backend == nullptr) {
+    if (m_device == nullptr) {
         return;
     }
 
@@ -309,23 +310,23 @@ void DX12SwapChain::CreateRenderTargetAdapters() {
     m_renderTargets.resize(2);
 
     for (UINT i = 0; i < 2; ++i) {
-        if (m_backend->m_renderTargets[i]) {
+        if (m_device->GetRenderTarget(i)) {
             // 创建纹理适配器包装现有的渲染目标
             ComPtr<ID3D12Resource> resource;
-            HRESULT hr = m_backend->m_swapChain->GetBuffer(i, IID_PPV_ARGS(&resource));
+            HRESULT hr = m_device->GetSwapChainBuffer(i, IID_PPV_ARGS(&resource));
 
             if (SUCCEEDED(hr)) {
                 TextureDesc desc;
                 desc.type = TextureType::Texture2D;
-                desc.width = m_backend->m_viewport.Width;
-                desc.height = m_backend->m_viewport.Height;
+                desc.width = m_device->GetViewport().Width;
+                desc.height = m_device->GetViewport().Height;
                 desc.format = TextureFormat::RGBA8_UNorm;
                 desc.allowRenderTarget = true;
                 desc.name = "SwapChainRenderTarget_" + std::to_string(i);
 
                 // 创建纹理适配器
                 m_renderTargets[i] = std::make_unique<DX12Texture>(
-                    (m_backend != nullptr) ? nullptr : nullptr, // DX12设备适配器
+                    (m_device != nullptr) ? nullptr : nullptr, // DX12设备适配器
                     resource,
                     desc
                 );

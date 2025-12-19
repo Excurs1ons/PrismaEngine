@@ -3,13 +3,12 @@
 #include "../SceneManager.h"
 #include "../Camera3D.h"
 #include "../core/ECS.h"
-#include "RenderBackendDirectX12.h"
 #include "RenderBackendVulkan.h"
 #include "ScriptableRenderPipeline.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
 // DirectX12适配器
-#include "adapters/dx12/DX12RenderDevice.h"
+#include "adapters/dx12/DX12Adapters.h"
 
 #if defined(_WIN32)
 #include <Windows.h>
@@ -53,19 +52,8 @@ bool RenderSystem::Initialize(const RenderSystemDesc& desc) {
     }
 
     // 5. 获取并设置默认渲染目标
-    if (m_legacyBackend) {
-        auto defaultRenderTarget = m_legacyBackend->GetDefaultRenderTarget();
-        auto defaultDepthBuffer = m_legacyBackend->GetDefaultDepthBuffer();
-        uint32_t width, height;
-        m_legacyBackend->GetRenderTargetSize(width, height);
-
-        if (defaultRenderTarget && defaultDepthBuffer) {
-            m_forwardPipeline->SetRenderTargets(defaultRenderTarget, defaultDepthBuffer, width, height);
-            LOG_INFO("Render", "设置默认渲染目标: {0}x{1}", width, height);
-        }
-
-        m_legacyBackend->isInitialized = true;
-    }
+    // TODO: 从新设备获取渲染目标
+    // 暂时跳过，后续实现
 
     LOG_INFO("Render", "新渲染系统初始化完成");
     return true;
@@ -84,7 +72,6 @@ void RenderSystem::Shutdown() {
     m_mainPipeline.reset();
     m_forwardPipeline.reset();
     m_legacyPipeline.reset();
-    m_legacyBackend.reset();
     m_resourceManager.reset();
     m_device.reset();
 
@@ -129,9 +116,10 @@ void RenderSystem::Present() {
 void RenderSystem::Resize(uint32_t width, uint32_t height) {
     LOG_INFO("Render", "调整渲染目标大小: {0}x{1}", width, height);
 
-    if (m_legacyBackend) {
-        m_legacyBackend->Resize(width, height);
-    }
+    // TODO: 实现新设备的Resize功能
+    // if (m_device) {
+    //     m_device->GetSwapChain()->ResizeBuffers(...);
+    // }
 
     // 更新描述
     m_desc.width = width;
@@ -181,15 +169,31 @@ void RenderSystem::ResetStats() {
 bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
     LOG_INFO("Render", "初始化渲染设备，后端类型: {0}", static_cast<int>(desc.backendType));
 
-    // 创建旧的渲染后端（临时，用于过渡）
+    // 直接创建新的适配器设备
     switch (desc.backendType) {
         case RenderBackendType::DirectX12: {
-            m_legacyBackend = std::make_unique<::Engine::RenderBackendDirectX12>(L"RendererDirectX");
+            // 准备设备描述
+            DeviceDesc deviceDesc;
+            deviceDesc.name = desc.name;
+            deviceDesc.windowHandle = desc.windowHandle;
+            deviceDesc.width = desc.width;
+            deviceDesc.height = desc.height;
+            deviceDesc.enableDebug = desc.enableDebug;
+            deviceDesc.enableValidation = desc.enableValidation;
+            deviceDesc.maxFramesInFlight = desc.maxFramesInFlight;
+
+            // 使用工厂创建DX12设备
+            m_device = DX12::CreateDX12RenderDeviceInterface(deviceDesc);
+            if (!m_device) {
+                LOG_ERROR("Render", "DX12设备创建失败");
+                return false;
+            }
             break;
         }
         case RenderBackendType::Vulkan: {
-            m_legacyBackend = std::make_unique<::Engine::RenderBackendVulkan>();
-            break;
+            // TODO: 实现Vulkan工厂
+            LOG_ERROR("Render", "Vulkan后端暂未实现");
+            return false;
         }
         default: {
             LOG_ERROR("Render", "不支持的渲染后端类型: {0}", static_cast<int>(desc.backendType));
@@ -197,39 +201,8 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
         }
     }
 
-    if (!m_legacyBackend) {
-        LOG_ERROR("Render", "渲染后端创建失败");
-        return false;
-    }
-
-    // 初始化旧的后端
-    if (!m_legacyBackend->Initialize(nullptr, desc.windowHandle, desc.surface, desc.width, desc.height)) {
-        LOG_ERROR("Render", "渲染后端初始化失败");
-        return false;
-    }
-
-    // 创建适配器设备
-    if (desc.backendType == RenderBackendType::DirectX12) {
-        auto* dx12Backend = dynamic_cast<RenderBackendDirectX12*>(m_legacyBackend.get());
-        // DX12RenderDevice 期望 RenderBackendDirectX12*（无命名空间）
-        auto dx12Device = std::make_unique<DX12::DX12RenderDevice>(
-            dx12Backend
-        );
-        m_device = std::move(dx12Device);
-
-        // 初始化设备描述
-        DeviceDesc deviceDesc;
-        deviceDesc.name = desc.name;
-        deviceDesc.enableDebug = desc.enableDebug;
-        deviceDesc.enableValidation = desc.enableValidation;
-        deviceDesc.maxFramesInFlight = desc.maxFramesInFlight;
-
-        if (!m_device->Initialize(deviceDesc)) {
-            LOG_ERROR("Render", "DX12设备适配器初始化失败");
-            return false;
-        }
-    } else {
-        LOG_ERROR("Render", "目前只支持DirectX12适配器");
+    if (!m_device) {
+        LOG_ERROR("Render", "渲染设备创建失败");
         return false;
     }
 
@@ -252,17 +225,21 @@ bool RenderSystem::InitializeResourceManager() {
 bool RenderSystem::InitializePipelines() {
     // 初始化旧的渲染管线（兼容性）
     m_legacyPipeline = std::make_unique<ScriptableRenderPipeline>();
-    if (!m_legacyPipeline->Initialize(m_legacyBackend.get())) {
-        LOG_ERROR("Render", "可编程渲染管线初始化失败");
-        return false;
-    }
+    // TODO: 需要重新设计管线系统以适配新架构
+    // 临时跳过初始化
+    // if (!m_legacyPipeline->Initialize(m_legacyBackend.get())) {
+    //     LOG_ERROR("Render", "可编程渲染管线初始化失败");
+    //     return false;
+    // }
 
     // 初始化前向渲染管线
     m_forwardPipeline = std::make_unique<::Engine::Graphic::Pipelines::Forward::ForwardPipeline>();
-    if (!m_forwardPipeline->Initialize(m_legacyPipeline.get())) {
-        LOG_ERROR("Render", "前向渲染管线初始化失败");
-        return false;
-    }
+    // TODO: 需要重新设计以适配新架构
+    // 临时跳过
+    // if (!m_forwardPipeline->Initialize(m_legacyPipeline.get())) {
+    //     LOG_ERROR("Render", "前向渲染管线初始化失败");
+    //     return false;
+    // }
 
     // 创建新的主渲染流程（使用旧流程作为临时实现）
     // 这里可以创建基于新接口的渲染流程
@@ -279,49 +256,27 @@ bool RenderSystem::CreateAdapters() {
 }
 
 void RenderSystem::RenderFrame() {
-    if (!m_legacyBackend || !m_legacyPipeline) {
+    if (!m_device) {
         return;
     }
 
-    // 使用旧的渲染流程（临时）
-    auto& world = ::Engine::Core::ECS::World::GetInstance();
-    auto sceneManager = dynamic_cast<::Engine::SceneManager*>(world.GetSystem<::Engine::SceneManager>());
-    if (!sceneManager) {
-        return;
-    }
+    // TODO: 使用新的设备接口实现渲染
+    // 这里是使用新接口的示例流程：
 
-    // 获取主相机
-    auto activeScene = sceneManager->GetCurrentScene();
-    if (!activeScene) {
-        return;
-    }
+    // 1. 开始帧
+    m_device->BeginFrame();
 
-    auto camera = activeScene->GetMainCamera();
-    if (!camera) {
-        return;
-    }
+    // 2. 渲染场景
+    // TODO: 实现场景渲染逻辑
 
-    // 设置清除颜色
-    XMVECTOR clearColorVec = camera->GetClearColor();
-    XMFLOAT4 clearColor;
-    DirectX::XMStoreFloat4(&clearColor, clearColorVec);
+    // 3. GUI渲染
+    // TODO: 实现GUI渲染
 
-    // 开始渲染
-    m_legacyBackend->BeginFrame(clearColor);
+    // 4. 结束帧
+    m_device->EndFrame();
 
-    // 执行渲染管线（注意：ForwardPipeline没有Execute方法）
-    // 这里应该使用渲染管线来渲染场景
-    // 暂时使用旧的渲染管线
-    m_legacyPipeline->Execute();
-
-    // GUI渲染
-    if (m_guiCallback) {
-        // 这里需要将DirectX12的命令列表传递给GUI
-        // m_guiCallback(m_legacyBackend->GetCommandList());
-    }
-
-    // 结束帧
-    m_legacyBackend->EndFrame();
+    // 5. 呈现
+    m_device->Present();
 }
 
 void RenderSystem::UpdateStats(float deltaTime) {
