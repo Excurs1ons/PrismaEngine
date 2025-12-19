@@ -1,7 +1,6 @@
 #pragma once
 
 #include "RenderTypes.h"
-#include <memory>
 
 namespace PrismaEngine::Graphic {
 
@@ -24,31 +23,31 @@ public:
 
     /// @brief 获取缓冲区数量
     /// @return 缓冲区数量
-    virtual uint32_t GetBufferCount() const = 0;
+    [[nodiscard]] virtual uint32_t GetBufferCount() const = 0;
 
     /// @brief 获取当前缓冲区索引
     /// @return 当前缓冲区索引
-    virtual uint32_t GetCurrentBufferIndex() const = 0;
+    [[nodiscard]] virtual uint32_t GetCurrentBufferIndex() const = 0;
 
     /// @brief 获取宽度
     /// @return 宽度
-    virtual uint32_t GetWidth() const = 0;
+    [[nodiscard]] virtual uint32_t GetWidth() const = 0;
 
     /// @brief 获取高度
     /// @return 高度
-    virtual uint32_t GetHeight() const = 0;
+    [[nodiscard]] virtual uint32_t GetHeight() const = 0;
 
     /// @brief 获取格式
     /// @return 格式
-    virtual TextureFormat GetFormat() const = 0;
+    [[nodiscard]] virtual TextureFormat GetFormat() const = 0;
 
     /// @brief 获取模式
     /// @return 模式
-    virtual SwapChainMode GetMode() const = 0;
+    [[nodiscard]] virtual SwapChainMode GetMode() const = 0;
 
     /// @brief 检查是否启用HDR
     /// @return 是否启用HDR
-    virtual bool IsHDR() const = 0;
+    [[nodiscard]] virtual bool IsHDR() const = 0;
 
     // === 缓冲区访问 ===
 
@@ -87,7 +86,7 @@ public:
 
     /// @brief 获取颜色空间
     /// @return 颜色空间
-    virtual const char* GetColorSpace() const = 0;
+    [[nodiscard]] virtual const char* GetColorSpace() const = 0;
 
     /// @brief 设置颜色空间
     /// @param colorSpace 颜色空间名称
@@ -98,11 +97,11 @@ public:
 
     /// @brief 获取帧率
     /// @return 当前帧率
-    virtual float GetFrameRate() const = 0;
+    [[nodiscard]] virtual float GetFrameRate() const = 0;
 
     /// @brief 获取帧时间
     /// @return 最后一帧的时间（毫秒）
-    virtual float GetFrameTime() const = 0;
+    [[nodiscard]] virtual float GetFrameTime() const = 0;
 
     /// @brief 获取呈现统计
     struct PresentStats {
@@ -114,7 +113,7 @@ public:
         float executionTime    = 0.0f;
         float frameRate = 0.0f;
     };
-    virtual PresentStats GetPresentStats() const = 0;
+    [[nodiscard]] virtual PresentStats GetPresentStats() const = 0;
 
     /// @brief 重置统计信息
     virtual void ResetStats() = 0;
@@ -123,7 +122,7 @@ public:
 
     /// @brief 检查是否为全屏
     /// @return 是否为全屏
-    virtual bool IsFullscreen() const = 0;
+    [[nodiscard]] virtual bool IsFullscreen() const = 0;
 
     /// @brief 设置全屏
     /// @param fullscreen 是否全屏

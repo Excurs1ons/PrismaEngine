@@ -1,10 +1,8 @@
 #pragma once
 
 #include "DX12RenderDevice.h"
-#include "RenderSystem.h"
 #include "interfaces/ISwapChain.h"
 #include <d3d12.h>
-#include <directx/d3dx12.h>
 #include <dxgi1_4.h>
 #include <memory>
 
