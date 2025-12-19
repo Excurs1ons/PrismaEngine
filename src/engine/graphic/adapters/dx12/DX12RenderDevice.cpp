@@ -1,18 +1,13 @@
+#include <directx/d3dx12.h>
+#include <directx/d3d12.h>
+
 #include "DX12RenderDevice.h"
 #include "DX12CommandBuffer.h"
 #include "DX12Fence.h"
 #include "DX12SwapChain.h"
 #include "DX12ResourceFactory.h"
-#include "DX12Texture.h"
-#include "DX12Buffer.h"
-#include "DX12Shader.h"
-#include "DX12PipelineState.h"
-#include "DX12Sampler.h"
 
-#include <dxgi1_6.h>
-#include <directx/d3dx12.h>
-#include <sstream>
-#include <iomanip>
+#include <Windows.h>
 #include <d3dcompiler.h>
 
 namespace PrismaEngine::Graphic::DX12 {
@@ -398,7 +393,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         }
         m_fenceValue = 1;
 
-        m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        m_fenceEvent = CreateEventW(nullptr, FALSE, FALSE, nullptr);
         if (m_fenceEvent == nullptr) {
             return false;
         }
@@ -673,9 +668,17 @@ bool DX12RenderDevice::SupportsMeshShader() const {
 }
 
 bool DX12RenderDevice::SupportsVariableRateShading() const {
-    return false; // 需要特定硬件支持
+    return false;  // 需要特定硬件支持
 }
+IRenderDevice::GPUMemoryInfo DX12RenderDevice::GetGPUMemoryInfo() const {
 
+    //TODO: 获取GPU内存信息
+    return {};
+}
+IRenderDevice::RenderStats DX12RenderDevice::GetRenderStats() const {
+    //TODO: 获取渲染统计信息
+    return {};
+}
 
 void DX12RenderDevice::BeginDebugMarker(const std::string& name) {
     // TODO: 实现调试标记

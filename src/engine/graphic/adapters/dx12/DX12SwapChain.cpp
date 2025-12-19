@@ -112,8 +112,8 @@ bool DX12SwapChain::Present() {
     }
 
     // 呈现
-    HRESULT hr = m_device->Present();
-    bool success = SUCCEEDED(hr);
+    m_device->Present();
+    bool success = true; // Present方法没有返回值，假设成功
 
     // 更新统计信息
     auto endTime = std::chrono::high_resolution_clock::now();
