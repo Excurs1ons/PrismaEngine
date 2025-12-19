@@ -1,3 +1,6 @@
+#include <directx/d3d12.h>
+#include <directx/d3dx12.h>
+
 #include "DX12Buffer.h"
 #include "DX12RenderDevice.h"
 #include "Logger.h"

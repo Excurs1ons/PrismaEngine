@@ -1,10 +1,10 @@
 #pragma once
 
-#include "interfaces/IPipelineState.h"
-#include "interfaces/IShader.h"
+#include <directx/d3d12.h>
 #include <directx/d3dx12.h>
-#include <d3d12.h>
-#include <memory>
+
+#include "interfaces/IPipelineState.h"
+#include <wrl/client.h>
 
 namespace PrismaEngine::Graphic::DX12 {
 

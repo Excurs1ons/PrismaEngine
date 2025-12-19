@@ -2,8 +2,6 @@
 
 #include "DX12RenderDevice.h"
 #include "interfaces/ISwapChain.h"
-#include <d3d12.h>
-#include <dxgi1_4.h>
 #include <memory>
 
 namespace PrismaEngine::Graphic::DX12 {

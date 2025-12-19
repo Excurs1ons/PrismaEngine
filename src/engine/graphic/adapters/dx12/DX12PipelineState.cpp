@@ -1,10 +1,8 @@
-#include "DX12PipelineState.h"
-#include "../Logger.h"
-#include "DX12RenderDevice.h"
-#include "DX12Shader.h"
-#include <algorithm>
+#include <directx/d3d12.h>
 #include <directx/d3dx12.h>
-#include <sstream>
+
+#include "DX12PipelineState.h"
+#include "DX12RenderDevice.h"
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;

@@ -2,7 +2,6 @@
 
 #include "DX12Texture.h"
 #include "Logger.h"
-#include <dxgi1_6.h>
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
