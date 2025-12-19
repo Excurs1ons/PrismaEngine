@@ -4,16 +4,29 @@
 
 ## 工作流说明
 
+### 工作流选择策略
+
+为了优化CI/CD效率，我们采用了互斥的workflow设计：
+
+1. **Quick Workflow** - 日常开发验证
+   - 当修改了 `src/engine/`、`android/` 或 `vcpkg.json` 时触发
+   - 快速验证代码编译是否正常
+
+2. **Complete Workflow** - 发布和完整测试
+   - 当修改了非上述路径时触发（如文档、配置等）
+   - 发布标签时自动触发
+   - 手动触发时使用
+
 ### 1. build-android.yml - 完整Android构建
 
 触发条件：
-- 推送到 main、develop 分支
+- 推送到 main、develop 分支（当不触发quick workflow时）
 - 创建标签（v开头的标签）
-- 对 main 分支的 Pull Request
+- 对 main 分支的 Pull Request（当不触发quick workflow时）
 - 手动触发（workflow_dispatch）
 
 特性：
-- **多架构支持**：并行构建 arm64-v8a、armeabi-v7a、x86_64、x86
+- **多架构支持**：并行构建 arm64-v8a、armeabi-v7a
 - **多构建类型**：同时构建 Release 和 Debug 版本
 - **智能缓存**：
   - Android SDK 缓存（约 1GB）
@@ -28,10 +41,16 @@
 - 推送到 main、develop 分支（仅当相关文件变化时）
 - 对 main 分支的 Pull Request（仅当相关文件变化时）
 
+监控的路径：
+- `src/engine/**` - 引擎源代码
+- `android/**` - Android特定配置
+- `vcpkg.json` - 依赖配置
+
 特性：
 - **快速验证**：只构建 arm64-v8a Release 版本
 - **轻量级**：使用最小化的依赖
-- **路径过滤**：只有当源码或配置文件变化时才触发
+- **路径过滤**：避免不必要的构建
+- **并发控制**：新推送会取消正在进行的构建
 
 ## 缓存策略
 
