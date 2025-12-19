@@ -3,6 +3,7 @@
 
 #include "DX12PipelineState.h"
 #include "DX12RenderDevice.h"
+#include "DX12Shader.h"
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
