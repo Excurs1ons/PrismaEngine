@@ -223,7 +223,7 @@ main() {
     # 显示输出文件
     print_info "输出文件:"
     for abi in "${build_abis[@]}"; do
-        local lib_path="build-android/install/$abi/lib/libengine.so"
+        local lib_path="build-android/install/$abi/lib/libEngine.so"
         if [ -f "$lib_path" ]; then
             local size=$(du -h "$lib_path" | cut -f1)
             print_info "  $abi: $lib_path ($size)"

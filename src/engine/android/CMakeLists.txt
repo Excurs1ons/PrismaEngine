@@ -1,4 +1,4 @@
-# Android Engine Library - 生成 libengine.so
+# Android Engine Library - 生成 libEngine.so
 cmake_minimum_required(VERSION 3.31)
 
 # 包含父级目录的graphic配置
