@@ -8,6 +8,7 @@
 #include "InputManager.h"
 
 #include "PlatformWindows.h"
+#include "RenderSystemNew.h"
 
 namespace Engine {
     EngineCore::EngineCore() : isRunning_(false) {
@@ -35,7 +36,7 @@ namespace Engine {
             return false;
         }     // 场景生命周期
 
-        if (!RegisterSystem<RenderSystem>()) {
+        if (!RegisterSystem<PrismaEngine::Graphic::RenderSystem>()) {
             return false;
         }     // 渲染管线逻辑
 
