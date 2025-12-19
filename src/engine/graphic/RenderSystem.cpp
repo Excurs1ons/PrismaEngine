@@ -1,8 +1,8 @@
 #include "RenderSystem.h"
 #include "Logger.h"
 #include "PlatformWindows.h"
-#include "RenderBackendDirectX12.h"
-#include "RenderBackendVulkan.h"
+// TODO: 更新以使用新架构
+// #include "RenderBackendVulkan.h"
 #include "pipelines/forward/ForwardPipeline.h"
 #include "RenderSystemNew.h"
 #include "../SceneManager.h"
