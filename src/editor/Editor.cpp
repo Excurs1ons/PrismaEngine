@@ -2,7 +2,7 @@
 #include "Logger.h"
 #include "PlatformSDL.h"
 #include "RenderBackend.h"
-#include "RenderSystem.h"
+#include "../graphic/RenderSystemNew.h"
 #include <iostream>
 #include <stdexcept>
 #ifdef _WIN32
@@ -63,17 +63,10 @@ bool Editor::Initialize()
     }
 
     // 3. 初始化渲染系统
-    auto renderSystem = RenderSystem::GetInstance();
+    auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
 
-    // 根据平台选择渲染后端
-    RenderBackendType backendType;
-#ifdef _WIN32
-    backendType = RenderBackendType::DirectX12;
-#else
-    backendType = RenderBackendType::Vulkan;
-#endif
 
-    if (!renderSystem->Initialize(platform.get(), backendType, m_window, nullptr, props.Width, props.Height)) {
+    if (!renderSystem->Initialize()) {
         LOG_FATAL("System", "渲染系统初始化失败");
         return false;
     }
@@ -104,14 +97,8 @@ bool Editor::InitializeImGui()
 
     // 2. 初始化平台/渲染器后端
     auto platform = PlatformSDL::GetInstance();
-    auto renderSystem = RenderSystem::GetInstance();
-    auto backend = renderSystem->GetRenderBackend();
-
-    if (!backend) {
-        LOG_ERROR("Editor", "无法获取渲染后端");
-        return false;
-    }
-
+    auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
+    renderSystem->Initialize();
     // 初始化 SDL3
     if (!ImGui_ImplSDL3_InitForOther((SDL_Window*)m_window)) {
         LOG_ERROR("Editor", "ImGui SDL3 初始化失败");
@@ -123,7 +110,7 @@ bool Editor::InitializeImGui()
         ImGui_ImplSDL3_ProcessEvent(event);
 
         if (event->type == SDL_EVENT_WINDOW_RESIZED) {
-            RenderSystem::GetInstance()->Resize(event->window.data1, event->window.data2);
+            PrismaEngine::Graphic::RenderSystem::GetInstance()->Resize(event->window.data1, event->window.data2);
         }
 
         return false;
@@ -131,7 +118,7 @@ bool Editor::InitializeImGui()
 
     // 注册渲染回调
     // 对于非Vulkan后端，使用通用的渲染回调
-    Engine::RenderSystem::GuiRenderCallback callback = [](void* cmdBuffer) {
+    PrismaEngine::Graphic::RenderSystem::GuiRenderCallback callback = [](void* cmdBuffer) {
         // 这里可以调用特定平台的ImGui渲染实现
         // 目前暂时留空
     };
@@ -143,7 +130,7 @@ bool Editor::InitializeImGui()
 int Editor::Run()
 {
     auto platform = PlatformSDL::GetInstance();
-    auto renderSystem = RenderSystem::GetInstance();
+    auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
     bool running = true;
 
     while (running) {
@@ -182,7 +169,7 @@ void Editor::Shutdown()
     ImGui::DestroyContext();
 
     // 清理渲染系统
-    auto renderSystem = RenderSystem::GetInstance();
+    auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
     if (renderSystem) {
         renderSystem->Shutdown();
     }
