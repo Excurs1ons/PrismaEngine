@@ -1,0 +1,163 @@
+name: Build Editor
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/editor/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/editor/**'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Release
+        - Debug
+      upload_artifact:
+        description: 'Upload build artifacts'
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  VCPKG_VERSION: 'latest'
+  CMAKE_VERSION: '3.31.0'
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        platform: [x64, x86]
+        include:
+          - platform: x64
+            arch: x64
+            artifact_suffix: win64
+          - platform: x86
+            arch: Win32
+            artifact_suffix: win32
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg_installed
+          C:/vcpkg
+        key: vcpkg-editor-${{ matrix.platform }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-editor-${{ matrix.platform }}-${{ matrix.build_type }}-
+          vcpkg-editor-${{ matrix.platform }}-
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup vcpkg
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.bat
+        ./vcpkg/vcpkg integrate install
+
+    - name: Configure CMake
+      run: |
+        cmake -B build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          -G "Visual Studio 17 2022" `
+          -A ${{ matrix.arch }} `
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform }}-windows
+
+    - name: Build
+      run: |
+        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          --config ${{ matrix.build_type }} `
+          --target Editor `
+          --parallel
+
+    - name: Test
+      run: |
+        cd build-${{ matrix.platform }}-${{ matrix.build_type }}
+        ctest -C ${{ matrix.build_type }} --output-on-failure --parallel
+
+    - name: Package
+      if: github.event.inputs.upload_artifact == 'true' || github.event.inputs.upload_artifact == ''
+      run: |
+        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
+        # Copy executable
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/Editor.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
+        # Copy required DLLs
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No DLLs to copy"
+        # Copy assets
+        xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
+        # Create archive
+        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
+        7z a ../PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip *
+
+    - name: Upload artifacts
+      if: github.event.inputs.upload_artifact == 'true' || github.event.inputs.upload_artifact == ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
+        path: PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip
+        retention-days: 30
+
+  # Create release
+  create-release:
+    needs: build-windows
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          artifacts/**/*.zip
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        name: Prisma Engine ${{ github.ref_name }}
+        body: |
+          ## Prisma Engine Editor ${{ github.ref_name }}
+
+          ### Downloads
+          - Windows x64: `PrismaEditor-win64-Release.zip`
+          - Windows x86: `PrismaEditor-win32-Release.zip`
+
+          ### Installation
+          1. Download the appropriate zip file for your platform
+          2. Extract to a folder
+          3. Run `Editor.exe`
+
+          ### Requirements
+          - Windows 10 or later
+          - DirectX 12 compatible GPU
+          - 4GB RAM (8GB recommended)
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

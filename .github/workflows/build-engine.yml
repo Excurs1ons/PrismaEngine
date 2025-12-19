@@ -1,0 +1,319 @@
+name: Build Engine
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/engine/**'
+      - 'android/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/engine/**'
+      - 'android/**'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows
+        - android
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Release
+        - Debug
+      upload_artifact:
+        description: 'Upload build artifacts'
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ANDROID_NDK_VERSION: 27.0.12077973
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows' || github.event.inputs.platform == ''
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        platform: [x64, x86]
+        include:
+          - platform: x64
+            arch: x64
+            artifact_suffix: win64
+          - platform: x86
+            arch: Win32
+            artifact_suffix: win32
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg_installed
+          C:/vcpkg
+        key: vcpkg-engine-${{ matrix.platform }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-engine-${{ matrix.platform }}-${{ matrix.build_type }}-
+          vcpkg-engine-${{ matrix.platform }}-
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: '3.31.0'
+
+    - name: Setup vcpkg
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.bat
+        ./vcpkg/vcpkg integrate install
+
+    - name: Configure CMake
+      run: |
+        cmake -B build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          -G "Visual Studio 17 2022" `
+          -A ${{ matrix.arch }} `
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform }}--windows
+
+    - name: Build Engine
+      run: |
+        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          --config ${{ matrix.build_type }} `
+          --target Engine `
+          --parallel
+
+    - name: Package
+      if: github.event.inputs.upload_artifact == 'true' || github.event.inputs.upload_artifact == ''
+      run: |
+        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}
+        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}/include
+
+        # Copy library files
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/PrismaEngine.lib package-${{ matrix.platform }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/PrismaEngine.pdb package-${{ matrix.platform }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/ 2>nul || echo "No PDB file"
+
+        # Copy headers
+        xcopy src/engine\*.h package-${{ matrix.platform }}-${{ matrix.build_type }}/include /E /I /Y 2>nul || echo "No headers to copy"
+
+        # Create CMake config files
+        echo "# PrismaEngine CMake Config" > package-${{ matrix.platform }}-${{ matrix.build_type }}/PrismaEngineConfig.cmake
+        echo "add_library(PrismaEngine STATIC IMPORTED)" >> package-${{ matrix.platform }}-${{ matrix.build_type }}/PrismaEngineConfig.cmake
+        echo "set_target_properties(PrismaEngine PROPERTIES" >> package-${{ matrix.platform }}-${{ matrix.build_type }}/PrismaEngineConfig.cmake
+        echo "  IMPORTED_LOCATION_${{ matrix.build_type }} \"\${CMAKE_CURRENT_LIST_DIR}/lib/${{ matrix.build_type }}/PrismaEngine.lib\"" >> package-${{ matrix.platform }}-${{ matrix.build_type }}/PrismaEngineConfig.cmake
+        echo "  INTERFACE_INCLUDE_DIRECTORIES \"\${CMAKE_CURRENT_LIST_DIR}/include\"" >> package-${{ matrix.platform }}-${{ matrix.build_type }}/PrismaEngineConfig.cmake
+        echo ")" >> package-${{ matrix.platform }}-${{ matrix.build_type }}/PrismaEngineConfig.cmake
+
+        # Create archive
+        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
+        7z a ../PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip *
+
+    - name: Upload artifacts
+      if: github.event.inputs.upload_artifact == 'true' || github.event.inputs.upload_artifact == ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
+        path: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip
+        retention-days: 30
+
+  build-android:
+    runs-on: ubuntu-latest
+    if: github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android' || github.event.inputs.platform == ''
+    strategy:
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a]
+        build_type: [Release, Debug]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
+
+    - name: Setup NDK
+      run: |
+        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: '3.31.0'
+
+    - name: Setup Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: Cache vcpkg Android
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./vcpkg_installed
+        key: vcpkg-engine-android-${{ matrix.abi }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-engine-android-${{ matrix.abi }}-
+
+    - name: Setup vcpkg
+      if: steps.cache-vcpkg-android.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.sh
+        ./vcpkg/vcpkg install sdl3 imgui nlohmann-json vulkan --triplet ${{ matrix.abi }}-android
+
+    - name: Configure CMake
+      run: |
+        cmake -S android -B build-${{ matrix.abi }}-${{ matrix.build_type }} \
+          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=24 \
+          -DANDROID_STL=c++_shared \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -G Ninja
+
+    - name: Build Engine
+      run: |
+        cmake --build build-${{ matrix.abi }}-${{ matrix.build_type }} \
+          --config ${{ matrix.build_type }} \
+          --parallel 2
+
+    - name: Package
+      if: github.event.inputs.upload_artifact == 'true' || github.event.inputs.upload_artifact == ''
+      run: |
+        mkdir -p artifacts/${{ matrix.abi }}
+        cmake --install build-${{ matrix.abi }}-${{ matrix.build_type }} \
+          --config ${{ matrix.build_type }} \
+          --prefix artifacts/${{ matrix.abi }}
+        tar czf PrismaEngine-android-${{ matrix.abi }}-${{ matrix.build_type }}.tar.gz -C artifacts .
+
+    - name: Upload artifacts
+      if: github.event.inputs.upload_artifact == 'true' || github.event.inputs.upload_artifact == ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEngine-android-${{ matrix.abi }}-${{ matrix.build_type }}
+        path: PrismaEngine-android-${{ matrix.abi }}-${{ matrix.build_type }}.tar.gz
+        retention-days: 30
+
+  # Create combined release
+  create-release:
+    needs: [build-windows, build-android]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Prepare engine SDK
+      run: |
+        mkdir -p PrismaEngine-SDK-${{ github.ref_name }}/{windows,android}
+
+        # Windows SDKs
+        for arch in win64 win32; do
+          for build_type in Release Debug; do
+            if [ -d "artifacts/PrismaEngine-${arch}-${build_type}" ]; then
+              mkdir -p PrismaEngine-SDK-${{ github.ref_name }}/windows/${arch}-${build_type}
+              cp artifacts/PrismaEngine-${arch}-${build_type}/* PrismaEngine-SDK-${{ github.ref_name }}/windows/${arch}-${build_type}/ 2>/dev/null || true
+            fi
+          done
+        done
+
+        # Android libraries
+        mkdir -p PrismaEngine-SDK-${{ github.ref_name }}/android/jniLibs
+        for abi in arm64-v8a armeabi-v7a; do
+          for build_type in Release Debug; do
+            if [ -f "artifacts/PrismaEngine-android-${abi}-${build_type}.tar.gz" ]; then
+              mkdir -p PrismaEngine-SDK-${{ github.ref_name }}/android/${abi}-${build_type}
+              tar xzf artifacts/PrismaEngine-android-${abi}-${build_type}.tar.gz -C PrismaEngine-SDK-${{ github.ref_name }}/android/${abi}-${build_type}
+              # Copy shared library to standard Android location
+              cp PrismaEngine-SDK-${{ github.ref_name }}/android/${abi}-${build_type}/lib/libEngine.so PrismaEngine-SDK-${{ github.ref_name }}/android/jniLibs/${abi}/ 2>/dev/null || true
+            fi
+          done
+        done
+
+        # Create README for SDK
+        cat > PrismaEngine-SDK-${{ github.ref_name }}/README.md << EOF
+        # Prisma Engine SDK ${{ github.ref_name }}
+
+        This SDK contains the Prisma Engine libraries for Windows and Android platforms.
+
+        ## Windows
+
+        Static libraries and headers are provided for:
+        - Windows x64 (Visual Studio 2022)
+        - Windows x86 (Visual Studio 2022)
+
+        Each build type (Debug/Release) has its own directory with CMake config files.
+
+        ## Android
+
+        Shared libraries (.so) are provided for:
+        - arm64-v8a (ARM 64-bit)
+        - armeabi-v7a (ARM 32-bit)
+
+        Libraries are located in standard Android jniLibs structure.
+
+        ## Integration
+
+        ### Windows Example
+        \`\`\`cmake
+        find_package(PrismaEngine REQUIRED PATHS ./path/to/PrismaEngine-SDK/windows/x64-Release)
+        target_link_libraries(your_target PrismaEngine)
+        \`\`\`
+
+        ### Android Example
+        Copy the jniLibs folder to your Android project's src/main/ directory.
+        EOF
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          PrismaEngine-SDK-*/
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        name: Prisma Engine SDK ${{ github.ref_name }}
+        body: |
+          ## Prisma Engine SDK ${{ github.ref_name }}
+
+          ### What's Included
+          - Windows Static Libraries (x64, x86)
+          - Android Shared Libraries (ARM64, ARMv7)
+          - CMake configuration files
+          - Header files
+
+          ### Downloads
+          - Full SDK: `PrismaEngine-SDK-${{ github.ref_name }}.zip` (attached below)
+
+          ### Integration
+          See README in the SDK package for detailed integration instructions.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,243 @@
+name: Build All Components
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_editor:
+        description: 'Build Editor'
+        required: true
+        default: true
+        type: boolean
+      build_engine:
+        description: 'Build Engine'
+        required: true
+        default: true
+        type: boolean
+      build_game:
+        description: 'Build Game'
+        required: true
+        default: true
+        type: boolean
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows
+        - android
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Release
+        - Debug
+      upload_artifacts:
+        description: 'Upload build artifacts'
+        required: true
+        default: true
+        type: boolean
+
+jobs:
+  # Determine what to build based on changes
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      build_editor: ${{ steps.changes.outputs.editor }}
+      build_engine: ${{ steps.changes.outputs.engine }}
+      build_game: ${{ steps.changes.outputs.game }}
+      is_release: ${{ steps.release.outputs.is_release }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    - name: Check for Editor changes
+      id: changes
+      run: |
+        if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "pull_request" ]; then
+          if git diff --name-only HEAD~1 HEAD | grep -q "^src/editor/"; then
+            echo "editor=true" >> $GITHUB_OUTPUT
+          else
+            echo "editor=false" >> $GITHUB_OUTPUT
+          fi
+
+          if git diff --name-only HEAD~1 HEAD | grep -q "^src/engine/"; then
+            echo "engine=true" >> $GITHUB_OUTPUT
+          else
+            echo "engine=false" >> $GITHUB_OUTPUT
+          fi
+
+          if git diff --name-only HEAD~1 HEAD | grep -E "^src/(game|runtime)/"; then
+            echo "game=true" >> $GITHUB_OUTPUT
+          else
+            echo "game=false" >> $GITHUB_OUTPUT
+          fi
+        else
+          # For tags and manual dispatch, build all selected components
+          echo "editor=${{ github.event.inputs.build_editor || 'true' }}" >> $GITHUB_OUTPUT
+          echo "engine=${{ github.event.inputs.build_engine || 'true' }}" >> $GITHUB_OUTPUT
+          echo "game=${{ github.event.inputs.build_game || 'true' }}" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Check if release
+      id: release
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          echo "is_release=true" >> $GITHUB_OUTPUT
+        else
+          echo "is_release=false" >> $GITHUB_OUTPUT
+        fi
+
+  # Build Editor if needed
+  build-editor:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.build_editor == 'true'
+    uses: ./.github/workflows/build-editor.yml
+    secrets: inherit
+    with:
+      build_type: ${{ github.event.inputs.build_type || 'Release' }}
+      upload_artifact: ${{ github.event.inputs.upload_artifacts || 'true' }}
+
+  # Build Engine if needed
+  build-engine:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.engine == 'true'
+    uses: ./.github/workflows/build-engine.yml
+    secrets: inherit
+    with:
+      platform: ${{ github.event.inputs.platform || 'all' }}
+      build_type: ${{ github.event.inputs.build_type || 'Release' }}
+      upload_artifact: ${{ github.event.inputs.upload_artifacts || 'true' }}
+
+  # Build Game if needed
+  build-game:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.game == 'true'
+    uses: ./.github/workflows/build-game.yml
+    secrets: inherit
+    with:
+      platform: ${{ github.event.inputs.platform || 'all' }}
+      build_type: ${{ github.event.inputs.build_type || 'Release' }}
+      upload_artifact: ${{ github.event.inputs.upload_artifacts || 'true' }}
+
+  # Create combined release
+  create-release:
+    needs: [detect-changes, build-editor, build-engine, build-game]
+    runs-on: ubuntu-latest
+    if: needs.detect-changes.outputs.is_release == 'true'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Prepare release
+      run: |
+        mkdir -p PrismaEngine-${{ github.ref_name }}
+
+        # Collect all artifacts
+        for artifact in artifacts/*; do
+          if [ -d "$artifact" ]; then
+            cp -r "$artifact"/* "PrismaEngine-${{ github.ref_name }}/"
+          fi
+        done
+
+        # Create comprehensive README
+        cat > PrismaEngine-${{ github.ref_name }}/README.md << EOF
+        # Prisma Engine ${{ github.ref_name }}
+
+        This package contains all Prisma Engine components.
+
+        ## Contents
+
+        ### Editor
+        - Windows: PrismaEditor-*.zip
+          - Prisma Engine Editor with integrated tools
+          - Requirements: Windows 10+, DirectX 12, 4GB RAM
+
+        ### Engine SDK
+        - Windows: PrismaEngine-*.zip
+          - Static libraries and headers
+          - For integration into custom applications
+        - Android: PrismaEngine-android-*.tar.gz
+          - Shared libraries for mobile development
+          - ARM64 and ARMv7 support
+
+        ### Game
+        - Windows: PrismaGame-*.zip
+          - Standalone game runtime
+          - Includes sample projects
+        - Android: PrismaGame-android-*.tar.gz
+          - Android game project template
+
+        ## Quick Start
+
+        1. **Using the Editor**
+           - Extract `PrismaEditor-win64-Release.zip`
+           - Run `Editor.exe`
+
+        2. **Developing with the Engine**
+           - Extract the appropriate Engine SDK for your platform
+           - Follow integration instructions in the package
+
+        3. **Playing the Game**
+           - Extract `PrismaGame-x64-Release.zip`
+           - Run `Runtime.exe` or `RunGame.bat`
+
+        ## Documentation
+
+        For detailed documentation, visit the project repository.
+        EOF
+
+        # Create final archive
+        tar czf PrismaEngine-Complete-${{ github.ref_name }}.tar.gz PrismaEngine-${{ github.ref_name }}
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          PrismaEngine-Complete-*.tar.gz
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+        name: Prisma Engine ${{ github.ref_name }}
+        body: |
+          ## Prisma Engine ${{ github.ref_name }}
+
+          🎮 A complete game engine solution
+
+          ### 📦 Complete Package
+          Download `PrismaEngine-Complete-${{ github.ref_name }}.tar.gz` for all components.
+
+          ### 🔧 Individual Components
+          Individual component artifacts are also available for selective download.
+
+          ### 🚀 What's New
+          ${{ github.event.head_commit.message }}
+
+          ### 📋 System Requirements
+          - **Editor**: Windows 10+, DirectX 12, 4GB RAM (8GB recommended)
+          - **Engine SDK**: Windows 10+ or Android 7.0+
+          - **Game**: Windows 10+ or Android 7.0+
+
+          ### 📚 Documentation
+          See README in the package for detailed usage instructions.
+
+          ---
+          Built with ❤️ using GitHub Actions
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
