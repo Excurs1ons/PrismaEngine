@@ -1,6 +1,6 @@
 # PrismaEngine Android Build
 
-此目录包含构建PrismaEngine为Android动态库（libengine.so）的配置文件。
+此目录包含构建PrismaEngine为Android动态库（libEngine.so）的配置文件。
 
 ## 环境要求
 
@@ -100,8 +100,8 @@ cmake --build .
 
 ## 输出文件
 
-构建成功后，libengine.so将位于：
-- `build-android/install/<abi>/lib/libengine.so`
+构建成功后，libEngine.so将位于：
+- `build-android/install/<abi>/lib/libEngine.so`
 
 支持的ABI架构：
 - `arm64-v8a` - ARM 64位（推荐）
@@ -125,16 +125,16 @@ Android版本会自动排除Windows特定代码，并使用以下替代方案：
 
 ## 集成到Android项目
 
-将生成的libengine.so和头文件复制到Android项目的相应位置：
+将生成的libEngine.so和头文件复制到Android项目的相应位置：
 
 ```
 YourAndroidProject/
 ├── app/
 │   ├── src/main/
 │   │   ├── jniLibs/
-│   │   │   ├── arm64-v8a/libengine.so
-│   │   │   ├── armeabi-v7a/libengine.so
-│   │   │   └── x86/libengine.so
+│   │   │   ├── arm64-v8a/libEngine.so
+│   │   │   ├── armeabi-v7a/libEngine.so
+│   │   │   └── x86/libEngine.so
 │   │   └── cpp/
 │   │       └── include/
 │   │           └── prisma/
