@@ -72,6 +72,9 @@ chmod +x scripts/build-android.sh
 ### 方法2：使用CMake Presets
 
 ```bash
+# 进入android目录
+cd android
+
 # 配置项目
 cmake --preset android-arm64
 
@@ -80,6 +83,10 @@ cmake --build --preset android-arm64
 
 # 或者使用workflow一次性构建所有架构
 cmake --workflow android-all
+
+# Debug构建
+cmake --preset android-arm64-debug
+cmake --build --preset android-arm64-debug
 ```
 
 ### 方法3：手动CMake命令
