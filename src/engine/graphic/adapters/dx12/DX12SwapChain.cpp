@@ -134,7 +134,7 @@ bool DX12SwapChain::SetMode(SwapChainMode mode) {
 }
 
 bool DX12SwapChain::Resize(uint32_t width, uint32_t height) {
-    if (!m_device || !m_device->GetSwapChain()) {
+    if (!m_device || !m_device->GetDXGISwapChain()) {
         return false;
     }
 
@@ -200,7 +200,7 @@ void DX12SwapChain::ResetStats() {
 }
 
 bool DX12SwapChain::IsFullscreen() const {
-    if (!m_device || !m_device->GetSwapChain()) {
+    if (!m_device || !m_device->GetDXGISwapChain()) {
         return false;
     }
 
@@ -212,7 +212,7 @@ bool DX12SwapChain::IsFullscreen() const {
 }
 
 bool DX12SwapChain::SetFullscreen(bool fullscreen) {
-    if (!m_device || !m_device->GetSwapChain()) {
+    if (!m_device || !m_device->GetDXGISwapChain()) {
         return false;
     }
 
@@ -222,7 +222,7 @@ bool DX12SwapChain::SetFullscreen(bool fullscreen) {
 }
 
 bool DX12SwapChain::Screenshot(const std::string& filename, uint32_t bufferIndex) {
-    if (!m_device || !m_device->GetSwapChain()) {
+    if (!m_device || !m_device->GetDXGISwapChain()) {
         return false;
     }
 
@@ -279,7 +279,7 @@ std::unique_ptr<DX12SwapChain> DX12SwapChain::Clone() const {
 }
 
 IDXGISwapChain3* DX12SwapChain::GetDXGISwapChain() const {
-    return m_device ? m_device->GetSwapChain() : nullptr;
+    return m_device ? m_device->GetDXGISwapChain() : nullptr;
 }
 
 // 私有方法

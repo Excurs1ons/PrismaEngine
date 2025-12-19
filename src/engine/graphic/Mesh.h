@@ -1,8 +1,8 @@
 
 #pragma once
 #define NOMINMAX
-#include "RenderBackendDirectX12.h"
 #include "ResourceBase.h"
+#include <DirectXMath.h>
 #include <DirectXCollision.h>
 #include <DirectXColors.h>
 #include <DirectXPackedVector.h>
@@ -10,6 +10,7 @@
 #include "Handle.h"
 
 using namespace Engine;
+using namespace DirectX;
 
 // ... 其他资源类型
 struct Vertex

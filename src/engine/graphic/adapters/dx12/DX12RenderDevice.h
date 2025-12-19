@@ -25,7 +25,7 @@ class DX12SwapChain;
 class DX12ResourceFactory;
 
 /// @brief DirectX12渲染设备适配器
-/// 实现IRenderDevice接口，包装现有的RenderBackendDirectX12
+/// 实现IRenderDevice接口，独立DirectX 12实现
 class DX12RenderDevice : public IRenderDevice {
 public:
     /// @brief 构造函数
@@ -124,9 +124,9 @@ public:
     /// @brief 等待前一帧完成
     void WaitForPreviousFrame();
 
-    /// @brief 获取交换链
+    /// @brief 获取DXGI交换链
     /// @return DXGI交换链指针
-    IDXGISwapChain3* GetSwapChain() const;
+    IDXGISwapChain3* GetDXGISwapChain() const;
 
     /// @brief 获取渲染目标
     /// @param bufferIndex 缓冲区索引
