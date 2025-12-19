@@ -16,9 +16,4 @@
 
 namespace PrismaEngine::Graphic::DX12 {
 
-/// @brief 创建DirectX12设备适配器
-/// @param backend 现有的DirectX12后端
-/// @return 设备适配器智能指针
-std::unique_ptr<DX12RenderDevice> CreateDX12RenderDevice(RenderBackendDirectX12* backend);
-
 } // namespace PrismaEngine::Graphic::DX12

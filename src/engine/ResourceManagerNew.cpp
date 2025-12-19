@@ -1,12 +1,12 @@
 #include "ResourceManagerNew.h"
+#include "Engine.h"
 #include "Logger.h"
-#include "../Engine.h"
-#include "interfaces/ITexture.h"
-#include "interfaces/IBuffer.h"
-#include "interfaces/IShader.h"
-#include "interfaces/IResource.h"
-#include "interfaces/IRenderDevice.h"
-#include "interfaces/IResourceFactory.h"
+#include "graphic/interfaces/IBuffer.h"
+#include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/IResource.h"
+#include "graphic/interfaces/IResourceFactory.h"
+#include "graphic/interfaces/IShader.h"
+#include "graphic/interfaces/ITexture.h"
 
 // TODO: Implement image loading without stb_image
 // #define STB_IMAGE_IMPLEMENTATION
