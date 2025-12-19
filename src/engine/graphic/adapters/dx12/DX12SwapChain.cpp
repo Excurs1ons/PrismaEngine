@@ -310,7 +310,7 @@ void DX12SwapChain::CreateRenderTargetAdapters() {
     m_renderTargets.resize(2);
 
     for (UINT i = 0; i < 2; ++i) {
-        if (m_device->GetRenderTarget(i)) {
+        if (m_device->GetRenderTarget(i) != nullptr) {
             // 创建纹理适配器包装现有的渲染目标
             ComPtr<ID3D12Resource> resource;
             HRESULT hr = m_device->GetSwapChainBuffer(i, IID_PPV_ARGS(&resource));
@@ -318,15 +318,15 @@ void DX12SwapChain::CreateRenderTargetAdapters() {
             if (SUCCEEDED(hr)) {
                 TextureDesc desc;
                 desc.type = TextureType::Texture2D;
-                desc.width = m_device->GetViewport().Width;
-                desc.height = m_device->GetViewport().Height;
+                desc.width = static_cast<uint32_t>(m_device->GetViewport().Width);
+                desc.height = static_cast<uint32_t>(m_device->GetViewport().Height);
                 desc.format = TextureFormat::RGBA8_UNorm;
                 desc.allowRenderTarget = true;
                 desc.name = "SwapChainRenderTarget_" + std::to_string(i);
 
                 // 创建纹理适配器
                 m_renderTargets[i] = std::make_unique<DX12Texture>(
-                    (m_device != nullptr) ? nullptr : nullptr, // DX12设备适配器
+                    m_device, // DX12设备适配器
                     resource,
                     desc
                 );
