@@ -46,6 +46,11 @@ on:
         default: true
         type: boolean
 
+env:
+  VCPKG_VERSION: 'latest'
+  CMAKE_VERSION: '3.31.0'
+  ANDROID_NDK_VERSION: 27.0.12077973
+
 jobs:
   # Determine what to build based on changes
   detect-changes:
@@ -102,33 +107,349 @@ jobs:
   build-editor:
     needs: detect-changes
     if: needs.detect-changes.outputs.build_editor == 'true'
-    uses: ./.github/workflows/build-editor.yml
-    secrets: inherit
-    with:
-      build_type: ${{ github.event.inputs.build_type || 'Release' }}
-      upload_artifact: ${{ github.event.inputs.upload_artifacts || 'true' }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        platform: [x64, x86]
+        include:
+          - platform: x64
+            arch: x64
+            artifact_suffix: win64
+          - platform: x86
+            arch: Win32
+            artifact_suffix: win32
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg_installed
+          C:/vcpkg
+        key: vcpkg-editor-${{ matrix.platform }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-editor-${{ matrix.platform }}-${{ matrix.build_type }}-
+          vcpkg-editor-${{ matrix.platform }}-
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup vcpkg
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.bat
+        ./vcpkg/vcpkg integrate install
+
+    - name: Configure CMake
+      run: |
+        cmake -B build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          -G "Visual Studio 17 2022" `
+          -A ${{ matrix.arch }} `
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform }}-windows
+
+    - name: Build
+      run: |
+        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          --config ${{ matrix.build_type }} `
+          --target Editor `
+          --parallel
+
+    - name: Package
+      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
+      run: |
+        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
+        # Copy executable
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/Editor.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
+        # Copy required DLLs
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No DLLs to copy"
+        # Copy assets
+        xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
+        # Create archive
+        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
+        7z a ../PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip *
+
+    - name: Upload artifacts
+      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
+        path: PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip
+        retention-days: 30
 
   # Build Engine if needed
   build-engine:
     needs: detect-changes
     if: needs.detect-changes.outputs.engine == 'true'
-    uses: ./.github/workflows/build-engine.yml
-    secrets: inherit
-    with:
-      platform: ${{ github.event.inputs.platform || 'all' }}
-      build_type: ${{ github.event.inputs.build_type || 'Release' }}
-      upload_artifact: ${{ github.event.inputs.upload_artifacts || 'true' }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            build_type: Release
+            arch: x64
+            artifact_suffix: win64
+          - os: windows-latest
+            platform: windows
+            build_type: Debug
+            arch: x64
+            artifact_suffix: win64-debug
+          - os: windows-latest
+            platform: windows
+            build_type: Release
+            arch: Win32
+            artifact_suffix: win32
+          - os: windows-latest
+            platform: windows
+            build_type: Debug
+            arch: Win32
+            artifact_suffix: win32-debug
+          - os: ubuntu-latest
+            platform: android
+            build_type: Release
+            abi: arm64-v8a
+            artifact_suffix: android-arm64
+          - os: ubuntu-latest
+            platform: android
+            build_type: Release
+            abi: armeabi-v7a
+            artifact_suffix: android-arm32
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Windows specific setup
+    - name: Cache vcpkg (Windows)
+      if: matrix.platform == 'windows'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg_installed
+          C:/vcpkg
+        key: vcpkg-engine-${{ matrix.arch }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-engine-${{ matrix.arch }}-${{ matrix.build_type }}-
+          vcpkg-engine-${{ matrix.arch }}-
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup vcpkg (Windows)
+      if: matrix.platform == 'windows' && steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.bat
+        ./vcpkg/vcpkg integrate install
+
+    - name: Configure CMake (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        cmake -B build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} `
+          -G "Visual Studio 17 2022" `
+          -A ${{ matrix.arch }} `
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.arch }}-windows
+
+    - name: Build Engine (Windows)
+      if: matrix.platform == 'windows'
+      run: |
+        cmake --build build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} `
+          --config ${{ matrix.build_type }} `
+          --target Engine `
+          --parallel
+
+    # Android specific setup
+    - name: Setup Android NDK
+      if: matrix.platform == 'android'
+      uses: android-actions/setup-android@v3
+
+    - name: Setup NDK
+      if: matrix.platform == 'android'
+      run: |
+        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+
+    - name: Setup Ninja (Android)
+      if: matrix.platform == 'android'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: Cache vcpkg (Android)
+      if: matrix.platform == 'android'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./vcpkg_installed
+        key: vcpkg-engine-android-${{ matrix.abi }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-engine-android-${{ matrix.abi }}-
+
+    - name: Setup vcpkg (Android)
+      if: matrix.platform == 'android' && steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.sh
+        ./vcpkg/vcpkg install sdl3 imgui nlohmann-json vulkan --triplet ${{ matrix.abi }}-android
+
+    - name: Configure CMake (Android)
+      if: matrix.platform == 'android'
+      run: |
+        cmake -S android -B build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} \
+          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=24 \
+          -DANDROID_STL=c++_shared \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -G Ninja
+
+    - name: Build Engine (Android)
+      if: matrix.platform == 'android'
+      run: |
+        cmake --build build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} \
+          --config ${{ matrix.build_type }} \
+          --parallel 2
+
+    - name: Package (Windows)
+      if: matrix.platform == 'windows' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
+      run: |
+        mkdir -p package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}
+        mkdir -p package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/include
+
+        # Copy library files
+        copy build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/PrismaEngine.lib package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/
+
+        # Copy headers
+        xcopy src/engine\*.h package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/include /E /I /Y 2>nul || echo "No headers to copy"
+
+        # Create archive
+        cd package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
+        7z a ../PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip *
+
+    - name: Package (Android)
+      if: matrix.platform == 'android' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
+      run: |
+        mkdir -p artifacts/${{ matrix.abi }}
+        cmake --install build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} \
+          --config ${{ matrix.build_type }} \
+          --prefix artifacts/${{ matrix.abi }}
+        tar czf PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.tar.gz -C artifacts .
+
+    - name: Upload artifacts (Windows)
+      if: matrix.platform == 'windows' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
+        path: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip
+        retention-days: 30
+
+    - name: Upload artifacts (Android)
+      if: matrix.platform == 'android' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
+        path: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.tar.gz
+        retention-days: 30
 
   # Build Game if needed
   build-game:
     needs: detect-changes
     if: needs.detect-changes.outputs.game == 'true'
-    uses: ./.github/workflows/build-game.yml
-    secrets: inherit
-    with:
-      platform: ${{ github.event.inputs.platform || 'all' }}
-      build_type: ${{ github.event.inputs.build_type || 'Release' }}
-      upload_artifact: ${{ github.event.inputs.upload_artifacts || 'true' }}
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        platform: [x64]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ github.workspace }}/vcpkg_installed
+          C:/vcpkg
+        key: vcpkg-game-${{ matrix.platform }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-game-${{ matrix.platform }}-${{ matrix.build_type }}-
+          vcpkg-game-${{ matrix.platform }}-
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup vcpkg
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.bat
+        ./vcpkg/vcpkg integrate install
+
+    - name: Configure CMake
+      run: |
+        cmake -B build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          -G "Visual Studio 17 2022" `
+          -A ${{ matrix.platform }} `
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
+          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform }}-windows
+
+    - name: Build Runtime
+      run: |
+        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          --config ${{ matrix.build_type }} `
+          --target Runtime `
+          --parallel
+
+    - name: Build Game
+      run: |
+        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
+          --config ${{ matrix.build_type }} `
+          --target Game `
+          --parallel
+
+    - name: Package
+      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
+      run: |
+        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
+
+        # Copy executables and DLLs
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/Runtime.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
+        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No additional DLLs"
+
+        # Copy game data
+        xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
+        xcopy projects package-${{ matrix.platform }}-${{ matrix.build_type }}/projects /E /I /Y 2>nul || echo "No projects to copy"
+
+        # Create archive
+        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
+        7z a ../PrismaGame-${{ matrix.platform }}-${{ matrix.build_type }}.zip *
+
+    - name: Upload artifacts
+      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaGame-${{ matrix.platform }}-${{ matrix.build_type }}
+        path: PrismaGame-${{ matrix.platform }}-${{ matrix.build_type }}.zip
+        retention-days: 30
 
   # Create combined release
   create-release:
@@ -157,8 +478,8 @@ jobs:
         done
 
         # Create comprehensive README
-        cat > PrismaEngine-${{ github.ref_name }}/README.md << EOF
-        # Prisma Engine ${{ github.ref_name }}
+        cat > PrismaEngine-${{ github.ref_name }}/README.md << 'EOF'
+        # Prisma Engine
 
         This package contains all Prisma Engine components.
 
@@ -166,23 +487,13 @@ jobs:
 
         ### Editor
         - Windows: PrismaEditor-*.zip
-          - Prisma Engine Editor with integrated tools
-          - Requirements: Windows 10+, DirectX 12, 4GB RAM
 
         ### Engine SDK
         - Windows: PrismaEngine-*.zip
-          - Static libraries and headers
-          - For integration into custom applications
         - Android: PrismaEngine-android-*.tar.gz
-          - Shared libraries for mobile development
-          - ARM64 and ARMv7 support
 
         ### Game
         - Windows: PrismaGame-*.zip
-          - Standalone game runtime
-          - Includes sample projects
-        - Android: PrismaGame-android-*.tar.gz
-          - Android game project template
 
         ## Quick Start
 
@@ -196,11 +507,7 @@ jobs:
 
         3. **Playing the Game**
            - Extract `PrismaGame-x64-Release.zip`
-           - Run `Runtime.exe` or `RunGame.bat`
-
-        ## Documentation
-
-        For detailed documentation, visit the project repository.
+           - Run `Runtime.exe`
         EOF
 
         # Create final archive
