@@ -580,25 +580,25 @@ D3D12_BLEND_OP DX12PipelineState::GetD3D12BlendOp(BlendOp op) const {
     }
 }
 
-D3D12_BLEND DX12PipelineState::GetD3D12Blend(BlendFactor factor) const {
+D3D12_BLEND DX12PipelineState::GetD3D12Blend(BlendFactorType factor) const {
     switch (factor) {
-        case BlendFactor::Zero: return D3D12_BLEND_ZERO;
-        case BlendFactor::One: return D3D12_BLEND_ONE;
-        case BlendFactor::SrcColor: return D3D12_BLEND_SRC_COLOR;
-        case BlendFactor::InvSrcColor: return D3D12_BLEND_INV_SRC_COLOR;
-        case BlendFactor::SrcAlpha: return D3D12_BLEND_SRC_ALPHA;
-        case BlendFactor::InvSrcAlpha: return D3D12_BLEND_INV_SRC_ALPHA;
-        case BlendFactor::DstAlpha: return D3D12_BLEND_DEST_ALPHA;
-        case BlendFactor::InvDstAlpha: return D3D12_BLEND_INV_DEST_ALPHA;
-        case BlendFactor::DstColor: return D3D12_BLEND_DEST_COLOR;
-        case BlendFactor::InvDstColor: return D3D12_BLEND_INV_DEST_COLOR;
-        case BlendFactor::SrcAlphaSat: return D3D12_BLEND_SRC_ALPHA_SAT;
-        case BlendFactor::BlendFactor: return D3D12_BLEND_BLEND_FACTOR;
-        case BlendFactor::InvBlendFactor: return D3D12_BLEND_INV_BLEND_FACTOR;
-        case BlendFactor::Src1Color: return D3D12_BLEND_SRC1_COLOR;
-        case BlendFactor::InvSrc1Color: return D3D12_BLEND_INV_SRC1_COLOR;
-        case BlendFactor::Src1Alpha: return D3D12_BLEND_SRC1_ALPHA;
-        case BlendFactor::InvSrc1Alpha: return D3D12_BLEND_INV_SRC1_ALPHA;
+        case BlendFactorType::Zero: return D3D12_BLEND_ZERO;
+        case BlendFactorType::One: return D3D12_BLEND_ONE;
+        case BlendFactorType::SrcColor: return D3D12_BLEND_SRC_COLOR;
+        case BlendFactorType::InvSrcColor: return D3D12_BLEND_INV_SRC_COLOR;
+        case BlendFactorType::SrcAlpha: return D3D12_BLEND_SRC_ALPHA;
+        case BlendFactorType::InvSrcAlpha: return D3D12_BLEND_INV_SRC_ALPHA;
+        case BlendFactorType::DstAlpha: return D3D12_BLEND_DEST_ALPHA;
+        case BlendFactorType::InvDstAlpha: return D3D12_BLEND_INV_DEST_ALPHA;
+        case BlendFactorType::DstColor: return D3D12_BLEND_DEST_COLOR;
+        case BlendFactorType::InvDstColor: return D3D12_BLEND_INV_DEST_COLOR;
+        case BlendFactorType::SrcAlphaSat: return D3D12_BLEND_SRC_ALPHA_SAT;
+        case BlendFactorType::BlendFactor: return D3D12_BLEND_BLEND_FACTOR;
+        case BlendFactorType::InvBlendFactor: return D3D12_BLEND_INV_BLEND_FACTOR;
+        case BlendFactorType::Src1Color: return D3D12_BLEND_SRC1_COLOR;
+        case BlendFactorType::InvSrc1Color: return D3D12_BLEND_INV_SRC1_COLOR;
+        case BlendFactorType::Src1Alpha: return D3D12_BLEND_SRC1_ALPHA;
+        case BlendFactorType::InvSrc1Alpha: return D3D12_BLEND_INV_SRC1_ALPHA;
         default: return D3D12_BLEND_ONE;
     }
 }

@@ -297,7 +297,7 @@ enum class BlendOp {
 };
 
 // 混合因子
-enum class BlendFactor {
+enum class BlendFactorType {
     Zero,
     One,
     SrcColor,
@@ -309,6 +309,7 @@ enum class BlendFactor {
     DstColor,
     InvDstColor,
     SrcAlphaSat,
+    BlendFactor,
     InvBlendFactor,
     Src1Color,
     InvSrc1Color,
