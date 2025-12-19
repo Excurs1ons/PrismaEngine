@@ -105,8 +105,8 @@ jobs:
 
   # Build Editor if needed
   build-editor:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.build_editor == 'true'
+    needs: [detect-changes, build-engine]
+    if: needs.detect-changes.outputs.build_editor == 'true' && (needs.detect-changes.outputs.engine == 'false' || needs.build-engine.result == 'success')
     runs-on: windows-latest
     strategy:
       matrix:
@@ -367,8 +367,8 @@ jobs:
 
   # Build Game if needed
   build-game:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.game == 'true'
+    needs: [detect-changes, build-engine]
+    if: needs.detect-changes.outputs.game == 'true' && (needs.detect-changes.outputs.engine == 'false' || needs.build-engine.result == 'success')
     runs-on: windows-latest
     strategy:
       matrix:
