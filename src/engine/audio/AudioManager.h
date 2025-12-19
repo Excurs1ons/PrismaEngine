@@ -1,287 +1,298 @@
 #pragma once
 
-#include <string>
+#include "AudioTypes.h"
+#include "IAudioDevice.h"
 #include <memory>
 #include <unordered_map>
-#include <vector>
+#include <string>
 #include <functional>
-#include <mutex>
-#include <DirectXMath.h>
 
-namespace Engine {
-namespace Audio {
+namespace Engine::Audio {
 
-// 音频格式
-enum class AudioFormat {
-    Unknown,
-    PCM,
-    Vorbis,
-    MP3,
-    WAV,
-    FLAC
-};
+// 前置声明
+class IAudioLoader;
+class LoadTask;
 
-// 音频采样率
-enum class SampleRate {
-    Hz22050 = 22050,
-    Hz44100 = 44100,
-    Hz48000 = 48000,
-    Hz96000 = 96000
-};
-
-// 音频声道数
-enum class AudioChannels {
-    Mono = 1,
-    Stereo = 2,
-    Quad = 4,
-    FivePointOne = 6,
-    SevenPointOne = 8
-};
-
-// 音频数据
-struct AudioData {
-    AudioFormat format = AudioFormat::PCM;
-    SampleRate sampleRate = SampleRate::Hz44100;
-    AudioChannels channels = AudioChannels::Stereo;
-    uint32_t bitsPerSample = 16;
-    std::vector<uint8_t> rawData;
-    uint32_t size = 0;
-    float duration = 0.0f;
-};
-
-// 音频状态
-enum class AudioState {
-    Stopped,
-    Playing,
-    Paused,
-    FadingIn,
-    FadingOut
-};
-
-// 音频源
-class AudioSource {
-public:
-    AudioSource();
-    ~AudioSource();
-
-    // 音频控制
-    void Play();
-    void Pause();
-    void Stop();
-    void Resume();
-
-    // 属性设置
-    void SetVolume(float volume);
-    void SetPitch(float pitch);
-    void SetPan(float pan); // -1.0 (left) to 1.0 (right)
-    void SetLoop(bool loop);
-
-    // 3D音频
-    void Set3DPosition(const DirectX::XMFLOAT3& position);
-    void Set3DVelocity(const DirectX::XMFLOAT3& velocity);
-    void Set3DDistance(float minDistance, float maxDistance);
-    void Set3DCone(float innerAngle, float outerAngle, float outerVolume);
-
-    // 获取状态
-    AudioState GetState() const { return m_state; }
-    float GetVolume() const { return m_volume; }
-    float GetPitch() const { return m_pitch; }
-    float GetPan() const { return m_pan; }
-    bool IsLooping() const { return m_loop; }
-
-    // 获取播放进度
-    float GetPlaybackTime() const;
-    void SetPlaybackTime(float time);
-
-    // 音频数据
-    void SetAudioData(std::shared_ptr<const AudioData> data);
-    std::shared_ptr<const AudioData> GetAudioData() const { return m_audioData; }
-
-private:
-    // 音频数据
-    std::shared_ptr<const AudioData> m_audioData;
-
-    // 状态
-    AudioState m_state = AudioState::Stopped;
-    float m_volume = 1.0f;
-    float m_pitch = 1.0f;
-    float m_pan = 0.0f;
-    bool m_loop = false;
-
-    // 播放控制
-    uint32_t m_currentSample = 0;
-    float m_playbackTime = 0.0f;
-
-    // 3D属性
-    DirectX::XMFLOAT3 m_position = DirectX::XMFLOAT3(0, 0, 0);
-    DirectX::XMFLOAT3 m_velocity = DirectX::XMFLOAT3(0, 0, 0);
-    float m_minDistance = 1.0f;
-    float m_maxDistance = 100.0f;
-    float m_innerConeAngle = DirectX::XM_PIDIV2;
-    float m_outerConeAngle = DirectX::XM_PI;
-    float m_outerConeVolume = 0.0f;
-
-    // 内部缓冲区句柄
-    void* m_bufferHandle = nullptr;
-    void* m_sourceHandle = nullptr;
-};
-
-// 音频监听器（3D音频）
-class AudioListener {
-public:
-    AudioListener();
-
-    // 位置和朝向
-    void SetPosition(const DirectX::XMFLOAT3& position);
-    void SetVelocity(const DirectX::XMFLOAT3& velocity);
-    void SetOrientation(const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& up);
-
-    // 获取属性
-    const DirectX::XMFLOAT3& GetPosition() const { return m_position; }
-    const DirectX::XMFLOAT3& GetVelocity() const { return m_velocity; }
-    const DirectX::XMFLOAT3& GetForward() const { return m_forward; }
-    const DirectX::XMFLOAT3& GetUp() const { return m_up; }
-
-private:
-    DirectX::XMFLOAT3 m_position = DirectX::XMFLOAT3(0, 0, 0);
-    DirectX::XMFLOAT3 m_velocity = DirectX::XMFLOAT3(0, 0, 0);
-    DirectX::XMFLOAT3 m_forward = DirectX::XMFLOAT3(0, 0, -1);
-    DirectX::XMFLOAT3 m_up = DirectX::XMFLOAT3(0, 1, 0);
-};
-
-// 音频管理器
+/// @brief 统一的音频管理器
+/// 这是音频系统的主入口，管理音频设备的生命周期和提供便利接口
 class AudioManager {
 public:
-    static AudioManager& GetInstance();
-
-    // 初始化
-    bool Initialize(int maxSources = 256);
-    void Shutdown();
-
-    // 音频资源管理
-    std::shared_ptr<const AudioData> LoadAudio(const std::string& filePath);
-    void UnloadAudio(const std::string& filePath);
-    void UnloadAllAudio();
-
-    // 音频源管理
-    std::shared_ptr<AudioSource> CreateSource();
-    void DestroySource(std::shared_ptr<AudioSource> source);
-
-    // 快速播放
-    std::shared_ptr<AudioSource> PlayAudio(const std::string& filePath,
-                                          float volume = 1.0f,
-                                          bool loop = false);
-
-    // 3D音频
-    std::shared_ptr<AudioSource> PlayAudio3D(const std::string& filePath,
-                                           const DirectX::XMFLOAT3& position,
-                                           float volume = 1.0f,
-                                           bool loop = false);
-
-    // 监听器
-    const AudioListener& GetListener() const { return m_listener; }
-    void SetListener(const AudioListener& listener) { m_listener = listener; }
-
-    // 主音量
-    void SetMasterVolume(float volume);
-    float GetMasterVolume() const { return m_masterVolume; }
-
-    // 音频设备
-    struct DeviceInfo {
-        std::string name;
-        std::string driver;
-        bool isDefault = false;
-        int maxSources = 0;
-    };
-
-    std::vector<DeviceInfo> GetAvailableDevices() const;
-    bool SetDevice(const std::string& deviceName);
-    std::string GetCurrentDevice() const { return m_currentDevice; }
-
-    // 更新（每帧调用）
-    void Update();
-
-    // 音频设置
-    struct AudioSettings {
-        SampleRate sampleRate = SampleRate::Hz44100;
-        AudioChannels channels = AudioChannels::Stereo;
-        int bufferSize = 512;
-        int maxSources = 256;
-        bool enableHRTF = false; // Head-related transfer function
-        float dopplerFactor = 1.0f;
-        float speedOfSound = 343.3f; // m/s
-    };
-
-    void ApplySettings(const AudioSettings& settings);
-    const AudioSettings& GetSettings() const { return m_settings; }
-
-    // 调试信息
-    struct AudioStats {
-        uint32_t loadedAudioFiles = 0;
-        uint32_t activeSources = 0;
-        uint32_t playingSources = 0;
-        uint64_t memoryUsage = 0;
-    };
-
-    AudioStats GetStats() const;
-
-private:
     AudioManager() = default;
     ~AudioManager();
 
-    AudioManager(const AudioManager&) = delete;
-    AudioManager& operator=(const AudioManager&) = delete;
+    // ========== 初始化和关闭 ==========
 
-    // 音频加载
-    std::shared_ptr<AudioData> LoadWAV(const std::string& filePath);
-    std::shared_ptr<AudioData> LoadOGG(const std::string& filePath);
-    std::shared_ptr<AudioData> LoadMP3(const std::string& filePath);
+    /// @brief 初始化音频系统
+    /// @param desc 音频系统描述
+    /// @return 是否初始化成功
+    bool Initialize(const AudioDesc& desc = {});
 
-    // 音频解码
-    bool DecodeAudio(const std::string& filePath, AudioData& outData);
+    /// @brief 关闭音频系统
+    void Shutdown();
 
-    // 线程安全
+    /// @brief 检查是否已初始化
+    bool IsInitialized() const;
+
+    /// @brief 更新音频系统（每帧调用）
+    /// @param deltaTime 时间增量（秒）
+    void Update(float deltaTime);
+
+    // ========== 基本播放接口（便利方法）==========
+
+    /// @brief 播放音频
+    /// @param path 音频文件路径
+    /// @param volume 音量 (0-1)
+    /// @param volume 是否循环
+    /// @return 音频Voice ID
+    AudioVoiceId Play(const std::string& path, float volume = 1.0f, bool loop = false);
+
+    /// @brief 播放3D音频
+    /// @param path 音频文件路径
+    /// @param position 位置 (x, y, z)
+    /// @param volume 音量 (0-1)
+    /// @param volume 是否循环
+    /// @return 音频Voice ID
+    AudioVoiceId Play3D(const std::string& path, const float position[3],
+                       float volume = 1.0f, bool loop = false);
+
+    /// @brief 播放音频（完整控制）
+    /// @param path 音频文件路径
+    /// @param desc 播放描述
+    /// @return 音频Voice ID
+    AudioVoiceId Play(const std::string& path, const PlayDesc& desc);
+
+    /// @brief 直接播放音频剪辑
+    /// @param clip 音频剪辑
+    /// @param desc 播放描述
+    /// @return 音频Voice ID
+    AudioVoiceId PlayClip(const AudioClip& clip, const PlayDesc& desc = {});
+
+    // ========== 播放控制 ==========
+
+    /// @brief 停止音频
+    /// @param voiceId 音频Voice ID
+    void Stop(AudioVoiceId voiceId);
+
+    /// @brief 暂停音频
+    /// @param voiceId 音频Voice ID
+    void Pause(AudioVoiceId voiceId);
+
+    /// @brief 恢复音频
+    /// @param voiceId 音频Voice ID
+    void Resume(AudioVoiceId voiceId);
+
+    /// @brief 停止所有音频
+    void StopAll();
+
+    /// @brief 暂停所有音频
+    void PauseAll();
+
+    /// @brief 恢复所有音频
+    void ResumeAll();
+
+    // ========== 实时控制 ==========
+
+    /// @brief 设置音量
+    /// @param voiceId 音频Voice ID
+    /// @param volume 音量 (0-1)
+    void SetVolume(AudioVoiceId voiceId, float volume);
+
+    /// @brief 设置音调
+    /// @param voiceId 音频Voice ID
+    /// @param pitch 音调倍数 (0.5-2.0)
+    void SetPitch(AudioVoiceId voiceId, float pitch);
+
+    /// @brief 设置播放位置
+    /// @param voiceId 音频Voice ID
+    /// @param time 时间位置（秒）
+    void SetPlaybackPosition(AudioVoiceId voiceId, float time);
+
+    // ========== 3D音频 ==========
+
+    /// @brief 设置音频源3D位置
+    /// @param voiceId 音频Voice ID
+    /// @param x X坐标
+    /// @param y Y坐标
+    /// @param z Z坐标
+    void SetVoice3DPosition(AudioVoiceId voiceId, float x, float y, float z);
+
+    /// @brief 设置音频源3D属性
+    /// @param voiceId 音频Voice ID
+    /// @param attributes 3D属性
+    void SetVoice3DAttributes(AudioVoiceId voiceId, const Audio3DAttributes& attributes);
+
+    /// @brief 设置监听器（听者）
+    /// @param listener 监听器属性
+    void SetListener(const AudioListener& listener);
+
+    // ========== 全局控制 ==========
+
+    /// @brief 设置主音量
+    /// @param volume 主音量 (0-1)
+    void SetMasterVolume(float volume);
+
+    /// @brief 获取主音量
+    float GetMasterVolume() const;
+
+    /// @brief 设置距离模型
+    /// @param model 距离模型
+    void SetDistanceModel(DistanceModel model);
+
+    // ========== 资源管理 ==========
+
+    /// @brief 加载音频剪辑
+    /// @param path 音频文件路径
+    /// @param async 是否异步加载
+    /// @return 音频剪辑智能指针
+    std::shared_ptr<AudioClip> LoadClip(const std::string& path, bool async = false);
+
+    /// @brief 异步加载音频剪辑
+    /// @param path 音频文件路径
+    /// @return 加载任务
+    LoadTask LoadClipAsync(const std::string& path);
+
+    /// @brief 卸载音频剪辑
+    /// @param path 音频文件路径
+    void UnloadClip(const std::string& path);
+
+    /// @brief 预加载音频
+    /// @param paths 音频文件路径列表
+    void Preload(const std::vector<std::string>& paths);
+
+    // ========== 查询 ==========
+
+    /// @brief 检查音频是否正在播放
+    /// @param voiceId 音频Voice ID
+    bool IsPlaying(AudioVoiceId voiceId);
+
+    /// @brief 检查音频是否已暂停
+    /// @param voiceId 音频Voice ID
+    bool IsPaused(AudioVoiceId voiceId);
+
+    /// @brief 检查音频是否已停止
+    /// @param voiceId 音频Voice ID
+    bool IsStopped(AudioVoiceId voiceId);
+
+    /// @brief 获取音频播放位置
+    /// @param voiceId 音频Voice ID
+    /// @return 播放位置（秒）
+    float GetPlaybackPosition(AudioVoiceId voiceId);
+
+    /// @brief 获取音频时长
+    /// @param voiceId 音频Voice ID
+    /// @return 时长（秒）
+    float GetDuration(AudioVoiceId voiceId);
+
+    /// @brief 获取当前正在播放的音频数量
+    uint32_t GetPlayingVoiceCount() const;
+
+    // ========== 设备信息 ==========
+
+    /// @brief 获取当前设备信息
+    DeviceInfo GetDeviceInfo() const;
+
+    /// @brief 获取所有可用设备
+    std::vector<DeviceInfo> GetAvailableDevices() const;
+
+    /// @brief 设置音频设备
+    /// @param deviceName 设备名称
+    /// @return 是否成功
+    bool SetDevice(const std::string& deviceName);
+
+    /// @brief 获取音频设备类型
+    AudioDeviceType GetDeviceType() const;
+
+    // ========== 事件系统 ==========
+
+    /// @brief 设置事件回调
+    /// @param callback 回调函数
+    void SetEventCallback(AudioEventCallback callback);
+
+    /// @brief 移除事件回调
+    void RemoveEventCallback();
+
+    // ========== 统计信息 ==========
+
+    /// @brief 获取音频统计信息
+    AudioStats GetStats() const;
+
+    /// @brief 重置统计信息
+    void ResetStats();
+
+    // ========== 调试功能 ==========
+
+    /// @brief 开始性能分析
+    void BeginProfile();
+
+    /// @brief 结束性能分析
+    /// @return 性能报告
+    std::string EndProfile();
+
+    /// @brief 生成调试报告
+    /// @return 调试信息
+    std::string GenerateDebugReport();
+
+    // ========== 访问设备（高级用户）==========
+
+    /// @brief 获取音频设备
+    /// @warning 谨慎使用，可能绕过管理器的某些功能
+    IAudioDevice* GetDevice() const;
+
+private:
+    // ========== 内部方法 ==========
+
+    /// @brief 创建音频设备
+    /// @param deviceType 设备类型
+    /// @return 设备指针
+    std::unique_ptr<IAudioDevice> CreateDevice(AudioDeviceType deviceType);
+
+    /// @brief 自动选择最佳设备
+    /// @param hint 提示的设备类型
+    /// @return 选择的实际设备类型
+    AudioDeviceType SelectBestDevice(AudioDeviceType hint);
+
+    /// @brief 处理音频事件
+    void HandleAudioEvent(const AudioEvent& event);
+
+    /// @brief 清理已完成的Voice
+    void CleanupFinishedVoices();
+
+    /// @brief 格式化文件路径
+    std::string FormatPath(const std::string& path);
+
+    // ========== 成员变量 ==========
+
+    // 音频设备
+    std::unique_ptr<IAudioDevice> m_device;
+    AudioDeviceType m_currentDevice = AudioDeviceType::Auto;
+
+    // 音频加载器
+    std::unique_ptr<IAudioLoader> m_loader;
+
+    // 音频剪辑缓存
+    std::unordered_map<std::string, std::shared_ptr<AudioClip>> m_clipCache;
+
+    // 活跃Voice列表（用于快速查找）
+    std::unordered_map<AudioVoiceId, std::string> m_voiceToClip;
+
+    // 配置
+    AudioDesc m_desc;
+
+    // 状态
+    std::atomic<bool> m_initialized{false};
     mutable std::mutex m_mutex;
-
-    // 音频资源缓存
-    std::unordered_map<std::string, std::shared_ptr<const AudioData>> m_audioCache;
-
-    // 音频源池
-    std::vector<std::shared_ptr<AudioSource>> m_sources;
-    std::vector<std::shared_ptr<AudioSource>> m_availableSources;
-
-    // 监听器
-    AudioListener m_listener;
-
-    // 设置
-    AudioSettings m_settings;
-    float m_masterVolume = 1.0f;
-    std::string m_currentDevice;
 
     // 统计
     mutable AudioStats m_stats;
 
-    // 是否已初始化
-    bool m_initialized = false;
-
-    // 内部句柄
-    void* m_audioContext = nullptr;
-    void* m_audioDevice = nullptr;
+    // 事件处理
+    AudioEventCallback m_eventCallback;
 };
 
-// 便利函数
-inline AudioManager& GetAudioManager() {
-    return AudioManager::GetInstance();
-}
+// ========== 便利函数 ==========
 
-// 快速音频播放
-inline void PlaySound(const std::string& filePath) {
-    GetAudioManager().PlayAudio(filePath);
-}
+/// @brief 获取全局音频管理器单例
+/// @note 这是一个便利函数，建议使用非单例版本以便更好地控制生命周期
+AudioManager& GetAudioManager();
 
-inline void PlaySound3D(const std::string& filePath, const DirectX::XMFLOAT3& pos) {
-    GetAudioManager().PlayAudio3D(filePath, pos);
-}
-
-} // namespace Audio
-} // namespace Engine
+} // namespace Engine::Audio

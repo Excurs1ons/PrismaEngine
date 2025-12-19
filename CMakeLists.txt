@@ -31,6 +31,8 @@ if(DEFINED CMAKE_TOOLCHAIN_FILE)
     endif()
 endif()
 
+# 包含设备选项配置
+include(cmake/DeviceOptions.cmake)
 
 # 动态设置输出目录
 # 构建目录结构: build/{system}-{platform}-{build_type}
