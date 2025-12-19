@@ -1,0 +1,89 @@
+name: Build Android (Quick)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/engine/**'
+      - 'android/**'
+      - 'vcpkg.json'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/engine/**'
+      - 'android/**'
+      - 'vcpkg.json'
+
+env:
+  ANDROID_NDK_VERSION: 27.0.12077973
+
+jobs:
+  build-quick:
+    runs-on: ubuntu-latest
+    # Only build arm64 for quick checks
+    strategy:
+      matrix:
+        abi: [arm64-v8a]
+        build_type: [Release]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Use pre-built Android command line tools (smaller than full SDK)
+    - name: Setup Android command line tools
+      uses: android-actions/setup-android@v3
+
+    - name: Setup NDK
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget unzip
+        # Download NDK
+        wget -q https://dl.google.com/android/repository/android-ndk-r27-linux.zip
+        unzip -q android-ndk-r27-linux.zip
+        echo "ANDROID_NDK_HOME=$PWD/android-ndk-r27" >> $GITHUB_ENV
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: '3.31.x'
+
+    - name: Setup Ninja
+      run: |
+        sudo apt-get install -y ninja-build
+
+    # Only install minimal vcpkg dependencies if needed
+    - name: Cache vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./vcpkg_installed
+        key: vcpkg-quick-${{ matrix.abi }}-${{ hashFiles('vcpkg.json') }}
+        restore-keys: |
+          vcpkg-quick-${{ matrix.abi }}-
+
+    - name: Setup vcpkg (if cache miss)
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.sh
+        # Install only essential dependencies for quick build
+        ./vcpkg/vcpkg install sdl3 nlohmann-json --triplet ${{ matrix.abi }}-android
+
+    - name: Configure and Build
+      run: |
+        cmake -S android -B build \
+          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=24 \
+          -DANDROID_STL=c++_shared \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -G Ninja
+
+        cmake --build build --config ${{ matrix.build_type }} --parallel 2
+
+    - name: Verify build
+      run: |
+        ls -la build/libEngine.so
+        file build/libEngine.so
