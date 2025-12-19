@@ -50,3 +50,9 @@ CheckOptions:
     value: lowerCamelCase
   - key: readability-identifier-naming.LocalConstCase
     value: lowerCamelCase
+  - key: readability-inconsistent-declaration-parameter-name.StrictMode
+    value: true
+  - key: readability-uppercase-literal-suffix.IgnoreMacros
+    value: true
+  - key: readability-uppercase-literal-suffix.NewSuffixes
+    value: 'f'
