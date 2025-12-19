@@ -5,13 +5,18 @@
 #include <memory>
 #include <vector>
 #include "IRenderDevice.h"
-
+#define INT int
+#ifdef _WIN32
+#define BOOL int
+#else
+#define BOOL bool
+#endif
 namespace PrismaEngine::Graphic {
 
 /// @brief 混合状态描述
 struct BlendState {
-    bool blendEnable = false;
-    bool logicOpEnable = false;
+    BOOL blendEnable = false;
+    BOOL logicOpEnable = false;
     uint32_t writeMask = 0xF;  // RGBA all enabled
     BlendOp blendOp = BlendOp::Add;
     BlendFactor srcBlend = BlendFactor::One;
@@ -25,16 +30,16 @@ struct BlendState {
 
 /// @brief 光栅化器状态描述
 struct RasterizerState {
-    bool cullEnable = true;
-    bool frontCounterClockwise = false;
-    bool depthClipEnable = true;
-    bool scissorEnable = false;
-    bool multisampleEnable = false;
-    bool antialiasedLineEnable = false;
+    BOOL cullEnable = true;
+    BOOL frontCounterClockwise = false;
+    BOOL depthClipEnable = true;
+    BOOL scissorEnable = false;
+    BOOL multisampleEnable = false;
+    BOOL antialiasedLineEnable = false;
     bool conservativeRaster = false;
     FillMode fillMode = FillMode::Solid;
     CullMode cullMode = CullMode::Back;
-    float depthBias = 0.0f;
+    INT depthBias = 0;
     float depthBiasClamp = 0.0f;
     float slopeScaledDepthBias = 0.0f;
 
@@ -43,9 +48,9 @@ struct RasterizerState {
 
 /// @brief 深度模板状态描述
 struct DepthStencilState {
-    bool depthEnable = true;
+    BOOL depthEnable = true;
     bool depthWriteEnable = true;
-    bool stencilEnable = false;
+    BOOL stencilEnable = false;
     ComparisonFunc depthFunc = ComparisonFunc::Less;
 
     // 模板操作

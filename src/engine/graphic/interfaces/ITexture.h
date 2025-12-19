@@ -1,7 +1,7 @@
 #pragma once
 
 #include "RenderTypes.h"
-#include <memory>
+
 
 namespace PrismaEngine::Graphic {
 
@@ -33,6 +33,26 @@ enum class TextureDescriptorType {
     DepthStencilView
 };
 
+/// @brief 纹理描述
+struct TextureDesc : public ResourceDesc {
+    TextureType type = TextureType::Texture2D;
+    TextureFormat format = TextureFormat::RGBA8_UNorm;
+    uint64_t width = 1;
+    uint64_t height = 1;
+    uint32_t depth = 1;
+    uint32_t mipLevels = 1;
+    uint32_t arraySize = 1;
+    bool allowRenderTarget = false;
+    bool allowUnorderedAccess = false;
+    bool allowShaderResource = true;
+    bool allowDepthStencil = false;  // 是否允许作为深度模板缓冲区
+    const void* initialData = nullptr;
+    uint64_t dataSize = 0;
+    std::string filename;  // 文件名（用于从文件加载）
+    uint32_t sampleCount = 1;    // 多重采样数量
+    uint32_t sampleQuality = 0;  // 多重采样质量
+};
+
 /// @brief 纹理抽象接口
 class ITexture {
 public:
@@ -48,11 +68,11 @@ public:
 
     /// @brief 获取宽度
     /// @return 纹理宽度（像素）
-    virtual uint32_t GetWidth() const = 0;
+    virtual FLOAT GetWidth() const = 0;
 
     /// @brief 获取高度
     /// @return 纹理高度（像素）
-    virtual uint32_t GetHeight() const = 0;
+    virtual FLOAT GetHeight() const = 0;
 
     /// @brief 获取深度
     /// @return 纹理深度（3D纹理）
@@ -92,7 +112,7 @@ public:
 
     /// @brief 获取每个像素的字节数
     /// @return 每个像素的字节数
-    virtual uint32_t GetBytesPerPixel() const = 0;
+    virtual uint64_t GetBytesPerPixel() const = 0;
 
     /// @brief 获取指定MIP级别的子资源大小
     /// @param mipLevel MIP级别
@@ -126,9 +146,9 @@ public:
     /// @param height 高度
     /// @param depth 深度
     virtual void UpdateData(const void* data, uint64_t dataSize,
-                           uint32_t mipLevel = 0, uint32_t arraySlice = 0,
-                           uint32_t left = 0, uint32_t top = 0, uint32_t front = 0,
-                           uint32_t width = 0, uint32_t height = 0, uint32_t depth = 0) = 0;
+                   uint32_t mipLevel, uint32_t arraySlice,
+                   uint32_t left, uint32_t top, uint32_t front,
+                   uint64_t width, uint64_t height, uint64_t depth) = 0;
 
     /// @brief 生成MIP映射
     virtual void GenerateMips() = 0;

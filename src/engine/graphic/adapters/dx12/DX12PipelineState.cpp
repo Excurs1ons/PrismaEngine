@@ -250,10 +250,10 @@ const std::string& DX12PipelineState::GetErrors() const {
 
 void DX12PipelineState::SetDebugName(const std::string& name) {
     m_debugName = name;
-    if (m_pipelineState) {
+    if (m_pipelineState != nullptr) {
         m_pipelineState->SetName(std::wstring(name.begin(), name.end()).c_str());
     }
-    if (m_rootSignature) {
+    if (m_rootSignature != nullptr) {
         m_rootSignature->SetName(std::wstring(name.begin(), name.end()).c_str());
     }
 }
@@ -299,23 +299,23 @@ D3D12_GRAPHICS_PIPELINE_STATE_DESC DX12PipelineState::CreateD3D12PipelineDesc() 
     auto domainShader = GetShader(ShaderType::Domain);
 
     if (vertexShader) {
-        auto dx12VS = static_cast<DX12Shader*>(vertexShader.get());
+        auto *dx12VS = dynamic_cast<DX12Shader*>(vertexShader.get());
         desc.VS = CD3DX12_SHADER_BYTECODE(dx12VS->GetBytecodeData(), dx12VS->GetBytecodeSize());
     }
     if (pixelShader) {
-        auto dx12PS = static_cast<DX12Shader*>(pixelShader.get());
+        auto *dx12PS = dynamic_cast<DX12Shader*>(pixelShader.get());
         desc.PS = CD3DX12_SHADER_BYTECODE(dx12PS->GetBytecodeData(), dx12PS->GetBytecodeSize());
     }
     if (geometryShader) {
-        auto dx12GS = static_cast<DX12Shader*>(geometryShader.get());
+        auto *dx12GS = dynamic_cast<DX12Shader*>(geometryShader.get());
         desc.GS = CD3DX12_SHADER_BYTECODE(dx12GS->GetBytecodeData(), dx12GS->GetBytecodeSize());
     }
     if (hullShader) {
-        auto dx12HS = static_cast<DX12Shader*>(hullShader.get());
+        auto *dx12HS = dynamic_cast<DX12Shader*>(hullShader.get());
         desc.HS = CD3DX12_SHADER_BYTECODE(dx12HS->GetBytecodeData(), dx12HS->GetBytecodeSize());
     }
     if (domainShader) {
-        auto dx12DS = static_cast<DX12Shader*>(domainShader.get());
+        auto *dx12DS = dynamic_cast<DX12Shader*>(domainShader.get());
         desc.DS = CD3DX12_SHADER_BYTECODE(dx12DS->GetBytecodeData(), dx12DS->GetBytecodeSize());
     }
 

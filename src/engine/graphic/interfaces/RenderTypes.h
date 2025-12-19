@@ -3,6 +3,14 @@
 #include <cstdint>
 #include <string>
 
+#define FLOAT float
+#define INT int
+#if _WIN32 || _WIN64
+#define BOOL int
+#else
+#define BOOL bool
+#endif
+
 namespace PrismaEngine::Graphic {
 
 // 前置声明
@@ -301,7 +309,6 @@ enum class BlendFactor {
     DstColor,
     InvDstColor,
     SrcAlphaSat,
-    BlendFactor,
     InvBlendFactor,
     Src1Color,
     InvSrc1Color,

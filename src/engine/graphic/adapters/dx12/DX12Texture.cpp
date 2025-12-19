@@ -15,7 +15,7 @@ DX12Texture::DX12Texture(DX12RenderDevice* device,
     : m_device(device)
     , m_resource(resource)
     , m_desc(desc)
-    , m_currentState(D3D12_RESOURCE_STATE_COMMON) {
+    {
 
     // 从资源获取实际属性
     if (resource) {
@@ -58,12 +58,12 @@ TextureFormat DX12Texture::GetFormat() const {
     return m_desc.format;
 }
 
-uint32_t DX12Texture::GetWidth() const {
-    return m_desc.width;
+FLOAT DX12Texture::GetWidth() const {
+    return static_cast<FLOAT>(m_desc.width);
 }
 
-uint32_t DX12Texture::GetHeight() const {
-    return m_desc.height;
+FLOAT DX12Texture::GetHeight() const {
+    return static_cast<FLOAT>(m_desc.height);
 }
 
 uint32_t DX12Texture::GetDepth() const {
@@ -112,7 +112,7 @@ bool DX12Texture::IsUnorderedAccess() const {
     return m_desc.allowUnorderedAccess;
 }
 
-uint32_t DX12Texture::GetBytesPerPixel() const {
+uint64_t DX12Texture::GetBytesPerPixel() const {
     // 根据格式计算每像素字节数
     switch (m_desc.format) {
         case TextureFormat::R8_UNorm:
@@ -154,11 +154,11 @@ uint32_t DX12Texture::GetBytesPerPixel() const {
 }
 
 uint64_t DX12Texture::GetSubresourceSize(uint32_t mipLevel) const {
-    uint32_t width = m_desc.width >> mipLevel;
-    uint32_t height = m_desc.height >> mipLevel;
-    uint32_t depth = m_desc.depth >> mipLevel;
+    uint64_t width = m_desc.width >> mipLevel;
+    uint64_t height = m_desc.height >> mipLevel;
+    uint64_t depth = m_desc.depth >> mipLevel;
 
-    uint32_t bytesPerPixel = GetBytesPerPixel();
+    uint64_t bytesPerPixel = GetBytesPerPixel();
 
     return width * height * depth * bytesPerPixel;
 }
@@ -217,7 +217,7 @@ void DX12Texture::Unmap(uint32_t mipLevel, uint32_t arraySlice) {
 void DX12Texture::UpdateData(const void* data, uint64_t dataSize,
                            uint32_t mipLevel, uint32_t arraySlice,
                            uint32_t left, uint32_t top, uint32_t front,
-                           uint32_t width, uint32_t height, uint32_t depth) {
+                           uint64_t width, uint64_t height, uint64_t depth) {
     // 使用命令缓冲区更新纹理
     // 这需要通过DX12RenderDevice的命令缓冲区来完成
     // 这里暂时不实现
