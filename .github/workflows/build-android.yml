@@ -4,8 +4,13 @@ on:
   push:
     branches: [ main, develop ]
     tags: [ 'v*' ]
+    # 不使用paths过滤，这样会作为完整构建
   pull_request:
     branches: [ main ]
+    paths-ignore:  # 忽略特定路径，确保PR不会触发两次
+      - 'src/engine/**'
+      - 'android/**'
+      - 'vcpkg.json'
   workflow_dispatch:
     inputs:
       build_type:
@@ -21,6 +26,11 @@ on:
         required: true
         default: true
         type: boolean
+
+# 并发控制
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 env:
   ANDROID_SDK_VERSION: 11076708
