@@ -1,9 +1,11 @@
 #pragma once
 
+#include "RenderTypes.h"
 #include "IPipelineState.h"
 #include "ISampler.h"
 #include "IShader.h"
-#include "RenderTypes.h"
+#include "ITexture.h"
+
 #include <memory>
 #include <shared_mutex>
 #include <string>
@@ -19,25 +21,7 @@ class IPipelineState;
 class IResource;
 class IRenderDevice;
 
-/// @brief 纹理描述
-struct TextureDesc : public ResourceDesc {
-    TextureType type = TextureType::Texture2D;
-    TextureFormat format = TextureFormat::RGBA8_UNorm;
-    uint32_t width = 1;
-    uint32_t height = 1;
-    uint32_t depth = 1;
-    uint32_t mipLevels = 1;
-    uint32_t arraySize = 1;
-    bool allowRenderTarget = false;
-    bool allowUnorderedAccess = false;
-    bool allowShaderResource = true;
-    bool allowDepthStencil = false;  // 是否允许作为深度模板缓冲区
-    const void* initialData = nullptr;
-    uint64_t dataSize = 0;
-    std::string filename;  // 文件名（用于从文件加载）
-    uint32_t sampleCount = 1;    // 多重采样数量
-    uint32_t sampleQuality = 0;  // 多重采样质量
-};
+
 
 /// @brief 缓冲区描述
 struct BufferDesc : public ResourceDesc {

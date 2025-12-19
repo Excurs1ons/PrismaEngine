@@ -1,11 +1,9 @@
 #pragma once
 
-#include "interfaces/IResourceManager.h"
+
 #include "interfaces/ITexture.h"
 #include <directx/d3dx12.h>
-#include <d3d12.h>
-#include <dxgi1_4.h>
-#include <memory>
+
 
 namespace PrismaEngine::Graphic::DX12 {
 
@@ -30,10 +28,10 @@ public:
 
     
     // ITexture接口实现
-    TextureType GetTextureType() const override;
-    TextureFormat GetFormat() const override;
-    uint32_t GetWidth() const override;
-    uint32_t GetHeight() const override;
+    [[nodiscard]] TextureType GetTextureType() const override;
+    [[nodiscard]] TextureFormat GetFormat() const override;
+    FLOAT GetWidth() const override;
+    FLOAT GetHeight() const override;
     uint32_t GetDepth() const override;
     uint32_t GetMipLevels() const override;
     uint32_t GetArraySize() const override;
@@ -45,7 +43,7 @@ public:
     bool IsShaderResource() const override;
     bool IsUnorderedAccess() const override;
 
-    uint32_t GetBytesPerPixel() const override;
+    uint64_t GetBytesPerPixel() const override;
     uint64_t GetSubresourceSize(uint32_t mipLevel) const override;
 
     TextureMapDesc Map(uint32_t mipLevel, uint32_t arraySlice, uint32_t mapType) override;
@@ -54,7 +52,7 @@ public:
     void UpdateData(const void* data, uint64_t dataSize,
                    uint32_t mipLevel, uint32_t arraySlice,
                    uint32_t left, uint32_t top, uint32_t front,
-                   uint32_t width, uint32_t height, uint32_t depth) override;
+                   uint64_t width, uint64_t height, uint64_t depth) override;
 
     void GenerateMips() override;
 

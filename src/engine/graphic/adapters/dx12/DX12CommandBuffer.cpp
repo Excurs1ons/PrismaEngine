@@ -137,7 +137,7 @@ void DX12CommandBuffer::BeginRenderPass(const RenderPassDesc& desc) {
         // 设置视口和裁剪矩形
         D3D12_VIEWPORT viewport = {};
         viewport.Width = static_cast<float>(dx12RenderTarget->GetWidth());
-        viewport.Height = static_cast<float>(dx12RenderTarget->GetHeight());
+        viewport.Height = dx12RenderTarget->GetHeight();
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         m_commandList->RSSetViewports(1, &viewport);
