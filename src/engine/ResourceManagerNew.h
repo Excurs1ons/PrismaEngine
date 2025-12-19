@@ -1,15 +1,15 @@
 #pragma once
 
-#include "../ManagerBase.h"
-#include "interfaces/IResourceManager.h"
-#include "interfaces/IRenderDevice.h"
-#include "interfaces/IPipelineState.h"
-#include <unordered_map>
-#include <shared_mutex>
-#include <queue>
-#include <thread>
+#include "ManagerBase.h"
+#include "graphic/interfaces/IPipelineState.h"
+#include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/IResourceManager.h"
 #include <atomic>
 #include <filesystem>
+#include <queue>
+#include <shared_mutex>
+#include <thread>
+#include <unordered_map>
 
 namespace PrismaEngine::Graphic {
 

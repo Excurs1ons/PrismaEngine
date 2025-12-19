@@ -1,15 +1,13 @@
 #pragma once
 
 #include "DX12Adapters.h"
+#include "Helper.h"
 #include "RenderBackendDirectX12.h"
 #include "interfaces/ICommandBuffer.h"
 #include "interfaces/IFence.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceFactory.h"
 #include "interfaces/ISwapChain.h"
-#include <d3d12.h>
-#include <directx/d3dx12.h>
-#include <dxgi1_4.h>
 #include <memory>
 #include <vector>
 
@@ -25,10 +23,6 @@ class DX12ResourceFactory;
 /// 实现IRenderDevice接口，包装现有的RenderBackendDirectX12
 class DX12RenderDevice : public IRenderDevice {
 public:
-    /// @brief 构造函数
-    /// @param backend 现有的DirectX12后端
-    explicit DX12RenderDevice(RenderBackendDirectX12* backend);
-
     /// @brief 析构函数
     ~DX12RenderDevice() override;
 
@@ -135,7 +129,6 @@ public:
     ID3D12CommandSignature* GetDispatchCommandSignature();
 
 private:
-    RenderBackendDirectX12* m_backend;  // 原始后端实现
     std::unique_ptr<DX12ResourceFactory> m_resourceFactory;
     std::unique_ptr<DX12SwapChain> m_swapChain;
     bool m_initialized = false;
