@@ -3,7 +3,6 @@
 #include "RenderTypes.h"
 #include <string>
 #include <vector>
-#include <string_view>
 
 namespace PrismaEngine::Graphic {
 
