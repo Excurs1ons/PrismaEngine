@@ -13,7 +13,7 @@ if "%BUILD_TYPE%"=="" set "BUILD_TYPE=Release"
 if "%ANDROID_STL%"=="" set "ANDROID_STL=c++_shared"
 
 :: 支持的ABI列表
-set "ABIS=arm64-v8a armeabi-v7a x86_64 x86"
+set "ABIS=arm64-v8a armeabi-v7a"
 set "DEFAULT_ABIS=arm64-v8a"
 
 :: 函数：打印消息
@@ -46,6 +46,8 @@ echo   ANDROID_HOME            Android SDK路径
 echo   VCPKG_ROOT              vcpkg根目录 (可选)
 echo.
 echo 支持的ABI: %ABIS%
+echo.
+echo 注意: 已移除x86和x86_64架构，因为ARM架构在Android设备中占主导地位
 goto :eof
 
 :check_environment

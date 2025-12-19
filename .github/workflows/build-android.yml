@@ -1,0 +1,222 @@
+name: Build Android
+
+on:
+  push:
+    branches: [ main, develop ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Release'
+        type: choice
+        options:
+        - Release
+        - Debug
+      upload_artifact:
+        description: 'Upload build artifacts'
+        required: true
+        default: true
+        type: boolean
+
+env:
+  ANDROID_SDK_VERSION: 11076708
+  ANDROID_NDK_VERSION: 27.0.12077973
+  CMAKE_VERSION: 3.31.0
+  NINJA_VERSION: 1.12.1
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a]
+        build_type: [Release, Debug]
+        include:
+          - abi: arm64-v8a
+            arch: arm64
+            artifact_name: libEngine-arm64-v8a
+          - abi: armeabi-v7a
+            arch: arm
+            artifact_name: libEngine-armeabi-v7a
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    # Cache Android SDK and NDK
+    - name: Cache Android SDK
+      id: cache-android-sdk
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/Android/Sdk
+          ~/.android
+        key: android-sdk-${{ env.ANDROID_SDK_VERSION }}-v2
+        restore-keys: |
+          android-sdk-${{ env.ANDROID_SDK_VERSION }}-v1
+          android-sdk-${{ env.ANDROID_SDK_VERSION }}-
+
+    - name: Cache Android NDK
+      id: cache-android-ndk
+      uses: actions/cache@v4
+      with:
+        path: ~/Android/Sdk/ndk/${{ env.ANDROID_NDK_VERSION }}
+        key: android-ndk-${{ env.ANDROID_NDK_VERSION }}-v1
+        restore-keys: |
+          android-ndk-${{ env.ANDROID_NDK_VERSION }}-
+
+    # Cache vcpkg dependencies
+    - name: Cache vcpkg
+      id: cache-vcpkg
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/vcpkg
+          ./vcpkg_installed
+        key: vcpkg-android-${{ matrix.abi }}-${{ hashFiles('vcpkg.json', '.github/workflows/build-android.yml') }}
+        restore-keys: |
+          vcpkg-android-${{ matrix.abi }}-
+          vcpkg-android-
+
+    # Install Android SDK if not cached
+    - name: Setup Android SDK
+      if: steps.cache-android-sdk.outputs.cache-hit != 'true'
+      uses: android-actions/setup-android@v3
+      with:
+        sdk-version: ${{ env.ANDROID_SDK_VERSION }}
+
+    # Install Android NDK if not cached
+    - name: Setup Android NDK
+      if: steps.cache-android-ndk.outputs.cache-hit != 'true'
+      run: |
+        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
+
+    # Install CMake
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    # Install Ninja
+    - name: Setup Ninja
+      run: |
+        wget https://github.com/ninja-build/ninja/releases/download/v${{ env.NINJA_VERSION }}/ninja-linux.zip
+        unzip ninja-linux.zip -d ~/.local/bin
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    # Setup vcpkg
+    - name: Setup vcpkg
+      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
+      run: |
+        ./vcpkg/bootstrap-vcpkg.sh
+        # Install Android dependencies
+        ./vcpkg/vcpkg install sdl3 imgui nlohmann-json vulkan --triplet ${{ matrix.abi }}-android
+
+    # Configure environment
+    - name: Configure environment
+      run: |
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+        echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
+        echo "VCPKG_ROOT=$PWD/vcpkg" >> $GITHUB_ENV
+
+    # Show environment info
+    - name: Show environment
+      run: |
+        echo "Android SDK: $ANDROID_HOME"
+        echo "Android NDK: $ANDROID_NDK_HOME"
+        echo "CMake: $(cmake --version | head -n1)"
+        echo "Ninja: $(ninja --version)"
+        echo "vcpkg: $VCPKG_ROOT"
+
+    # Configure CMake
+    - name: Configure CMake
+      run: |
+        cmake -S android -B build-${{ matrix.abi }} \
+          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=24 \
+          -DANDROID_STL=c++_shared \
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_INSTALL_PREFIX=install-${{ matrix.abi }} \
+          -G Ninja \
+          -DCMAKE_MAKE_PROGRAM=ninja
+
+    # Build
+    - name: Build
+      run: |
+        cmake --build build-${{ matrix.abi }} --config ${{ matrix.build_type }} --parallel 2
+
+    # Install
+    - name: Install
+      run: |
+        cmake --install build-${{ matrix.abi }} --config ${{ matrix.build_type }} --strip
+
+    # Show build info
+    - name: Show build artifacts
+      run: |
+        find install-${{ matrix.abi }} -type f -name "*.so" -exec ls -lh {} \;
+        file install-${{ matrix.abi }}/lib/libEngine.so
+
+    # Package for artifact upload
+    - name: Package artifacts
+      if: github.event_name != 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.upload_artifact == 'true')
+      run: |
+        mkdir -p artifacts/${{ matrix.abi }}
+        cp -r install-${{ matrix.abi }}/lib/* artifacts/${{ matrix.abi }}/
+        cp -r install-${{ matrix.abi }}/include artifacts/ 2>/dev/null || true
+        # Create a tar.gz archive
+        tar czf libEngine-${{ matrix.abi }}-${{ matrix.build_type }}.tar.gz -C artifacts .
+
+    # Upload build artifacts
+    - name: Upload artifacts
+      if: github.event_name != 'pull_request' || (github.event_name == 'workflow_dispatch' && github.event.inputs.upload_artifact == 'true')
+      uses: actions/upload-artifact@v4
+      with:
+        name: libEngine-${{ matrix.abi }}-${{ matrix.build_type }}
+        path: libEngine-${{ matrix.abi }}-${{ matrix.build_type }}.tar.gz
+        retention-days: 30
+
+  # Create release package
+  create-release:
+    needs: build-android
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Prepare release package
+      run: |
+        mkdir -p release-package/jniLibs
+        # Extract all artifacts
+        find artifacts -name "*.tar.gz" -exec tar xzf {} -C release-package \;
+        # Move libraries to proper Android structure
+        mkdir -p release-package/jniLibs/{arm64-v8a,armeabi-v7a}
+        mv release-package/arm64-v8a/lib/libEngine.so release-package/jniLibs/arm64-v8a/ 2>/dev/null || true
+        mv release-package/armeabi-v7a/lib/libEngine.so release-package/jniLibs/armeabi-v7a/ 2>/dev/null || true
+        # Create final package
+        tar czf PrismaEngine-Android-${{ github.ref_name }}.tar.gz -C release-package jniLibs include
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          PrismaEngine-Android-${{ github.ref_name }}.tar.gz
+        draft: false
+        prerelease: false
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -13,7 +13,7 @@ BUILD_TYPE=${BUILD_TYPE:-"Release"}
 ANDROID_STL=${ANDROID_STL:-"c++_shared"}
 
 # 支持的ABI列表
-ABIS=("arm64-v8a" "armeabi-v7a" "x86_64" "x86")
+ABIS=("arm64-v8a" "armeabi-v7a")
 DEFAULT_ABIS=("arm64-v8a")
 
 # 函数：打印带颜色的消息
@@ -142,6 +142,8 @@ show_help() {
     echo "  VCPKG_ROOT              vcpkg根目录 (可选)"
     echo ""
     echo "支持的ABI: ${ABIS[*]}"
+    echo ""
+    echo "注意: 已移除x86和x86_64架构，因为ARM架构在Android设备中占主导地位"
 }
 
 # 主函数
