@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <wrl/client.h>
 
 namespace PrismaEngine::Graphic {
 

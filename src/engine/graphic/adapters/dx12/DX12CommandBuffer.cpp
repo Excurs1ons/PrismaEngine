@@ -1,11 +1,14 @@
+#include <directx/d3d12.h>
+#include <directx/d3dx12.h>
+
 #include "DX12CommandBuffer.h"
 #include "DX12RenderDevice.h"
+#include <wrl/client.h>
 #include "DX12Texture.h"
 #include "DX12Buffer.h"
 #include "DX12PipelineState.h"
 #include "DX12Sampler.h"
 
-#include <directx/d3dx12.h>
 #include <sstream>
 #include <algorithm>
 
@@ -137,14 +140,14 @@ void DX12CommandBuffer::BeginRenderPass(const RenderPassDesc& desc) {
         // 设置视口和裁剪矩形
         D3D12_VIEWPORT viewport = {};
         viewport.Width = static_cast<float>(dx12RenderTarget->GetWidth());
-        viewport.Height = dx12RenderTarget->GetHeight();
+        viewport.Height = static_cast<float>(dx12RenderTarget->GetHeight());
         viewport.MinDepth = 0.0f;
         viewport.MaxDepth = 1.0f;
         m_commandList->RSSetViewports(1, &viewport);
 
         D3D12_RECT scissor = {};
-        scissor.right = dx12RenderTarget->GetWidth();
-        scissor.bottom = dx12RenderTarget->GetHeight();
+        scissor.right = static_cast<LONG>(dx12RenderTarget->GetWidth());
+        scissor.bottom = static_cast<LONG>(dx12RenderTarget->GetHeight());
         m_commandList->RSSetScissorRects(1, &scissor);
     }
 

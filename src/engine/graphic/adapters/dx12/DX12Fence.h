@@ -1,9 +1,11 @@
 #pragma once
 
-#include "interfaces/IFence.h"
+#include <directx/d3d12.h>
 #include <directx/d3dx12.h>
-#include <d3d12.h>
-#include <windows.h>
+
+#include "interfaces/IFence.h"
+#include <wrl/client.h>
+
 #ifdef CreateEvent
 #undef CreateEvent
 #endif
