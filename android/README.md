@@ -112,9 +112,7 @@ cmake --build .
 
 支持的ABI架构：
 - `arm64-v8a` - ARM 64位（推荐）
-- `armeabi-v7a` - ARM 32位
-- `x86_64` - x86 64位
-- `x86` - x86 32位
+- `armeabi-v7a` - ARM 32位（旧设备兼容）
 
 ## 依赖说明
 
@@ -140,8 +138,7 @@ YourAndroidProject/
 │   ├── src/main/
 │   │   ├── jniLibs/
 │   │   │   ├── arm64-v8a/libEngine.so
-│   │   │   ├── armeabi-v7a/libEngine.so
-│   │   │   └── x86/libEngine.so
+│   │   │   └── armeabi-v7a/libEngine.so
 │   │   └── cpp/
 │   │       └── include/
 │   │           └── prisma/
