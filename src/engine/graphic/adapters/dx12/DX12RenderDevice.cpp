@@ -676,15 +676,6 @@ bool DX12RenderDevice::SupportsVariableRateShading() const {
     return false; // 需要特定硬件支持
 }
 
-GPUMemoryInfo DX12RenderDevice::GetGPUMemoryInfo() const {
-    // TODO: 实现GPU内存信息查询
-    GPUMemoryInfo info = {};
-    return info;
-}
-
-RenderStats DX12RenderDevice::GetRenderStats() const {
-    return m_stats;
-}
 
 void DX12RenderDevice::BeginDebugMarker(const std::string& name) {
     // TODO: 实现调试标记
@@ -713,7 +704,7 @@ ID3D12CommandSignature* DX12RenderDevice::GetDispatchCommandSignature() {
     return nullptr;
 }
 
-IDXGISwapChain3* DX12RenderDevice::GetSwapChain() const {
+IDXGISwapChain3* DX12RenderDevice::GetDXGISwapChain() const {
     return m_swapChain.Get();
 }
 
