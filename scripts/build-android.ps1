@@ -240,7 +240,9 @@ function Build-Abi {
     }
 
     Write-Info "配置CMake..."
-    $result = cmake $cmakeArgs ..\android
+    # 使用项目根目录作为源码目录
+    $projectRoot = (Resolve-Path "..\..").Path
+    $result = cmake $cmakeArgs $projectRoot
     if ($LASTEXITCODE -ne 0) {
         Pop-Location
         Write-Error "CMake配置失败"
