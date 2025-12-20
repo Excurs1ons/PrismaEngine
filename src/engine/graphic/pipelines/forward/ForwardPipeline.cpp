@@ -6,7 +6,15 @@
 #include "Camera.h"
 #include "Logger.h"
 #include "SceneManager.h"
-#include <DirectXColors.h>
+// 使用自定义颜色常量替代 DirectXColors
+namespace Colors {
+    const PrismaMath::vec4 Black = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    const PrismaMath::vec4 White = PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    const PrismaMath::vec4 Red = PrismaMath::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    const PrismaMath::vec4 Green = PrismaMath::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+    const PrismaMath::vec4 Blue = PrismaMath::vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    const PrismaMath::vec4 Yellow = PrismaMath::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+}
 
 namespace Engine {
 namespace Graphic {

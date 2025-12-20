@@ -5,7 +5,7 @@
 #include "Logger.h"
 #include "SceneManager.h"
 #include "RenderErrorHandling.h"
-#include <DirectXMath.h>
+#include "math/MathTypes.h"
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>

@@ -14,11 +14,23 @@ file(GLOB_RECURSE CORE_SOURCES
 list(FILTER CORE_SOURCES EXCLUDE REGEX "graphic/")
 list(FILTER CORE_SOURCES EXCLUDE REGEX "audio/")
 
+# 排除Windows特定文件
+if(ANDROID)
+    list(FILTER CORE_SOURCES EXCLUDE REGEX "framework.h")
+    list(FILTER CORE_SOURCES EXCLUDE REGEX "targetver.h")
+endif()
+
 file(GLOB_RECURSE CORE_HEADERS
     "*.h")
 
 list(FILTER CORE_HEADERS EXCLUDE REGEX "graphic/")
 list(FILTER CORE_HEADERS EXCLUDE REGEX "audio/")
+
+# 排除Windows特定头文件
+if(ANDROID)
+    list(FILTER CORE_HEADERS EXCLUDE REGEX "framework.h")
+    list(FILTER CORE_HEADERS EXCLUDE REGEX "targetver.h")
+endif()
 
 # 添加基础核心文件
 set(ENGINE_SOURCES
@@ -81,12 +93,32 @@ endif()
 
 # DirectX12 (Windows)
 if(PRISMA_ENABLE_RENDER_DX12)
-    # 重命名旧的DX12RenderDevice为RenderDeviceDX12
+    # 添加所有DX12适配器文件
     list(APPEND ENGINE_GRAPHIC_SOURCES
+        graphic/adapters/dx12/DX12Adapters.cpp
         graphic/adapters/dx12/DX12RenderDevice.cpp
+        graphic/adapters/dx12/DX12CommandBuffer.cpp
+        graphic/adapters/dx12/DX12Fence.cpp
+        graphic/adapters/dx12/DX12SwapChain.cpp
+        graphic/adapters/dx12/DX12Texture.cpp
+        graphic/adapters/dx12/DX12Buffer.cpp
+        graphic/adapters/dx12/DX12Shader.cpp
+        graphic/adapters/dx12/DX12PipelineState.cpp
+        graphic/adapters/dx12/DX12Sampler.cpp
+        graphic/adapters/dx12/DX12ResourceFactory.cpp
     )
     list(APPEND ENGINE_GRAPHIC_HEADERS
+        graphic/adapters/dx12/DX12Adapters.h
         graphic/adapters/dx12/DX12RenderDevice.h
+        graphic/adapters/dx12/DX12CommandBuffer.h
+        graphic/adapters/dx12/DX12Fence.h
+        graphic/adapters/dx12/DX12SwapChain.h
+        graphic/adapters/dx12/DX12Texture.h
+        graphic/adapters/dx12/DX12Buffer.h
+        graphic/adapters/dx12/DX12Shader.h
+        graphic/adapters/dx12/DX12PipelineState.h
+        graphic/adapters/dx12/DX12Sampler.h
+        graphic/adapters/dx12/DX12ResourceFactory.h
     )
     message(STATUS "Adding DirectX12 render device")
 endif()

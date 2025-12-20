@@ -30,18 +30,8 @@ set(ENGINE_GRAPHIC_SOURCES
     # New interface files
     graphic/interfaces/RenderTypes.cpp
     graphic/interfaces/IPipelineState.cpp
-    # New adapter files
-    graphic/adapters/dx12/DX12Adapters.cpp
-    graphic/adapters/dx12/DX12RenderDevice.cpp
-    graphic/adapters/dx12/DX12CommandBuffer.cpp
-    graphic/adapters/dx12/DX12Fence.cpp
-    graphic/adapters/dx12/DX12SwapChain.cpp
-    graphic/adapters/dx12/DX12Texture.cpp
-    graphic/adapters/dx12/DX12Buffer.cpp
-    graphic/adapters/dx12/DX12Shader.cpp
-    graphic/adapters/dx12/DX12PipelineState.cpp
-    graphic/adapters/dx12/DX12Sampler.cpp
-    graphic/adapters/dx12/DX12ResourceFactory.cpp
+    # DX12 adapter files (conditionally included)
+    # graphic/adapters/dx12/ files will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_DX12
     # Test files
     graphic/RenderSystemTest.cpp
 )
@@ -79,16 +69,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/interfaces/ISampler.h
     graphic/interfaces/ISwapChain.h
     graphic/interfaces/IFence.h
-    # New adapter headers
-    graphic/adapters/dx12/DX12Adapters.h
-    graphic/adapters/dx12/DX12RenderDevice.h
-    graphic/adapters/dx12/DX12CommandBuffer.h
-    graphic/adapters/dx12/DX12Fence.h
-    graphic/adapters/dx12/DX12SwapChain.h
-    graphic/adapters/dx12/DX12Texture.h
-    graphic/adapters/dx12/DX12Buffer.h
-    graphic/adapters/dx12/DX12Shader.h
-    graphic/adapters/dx12/DX12PipelineState.h
-    graphic/adapters/dx12/DX12Sampler.h
-    graphic/adapters/dx12/DX12ResourceFactory.h
+    # DX12 adapter headers (conditionally included)
+    # graphic/adapters/dx12/ files will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_DX12
 )
