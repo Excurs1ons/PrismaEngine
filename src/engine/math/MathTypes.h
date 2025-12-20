@@ -53,6 +53,10 @@ namespace Prisma {
     using Vector2 = DirectX::XMFLOAT2;
     using Vector3 = DirectX::XMFLOAT3;
     using Vector4 = DirectX::XMFLOAT4;
+
+    inline Vector4&& operator -(const Vector4& lhs, const Vector4& rhs) {
+        return {lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
+    }
     using IVector2 = DirectX::XMINT2;
     using IVector3 = DirectX::XMINT3;
     using IVector4 = DirectX::XMINT4;
