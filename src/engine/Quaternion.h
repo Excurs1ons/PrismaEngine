@@ -5,22 +5,23 @@
 
 #ifndef QUATERNION_H
 #define QUATERNION_H
-#include <DirectXMath.h>
+
+#include "math/MathTypes.h"
 
 class Quaternion {
 public:
     // 构造函数
     Quaternion();
     Quaternion(float x, float y, float z, float w);
-    Quaternion(const DirectX::XMVECTOR& vector);
-    Quaternion(const DirectX::XMFLOAT3& euler); // 从欧拉角构造
+    Quaternion(const PrismaMath::vec4& vector);
+    Quaternion(const PrismaMath::vec3& euler); // 从欧拉角构造
 
     // 静态常量
     static const Quaternion Identity;
 
     // 转换函数
-    DirectX::XMVECTOR ToXMVector() const;
-    void FromXMVector(const DirectX::XMVECTOR& vector);
+    Prisma::Quaternion ToNativeQuaternion() const;
+    void FromNativeQuaternion(const Prisma::Quaternion& quat);
 
     // 实用方法
     void Normalize();
@@ -30,20 +31,20 @@ public:
     Quaternion Inverse() const;
 
     // 欧拉角转换
-    DirectX::XMFLOAT3 ToEulerAngles() const;
+    PrismaMath::vec3 ToEulerAngles() const;
 
     // 点乘
     float Dot(const Quaternion& other) const;
 
     // 静态方法
     static Quaternion IdentityQuaternion();
-    static Quaternion LookRotation(const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& up = DirectX::XMFLOAT3(0, 1, 0));
+    static Quaternion LookRotation(const PrismaMath::vec3& forward, const PrismaMath::vec3& up = PrismaMath::vec3(0, 1, 0));
     static float Angle(const Quaternion& a, const Quaternion& b);
 
     // 静态创建方法
     static Quaternion FromEulerAngles(float pitch, float yaw, float roll);
-    static Quaternion FromAxisAngle(const DirectX::XMFLOAT3& axis, float angle);
-    static Quaternion FromRotationMatrix(const DirectX::XMMATRIX& matrix);
+    static Quaternion FromAxisAngle(const PrismaMath::vec3& axis, float angle);
+    static Quaternion FromRotationMatrix(const PrismaMath::mat4& matrix);
 
     // 球面线性插值
     static Quaternion Slerp(const Quaternion& a, const Quaternion& b, float t);
