@@ -2,24 +2,19 @@
 #pragma once
 #define NOMINMAX
 #include "../resource/ResourceBase.h"
-#include <DirectXMath.h>
-#include <DirectXCollision.h>
-#include <DirectXColors.h>
-#include <DirectXPackedVector.h>
+#include "../math/MathTypes.h"
+#include "../math/Color.h"
 #include <nlohmann/json.hpp>
 #include "Handle.h"
-
-using namespace Engine;
-using namespace DirectX;
 
 // ... 其他资源类型
 struct Vertex
 {
-    XMFLOAT4 position;     // 位置
-    XMFLOAT4 normal;       // 法线
-    XMFLOAT4 texCoord;     // 纹理坐标
-    XMFLOAT4 tangent;      // 切线
-    XMVECTORF32 color;        // 顶点颜色
+    PrismaMath::vec4 position;     // 位置
+    PrismaMath::vec4 normal;       // 法线
+    PrismaMath::vec4 texCoord;     // 纹理坐标
+    PrismaMath::vec4 tangent;      // 切线
+    PrismaMath::vec4 color;         // 顶点颜色
     constexpr static uint32_t GetVertexStride() { return sizeof(Vertex); }
 };
 
@@ -33,6 +28,41 @@ struct SubMesh {
     // 图形API资源句柄
     VertexBufferHandle vertexBufferHandle;
     IndexBufferHandle indexBufferHandle;
+};
+
+// 简单的包围盒结构
+struct BoundingBox {
+    PrismaMath::vec3 min;
+    PrismaMath::vec3 max;
+
+    BoundingBox() : min(0, 0, 0), max(0, 0, 0) {}
+    BoundingBox(const PrismaMath::vec3& min, const PrismaMath::vec3& max) : min(min), max(max) {}
+
+    // 扩展包围盒以包含点
+    void Encapsulate(const PrismaMath::vec3& point) {
+        if (point.x < min.x) min.x = point.x;
+        if (point.y < min.y) min.y = point.y;
+        if (point.z < min.z) min.z = point.z;
+        if (point.x > max.x) max.x = point.x;
+        if (point.y > max.y) max.y = point.y;
+        if (point.z > max.z) max.z = point.z;
+    }
+
+    // 合并另一个包围盒
+    void Merge(const BoundingBox& other) {
+        Encapsulate(other.min);
+        Encapsulate(other.max);
+    }
+
+    // 获取中心点
+    PrismaMath::vec3 GetCenter() const {
+        return (min + max) * 0.5f;
+    }
+
+    // 获取尺寸
+    PrismaMath::vec3 GetSize() const {
+        return max - min;
+    }
 };
 
 class Mesh : public ResourceBase

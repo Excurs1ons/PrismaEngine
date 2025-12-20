@@ -5,7 +5,7 @@
 #include <memory>
 #include <mutex>
 #include <vector>
-#include <DirectXMath.h>
+#include "../math/MathTypes.h"
 
 namespace Engine {
 namespace Graphic {
@@ -99,7 +99,7 @@ struct SamplerDesc {
     TextureAddressMode addressW = TextureAddressMode::Wrap;
     float mipLODBias = 0.0f;
     uint32_t maxAnisotropy = 16;
-    DirectX::XMFLOAT4 borderColor = DirectX::XMFLOAT4(0, 0, 0, 0);
+    PrismaMath::vec4 borderColor = PrismaMath::vec4(0, 0, 0, 0);
     float minLOD = -FLT_MAX;
     float maxLOD = FLT_MAX;
 };
