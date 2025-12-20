@@ -357,7 +357,10 @@ inline float LengthSquared(const Vector4& q) {
 }
 
 inline Vector4 Inverse(const Vector4& q) {
-    return glm::inverse(q);
+    // 对于四元数 Vector4，转换为 quat 后求逆
+    glm::quat quat_q(q);
+    quat_q = glm::inverse(quat_q);
+    return Vector4(quat_q.x, quat_q.y, quat_q.z, quat_q.w);
 }
 
 inline float Dot(const Vector4& a, const Vector4& b) {
@@ -365,19 +368,26 @@ inline float Dot(const Vector4& a, const Vector4& b) {
 }
 
 inline Vector4 Slerp(const Vector4& a, const Vector4& b, float t) {
-    return glm::slerp(a, b, t);
+    // 对于四元数 Vector4，转换为 quat 后进行球面线性插值
+    glm::quat quat_a(a);
+    glm::quat quat_b(b);
+    glm::quat result = glm::slerp(quat_a, quat_b, t);
+    return Vector4(result.x, result.y, result.z, result.w);
 }
 
 inline Vector4 FromEulerAngles(float pitch, float yaw, float roll) {
-    return glm::quat(glm::vec3(pitch, yaw, roll));
+    glm::quat result = glm::quat(glm::vec3(pitch, yaw, roll));
+    return Vector4(result.x, result.y, result.z, result.w);
 }
 
 inline Vector4 FromAxisAngle(const Vector3& axis, float angle) {
-    return glm::angleAxis(angle, glm::normalize(axis));
+    glm::quat result = glm::angleAxis(angle, glm::normalize(axis));
+    return Vector4(result.x, result.y, result.z, result.w);
 }
 
 inline Vector4 FromRotationMatrix(const Matrix4x4& matrix) {
-    return glm::quat_cast(matrix);
+    glm::quat result = glm::quat_cast(matrix);
+    return Vector4(result.x, result.y, result.z, result.w);
 }
 
 inline Vector3 ToEulerAngles(const Vector4& q) {
@@ -413,6 +423,10 @@ inline Matrix4x4 PerspectiveFovLH(float fovAngleY, float aspectRatio, float near
 
 inline Matrix4x4 OrthographicLH(float viewWidth, float viewHeight, float nearZ, float farZ) {
     return glm::orthoLH(0.0f, viewWidth, 0.0f, viewHeight, nearZ, farZ);
+}
+
+inline Matrix4x4 Orthographic(float left, float right, float bottom, float top, float nearZ, float farZ) {
+    return glm::ortho(left, right, bottom, top, nearZ, farZ);
 }
 
 #endif
