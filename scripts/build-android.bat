@@ -202,7 +202,7 @@ if defined VCPKG_ROOT (
 )
 
 call :print_info "配置CMake..."
-cmake !cmake_args! ..\android
+cmake !cmake_args! "%~dp0..\.."
 if errorlevel 1 (
     popd
     call :print_error "CMake配置失败"
