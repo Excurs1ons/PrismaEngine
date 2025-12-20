@@ -106,10 +106,22 @@ build_abi() {
 
     # 构建
     print_info "开始编译..."
+    local build_log_file="../build/build-$abi.log"
     if command -v ninja &> /dev/null; then
-        ninja
+        ninja -v 2>&1 | tee "$build_log_file"
+        build_exit_code=${PIPESTATUS[0]}
     else
-        make -j$(nproc)
+        make -j$(nproc) 2>&1 | tee "$build_log_file"
+        build_exit_code=${PIPESTATUS[0]}
+    fi
+
+    # 检查构建结果
+    if [ $build_exit_code -ne 0 ]; then
+        cd ../..
+        print_error "$abi 编译失败"
+        print_error "完整日志已保存到: $build_log_file"
+        print_error "请查看日志文件获取详细错误信息"
+        exit 1
     fi
 
     # 安装
