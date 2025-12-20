@@ -12,6 +12,9 @@
     #define PRISMA_PLATFORM_OTHER 1
 #endif
 
+// 定义GLM实验性扩展支持
+#define GLM_ENABLE_EXPERIMENTAL
+
 // 选择数学库
 // 统一使用GLM的列主序约定，Vulkan兼容
 #if defined(PRISMA_USE_GLM) || defined(PRISMA_PLATFORM_ANDROID) || defined(PRISMA_PLATFORM_OTHER)

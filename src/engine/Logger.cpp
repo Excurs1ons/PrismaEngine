@@ -427,11 +427,12 @@ std::string Logger::GetTimestamp(const std::chrono::system_clock::time_point& ti
 
     std::tm tm;
     //如果是Windows平台，使用localtime_s函数，否则使用localtime_r函数
-    //localtime_s是线程安全的，而localtime_r不是线程安全的
-//#ifdef _WIN32
+    //localtime_s是Windows特有的，localtime_r是POSIX标准
+#ifdef _WIN32
     localtime_s(&tm, &timeT);
-//#else
-//#endif
+#else
+    localtime_r(&timeT, &tm);
+#endif
 
     std::ostringstream oss;
     oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S")

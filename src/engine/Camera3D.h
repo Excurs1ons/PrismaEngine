@@ -3,8 +3,7 @@
 #include "graphic/ICamera.h"
 #include "Transform.h"
 #include "Quaternion.h"
-
-using namespace DirectX;
+#include "math/MathTypes.h"
 
 namespace Engine {
 namespace Graphic {
@@ -24,7 +23,7 @@ public:
 
     // 移动相机（相对于世界坐标系）
     void MoveWorld(float x, float y, float z);
-    void MoveWorld(FXMVECTOR direction);
+    void MoveWorld(const PrismaMath::vec4& direction);
 
     // 移动相机（相对于相机坐标系）
     void MoveLocal(float forward, float right, float up);
@@ -33,18 +32,18 @@ public:
     void Rotate(float pitch, float yaw, float roll);
 
     // 看向目标点
-    void LookAt(FXMVECTOR target);
+    void LookAt(const PrismaMath::vec4& target);
     void LookAt(float x, float y, float z);
 
     // ICamera接口实现
-    XMMATRIX GetViewMatrix() const override;
-    XMMATRIX GetProjectionMatrix() const override;
-    XMMATRIX GetViewProjectionMatrix() const override;
+    PrismaMath::mat4 GetViewMatrix() const override;
+    PrismaMath::mat4 GetProjectionMatrix() const override;
+    PrismaMath::mat4 GetViewProjectionMatrix() const override;
 
-    XMVECTOR GetPosition() const override;
-    XMVECTOR GetForward() const override;
-    XMVECTOR GetUp() const override;
-    XMVECTOR GetRight() const override;
+    PrismaMath::vec4 GetPosition() const override;
+    PrismaMath::vec4 GetForward() const override;
+    PrismaMath::vec4 GetUp() const override;
+    PrismaMath::vec4 GetRight() const override;
 
     float GetFOV() const override { return m_fov; }
     void SetFOV(float fov) override;
@@ -59,7 +58,7 @@ public:
     bool IsActive() const override { return m_isActive; }
     void SetActive(bool active) override { m_isActive = active; }
 
-    DirectX::XMVECTOR GetClearColor() const override;
+    PrismaMath::vec4 GetClearColor() const override;
     void SetClearColor(float r, float g, float b, float a = 1.0f) override;
 
 private:
@@ -74,16 +73,16 @@ private:
     float m_farPlane;
 
     // 清除颜色
-    XMFLOAT4 m_clearColor;
+    PrismaMath::vec4 m_clearColor;
 
     // 缓存的矩阵
-    mutable XMMATRIX m_viewMatrix;
-    mutable XMMATRIX m_projectionMatrix;
+    mutable PrismaMath::mat4 m_viewMatrix;
+    mutable PrismaMath::mat4 m_projectionMatrix;
 
     // 缓存的向量（从Transform计算得出）
-    mutable XMVECTOR m_forward;
-    mutable XMVECTOR m_up;
-    mutable XMVECTOR m_right;
+    mutable PrismaMath::vec4 m_forward;
+    mutable PrismaMath::vec4 m_up;
+    mutable PrismaMath::vec4 m_right;
 
     // 脏标记
     mutable bool m_isViewDirty;

@@ -41,6 +41,7 @@
 
 #include <KeyCode.h>
 #include <string>
+#include <vector>
 #ifdef _WIN32
 #include <Windows.h>
 #ifdef CreateWindow
