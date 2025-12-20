@@ -6,8 +6,15 @@
 #include <vector>
 #include <mutex>
 
+// 添加对新接口的引用
+#include "interfaces/RenderTypes.h"
+#include "interfaces/IShader.h"  // 添加新的IShader接口
+
 namespace Engine {
 namespace Graphic {
+
+// 前向声明
+class IShaderProgram;
 
 // 着色器类型
 enum class ShaderType : uint32_t {
@@ -44,31 +51,10 @@ struct ShaderMacro {
 struct ShaderDesc {
     std::string filePath;
     std::string entryPoint;
-    ShaderType type;
+    PrismaEngine::Graphic::ShaderType type;  // 使用新的ShaderType
     std::vector<ShaderMacro> macros;
 
-    ShaderDesc() : type(ShaderType::Vertex), entryPoint("main") {}
-};
-
-// 着色器资源接口
-class IShader {
-public:
-    virtual ~IShader() = default;
-
-    // 获取着色器类型
-    virtual ShaderType GetType() const = 0;
-
-    // 获取着色器原生句柄
-    virtual void* GetNativeHandle() const = 0;
-
-    // 获取着色器描述
-    virtual const ShaderDesc& GetDesc() const = 0;
-
-    // 重新编译着色器
-    virtual bool Reload() = 0;
-
-    // 检查是否有效
-    virtual bool IsValid() const = 0;
+    ShaderDesc() : type(PrismaEngine::Graphic::ShaderType::Vertex), entryPoint("main") {}
 };
 
 // 着色器程序（Pipeline State Object）
@@ -77,10 +63,10 @@ public:
     virtual ~IShaderProgram() = default;
 
     // 设置着色器
-    virtual void SetShader(ShaderStage stage, std::shared_ptr<IShader> shader) = 0;
+    virtual void SetShader(ShaderStage stage, std::shared_ptr<PrismaEngine::Graphic::IShader> shader) = 0;
 
     // 获取着色器
-    virtual std::shared_ptr<IShader> GetShader(ShaderStage stage) const = 0;
+    virtual std::shared_ptr<PrismaEngine::Graphic::IShader> GetShader(ShaderStage stage) const = 0;
 
     // 链接程序
     virtual bool Link() = 0;
@@ -119,13 +105,13 @@ public:
     static ShaderManager& GetInstance();
 
     // 加载着色器
-    std::shared_ptr<IShader> LoadShader(const ShaderDesc& desc);
+    std::shared_ptr<PrismaEngine::Graphic::IShader> LoadShader(const ShaderDesc& desc);
 
     // 创建着色器程序
     std::shared_ptr<IShaderProgram> CreateShaderProgram();
 
     // 获取已加载的着色器
-    std::shared_ptr<IShader> GetShader(const std::string& filePath);
+    std::shared_ptr<PrismaEngine::Graphic::IShader> GetShader(const std::string& filePath);
 
     // 重新加载所有着色器
     void ReloadAllShaders();
@@ -138,6 +124,12 @@ public:
 
     // 预编译所有着色器
     void PrecompileAllShaders(const std::string& shaderDir);
+
+    // 设置当前渲染后端类型
+    void SetRenderBackendType(PrismaEngine::Graphic::RenderBackendType type);
+
+    // 获取当前渲染后端类型
+    PrismaEngine::Graphic::RenderBackendType GetRenderBackendType() const;
 
     // 获取着色器缓存统计
     struct ShaderStats {
@@ -159,19 +151,22 @@ private:
     std::string GenerateShaderKey(const ShaderDesc& desc) const;
 
     // 编译着色器
-    std::shared_ptr<IShader> CompileShader(const ShaderDesc& desc);
+    std::shared_ptr<PrismaEngine::Graphic::IShader> CompileShader(const ShaderDesc& desc);
 
     // 线程安全
     mutable std::mutex m_mutex;
 
     // 着色器缓存
-    std::unordered_map<std::string, std::shared_ptr<IShader>> m_shaders;
+    std::unordered_map<std::string, std::shared_ptr<PrismaEngine::Graphic::IShader>> m_shaders;
 
     // 着色器程序列表
     std::vector<std::weak_ptr<IShaderProgram>> m_programs;
 
     // 搜索路径
     std::string m_searchPath = "shaders/";
+
+    // 当前后端类型
+    PrismaEngine::Graphic::RenderBackendType m_backendType = PrismaEngine::Graphic::RenderBackendType::DirectX12;
 
     // 统计信息
     mutable ShaderStats m_stats;

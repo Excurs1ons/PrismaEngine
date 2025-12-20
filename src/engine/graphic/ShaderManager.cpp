@@ -1,6 +1,8 @@
 #include "ShaderManager.h"
 #include "RenderBackend.h"
 #include "Logger.h"
+#include "ShaderFactory.h"  // 添加对ShaderFactory的引用
+#include "EngineShaderAdapter.h"  // 添加对适配器的引用
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -14,7 +16,7 @@ ShaderManager& ShaderManager::GetInstance()
     return instance;
 }
 
-std::shared_ptr<IShader> ShaderManager::LoadShader(const ShaderDesc& desc)
+std::shared_ptr<PrismaEngine::Graphic::IShader> ShaderManager::LoadShader(const ShaderDesc& desc)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -62,7 +64,7 @@ std::shared_ptr<IShaderProgram> ShaderManager::CreateShaderProgram()
     return program;
 }
 
-std::shared_ptr<IShader> ShaderManager::GetShader(const std::string& filePath)
+std::shared_ptr<PrismaEngine::Graphic::IShader> ShaderManager::GetShader(const std::string& filePath)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -178,6 +180,19 @@ void ShaderManager::PrecompileAllShaders(const std::string& shaderDir)
     }
 }
 
+void ShaderManager::SetRenderBackendType(PrismaEngine::Graphic::RenderBackendType type) 
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_backendType = type;
+    LOG_INFO("ShaderManager", "设置渲染后端类型: {0}", static_cast<int>(type));
+}
+
+PrismaEngine::Graphic::RenderBackendType ShaderManager::GetRenderBackendType() const 
+{
+    std::lock_guard<std::mutex> lock(m_mutex);
+    return m_backendType;
+}
+
 ShaderManager::ShaderStats ShaderManager::GetStats() const
 {
     std::lock_guard<std::mutex> lock(m_mutex);
@@ -197,30 +212,38 @@ std::string ShaderManager::GenerateShaderKey(const ShaderDesc& desc) const
     return ss.str();
 }
 
-std::shared_ptr<IShader> ShaderManager::CompileShader(const ShaderDesc& desc)
+std::shared_ptr<PrismaEngine::Graphic::IShader> ShaderManager::CompileShader(const ShaderDesc& desc)
 {
-    // 获取渲染后端
-    auto backend = RenderSystem::GetInstance()->GetRenderBackend();
-    if (!backend) {
-        LOG_ERROR("ShaderManager", "无效的渲染后端");
-        return nullptr;
+    // 构造新的ShaderDesc
+    PrismaEngine::Graphic::ShaderDesc newDesc;
+    newDesc.filename = m_searchPath + desc.filePath;
+    newDesc.entryPoint = desc.entryPoint;
+    newDesc.type = static_cast<PrismaEngine::Graphic::ShaderType>(static_cast<int>(desc.type));
+    newDesc.language = PrismaEngine::Graphic::ShaderLanguage::HLSL; // 默认使用HLSL
+    newDesc.target = "ps_5_0"; // 默认目标
+    
+    // 使用ShaderFactory创建着色器
+    auto newShader = PrismaEngine::Graphic::ShaderFactory::CreateShaderFromFile(
+        m_backendType,
+        newDesc.filename,
+        newDesc);
+    
+    if (newShader) {
+        return newShader;
     }
-
-    // 读取着色器源码
-    std::string fullPath = m_searchPath + desc.filePath;
-    std::ifstream file(fullPath);
-    if (!file.is_open()) {
-        LOG_ERROR("ShaderManager", "无法打开着色器文件: {0}", fullPath);
-        return nullptr;
+    
+    // 如果新的着色器系统失败，则回落到旧的Engine::Shader系统
+    LOG_WARNING("ShaderManager", "新着色器系统失败，回落到旧系统: {0}", desc.filePath);
+    
+    // 创建旧的Engine::Shader
+    auto engineShader = std::make_shared<Shader>();
+    if (engineShader->LoadWithFallback(std::filesystem::path(m_searchPath + desc.filePath))) {
+        // 使用适配器包装旧的着色器
+        return std::make_shared<PrismaEngine::Graphic::EngineShaderAdapter>(engineShader);
     }
-
-    std::stringstream sourceStream;
-    sourceStream << file.rdbuf();
-    std::string source = sourceStream.str();
-    file.close();
-
-    // 编译着色器
-    return backend->CreateShader(desc.type, source.c_str(), source.size(), desc.entryPoint.c_str());
+    
+    LOG_ERROR("ShaderManager", "无法加载着色器: {0}", desc.filePath);
+    return nullptr;
 }
 
 } // namespace Graphic

@@ -4,10 +4,8 @@
 #include "Logger.h"
 #include "Platform.h"
 #include "GameObject.h"
-#include <DirectXMath.h>
+#include "math/MathTypes.h"
 #include <cmath>
-
-using namespace DirectX;
 using namespace Engine::Graphic;
 
 namespace Engine {

@@ -6,7 +6,9 @@
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
 #elif defined(__ANDROID__)
-#include "ApplicationAndroid.h"
+// TODO: Implement ApplicationAndroid
+// For now, use generic Application class
+#include "../engine/platform/Application.h"
 #elif defined(__linux__)
 #include "ApplicationLinux.h"
 #elif defined(__APPLE__)

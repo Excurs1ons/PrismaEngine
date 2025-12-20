@@ -3,7 +3,11 @@
 #include "SceneManager.h"
 #include "Camera.h"
 #include "MeshRenderer.h"
-#include <DirectXColors.h>
+// 使用自定义颜色常量替代 DirectXColors
+namespace Colors {
+    const PrismaMath::vec4 Black = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    const PrismaMath::vec4 White = PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+}
 
 namespace Engine {
 namespace Graphic {

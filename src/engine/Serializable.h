@@ -1,9 +1,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include <DirectXMath.h>
-#include <DirectXPackedVector.h>
-#include <DirectXCollision.h>
+#include "math/MathTypes.h"
 // 移除了对Asset.h的循环引用
 #include "MetaData.h"
 #include "resource/Archive.h"

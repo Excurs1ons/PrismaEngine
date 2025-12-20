@@ -1,7 +1,18 @@
 #include "AudioFactory.h"
-#include "AudioDeviceOpenAL.h"
-#include "AudioDeviceSDL3.h"
+
+// 条件包含音频设备头文件
+#ifdef PRISMA_ENABLE_AUDIO_XAUDIO2
 #include "AudioDeviceXAudio2.h"
+#endif
+
+#ifdef PRISMA_ENABLE_AUDIO_OPENAL
+#include "AudioDeviceOpenAL.h"
+#endif
+
+#ifdef PRISMA_ENABLE_AUDIO_SDL3
+#include "AudioDeviceSDL3.h"
+#endif
+
 #include "AudioDeviceNull.h"
 #include "../Logger.h"
 #include <cstdlib>
