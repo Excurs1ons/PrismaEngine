@@ -106,6 +106,8 @@ if(PRISMA_ENABLE_RENDER_DX12)
         graphic/adapters/dx12/DX12PipelineState.cpp
         graphic/adapters/dx12/DX12Sampler.cpp
         graphic/adapters/dx12/DX12ResourceFactory.cpp
+        graphic/adapters/dx12/DX12Material.cpp
+        graphic/adapters/dx12/DX12Mesh.cpp
     )
     list(APPEND ENGINE_GRAPHIC_HEADERS
         graphic/adapters/dx12/DX12Adapters.h
@@ -119,6 +121,8 @@ if(PRISMA_ENABLE_RENDER_DX12)
         graphic/adapters/dx12/DX12PipelineState.h
         graphic/adapters/dx12/DX12Sampler.h
         graphic/adapters/dx12/DX12ResourceFactory.h
+        graphic/adapters/dx12/DX12Material.h
+        graphic/adapters/dx12/DX12Mesh.h
     )
     message(STATUS "Adding DirectX12 render device")
 endif()
@@ -139,10 +143,14 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     list(APPEND ENGINE_GRAPHIC_SOURCES
         graphic/adapters/vulkan/RenderDeviceVulkan.cpp
         graphic/adapters/vulkan/VulkanShader.cpp
+        graphic/adapters/vulkan/VulkanMaterial.cpp
+        graphic/adapters/vulkan/VulkanMesh.cpp
     )
     list(APPEND ENGINE_GRAPHIC_HEADERS
         graphic/adapters/vulkan/RenderDeviceVulkan.h
         graphic/adapters/vulkan/VulkanShader.h
+        graphic/adapters/vulkan/VulkanMaterial.h
+        graphic/adapters/vulkan/VulkanMesh.h
     )
     message(STATUS "Adding Vulkan render device")
 endif()
