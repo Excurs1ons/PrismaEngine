@@ -1,16 +1,19 @@
 #pragma once
 
-#include <DirectXMath.h>
+#include "MathTypes.h"
+#include "Math.h"
 #include <string>
 #include <cstdint>
+#include <cmath>
 
 namespace Engine {
 namespace Math {
 
 /**
- * @brief 颜色结构体 - XMVECTOR的包装器，类似Unity的Color类型
+ * @brief 颜色结构体 - PrismaMath::vec4的包装器，类似Unity的Color类型
  *
  * 提供RGBA颜色值的便捷操作，支持多种颜色空间和格式转换
+ * 跨平台兼容：Windows使用DirectXMath，Android使用GLM
  */
 class Color
 {
@@ -20,40 +23,28 @@ public:
     /**
      * @brief 默认构造 - 白色 (1, 1, 1, 1)
      */
-    Color() : m_value(DirectX::XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f)) {}
+    Color() : m_value(PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f)) {}
 
     /**
      * @brief RGB构造 - Alpha = 1.0
      */
-    Color(float r, float g, float b) : m_value(DirectX::XMVectorSet(r, g, b, 1.0f)) {}
+    Color(float r, float g, float b) : m_value(PrismaMath::vec4(r, g, b, 1.0f)) {}
 
     /**
      * @brief RGBA构造
      */
-    Color(float r, float g, float b, float a) : m_value(DirectX::XMVectorSet(r, g, b, a)) {}
+    Color(float r, float g, float b, float a) : m_value(PrismaMath::vec4(r, g, b, a)) {}
 
     /**
-     * @brief 从XMVECTOR构造
+     * @brief 从PrismaMath::vec4构造
      */
-    explicit Color(const DirectX::XMVECTOR& vec) : m_value(vec) {}
-
-    /**
-     * @brief 从XMFLOAT4构造
-     */
-    explicit Color(const DirectX::XMFLOAT4& color)
-        : m_value(DirectX::XMVectorSet(color.x, color.y, color.z, color.w)) {}
-
-    /**
-     * @brief 从XMFLOAT3构造 - Alpha = 1.0
-     */
-    explicit Color(const DirectX::XMFLOAT3& color)
-        : m_value(DirectX::XMVectorSet(color.x, color.y, color.z, 1.0f)) {}
+    explicit Color(const PrismaMath::vec4& vec) : m_value(vec) {}
 
     /**
      * @brief 从32位ARGB整数构造 (0xAARRGGBB)
      */
     explicit Color(uint32_t argb)
-        : m_value(DirectX::XMVectorSet(
+        : m_value(PrismaMath::vec4(
             static_cast<float>((argb >> 16) & 0xFF) / 255.0f,  // R
             static_cast<float>((argb >> 8) & 0xFF) / 255.0f,   // G
             static_cast<float>(argb & 0xFF) / 255.0f,          // B
@@ -96,25 +87,29 @@ public:
 
     // ========== 访问器 ==========
 
-    float r() const { return DirectX::XMVectorGetX(m_value); }
-    float g() const { return DirectX::XMVectorGetY(m_value); }
-    float b() const { return DirectX::XMVectorGetZ(m_value); }
-    float a() const { return DirectX::XMVectorGetW(m_value); }
+    float r() const { return m_value.x; }
+    float g() const { return m_value.y; }
+    float b() const { return m_value.z; }
+    float a() const { return m_value.w; }
 
-    void SetR(float r) { m_value = DirectX::XMVectorSetX(m_value, r); }
-    void SetG(float g) { m_value = DirectX::XMVectorSetY(m_value, g); }
-    void SetB(float b) { m_value = DirectX::XMVectorSetZ(m_value, b); }
-    void SetA(float a) { m_value = DirectX::XMVectorSetW(m_value, a); }
+    void SetR(float r) { m_value.x = r; }
+    void SetG(float g) { m_value.y = g; }
+    void SetB(float b) { m_value.z = b; }
+    void SetA(float a) { m_value.w = a; }
 
     void SetRGBA(float r, float g, float b, float a) {
-        m_value = DirectX::XMVectorSet(r, g, b, a);
+        m_value = PrismaMath::vec4(r, g, b, a);
     }
 
     // ========== 运算符重载 ==========
 
     // 相等性比较
     bool operator==(const Color& other) const {
-        return DirectX::XMVector4NearEqual(m_value, other.m_value, DirectX::XMVectorSplatEpsilon());
+        const float epsilon = 0.001f;
+        return std::abs(r() - other.r()) < epsilon &&
+               std::abs(g() - other.g()) < epsilon &&
+               std::abs(b() - other.b()) < epsilon &&
+               std::abs(a() - other.a()) < epsilon;
     }
 
     bool operator!=(const Color& other) const {
@@ -123,57 +118,57 @@ public:
 
     // 算术运算
     Color operator+(const Color& other) const {
-        return Color(DirectX::XMVectorAdd(m_value, other.m_value));
+        return Color(Prisma::Add(m_value, other.m_value));
     }
 
     Color operator-(const Color& other) const {
-        return Color(DirectX::XMVectorSubtract(m_value, other.m_value));
+        return Color(Prisma::Subtract(m_value, other.m_value));
     }
 
     Color operator*(const Color& other) const {
-        return Color(DirectX::XMVectorMultiply(m_value, other.m_value));
+        return Color(m_value * other.m_value);
     }
 
     Color operator*(float scalar) const {
-        return Color(DirectX::XMVectorScale(m_value, scalar));
+        return Color(Prisma::Multiply(m_value, scalar));
     }
 
     Color operator/(const Color& other) const {
-        return Color(DirectX::XMVectorDivide(m_value, other.m_value));
+        return Color(m_value / other.m_value);
     }
 
     Color operator/(float scalar) const {
-        return Color(DirectX::XMVectorScale(m_value, 1.0f / scalar));
+        return Color(Prisma::Multiply(m_value, 1.0f / scalar));
     }
 
     // 赋值运算
     Color& operator+=(const Color& other) {
-        m_value = DirectX::XMVectorAdd(m_value, other.m_value);
+        m_value = Prisma::Add(m_value, other.m_value);
         return *this;
     }
 
     Color& operator-=(const Color& other) {
-        m_value = DirectX::XMVectorSubtract(m_value, other.m_value);
+        m_value = Prisma::Subtract(m_value, other.m_value);
         return *this;
     }
 
     Color& operator*=(const Color& other) {
-        m_value = DirectX::XMVectorMultiply(m_value, other.m_value);
+        m_value = m_value * other.m_value;
         return *this;
     }
 
     Color& operator*=(float scalar) {
-        m_value = DirectX::XMVectorScale(m_value, scalar);
+        m_value = Prisma::Multiply(m_value, scalar);
         return *this;
     }
 
     Color& operator/=(const Color& other) {
-        m_value = DirectX::XMVectorDivide(m_value, other.m_value);
+        m_value = m_value / other.m_value;
         return *this;
     }
 
     Color& operator/=(float scalar) {
-        m_value = DirectX::XMVectorScale(m_value, 1.0f / scalar);
+        m_value = Prisma::Multiply(m_value, 1.0f / scalar);
         return *this;
     }
 
@@ -183,7 +178,7 @@ public:
      * @brief 线性插值
      */
     static Color Lerp(const Color& a, const Color& b, float t) {
-        return Color(DirectX::XMVectorLerp(a.m_value, b.m_value, t));
+        return Color(Prisma::Lerp(a.m_value, b.m_value, t));
     }
 
     /**
@@ -243,9 +238,9 @@ public:
      */
     Color GammaCorrect(float gamma = 2.2f) const {
         return Color(
-            powf(r(), 1.0f / gamma),
-            powf(g(), 1.0f / gamma),
-            powf(b(), 1.0f / gamma),
+            std::pow(r(), 1.0f / gamma),
+            std::pow(g(), 1.0f / gamma),
+            std::pow(b(), 1.0f / gamma),
             a()
         );
     }
@@ -263,23 +258,9 @@ public:
     // ========== 格式转换 ==========
 
     /**
-     * @brief 转换为XMVECTOR (隐式转换)
+     * @brief 转换为PrismaMath::vec4 (隐式转换)
      */
-    operator DirectX::XMVECTOR() const { return m_value; }
-
-    /**
-     * @brief 转换为XMFLOAT4
-     */
-    DirectX::XMFLOAT4 ToXMFLOAT4() const {
-        return DirectX::XMFLOAT4(r(), g(), b(), a());
-    }
-
-    /**
-     * @brief 转换为XMFLOAT3 (忽略Alpha)
-     */
-    DirectX::XMFLOAT3 ToXMFLOAT3() const {
-        return DirectX::XMFLOAT3(r(), g(), b());
-    }
+    operator PrismaMath::vec4() const { return m_value; }
 
     /**
      * @brief 转换为32位ARGB整数
@@ -331,7 +312,10 @@ public:
      * @brief 限制颜色值到有效范围 [0, 1]
      */
     Color& Clamp() {
-        m_value = DirectX::XMVectorClamp(m_value, DirectX::XMVectorZero(), DirectX::XMVectorSplatOne());
+        m_value.x = Prisma::Clamp(m_value.x, 0.0f, 1.0f);
+        m_value.y = Prisma::Clamp(m_value.y, 0.0f, 1.0f);
+        m_value.z = Prisma::Clamp(m_value.z, 0.0f, 1.0f);
+        m_value.w = Prisma::Clamp(m_value.w, 0.0f, 1.0f);
         return *this;
     }
 
@@ -339,11 +323,16 @@ public:
      * @brief 获取限制后的颜色
      */
     Color Clamped() const {
-        return Color(DirectX::XMVectorClamp(m_value, DirectX::XMVectorZero(), DirectX::XMVectorSplatOne()));
+        return Color(
+            Prisma::Clamp(r(), 0.0f, 1.0f),
+            Prisma::Clamp(g(), 0.0f, 1.0f),
+            Prisma::Clamp(b(), 0.0f, 1.0f),
+            Prisma::Clamp(a(), 0.0f, 1.0f)
+        );
     }
 
 private:
-    DirectX::XMVECTOR m_value;
+    PrismaMath::vec4 m_value;
 };
 
 // ========== 全局运算符 ==========
