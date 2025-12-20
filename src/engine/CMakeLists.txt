@@ -138,9 +138,11 @@ endif()
 if(PRISMA_ENABLE_RENDER_VULKAN)
     list(APPEND ENGINE_GRAPHIC_SOURCES
         graphic/adapters/vulkan/RenderDeviceVulkan.cpp
+        graphic/adapters/vulkan/VulkanShader.cpp
     )
     list(APPEND ENGINE_GRAPHIC_HEADERS
         graphic/adapters/vulkan/RenderDeviceVulkan.h
+        graphic/adapters/vulkan/VulkanShader.h
     )
     message(STATUS "Adding Vulkan render device")
 endif()
