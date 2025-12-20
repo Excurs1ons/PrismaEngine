@@ -1,7 +1,6 @@
 #pragma once
 
-#include <DirectXMath.h>
-using namespace DirectX;
+#include "math/MathTypes.h"
 
 namespace Engine {
 namespace Graphic {
@@ -12,25 +11,25 @@ public:
     virtual ~ICamera() = default;
 
     // 获取视图矩阵
-    virtual XMMATRIX GetViewMatrix() const = 0;
+    virtual PrismaMath::mat4 GetViewMatrix() const = 0;
 
     // 获取投影矩阵
-    virtual XMMATRIX GetProjectionMatrix() const = 0;
+    virtual PrismaMath::mat4 GetProjectionMatrix() const = 0;
 
     // 获取视图投影矩阵
-    virtual XMMATRIX GetViewProjectionMatrix() const = 0;
+    virtual PrismaMath::mat4 GetViewProjectionMatrix() const = 0;
 
     // 获取相机位置
-    virtual XMVECTOR GetPosition() const = 0;
+    virtual PrismaMath::vec3 GetPosition() const = 0;
 
     // 获取相机朝向
-    virtual XMVECTOR GetForward() const = 0;
+    virtual PrismaMath::vec3 GetForward() const = 0;
 
     // 获取相机上方向
-    virtual XMVECTOR GetUp() const = 0;
+    virtual PrismaMath::vec3 GetUp() const = 0;
 
     // 获取相机右方向
-    virtual XMVECTOR GetRight() const = 0;
+    virtual PrismaMath::vec3 GetRight() const = 0;
 
     // 获取视野角度（弧度）
     virtual float GetFOV() const = 0;
@@ -63,7 +62,7 @@ public:
     virtual void SetActive(bool active) = 0;
 
     // 获取清除颜色
-    virtual DirectX::XMVECTOR GetClearColor() const = 0;
+    virtual PrismaMath::vec4 GetClearColor() const = 0;
 
     // 设置清除颜色
     virtual void SetClearColor(float r, float g, float b, float a = 1.0f) = 0;

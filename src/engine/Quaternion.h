@@ -19,10 +19,6 @@ public:
     // 静态常量
     static const Quaternion Identity;
 
-    // 转换函数
-    Prisma::Quaternion ToNativeQuaternion() const;
-    void FromNativeQuaternion(const Prisma::Quaternion& quat);
-
     // 实用方法
     void Normalize();
     float Length() const;
@@ -59,8 +55,17 @@ public:
     float x, y, z, w;
 
 private:
+    // 平台特定的内部数据
+#if defined(PRISMA_USE_DIRECTXMATH)
+    DirectX::XMFLOAT4 m_internalData;
+#endif
+
     // 辅助函数
     static float Clamp(float value, float min, float max);
+
+    // 平台特定的转换函数
+    PrismaMath::vec4 ToInternalVector() const;
+    void FromInternalVector(const PrismaMath::vec4& vector);
 };
 
 #endif //QUATERNION_H

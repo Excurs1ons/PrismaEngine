@@ -1,8 +1,6 @@
 #include "Quaternion.h"
-#include <DirectXMath.h>
+#include "math/Math.h"
 #include <cmath>
-
-using namespace DirectX;
 
 // 静态常量定义
 const Quaternion Quaternion::Identity = Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
@@ -12,50 +10,44 @@ Quaternion::Quaternion() : x(0.0f), y(0.0f), z(0.0f), w(1.0f) {}
 
 Quaternion::Quaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 
-Quaternion::Quaternion(const XMVECTOR& vector) {
-    XMFLOAT4 float4;
-    XMStoreFloat4(&float4, vector);
-    this->x = float4.x;
-    this->y = float4.y;
-    this->z = float4.z;
-    this->w = float4.w;
+Quaternion::Quaternion(const PrismaMath::vec4& vector) {
+    this->x = vector.x;
+    this->y = vector.y;
+    this->z = vector.z;
+    this->w = vector.w;
 }
 
-Quaternion::Quaternion(const XMFLOAT3& euler) {
+Quaternion::Quaternion(const PrismaMath::vec3& euler) {
     *this = FromEulerAngles(euler.x, euler.y, euler.z);
 }
 
-// 转换函数
-XMVECTOR Quaternion::ToXMVector() const {
-    return XMVectorSet(x, y, z, w);
+// 平台特定的转换函数
+PrismaMath::vec4 Quaternion::ToInternalVector() const {
+    return PrismaMath::vec4(x, y, z, w);
 }
 
-void Quaternion::FromXMVector(const XMVECTOR& vector) {
-    XMFLOAT4 float4;
-    XMStoreFloat4(&float4, vector);
-    x = float4.x;
-    y = float4.y;
-    z = float4.z;
-    w = float4.w;
+void Quaternion::FromInternalVector(const PrismaMath::vec4& vector) {
+    x = vector.x;
+    y = vector.y;
+    z = vector.z;
+    w = vector.w;
 }
 
 // 实用方法
 void Quaternion::Normalize() {
-    XMVECTOR vector = ToXMVector();
-    vector = XMQuaternionNormalize(vector);
-    FromXMVector(vector);
+    PrismaMath::vec4 q = ToInternalVector();
+    q = Prisma::Normalize(q);
+    FromInternalVector(q);
 }
 
 float Quaternion::Length() const {
-    XMVECTOR vector = ToXMVector();
-    XMVECTOR length = XMQuaternionLength(vector);
-    return XMVectorGetX(length);
+    PrismaMath::vec4 q = ToInternalVector();
+    return Prisma::Length(q);
 }
 
 float Quaternion::LengthSquared() const {
-    XMVECTOR vector = ToXMVector();
-    XMVECTOR length = XMQuaternionLengthSq(vector);
-    return XMVectorGetX(length);
+    PrismaMath::vec4 q = ToInternalVector();
+    return Prisma::LengthSquared(q);
 }
 
 Quaternion Quaternion::Normalized() const {
@@ -65,53 +57,54 @@ Quaternion Quaternion::Normalized() const {
 }
 
 Quaternion Quaternion::Inverse() const {
-    XMVECTOR vector = ToXMVector();
-    XMVECTOR inverse = XMQuaternionInverse(vector);
+    PrismaMath::vec4 q = ToInternalVector();
+    PrismaMath::vec4 inverse = Prisma::Inverse(q);
     return Quaternion(inverse);
 }
 
 // 静态创建方法
 Quaternion Quaternion::FromEulerAngles(float pitch, float yaw, float roll) {
-    XMVECTOR quaternion = XMQuaternionRotationRollPitchYaw(
-        XMConvertToRadians(pitch),
-        XMConvertToRadians(yaw),
-        XMConvertToRadians(roll)
-    );
+    // 转换为弧度
+    float radPitch = Prisma::Radians(pitch);
+    float radYaw = Prisma::Radians(yaw);
+    float radRoll = Prisma::Radians(roll);
+
+    PrismaMath::vec4 quaternion = Prisma::FromEulerAngles(radPitch, radYaw, radRoll);
     return Quaternion(quaternion);
 }
 
-Quaternion Quaternion::FromAxisAngle(const XMFLOAT3& axis, float angle) {
-    XMVECTOR axisVector = XMLoadFloat3(&axis);
-    XMVECTOR quaternion = XMQuaternionRotationAxis(axisVector, XMConvertToRadians(angle));
+Quaternion Quaternion::FromAxisAngle(const PrismaMath::vec3& axis, float angle) {
+    float radAngle = Prisma::Radians(angle);
+    PrismaMath::vec4 quaternion = Prisma::FromAxisAngle(axis, radAngle);
     return Quaternion(quaternion);
 }
 
-Quaternion Quaternion::FromRotationMatrix(const XMMATRIX& matrix) {
-    XMVECTOR quaternion = XMQuaternionRotationMatrix(matrix);
+Quaternion Quaternion::FromRotationMatrix(const PrismaMath::mat4& matrix) {
+    PrismaMath::vec4 quaternion = Prisma::FromRotationMatrix(matrix);
     return Quaternion(quaternion);
 }
 
 // 球面线性插值
 Quaternion Quaternion::Slerp(const Quaternion& a, const Quaternion& b, float t) {
-    XMVECTOR vectorA = a.ToXMVector();
-    XMVECTOR vectorB = b.ToXMVector();
-    XMVECTOR result = XMQuaternionSlerp(vectorA, vectorB, t);
+    PrismaMath::vec4 q1 = a.ToInternalVector();
+    PrismaMath::vec4 q2 = b.ToInternalVector();
+    PrismaMath::vec4 result = Prisma::Slerp(q1, q2, t);
     return Quaternion(result);
 }
 
 // 运算符重载
 Quaternion Quaternion::operator*(const Quaternion& other) const {
-    XMVECTOR vectorA = ToXMVector();
-    XMVECTOR vectorB = other.ToXMVector();
-    XMVECTOR result = XMQuaternionMultiply(vectorA, vectorB);
+    PrismaMath::vec4 q1 = ToInternalVector();
+    PrismaMath::vec4 q2 = other.ToInternalVector();
+    PrismaMath::vec4 result = Prisma::Multiply(q1, q2);
     return Quaternion(result);
 }
 
 Quaternion& Quaternion::operator*=(const Quaternion& other) {
-    XMVECTOR vectorA = ToXMVector();
-    XMVECTOR vectorB = other.ToXMVector();
-    XMVECTOR result = XMQuaternionMultiply(vectorA, vectorB);
-    FromXMVector(result);
+    PrismaMath::vec4 q1 = ToInternalVector();
+    PrismaMath::vec4 q2 = other.ToInternalVector();
+    PrismaMath::vec4 result = Prisma::Multiply(q1, q2);
+    FromInternalVector(result);
     return *this;
 }
 
@@ -124,47 +117,15 @@ bool Quaternion::operator!=(const Quaternion& other) const {
 }
 
 // 欧拉角转换
-XMFLOAT3 Quaternion::ToEulerAngles() const {
-    XMFLOAT3 euler;
-    XMVECTOR q = ToXMVector();
-
-    // 提取欧拉角 (roll, pitch, yaw)
-    float test = q.m128_f32[0] * q.m128_f32[1] + q.m128_f32[2] * q.m128_f32[3];
-    if (test > 0.499f) {
-        // 奇点处理：north pole
-        euler.y = 2.0f * atan2f(q.m128_f32[0], q.m128_f32[3]);
-        euler.x = XM_PIDIV2;
-        euler.z = 0;
-    } else if (test < -0.499f) {
-        // 奇点处理：south pole
-        euler.y = -2.0f * atan2f(q.m128_f32[0], q.m128_f32[3]);
-        euler.x = -XM_PIDIV2;
-        euler.z = 0;
-    } else {
-        float sqx = q.m128_f32[0] * q.m128_f32[0];
-        float sqy = q.m128_f32[1] * q.m128_f32[1];
-        float sqz = q.m128_f32[2] * q.m128_f32[2];
-        euler.y = atan2f(2.0f * q.m128_f32[1] * q.m128_f32[3] - 2.0f * q.m128_f32[0] * q.m128_f32[2],
-                         1.0f - 2.0f * (sqy + sqz));
-        euler.x = asinf(2.0f * test);
-        euler.z = atan2f(2.0f * q.m128_f32[0] * q.m128_f32[3] - 2.0f * q.m128_f32[1] * q.m128_f32[2],
-                         1.0f - 2.0f * (sqx + sqz));
-    }
-
-    // 转换为度数
-    euler.x = XMConvertToDegrees(euler.x);
-    euler.y = XMConvertToDegrees(euler.y);
-    euler.z = XMConvertToDegrees(euler.z);
-
-    return euler;
+PrismaMath::vec3 Quaternion::ToEulerAngles() const {
+    return Prisma::ToEulerAngles(ToInternalVector());
 }
 
 // 点乘
 float Quaternion::Dot(const Quaternion& other) const {
-    XMVECTOR q1 = ToXMVector();
-    XMVECTOR q2 = other.ToXMVector();
-    XMVECTOR dot = XMVector4Dot(q1, q2);
-    return XMVectorGetX(dot);
+    PrismaMath::vec4 q1 = ToInternalVector();
+    PrismaMath::vec4 q2 = other.ToInternalVector();
+    return Prisma::Dot(q1, q2);
 }
 
 // 静态方法
@@ -172,43 +133,21 @@ Quaternion Quaternion::IdentityQuaternion() {
     return Quaternion(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-Quaternion Quaternion::LookRotation(const XMFLOAT3& forward, const XMFLOAT3& up) {
-    XMVECTOR f = XMLoadFloat3(&forward);
-    XMVECTOR u = XMLoadFloat3(&up);
-
-    // 标准化向量
-    f = XMVector3Normalize(f);
-    u = XMVector3Normalize(u);
-
-    // 计算右向量
-    XMVECTOR r = XMVector3Cross(u, f);
-    r = XMVector3Normalize(r);
-
-    // 重新计算上向量
-    u = XMVector3Cross(f, r);
-
-    // 创建旋转矩阵
-    XMMATRIX rotationMatrix = XMMATRIX(
-        XMVectorGetX(r), XMVectorGetX(u), XMVectorGetX(f), 0.0f,
-        XMVectorGetY(r), XMVectorGetY(u), XMVectorGetY(f), 0.0f,
-        XMVectorGetZ(r), XMVectorGetZ(u), XMVectorGetZ(f), 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
-
-    XMVECTOR rotationQuat = XMQuaternionRotationMatrix(rotationMatrix);
-    return Quaternion(rotationQuat);
+Quaternion Quaternion::LookRotation(const PrismaMath::vec3& forward, const PrismaMath::vec3& up) {
+    PrismaMath::vec4 quaternion = Prisma::LookRotation(forward, up);
+    return Quaternion(quaternion);
 }
 
 float Quaternion::Angle(const Quaternion& a, const Quaternion& b) {
-    XMVECTOR q1 = a.ToXMVector();
-    XMVECTOR q2 = b.ToXMVector();
+    PrismaMath::vec4 q1 = a.ToInternalVector();
+    PrismaMath::vec4 q2 = b.ToInternalVector();
 
     // 计算点积
-    float dot = XMVectorGetX(XMVector4Dot(q1, q2));
+    float dot = Prisma::Dot(q1, q2);
     dot = Clamp(dot, -1.0f, 1.0f);
 
     // 计算角度
-    return XMConvertToDegrees(acosf(fabsf(dot)) * 2.0f);
+    return Prisma::Degrees(acosf(fabsf(dot)) * 2.0f);
 }
 
 // 辅助函数

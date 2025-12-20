@@ -1,14 +1,12 @@
 #pragma once
 #include "Component.h"
-#include <DirectXMath.h>
-#include <DirectXPackedVector.h>
+#include "math/MathTypes.h"
 
-using namespace DirectX;
 using namespace std;
 
 class ITransform:public Component
 {
 public:
-	XMVECTOR position;
+	PrismaMath::vec3 position;
 };
 
