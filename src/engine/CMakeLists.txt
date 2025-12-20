@@ -292,6 +292,9 @@ if(ANDROID)
     message(STATUS "Using VCPKG_PATH: ${VCPKG_PATH}")
     target_include_directories(Engine PRIVATE ${VCPKG_PATH}/include)
 
+    # 添加GLM包含路径（由于vcpkg的glm没有顶层glm.hpp）
+    target_include_directories(Engine PRIVATE ${VCPKG_PATH}/include/glm)
+
     # 查找并链接vcpkg安装的库
     find_path(GLM_INCLUDE_DIR glm/glm.hpp
         PATHS ${VCPKG_PATH}/include
