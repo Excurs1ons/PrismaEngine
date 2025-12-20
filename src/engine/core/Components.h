@@ -1,7 +1,8 @@
 #pragma once
 
 #include "ECS.h"
-#include <DirectXMath.h>
+#include "../math/MathTypes.h"
+#include "../math/Math.h"
 #include <string>
 
 namespace Engine {
@@ -33,75 +34,76 @@ public:
     static constexpr ComponentTypeID TYPE_ID = ComponentTypes::Transform;
 
     TransformComponent() {
-        position = DirectX::XMFLOAT3(0, 0, 0);
-        rotation = DirectX::XMFLOAT4(0, 0, 0, 1); // Quaternion
-        scale = DirectX::XMFLOAT3(1, 1, 1);
+        position = PrismaMath::vec3(0, 0, 0);
+        rotation = PrismaMath::vec4(0, 0, 0, 1); // Quaternion
+        scale = PrismaMath::vec3(1, 1, 1);
         UpdateMatrix();
     }
 
     ComponentTypeID GetTypeID() const override { return TYPE_ID; }
 
     // 获取世界矩阵
-    const DirectX::XMMATRIX& GetWorldMatrix() const {
+    const PrismaMath::mat4& GetWorldMatrix() const {
         return m_worldMatrix;
     }
 
     // 获取前向向量
-    DirectX::XMVECTOR GetForward() const {
-        auto quat = DirectX::XMLoadFloat4(&rotation);
-        return DirectX::XMVector3Rotate(DirectX::XMVectorSet(0, 0, 1, 0), quat);
+    PrismaMath::vec3 GetForward() const {
+        auto forward = PrismaMath::vec3(0, 0, 1);
+        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
+        return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(forward, 0));
     }
 
     // 获取右向量
-    DirectX::XMVECTOR GetRight() const {
-        auto quat = DirectX::XMLoadFloat4(&rotation);
-        return DirectX::XMVector3Rotate(DirectX::XMVectorSet(1, 0, 0, 0), quat);
+    PrismaMath::vec3 GetRight() const {
+        auto right = PrismaMath::vec3(1, 0, 0);
+        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
+        return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(right, 0));
     }
 
     // 获取上向量
-    DirectX::XMVECTOR GetUp() const {
-        auto quat = DirectX::XMLoadFloat4(&rotation);
-        return DirectX::XMVector3Rotate(DirectX::XMVectorSet(0, 1, 0, 0), quat);
+    PrismaMath::vec3 GetUp() const {
+        auto up = PrismaMath::vec3(0, 1, 0);
+        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
+        return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(up, 0));
     }
 
     // 设置位置
-    void SetPosition(const DirectX::XMFLOAT3& pos) {
+    void SetPosition(const PrismaMath::vec3& pos) {
         position = pos;
         UpdateMatrix();
     }
 
     // 设置旋转（欧拉角）
-    void SetEulerAngles(const DirectX::XMFLOAT3& euler) {
-        auto quat = DirectX::XMQuaternionRotationRollPitchYaw(
-            DirectX::XMConvertToRadians(euler.x),
-            DirectX::XMConvertToRadians(euler.y),
-            DirectX::XMConvertToRadians(euler.z)
+    void SetEulerAngles(const PrismaMath::vec3& euler) {
+        rotation = Prisma::FromEulerAngles(
+            Prisma::Radians(euler.x),
+            Prisma::Radians(euler.y),
+            Prisma::Radians(euler.z)
         );
-        DirectX::XMStoreFloat4(&rotation, quat);
         UpdateMatrix();
     }
 
     // 设置缩放
-    void SetScale(const DirectX::XMFLOAT3& s) {
+    void SetScale(const PrismaMath::vec3& s) {
         scale = s;
         UpdateMatrix();
     }
 
     // 变换矩阵属性
-    DirectX::XMFLOAT3 position;
-    DirectX::XMFLOAT4 rotation; // Quaternion
-    DirectX::XMFLOAT3 scale;
+    PrismaMath::vec3 position;
+    PrismaMath::vec4 rotation; // Quaternion
+    PrismaMath::vec3 scale;
 
 private:
-    DirectX::XMMATRIX m_worldMatrix;
+    PrismaMath::mat4 m_worldMatrix;
 
     void UpdateMatrix() {
-        auto translation = DirectX::XMMatrixTranslation(position.x, position.y, position.z);
-        auto quat = DirectX::XMLoadFloat4(&rotation);
-        auto rotationMatrix = DirectX::XMMatrixRotationQuaternion(quat);
-        auto scaleMatrix = DirectX::XMMatrixScaling(scale.x, scale.y, scale.z);
+        auto translation = Prisma::Translation(position);
+        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
+        auto scaleMatrix = Prisma::Scale(scale);
 
-        m_worldMatrix = scaleMatrix * rotationMatrix * translation;
+        m_worldMatrix = Prisma::Multiply(Prisma::Multiply(scaleMatrix, rotationMatrix), translation);
     }
 };
 
@@ -136,18 +138,18 @@ public:
     };
 
     ProjectionType projectionType = ProjectionType::Perspective;
-    float fov = DirectX::XM_PIDIV4; // 45度
+    float fov = Prisma::HALF_PI / 2.0f; // 45度
     float nearPlane = 0.1f;
     float farPlane = 1000.0f;
     float orthoSize = 10.0f;
 
     // 获取投影矩阵
-    DirectX::XMMATRIX GetProjectionMatrix(float aspectRatio) const {
+    PrismaMath::mat4 GetProjectionMatrix(float aspectRatio) const {
         if (projectionType == ProjectionType::Perspective) {
-            return DirectX::XMMatrixPerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane);
+            return Prisma::PerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane);
         } else {
             float halfSize = orthoSize * 0.5f;
-            return DirectX::XMMatrixOrthographicLH(
+            return Prisma::OrthographicLH(
                 halfSize * aspectRatio, halfSize, nearPlane, farPlane
             );
         }
@@ -173,15 +175,15 @@ public:
     LightType type = LightType::Point;
 
     // 颜色和强度
-    DirectX::XMFLOAT3 color = DirectX::XMFLOAT3(1, 1, 1);
+    PrismaMath::vec3 color = PrismaMath::vec3(1, 1, 1);
     float intensity = 1.0f;
 
     // 范围（点光源和聚光灯）
     float range = 10.0f;
 
     // 聚光灯参数
-    float innerConeAngle = DirectX::XMConvertToRadians(30.0f);
-    float outerConeAngle = DirectX::XMConvertToRadians(45.0f);
+    float innerConeAngle = Prisma::Radians(30.0f);
+    float outerConeAngle = Prisma::Radians(45.0f);
 
     // 阴影
     bool castShadows = false;
