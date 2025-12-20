@@ -1,7 +1,7 @@
 #pragma once
 #include "../resource/ResourceBase.h"
 #include "RenderCommandContext.h"
-#include <DirectXMath.h>
+#include "../math/MathTypes.h"
 #include <string>
 #include <memory>
 
@@ -11,7 +11,7 @@ namespace Engine {
 
     // 材质属性结构
     struct MaterialProperties {
-        DirectX::XMFLOAT4 baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
+        PrismaMath::vec4 baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
         float metallic = 0.0f;     // 金属度 [0, 1]
         float roughness = 0.5f;    // 粗糙度 [0, 1]
         float emissive = 0.0f;     // 自发光强度
@@ -33,7 +33,7 @@ namespace Engine {
         ~Material() override;
 
         // 基础属性设置
-        void SetBaseColor(const DirectX::XMFLOAT4& color);
+        void SetBaseColor(const PrismaMath::vec4& color);
         void SetBaseColor(float r, float g, float b, float a = 1.0f);
         void SetMetallic(float metallic);
         void SetRoughness(float roughness);

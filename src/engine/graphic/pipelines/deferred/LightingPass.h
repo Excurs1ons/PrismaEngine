@@ -2,7 +2,7 @@
 
 #include "graphic/RenderPass.h"
 #include "GBuffer.h"
-#include <DirectXMath.h>
+#include "../../../math/MathTypes.h"
 #include <memory>
 #include <vector>
 
@@ -21,9 +21,9 @@ enum class LightType : uint32_t {
 // 光源数据结构
 struct Light {
     LightType type;
-    DirectX::XMFLOAT3 position;      // 点光源/聚光灯位置
-    DirectX::XMFLOAT3 direction;     // 方向光/聚光灯方向
-    DirectX::XMFLOAT3 color;
+    PrismaMath::vec3 position;      // 点光源/聚光灯位置
+    PrismaMath::vec3 direction;     // 方向光/聚光灯方向
+    PrismaMath::vec3 color;
     float intensity;
 
     // 点光源/聚光灯参数
@@ -34,20 +34,20 @@ struct Light {
     // 阴影参数
     bool castShadows;
     uint32_t shadowMapIndex;
-    DirectX::XMMATRIX shadowMatrix;
+    PrismaMath::mat4 shadowMatrix;
 
     Light() {
         type = LightType::Point;
-        position = DirectX::XMFLOAT3(0, 0, 0);
-        direction = DirectX::XMFLOAT3(0, -1, 0);
-        color = DirectX::XMFLOAT3(1, 1, 1);
+        position = PrismaMath::vec3(0, 0, 0);
+        direction = PrismaMath::vec3(0, -1, 0);
+        color = PrismaMath::vec3(1, 1, 1);
         intensity = 1.0f;
         range = 10.0f;
         innerCone = 0.5f;
         outerCone = 1.0f;
         castShadows = false;
         shadowMapIndex = 0xFFFFFFFF;
-        shadowMatrix = DirectX::XMMatrixIdentity();
+        shadowMatrix = PrismaMath::mat4(1.0f);
     }
 };
 
@@ -74,7 +74,7 @@ public:
     void SetGBuffer(std::shared_ptr<GBuffer> gbuffer);
 
     // 设置环境光
-    void SetAmbientLight(const DirectX::XMFLOAT3& ambient);
+    void SetAmbientLight(const PrismaMath::vec3& ambient);
 
     // 设置光源
     void SetLights(const std::vector<Light>& lights);
@@ -103,7 +103,7 @@ private:
     uint32_t m_height = 0;
 
     // 环境光
-    DirectX::XMFLOAT3 m_ambientLight = DirectX::XMFLOAT3(0.1f, 0.1f, 0.1f);
+    PrismaMath::vec3 m_ambientLight = PrismaMath::vec3(0.1f, 0.1f, 0.1f);
 
     // 光源列表
     std::vector<Light> m_lights;

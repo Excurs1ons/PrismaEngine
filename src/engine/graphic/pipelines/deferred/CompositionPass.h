@@ -1,7 +1,6 @@
 #pragma once
 
 #include "graphic/RenderPass.h"
-#include <DirectXMath.h>
 #include <memory>
 
 namespace Engine {

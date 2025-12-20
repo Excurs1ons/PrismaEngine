@@ -2,7 +2,7 @@
 
 #include "graphic/RenderPass.h"
 #include "GBuffer.h"
-#include <DirectXMath.h>
+#include "../../../math/MathTypes.h"
 #include <memory>
 
 namespace Engine {
@@ -32,13 +32,13 @@ public:
     void SetViewport(uint32_t width, uint32_t height) override;
 
     // 设置视图矩阵
-    void SetViewMatrix(const DirectX::XMMATRIX& view);
+    void SetViewMatrix(const PrismaMath::mat4& view);
 
     // 设置投影矩阵
-    void SetProjectionMatrix(const DirectX::XMMATRIX& projection);
+    void SetProjectionMatrix(const PrismaMath::mat4& projection);
 
     // 设置视图投影矩阵
-    void SetViewProjectionMatrix(const DirectX::XMMATRIX& viewProjection);
+    void SetViewProjectionMatrix(const PrismaMath::mat4& viewProjection);
 
     // 启用/禁用深度预渲染
     void SetDepthPrePass(bool enable);
@@ -48,9 +48,9 @@ private:
     std::shared_ptr<GBuffer> m_gbuffer;
 
     // 相机矩阵
-    DirectX::XMMATRIX m_view = DirectX::XMMatrixIdentity();
-    DirectX::XMMATRIX m_projection = DirectX::XMMatrixIdentity();
-    DirectX::XMMATRIX m_viewProjection = DirectX::XMMatrixIdentity();
+    PrismaMath::mat4 m_view = PrismaMath::mat4(1.0f);
+    PrismaMath::mat4 m_projection = PrismaMath::mat4(1.0f);
+    PrismaMath::mat4 m_viewProjection = PrismaMath::mat4(1.0f);
 
     // 视口尺寸
     uint32_t m_width = 0;

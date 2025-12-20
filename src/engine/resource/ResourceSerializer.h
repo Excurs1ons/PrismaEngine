@@ -1,7 +1,7 @@
 #pragma once
 #include "Mesh.h"
 #include "ResourceBase.h"
-#include <DirectXMath.h>
+#include "../math/MathTypes.h"
 #include <filesystem>
 #include <nlohmann/json.hpp>
 using json = nlohmann::json;
@@ -10,22 +10,22 @@ namespace nlohmann {
     // 第三方类型的序列化集中在这里
 
     template <>
-    struct adl_serializer<DirectX::XMFLOAT2> {
-        static void to_json(json& j, const DirectX::XMFLOAT2& v) {
+    struct adl_serializer<PrismaMath::vec2> {
+        static void to_json(json& j, const PrismaMath::vec2& v) {
             j = json{ {"x", v.x}, {"y", v.y} };
         }
-        static void from_json(const json& j, DirectX::XMFLOAT2& v) {
+        static void from_json(const json& j, PrismaMath::vec2& v) {
             j.at("x").get_to(v.x);
             j.at("y").get_to(v.y);
 		}
     };
 
     template <>
-    struct adl_serializer<DirectX::XMFLOAT3> {
-        static void to_json(json& j, const DirectX::XMFLOAT3& v) {
+    struct adl_serializer<PrismaMath::vec3> {
+        static void to_json(json& j, const PrismaMath::vec3& v) {
             j = json{ {"x", v.x}, {"y", v.y}, {"z", v.z} };
         }
-        static void from_json(const json& j, DirectX::XMFLOAT3& v) {
+        static void from_json(const json& j, PrismaMath::vec3& v) {
             j.at("x").get_to(v.x);
             j.at("y").get_to(v.y);
             j.at("z").get_to(v.z);
@@ -33,11 +33,11 @@ namespace nlohmann {
     };
 
     template <>
-    struct adl_serializer<DirectX::XMFLOAT4> {
-        static void to_json(json& j, const DirectX::XMFLOAT4& v) {
+    struct adl_serializer<PrismaMath::vec4> {
+        static void to_json(json& j, const PrismaMath::vec4& v) {
             j = json{ {"x", v.x}, {"y", v.y}, {"z", v.z}, {"w", v.w} };
         }
-        static void from_json(const json& j, DirectX::XMFLOAT4& v) {
+        static void from_json(const json& j, PrismaMath::vec4& v) {
             j.at("x").get_to(v.x);
             j.at("y").get_to(v.y);
             j.at("z").get_to(v.z);
@@ -52,19 +52,6 @@ namespace nlohmann {
         }
         static void from_json(const json& j, std::filesystem::path& p) {
             p = j.get<std::string>();
-        }
-    };
-
-    template <>
-    struct adl_serializer<DirectX::XMVECTORF32> {
-        static void to_json(json& j, const DirectX::XMVECTORF32& vec) {
-			j = { {"x", vec.f[0]}, {"y", vec.f[1]}, {"z", vec.f[2]}, {"w", vec.f[3]} };
-        }
-        static void from_json(const json& j, DirectX::XMVECTORF32& vec) {
-			j.at("x").get_to(vec.f[0]);
-			j.at("y").get_to(vec.f[1]);
-			j.at("z").get_to(vec.f[2]);
-            j.at("w").get_to(vec.f[3]);
         }
     };
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <DirectXMath.h>
+#include "../../../math/MathTypes.h"
 #include <memory>
 
 namespace Engine {
@@ -37,19 +37,19 @@ struct GBufferFormats {
 // G-Buffer数据结构（用于着色器）
 struct GBufferData {
     // World space position
-    DirectX::XMFLOAT3 position;
+    PrismaMath::vec3 position;
     float padding1;
 
     // World space normal
-    DirectX::XMFLOAT3 normal;
+    PrismaMath::vec3 normal;
     float roughness;
 
     // Albedo color
-    DirectX::XMFLOAT3 albedo;
+    PrismaMath::vec3 albedo;
     float metallic;
 
     // Emissive color
-    DirectX::XMFLOAT3 emissive;
+    PrismaMath::vec3 emissive;
     float ao;
 
     // Material properties

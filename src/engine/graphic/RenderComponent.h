@@ -2,11 +2,9 @@
 #include "GameObject.h"
 #include "Component.h"
 #include "RenderCommandContext.h"
-#include <DirectXMath.h>
+#include "../math/MathTypes.h"
 #include <vector>
 #include <memory>
-
-using namespace DirectX;
 
 namespace Engine {
     class Material; // 前向声明
@@ -41,7 +39,7 @@ public:
     void SetColor(float r, float g, float b, float a = 1.0f);
 
     // 获取颜色
-    XMVECTOR GetColor() const;
+    PrismaMath::vec4 GetColor() const;
 
     // 材质相关方法
     void SetMaterial(std::shared_ptr<Engine::Material> material);
@@ -58,7 +56,7 @@ private:
     uint32_t m_vertexCount;
     uint32_t m_indexCount;
     bool m_use16BitIndices; // 缓存索引类型，避免运行时检查
-    XMVECTOR m_color;
+    PrismaMath::vec4 m_color;
 
     // 材质系统
     std::shared_ptr<Engine::Material> m_material;
