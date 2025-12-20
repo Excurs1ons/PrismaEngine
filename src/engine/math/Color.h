@@ -10,46 +10,44 @@ namespace Engine {
 namespace Math {
 
 /**
- * @brief 颜色结构体 - PrismaMath::vec4的包装器，类似Unity的Color类型
+ * @brief 颜色结构体 - Prisma::Vector4的包装器，类似Unity的Color类型
  *
  * 提供RGBA颜色值的便捷操作，支持多种颜色空间和格式转换
  * 跨平台兼容：Windows使用DirectXMath，Android使用GLM
  */
-class Color
-{
+class Color {
 public:
     // ========== 构造函数 ==========
 
     /**
      * @brief 默认构造 - 白色 (1, 1, 1, 1)
      */
-    Color() : m_value(PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f)) {}
+    Color() : m_value(Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f)) {}
 
     /**
      * @brief RGB构造 - Alpha = 1.0
      */
-    Color(float r, float g, float b) : m_value(PrismaMath::vec4(r, g, b, 1.0f)) {}
+    Color(float r, float g, float b) : m_value(Prisma::Vector4(r, g, b, 1.0f)) {}
 
     /**
      * @brief RGBA构造
      */
-    Color(float r, float g, float b, float a) : m_value(PrismaMath::vec4(r, g, b, a)) {}
+    Color(float r, float g, float b, float a) : m_value(Prisma::Vector4(r, g, b, a)) {}
 
     /**
-     * @brief 从PrismaMath::vec4构造
+     * @brief 从Prisma::Vector4构造
      */
-    explicit Color(const PrismaMath::vec4& vec) : m_value(vec) {}
+    explicit Color(const Prisma::Vector4& vec) : m_value(vec) {}
 
     /**
      * @brief 从32位ARGB整数构造 (0xAARRGGBB)
      */
     explicit Color(uint32_t argb)
-        : m_value(PrismaMath::vec4(
-            static_cast<float>((argb >> 16) & 0xFF) / 255.0f,  // R
-            static_cast<float>((argb >> 8) & 0xFF) / 255.0f,   // G
-            static_cast<float>(argb & 0xFF) / 255.0f,          // B
-            static_cast<float>((argb >> 24) & 0xFF) / 255.0f   // A
-        )) {}
+        : m_value(Prisma::Vector4(static_cast<float>((argb >> 16) & 0xFF) / 255.0f,  // R
+                                  static_cast<float>((argb >> 8) & 0xFF) / 255.0f,   // G
+                                  static_cast<float>(argb & 0xFF) / 255.0f,          // B
+                                  static_cast<float>((argb >> 24) & 0xFF) / 255.0f   // A
+                                  )) {}
 
     // ========== 静态工厂方法 ==========
 
@@ -71,19 +69,19 @@ public:
 
     // ========== 预定义颜色常量 ==========
 
-    static Color Clear()      { return Color(0.0f, 0.0f, 0.0f, 0.0f); }
-    static Color Black()      { return Color(0.0f, 0.0f, 0.0f, 1.0f); }
-    static Color White()      { return Color(1.0f, 1.0f, 1.0f, 1.0f); }
-    static Color Red()        { return Color(1.0f, 0.0f, 0.0f, 1.0f); }
-    static Color Green()      { return Color(0.0f, 1.0f, 0.0f, 1.0f); }
-    static Color Blue()       { return Color(0.0f, 0.0f, 1.0f, 1.0f); }
-    static Color Yellow()     { return Color(1.0f, 1.0f, 0.0f, 1.0f); }
-    static Color Magenta()    { return Color(1.0f, 0.0f, 1.0f, 1.0f); }
-    static Color Cyan()       { return Color(0.0f, 1.0f, 1.0f, 1.0f); }
-    static Color Gray()       { return Color(0.5f, 0.5f, 0.5f, 1.0f); }
-    static Color Grey()       { return Gray(); }
-    static Color Orange()     { return Color(1.0f, 0.5f, 0.0f, 1.0f); }
-    static Color Purple()     { return Color(0.5f, 0.0f, 0.5f, 1.0f); }
+    static Color Clear() { return Color(0.0f, 0.0f, 0.0f, 0.0f); }
+    static Color Black() { return Color(0.0f, 0.0f, 0.0f, 1.0f); }
+    static Color White() { return Color(1.0f, 1.0f, 1.0f, 1.0f); }
+    static Color Red() { return Color(1.0f, 0.0f, 0.0f, 1.0f); }
+    static Color Green() { return Color(0.0f, 1.0f, 0.0f, 1.0f); }
+    static Color Blue() { return Color(0.0f, 0.0f, 1.0f, 1.0f); }
+    static Color Yellow() { return Color(1.0f, 1.0f, 0.0f, 1.0f); }
+    static Color Magenta() { return Color(1.0f, 0.0f, 1.0f, 1.0f); }
+    static Color Cyan() { return Color(0.0f, 1.0f, 1.0f, 1.0f); }
+    static Color Gray() { return Color(0.5f, 0.5f, 0.5f, 1.0f); }
+    static Color Grey() { return Gray(); }
+    static Color Orange() { return Color(1.0f, 0.5f, 0.0f, 1.0f); }
+    static Color Purple() { return Color(0.5f, 0.0f, 0.5f, 1.0f); }
 
     // ========== 访问器 ==========
 
@@ -97,58 +95,40 @@ public:
     void SetB(float b) { m_value.z = b; }
     void SetA(float a) { m_value.w = a; }
 
-    void SetRGBA(float r, float g, float b, float a) {
-        m_value = PrismaMath::vec4(r, g, b, a);
-    }
+    void SetRGBA(float r, float g, float b, float a) { m_value = Prisma::Vector4(r, g, b, a); }
 
     // ========== 运算符重载 ==========
 
     // 相等性比较
     bool operator==(const Color& other) const {
         const float epsilon = 0.001f;
-        return std::abs(r() - other.r()) < epsilon &&
-               std::abs(g() - other.g()) < epsilon &&
-               std::abs(b() - other.b()) < epsilon &&
-               std::abs(a() - other.a()) < epsilon;
+        return std::abs(r() - other.r()) < epsilon && std::abs(g() - other.g()) < epsilon &&
+               std::abs(b() - other.b()) < epsilon && std::abs(a() - other.a()) < epsilon;
     }
 
-    bool operator!=(const Color& other) const {
-        return !(*this == other);
-    }
+    bool operator!=(const Color& other) const { return !(*this == other); }
 
     // 算术运算
-    Color operator+(const Color& other) const {
-        return Color(Prisma::Add(m_value, other.m_value));
-    }
+    Color operator+(const Color& other) const { return Color(Prisma::Add(m_value, other.m_value)); }
 
-    Color operator-(const Color& other) const {
-        return Color(Prisma::Subtract(m_value, other.m_value));
-    }
+    Color operator-(const Color& other) const { return Color(Prisma::Subtract(m_value, other.m_value)); }
 
-    Color operator*(const Color& other) const {
-        return Color(m_value * other.m_value);
-    }
+    Color operator*(const Color& other) const { return Color(m_value * other.m_value); }
 
-    Color operator*(float scalar) const {
-        return Color(Prisma::Multiply(m_value, scalar));
-    }
+    Color operator*(float scalar) const { return Color(Prisma::Math::Multiply(m_value, scalar)); }
 
-    Color operator/(const Color& other) const {
-        return Color(m_value / other.m_value);
-    }
+    Color operator/(const Color& other) const { return Color(m_value / other.m_value); }
 
-    Color operator/(float scalar) const {
-        return Color(Prisma::Multiply(m_value, 1.0f / scalar));
-    }
+    Color operator/(float scalar) const { return Color(Prisma::Math::Multiply(m_value, 1.0f / scalar)); }
 
     // 赋值运算
     Color& operator+=(const Color& other) {
-        m_value = Prisma::Add(m_value, other.m_value);
+        m_value = Prisma::Math::Add(m_value, other.m_value);
         return *this;
     }
 
     Color& operator-=(const Color& other) {
-        m_value = Prisma::Subtract(m_value, other.m_value);
+        m_value = m_value - other.m_value;
         return *this;
     }
 
@@ -158,7 +138,7 @@ public:
     }
 
     Color& operator*=(float scalar) {
-        m_value = Prisma::Multiply(m_value, scalar);
+        m_value = Prisma::Math::Multiply(m_value, scalar);
         return *this;
     }
 
@@ -168,7 +148,7 @@ public:
     }
 
     Color& operator/=(float scalar) {
-        m_value = Prisma::Multiply(m_value, 1.0f / scalar);
+        m_value = Prisma::Math::Multiply(m_value, 1.0f / scalar);
         return *this;
     }
 
@@ -177,9 +157,7 @@ public:
     /**
      * @brief 线性插值
      */
-    static Color Lerp(const Color& a, const Color& b, float t) {
-        return Color(Prisma::Lerp(a.m_value, b.m_value, t));
-    }
+    static Color Lerp(const Color& a, const Color& b, float t) { return Color(Prisma::Lerp(a.m_value, b.m_value, t)); }
 
     /**
      * @brief 平滑插值 (Smoothstep)
@@ -210,9 +188,7 @@ public:
     /**
      * @brief 调整亮度
      */
-    Color AdjustBrightness(float factor) const {
-        return Color(r() * factor, g() * factor, b() * factor, a());
-    }
+    Color AdjustBrightness(float factor) const { return Color(r() * factor, g() * factor, b() * factor, a()); }
 
     /**
      * @brief 调整饱和度
@@ -227,9 +203,7 @@ public:
     /**
      * @brief 反转颜色
      */
-    Color Inverted() const {
-        return Color(1.0f - r(), 1.0f - g(), 1.0f - b(), a());
-    }
+    Color Inverted() const { return Color(1.0f - r(), 1.0f - g(), 1.0f - b(), a()); }
 
     // ========== 颜色空间转换 ==========
 
@@ -237,12 +211,7 @@ public:
      * @brief Gamma校正
      */
     Color GammaCorrect(float gamma = 2.2f) const {
-        return Color(
-            std::pow(r(), 1.0f / gamma),
-            std::pow(g(), 1.0f / gamma),
-            std::pow(b(), 1.0f / gamma),
-            a()
-        );
+        return Color(std::pow(r(), 1.0f / gamma), std::pow(g(), 1.0f / gamma), std::pow(b(), 1.0f / gamma), a());
     }
 
     /**
@@ -258,32 +227,24 @@ public:
     // ========== 格式转换 ==========
 
     /**
-     * @brief 转换为PrismaMath::vec4 (隐式转换)
+     * @brief 转换为Prisma::Vector4 (隐式转换)
      */
-    operator PrismaMath::vec4() const { return m_value; }
+    operator Prisma::Vector4() const { return m_value; }
 
     /**
      * @brief 转换为32位ARGB整数
      */
     uint32_t ToARGB() const {
-        return (
-            (static_cast<uint32_t>(a() * 255.0f) << 24) |
-            (static_cast<uint32_t>(r() * 255.0f) << 16) |
-            (static_cast<uint32_t>(g() * 255.0f) << 8)  |
-            (static_cast<uint32_t>(b() * 255.0f))
-        );
+        return ((static_cast<uint32_t>(a() * 255.0f) << 24) | (static_cast<uint32_t>(r() * 255.0f) << 16) |
+                (static_cast<uint32_t>(g() * 255.0f) << 8) | (static_cast<uint32_t>(b() * 255.0f)));
     }
 
     /**
      * @brief 转换为32位RGBA整数
      */
     uint32_t ToRGBA() const {
-        return (
-            (static_cast<uint32_t>(r() * 255.0f) << 24) |
-            (static_cast<uint32_t>(g() * 255.0f) << 16) |
-            (static_cast<uint32_t>(b() * 255.0f) << 8)  |
-            (static_cast<uint32_t>(a() * 255.0f))
-        );
+        return ((static_cast<uint32_t>(r() * 255.0f) << 24) | (static_cast<uint32_t>(g() * 255.0f) << 16) |
+                (static_cast<uint32_t>(b() * 255.0f) << 8) | (static_cast<uint32_t>(a() * 255.0f)));
     }
 
     /**
@@ -302,20 +263,18 @@ public:
      * @brief 验证颜色值是否在有效范围内 [0, 1]
      */
     bool IsValid() const {
-        return r() >= 0.0f && r() <= 1.0f &&
-               g() >= 0.0f && g() <= 1.0f &&
-               b() >= 0.0f && b() <= 1.0f &&
-               a() >= 0.0f && a() <= 1.0f;
+        return r() >= 0.0f && r() <= 1.0f && g() >= 0.0f && g() <= 1.0f && b() >= 0.0f && b() <= 1.0f && a() >= 0.0f &&
+               a() <= 1.0f;
     }
 
     /**
      * @brief 限制颜色值到有效范围 [0, 1]
      */
     Color& Clamp() {
-        m_value.x = Prisma::Clamp(m_value.x, 0.0f, 1.0f);
-        m_value.y = Prisma::Clamp(m_value.y, 0.0f, 1.0f);
-        m_value.z = Prisma::Clamp(m_value.z, 0.0f, 1.0f);
-        m_value.w = Prisma::Clamp(m_value.w, 0.0f, 1.0f);
+        m_value.x = Prisma::Math::Clamp(m_value.x, 0.0f, 1.0f);
+        m_value.y = Prisma::Math::Clamp(m_value.y, 0.0f, 1.0f);
+        m_value.z = Prisma::Math::Clamp(m_value.z, 0.0f, 1.0f);
+        m_value.w = Prisma::Math::Clamp(m_value.w, 0.0f, 1.0f);
         return *this;
     }
 
@@ -323,16 +282,14 @@ public:
      * @brief 获取限制后的颜色
      */
     Color Clamped() const {
-        return Color(
-            Prisma::Clamp(r(), 0.0f, 1.0f),
-            Prisma::Clamp(g(), 0.0f, 1.0f),
-            Prisma::Clamp(b(), 0.0f, 1.0f),
-            Prisma::Clamp(a(), 0.0f, 1.0f)
-        );
+        return Color(Prisma::Math::Clamp(r(), 0.0f, 1.0f),
+                     Prisma::Math::Clamp(g(), 0.0f, 1.0f),
+                     Prisma::Math::Clamp(b(), 0.0f, 1.0f),
+                     Prisma::Math::Clamp(a(), 0.0f, 1.0f));
     }
 
 private:
-    PrismaMath::vec4 m_value;
+    Prisma::Vector4 m_value;
 };
 
 // ========== 全局运算符 ==========

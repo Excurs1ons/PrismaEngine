@@ -7,6 +7,7 @@
 #include <typeinfo>
 #include <functional>
 #include <mutex>
+#include "Logger.h"
 
 namespace Engine {
 namespace Core {
