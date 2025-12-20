@@ -23,7 +23,7 @@ public:
 
     // 移动相机（相对于世界坐标系）
     void MoveWorld(float x, float y, float z);
-    void MoveWorld(const PrismaMath::vec4& direction);
+    void MoveWorld(const PrismaMath::vec3& direction);
 
     // 移动相机（相对于相机坐标系）
     void MoveLocal(float forward, float right, float up);
@@ -32,7 +32,7 @@ public:
     void Rotate(float pitch, float yaw, float roll);
 
     // 看向目标点
-    void LookAt(const PrismaMath::vec4& target);
+    void LookAt(const PrismaMath::vec3& target);
     void LookAt(float x, float y, float z);
 
     // ICamera接口实现
@@ -40,10 +40,10 @@ public:
     PrismaMath::mat4 GetProjectionMatrix() const override;
     PrismaMath::mat4 GetViewProjectionMatrix() const override;
 
-    PrismaMath::vec4 GetPosition() const override;
-    PrismaMath::vec4 GetForward() const override;
-    PrismaMath::vec4 GetUp() const override;
-    PrismaMath::vec4 GetRight() const override;
+    PrismaMath::vec3 GetPosition() const override;
+    PrismaMath::vec3 GetForward() const override;
+    PrismaMath::vec3 GetUp() const override;
+    PrismaMath::vec3 GetRight() const override;
 
     float GetFOV() const override { return m_fov; }
     void SetFOV(float fov) override;
@@ -80,9 +80,9 @@ private:
     mutable PrismaMath::mat4 m_projectionMatrix;
 
     // 缓存的向量（从Transform计算得出）
-    mutable PrismaMath::vec4 m_forward;
-    mutable PrismaMath::vec4 m_up;
-    mutable PrismaMath::vec4 m_right;
+    mutable PrismaMath::vec3 m_forward;
+    mutable PrismaMath::vec3 m_up;
+    mutable PrismaMath::vec3 m_right;
 
     // 脏标记
     mutable bool m_isViewDirty;
