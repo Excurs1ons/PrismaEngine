@@ -328,10 +328,10 @@ call :print_info "构建完成！"
 :: 显示输出文件
 call :print_info "输出文件:"
 for %%a in (%build_abis%) do (
-    set "lib_path=build-android\install\%%a\lib\libEngine.so"
+    set "lib_path=..\build\install\%%a\lib\libEngine.so"
     if exist "!lib_path!" (
         for %%i in ("!lib_path!") do set "file_size=%%~zi"
-        call :print_info "  %%a: !lib_path!"
+        call :print_info "  %%a: build\install\%%a\lib\libEngine.so"
     )
 )
 
