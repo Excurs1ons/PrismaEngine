@@ -215,12 +215,30 @@ endif()
 
 # 渲染设备依赖
 if(PRISMA_ENABLE_RENDER_VULKAN)
-    find_package(Vulkan QUIET)
-    if(Vulkan_FOUND)
-        target_include_directories(Engine PRIVATE ${Vulkan_INCLUDE_DIRS})
-        target_link_libraries(Engine PRIVATE ${Vulkan_LIBRARIES})
+    if(ANDROID)
+        # Android平台Vulkan是系统库
+        list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
+        set(Vulkan_INCLUDE_DIRS "${VCPKG_PATH}/include")
+
+        # 检查Vulkan头文件是否存在
+        if(EXISTS "${Vulkan_INCLUDE_DIRS}/vulkan/vulkan.h")
+            message(STATUS "Found Vulkan headers for Android: ${Vulkan_INCLUDE_DIRS}/vulkan")
+            target_include_directories(Engine PRIVATE ${Vulkan_INCLUDE_DIRS})
+
+            # Android平台Vulkan是系统库，不需要静态库文件
+            # 只需在链接时指定库名
+            target_link_libraries(Engine PRIVATE vulkan)
+        else()
+            message(FATAL_ERROR "Vulkan headers not found for Android")
+        endif()
     else()
-        message(WARNING "Vulkan not found, but backend is enabled")
+        find_package(Vulkan QUIET)
+        if(Vulkan_FOUND)
+            target_include_directories(Engine PRIVATE ${Vulkan_INCLUDE_DIRS})
+            target_link_libraries(Engine PRIVATE ${Vulkan_LIBRARIES})
+        else()
+            message(WARNING "Vulkan not found, but backend is enabled")
+        endif()
     endif()
 endif()
 
@@ -260,9 +278,50 @@ target_include_directories(Engine
 
 # 在Android平台上添加vcpkg包含路径
 if(ANDROID)
-    # 提取vcpkg路径
-    list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
+    # CMAKE_PREFIX_PATH 可能是单个路径而不是列表
+    set(VCPKG_PATH ${CMAKE_PREFIX_PATH})
+    message(STATUS "CMAKE_PREFIX_PATH: ${VCPKG_PATH}")
+
+    # 如果包含分号，只取第一个路径
+    string(FIND "${VCPKG_PATH}" \; SEMICOLON_POS)
+    if(SEMICOLON_POS GREATER -1)
+        string(SUBSTRING "${VCPKG_PATH}" 0 ${SEMICOLON_POS} FIRST_PATH)
+        set(VCPKG_PATH ${FIRST_PATH})
+    endif()
+
+    message(STATUS "Using VCPKG_PATH: ${VCPKG_PATH}")
     target_include_directories(Engine PRIVATE ${VCPKG_PATH}/include)
+
+    # 查找并链接vcpkg安装的库
+    find_path(GLM_INCLUDE_DIR glm/glm.hpp
+        PATHS ${VCPKG_PATH}/include
+        NO_DEFAULT_PATH
+    )
+
+    # 如果上述方式失败，尝试直接从项目根目录查找
+    if(NOT GLM_INCLUDE_DIR)
+        set(GLM_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../vcpkg_installed/arm64-android")
+        find_path(GLM_INCLUDE_DIR glm/glm.hpp
+            PATHS ${GLM_INSTALL_DIR}/include
+            NO_DEFAULT_PATH
+        )
+        message(STATUS "Trying alternative path: ${GLM_INSTALL_DIR}")
+    endif()
+
+    if(GLM_INCLUDE_DIR)
+        message(STATUS "Found GLM: ${GLM_INCLUDE_DIR}")
+        target_include_directories(Engine PRIVATE ${GLM_INCLUDE_DIR})
+    else()
+        # 尝试绝对路径
+        set(GLM_ABS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../vcpkg_installed/arm64-android/include")
+        if(EXISTS "${GLM_ABS_PATH}/glm/glm.hpp")
+            message(STATUS "Found GLM using absolute path: ${GLM_ABS_PATH}")
+            target_include_directories(Engine PRIVATE ${GLM_ABS_PATH})
+        else()
+            message(FATAL_ERROR "GLM not found in vcpkg installed directory")
+            message(FATAL_ERROR "Expected path: ${GLM_ABS_PATH}/glm/glm.hpp")
+        endif()
+    endif()
 endif()
 
 # ========== 编译定义 ==========
