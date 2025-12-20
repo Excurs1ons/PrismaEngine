@@ -33,8 +33,8 @@
 #endif
 
 // 统一的数学函数接口
-namespace Prisma {
-namespace Math {
+
+namespace Prisma::Math {
 
 #if defined(_WIN32) || defined(_WIN64)
 
@@ -68,12 +68,16 @@ inline Matrix4x4 FromMatrix(const XMMATRIX& m) {
     XMStoreFloat4x4(&result, m);
     return result;
 }
-
+inline XMVECTOR ToVector4(const Vector4& v) {
+}
 // 向量运算
 inline Vector3 Add(const Vector3& a, const Vector3& b) {
     return FromVector(ToVector(a) + ToVector(b));
 }
-
+// 向量运算
+inline Vector4 Add(const Vector4& a, const Vector4& b) {
+    return FromVector4(ToVector(a) + ToVector(b));
+}
 inline Vector3 Subtract(const Vector3& a, const Vector3& b) {
     return FromVector(ToVector(a) - ToVector(b));
 }
@@ -81,7 +85,12 @@ inline Vector3 Subtract(const Vector3& a, const Vector3& b) {
 inline Vector3 Multiply(const Vector3& v, float s) {
     return FromVector(ToVector(v) * s);
 }
-
+inline Vector4 Multiply(const Vector4& v, float s) {
+    return FromVector4(ToVector(v) * s);
+}
+inline Vector4 Multiply(const Vector4& v, const Vector4& s) {
+    return {v.x*s.x, v.y*s.y, v.z*s.z, v.w*s.w};
+}
 inline float Dot(const Vector3& a, const Vector3& b) {
     return XMVectorGetX(XMVector3Dot(ToVector(a), ToVector(b)));
 }
@@ -143,10 +152,6 @@ inline Quaternion QuaternionIdentity() {
 
 inline Quaternion CreateFromAxisAngle(const Vector3& axis, float angle) {
     return FromVector4(XMQuaternionRotationAxis(ToVector(axis), angle));
-}
-
-inline Quaternion Multiply(const Quaternion& a, const Quaternion& b) {
-    return FromVector4(XMQuaternionMultiply(ToVector4(a), ToVector4(b)));
 }
 
 inline Matrix4x4 QuaternionToMatrix(const Quaternion& q) {
@@ -471,5 +476,4 @@ constexpr float PI = 3.14159265358979323846f;
 constexpr float TwoPI = 2.0f * PI;
 constexpr float HalfPI = PI * 0.5f;
 
-} // namespace Math
-} // namespace Prisma
+} // namespace Prisma::Math
