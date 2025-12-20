@@ -220,6 +220,12 @@ function Build-Abi {
 
     Push-Location $buildDir
 
+    # 使用项目的vcpkg
+    $projectRoot = (Resolve-Path "..\..").Path
+    $vcpkgRoot = "$projectRoot\vcpkg"
+    $vcpkgExe = "$vcpkgRoot\vcpkg.exe"
+    $vcpkgToolchain = "$vcpkgRoot\scripts\buildsystems\vcpkg.cmake"
+
     # 配置CMake
     $cmakeArgs = @(
         "-DCMAKE_TOOLCHAIN_FILE=$env:ANDROID_NDK_HOME\build\cmake\android.toolchain.cmake",
@@ -238,19 +244,13 @@ function Build-Abi {
         "-G", "Ninja"
     )
 
-    # 使用项目的vcpkg
-    $projectRoot = (Resolve-Path "..\..").Path
-    $vcpkgRoot = "$projectRoot\vcpkg"
-    $vcpkgExe = "$vcpkgRoot\vcpkg.exe"
-
-    if (Test-Path $vcpkgExe) {
-        $vcpkgToolchain = "$vcpkgRoot\scripts\buildsystems\vcpkg.cmake"
-
-        # 添加vcpkg工具链，不指定manifest文件（使用默认的vcpkg.json）
-        $cmakeArgs += @(
-            "-DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain",
-            "-DVCPKG_TARGET_TRIPLET=arm64-android"
-        )
+    # 暂时不使用vcpkg工具链，只使用Android NDK工具链
+    # 注意：vcpkg已安装的库可以通过CMAKE_PREFIX_PATH找到
+    $cmakeArgs += @(
+        "-DCMAKE_PREFIX_PATH=$projectRoot\vcpkg_installed\arm64-android",
+        "-DCMAKE_MODULE_PATH=$projectRoot\vcpkg_installed\arm64-android/share",
+        "-DVCPKG_MANIFEST_MODE=OFF"
+    )
 
         # 强制检查并安装Android依赖
         Write-Info "检查Android依赖..."
