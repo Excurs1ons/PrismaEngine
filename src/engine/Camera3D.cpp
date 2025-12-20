@@ -1,14 +1,13 @@
 #include "Camera3D.h"
 #include "GameObject.h"
 #include "Logger.h"
-
-using namespace DirectX;
+#include "math/Math.h"
 
 namespace Engine {
 namespace Graphic {
 
 Camera3D::Camera3D()
-    : m_fov(XM_PIDIV4)
+    : m_fov(Prisma::Math::PI / 4.0f)
     , m_aspectRatio(16.0f / 9.0f)
     , m_nearPlane(0.1f)
     , m_farPlane(1000.0f)
@@ -17,13 +16,13 @@ Camera3D::Camera3D()
     , m_isProjectionDirty(true)
 {
     // 初始化缓存向量
-    m_forward = XMVectorSet(0.0f, 0.0f, 1.0f, 0.0f);
-    m_up = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-    m_right = XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f);
+    m_forward = PrismaMath::vec4(0.0f, 0.0f, 1.0f, 0.0f);
+    m_up = PrismaMath::vec4(0.0f, 1.0f, 0.0f, 0.0f);
+    m_right = PrismaMath::vec4(1.0f, 0.0f, 0.0f, 0.0f);
 
     // 初始化矩阵为单位矩阵
-    m_viewMatrix = XMMatrixIdentity();
-    m_projectionMatrix = XMMatrixIdentity();
+    m_viewMatrix = PrismaMath::mat4(1.0f);
+    m_projectionMatrix = PrismaMath::mat4(1.0f);
 }
 
 Camera3D::~Camera3D() {

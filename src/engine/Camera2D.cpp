@@ -1,10 +1,11 @@
 #include "Camera2D.h"
+#include "math/Math.h"
 
 Camera2D::Camera2D()
-    : m_position(XMVectorZero())
+    : m_position(PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f))
     , m_rotation(0.0f)
-    , m_viewMatrix(XMMatrixIdentity())
-    , m_projectionMatrix(XMMatrixIdentity())
+    , m_viewMatrix(PrismaMath::mat4(1.0f))
+    , m_projectionMatrix(PrismaMath::mat4(1.0f))
     , m_width(100.0f)
     , m_height(100.0f)
     , m_left(-50.0f)
@@ -16,7 +17,7 @@ Camera2D::Camera2D()
     , m_isOrthoDirty(true)
     , m_isViewDirty(true)
 {
-    m_clearColor = XMVectorSet(0.0f, 1.0f, 1.0f, 1.0f);
+    m_clearColor = PrismaMath::vec4(0.0f, 1.0f, 1.0f, 1.0f);
 }
 
 Camera2D::~Camera2D()
@@ -35,17 +36,17 @@ void Camera2D::Update(float deltaTime)
 
 void Camera2D::SetPosition(float x, float y, float z)
 {
-    m_position = XMVectorSet(x, y, z, 0.0f);
+    m_position = PrismaMath::vec4(x, y, z, 0.0f);
     m_isViewDirty = true;
 }
 
-void Camera2D::SetPosition(FXMVECTOR position)
+void Camera2D::SetPosition(const PrismaMath::vec4& position)
 {
     m_position = position;
     m_isViewDirty = true;
 }
 
-XMVECTOR Camera2D::GetPosition() const
+PrismaMath::vec4 Camera2D::GetPosition() const
 {
     return m_position;
 }
@@ -85,40 +86,40 @@ void Camera2D::SetOrthographicProjection(float left, float right, float bottom, 
     m_isOrthoDirty = true;
 }
 
-XMMATRIX Camera2D::GetViewMatrix() const
+PrismaMath::mat4 Camera2D::GetViewMatrix() const
 {
     if (m_isViewDirty)
     {
         // 计算视图矩阵: 相机的变换矩阵的逆矩阵
         // 注意顺序：先旋转，再平移
-        XMMATRIX translationMatrix = XMMatrixTranslationFromVector(m_position);
-        XMMATRIX rotationMatrix = XMMatrixRotationZ(m_rotation);
+        PrismaMath::mat4 translationMatrix = Prisma::Math::Translation(PrismaMath::vec3(m_position));
+        PrismaMath::mat4 rotationMatrix = Prisma::Math::RotationZ(m_rotation);
 
         // 组合相机的变换矩阵：平移 * 旋转
-        XMMATRIX cameraMatrix = XMMatrixMultiply(translationMatrix, rotationMatrix);
+        PrismaMath::mat4 cameraMatrix = Prisma::Math::Multiply(translationMatrix, rotationMatrix);
 
         // 视图矩阵是相机变换矩阵的逆矩阵
-        m_viewMatrix = XMMatrixInverse(nullptr, cameraMatrix);
+        m_viewMatrix = Prisma::Math::Inverse(cameraMatrix);
         m_isViewDirty = false;
     }
 
     return m_viewMatrix;
 }
 
-XMMATRIX Camera2D::GetProjectionMatrix() const
+PrismaMath::mat4 Camera2D::GetProjectionMatrix() const
 {
     if (m_isOrthoDirty)
     {
-        m_projectionMatrix = XMMatrixOrthographicOffCenterLH(m_left, m_right, m_bottom, m_top, m_nearPlane, m_farPlane);
+        m_projectionMatrix = Prisma::Math::Orthographic(m_left, m_right, m_bottom, m_top, m_nearPlane, m_farPlane);
         m_isOrthoDirty = false;
     }
     
     return m_projectionMatrix;
 }
 
-XMMATRIX Camera2D::GetViewProjectionMatrix() const
+PrismaMath::mat4 Camera2D::GetViewProjectionMatrix() const
 {
-    return XMMatrixMultiply(GetViewMatrix(), GetProjectionMatrix());
+    return Prisma::Math::Multiply(GetViewMatrix(), GetProjectionMatrix());
 }
 
 void Camera2D::UpdateProjectionMatrix(float windowWidth, float windowHeight)
