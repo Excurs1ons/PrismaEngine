@@ -17,8 +17,8 @@ public:
 
     // 设置摄像机位置
     void SetPosition(float x, float y, float z = 0.0f);
-    void SetPosition(const PrismaMath::vec4& position);
-    PrismaMath::vec4 GetPosition() const;
+    void SetPosition(const PrismaMath::vec3& position);
+    PrismaMath::vec3 GetPosition() const override;
 
     // 设置摄像机旋转（绕Z轴）
     void SetRotation(float rotation);
@@ -42,9 +42,9 @@ public:
     void UpdateProjectionMatrix(float windowWidth, float windowHeight);
 
     // ICamera接口实现
-    PrismaMath::vec4 GetForward() const override { return PrismaMath::vec4(0.0f, 0.0f, -1.0f, 0.0f); }
-    PrismaMath::vec4 GetUp() const override { return PrismaMath::vec4(0.0f, 1.0f, 0.0f, 0.0f); }
-    PrismaMath::vec4 GetRight() const override { return PrismaMath::vec4(1.0f, 0.0f, 0.0f, 0.0f); }
+    PrismaMath::vec3 GetForward() const override { return PrismaMath::vec3(0.0f, 0.0f, -1.0f); }
+    PrismaMath::vec3 GetUp() const override { return PrismaMath::vec3(0.0f, 1.0f, 0.0f); }
+    PrismaMath::vec3 GetRight() const override { return PrismaMath::vec3(1.0f, 0.0f, 0.0f); }
 
     float GetFOV() const override { return 0.0f; } // 正交投影没有FOV
     void SetFOV(float fov) override { (void)fov; } // 正交投影忽略FOV
@@ -60,7 +60,7 @@ public:
     void SetActive(bool active) override { m_isActive = active; }
 
 private:
-    PrismaMath::vec4 m_position;
+    PrismaMath::vec3 m_position;
     float m_rotation;
 
     mutable PrismaMath::mat4 m_viewMatrix;

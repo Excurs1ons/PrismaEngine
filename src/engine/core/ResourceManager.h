@@ -223,7 +223,7 @@ public:
     bool IsValid() const { return m_resource && m_resource->IsValid(); }
 
     // 获取路径
-    const std::string& GetPath() const { return m_resource ? m_resource->GetPath() : ""; }
+    std::string GetPath() const { return m_resource ? m_resource->GetPath() : std::string(); }
 
     // 获取状态
     ResourceState GetState() const { return m_resource ? m_resource->GetState() : ResourceState::Unloaded; }
