@@ -278,8 +278,12 @@ if ($help) {
 # 清理构建目录
 if ($clean) {
     Write-Info "清理构建目录..."
-    if (Test-Path "build-android") {
-        Remove-Item -Recurse -Force "build-android"
+    if (Test-Path "..\build") {
+        $androidBuilds = Get-ChildItem -Path "..\build" -Directory -Name "android-*" -ErrorAction SilentlyContinue
+        foreach ($dir in $androidBuilds) {
+            Write-Info "删除: build\$dir"
+            Remove-Item -Path "..\build\$dir" -Recurse -Force
+        }
     }
 }
 
@@ -310,9 +314,9 @@ Write-Info "构建完成！耗时: $($duration.TotalSeconds.ToString('0.00'))秒
 # 显示输出文件
 Write-Info "输出文件:"
 foreach ($a in $buildAbis) {
-    $libPath = "build-android\install\$a\lib\libEngine.so"
+    $libPath = "..\build\install\$a\lib\libEngine.so"
     if (Test-Path $libPath) {
         $fileInfo = Get-Item $libPath
-        Write-Info "  $a`: $libPath (大小: $([math]::Round($fileInfo.Length / 1MB, 2)) MB)"
+        Write-Info "  $a`: build\install\$a\lib\libEngine.so (大小: $([math]::Round($fileInfo.Length / 1MB, 2)) MB)"
     }
 }
