@@ -40,7 +40,6 @@ enum class ResourceType {
 enum class RenderBackendType {
     DirectX12,
     Vulkan,
-    Metal,
     OpenGL
 };
 

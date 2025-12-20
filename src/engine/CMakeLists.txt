@@ -16,7 +16,7 @@ list(FILTER CORE_SOURCES EXCLUDE REGEX "audio/")
 
 file(GLOB_RECURSE CORE_HEADERS
     "*.h")
-)
+
 list(FILTER CORE_HEADERS EXCLUDE REGEX "graphic/")
 list(FILTER CORE_HEADERS EXCLUDE REGEX "audio/")
 
@@ -203,4 +203,11 @@ target_include_directories(Engine
 target_compile_definitions(Engine PRIVATE
     PRISMA_DEFAULT_AUDIO_DEVICE=${PRISMA_DEFAULT_AUDIO_BACKEND}
     PRISMA_DEFAULT_RENDER_DEVICE=${PRISMA_DEFAULT_RENDER_BACKEND}
+)
+
+# 安装规则
+install(TARGETS Engine
+    EXPORT PrismaEngineTargets
+    LIBRARY DESTINATION lib
+    ARCHIVE DESTINATION lib
 )
