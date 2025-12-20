@@ -5,7 +5,7 @@
 #include <functional>
 #include <vector>
 #include <memory>
-#include <DirectXMath.h>
+#include "../math/MathTypes.h"
 
 namespace Engine {
 namespace Input {
@@ -189,9 +189,9 @@ public:
     bool IsMouseButtonPressed(MouseButton button) const;
     bool IsMouseButtonJustPressed(MouseButton button) const;
     bool IsMouseButtonJustReleased(MouseButton button) const;
-    DirectX::XMFLOAT2 GetMousePosition() const { return m_mousePosition; }
-    DirectX::XMFLOAT2 GetMouseDelta() const { return m_mouseDelta; }
-    DirectX::XMFLOAT2 GetScrollDelta() const { return m_scrollDelta; }
+    PrismaMath::vec2 GetMousePosition() const { return m_mousePosition; }
+    PrismaMath::vec2 GetMouseDelta() const { return m_mouseDelta; }
+    PrismaMath::vec2 GetScrollDelta() const { return m_scrollDelta; }
 
     // 手柄状态查询
     const GamepadState& GetGamepadState(int gamepadId = 0) const;
@@ -262,10 +262,10 @@ private:
     // 鼠标状态
     std::unordered_map<MouseButton, bool> m_mouseButtonStates;
     std::unordered_map<MouseButton, bool> m_mouseButtonStatesPrev;
-    DirectX::XMFLOAT2 m_mousePosition = DirectX::XMFLOAT2(0, 0);
-    DirectX::XMFLOAT2 m_mousePositionPrev = DirectX::XMFLOAT2(0, 0);
-    DirectX::XMFLOAT2 m_mouseDelta = DirectX::XMFLOAT2(0, 0);
-    DirectX::XMFLOAT2 m_scrollDelta = DirectX::XMFLOAT2(0, 0);
+    PrismaMath::vec2 m_mousePosition = PrismaMath::vec2(0, 0);
+    PrismaMath::vec2 m_mousePositionPrev = PrismaMath::vec2(0, 0);
+    PrismaMath::vec2 m_mouseDelta = PrismaMath::vec2(0, 0);
+    PrismaMath::vec2 m_scrollDelta = PrismaMath::vec2(0, 0);
 
     // 手柄状态
     std::unordered_map<int, GamepadState> m_gamepadStates;
@@ -316,7 +316,7 @@ inline bool IsMouseDown(MouseButton button) {
     return GetInputManager().IsMouseButtonPressed(button);
 }
 
-inline DirectX::XMFLOAT2 GetMousePos() {
+inline PrismaMath::vec2 GetMousePos() {
     return GetInputManager().GetMousePosition();
 }
 

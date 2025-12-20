@@ -434,6 +434,24 @@ inline float Degrees(float radians) {
 #endif
 }
 
+// Clamp函数
+inline float Clamp(float value, float min, float max) {
+#if defined(_WIN32) || defined(_WIN64)
+    return XMVectorGetX(XMVectorClamp(XMVectorReplicate(value), XMVectorReplicate(min), XMVectorReplicate(max)));
+#else
+    return glm::clamp(value, min, max);
+#endif
+}
+
+// Lerp插值函数
+inline Vector4 Lerp(const Vector4& a, const Vector4& b, float t) {
+#if defined(_WIN32) || defined(_WIN64)
+    return FromVector4(XMVectorLerp(ToVector4(a), ToVector4(b), t));
+#else
+    return glm::mix(a, b, t);
+#endif
+}
+
 // 通用常量
 constexpr float PI = 3.14159265358979323846f;
 constexpr float TwoPI = 2.0f * PI;
