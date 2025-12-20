@@ -294,10 +294,16 @@ function Build-Abi {
 
     # 构建
     Write-Info "开始编译..."
-    $result = ninja
+    $result = ninja -v 2>&1
+    $buildOutput = $result -join "`n"
+    Write-Host $buildOutput
+
     if ($LASTEXITCODE -ne 0) {
         Pop-Location
         Write-Error "编译失败"
+        # 显示最后几行错误信息
+        Write-Host "最后10行输出:" -ForegroundColor Yellow
+        $buildOutput -split "`n" | Select-Object -Last 10 | ForEach-Object { Write-Host $_ }
         exit 1
     }
 

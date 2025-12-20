@@ -143,13 +143,8 @@ if(PRISMA_ENABLE_AUDIO_OPENAL)
 endif()
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
-    find_package(SDL3 QUIET)
-    if(SDL3_FOUND)
-        target_include_directories(Engine PRIVATE ${SDL3_INCLUDE_DIRS})
-        target_link_libraries(Engine PRIVATE SDL3::SDL3)
-    else()
-        message(WARNING "SDL3 not found, but device is enabled")
-    endif()
+    find_package(SDL3 CONFIG REQUIRED)
+    target_link_libraries(Engine PRIVATE SDL3::SDL3)
 endif()
 
 # 渲染设备依赖
@@ -198,6 +193,25 @@ target_include_directories(Engine
 )
 
 # ========== 编译定义 ==========
+
+# 根据平台定义宏
+if(ANDROID)
+    # Android平台使用GLM
+    target_compile_definitions(Engine PRIVATE
+        PRISMA_USE_GLM
+    )
+else()
+    # Windows平台默认使用DirectXMath（可配置为使用GLM）
+    if(PRISMA_FORCE_GLM)
+        target_compile_definitions(Engine PRIVATE
+            PRISMA_FORCE_GLM
+        )
+    else()
+        target_compile_definitions(Engine PRIVATE
+            PRISMA_USE_DIRECTXMATH
+        )
+    endif()
+endif()
 
 # 根据启用的设备定义宏
 target_compile_definitions(Engine PRIVATE
