@@ -228,6 +228,13 @@ function Build-Abi {
         "-DANDROID_STL=c++_shared",
         "-DCMAKE_BUILD_TYPE=$type",
         "-DCMAKE_INSTALL_PREFIX=..\..\build\install\$AbiName",
+        # Android设备选项
+        "-DPRISMA_ENABLE_AUDIO_XAUDIO2=OFF",
+        "-DPRISMA_ENABLE_AUDIO_SDL3=ON",
+        "-DPRISMA_ENABLE_RENDER_DX12=OFF",
+        "-DPRISMA_ENABLE_RENDER_VULKAN=ON",
+        # 排除Editor (Windows only)
+        "-DPRISMA_BUILD_EDITOR=OFF",
         "-G", "Ninja"
     )
 

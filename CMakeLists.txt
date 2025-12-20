@@ -70,12 +70,31 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 message(STATUS "Single-config output: bin, lib")
 
-# Windows 构建
-message(STATUS "Building for Windows")
+# 平台检测
+if(ANDROID)
+    message(STATUS "Building for Android")
+else()
+    message(STATUS "Building for Windows")
+endif()
+
+# Editor构建选项 (默认在Windows上启用，其他平台禁用)
+if(WIN32 AND NOT ANDROID)
+    option(PRISMA_BUILD_EDITOR "Build Editor application" ON)
+else()
+    option(PRISMA_BUILD_EDITOR "Build Editor application" OFF)
+endif()
+
+# 添加核心模块
 add_subdirectory(src/engine)
 add_subdirectory(src/runtime)
 add_subdirectory(src/game)
-add_subdirectory(src/editor)
+
+# 条件添加Editor (仅Windows且未禁用时)
+if(PRISMA_BUILD_EDITOR)
+    add_subdirectory(src/editor)
+else()
+    message(STATUS "Skipping Editor (PRISMA_BUILD_EDITOR=OFF)")
+endif()
 
 # 测试已移除
 
@@ -133,9 +152,15 @@ add_custom_target(dist-win
 )
 
 # 创建一个聚合目标，确保CLion能正确识别项目
-add_custom_target(Prisma ALL
-        DEPENDS Engine Editor Runtime Game
-)
+if(PRISMA_BUILD_EDITOR)
+    add_custom_target(Prisma ALL
+            DEPENDS Engine Editor Runtime Game
+    )
+else()
+    add_custom_target(Prisma ALL
+            DEPENDS Engine Runtime Game
+    )
+endif()
 
 # 添加资源复制目标 - 将资源从源目录直接复制到运行目录
 add_custom_target(copy-runtime-resources ALL
@@ -143,11 +168,19 @@ add_custom_target(copy-runtime-resources ALL
     # 为 Runtime 复制资源
     COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Runtime>/Assets
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Runtime>/Assets
-    # 为 Editor 复制资源（如果需要）
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Editor>/Assets
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Editor>/Assets
     COMMENT "Copying resources to runtime directories"
 )
+
+# 为Editor复制资源（如果Editor被构建）
+if(PRISMA_BUILD_EDITOR)
+    add_custom_target(copy-editor-resources ALL
+        COMMAND ${CMAKE_COMMAND} -E echo "Copying resources to Editor directory..."
+        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Editor>/Assets
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Editor>/Assets
+        COMMENT "Copying resources to Editor directory"
+    )
+    add_dependencies(copy-runtime-resources copy-editor-resources)
+endif()
 
 # 确保在构建后复制资源
 add_dependencies(copy-runtime-resources Prisma)
