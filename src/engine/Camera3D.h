@@ -21,7 +21,7 @@ public:
 
     // 移动相机（相对于世界坐标系）
     void MoveWorld(float x, float y, float z);
-    void MoveWorld(const PrismaMath::vec3& direction);
+    void MoveWorld(const Prisma::Vector3& direction);
 
     // 移动相机（相对于相机坐标系）
     void MoveLocal(float forward, float right, float up);
@@ -30,18 +30,18 @@ public:
     void Rotate(float pitch, float yaw, float roll);
 
     // 看向目标点
-    void LookAt(const PrismaMath::vec3& target);
+    void LookAt(const Prisma::Vector3& target);
     void LookAt(float x, float y, float z);
 
     // ICamera接口实现
-    PrismaMath::mat4 GetViewMatrix() const override;
-    PrismaMath::mat4 GetProjectionMatrix() const override;
-    PrismaMath::mat4 GetViewProjectionMatrix() const override;
+    Prisma::Matrix4x4 GetViewMatrix() const override;
+    Prisma::Matrix4x4 GetProjectionMatrix() const override;
+    Prisma::Matrix4x4 GetViewProjectionMatrix() const override;
 
-    PrismaMath::vec3 GetPosition() const override;
-    PrismaMath::vec3 GetForward() const override;
-    PrismaMath::vec3 GetUp() const override;
-    PrismaMath::vec3 GetRight() const override;
+    Prisma::Vector3 GetPosition() const override;
+    Prisma::Vector3 GetForward() const override;
+    Prisma::Vector3 GetUp() const override;
+    Prisma::Vector3 GetRight() const override;
 
     float GetFOV() const override { return m_fov; }
     void SetFOV(float fov) override;
@@ -56,7 +56,7 @@ public:
     bool IsActive() const override { return m_isActive; }
     void SetActive(bool active) override { m_isActive = active; }
 
-    PrismaMath::vec4 GetClearColor() const override;
+    Prisma::Vector4 GetClearColor() const override;
     void SetClearColor(float r, float g, float b, float a = 1.0f) override;
 
 private:
@@ -71,16 +71,16 @@ private:
     float m_farPlane;
 
     // 清除颜色
-    PrismaMath::vec4 m_clearColor;
+    Prisma::Vector4 m_clearColor;
 
     // 缓存的矩阵
-    mutable PrismaMath::mat4 m_viewMatrix;
-    mutable PrismaMath::mat4 m_projectionMatrix;
+    mutable Prisma::Matrix4x4 m_viewMatrix;
+    mutable Prisma::Matrix4x4 m_projectionMatrix;
 
     // 缓存的向量（从Transform计算得出）
-    mutable PrismaMath::vec3 m_forward;
-    mutable PrismaMath::vec3 m_up;
-    mutable PrismaMath::vec3 m_right;
+    mutable Prisma::Vector3 m_forward;
+    mutable Prisma::Vector3 m_up;
+    mutable Prisma::Vector3 m_right;
 
     // 脏标记
     mutable bool m_isViewDirty;
