@@ -295,7 +295,7 @@ function Build-Abi {
 
     # 构建
     Write-Info "开始编译..."
-    $result = ninja -v 2>&1
+    $result = ninja -v Engine 2>&1
     $buildOutput = $result -join "`n"
     Write-Host $buildOutput
 
@@ -377,3 +377,4 @@ foreach ($a in $buildAbis) {
         Write-Info "  $a`: build\install\$a\lib\libEngine.so (大小: $([math]::Round($fileInfo.Length / 1MB, 2)) MB)"
     }
 }
+
