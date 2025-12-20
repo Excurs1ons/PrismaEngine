@@ -8,7 +8,7 @@ class Camera2D :
 {
 public:
     Camera2D();
-    ~Camera2D();
+    ~Camera2D() override;
 
     // Component接口实现
     void Owner(GameObject* owner) override { m_owner = owner; }
@@ -30,13 +30,13 @@ public:
 
 
     // 获取视图矩阵
-    PrismaMath::mat4 GetViewMatrix() const;
+    PrismaMath::mat4 GetViewMatrix() const override;
 
     // 获取投影矩阵
-    PrismaMath::mat4 GetProjectionMatrix() const;
+    PrismaMath::mat4 GetProjectionMatrix() const override;
 
     // 获取视图-投影矩阵
-    PrismaMath::mat4 GetViewProjectionMatrix() const;
+    PrismaMath::mat4 GetViewProjectionMatrix() const override;
 
     // 更新投影矩阵以适应窗口大小
     void UpdateProjectionMatrix(float windowWidth, float windowHeight);

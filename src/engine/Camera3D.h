@@ -1,18 +1,16 @@
 #pragma once
-#include "Component.h"
-#include "graphic/ICamera.h"
-#include "Transform.h"
+#include "Camera.h"
 #include "Quaternion.h"
 #include "math/MathTypes.h"
 
-namespace Engine {
-namespace Graphic {
 
-class Camera3D : public Component, public ICamera
+namespace Engine::Graphic {
+
+class Camera3D : public Camera
 {
 public:
     Camera3D();
-    ~Camera3D();
+    ~Camera3D() override;
 
     // Component接口实现
     void Initialize() override;
@@ -90,5 +88,4 @@ private:
     bool m_isActive = true;
 };
 
-} // namespace Graphic
-} // namespace Engine
+} // namespace Engine::Graphic
