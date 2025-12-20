@@ -153,6 +153,100 @@ inline Matrix4x4 QuaternionToMatrix(const Quaternion& q) {
     return FromMatrix(XMMatrixRotationQuaternion(ToVector4(q)));
 }
 
+// 四元数向量化操作
+inline Vector4 Normalize(const Vector4& q) {
+    return FromVector4(XMQuaternionNormalize(ToVector4(q)));
+}
+
+inline float Length(const Vector4& q) {
+    return XMVectorGetX(XMQuaternionLength(ToVector4(q)));
+}
+
+inline float LengthSquared(const Vector4& q) {
+    return XMVectorGetX(XMQuaternionLengthSq(ToVector4(q)));
+}
+
+inline Vector4 Inverse(const Vector4& q) {
+    return FromVector4(XMQuaternionInverse(ToVector4(q)));
+}
+
+inline float Dot(const Vector4& a, const Vector4& b) {
+    return XMVectorGetX(XMVector4Dot(ToVector4(a), ToVector4(b)));
+}
+
+inline Vector4 Slerp(const Vector4& a, const Vector4& b, float t) {
+    return FromVector4(XMQuaternionSlerp(ToVector4(a), ToVector4(b), t));
+}
+
+inline Vector4 FromEulerAngles(float pitch, float yaw, float roll) {
+    return FromVector4(XMQuaternionRotationRollPitchYaw(pitch, yaw, roll));
+}
+
+inline Vector4 FromAxisAngle(const Vector3& axis, float angle) {
+    return FromVector4(XMQuaternionRotationAxis(ToVector(axis), angle));
+}
+
+inline Vector4 FromRotationMatrix(const Matrix4x4& matrix) {
+    return FromVector4(XMQuaternionRotationMatrix(ToMatrix(matrix)));
+}
+
+inline Vector3 ToEulerAngles(const Vector4& q) {
+    // 提取欧拉角 (pitch, yaw, roll)
+    XMVECTOR quat = ToVector4(q);
+    float test = XMVectorGetX(quat) * XMVectorGetY(quat) + XMVectorGetZ(quat) * XMVectorGetW(quat);
+    Vector3 euler;
+
+    if (test > 0.499f) {
+        // 奇点处理：north pole
+        euler.y = 2.0f * atan2f(XMVectorGetX(quat), XMVectorGetW(quat));
+        euler.x = XM_PIDIV2;
+        euler.z = 0;
+    } else if (test < -0.499f) {
+        // 奇点处理：south pole
+        euler.y = -2.0f * atan2f(XMVectorGetX(quat), XMVectorGetW(quat));
+        euler.x = -XM_PIDIV2;
+        euler.z = 0;
+    } else {
+        float sqx = XMVectorGetX(quat) * XMVectorGetX(quat);
+        float sqy = XMVectorGetY(quat) * XMVectorGetY(quat);
+        float sqz = XMVectorGetZ(quat) * XMVectorGetZ(quat);
+        euler.y = atan2f(2.0f * XMVectorGetY(quat) * XMVectorGetW(quat) - 2.0f * XMVectorGetX(quat) * XMVectorGetZ(quat),
+                         1.0f - 2.0f * (sqy + sqz));
+        euler.x = asinf(2.0f * test);
+        euler.z = atan2f(2.0f * XMVectorGetX(quat) * XMVectorGetW(quat) - 2.0f * XMVectorGetY(quat) * XMVectorGetZ(quat),
+                         1.0f - 2.0f * (sqx + sqz));
+    }
+
+    return euler;
+}
+
+inline Vector4 LookRotation(const Vector3& forward, const Vector3& up) {
+    XMVECTOR f = ToVector(forward);
+    XMVECTOR u = ToVector(up);
+
+    // 标准化向量
+    f = XMVector3Normalize(f);
+    u = XMVector3Normalize(u);
+
+    // 计算右向量
+    XMVECTOR r = XMVector3Cross(u, f);
+    r = XMVector3Normalize(r);
+
+    // 重新计算上向量
+    u = XMVector3Cross(f, r);
+
+    // 创建旋转矩阵
+    XMMATRIX rotationMatrix = XMMATRIX(
+        XMVectorGetX(r), XMVectorGetX(u), XMVectorGetX(f), 0.0f,
+        XMVectorGetY(r), XMVectorGetY(u), XMVectorGetY(f), 0.0f,
+        XMVectorGetZ(r), XMVectorGetZ(u), XMVectorGetZ(f), 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    );
+
+    XMVECTOR rotationQuat = XMQuaternionRotationMatrix(rotationMatrix);
+    return FromVector4(rotationQuat);
+}
+
 // 视角投影矩阵
 inline Matrix4x4 PerspectiveFovLH(float fovAngleY, float aspectRatio, float nearZ, float farZ) {
     return FromMatrix(XMMatrixPerspectiveFovLH(fovAngleY, aspectRatio, nearZ, farZ));
@@ -249,6 +343,69 @@ inline Matrix4x4 QuaternionToMatrix(const Quaternion& q) {
     return glm::toMat4(q);
 }
 
+// 四元数向量化操作
+inline Vector4 Normalize(const Vector4& q) {
+    return glm::normalize(q);
+}
+
+inline float Length(const Vector4& q) {
+    return glm::length(q);
+}
+
+inline float LengthSquared(const Vector4& q) {
+    return glm::dot(q, q);
+}
+
+inline Vector4 Inverse(const Vector4& q) {
+    return glm::inverse(q);
+}
+
+inline float Dot(const Vector4& a, const Vector4& b) {
+    return glm::dot(a, b);
+}
+
+inline Vector4 Slerp(const Vector4& a, const Vector4& b, float t) {
+    return glm::slerp(a, b, t);
+}
+
+inline Vector4 FromEulerAngles(float pitch, float yaw, float roll) {
+    return glm::quat(glm::vec3(pitch, yaw, roll));
+}
+
+inline Vector4 FromAxisAngle(const Vector3& axis, float angle) {
+    return glm::angleAxis(angle, glm::normalize(axis));
+}
+
+inline Vector4 FromRotationMatrix(const Matrix4x4& matrix) {
+    return glm::quat_cast(matrix);
+}
+
+inline Vector3 ToEulerAngles(const Vector4& q) {
+    return glm::eulerAngles(glm::quat(q.w, q.x, q.y, q.z));
+}
+
+inline Vector4 LookRotation(const Vector3& forward, const Vector3& up) {
+    Vector3 f = glm::normalize(forward);
+    Vector3 u = glm::normalize(up);
+
+    // 计算右向量
+    Vector3 r = glm::cross(u, f);
+    r = glm::normalize(r);
+
+    // 重新计算上向量
+    u = glm::cross(f, r);
+
+    // 创建旋转矩阵
+    Matrix4x4 rotationMatrix = Matrix4x4(
+        r.x, u.x, f.x, 0.0f,
+        r.y, u.y, f.y, 0.0f,
+        r.z, u.z, f.z, 0.0f,
+        0.0f, 0.0f, 0.0f, 1.0f
+    );
+
+    return glm::quat_cast(rotationMatrix);
+}
+
 // 视角投影矩阵
 inline Matrix4x4 PerspectiveFovLH(float fovAngleY, float aspectRatio, float nearZ, float farZ) {
     return glm::perspectiveLH(fovAngleY, aspectRatio, nearZ, farZ);
@@ -259,6 +416,23 @@ inline Matrix4x4 OrthographicLH(float viewWidth, float viewHeight, float nearZ, 
 }
 
 #endif
+
+// 角度转换函数
+inline float Radians(float degrees) {
+#if defined(_WIN32) || defined(_WIN64)
+    return XMConvertToRadians(degrees);
+#else
+    return glm::radians(degrees);
+#endif
+}
+
+inline float Degrees(float radians) {
+#if defined(_WIN32) || defined(_WIN64)
+    return XMConvertToDegrees(radians);
+#else
+    return glm::degrees(radians);
+#endif
+}
 
 // 通用常量
 constexpr float PI = 3.14159265358979323846f;

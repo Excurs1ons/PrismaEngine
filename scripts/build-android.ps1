@@ -252,14 +252,15 @@ function Build-Abi {
         "-DVCPKG_MANIFEST_MODE=OFF"
     )
 
-        # 强制检查并安装Android依赖
-        Write-Info "检查Android依赖..."
-        $androidInstalledDir = "$projectRoot\vcpkg_installed\arm64-android"
+    # 强制检查并安装Android依赖
+    Write-Info "检查Android依赖..."
+    $androidInstalledDir = "$projectRoot\vcpkg_installed\arm64-android"
 
-        Write-Info "vcpkg路径: $vcpkgExe"
-        Write-Info "Android安装目录: $androidInstalledDir"
-        Write-Info "目录存在: $(Test-Path $androidInstalledDir)"
+    Write-Info "vcpkg路径: $vcpkgExe"
+    Write-Info "Android安装目录: $androidInstalledDir"
+    Write-Info "目录存在: $(Test-Path $androidInstalledDir)"
 
+    if (Test-Path $vcpkgExe) {
         # 总是尝试安装或更新依赖
         Write-Info "安装Android依赖（arm64-android）..."
         Push-Location $projectRoot

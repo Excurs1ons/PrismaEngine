@@ -1,49 +1,40 @@
 #pragma once
 #include "Component.h"
 #include "Logger.h"
-#include <DirectXMath.h>
-#include <DirectXCollision.h>
-// 引入四元数
+#include "math/MathTypes.h"
+#include "math/Math.h"
 #include "Quaternion.h"
 #include <cmath>
 
 class GameObject;  // 前向声明以避免循环依赖
 
-using namespace DirectX;
-
 class Transform : public Component
 {
 public:
     // 添加简单的变换属性
-    XMFLOAT3 position = {0.0f, 0.0f, 0.0f};
-    XMFLOAT3 eulerAngles = { 0.0f, 0.0f, 0.0f };
+    PrismaMath::vec3 position = {0.0f, 0.0f, 0.0f};
+    PrismaMath::vec3 eulerAngles = { 0.0f, 0.0f, 0.0f };
     Quaternion rotation = Quaternion::Identity;
-    XMFLOAT3 scale = { 1.0f, 1.0f, 1.0f };
+    PrismaMath::vec3 scale = { 1.0f, 1.0f, 1.0f };
 
-    XMFLOAT3 GetPosition() const;
+    PrismaMath::vec3 GetPosition() const;
     // 获取变换矩阵
     float* GetMatrix() {
-        // 创建旋转矩阵（欧拉角转换为四元数，然后转换为矩阵）
-        // 注意：DirectX使用弧度制，但我们的rotation是度数
-        XMVECTOR rotationQuaternion = XMQuaternionRotationRollPitchYaw(
-            XMConvertToRadians(rotation.x),
-            XMConvertToRadians(rotation.y),
-            XMConvertToRadians(rotation.z)
-        );
-        XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotationQuaternion);
+        // 创建旋转矩阵（从四元数转换为矩阵）
+        PrismaMath::mat4 rotationMatrix = Prisma::QuaternionToMatrix(rotation.ToInternalVector());
 
         // 创建平移矩阵
-        XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y, position.z);
+        PrismaMath::mat4 translationMatrix = Prisma::Translation(position);
 
         // 创建缩放矩阵
-        XMMATRIX scaleMatrix = XMMatrixScaling(scale.x, scale.y, scale.z);
+        PrismaMath::mat4 scaleMatrix = Prisma::Scale(scale);
 
         // 组合变换：先缩放，再旋转，最后平移 (S * R * T)
-        XMMATRIX worldMatrix = XMMatrixMultiply(scaleMatrix, rotationMatrix);
-        worldMatrix = XMMatrixMultiply(worldMatrix, translationMatrix);
+        PrismaMath::mat4 worldMatrix = Prisma::Multiply(scaleMatrix, rotationMatrix);
+        worldMatrix = Prisma::Multiply(worldMatrix, translationMatrix);
 
-        // 不在这里转置矩阵，让渲染管线统一处理
-        XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(m_matrix), worldMatrix);
+        // 将矩阵数据复制到浮点数组
+        memcpy(m_matrix, &worldMatrix[0][0], sizeof(float) * 16);
 
         // 添加调试日志（仅在位置或旋转变化时输出）
         static float lastPos[3] = {9999, 9999, 9999};
@@ -54,7 +45,6 @@ public:
             std::abs(rotation.x - lastRot[0]) > 0.01f ||
             std::abs(rotation.y - lastRot[1]) > 0.01f ||
             std::abs(rotation.z - lastRot[2]) > 0.01f) {
-
 
             lastPos[0] = position.x;
             lastPos[1] = position.y;
