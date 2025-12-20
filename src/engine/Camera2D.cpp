@@ -2,7 +2,7 @@
 #include "math/Math.h"
 
 Camera2D::Camera2D()
-    : m_position(PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f))
+    : m_position(PrismaMath::vec3(0.0f, 0.0f, 0.0f))
     , m_rotation(0.0f)
     , m_viewMatrix(PrismaMath::mat4(1.0f))
     , m_projectionMatrix(PrismaMath::mat4(1.0f))
@@ -36,17 +36,17 @@ void Camera2D::Update(float deltaTime)
 
 void Camera2D::SetPosition(float x, float y, float z)
 {
-    m_position = PrismaMath::vec4(x, y, z, 0.0f);
+    m_position = PrismaMath::vec3(x, y, z);
     m_isViewDirty = true;
 }
 
-void Camera2D::SetPosition(const PrismaMath::vec4& position)
+void Camera2D::SetPosition(const PrismaMath::vec3& position)
 {
     m_position = position;
     m_isViewDirty = true;
 }
 
-PrismaMath::vec4 Camera2D::GetPosition() const
+PrismaMath::vec3 Camera2D::GetPosition() const
 {
     return m_position;
 }
@@ -92,7 +92,7 @@ PrismaMath::mat4 Camera2D::GetViewMatrix() const
     {
         // 计算视图矩阵: 相机的变换矩阵的逆矩阵
         // 注意顺序：先旋转，再平移
-        PrismaMath::mat4 translationMatrix = Prisma::Math::Translation(PrismaMath::vec3(m_position));
+        PrismaMath::mat4 translationMatrix = Prisma::Math::Translation(m_position);
         PrismaMath::mat4 rotationMatrix = Prisma::Math::RotationZ(m_rotation);
 
         // 组合相机的变换矩阵：平移 * 旋转
