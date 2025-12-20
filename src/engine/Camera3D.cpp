@@ -16,9 +16,9 @@ Camera3D::Camera3D()
     , m_isProjectionDirty(true)
 {
     // 初始化缓存向量
-    m_forward = PrismaMath::vec4(0.0f, 0.0f, 1.0f, 0.0f);
-    m_up = PrismaMath::vec4(0.0f, 1.0f, 0.0f, 0.0f);
-    m_right = PrismaMath::vec4(1.0f, 0.0f, 0.0f, 0.0f);
+    m_forward = PrismaMath::vec3(0.0f, 0.0f, 1.0f);
+    m_up = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
+    m_right = PrismaMath::vec3(1.0f, 0.0f, 0.0f);
 
     // 初始化矩阵为单位矩阵
     m_viewMatrix = PrismaMath::mat4(1.0f);
@@ -52,49 +52,49 @@ void Camera3D::SetPerspectiveProjection(float fov, float aspectRatio, float near
     m_isProjectionDirty = true;
 }
 
-DirectX::XMVECTOR Camera3D::GetClearColor() const {
-    return XMLoadFloat4(&m_clearColor);
+PrismaMath::vec4 Camera3D::GetClearColor() const {
+    return m_clearColor;
 }
 
 void Camera3D::SetClearColor(float r, float g, float b, float a) {
-    m_clearColor = XMFLOAT4(r, g, b, a);
+    m_clearColor = PrismaMath::vec4(r, g, b, a);
 }
 
-XMMATRIX Camera3D::GetViewMatrix() const {
+PrismaMath::mat4 Camera3D::GetViewMatrix() const {
     UpdateViewMatrix();
     return m_viewMatrix;
 }
 
-XMMATRIX Camera3D::GetProjectionMatrix() const {
+PrismaMath::mat4 Camera3D::GetProjectionMatrix() const {
     if (m_isProjectionDirty) {
-        m_projectionMatrix = XMMatrixPerspectiveFovLH(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+        m_projectionMatrix = Prisma::Math::Perspective(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
         m_isProjectionDirty = false;
     }
     return m_projectionMatrix;
 }
 
-XMMATRIX Camera3D::GetViewProjectionMatrix() const {
-    return XMMatrixMultiply(GetViewMatrix(), GetProjectionMatrix());
+PrismaMath::mat4 Camera3D::GetViewProjectionMatrix() const {
+    return Prisma::Math::Multiply(GetViewMatrix(), GetProjectionMatrix());
 }
 
-XMVECTOR Camera3D::GetPosition() const {
+PrismaMath::vec3 Camera3D::GetPosition() const {
     if (auto transform = m_owner->transform()) {
-        return XMLoadFloat3(&transform->position);
+        return PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
     }
-    return XMVectorZero();
+    return PrismaMath::vec3(0.0f, 0.0f, 0.0f);
 }
 
-XMVECTOR Camera3D::GetForward() const {
+PrismaMath::vec3 Camera3D::GetForward() const {
     UpdateVectors();
     return m_forward;
 }
 
-XMVECTOR Camera3D::GetUp() const {
+PrismaMath::vec3 Camera3D::GetUp() const {
     UpdateVectors();
     return m_up;
 }
 
-XMVECTOR Camera3D::GetRight() const {
+PrismaMath::vec3 Camera3D::GetRight() const {
     UpdateVectors();
     return m_right;
 }
@@ -124,12 +124,11 @@ void Camera3D::MoveWorld(float x, float y, float z) {
     }
 }
 
-void Camera3D::MoveWorld(FXMVECTOR direction) {
+void Camera3D::MoveWorld(const PrismaMath::vec3& direction) {
     if (auto transform = m_owner->transform()) {
-        XMFLOAT3 currentPos = transform->position;
-        XMVECTOR currentPosVec = XMLoadFloat3(&currentPos);
-        XMVECTOR newPos = XMVectorAdd(currentPosVec, direction);
-        XMStoreFloat3(&transform->position, newPos);
+        transform->position.x += direction.x;
+        transform->position.y += direction.y;
+        transform->position.z += direction.z;
         MarkViewDirty();
     }
 }
@@ -138,10 +137,10 @@ void Camera3D::MoveLocal(float forward, float right, float up) {
     UpdateVectors();
 
     // 计算移动向量
-    XMVECTOR movement = XMVectorZero();
-    if (forward != 0.0f) movement = XMVectorAdd(movement, XMVectorScale(m_forward, forward));
-    if (right != 0.0f) movement = XMVectorAdd(movement, XMVectorScale(m_right, right));
-    if (up != 0.0f) movement = XMVectorAdd(movement, XMVectorScale(m_up, up));
+    PrismaMath::vec3 movement = PrismaMath::vec3(0.0f, 0.0f, 0.0f);
+    if (forward != 0.0f) movement = movement + m_forward * forward;
+    if (right != 0.0f) movement = movement + m_right * right;
+    if (up != 0.0f) movement = movement + m_up * up;
 
     MoveWorld(movement);
 }
@@ -149,52 +148,55 @@ void Camera3D::MoveLocal(float forward, float right, float up) {
 void Camera3D::Rotate(float pitch, float yaw, float roll) {
     if (auto transform = m_owner->transform()) {
         // 创建旋转增量（弧度）
-        XMVECTOR deltaRotation = XMQuaternionRotationRollPitchYaw(
-            XMConvertToRadians(pitch),
-            XMConvertToRadians(yaw),
-            XMConvertToRadians(roll)
+        PrismaMath::quat deltaRotation = Prisma::Math::QuaternionFromEuler(
+            Prisma::Math::ToRadians(pitch),
+            Prisma::Math::ToRadians(yaw),
+            Prisma::Math::ToRadians(roll)
         );
 
         // 应用旋转到当前旋转
-        XMVECTOR currentRotation = transform->rotation.ToXMVector();
-        XMVECTOR newRotation = XMQuaternionMultiply(deltaRotation, currentRotation);
-        transform->rotation.FromXMVector(newRotation);
+        PrismaMath::quat currentRotation = transform->rotation;
+        PrismaMath::quat newRotation = Prisma::Math::Multiply(deltaRotation, currentRotation);
+        transform->rotation = newRotation;
 
         MarkViewDirty();
     }
 }
 
-void Camera3D::LookAt(FXMVECTOR target) {
+void Camera3D::LookAt(const PrismaMath::vec3& target) {
     if (auto transform = m_owner->transform()) {
-        XMVECTOR position = GetPosition();
-        XMVECTOR direction = XMVectorSubtract(target, position);
-        direction = XMVector3Normalize(direction);
+        PrismaMath::vec3 position = GetPosition();
+        PrismaMath::vec3 direction = Prisma::Math::Normalize(target - position);
 
         // 创建前向向量（相机看向-Z方向）
-        XMVECTOR forward = XMVectorNegate(direction);
+        PrismaMath::vec3 forward = -direction;
 
         // 计算上向量
-        XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-        XMVECTOR right = XMVector3Normalize(XMVector3Cross(worldUp, forward));
-        XMVECTOR up = XMVector3Cross(forward, right);
+        PrismaMath::vec3 worldUp = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
+        PrismaMath::vec3 right = Prisma::Math::Normalize(Prisma::Math::Cross(worldUp, forward));
+        PrismaMath::vec3 up = Prisma::Math::Cross(forward, right);
 
         // 创建旋转矩阵
-        XMMATRIX rotationMatrix = XMMATRIX(
-            XMVectorGetX(right), XMVectorGetX(up), XMVectorGetX(forward), 0.0f,
-            XMVectorGetY(right), XMVectorGetY(up), XMVectorGetY(forward), 0.0f,
-            XMVectorGetZ(right), XMVectorGetZ(up), XMVectorGetZ(forward), 0.0f,
-            0.0f, 0.0f, 0.0f, 1.0f
-        );
+        PrismaMath::mat4 rotationMatrix = PrismaMath::mat4(1.0f);
+        rotationMatrix[0][0] = right.x;
+        rotationMatrix[0][1] = up.x;
+        rotationMatrix[0][2] = forward.x;
+        rotationMatrix[1][0] = right.y;
+        rotationMatrix[1][1] = up.y;
+        rotationMatrix[1][2] = forward.y;
+        rotationMatrix[2][0] = right.z;
+        rotationMatrix[2][1] = up.z;
+        rotationMatrix[2][2] = forward.z;
 
         // 转换为四元数
-        XMVECTOR rotationQuat = XMQuaternionRotationMatrix(rotationMatrix);
-        transform->rotation.FromXMVector(rotationQuat);
+        PrismaMath::quat rotationQuat = Prisma::Math::ToQuaternion(rotationMatrix);
+        transform->rotation = rotationQuat;
         MarkViewDirty();
     }
 }
 
 void Camera3D::LookAt(float x, float y, float z) {
-    LookAt(XMVectorSet(x, y, z, 0.0f));
+    LookAt(PrismaMath::vec3(x, y, z));
 }
 
 void Camera3D::UpdateViewMatrix() const {
@@ -204,26 +206,26 @@ void Camera3D::UpdateViewMatrix() const {
 
     if (auto transform = m_owner->transform()) {
         // 获取位置和旋转
-        XMVECTOR position = XMLoadFloat3(&transform->position);
-        XMVECTOR rotation = transform->rotation.ToXMVector();
+        PrismaMath::vec3 position = PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
+        PrismaMath::quat rotation = transform->rotation;
 
         // 创建旋转矩阵
-        XMMATRIX rotationMatrix = XMMatrixRotationQuaternion(rotation);
+        PrismaMath::mat4 rotationMatrix = Prisma::Math::ToMatrix(rotation);
 
         // 相机默认前向是-Z，所以需要额外旋转
-        XMMATRIX cameraFix = XMMatrixRotationY(XM_PI);
-        rotationMatrix = XMMatrixMultiply(cameraFix, rotationMatrix);
+        PrismaMath::mat4 cameraFix = Prisma::Math::RotationY(Prisma::Math::PI);
+        rotationMatrix = Prisma::Math::Multiply(cameraFix, rotationMatrix);
 
         // 计算世界坐标系的各轴
-        m_forward = XMVector3Normalize(rotationMatrix.r[2]);  // Z轴（前向）
-        m_up = XMVector3Normalize(rotationMatrix.r[1]);       // Y轴（上向）
-        m_right = XMVector3Normalize(rotationMatrix.r[0]);    // X轴（右向）
+        m_forward = Prisma::Math::Normalize(PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));  // Z轴（前向）
+        m_up = Prisma::Math::Normalize(PrismaMath::vec3(rotationMatrix[1][0], rotationMatrix[1][1], rotationMatrix[1][2]));        // Y轴（上向）
+        m_right = Prisma::Math::Normalize(PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));     // X轴（右向）
 
         // 计算视图矩阵（相机变换的逆矩阵）
         // 视图矩阵 = 旋转矩阵的转置 * 平移矩阵的逆
-        XMMATRIX translation = XMMatrixTranslationFromVector(-position);
-        m_viewMatrix = XMMatrixTranspose(rotationMatrix);
-        m_viewMatrix = XMMatrixMultiply(m_viewMatrix, translation);
+        PrismaMath::mat4 translation = Prisma::Math::Translation(-position);
+        m_viewMatrix = Prisma::Math::Transpose(rotationMatrix);
+        m_viewMatrix = Prisma::Math::Multiply(m_viewMatrix, translation);
 
         m_isViewDirty = false;
     }
