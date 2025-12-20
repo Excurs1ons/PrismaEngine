@@ -1,4 +1,5 @@
 #include "Mesh.h"
+#include "../Logger.h"
 
 Mesh Mesh::GetCubeMesh()
 {
@@ -13,16 +14,16 @@ Mesh Mesh::GetCubeMesh()
     // 立方体的8个顶点
     subMesh.vertices = {
         // 前面 (Z+)
-        { XMFLOAT4(-0.5f, -0.5f, 0.5f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(0, 0, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(0.5f, -0.5f, 0.5f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(1, 0, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(0.5f, 0.5f, 0.5f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(1, 1, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(-0.5f, 0.5f, 0.5f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(0, 1, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        
+        { PrismaMath::vec4(-0.5f, -0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0, 0, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(0.5f, -0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(0.5f, 0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1, 1, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(-0.5f, 0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0, 1, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+
         // 后面 (Z-)
-        { XMFLOAT4(-0.5f, -0.5f, -0.5f, 1.0f), XMFLOAT4(0, 0, -1, 0), XMFLOAT4(0, 0, 0, 0), XMFLOAT4(-1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(0.5f, -0.5f, -0.5f, 1.0f), XMFLOAT4(0, 0, -1, 0), XMFLOAT4(1, 0, 0, 0), XMFLOAT4(-1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(0.5f, 0.5f, -0.5f, 1.0f), XMFLOAT4(0, 0, -1, 0), XMFLOAT4(1, 1, 0, 0), XMFLOAT4(-1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(-0.5f, 0.5f, -0.5f, 1.0f), XMFLOAT4(0, 0, -1, 0), XMFLOAT4(0, 1, 0, 0), XMFLOAT4(-1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} }
+        { PrismaMath::vec4(-0.5f, -0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(0, 0, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(0.5f, -0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(0.5f, 0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(1, 1, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(-0.5f, 0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(0, 1, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) }
     };
     
     // 立方体的12个三角形（36个索引）
@@ -42,9 +43,10 @@ Mesh Mesh::GetCubeMesh()
     };
     
     // 计算包围盒
-    XMVECTOR minVec = XMVectorSet(-0.5f, -0.5f, -0.5f, 0.0f);
-    XMVECTOR maxVec = XMVectorSet(0.5f, 0.5f, 0.5f, 0.0f);
-    BoundingBox::CreateFromPoints(cubeMesh.globalBoundingBox, minVec, maxVec);
+    PrismaMath::vec3 minVec(-0.5f, -0.5f, -0.5f);
+    PrismaMath::vec3 maxVec(0.5f, 0.5f, 0.5f);
+    cubeMesh.globalBoundingBox.min = minVec;
+    cubeMesh.globalBoundingBox.max = maxVec;
     
     return cubeMesh;
 }
@@ -60,18 +62,19 @@ Mesh Mesh::GetTriangleMesh()
     
     // 三角形的3个顶点
     subMesh.vertices = {
-        { XMFLOAT4(0.0f, 0.5f, 0.0f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(0.5f, 0.0f, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 0.0f, 0.0f, 1.0f} },
-        { XMFLOAT4(-0.5f, -0.5f, 0.0f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(0.0f, 1.0f, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{0.0f, 1.0f, 0.0f, 1.0f} },
-        { XMFLOAT4(0.5f, -0.5f, 0.0f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(1.0f, 1.0f, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{0.0f, 0.0f, 1.0f, 1.0f} }
+        { PrismaMath::vec4(0.0f, 0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.5f, 0.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 0.0f, 0.0f, 1.0f) },
+        { PrismaMath::vec4(-0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
+        { PrismaMath::vec4(0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(0.0f, 0.0f, 1.0f, 1.0f) }
     };
     
     // 三角形的1个三角形（3个索引）
     subMesh.indices = { 0, 1, 2 };
     
     // 计算包围盒
-    XMVECTOR minVec = XMVectorSet(-0.5f, -0.5f, 0.0f, 0.0f);
-    XMVECTOR maxVec = XMVectorSet(0.5f, 0.5f, 0.0f, 0.0f);
-    BoundingBox::CreateFromPoints(triangleMesh.globalBoundingBox, minVec, maxVec);
+    PrismaMath::vec3 minVec(-0.5f, -0.5f, 0.0f);
+    PrismaMath::vec3 maxVec(0.5f, 0.5f, 0.0f);
+    triangleMesh.globalBoundingBox.min = minVec;
+    triangleMesh.globalBoundingBox.max = maxVec;
     
     return triangleMesh;
 }
@@ -87,19 +90,20 @@ Mesh Mesh::GetQuadMesh()
     
     // 四边形的4个顶点
     subMesh.vertices = {
-        { XMFLOAT4(-0.5f, 0.5f, 0.0f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(0.0f, 0.0f, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(0.5f, 0.5f, 0.0f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(1.0f, 0.0f, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(0.5f, -0.5f, 0.0f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(1.0f, 1.0f, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} },
-        { XMFLOAT4(-0.5f, -0.5f, 0.0f, 1.0f), XMFLOAT4(0, 0, 1, 0), XMFLOAT4(0.0f, 1.0f, 0, 0), XMFLOAT4(1, 0, 0, 0), XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f} }
+        { PrismaMath::vec4(-0.5f, 0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.0f, 0.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(0.5f, 0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1.0f, 0.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        { PrismaMath::vec4(-0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) }
     };
     
     // 四边形的2个三角形（6个索引）
     subMesh.indices = { 0, 1, 2, 0, 2, 3 };
     
     // 计算包围盒
-    XMVECTOR minVec = XMVectorSet(-0.5f, -0.5f, 0.0f, 0.0f);
-    XMVECTOR maxVec = XMVectorSet(0.5f, 0.5f, 0.0f, 0.0f);
-    BoundingBox::CreateFromPoints(quadMesh.globalBoundingBox, minVec, maxVec);
+    PrismaMath::vec3 minVec(-0.5f, -0.5f, 0.0f);
+    PrismaMath::vec3 maxVec(0.5f, 0.5f, 0.0f);
+    quadMesh.globalBoundingBox.min = minVec;
+    quadMesh.globalBoundingBox.max = maxVec;
     
     return quadMesh;
 }
