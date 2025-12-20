@@ -143,8 +143,32 @@ if(PRISMA_ENABLE_AUDIO_OPENAL)
 endif()
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
-    find_package(SDL3 CONFIG REQUIRED)
-    target_link_libraries(Engine PRIVATE SDL3::SDL3)
+    # On Android, manually locate SDL3 from vcpkg
+    if(ANDROID)
+        # Extract the vcpkg path from CMAKE_PREFIX_PATH (first path before semicolon)
+        list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
+        message(STATUS "Searching for SDL3 in ${VCPKG_PATH}")
+
+        # Directly set the paths since we know where they are
+        set(SDL3_INCLUDE_DIRS "${VCPKG_PATH}/include/SDL3")
+        set(SDL3_LIBRARIES "${VCPKG_PATH}/lib/libSDL3.a")
+
+        # Check if files exist
+        if(EXISTS "${SDL3_INCLUDE_DIRS}/SDL.h" AND EXISTS "${SDL3_LIBRARIES}")
+            message(STATUS "Found SDL3: ${SDL3_LIBRARIES}")
+            message(STATUS "SDL3 include dirs: ${SDL3_INCLUDE_DIRS}")
+            target_include_directories(Engine PRIVATE ${SDL3_INCLUDE_DIRS})
+            target_link_libraries(Engine PRIVATE ${SDL3_LIBRARIES})
+        else()
+            message(FATAL_ERROR "SDL3 not found in vcpkg installed directory")
+            message(STATUS "VCPKG_PATH: ${VCPKG_PATH}")
+            message(STATUS "SDL3_INCLUDE_DIRS: ${SDL3_INCLUDE_DIRS}")
+            message(STATUS "SDL3_LIBRARIES: ${SDL3_LIBRARIES}")
+        endif()
+    else()
+        find_package(SDL3 CONFIG REQUIRED)
+        target_link_libraries(Engine PRIVATE SDL3::SDL3)
+    endif()
 endif()
 
 # 渲染设备依赖
@@ -191,6 +215,13 @@ target_include_directories(Engine
         ${CMAKE_CURRENT_SOURCE_DIR}/graphic
         ${CMAKE_CURRENT_SOURCE_DIR}/config
 )
+
+# 在Android平台上添加vcpkg包含路径
+if(ANDROID)
+    # 提取vcpkg路径
+    list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
+    target_include_directories(Engine PRIVATE ${VCPKG_PATH}/include)
+endif()
 
 # ========== 编译定义 ==========
 
