@@ -302,9 +302,14 @@ function Build-Abi {
     if ($LASTEXITCODE -ne 0) {
         Pop-Location
         Write-Error "编译失败"
-        # 显示最后几行错误信息
-        Write-Host "最后10行输出:" -ForegroundColor Yellow
-        $buildOutput -split "`n" | Select-Object -Last 10 | ForEach-Object { Write-Host $_ }
+        # 显示完整的错误输出
+        Write-Host "编译失败，完整输出信息:" -ForegroundColor Yellow
+        Write-Host $buildOutput
+
+        # 保存完整输出到文件
+        $errorLogFile = "..\build\error-$AbiName.log"
+        $buildOutput | Out-File -FilePath $errorLogFile -Encoding UTF8
+        Write-Host "完整错误日志已保存到: $errorLogFile" -ForegroundColor Green
         exit 1
     }
 
