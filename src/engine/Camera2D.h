@@ -1,8 +1,7 @@
 #pragma once
 #include "Camera.h"
 #include "Component.h"
-
-using namespace DirectX;
+#include "math/MathTypes.h"
 
 class Camera2D :
     public Camera
@@ -18,8 +17,8 @@ public:
 
     // 设置摄像机位置
     void SetPosition(float x, float y, float z = 0.0f);
-    void SetPosition(FXMVECTOR position);
-    XMVECTOR GetPosition() const;
+    void SetPosition(const PrismaMath::vec4& position);
+    PrismaMath::vec4 GetPosition() const;
 
     // 设置摄像机旋转（绕Z轴）
     void SetRotation(float rotation);
@@ -31,21 +30,21 @@ public:
 
 
     // 获取视图矩阵
-    XMMATRIX GetViewMatrix() const;
+    PrismaMath::mat4 GetViewMatrix() const;
 
     // 获取投影矩阵
-    XMMATRIX GetProjectionMatrix() const;
+    PrismaMath::mat4 GetProjectionMatrix() const;
 
     // 获取视图-投影矩阵
-    XMMATRIX GetViewProjectionMatrix() const;
+    PrismaMath::mat4 GetViewProjectionMatrix() const;
 
     // 更新投影矩阵以适应窗口大小
     void UpdateProjectionMatrix(float windowWidth, float windowHeight);
 
     // ICamera接口实现
-    XMVECTOR GetForward() const override { return XMVectorSet(0.0f, 0.0f, -1.0f, 0.0f); }
-    XMVECTOR GetUp() const override { return XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f); }
-    XMVECTOR GetRight() const override { return XMVectorSet(1.0f, 0.0f, 0.0f, 0.0f); }
+    PrismaMath::vec4 GetForward() const override { return PrismaMath::vec4(0.0f, 0.0f, -1.0f, 0.0f); }
+    PrismaMath::vec4 GetUp() const override { return PrismaMath::vec4(0.0f, 1.0f, 0.0f, 0.0f); }
+    PrismaMath::vec4 GetRight() const override { return PrismaMath::vec4(1.0f, 0.0f, 0.0f, 0.0f); }
 
     float GetFOV() const override { return 0.0f; } // 正交投影没有FOV
     void SetFOV(float fov) override { (void)fov; } // 正交投影忽略FOV
@@ -61,11 +60,11 @@ public:
     void SetActive(bool active) override { m_isActive = active; }
 
 private:
-    XMVECTOR m_position;
+    PrismaMath::vec4 m_position;
     float m_rotation;
 
-    mutable XMMATRIX m_viewMatrix;
-    mutable XMMATRIX m_projectionMatrix;
+    mutable PrismaMath::mat4 m_viewMatrix;
+    mutable PrismaMath::mat4 m_projectionMatrix;
     
     float m_width, m_height;
     float m_left, m_right, m_bottom, m_top;
