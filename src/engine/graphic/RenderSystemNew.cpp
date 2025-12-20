@@ -3,12 +3,18 @@
 #include "../SceneManager.h"
 #include "../Camera3D.h"
 #include "../core/ECS.h"
-#include "RenderBackendVulkan.h"
 #include "ScriptableRenderPipeline.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
+#ifdef PRISMA_ENABLE_RENDER_DX12
 // DirectX12适配器
 #include "adapters/dx12/DX12Adapters.h"
+#endif
+
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
+// DirectX12适配器
+#include "adapters/vulkan/VulkanAdapters.h"
+#endif
 
 #if defined(_WIN32)
 #include <Windows.h>
