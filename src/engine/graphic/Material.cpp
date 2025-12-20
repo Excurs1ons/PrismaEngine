@@ -5,7 +5,6 @@
 #include "DefaultShader.h"
 
 using namespace Engine;
-using namespace DirectX;
 
 Material::Material()
     : m_isLoaded(false) {
@@ -22,12 +21,12 @@ Material::~Material() {
 }
 
 // 基础属性设置
-void Material::SetBaseColor(const XMFLOAT4& color) {
+void Material::SetBaseColor(const PrismaMath::vec4& color) {
     m_properties.baseColor = color;
 }
 
 void Material::SetBaseColor(float r, float g, float b, float a) {
-    m_properties.baseColor = XMFLOAT4(r, g, b, a);
+    m_properties.baseColor = PrismaMath::vec4(r, g, b, a);
 }
 
 void Material::SetMetallic(float metallic) {
