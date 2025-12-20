@@ -16,7 +16,7 @@ using Microsoft::WRL::ComPtr;
 
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
 #include "adapters/vulkan/VulkanShader.h"
-#include "adapters/vulkan/VulkanRenderDevice.h"
+#include "adapters/vulkan/RenderDeviceVulkan.h"
 #endif
 
 using namespace Engine;
