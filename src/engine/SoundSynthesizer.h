@@ -1,8 +1,11 @@
 #pragma once
 #include <map>
-#include <DirectXMath.h>
+#include <cmath>
 #include <vector>
-using namespace DirectX;
+
+// 数学常量定义
+constexpr float XM_2PI = 6.28318530717958647692f;
+constexpr float XM_PI = 3.14159265358979323846f;
 // 基础音频接口
 class AudioGenerator {
 public:
@@ -41,7 +44,7 @@ class SineWaveGenerator : public WaveformGenerator {
 public:
     void GenerateSamples(float* buffer, size_t sampleCount) override {
         for (size_t i = 0; i < sampleCount; ++i) {
-            buffer[i] = XMScalarSin(AdvancePhase()) * volume;
+            buffer[i] = std::sin(AdvancePhase()) * volume;
         }
     }
 };
