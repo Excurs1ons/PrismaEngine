@@ -11,7 +11,8 @@
     "nlohmann-json",
     {
       "name": "imgui",
-      "features": [ "sdl3-binding", "vulkan-binding", "dx12-binding", "docking-experimental" ]
+      "features": [ "sdl3-binding", "vulkan-binding", "dx12-binding", "docking-experimental" ],
+      "platform": "windows"
     },
     "openfbx",
     "stb"

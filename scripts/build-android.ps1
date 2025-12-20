@@ -238,12 +238,48 @@ function Build-Abi {
         "-G", "Ninja"
     )
 
-    # 如果vcpkg已配置，添加工具链
-    if ($env:VCPKG_ROOT) {
-        $vcpkgToolchain = "$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake"
-        if (Test-Path $vcpkgToolchain) {
-            $cmakeArgs += "-DVCPKG_TARGET_TRIPLET=$AbiName-android"
+    # 使用项目的vcpkg
+    $projectRoot = (Resolve-Path "..\..").Path
+    $vcpkgRoot = "$projectRoot\vcpkg"
+    $vcpkgExe = "$vcpkgRoot\vcpkg.exe"
+
+    if (Test-Path $vcpkgExe) {
+        $vcpkgToolchain = "$vcpkgRoot\scripts\buildsystems\vcpkg.cmake"
+
+        # 添加vcpkg工具链，不指定manifest文件（使用默认的vcpkg.json）
+        $cmakeArgs += @(
+            "-DCMAKE_TOOLCHAIN_FILE=$vcpkgToolchain",
+            "-DVCPKG_TARGET_TRIPLET=arm64-android"
+        )
+
+        # 强制检查并安装Android依赖
+        Write-Info "检查Android依赖..."
+        $androidInstalledDir = "$projectRoot\vcpkg_installed\arm64-android"
+
+        Write-Info "vcpkg路径: $vcpkgExe"
+        Write-Info "Android安装目录: $androidInstalledDir"
+        Write-Info "目录存在: $(Test-Path $androidInstalledDir)"
+
+        # 总是尝试安装或更新依赖
+        Write-Info "安装Android依赖（arm64-android）..."
+        Push-Location $projectRoot
+
+        # 显示vcpkg命令
+        $installCmd = "& '$vcpkgExe' install --triplet arm64-android"
+        Write-Info "执行: $installCmd"
+
+        & $vcpkgExe install --triplet arm64-android
+        $exitCode = $LASTEXITCODE
+        Pop-Location
+
+        if ($exitCode -ne 0) {
+            Write-Error "vcpkg依赖安装失败，退出码: $exitCode"
+            # 继续构建，让用户看到错误
+        } else {
+            Write-Info "Android依赖安装成功"
         }
+    } else {
+        Write-Warn "未找到vcpkg，跳过依赖安装"
     }
 
     Write-Info "配置CMake..."
