@@ -1,10 +1,10 @@
 #include "Transform2D.h"
 
 Transform2D::Transform2D()
-    : m_position(XMVectorZero())
+    : m_position(PrismaMath::vec3(0.0f, 0.0f, 0.0f))
     , m_rotation(0.0f)
-    , m_scale(XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f))
-    , m_matrix(XMMatrixIdentity())
+    , m_scale(PrismaMath::vec3(1.0f, 1.0f, 1.0f))
+    , m_matrix(PrismaMath::mat4(1.0f))
     , m_isDirty(true)
 {
 }
@@ -13,12 +13,12 @@ Transform2D::~Transform2D()
 {
 }
 
-XMVECTOR Transform2D::GetPosition() const
+PrismaMath::vec3 Transform2D::GetPosition() const
 {
     return m_position;
 }
 
-void Transform2D::SetPosition(FXMVECTOR position)
+void Transform2D::SetPosition(const PrismaMath::vec3& position)
 {
     m_position = position;
     m_isDirty = true;
@@ -26,7 +26,7 @@ void Transform2D::SetPosition(FXMVECTOR position)
 
 void Transform2D::SetPosition(float x, float y, float z)
 {
-    m_position = XMVectorSet(x, y, z, 0.0f);
+    m_position = PrismaMath::vec3(x, y, z);
     m_isDirty = true;
 }
 
@@ -41,12 +41,12 @@ void Transform2D::SetRotation(float rotation)
     m_isDirty = true;
 }
 
-XMVECTOR Transform2D::GetScale() const
+PrismaMath::vec3 Transform2D::GetScale() const
 {
     return m_scale;
 }
 
-void Transform2D::SetScale(FXMVECTOR scale)
+void Transform2D::SetScale(const PrismaMath::vec3& scale)
 {
     m_scale = scale;
     m_isDirty = true;
@@ -54,31 +54,31 @@ void Transform2D::SetScale(FXMVECTOR scale)
 
 void Transform2D::SetScale(float xy)
 {
-    m_scale = XMVectorSet(xy, xy, 1.0f, 1.0f);
+    m_scale = PrismaMath::vec3(xy, xy, 1.0f);
     m_isDirty = true;
 }
 
 void Transform2D::SetScale(float x, float y, float z)
 {
-    m_scale = XMVectorSet(x, y, z, 1.0f);
+    m_scale = PrismaMath::vec3(x, y, z);
     m_isDirty = true;
 }
 
-XMMATRIX Transform2D::GetMatrix() const
+PrismaMath::mat4 Transform2D::GetMatrix() const
 {
     if (m_isDirty)
     {
         // 计算变换矩阵: Scale * Rotation * Translation
-        XMMATRIX scaleMatrix = XMMatrixScalingFromVector(m_scale);
-        XMMATRIX rotationMatrix = XMMatrixRotationZ(m_rotation);
-        XMMATRIX translationMatrix = XMMatrixTranslationFromVector(m_position);
+        PrismaMath::mat4 scaleMatrix = Prisma::Math::Scale(m_scale);
+        PrismaMath::mat4 rotationMatrix = Prisma::Math::RotationZ(m_rotation);
+        PrismaMath::mat4 translationMatrix = Prisma::Math::Translation(m_position);
 
-        m_matrix = XMMatrixMultiply(scaleMatrix, rotationMatrix);
-        m_matrix = XMMatrixMultiply(m_matrix, translationMatrix);
-        
+        m_matrix = Prisma::Math::Multiply(scaleMatrix, rotationMatrix);
+        m_matrix = Prisma::Math::Multiply(m_matrix, translationMatrix);
+
         m_isDirty = false;
     }
-    
+
     return m_matrix;
 }
 
