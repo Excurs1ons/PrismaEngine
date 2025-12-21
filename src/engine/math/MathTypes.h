@@ -1,7 +1,7 @@
 #pragma once
 
 // 跨平台数学类型定义
-// 根据平台选择不同的数学库实现
+// 统一使用GLM以保持跨平台兼容性
 
 // 平台检测宏
 #if defined(ANDROID) || defined(__ANDROID__)
@@ -15,102 +15,54 @@
 // 定义GLM实验性扩展支持
 #define GLM_ENABLE_EXPERIMENTAL
 
-// 选择数学库
-// 统一使用GLM的列主序约定，Vulkan兼容
-#if defined(PRISMA_USE_GLM) || defined(PRISMA_PLATFORM_ANDROID) || defined(PRISMA_PLATFORM_OTHER)
-    // 非Windows平台或指定使用GLM
-    #include <glm/glm.hpp>
-    #include <glm/gtc/matrix_transform.hpp>
-    #include <glm/gtc/quaternion.hpp>
-    #include <glm/gtx/quaternion.hpp>
-    #include <glm/gtc/type_ptr.hpp>
-    // GLM默认是右手坐标系，列主序
-    namespace PrismaMath = glm;
+// 所有平台统一使用GLM
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
-#elif defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM)
-    // Windows平台使用DirectXMath，但需要转换到列主序
-    #define PRISMA_USE_DIRECTXMATH 1
+// Windows平台可选：如果需要DirectXMath的性能优化，可以通过Prisma::Math命名空间使用
+#ifdef PRISMA_PLATFORM_WINDOWS
     #include <DirectXMath.h>
-    namespace PrismaMath = DirectX;
-    // 需要定义转换宏，将DirectXMath的行主序转换为列主序
-    #define PRISMA_DIRECTXMATH_TO_COLUMN_MAJOR
-
-#else
-    // 默认使用GLM
-    #include <glm/glm.hpp>
-    #include <glm/gtc/matrix_transform.hpp>
-    #include <glm/gtc/quaternion.hpp>
-    #include <glm/gtx/quaternion.hpp>
-    #include <glm/gtc/type_ptr.hpp>
-    namespace PrismaMath = glm;
+    #define PRISMA_DIRECTXMATH_AVAILABLE 1
 #endif
+
+namespace PrismaMath = glm;
 
 // 统一的基本类型定义
 namespace Prisma {
 
-// 向量类型
-#if defined(PRISMA_USE_DIRECTXMATH)
-    using Vector2 = DirectX::XMFLOAT2;
-    using Vector3 = DirectX::XMFLOAT3;
-    using Vector4 = DirectX::XMFLOAT4;
-
-    inline Vector4&& operator -(const Vector4& lhs, const Vector4& rhs) {
-        return {lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
-    }
-    using IVector2 = DirectX::XMINT2;
-    using IVector3 = DirectX::XMINT3;
-    using IVector4 = DirectX::XMINT4;
-    using UVector2 = DirectX::XMUINT2;
-    using UVector3 = DirectX::XMUINT3;
-    using UVector4 = DirectX::XMUINT4;
-#else
-    using Vector2 = glm::vec2;
-    using Vector3 = glm::vec3;
-    using Vector4 = glm::vec4;
-    using IVector2 = glm::ivec2;
-    using IVector3 = glm::ivec3;
-    using IVector4 = glm::ivec4;
-    using UVector2 = glm::uvec2;
-    using UVector3 = glm::uvec3;
-    using UVector4 = glm::uvec4;
-#endif
+// 向量类型 - 使用GLM
+using Vector2 = glm::vec2;
+using Vector3 = glm::vec3;
+using Vector4 = glm::vec4;
+using IVector2 = glm::ivec2;
+using IVector3 = glm::ivec3;
+using IVector4 = glm::ivec4;
+using UVector2 = glm::uvec2;
+using UVector3 = glm::uvec3;
+using UVector4 = glm::uvec4;
 
 // 矩阵类型
-#if defined(PRISMA_USE_DIRECTXMATH)
-    using Matrix3x3 = DirectX::XMFLOAT3X3;
-    using Matrix4x4 = DirectX::XMFLOAT4X4;
-#else
-    using Matrix3x3 = glm::mat3;
-    using Matrix4x4 = glm::mat4;
-#endif
+using Matrix3x3 = glm::mat3;
+using Matrix4x4 = glm::mat4;
 
 // 四元数类型
-#if defined(PRISMA_USE_DIRECTXMATH)
-    using Quaternion = DirectX::XMFLOAT4;
-#else
-    using Quaternion = glm::quat;
-#endif
+using Quaternion = glm::quat;
 
 // 平面类型
-#if defined(PRISMA_USE_DIRECTXMATH)
-    using Plane = DirectX::XMFLOAT4;
-#else
-    struct Plane {
-        Vector3 normal;
-        float distance;
+struct Plane {
+    Vector3 normal;
+    float distance;
 
-        Plane() : normal(0, 1, 0), distance(0) {}
-        Plane(const Vector3& n, float d) : normal(n), distance(d) {}
-        Plane(float a, float b, float c, float d) : normal(a, b, c), distance(d) {}
-    };
-#endif
+    Plane() : normal(0, 1, 0), distance(0) {}
+    Plane(const Vector3& n, float d) : normal(n), distance(d) {}
+    Plane(float a, float b, float c, float d) : normal(a, b, c), distance(d) {}
+};
 
 // 颜色类型
-#if defined(PRISMA_USE_DIRECTXMATH)
-    using Color = DirectX::XMFLOAT4;
-#else
-    using Color = Vector4;
-#endif
+using Color = Vector4;
 
 // 常用数学常量
 constexpr float PI = 3.14159265358979323846f;
