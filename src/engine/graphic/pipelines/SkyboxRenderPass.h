@@ -3,6 +3,7 @@
 #include "graphic/RenderPass.h"
 #include "graphic/Material.h"
 #include "graphic/Mesh.h"
+#include "math/MathTypes.h"
 #include <memory>
 #include <vector>
 
@@ -39,20 +40,20 @@ public:
     void SetCubeMapTexture(void* cubeMapTexture);
     
     // 设置视图投影矩阵
-    void SetViewProjectionMatrix(const XMMATRIX& viewProjection);
+    void SetViewProjectionMatrix(const PrismaMath::mat4& viewProjection);
 
     // 设置视图和投影矩阵
-    void SetViewMatrix(const XMMATRIX& view);
-    void SetProjectionMatrix(const XMMATRIX& projection);
+    void SetViewMatrix(const PrismaMath::mat4& view);
+    void SetProjectionMatrix(const PrismaMath::mat4& projection);
 
 private:
     // 天空盒立方体贴图纹理
     void* m_cubeMapTexture;
     
     // 视图和投影矩阵
-    XMMATRIX m_view;
-    XMMATRIX m_projection;
-    XMMATRIX m_viewProjection;
+    PrismaMath::mat4 m_view;
+    PrismaMath::mat4 m_projection;
+    PrismaMath::mat4 m_viewProjection;
     
     // 渲染目标
     void* m_renderTarget;
