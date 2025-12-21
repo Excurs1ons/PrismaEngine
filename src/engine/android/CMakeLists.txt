@@ -72,6 +72,9 @@ target_compile_options(engine PRIVATE
 )
 
 # 查找依赖包
+# 强制使用静态链接的 SDL3
+set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as static library" FORCE)
+set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
 find_package(SDL3 CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
@@ -79,7 +82,7 @@ find_package(imgui CONFIG REQUIRED)
 
 # 链接依赖库
 target_link_libraries(engine PUBLIC
-    SDL3::SDL3
+    SDL3::SDL3-static
     Vulkan::Vulkan
     nlohmann_json::nlohmann_json
     imgui::imgui
