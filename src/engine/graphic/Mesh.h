@@ -35,8 +35,8 @@ struct BoundingBox {
     PrismaMath::vec3 min;
     PrismaMath::vec3 max;
 
-    BoundingBox() : min(0, 0, 0), max(0, 0, 0) {}
-    BoundingBox(const PrismaMath::vec3& min, const PrismaMath::vec3& max) : min(min), max(max) {}
+    BoundingBox() : min(PrismaMath::vec3(0, 0, 0)), max(PrismaMath::vec3(0, 0, 0)) {}
+    BoundingBox(const PrismaMath::vec3& minVal, const PrismaMath::vec3& maxVal) : min(minVal), max(maxVal) {}
 
     // 扩展包围盒以包含点
     void Encapsulate(const PrismaMath::vec3& point) {
