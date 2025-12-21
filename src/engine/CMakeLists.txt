@@ -208,8 +208,11 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
             message(STATUS "SDL3_LIBRARIES: ${SDL3_LIBRARIES}")
         endif()
     else()
+        # 强制使用静态链接的 SDL3
+        set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as static library" FORCE)
+        set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
         find_package(SDL3 CONFIG REQUIRED)
-        target_link_libraries(Engine PRIVATE SDL3::SDL3)
+        target_link_libraries(Engine PRIVATE SDL3::SDL3-static)
     endif()
 endif()
 
