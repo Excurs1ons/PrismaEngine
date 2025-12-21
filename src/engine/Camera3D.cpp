@@ -155,9 +155,9 @@ void Camera3D::Rotate(float pitch, float yaw, float roll) {
         ));
 
         // 应用旋转到当前旋转
-        glm::quat currentRotation = glm::quat(transform->rotation.w, transform->rotation.x, transform->rotation.y, transform->rotation.z);
+        glm::quat currentRotation = transform->rotation;
         glm::quat newRotation = deltaRotation * currentRotation;
-        transform->rotation = PrismaMath::vec4(newRotation.x, newRotation.y, newRotation.z, newRotation.w);
+        transform->rotation = newRotation;
 
         MarkViewDirty();
     }
@@ -190,7 +190,7 @@ void Camera3D::LookAt(const PrismaMath::vec3& target) {
 
         // 转换为四元数
         glm::quat rotationQuat = glm::quat_cast(rotationMatrix);
-        transform->rotation = PrismaMath::vec4(rotationQuat.x, rotationQuat.y, rotationQuat.z, rotationQuat.w);
+        transform->rotation = rotationQuat;
         MarkViewDirty();
     }
 }
@@ -207,10 +207,10 @@ void Camera3D::UpdateViewMatrix() const {
     if (auto transform = m_owner->transform()) {
         // 获取位置和旋转
         PrismaMath::vec3 position = PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
-        PrismaMath::quat rotation = transform->rotation;
+        glm::quat rotation = transform->rotation;
 
         // 创建旋转矩阵
-        PrismaMath::mat4 rotationMatrix = Prisma::Math::ToMatrix(rotation);
+        PrismaMath::mat4 rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
 
         // 相机默认前向是-Z，所以需要额外旋转
         PrismaMath::mat4 cameraFix = Prisma::Math::RotationY(Prisma::Math::PI);
