@@ -50,21 +50,24 @@ public:
     // 获取前向向量
     PrismaMath::vec3 GetForward() const {
         auto forward = PrismaMath::vec3(0, 0, 1);
-        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
+        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(forward, 0));
     }
 
     // 获取右向量
     PrismaMath::vec3 GetRight() const {
         auto right = PrismaMath::vec3(1, 0, 0);
-        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
+        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(right, 0));
     }
 
     // 获取上向量
     PrismaMath::vec3 GetUp() const {
         auto up = PrismaMath::vec3(0, 1, 0);
-        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
+        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(up, 0));
     }
 
@@ -99,11 +102,12 @@ private:
     PrismaMath::mat4 m_worldMatrix;
 
     void UpdateMatrix() {
-        auto translation = Prisma::Translation(position);
-        auto rotationMatrix = Prisma::QuaternionToMatrix(rotation);
-        auto scaleMatrix = Prisma::Scale(scale);
+        auto translation = Prisma::Math::Translation(position);
+        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
+        auto scaleMatrix = Prisma::Math::Scale(scale);
 
-        m_worldMatrix = Prisma::Multiply(Prisma::Multiply(scaleMatrix, rotationMatrix), translation);
+        m_worldMatrix = Prisma::Math::Multiply(Prisma::Math::Multiply(scaleMatrix, rotationMatrix), translation);
     }
 };
 
