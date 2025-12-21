@@ -35,7 +35,7 @@ public:
 
     TransformComponent() {
         position = PrismaMath::vec3(0, 0, 0);
-        rotation = PrismaMath::vec4(0, 0, 0, 1); // Quaternion
+        rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f); // Identity quaternion
         scale = PrismaMath::vec3(1, 1, 1);
         UpdateMatrix();
     }
@@ -50,24 +50,21 @@ public:
     // 获取前向向量
     PrismaMath::vec3 GetForward() const {
         auto forward = PrismaMath::vec3(0, 0, 1);
-        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(forward, 0));
     }
 
     // 获取右向量
     PrismaMath::vec3 GetRight() const {
         auto right = PrismaMath::vec3(1, 0, 0);
-        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(right, 0));
     }
 
     // 获取上向量
     PrismaMath::vec3 GetUp() const {
         auto up = PrismaMath::vec3(0, 1, 0);
-        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(up, 0));
     }
 
@@ -95,7 +92,7 @@ public:
 
     // 变换矩阵属性
     PrismaMath::vec3 position;
-    PrismaMath::vec4 rotation; // Quaternion
+    Prisma::Quaternion rotation; // Quaternion
     PrismaMath::vec3 scale;
 
 private:
@@ -103,8 +100,7 @@ private:
 
     void UpdateMatrix() {
         auto translation = Prisma::Math::Translation(position);
-        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
+        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
         auto scaleMatrix = Prisma::Math::Scale(scale);
 
         m_worldMatrix = Prisma::Math::Multiply(Prisma::Math::Multiply(scaleMatrix, rotationMatrix), translation);
