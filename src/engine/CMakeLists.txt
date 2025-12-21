@@ -171,6 +171,11 @@ add_library(Engine STATIC
     packing/pipeline.h
 )
 
+# Windows 平台添加 UTF-8 编译支持
+if(WIN32)
+    target_compile_options(Engine PRIVATE /utf-8)
+endif()
+
 # ========== 依赖项配置 ==========
 
 # 音频设备依赖
