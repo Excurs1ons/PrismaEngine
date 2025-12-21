@@ -21,7 +21,8 @@ public:
     // 获取变换矩阵
     float* GetMatrix() {
         // 创建旋转矩阵（从四元数转换为矩阵）
-        PrismaMath::mat4 rotationMatrix = Prisma::Math::QuaternionToMatrix(Prisma::Math::ToQuaternion(rotation));
+        glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
+        PrismaMath::mat4 rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
 
         // 创建平移矩阵
         PrismaMath::mat4 translationMatrix = Prisma::Math::Translation(position);
