@@ -1,6 +1,7 @@
 #pragma once
 
 #include "graphic/RenderPass.h"
+#include "math/MathTypes.h"
 #include <memory>
 
 namespace Engine {
@@ -31,20 +32,20 @@ public:
     void SetDepthBuffer(void* depthBuffer);
 
     // 设置视图投影矩阵
-    void SetViewProjectionMatrix(const XMMATRIX& viewProjection);
+    void SetViewProjectionMatrix(const PrismaMath::mat4& viewProjection);
 
     // 设置视图和投影矩阵
-    void SetViewMatrix(const XMMATRIX& view);
-    void SetProjectionMatrix(const XMMATRIX& projection);
+    void SetViewMatrix(const PrismaMath::mat4& view);
+    void SetProjectionMatrix(const PrismaMath::mat4& projection);
 
 private:
     // 深度缓冲区
     void* m_depthBuffer = nullptr;
 
     // 视图和投影矩阵
-    XMMATRIX m_view = DirectX::XMMatrixIdentity();
-    XMMATRIX m_projection = DirectX::XMMatrixIdentity();
-    XMMATRIX m_viewProjection = DirectX::XMMatrixIdentity();
+    PrismaMath::mat4 m_view = PrismaMath::mat4(1.0f);
+    PrismaMath::mat4 m_projection = PrismaMath::mat4(1.0f);
+    PrismaMath::mat4 m_viewProjection = PrismaMath::mat4(1.0f);
 
     // 渲染目标
     void* m_renderTarget = nullptr;
