@@ -338,24 +338,10 @@ endif()
 
 # ========== 编译定义 ==========
 
-# 根据平台定义宏
-if(ANDROID)
-    # Android平台使用GLM
-    target_compile_definitions(Engine PRIVATE
-        PRISMA_USE_GLM
-    )
-else()
-    # Windows平台默认使用DirectXMath（可配置为使用GLM）
-    if(PRISMA_FORCE_GLM)
-        target_compile_definitions(Engine PRIVATE
-            PRISMA_FORCE_GLM
-        )
-    else()
-        target_compile_definitions(Engine PRIVATE
-            PRISMA_USE_DIRECTXMATH
-        )
-    endif()
-endif()
+# 所有平台统一使用GLM
+target_compile_definitions(Engine PRIVATE
+    PRISMA_USE_GLM
+)
 
 # Windows 平台需要链接的额外依赖
 if(NOT ANDROID)
