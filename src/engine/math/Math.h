@@ -180,7 +180,8 @@ inline Vector4 LookRotation(const Vector3& forward, const Vector3& up) {
         0.0f, 0.0f, 0.0f, 1.0f
     );
 
-    return glm::quat_cast(rotationMatrix);
+    glm::quat result = glm::quat_cast(rotationMatrix);
+    return Vector4(result.x, result.y, result.z, result.w);
 }
 
 // 视角投影矩阵

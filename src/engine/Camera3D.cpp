@@ -148,16 +148,16 @@ void Camera3D::MoveLocal(float forward, float right, float up) {
 void Camera3D::Rotate(float pitch, float yaw, float roll) {
     if (auto transform = m_owner->transform()) {
         // 创建旋转增量（弧度）
-        PrismaMath::quat deltaRotation = Prisma::Math::FromEulerAngles(
+        glm::quat deltaRotation = Prisma::Math::FromEulerAngles(glm::vec3(
             Prisma::Math::Radians(pitch),
             Prisma::Math::Radians(yaw),
             Prisma::Math::Radians(roll)
-        );
+        ));
 
         // 应用旋转到当前旋转
-        PrismaMath::quat currentRotation = transform->rotation;
-        PrismaMath::quat newRotation = Prisma::Math::Multiply(deltaRotation, currentRotation);
-        transform->rotation = newRotation;
+        glm::quat currentRotation = glm::quat(transform->rotation.w, transform->rotation.x, transform->rotation.y, transform->rotation.z);
+        glm::quat newRotation = deltaRotation * currentRotation;
+        transform->rotation = PrismaMath::vec4(newRotation.x, newRotation.y, newRotation.z, newRotation.w);
 
         MarkViewDirty();
     }
@@ -189,8 +189,8 @@ void Camera3D::LookAt(const PrismaMath::vec3& target) {
         rotationMatrix[2][2] = forward.z;
 
         // 转换为四元数
-        PrismaMath::quat rotationQuat = Prisma::Math::FromRotationMatrix(rotationMatrix);
-        transform->rotation = rotationQuat;
+        glm::quat rotationQuat = glm::quat_cast(rotationMatrix);
+        transform->rotation = PrismaMath::vec4(rotationQuat.x, rotationQuat.y, rotationQuat.z, rotationQuat.w);
         MarkViewDirty();
     }
 }
