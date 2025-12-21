@@ -15,20 +15,43 @@
 // 定义GLM实验性扩展支持
 #define GLM_ENABLE_EXPERIMENTAL
 
-// 所有平台统一使用GLM
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/quaternion.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-// Windows平台可选：如果需要DirectXMath的性能优化，可以通过Prisma::Math命名空间使用
-#ifdef PRISMA_PLATFORM_WINDOWS
+// 选择数学库
+#if defined(PRISMA_PLATFORM_WINDOWS) && defined(PRISMA_USE_DIRECTXMATH) && !defined(PRISMA_FORCE_GLM)
+    // Windows平台使用DirectXMath（通过选项启用）
     #include <DirectXMath.h>
-    #define PRISMA_DIRECTXMATH_AVAILABLE 1
-#endif
 
-namespace PrismaMath = glm;
+    // 在 PrismaMath 命名空间中定义 GLM 兼容的类型别名
+    namespace PrismaMath {
+        // 向量类型
+        using vec2 = DirectX::XMFLOAT2;
+        using vec3 = DirectX::XMFLOAT3;
+        using vec4 = DirectX::XMFLOAT4;
+        using ivec2 = DirectX::XMINT2;
+        using ivec3 = DirectX::XMINT3;
+        using ivec4 = DirectX::XMINT4;
+        using uvec2 = DirectX::XMUINT2;
+        using uvec3 = DirectX::XMUINT3;
+        using uvec4 = DirectX::XMUINT4;
+
+        // 矩阵类型
+        using mat3 = DirectX::XMFLOAT3X3;
+        using mat4 = DirectX::XMFLOAT4X4;
+
+        // 四元数类型
+        using quat = DirectX::XMFLOAT4;
+    }
+    #define PRISMA_USING_DIRECTXMATH 1
+#else
+    // 默认使用GLM
+    #include <glm/glm.hpp>
+    #include <glm/gtc/matrix_transform.hpp>
+    #include <glm/gtc/quaternion.hpp>
+    #include <glm/gtx/quaternion.hpp>
+    #include <glm/gtc/type_ptr.hpp>
+
+    namespace PrismaMath = glm;
+    #define PRISMA_USING_GLM 1
+#endif
 
 // 统一的基本类型定义
 namespace Prisma {

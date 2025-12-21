@@ -34,7 +34,7 @@ void Camera3D::Initialize() {
     // 初始化Transform的旋转（相机默认看向-Z方向）
     if (auto transform = m_owner->transform()) {
         // 设置初始旋转为 Identity
-        transform->rotation = Quaternion::Identity;
+        transform->rotation = Prisma::Math::QuaternionIdentity();
         MarkViewDirty();
     }
 }
@@ -148,10 +148,10 @@ void Camera3D::MoveLocal(float forward, float right, float up) {
 void Camera3D::Rotate(float pitch, float yaw, float roll) {
     if (auto transform = m_owner->transform()) {
         // 创建旋转增量（弧度）
-        PrismaMath::quat deltaRotation = Prisma::Math::QuaternionFromEuler(
-            Prisma::Math::ToRadians(pitch),
-            Prisma::Math::ToRadians(yaw),
-            Prisma::Math::ToRadians(roll)
+        PrismaMath::quat deltaRotation = Prisma::Math::FromEulerAngles(
+            Prisma::Math::Radians(pitch),
+            Prisma::Math::Radians(yaw),
+            Prisma::Math::Radians(roll)
         );
 
         // 应用旋转到当前旋转
@@ -189,7 +189,7 @@ void Camera3D::LookAt(const PrismaMath::vec3& target) {
         rotationMatrix[2][2] = forward.z;
 
         // 转换为四元数
-        PrismaMath::quat rotationQuat = Prisma::Math::ToQuaternion(rotationMatrix);
+        PrismaMath::quat rotationQuat = Prisma::Math::FromRotationMatrix(rotationMatrix);
         transform->rotation = rotationQuat;
         MarkViewDirty();
     }
