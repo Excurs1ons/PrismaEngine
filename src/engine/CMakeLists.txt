@@ -343,12 +343,16 @@ if(WIN32 AND PRISMA_USE_DIRECTXMATH AND NOT PRISMA_FORCE_GLM)
     # Windows平台使用DirectXMath
     target_compile_definitions(Engine PRIVATE
         PRISMA_USE_DIRECTXMATH
+        PRISMA_USING_DIRECTXMATH=1
     )
+    message(STATUS "Using DirectXMath on Windows")
 else()
     # 默认使用GLM
     target_compile_definitions(Engine PRIVATE
         PRISMA_USE_GLM
+        PRISMA_USING_GLM=1
     )
+    message(STATUS "Using GLM")
 endif()
 
 # Windows 平台需要链接的额外依赖

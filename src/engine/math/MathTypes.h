@@ -16,8 +16,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 
 // 选择数学库
-#if defined(PRISMA_PLATFORM_WINDOWS) && defined(PRISMA_USE_DIRECTXMATH) && !defined(PRISMA_FORCE_GLM)
-    // Windows平台使用DirectXMath（通过选项启用）
+#if defined(PRISMA_USING_DIRECTXMATH)
+    // Windows平台使用DirectXMath
     #include <DirectXMath.h>
 
     // 在 PrismaMath 命名空间中定义 GLM 兼容的类型别名
@@ -40,7 +40,6 @@
         // 四元数类型
         using quat = DirectX::XMFLOAT4;
     }
-    #define PRISMA_USING_DIRECTXMATH 1
 #else
     // 默认使用GLM
     #include <glm/glm.hpp>
@@ -50,7 +49,6 @@
     #include <glm/gtc/type_ptr.hpp>
 
     namespace PrismaMath = glm;
-    #define PRISMA_USING_GLM 1
 #endif
 
 // 统一的基本类型定义
