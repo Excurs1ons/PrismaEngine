@@ -22,17 +22,17 @@ public:
     /**
      * @brief 默认构造 - 白色 (1, 1, 1, 1)
      */
-    Color() : m_value(Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f)) {}
+    Color() : m_value(PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f)) {}
 
     /**
      * @brief RGB构造 - Alpha = 1.0
      */
-    Color(float r, float g, float b) : m_value(Prisma::Vector4(r, g, b, 1.0f)) {}
+    Color(float r, float g, float b) : m_value(PrismaMath::vec4(r, g, b, 1.0f)) {}
 
     /**
      * @brief RGBA构造
      */
-    Color(float r, float g, float b, float a) : m_value(Prisma::Vector4(r, g, b, a)) {}
+    Color(float r, float g, float b, float a) : m_value(PrismaMath::vec4(r, g, b, a)) {}
 
     /**
      * @brief 从Prisma::Vector4构造
@@ -43,7 +43,7 @@ public:
      * @brief 从32位ARGB整数构造 (0xAARRGGBB)
      */
     explicit Color(uint32_t argb)
-        : m_value(Prisma::Vector4(static_cast<float>((argb >> 16) & 0xFF) / 255.0f,  // R
+        : m_value(PrismaMath::vec4(static_cast<float>((argb >> 16) & 0xFF) / 255.0f,  // R
                                   static_cast<float>((argb >> 8) & 0xFF) / 255.0f,   // G
                                   static_cast<float>(argb & 0xFF) / 255.0f,          // B
                                   static_cast<float>((argb >> 24) & 0xFF) / 255.0f   // A
@@ -95,7 +95,7 @@ public:
     void SetB(float b) { m_value.z = b; }
     void SetA(float a) { m_value.w = a; }
 
-    void SetRGBA(float r, float g, float b, float a) { m_value = Prisma::Vector4(r, g, b, a); }
+    void SetRGBA(float r, float g, float b, float a) { m_value = PrismaMath::vec4(r, g, b, a); }
 
     // ========== 运算符重载 ==========
 
@@ -109,21 +109,21 @@ public:
     bool operator!=(const Color& other) const { return !(*this == other); }
 
     // 算术运算
-    Color operator+(const Color& other) const { return Color(Prisma::Add(m_value, other.m_value)); }
+    Color operator+(const Color& other) const { return Color(m_value + other.m_value); }
 
-    Color operator-(const Color& other) const { return Color(Prisma::Subtract(m_value, other.m_value)); }
+    Color operator-(const Color& other) const { return Color(m_value - other.m_value); }
 
     Color operator*(const Color& other) const { return Color(m_value * other.m_value); }
 
-    Color operator*(float scalar) const { return Color(Prisma::Math::Multiply(m_value, scalar)); }
+    Color operator*(float scalar) const { return Color(m_value * scalar); }
 
     Color operator/(const Color& other) const { return Color(m_value / other.m_value); }
 
-    Color operator/(float scalar) const { return Color(Prisma::Math::Multiply(m_value, 1.0f / scalar)); }
+    Color operator/(float scalar) const { return Color(m_value * (1.0f / scalar)); }
 
     // 赋值运算
     Color& operator+=(const Color& other) {
-        m_value = Prisma::Math::Add(m_value, other.m_value);
+        m_value = m_value + other.m_value;
         return *this;
     }
 
@@ -157,7 +157,7 @@ public:
     /**
      * @brief 线性插值
      */
-    static Color Lerp(const Color& a, const Color& b, float t) { return Color(Prisma::Lerp(a.m_value, b.m_value, t)); }
+    static Color Lerp(const Color& a, const Color& b, float t) { return Color(PrismaMath::mix(a.m_value, b.m_value, t)); }
 
     /**
      * @brief 平滑插值 (Smoothstep)
