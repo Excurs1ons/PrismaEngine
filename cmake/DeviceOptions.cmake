@@ -29,6 +29,12 @@ option(PRISMA_ENABLE_RENDER_METAL "Enable Metal render device (Apple only)" OFF)
 # WebGPU (Web)
 option(PRISMA_ENABLE_RENDER_WEBGPU "Enable WebGPU render device" OFF)
 
+# ========== 数学库选项 ==========
+
+# 数学库选择
+option(PRISMA_USE_DIRECTXMATH "Use DirectXMath on Windows (Windows only)" OFF)
+option(PRISMA_FORCE_GLM "Force use GLM on all platforms" OFF)
+
 # ========== 功能选项 ==========
 
 # 音频功能
@@ -150,6 +156,15 @@ endif()
 
 message(STATUS "")
 message(STATUS "=== Prisma Engine Configuration ===")
+message(STATUS "Math Library:")
+if(WIN32 AND PRISMA_USE_DIRECTXMATH)
+    message(STATUS "  DirectXMath: ON")
+    message(STATUS "  GLM:         OFF")
+else()
+    message(STATUS "  DirectXMath: OFF")
+    message(STATUS "  GLM:         ON")
+endif()
+message(STATUS "")
 message(STATUS "Audio Devices:")
 message(STATUS "  XAudio2: ${PRISMA_ENABLE_AUDIO_XAUDIO2}")
 message(STATUS "  OpenAL:   ${PRISMA_ENABLE_AUDIO_OPENAL}")
