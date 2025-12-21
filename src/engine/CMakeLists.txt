@@ -20,6 +20,12 @@ if(ANDROID)
     list(FILTER CORE_SOURCES EXCLUDE REGEX "targetver.h")
 endif()
 
+# 如果未启用SDL3，排除SDL相关文件
+if(NOT PRISMA_ENABLE_AUDIO_SDL3 AND NOT PRISMA_ENABLE_RENDER_VULKAN)
+    list(FILTER CORE_SOURCES EXCLUDE REGEX "PlatformSDL")
+    message(STATUS "SDL3 is disabled, excluding PlatformSDL files")
+endif()
+
 file(GLOB_RECURSE CORE_HEADERS
     "*.h")
 
@@ -349,6 +355,17 @@ else()
             PRISMA_USE_DIRECTXMATH
         )
     endif()
+endif()
+
+# Windows 平台需要链接的额外依赖
+if(NOT ANDROID)
+    # 查找并链接 nlohmann_json 和 imgui
+    find_package(nlohmann_json CONFIG REQUIRED)
+    find_package(imgui CONFIG REQUIRED)
+    target_link_libraries(Engine PRIVATE
+        nlohmann_json::nlohmann_json
+        imgui::imgui
+    )
 endif()
 
 # 根据启用的设备定义宏
