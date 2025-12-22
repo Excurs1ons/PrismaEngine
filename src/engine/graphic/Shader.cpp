@@ -155,25 +155,25 @@ bool Shader::RecompileFromSource(const std::string& source,
                                 const PrismaEngine::Graphic::ShaderCompileOptions* options,
                                 std::string* errors) {
     if (!m_impl) {
-        if (errors) *errors = "Shader not loaded";
+        if (errors != nullptr) *errors = "Shader not loaded";
         return false;
     }
 
     std::string err;
     bool result = m_impl->RecompileFromSource(source, options, err);
-    if (errors) *errors = err;
+    if (errors != nullptr) *errors = err;
     return result;
 }
 
 bool Shader::ReloadFromFile(std::string* errors) {
     if (!m_impl) {
-        if (errors) *errors = "Shader not loaded";
+        if (errors != nullptr) *errors = "Shader not loaded";
         return false;
     }
 
     std::string err;
     bool result = m_impl->ReloadFromFile(err);
-    if (errors) *errors = err;
+    if (errors != nullptr) *errors = err;
     return result;
 }
 

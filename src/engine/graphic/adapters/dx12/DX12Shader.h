@@ -1,8 +1,7 @@
 #pragma once
 
-#define NOMINMAX
-#include "interfaces/IResourceManager.h"
-#include "interfaces/IShader.h"
+#include "graphic/interfaces/IResourceManager.h"
+#include "graphic/interfaces/IShader.h"
 #include <string>
 #include <vector>
 

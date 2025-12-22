@@ -1,7 +1,6 @@
 #ifdef _WIN32
 #include "PlatformWindows.h"
 #include <Logger.h>
-#define NOMINMAX
 #include <Windows.h>
 #include <chrono>
 #include <codecvt>

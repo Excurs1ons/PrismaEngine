@@ -3,13 +3,6 @@
 #include <cstdint>
 #include <string>
 
-#define FLOAT float
-#define INT int
-#if _WIN32 || _WIN64
-#define BOOL int
-#else
-#define BOOL bool
-#endif
 
 namespace PrismaEngine::Graphic {
 

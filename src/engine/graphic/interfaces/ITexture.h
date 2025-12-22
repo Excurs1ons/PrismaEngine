@@ -68,11 +68,11 @@ public:
 
     /// @brief 获取宽度
     /// @return 纹理宽度（像素）
-    virtual FLOAT GetWidth() const = 0;
+    virtual float GetWidth() const = 0;
 
     /// @brief 获取高度
     /// @return 纹理高度（像素）
-    virtual FLOAT GetHeight() const = 0;
+    virtual float GetHeight() const = 0;
 
     /// @brief 获取深度
     /// @return 纹理深度（3D纹理）

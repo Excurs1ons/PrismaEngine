@@ -1,7 +1,6 @@
 #if defined(WIN32) || defined(_WIN32) || defined(_WIN64) || defined(WIN64)
 #include "WindowsUtils.h"
 #include "Logger.h"
-#define NOMINMAX
 #include <Windows.h>
 #include <iostream>
 

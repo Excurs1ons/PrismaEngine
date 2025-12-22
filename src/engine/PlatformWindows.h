@@ -1,7 +1,6 @@
 #pragma once
 
 #ifdef _WIN32
-#define NOMINMAX
 #include "Platform.h"
 #include <Windows.h>
 #ifdef CreateWindow
