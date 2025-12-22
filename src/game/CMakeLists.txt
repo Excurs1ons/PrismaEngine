@@ -24,9 +24,16 @@ target_include_directories(Game
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# 查找并链接 DirectX 12 (使用 Windows SDK)
+find_package(directx-headers CONFIG REQUIRED)
+
 # 链接依赖
-target_link_libraries(Game 
+target_link_libraries(Game
     PRIVATE Engine
+    Microsoft::DirectX-Headers
+    d3d12
+    dxgi
+    d3dcompiler
 )
 
 # 编译选项
