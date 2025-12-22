@@ -19,7 +19,7 @@ public:
 };
 
 // 模板特化实现
-#if defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_PLATFORM_ANDROID)
+#if defined(PRISMA_PLATFORM_WINDOWS) && defined(PRISMA_USING_DIRECTXMATH)
 template <> inline void OutputArchive::SerializeValue(const std::string& key, const DirectX::XMFLOAT4& value) {
     BeginObject(1);
     SetCurrent(key);
@@ -77,7 +77,7 @@ template <> inline void OutputArchive::SerializeValue(const std::string& key, co
     EndObject();
 }
 
-#if defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_PLATFORM_ANDROID)
+#if defined(PRISMA_PLATFORM_WINDOWS) && defined(PRISMA_USING_DIRECTXMATH)
 template <> inline void InputArchive::DeserializeValue(const std::string& key, DirectX::XMFLOAT4& value) {
     BeginObject();
     EnterField(key);

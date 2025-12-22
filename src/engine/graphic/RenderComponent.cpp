@@ -1,4 +1,6 @@
 #include "RenderComponent.h"
+
+#include <utility>
 #include "Material.h"
 #include "Transform.h"
 #include "Logger.h"
@@ -7,7 +9,7 @@ RenderComponent::RenderComponent()
     : m_vertexCount(0)
     , m_indexCount(0)
     , m_use16BitIndices(true) // 默认使用16位索引
-    , m_color(XMVectorSet(1.0f, 1.0f, 1.0f, 1.0f)) // 默认白色
+    , m_color(1.0f, 1.0f, 1.0f, 1.0f) // 默认白色
 {
 }
 
@@ -69,20 +71,14 @@ void RenderComponent::Render(RenderCommandContext* context)
     // 设置世界矩阵 (寄存器 b1)
     if (auto* transform = m_owner->transform()) {
         // 手动构建世界矩阵：位置 * 旋转 * 缩放
-        // 注意：DXMath使用行主序，所以顺序是：缩放 * 旋转 * 平移
-        XMMATRIX translation = XMMatrixTranslation(transform->position.x, transform->position.y, transform->position.z);
-        XMMATRIX rotation = XMMatrixRotationQuaternion(transform->rotation.ToXMVector());
-        XMMATRIX scale = XMMatrixScaling(transform->scale.x, transform->scale.y, transform->scale.z);
+        Prisma::Matrix4x4 translation = Prisma::Math::Translation(transform->position);
+        Prisma::Matrix4x4 rotationX = Prisma::Math::RotationX(transform->rotation.x);
+        Prisma::Matrix4x4 rotationY = Prisma::Math::RotationY(transform->rotation.y);
+        Prisma::Matrix4x4 rotationZ = Prisma::Math::RotationZ(transform->rotation.z);
+        Prisma::Matrix4x4 scale = Prisma::Math::Scale(transform->scale);
 
         // 组合矩阵：S * R * T
-        XMMATRIX worldMatrix = scale * rotation * translation;
-
-        // 输出矩阵值用于调试
-        XMFLOAT4X4 wMatrix;
-        XMStoreFloat4x4(&wMatrix, worldMatrix);
-        LOG_DEBUG("RenderComponent", "世界矩阵计算完成，位置:({0},{1},{2}), 缩放:({3},{4},{5})",
-                  transform->position.x, transform->position.y, transform->position.z,
-                  transform->scale.x, transform->scale.y, transform->scale.z);
+        Prisma::Matrix4x4 worldMatrix = scale * rotationZ * rotationY * rotationX * translation;
 
         context->SetConstantBuffer("World", reinterpret_cast<const float*>(&worldMatrix), 16);
     }
@@ -123,7 +119,7 @@ void RenderComponent::Render(RenderCommandContext* context)
 
 void RenderComponent::SetColor(float r, float g, float b, float a)
 {
-    m_color = XMVectorSet(r, g, b, a);
+    m_color = Prisma::Color(r, g, b, a);
 
     // 如果已有材质，更新其基础颜色
     if (m_material) {
@@ -132,11 +128,11 @@ void RenderComponent::SetColor(float r, float g, float b, float a)
 }
 
 // 获取颜色
-XMVECTOR RenderComponent::GetColor() const
+Prisma::Color RenderComponent::GetColor() const
 {
     if (m_material) {
-        auto& color = m_material->GetProperties().baseColor;
-        return XMVectorSet(color.x, color.y, color.z, color.w);
+        const auto& color = m_material->GetProperties().baseColor;
+        return color;
     }
     return m_color;
 }
@@ -144,12 +140,10 @@ XMVECTOR RenderComponent::GetColor() const
 // 材质相关方法
 void RenderComponent::SetMaterial(std::shared_ptr<Engine::Material> material)
 {
-    m_material = material;
+    m_material = std::move(material);
     if (m_material) {
         // 同步颜色到材质
-        XMFLOAT4 color;
-        XMStoreFloat4(&color, m_color);
-        m_material->SetBaseColor(color.x, color.y, color.z, color.w);
+        m_material->SetBaseColor(m_color);
     }
 }
 
@@ -158,9 +152,8 @@ std::shared_ptr<Engine::Material> RenderComponent::GetOrCreateMaterial()
     if (!m_material) {
         m_material = Engine::Material::CreateDefault();
         // 同步颜色到新材质
-        XMFLOAT4 color;
-        XMStoreFloat4(&color, m_color);
-        m_material->SetBaseColor(color.x, color.y, color.z, color.w);
+        Prisma::Color color;
+        m_material->SetBaseColor(m_color);
     }
     return m_material;
 }

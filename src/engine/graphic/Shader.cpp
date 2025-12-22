@@ -19,6 +19,10 @@ using Microsoft::WRL::ComPtr;
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #endif
 
+#if defined(FindResource)
+#undef FindResource
+#endif
+
 using namespace Engine;
 using namespace StringUtils;
 
@@ -65,7 +69,7 @@ ResourceType Shader::GetType() const {
 }
 
 // 着色器特定方法
-PrismaEngine::Graphic::ShaderType Shader::GetType() const {
+PrismaEngine::Graphic::ShaderType Shader::GetShaderType() const {
     return m_impl ? m_impl->GetShaderType() : PrismaEngine::Graphic::ShaderType::Vertex;
 }
 
@@ -268,7 +272,7 @@ void Shader::SetEntryPoint(const std::string& entryPoint) {
 #endif
 
 // 获取原生句柄（用于平台特定操作）
-void* Shader::GetNativeHandle() const {
+const void* Shader::GetNativeHandle() const {
     if (!m_impl) {
         return nullptr;
     }
@@ -371,7 +375,7 @@ std::shared_ptr<Shader> CreateShader(const std::string& vertexSource, const std:
 
 bool Shader::LoadDefaultShader() {
     // 加载默认的着色器
-    auto defaultShader = std::make_shared<DefaultShader>();
-    m_impl = defaultShader;
+    auto defaultShader = std::make_shared<Shader>();
+    m_impl = defaultShader->m_impl;
     return true;
 }

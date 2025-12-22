@@ -11,7 +11,7 @@ namespace Engine {
 
     // 材质属性结构
     struct MaterialProperties {
-        PrismaMath::vec4 baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
+        Prisma::Color baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
         float metallic = 0.0f;     // 金属度 [0, 1]
         float roughness = 0.5f;    // 粗糙度 [0, 1]
         float emissive = 0.0f;     // 自发光强度

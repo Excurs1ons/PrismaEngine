@@ -1,10 +1,8 @@
 #pragma once
 #include "Camera3D.h"
-#include "Camera3DController.h"
 #include "GameObject.h"
 #include "Scene.h"
 #include "Transform.h"
-#include "graphic/RenderComponent.h"
 #include <memory>
 
 // 三角形示例类，展示如何创建场景、相机和渲染组件
@@ -19,17 +17,17 @@ public:
     
 private:
     // 创建三角形游戏对象
-    std::shared_ptr<GameObject> CreateTriangle(const std::string& name, XMFLOAT3 pos, XMFLOAT4 color);
+    std::shared_ptr<GameObject> CreateTriangle(const std::string& name, Prisma::Vector3 pos, Prisma::Vector4 color);
 
     // 创建四边形游戏对象（使用索引缓冲区）
-    std::shared_ptr<GameObject> CreateQuad(const std::string& name, XMFLOAT3 pos, XMFLOAT4 color, float size);
+    std::shared_ptr<GameObject> CreateQuad(const std::string& name, Prisma::Vector3 pos, Prisma::Vector4 color, float size);
 
     // 创建立方体游戏对象
-    std::shared_ptr<GameObject> CreateCube(const std::string& name, XMFLOAT3 pos, XMFLOAT4 color, float size);
+    std::shared_ptr<GameObject> CreateCube(const std::string& name, Prisma::Vector3 pos, Prisma::Vector4 color, float size);
 
     // 创建地面游戏对象（平放）
-    std::shared_ptr<GameObject> CreateGround(const std::string& name, XMFLOAT3 pos, XMFLOAT4 color, float size);
+    std::shared_ptr<GameObject> CreateGround(const std::string& name, Prisma::Vector3 pos, Prisma::Vector4 color, float size);
 
     // 创建相机游戏对象
-    static std::shared_ptr<GameObject> CreateCamera(const std::string& name, XMFLOAT3 pos, Quaternion rotation);
+    static std::shared_ptr<GameObject> CreateCamera(const std::string& name, Prisma::Vector3 pos, Quaternion rotation);
 };

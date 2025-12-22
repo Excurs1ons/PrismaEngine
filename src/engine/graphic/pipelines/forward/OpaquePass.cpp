@@ -43,21 +43,12 @@ void OpaquePass::Execute(RenderCommandContext* context)
         // 计算视图投影矩阵
         m_viewProjection = m_view * m_projection;
 
-        // 调试：输出矩阵值
-        XMFLOAT4X4 vpMatrix;
-        XMStoreFloat4x4(&vpMatrix, m_viewProjection);
-        LOG_DEBUG("OpaquePass", "ViewProjection矩阵:");
-        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._11, vpMatrix._12, vpMatrix._13, vpMatrix._14);
-        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._21, vpMatrix._22, vpMatrix._23, vpMatrix._24);
-        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._31, vpMatrix._32, vpMatrix._33, vpMatrix._34);
-        LOG_DEBUG("OpaquePass", "  [{0:.3f}, {1:.3f}, {2:.3f}, {3:.3f}]", vpMatrix._41, vpMatrix._42, vpMatrix._43, vpMatrix._44);
-
         // 设置着色器常量
         context->SetConstantBuffer("ViewProjection", m_viewProjection);
         // Note: 不单独设置View和Projection，因为默认着色器只使用ViewProjection
         // context->SetConstantBuffer("View", m_view);
         // context->SetConstantBuffer("Projection", m_projection);
-        context->SetConstantBuffer("AmbientLight", reinterpret_cast<const float*>(&m_ambientLight), sizeof(XMFLOAT3));
+        context->SetConstantBuffer("AmbientLight", reinterpret_cast<const float*>(&m_ambientLight), sizeof(Prisma::Vector3));
 
         // 设置光源数据
         if (!m_lights.empty()) {
@@ -76,10 +67,10 @@ void OpaquePass::Execute(RenderCommandContext* context)
 
         // 获取主相机位置
         auto camera = scene->GetMainCamera();
-        XMFLOAT3 cameraPos = XMFLOAT3(0, 0, 0);
+        Prisma::Vector3 cameraPos = Prisma::Vector3(0, 0, 0);
         if (camera) {
-            XMVECTOR pos = camera->GetPosition();
-            cameraPos = XMFLOAT3(XMVectorGetX(pos), XMVectorGetY(pos), XMVectorGetZ(pos));
+            Prisma::Vector3 pos = camera->GetPosition();
+            cameraPos = Prisma::Vector3(pos.x, pos.y, pos.z);
         }
 
         // 遍历所有带有MeshRenderer的游戏对象
@@ -90,7 +81,7 @@ void OpaquePass::Execute(RenderCommandContext* context)
         struct RenderObject {
             RenderComponent* renderComponent;
             MeshRenderer* meshRenderer;
-            XMMATRIX worldMatrix;
+            Prisma::Matrix4x4 worldMatrix;
             float distanceToCamera;
         };
         std::vector<RenderObject> renderObjects;
@@ -137,24 +128,17 @@ void OpaquePass::Execute(RenderCommandContext* context)
                 LOG_DEBUG("OpaquePass", "  - RenderComponent有 {0} 个顶点", vertexCount);
             }
 
-            auto transform = gameObject->transform();
-            XMMATRIX worldMatrix;
-            if (transform) {
+            auto *transform = gameObject->transform();
+            Prisma::Matrix4x4 worldMatrix;
+            if (transform != nullptr) {
                 // Transform::GetMatrix() 返回的是标准的行主序矩阵
-                float* matrixData = transform->GetMatrix();
-                worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrixData));
-                // 转置矩阵以适应HLSL的列主序要求
-                worldMatrix = XMMatrixTranspose(worldMatrix);
+                worldMatrix = transform->GetMatrix();
             } else {
-                worldMatrix = DirectX::XMMatrixIdentity();
+                worldMatrix = {};
             }
 
             // 计算到相机的距离（用于排序）
-            XMFLOAT3 objectPos = XMFLOAT3(
-                XMVectorGetX(worldMatrix.r[3]),
-                XMVectorGetY(worldMatrix.r[3]),
-                XMVectorGetZ(worldMatrix.r[3])
-            );
+            Prisma::Vector3 objectPos = Prisma::Vector3(worldMatrix[3][0], worldMatrix[3][1], worldMatrix[3][2] );
             float distance = sqrtf(
                 powf(objectPos.x - cameraPos.x, 2) +
                 powf(objectPos.y - cameraPos.y, 2) +
@@ -162,7 +146,7 @@ void OpaquePass::Execute(RenderCommandContext* context)
             );
 
             LOG_DEBUG("OpaquePass", "  - 添加对象到渲染列表，距离相机: {0}", distance);
-            renderObjects.push_back({ renderComponent, meshRenderer, worldMatrix, distance });
+            renderObjects.push_back({ .renderComponent=renderComponent, .meshRenderer=meshRenderer, .worldMatrix=worldMatrix, .distanceToCamera=distance });
             m_stats.objects++;
         }
 
@@ -190,8 +174,8 @@ void OpaquePass::Execute(RenderCommandContext* context)
                 if (material) {
                     const auto& props = material->GetProperties();
                     // PBR材质参数
-                    XMFLOAT3 albedo = { props.baseColor.x, props.baseColor.y, props.baseColor.z };
-                    context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedo), sizeof(XMFLOAT3));
+                    Prisma::Vector3 albedo = { props.baseColor.x, props.baseColor.y, props.baseColor.z };
+                    context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedo), sizeof(Prisma::Vector3));
                     context->SetConstantBuffer("MaterialMetallic", reinterpret_cast<const float*>(&props.metallic), sizeof(float));
                     context->SetConstantBuffer("MaterialRoughness", reinterpret_cast<const float*>(&props.roughness), sizeof(float));
                     context->SetConstantBuffer("MaterialEmissive", reinterpret_cast<const float*>(&props.emissive), sizeof(float));
@@ -271,12 +255,12 @@ void OpaquePass::SetDepthBuffer(void* depthBuffer)
     LOG_DEBUG("OpaquePass", "设置深度缓冲区: 0x{0:x}", reinterpret_cast<uintptr_t>(depthBuffer));
 }
 
-void OpaquePass::SetViewMatrix(const XMMATRIX& view)
+void OpaquePass::SetViewMatrix(const Prisma::Matrix4x4& view)
 {
     m_view = view;
 }
 
-void OpaquePass::SetProjectionMatrix(const XMMATRIX& projection)
+void OpaquePass::SetProjectionMatrix(const Prisma::Matrix4x4& projection)
 {
     m_projection = projection;
 }
@@ -287,7 +271,7 @@ void OpaquePass::SetLights(const std::vector<Light>& lights)
     LOG_DEBUG("OpaquePass", "设置 {0} 个光源", lights.size());
 }
 
-void OpaquePass::SetAmbientLight(const XMFLOAT3& color)
+void OpaquePass::SetAmbientLight(const Prisma::Color& color)
 {
     m_ambientLight = color;
     LOG_DEBUG("OpaquePass", "设置环境光: ({0}, {1}, {2})", color.x, color.y, color.z);

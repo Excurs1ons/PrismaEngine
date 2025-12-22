@@ -56,7 +56,7 @@ private:
     uint32_t m_vertexCount;
     uint32_t m_indexCount;
     bool m_use16BitIndices; // 缓存索引类型，避免运行时检查
-    PrismaMath::vec4 m_color;
+    Prisma::Color m_color;
 
     // 材质系统
     std::shared_ptr<Engine::Material> m_material;
