@@ -2,8 +2,6 @@
 
 // 平台定义
 #ifdef _WIN32
-    #define WIN32_LEAN_AND_MEAN
-    #define NOMINMAX
     #include <windows.h>
     #include <windowsx.h>
     // DirectX头文件将在需要时包含

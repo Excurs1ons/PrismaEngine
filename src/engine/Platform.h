@@ -43,7 +43,6 @@
 #include <string>
 #include <vector>
 #ifdef _WIN32
-#define NOMINMAX
 #include <Windows.h>
 #ifdef CreateWindow
 #undef CreateWindow
