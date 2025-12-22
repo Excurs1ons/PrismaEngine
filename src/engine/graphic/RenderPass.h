@@ -31,13 +31,13 @@ class RenderPass2D : public RenderPass
 {
 public:
     RenderPass2D();
-    ~RenderPass2D();
+    ~RenderPass2D() override;
 
     // 2D渲染通道执行函数
     void Execute(RenderCommandContext* context) override;
 
     // 添加2D网格到渲染队列
-    void AddMeshToRenderQueue(std::shared_ptr<Mesh> mesh, const PrismaMath::mat4& transform);
+    void AddMeshToRenderQueue(const std::shared_ptr<Mesh>& mesh, const PrismaMath::mat4& transform);
 
     // 设置摄像机矩阵
     void SetCameraMatrix(const PrismaMath::mat4& viewProjection);

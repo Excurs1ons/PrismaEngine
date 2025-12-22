@@ -8,6 +8,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <numbers>
 
 // 类型别名，统一接口
 using Vector2 = glm::vec2;
@@ -234,8 +235,21 @@ inline Vector4 Lerp(const Vector4& a, const Vector4& b, float t) {
 }
 
 // 通用常量
-constexpr float PI = 3.14159265358979323846f;
-constexpr float TwoPI = 2.0f * PI;
-constexpr float HalfPI = PI * 0.5f;
+constexpr float PI = std::numbers::pi_v<float>;
+constexpr float TWO_PI = 2.0f * PI;
+constexpr float HALF_PI = PI * 0.5f;
 
+inline Vector4 Min(const Vector4& a, const Vector4& b) {
+    return Vector4{glm::min(a.x, b.x), glm::min(a.y, b.y), glm::min(a.z, b.z), glm::min(a.w, b.w)};
+}
+inline Vector4 Max(const Vector4& a, const Vector4& b) {
+    return Vector4{glm::max(a.x, b.x), glm::max(a.y, b.y), glm::max(a.z, b.z), glm::max(a.w, b.w)};
+}
+
+inline Vector3 Min(const Vector3& a, const Vector3& b) {
+    return Vector3{glm::min(a.x, b.x), glm::min(a.y, b.y), glm::min(a.z, b.z)};
+}
+inline Vector3 Max(const Vector3& a, const Vector3& b) {
+    return Vector3{glm::max(a.x, b.x), glm::max(a.y, b.y), glm::max(a.z, b.z)};
+}
 } // namespace Prisma::Math

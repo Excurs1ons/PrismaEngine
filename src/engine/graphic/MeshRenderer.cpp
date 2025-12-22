@@ -73,7 +73,7 @@ void MeshRenderer::Render(RenderCommandContext* context)
             assert(transform && "MeshRenderer::Render: owner transform is null");
         } else {
             LOG_DEBUG("MeshRenderer", "Render: setting ObjectConstants from Transform ptr={0}", reinterpret_cast<uintptr_t>(transform));
-            context->SetConstantBuffer("ObjectConstants", transform->GetMatrix(), 16 * sizeof(float));
+            context->SetConstantBuffer("ObjectConstants", transform->GetMatrix());
         }
     } else {
         LOG_WARNING("MeshRenderer", "Render: m_owner is null");
