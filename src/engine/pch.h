@@ -2,88 +2,44 @@
 
 // 平台定义
 #ifdef _WIN32
+    // NOGDI 必须在包含 windows.h 之前定义，以排除 GDI 函数（包括 FindResource 宏）
+    #ifndef NOGDI
+    #define NOGDI
+    #endif
+    // Windows.h 定义了 FindResource 宏，会与我们的 IShader::FindResource 方法冲突
     #include <windows.h>
     #include <windowsx.h>
+    // 直接取消定义 FindResource 宏
+    // 使用 push_macro/pop_macro 来保存和恢复宏状态
+    #pragma push_macro("FindResource")
+    #ifdef FindResource
+    #undef FindResource
+    #endif
+    #pragma pop_macro("FindResource")
+    // 再次确保 FindResource 未定义
+    #undef FindResource
     // DirectX头文件将在需要时包含
     // 不在PCH中包含以避免版本兼容性问题
 #endif
 
 // C++标准库核心头文件
 #include <algorithm>
-#include <array>
-#include <atomic>
-#include <bitset>
-#include <chrono>
-#include <condition_variable>
-#include <deque>
-#include <forward_list>
-#include <fstream>
-#include <functional>
-#include <future>
-#include <initializer_list>
-#include <iostream>
-#include <iterator>
-#include <limits>
-#include <list>
-#include <map>
-#include <memory>
-#include <mutex>
-#include <numeric>
-#include <optional>
-#include <queue>
-#include <set>
-#include <span>
-#include <stack>
-#include <string>
-#include <string_view>
-#include <thread>
-#include <tuple>
-#include <type_traits>
-#include <unordered_map>
-#include <unordered_set>
+
+
 #include <utility>
-#include <variant>
-#include <vector>
+
 
 // C标准库头文件
 #include <cassert>
 #include <cctype>
-#include <cerrno>
-#include <cfloat>
-#include <ciso646>
-#include <climits>
-#include <clocale>
-#include <cmath>
-#include <csetjmp>
-#include <csignal>
+
 #include <cstdarg>
-#include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-#include <ctime>
-#include <cwchar>
-#include <cwctype>
+
 
 // 文件系统
 #include <filesystem>
 
-// 数学库
-#include <cmath>
-#include <numbers>
-
-// 异常处理
-#include <exception>
-#include <stdexcept>
-#include <system_error>
-
-// 智能指针（已经在上面，但强调一下）
-#include <memory>
-
-// 字符串流
-#include <sstream>
-#include <iomanip>
 
 // 第三方库
 #ifdef ENABLE_VULKAN

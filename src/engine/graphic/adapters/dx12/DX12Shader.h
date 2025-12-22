@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 
+#ifdef FindResource
+#undef FindResource
+#endif
+
 namespace PrismaEngine::Graphic::DX12 {
 
 // 前置声明

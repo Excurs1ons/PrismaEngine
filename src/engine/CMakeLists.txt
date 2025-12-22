@@ -38,6 +38,71 @@ if(ANDROID)
     list(FILTER CORE_HEADERS EXCLUDE REGEX "targetver.h")
 endif()
 
+# ========== 渲染设备条件编译 ==========
+# 注意：必须在设置 ENGINE_SOURCES 之前添加，因为 ENGINE_SOURCES 使用 ENGINE_GRAPHIC_SOURCES 的值
+
+# DirectX12 (Windows)
+if(PRISMA_ENABLE_RENDER_DX12)
+    # 添加所有DX12适配器文件
+    list(APPEND ENGINE_GRAPHIC_SOURCES
+        graphic/adapters/dx12/DX12Adapters.cpp
+        graphic/adapters/dx12/DX12RenderDevice.cpp
+        graphic/adapters/dx12/DX12CommandBuffer.cpp
+        graphic/adapters/dx12/DX12Fence.cpp
+        graphic/adapters/dx12/DX12SwapChain.cpp
+        graphic/adapters/dx12/DX12Texture.cpp
+        graphic/adapters/dx12/DX12Buffer.cpp
+        graphic/adapters/dx12/DX12Shader.cpp
+        graphic/adapters/dx12/DX12PipelineState.cpp
+        graphic/adapters/dx12/DX12Sampler.cpp
+        graphic/adapters/dx12/DX12ResourceFactory.cpp
+    )
+    list(APPEND ENGINE_GRAPHIC_HEADERS
+        graphic/adapters/dx12/DX12Adapters.h
+        graphic/adapters/dx12/DX12RenderDevice.h
+        graphic/adapters/dx12/DX12CommandBuffer.h
+        graphic/adapters/dx12/DX12Fence.h
+        graphic/adapters/dx12/DX12SwapChain.h
+        graphic/adapters/dx12/DX12Texture.h
+        graphic/adapters/dx12/DX12Buffer.h
+        graphic/adapters/dx12/DX12Shader.h
+        graphic/adapters/dx12/DX12PipelineState.h
+        graphic/adapters/dx12/DX12Sampler.h
+        graphic/adapters/dx12/DX12ResourceFactory.h
+        graphic/adapters/dx12/DX12Material.h
+        graphic/adapters/dx12/DX12Mesh.h
+    )
+    message(STATUS "Adding DirectX12 render device")
+endif()
+
+# OpenGL (跨平台)
+if(PRISMA_ENABLE_RENDER_OPENGL)
+    list(APPEND ENGINE_GRAPHIC_SOURCES
+        graphic/adapters/opengl/RenderDeviceOpenGL.cpp
+    )
+    list(APPEND ENGINE_GRAPHIC_HEADERS
+        graphic/adapters/opengl/RenderDeviceOpenGL.h
+    )
+    message(STATUS "Adding OpenGL render device")
+endif()
+
+# Vulkan (跨平台)
+if(PRISMA_ENABLE_RENDER_VULKAN)
+    list(APPEND ENGINE_GRAPHIC_SOURCES
+        graphic/adapters/vulkan/RenderDeviceVulkan.cpp
+        graphic/adapters/vulkan/VulkanShader.cpp
+        graphic/adapters/vulkan/VulkanMaterial.cpp
+        graphic/adapters/vulkan/VulkanMesh.cpp
+    )
+    list(APPEND ENGINE_GRAPHIC_HEADERS
+        graphic/adapters/vulkan/RenderDeviceVulkan.h
+        graphic/adapters/vulkan/VulkanShader.h
+        graphic/adapters/vulkan/VulkanMaterial.h
+        graphic/adapters/vulkan/VulkanMesh.h
+    )
+    message(STATUS "Adding Vulkan render device")
+endif()
+
 # 添加基础核心文件
 set(ENGINE_SOURCES
     ${CORE_SOURCES}
@@ -93,72 +158,6 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
         audio/AudioDeviceSDL3.h
     )
     message(STATUS "Adding SDL3 audio device")
-endif()
-
-# ========== 渲染设备条件编译 ==========
-
-# DirectX12 (Windows)
-if(PRISMA_ENABLE_RENDER_DX12)
-    # 添加所有DX12适配器文件
-    list(APPEND ENGINE_GRAPHIC_SOURCES
-        graphic/adapters/dx12/DX12Adapters.cpp
-        graphic/adapters/dx12/DX12RenderDevice.cpp
-        graphic/adapters/dx12/DX12CommandBuffer.cpp
-        graphic/adapters/dx12/DX12Fence.cpp
-        graphic/adapters/dx12/DX12SwapChain.cpp
-        graphic/adapters/dx12/DX12Texture.cpp
-        graphic/adapters/dx12/DX12Buffer.cpp
-        graphic/adapters/dx12/DX12Shader.cpp
-        graphic/adapters/dx12/DX12PipelineState.cpp
-        graphic/adapters/dx12/DX12Sampler.cpp
-        graphic/adapters/dx12/DX12ResourceFactory.cpp
-        graphic/adapters/dx12/DX12Material.cpp
-        graphic/adapters/dx12/DX12Mesh.cpp
-    )
-    list(APPEND ENGINE_GRAPHIC_HEADERS
-        graphic/adapters/dx12/DX12Adapters.h
-        graphic/adapters/dx12/DX12RenderDevice.h
-        graphic/adapters/dx12/DX12CommandBuffer.h
-        graphic/adapters/dx12/DX12Fence.h
-        graphic/adapters/dx12/DX12SwapChain.h
-        graphic/adapters/dx12/DX12Texture.h
-        graphic/adapters/dx12/DX12Buffer.h
-        graphic/adapters/dx12/DX12Shader.h
-        graphic/adapters/dx12/DX12PipelineState.h
-        graphic/adapters/dx12/DX12Sampler.h
-        graphic/adapters/dx12/DX12ResourceFactory.h
-        graphic/adapters/dx12/DX12Material.h
-        graphic/adapters/dx12/DX12Mesh.h
-    )
-    message(STATUS "Adding DirectX12 render device")
-endif()
-
-# OpenGL (跨平台)
-if(PRISMA_ENABLE_RENDER_OPENGL)
-    list(APPEND ENGINE_GRAPHIC_SOURCES
-        graphic/adapters/opengl/RenderDeviceOpenGL.cpp
-    )
-    list(APPEND ENGINE_GRAPHIC_HEADERS
-        graphic/adapters/opengl/RenderDeviceOpenGL.h
-    )
-    message(STATUS "Adding OpenGL render device")
-endif()
-
-# Vulkan (跨平台)
-if(PRISMA_ENABLE_RENDER_VULKAN)
-    list(APPEND ENGINE_GRAPHIC_SOURCES
-        graphic/adapters/vulkan/RenderDeviceVulkan.cpp
-        graphic/adapters/vulkan/VulkanShader.cpp
-        graphic/adapters/vulkan/VulkanMaterial.cpp
-        graphic/adapters/vulkan/VulkanMesh.cpp
-    )
-    list(APPEND ENGINE_GRAPHIC_HEADERS
-        graphic/adapters/vulkan/RenderDeviceVulkan.h
-        graphic/adapters/vulkan/VulkanShader.h
-        graphic/adapters/vulkan/VulkanMaterial.h
-        graphic/adapters/vulkan/VulkanMesh.h
-    )
-    message(STATUS "Adding Vulkan render device")
 endif()
 
 # ========== 创建静态库 ==========
@@ -362,6 +361,10 @@ endif()
 
 # Windows 平台需要链接的额外依赖
 if(NOT ANDROID)
+    # 查找并链接 GLM
+    find_package(glm CONFIG REQUIRED)
+    target_link_libraries(Engine PUBLIC glm::glm-header-only)
+
     # 查找并链接 nlohmann_json 和 imgui
     find_package(nlohmann_json CONFIG REQUIRED)
     find_package(imgui CONFIG REQUIRED)
