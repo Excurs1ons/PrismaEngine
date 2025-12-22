@@ -20,6 +20,7 @@
 #include <algorithm>
 
 #if defined(_WIN32)
+#define NOMINMAX
 #include <Windows.h>
 #include <d3dcompiler.h>
 #include <filesystem>
