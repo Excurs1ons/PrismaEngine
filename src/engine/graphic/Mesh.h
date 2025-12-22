@@ -1,6 +1,12 @@
 
 #pragma once
+
+#ifdef _WIN32
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
+#endif
+
 #include "../resource/ResourceBase.h"
 #include "../math/MathTypes.h"
 #include "../math/Color.h"
@@ -32,42 +38,42 @@ struct SubMesh {
 
 // 简单的包围盒结构
 struct BoundingBox {
-    PrismaMath::vec3 min;
-    PrismaMath::vec3 max;
+    PrismaMath::vec3 minBounds;
+    PrismaMath::vec3 maxBounds;
 
     BoundingBox() {
-        min = PrismaMath::vec3(0, 0, 0);
-        max = PrismaMath::vec3(0, 0, 0);
+        minBounds = PrismaMath::vec3(0, 0, 0);
+        maxBounds = PrismaMath::vec3(0, 0, 0);
     }
     BoundingBox(const PrismaMath::vec3& minVal, const PrismaMath::vec3& maxVal) {
-        min = minVal;
-        max = maxVal;
+        minBounds = minVal;
+        maxBounds = maxVal;
     }
 
     // 扩展包围盒以包含点
     void Encapsulate(const PrismaMath::vec3& point) {
-        if (point.x < min.x) min.x = point.x;
-        if (point.y < min.y) min.y = point.y;
-        if (point.z < min.z) min.z = point.z;
-        if (point.x > max.x) max.x = point.x;
-        if (point.y > max.y) max.y = point.y;
-        if (point.z > max.z) max.z = point.z;
+        if (point.x < minBounds.x) minBounds.x = point.x;
+        if (point.y < minBounds.y) minBounds.y = point.y;
+        if (point.z < minBounds.z) minBounds.z = point.z;
+        if (point.x > maxBounds.x) maxBounds.x = point.x;
+        if (point.y > maxBounds.y) maxBounds.y = point.y;
+        if (point.z > maxBounds.z) maxBounds.z = point.z;
     }
 
     // 合并另一个包围盒
     void Merge(const BoundingBox& other) {
-        Encapsulate(other.min);
-        Encapsulate(other.max);
+        Encapsulate(other.minBounds);
+        Encapsulate(other.maxBounds);
     }
 
     // 获取中心点
     [[nodiscard]] PrismaMath::vec3 GetCenter() const {
-        return (min + max) * 0.5f;
+        return (minBounds + maxBounds) * 0.5f;
     }
 
     // 获取尺寸
     [[nodiscard]] PrismaMath::vec3 GetSize() const {
-        return max - min;
+        return maxBounds - minBounds;
     }
 };
 
