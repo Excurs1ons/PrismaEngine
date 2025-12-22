@@ -145,9 +145,21 @@ private:
     // ========== 事件触发 ==========
 
     /// @brief 触发音频事件
-    void TriggerEvent(AudioEventType type, AudioVoiceId voiceId = INVALID_VOICE_ID,
-                     const std::string& message = "");
+    void TriggerEvent(AudioEventType type, AudioVoiceId voiceId = INVALID_VOICE_ID, const std::string& message = "");
 
+public:
+    AudioVoiceId Play(const AudioClip& clip, const PlayDesc& desc) override;
+    void StopAll() override;
+    void PauseAll() override;
+    void ResumeAll() override;
+    void SetVoice3DPosition(AudioVoiceId voiceId, const float position[3]) override;
+    void SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) override;
+    void SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) override;
+    void SetDopplerFactor(float factor) override;
+    void SetSpeedOfSound(float speed) override;
+    VoiceState GetVoiceState(AudioVoiceId voiceId) override;
+
+private:
     // ========== 成员变量 ==========
 
     // SDL音频相关
