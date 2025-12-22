@@ -5,6 +5,8 @@
 
 #include "interfaces/IPipelineState.h"
 #include <wrl/client.h>
+#include <array>
+#include <memory>
 
 namespace PrismaEngine::Graphic::DX12 {
 

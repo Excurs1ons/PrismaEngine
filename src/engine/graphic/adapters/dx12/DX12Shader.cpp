@@ -9,6 +9,10 @@
 #include <sstream>
 #include <chrono>
 
+#ifdef FindResource
+#undef FindResource
+#endif
+
 using Microsoft::WRL::ComPtr;
 
 namespace PrismaEngine::Graphic::DX12 {

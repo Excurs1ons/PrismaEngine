@@ -4,6 +4,10 @@
 #include <string>
 #include <vector>
 
+// Windows.h 定义了 FindResource 宏，会与 IShader::FindResource 方法冲突
+#ifdef _WIN32
+#undef FindResource
+#endif
 namespace PrismaEngine::Graphic {
 
 /// @brief 着色器反射信息

@@ -5,6 +5,9 @@
 #include "DX12RenderDevice.h"
 #include "DX12Shader.h"
 #include <wrl/client.h>
+#include <array>
+#include <sstream>
+#include <iomanip>
 
 using Microsoft::WRL::ComPtr;
 

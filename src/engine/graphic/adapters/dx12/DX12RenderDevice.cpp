@@ -7,7 +7,6 @@
 #include "DX12SwapChain.h"
 #include "DX12ResourceFactory.h"
 
-#define NOMINMAX
 #include <Windows.h>
 #include <d3dcompiler.h>
 
