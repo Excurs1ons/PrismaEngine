@@ -21,9 +21,12 @@ public:
 
     // 播放控制
     AudioVoiceId PlayClip(const AudioClip& clip, const PlayDesc& desc) override;
+    AudioVoiceId Play(const AudioClip& clip, const PlayDesc& desc) override;
     void Stop(AudioVoiceId voiceId) override;
     void Pause(AudioVoiceId voiceId) override;
+    void PauseAll() override;
     void Resume(AudioVoiceId voiceId) override;
+    void ResumeAll() override;
     void StopAll() override;
 
     // 实时控制
@@ -33,6 +36,9 @@ public:
 
     // 3D音频
     void SetVoice3DPosition(AudioVoiceId voiceId, float x, float y, float z) override;
+    void SetVoice3DPosition(AudioVoiceId voiceId, const float position[3]) override;
+    void SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) override;
+    void SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) override;
     void SetVoice3DAttributes(AudioVoiceId voiceId, const Audio3DAttributes& attributes) override;
     void SetListener(const AudioListener& listener) override;
 
@@ -40,6 +46,8 @@ public:
     void SetMasterVolume(float volume) override;
     float GetMasterVolume() const override;
     void SetDistanceModel(DistanceModel model) override;
+    void SetDopplerFactor(float factor) override;
+    void SetSpeedOfSound(float speed) override;
 
     // 查询
     bool IsPlaying(AudioVoiceId voiceId) override;
@@ -47,6 +55,7 @@ public:
     bool IsStopped(AudioVoiceId voiceId) override;
     float GetPlaybackPosition(AudioVoiceId voiceId) override;
     float GetDuration(AudioVoiceId voiceId) override;
+    VoiceState GetVoiceState(AudioVoiceId voiceId) override;
     uint32_t GetPlayingVoiceCount() const override;
 
     // 设备信息
@@ -82,6 +91,8 @@ private:
         float pitch;
         float position;
         float duration;
+        float velocity[3] = {0, 0, 0};
+        float direction[3] = {0, 0, 1};
         PlayDesc desc;
     };
 
@@ -95,6 +106,8 @@ private:
     bool m_initialized = false;
     float m_masterVolume = 1.0f;
     DistanceModel m_distanceModel = DistanceModel::InverseClamped;
+    float m_dopplerFactor = 1.0f;
+    float m_speedOfSound = 343.0f;
     AudioListener m_listener;
     AudioStats m_stats;
     AudioEventCallback m_eventCallback;
