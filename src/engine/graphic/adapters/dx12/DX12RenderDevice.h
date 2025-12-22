@@ -1,10 +1,9 @@
 #pragma once
 
-#define NOMINMAX
-#include "interfaces/ICommandBuffer.h"
-#include "interfaces/IFence.h"
-#include "interfaces/IRenderDevice.h"
-#include "interfaces/ISwapChain.h"
+#include "graphic/interfaces/ICommandBuffer.h"
+#include "graphic/interfaces/IFence.h"
+#include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/ISwapChain.h"
 #include <memory>
 #include <vector>
 #include <directx/d3dx12.h>

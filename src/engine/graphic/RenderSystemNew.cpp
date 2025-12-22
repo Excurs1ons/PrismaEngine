@@ -17,7 +17,6 @@
 #endif
 
 #if defined(_WIN32)
-#define NOMINMAX
 #include <Windows.h>
 extern HWND g_hWnd;
 #endif
