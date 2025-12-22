@@ -36,38 +36,38 @@ struct SubMesh {
 
 /// @brief 包围盒
 struct BoundingBox {
-    glm::vec3 min;
-    glm::vec3 max;
+    glm::vec3 minBounds;
+    glm::vec3 maxBounds;
 
-    BoundingBox() : min(0, 0, 0), max(0, 0, 0) {}
-    BoundingBox(const glm::vec3& min, const glm::vec3& max) : min(min), max(max) {}
+    BoundingBox() : minBounds(0, 0, 0), maxBounds(0, 0, 0) {}
+    BoundingBox(const glm::vec3& min, const glm::vec3& max) : minBounds(min), maxBounds(max) {}
 
     /// @brief 扩展包围盒以包含点
     void Encapsulate(const glm::vec3& point) {
-        min = glm::min(min, point);
-        max = glm::max(max, point);
+        minBounds = glm::min(minBounds, point);
+        maxBounds = glm::max(maxBounds, point);
     }
 
     /// @brief 合并另一个包围盒
     void Merge(const BoundingBox& other) {
-        min = glm::min(min, other.min);
-        max = glm::max(max, other.max);
+        minBounds = glm::min(minBounds, other.minBounds);
+        maxBounds = glm::max(maxBounds, other.maxBounds);
     }
 
     /// @brief 获取中心点
     glm::vec3 GetCenter() const {
-        return (min + max) * 0.5f;
+        return (minBounds + maxBounds) * 0.5f;
     }
 
     /// @brief 获取尺寸
     glm::vec3 GetSize() const {
-        return max - min;
+        return maxBounds - minBounds;
     }
 
     /// @brief 获取半径
     float GetRadius() const {
         glm::vec3 center = GetCenter();
-        glm::vec3 extents = max - center;
+        glm::vec3 extents = maxBounds - center;
         return glm::length(extents);
     }
 };

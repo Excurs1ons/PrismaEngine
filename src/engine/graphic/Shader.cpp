@@ -6,9 +6,7 @@
 #include <fstream>
 #include <iostream>
 
-// 平台特定的着色器头文件
 #if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-#define NOMINMAX
 #include "adapters/dx12/DX12Shader.h"
 #include "adapters/dx12/DX12RenderDevice.h"
 #include <d3dcompiler.h>

@@ -1,3 +1,10 @@
+// Windows平台必须定义NOMINMAX，防止Windows.h的min/max宏污染
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#endif
+
 #include "ResourceManagerNew.h"
 #include "Engine.h"
 #include "Logger.h"
@@ -20,7 +27,6 @@
 #include <algorithm>
 
 #if defined(_WIN32)
-#define NOMINMAX
 #include <Windows.h>
 #include <d3dcompiler.h>
 #include <filesystem>

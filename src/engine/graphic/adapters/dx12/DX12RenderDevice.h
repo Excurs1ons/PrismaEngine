@@ -1,6 +1,6 @@
 #pragma once
 
-
+#define NOMINMAX
 #include "interfaces/ICommandBuffer.h"
 #include "interfaces/IFence.h"
 #include "interfaces/IRenderDevice.h"

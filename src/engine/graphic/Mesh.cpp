@@ -45,8 +45,8 @@ Mesh Mesh::GetCubeMesh()
     // 计算包围盒
     PrismaMath::vec3 minVec(-0.5f, -0.5f, -0.5f);
     PrismaMath::vec3 maxVec(0.5f, 0.5f, 0.5f);
-    cubeMesh.globalBoundingBox.min = minVec;
-    cubeMesh.globalBoundingBox.max = maxVec;
+    cubeMesh.globalBoundingBox.minBounds = minVec;
+    cubeMesh.globalBoundingBox.maxBounds = maxVec;
     
     return cubeMesh;
 }
@@ -73,8 +73,8 @@ Mesh Mesh::GetTriangleMesh()
     // 计算包围盒
     PrismaMath::vec3 minVec(-0.5f, -0.5f, 0.0f);
     PrismaMath::vec3 maxVec(0.5f, 0.5f, 0.0f);
-    triangleMesh.globalBoundingBox.min = minVec;
-    triangleMesh.globalBoundingBox.max = maxVec;
+    triangleMesh.globalBoundingBox.minBounds = minVec;
+    triangleMesh.globalBoundingBox.maxBounds = maxVec;
     
     return triangleMesh;
 }
@@ -102,8 +102,8 @@ Mesh Mesh::GetQuadMesh()
     // 计算包围盒
     PrismaMath::vec3 minVec(-0.5f, -0.5f, 0.0f);
     PrismaMath::vec3 maxVec(0.5f, 0.5f, 0.0f);
-    quadMesh.globalBoundingBox.min = minVec;
-    quadMesh.globalBoundingBox.max = maxVec;
+    quadMesh.globalBoundingBox.minBounds = minVec;
+    quadMesh.globalBoundingBox.maxBounds = maxVec;
     
     return quadMesh;
 }
