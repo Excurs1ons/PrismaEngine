@@ -64,7 +64,7 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
         if (!m_constantBuffer.empty()) {
             LOG_DEBUG("SkyboxRenderPass", "设置常量缓冲区");
             // 天空盒需要特殊的视图矩阵处理（移除平移）
-            Matrix4x4 modifiedViewProjection = m_viewProjection;
+            PrismaMath::mat4 modifiedViewProjection = m_viewProjection;
             modifiedViewProjection[3] = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
             context->SetConstantBuffer("ConstantBuffer", modifiedViewProjection);
         }
@@ -130,7 +130,7 @@ void SkyboxRenderPass::SetCubeMapTexture(void* cubeMapTexture)
     LOG_DEBUG("SkyboxRenderPass", "设置立方体贴图纹理: 0x{0:x}", reinterpret_cast<uintptr_t>(cubeMapTexture));
 }
 
-void SkyboxRenderPass::SetViewProjectionMatrix(const Matrix4x4& viewProjection)
+void SkyboxRenderPass::SetViewProjectionMatrix(const PrismaMath::mat4& viewProjection)
 {
     m_viewProjection = viewProjection;
     LOG_DEBUG("SkyboxRenderPass", "设置视图投影矩阵");
@@ -142,7 +142,7 @@ void SkyboxRenderPass::SetViewProjectionMatrix(const Matrix4x4& viewProjection)
     //TODO:
 }
 
-void SkyboxRenderPass::SetViewMatrix(const Matrix4x4& view)
+void SkyboxRenderPass::SetViewMatrix(const PrismaMath::mat4& view)
 {
     m_view = view;
     // 重新计算视图投影矩阵
@@ -157,7 +157,7 @@ void SkyboxRenderPass::SetViewMatrix(const Matrix4x4& view)
 
 }
 
-void SkyboxRenderPass::SetProjectionMatrix(const Matrix4x4& projection)
+void SkyboxRenderPass::SetProjectionMatrix(const PrismaMath::mat4& projection)
 {
     m_projection = projection;
     // 重新计算视图投影矩阵

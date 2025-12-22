@@ -77,6 +77,12 @@ AudioVoiceId AudioDeviceNull::PlayClip(const AudioClip& clip, const PlayDesc& de
     voice.pitch = desc.pitch;
     voice.position = 0.0f;
     voice.duration = clip.duration;
+    voice.velocity[0] = 0.0f;
+    voice.velocity[1] = 0.0f;
+    voice.velocity[2] = 0.0f;
+    voice.direction[0] = 0.0f;
+    voice.direction[1] = 0.0f;
+    voice.direction[2] = 1.0f;
     voice.desc = desc;
 
     m_voices[voiceId] = voice;
@@ -97,6 +103,10 @@ AudioVoiceId AudioDeviceNull::PlayClip(const AudioClip& clip, const PlayDesc& de
 
     LOG_DEBUG("Audio", "空音频设备播放声音，Voice ID: {}", voiceId);
     return voiceId;
+}
+
+AudioVoiceId AudioDeviceNull::Play(const AudioClip& clip, const PlayDesc& desc) {
+    return PlayClip(clip, desc);
 }
 
 void AudioDeviceNull::Stop(AudioVoiceId voiceId) {
@@ -156,6 +166,48 @@ void AudioDeviceNull::Resume(AudioVoiceId voiceId) {
     }
 }
 
+void AudioDeviceNull::PauseAll() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    for (auto& pair : m_voices) {
+        auto& voice = pair.second;
+        if (voice.playing && !voice.paused) {
+            voice.paused = true;
+
+            if (m_eventCallback) {
+                AudioEvent event;
+                event.type = AudioEventType::VoicePaused;
+                event.voiceId = voice.id;
+                event.timestamp = 0;
+                m_eventCallback(event);
+            }
+        }
+    }
+
+    LOG_DEBUG("Audio", "空音频设备暂停所有声音");
+}
+
+void AudioDeviceNull::ResumeAll() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    for (auto& pair : m_voices) {
+        auto& voice = pair.second;
+        if (voice.playing && voice.paused) {
+            voice.paused = false;
+
+            if (m_eventCallback) {
+                AudioEvent event;
+                event.type = AudioEventType::VoiceResumed;
+                event.voiceId = voice.id;
+                event.timestamp = 0;
+                m_eventCallback(event);
+            }
+        }
+    }
+
+    LOG_DEBUG("Audio", "空音频设备恢复所有声音");
+}
+
 void AudioDeviceNull::StopAll() {
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -212,6 +264,39 @@ void AudioDeviceNull::SetVoice3DPosition(AudioVoiceId voiceId, float x, float y,
     }
 }
 
+void AudioDeviceNull::SetVoice3DPosition(AudioVoiceId voiceId, const float position[3]) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto voice = FindVoice(voiceId);
+    if (voice) {
+        voice->desc.spatial.position[0] = position[0];
+        voice->desc.spatial.position[1] = position[1];
+        voice->desc.spatial.position[2] = position[2];
+    }
+}
+
+void AudioDeviceNull::SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto voice = FindVoice(voiceId);
+    if (voice) {
+        voice->velocity[0] = velocity[0];
+        voice->velocity[1] = velocity[1];
+        voice->velocity[2] = velocity[2];
+    }
+}
+
+void AudioDeviceNull::SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto voice = FindVoice(voiceId);
+    if (voice) {
+        voice->direction[0] = direction[0];
+        voice->direction[1] = direction[1];
+        voice->direction[2] = direction[2];
+    }
+}
+
 void AudioDeviceNull::SetVoice3DAttributes(AudioVoiceId voiceId, const Audio3DAttributes& attributes) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
@@ -241,6 +326,16 @@ void AudioDeviceNull::SetDistanceModel(DistanceModel model) {
     m_distanceModel = model;
 }
 
+void AudioDeviceNull::SetDopplerFactor(float factor) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_dopplerFactor = factor;
+}
+
+void AudioDeviceNull::SetSpeedOfSound(float speed) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_speedOfSound = speed;
+}
+
 bool AudioDeviceNull::IsPlaying(AudioVoiceId voiceId) {
     std::lock_guard<std::mutex> lock(m_mutex);
     auto voice = FindVoice(voiceId);
@@ -268,6 +363,21 @@ float AudioDeviceNull::GetDuration(AudioVoiceId voiceId) {
     std::lock_guard<std::mutex> lock(m_mutex);
     auto voice = FindVoice(voiceId);
     return voice ? voice->duration : 0.0f;
+}
+
+VoiceState AudioDeviceNull::GetVoiceState(AudioVoiceId voiceId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    VoiceState state = VoiceState::Stopped;
+    auto voice = FindVoice(voiceId);
+    if (voice) {
+        if (voice->playing && !voice->paused) {
+            state = VoiceState::Playing;
+        } else if (voice->paused) {
+            state = VoiceState::Paused;
+        }
+    }
+    return state;
 }
 
 uint32_t AudioDeviceNull::GetPlayingVoiceCount() const {
