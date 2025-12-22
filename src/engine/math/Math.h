@@ -1,5 +1,12 @@
 #pragma once
 
+// Windows平台必须定义NOMINMAX，防止Windows.h的min/max宏污染
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#endif
+
 // 跨平台数学库抽象层
 // 统一使用GLM
 
@@ -225,8 +232,8 @@ inline float Degrees(float radians) {
 }
 
 // Clamp函数
-inline float Clamp(float value, float min, float max) {
-    return glm::clamp(value, min, max);
+inline float Clamp(float value, float minVal, float maxVal) {
+    return glm::clamp(value, minVal, maxVal);
 }
 
 // Lerp插值函数
