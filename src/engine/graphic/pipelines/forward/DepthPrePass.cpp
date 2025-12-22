@@ -26,7 +26,7 @@ DepthPrePass::~DepthPrePass()
 
 void DepthPrePass::Execute(RenderCommandContext* context)
 {
-    if (!context || !m_depthBuffer) {
+    if (context == nullptr || m_depthBuffer == nullptr) {
         LOG_WARNING("DepthPrePass", "Invalid context or depth buffer");
         return;
     }
@@ -38,8 +38,8 @@ void DepthPrePass::Execute(RenderCommandContext* context)
         context->SetConstantBuffer("ViewProjection", m_viewProjection);
 
         // 获取场景
-        auto scene = SceneManager::GetInstance()->GetCurrentScene();
-        if (!scene) {
+        auto *scene = SceneManager::GetInstance()->GetCurrentScene();
+        if (scene == nullptr) {
             LOG_WARNING("DepthPrePass", "No active scene");
             return;
         }
@@ -50,21 +50,17 @@ void DepthPrePass::Execute(RenderCommandContext* context)
         for (const auto& gameObject : gameObjects) {
             if (!gameObject) continue;
 
-            auto meshRenderer = gameObject->GetComponent<MeshRenderer>();
-            if (!meshRenderer) continue;
+            auto *meshRenderer = gameObject->GetComponent<MeshRenderer>();
+            if (meshRenderer == nullptr) continue;
 
             // 获取网格数据
             auto mesh = meshRenderer->GetMesh();
             if (!mesh || mesh->subMeshes.empty()) continue;
 
             // 设置世界矩阵
-            auto transform = gameObject->transform();
-            if (transform) {
-                // Transform::GetMatrix() 返回的是转置后的矩阵
-                float* matrixData = transform->GetMatrix();
-                XMMATRIX worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrixData));
-                // 再次转置回来，因为GetMatrix()为了HLSL已经转置了一次
-                worldMatrix = XMMatrixTranspose(worldMatrix);
+            auto *transform = gameObject->transform();
+            if (transform != nullptr) {
+                Prisma::Matrix4x4 worldMatrix = transform->GetMatrix();
                 context->SetConstantBuffer("World", worldMatrix);
             }
 
@@ -100,7 +96,7 @@ void DepthPrePass::ClearRenderTarget(float r, float g, float b, float a)
     // 深度预渲染只需要清除深度缓冲
     LOG_DEBUG("DepthPrePass", "清除深度缓冲");
 
-    if (m_depthBuffer) {
+    if (m_depthBuffer != nullptr) {
         // 设置深度清除值为1.0（最远）
         // 这里应该调用具体的图形API来清除深度缓冲
         // context->ClearDepthBuffer(1.0f);
@@ -120,19 +116,19 @@ void DepthPrePass::SetDepthBuffer(void* depthBuffer)
     LOG_DEBUG("DepthPrePass", "设置深度缓冲区: 0x{0:x}", reinterpret_cast<uintptr_t>(depthBuffer));
 }
 
-void DepthPrePass::SetViewProjectionMatrix(const XMMATRIX& viewProjection)
+void DepthPrePass::SetViewProjectionMatrix(const Prisma::Matrix4x4& viewProjection)
 {
     m_viewProjection = viewProjection;
 }
 
-void DepthPrePass::SetViewMatrix(const XMMATRIX& view)
+void DepthPrePass::SetViewMatrix(const Prisma::Matrix4x4& view)
 {
     m_view = view;
     // 重新计算视图投影矩阵
     m_viewProjection = m_view * m_projection;
 }
 
-void DepthPrePass::SetProjectionMatrix(const XMMATRIX& projection)
+void DepthPrePass::SetProjectionMatrix(const Prisma::Matrix4x4& projection)
 {
     m_projection = projection;
     // 重新计算视图投影矩阵

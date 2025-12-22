@@ -15,53 +15,12 @@
 #endif
 
 #include "../engine/Common.h"
-#include "../engine/graphic/RenderSystemTest.h"
 #include "../engine/DynamicLoader.h"
 #include "Export.h"
 #include "PlatformWindows.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
-
-// ============================================================================
-// 函数声明
-// ============================================================================
-int RunRenderTest();
-
-// ============================================================================
-// 渲染测试实现
-// ============================================================================
-int RunRenderTest() {
-    using namespace PrismaEngine::Graphic;
-    
-    LOG_INFO("Runtime", "开始运行渲染测试");
-    
-    try {
-        // 创建测试实例
-        RenderSystemTest test;
-        
-        // 初始化测试 (使用默认窗口大小)
-        if (!test.Initialize(nullptr, 800, 600)) {
-            LOG_ERROR("Runtime", "渲染测试初始化失败");
-            return -1;
-        }
-        
-        LOG_INFO("Runtime", "渲染测试初始化成功，开始运行测试");
-        
-        // 运行测试
-        bool result = test.RunTests();
-        
-        // 清理
-        test.Shutdown();
-        
-        LOG_INFO("Runtime", "渲染测试完成，结果: {0}", result ? "通过" : "失败");
-        return result ? 0 : -1;
-    }
-    catch (const std::exception& e) {
-        LOG_ERROR("Runtime", "渲染测试过程中发生异常: {0}", e.what());
-        return -1;
-    }
-}
 
 // ============================================================================
 // 应用程序入口点
@@ -148,12 +107,8 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     std::string lib_name;
-    if (cmdParser.IsOptionSet("test-render")) {
-        LOG_INFO("Runtime", "运行新渲染系统测试");
-        // 直接运行渲染测试，不加载DLL
-        return RunRenderTest();
-    }
-    else if (cmdParser.IsOptionSet("editor")) {
+
+    if (cmdParser.IsOptionSet("editor")) {
         LOG_INFO("Runtime", "尝试启动编辑器");
         lib_name = "PrismaEditor.dll";
     }

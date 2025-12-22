@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <fstream>
 
-namespace Engine {
-namespace Input {
+
+namespace Engine::Input {
 
 InputManager& InputManager::GetInstance()
 {
@@ -31,8 +31,8 @@ void InputManager::Update()
     // 清除单帧状态
     m_keyPressedThisFrame.clear();
     m_keyReleasedThisFrame.clear();
-    m_mouseDelta = DirectX::XMFLOAT2(0, 0);
-    m_scrollDelta = DirectX::XMFLOAT2(0, 0);
+    m_mouseDelta = Prisma::Vector2(0, 0);
+    m_scrollDelta = Prisma::Vector2(0, 0);
 
     // 更新手柄状态
     UpdateGamepadStates();
@@ -136,7 +136,7 @@ void InputManager::OnMouseScroll(float deltaX, float deltaY)
     m_scrollDelta.y += deltaY;
 
     // 发送事件
-    InputEvent event;
+    InputEvent event{};
     event.type = InputEvent::Type::Scroll;
     event.scroll.deltaX = deltaX;
     event.scroll.deltaY = deltaY;
@@ -146,7 +146,7 @@ void InputManager::OnMouseScroll(float deltaX, float deltaY)
 void InputManager::OnTouchEvent(int fingerId, float x, float y, InputAction action)
 {
     // 发送事件
-    InputEvent event;
+    InputEvent event{};
     event.type = InputEvent::Type::Touch;
     event.touch.fingerId = fingerId;
     event.touch.x = x;
@@ -390,5 +390,4 @@ bool InputBinding::IsTriggered() const
     }
 }
 
-} // namespace Input
-} // namespace Engine
+} // namespace Engine::Input

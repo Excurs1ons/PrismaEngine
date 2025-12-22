@@ -32,10 +32,10 @@ public:
     void SetDepthBuffer(void* depthBuffer);
 
     // 设置视图矩阵
-    void SetViewMatrix(const XMMATRIX& view);
+    void SetViewMatrix(const Prisma::Matrix4x4& view);
 
     // 设置投影矩阵
-    void SetProjectionMatrix(const XMMATRIX& projection);
+    void SetProjectionMatrix(const Prisma::Matrix4x4& projection);
 
     // 启用/禁用深度写入
     void SetDepthWrite(bool enable);
@@ -45,9 +45,9 @@ private:
     void* m_depthBuffer = nullptr;
 
     // 相机矩阵
-    XMMATRIX m_view = DirectX::XMMatrixIdentity();
-    XMMATRIX m_projection = DirectX::XMMatrixIdentity();
-    XMMATRIX m_viewProjection = DirectX::XMMatrixIdentity();
+    Prisma::Matrix4x4 m_view = {};
+    Prisma::Matrix4x4 m_projection = {};
+    Prisma::Matrix4x4 m_viewProjection = {};
 
     // 深度写入标志
     bool m_depthWrite = false;

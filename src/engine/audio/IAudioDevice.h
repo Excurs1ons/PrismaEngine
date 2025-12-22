@@ -12,9 +12,11 @@ namespace Engine::Audio {
 class IAudioDevice {
 public:
     virtual ~IAudioDevice() = default;
-
+    virtual AudioVoiceId PlayClip(const AudioClip& clip, const PlayDesc& desc = {}) = 0;
+    virtual void SetVoice3DPosition(AudioVoiceId voiceId, float x, float y, float z) = 0;
+    virtual std::string GenerateDebugReport() = 0;
     // ========== 初始化和关闭 ==========
-
+    virtual AudioDeviceType GetDeviceType() const = 0;
     /// @brief 初始化音频设备
     /// @param desc 设备初始化描述
     /// @return 是否初始化成功
