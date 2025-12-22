@@ -237,7 +237,7 @@ bool AudioFactory::TestDeviceAvailability(AudioDeviceType deviceType) {
 }
 
 // ========== 私有方法实现 ==========
-
+#ifdef PRISMA_ENABLE_AUDIO_OPENAL
 std::unique_ptr<IAudioDevice> AudioFactory::CreateOpenALDevice(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceOpenAL>();
     if (device->Initialize(desc)) {
@@ -245,7 +245,9 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateOpenALDevice(const AudioDesc& 
     }
     return nullptr;
 }
+#endif
 
+#ifdef PRISMA_ENABLE_AUDIO_SDL3
 std::unique_ptr<IAudioDevice> AudioFactory::CreateSDL3Device(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceSDL3>();
     if (device->Initialize(desc)) {
@@ -253,7 +255,9 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateSDL3Device(const AudioDesc& de
     }
     return nullptr;
 }
+#endif
 
+#ifdef PRISMA_ENABLE_AUDIO_XAUDIO2
 std::unique_ptr<IAudioDevice> AudioFactory::CreateXAudio2Device(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceXAudio2>();
     if (device->Initialize(desc)) {
@@ -261,7 +265,7 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateXAudio2Device(const AudioDesc&
     }
     return nullptr;
 }
-
+#endif
 std::unique_ptr<IAudioDevice> AudioFactory::CreateNullDevice(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceNull>();
     if (device->Initialize(desc)) {

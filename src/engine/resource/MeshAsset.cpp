@@ -1,8 +1,9 @@
 #include "MeshAsset.h"
+#include "AssetSerializer.h"
 #include "Logger.h"
+#include "math/Math.h"
 #include <fstream>
 #include <sstream>
-#include "AssetSerializer.h"
 
 namespace Engine {
 using namespace Serialization;
