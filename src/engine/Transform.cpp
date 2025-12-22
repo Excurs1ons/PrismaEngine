@@ -1,4 +1,4 @@
 #include "Transform.h"
-XMFLOAT3 Transform::GetPosition() const {
+Prisma::Vector3 Transform::GetPosition() const {
     return position;
 }

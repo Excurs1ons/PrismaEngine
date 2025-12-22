@@ -32,8 +32,6 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/interfaces/IPipelineState.cpp
     # DX12 adapter files (conditionally included)
     # graphic/adapters/dx12/ files will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_DX12
-    # Test files
-    graphic/RenderSystemTest.cpp
 )
 
 set(ENGINE_GRAPHIC_HEADERS

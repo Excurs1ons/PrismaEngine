@@ -33,7 +33,7 @@ public:
     ResourceType GetType() const override;
 
     // 着色器特定方法
-    PrismaEngine::Graphic::ShaderType GetType() const;
+    PrismaEngine::Graphic::ShaderType GetShaderType() const;
     PrismaEngine::Graphic::ShaderLanguage GetLanguage() const;
     const std::string& GetEntryPoint() const;
     const std::string& GetTarget() const;
@@ -100,7 +100,7 @@ public:
     std::shared_ptr<PrismaEngine::Graphic::IShader> GetImplementation() const { return m_impl; }
 
     // 获取原生句柄（用于平台特定操作）
-    void* GetNativeHandle() const;
+    const void* GetNativeHandle() const;
 
 private:
     std::shared_ptr<PrismaEngine::Graphic::IShader> m_impl;

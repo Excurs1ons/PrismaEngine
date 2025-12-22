@@ -17,7 +17,7 @@ Material::Material(const std::string& name)
 }
 
 Material::~Material() {
-    Unload();
+    Material::Unload();
 }
 
 // 基础属性设置

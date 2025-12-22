@@ -63,15 +63,15 @@ bool ForwardPipeline::Initialize(ScriptableRenderPipeline* renderPipe)
     m_opaquePass = std::make_shared<OpaquePass>();
     m_opaquePass->SetViewport(1920, 1080);
     // 设置默认环境光
-    m_opaquePass->SetAmbientLight(XMFLOAT3(0.1f, 0.1f, 0.1f));
+    m_opaquePass->SetAmbientLight(Prisma::Color(0.1f, 0.1f, 0.1f, 1.0f));
     // 设置默认方向光
     OpaquePass::Light directionalLight;
     directionalLight.type = 0; // 方向光
-    directionalLight.position = XMFLOAT3(0, 100, 0);
-    directionalLight.color = XMFLOAT3(1.0f, 1.0f, 1.0f);
+    directionalLight.position = Prisma::Vector3(0, 100, 0);
+    directionalLight.color = Prisma::Color(1.0f, 1.0f, 1.0f,1.0f);
     directionalLight.intensity = 1.0f;
-    directionalLight.direction = XMFLOAT3(0, -1.0f, -1.0f);
-    XMStoreFloat3(&directionalLight.direction, XMVector3Normalize(XMLoadFloat3(&directionalLight.direction)));
+    directionalLight.direction = Prisma::Vector3(0, -1.0f, -1.0f);
+    //normalize
     m_opaquePass->SetLights({directionalLight});
     m_renderPipe->AddRenderPass(m_opaquePass);
 
@@ -145,9 +145,9 @@ void ForwardPipeline::Update(float deltaTime)
 
     // 如果有相机，更新天空盒的特殊视图矩阵（移除平移）
     if (m_camera && m_skyboxRenderPass) {
-        XMMATRIX view = m_camera->GetViewMatrix();
-        XMMATRIX skyboxView = view;
-        skyboxView.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+        Prisma::Matrix4x4 view = m_camera->GetViewMatrix();
+        Prisma::Matrix4x4 skyboxView = view;
+        skyboxView[3] = Prisma::Vector4(0.0f, 0.0f, 0.0f, 1.0f);
 
         // 天空盒需要单独处理视图矩阵
         m_skyboxRenderPass->SetViewMatrix(skyboxView);

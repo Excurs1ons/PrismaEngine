@@ -32,36 +32,36 @@ public:
     void SetDepthBuffer(void* depthBuffer);
 
     // 设置视图矩阵
-    void SetViewMatrix(const XMMATRIX& view);
+    void SetViewMatrix(const Prisma::Matrix4x4& view);
 
     // 设置投影矩阵
-    void SetProjectionMatrix(const XMMATRIX& projection);
+    void SetProjectionMatrix(const Prisma::Matrix4x4& projection);
 
     // 设置光源信息
     struct Light {
-        XMFLOAT3 position;
-        XMFLOAT3 color;
+        Prisma::Vector3 position;
+        Prisma::Color color;
         float intensity;
-        XMFLOAT3 direction;  // 用于方向光
+        Prisma::Vector3 direction;  // 用于方向光
         int type;  // 0=directional, 1=point, 2=spot
     };
     void SetLights(const std::vector<Light>& lights);
 
     // 设置环境光
-    void SetAmbientLight(const XMFLOAT3& color);
+    void SetAmbientLight(const Prisma::Color& color);
 
 private:
     // 深度缓冲区
     void* m_depthBuffer = nullptr;
 
     // 相机矩阵
-    XMMATRIX m_view = DirectX::XMMatrixIdentity();
-    XMMATRIX m_projection = DirectX::XMMatrixIdentity();
-    XMMATRIX m_viewProjection = DirectX::XMMatrixIdentity();
+    Prisma::Matrix4x4 m_view = Prisma::Matrix4x4();
+    Prisma::Matrix4x4 m_projection = Prisma::Matrix4x4();
+    Prisma::Matrix4x4 m_viewProjection = Prisma::Matrix4x4();
 
     // 光照数据
     std::vector<Light> m_lights;
-    XMFLOAT3 m_ambientLight = XMFLOAT3(0.1f, 0.1f, 0.1f);
+    Prisma::Vector3 m_ambientLight = Prisma::Vector3(0.1f, 0.1f, 0.1f);
 
     // 渲染目标
     void* m_renderTarget = nullptr;

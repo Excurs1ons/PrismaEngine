@@ -61,17 +61,17 @@ struct BoundingBox {
     }
 
     // 获取中心点
-    PrismaMath::vec3 GetCenter() const {
+    [[nodiscard]] PrismaMath::vec3 GetCenter() const {
         return (min + max) * 0.5f;
     }
 
     // 获取尺寸
-    PrismaMath::vec3 GetSize() const {
+    [[nodiscard]] PrismaMath::vec3 GetSize() const {
         return max - min;
     }
 };
 
-class Mesh : public ResourceBase
+class Mesh : public Engine::ResourceBase
 {
     // 加载到GPU的方法
     //bool UploadToGPU(RenderDevice* device);
@@ -85,12 +85,12 @@ public:
     static Mesh GetTriangleMesh();
 	static Mesh GetQuadMesh();
 
-    ResourceType GetType() const override {
-        return ResourceType::Mesh;
+    [[nodiscard]] Engine::ResourceType GetType() const override {
+        return Engine::ResourceType::Mesh;
     }
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
-    bool IsLoaded() const;
+    bool IsLoaded() const override;
 
 private:
     bool m_isLoaded = false;

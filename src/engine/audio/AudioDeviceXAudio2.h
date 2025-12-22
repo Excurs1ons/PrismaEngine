@@ -1,5 +1,5 @@
 #pragma once
-
+#if defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
 #include "IAudioDevice.h"
 #include <mutex>
 #include <wrl/client.h>
@@ -9,6 +9,7 @@
 #include <array>
 #include <thread>
 #include <atomic>
+
 
 namespace Engine::Audio {
 
@@ -98,11 +99,11 @@ private:
     };
 
     /// @brief 3D音频参数（XAudio2特定）
-    struct X3DAudioParameters {
-        X3DAUDIO_DSP_SETTINGS dspSettings;
-        X3DAUDIO_LISTENER listener;
-        X3DAUDIO_EMITTER emitter;
-    };
+    // struct X3DAudioParameters {
+    //     X3DAUDIO_DSP_SETTINGS dspSettings;
+    //     X3DAUDIO_LISTENER listener;
+    //     X3DAUDIO_EMITTER emitter;
+    // };
 
     // ========== 初始化相关 ==========
 
@@ -144,7 +145,7 @@ private:
     void Apply3DToVoice(Voice* voice);
 
     /// @brief 转换距离模型到X3DAUDIO_CURVE_TYPE
-    X3DAUDIO_CURVE_TYPE GetX3DAudioCurveType(DistanceModel model) const;
+    // X3DAUDIO_CURVE_TYPE GetX3DAudioCurveType(DistanceModel model) const;
 
     // ========== 错误处理 ==========
 
@@ -164,8 +165,8 @@ private:
     IXAudio2MasteringVoice* m_masteringVoice = nullptr;
 
     // 3D音频相关
-    X3DAUDIO_HANDLE m_x3dAudioInstance;
-    X3DAUDIO_PARAMETERS m_x3dParams;
+    // X3DAUDIO_HANDLE m_x3dAudioInstance;
+    // X3DAUDIO_PARAMETERS m_x3dParams;
     uint32_t m_channelMask;
     float m_speedOfSound = 343.3f;
 
@@ -201,3 +202,5 @@ private:
 };
 
 } // namespace Engine::Audio
+
+#endif

@@ -59,14 +59,14 @@ void TransparentPass::Execute(RenderCommandContext* context)
 
         // 获取主相机
         auto camera = scene->GetMainCamera();
-        XMFLOAT3 cameraPos = XMFLOAT3(0, 0, 0);
+        Vector3 cameraPos = Vector3(0, 0, 0);
         // TODO: 实现Camera的GetPosition方法
         // 现在使用默认位置
 
         // 收集所有透明对象
         struct TransparentObject {
             MeshRenderer* meshRenderer;
-            XMMATRIX worldMatrix;
+            Matrix4x4 worldMatrix;
             float distanceToCamera;
             float alpha;
         };
@@ -88,23 +88,10 @@ void TransparentPass::Execute(RenderCommandContext* context)
             if (props.baseColor.w <= 0.01f) continue; // 完全透明的物体跳过
 
             auto transform = gameObject->transform();
-            XMMATRIX worldMatrix;
-            if (transform) {
-                // Transform::GetMatrix() 返回的是转置后的矩阵
-                float* matrixData = transform->GetMatrix();
-                worldMatrix = XMLoadFloat4x4(reinterpret_cast<const XMFLOAT4X4*>(matrixData));
-                // 再次转置回来，因为GetMatrix()为了HLSL已经转置了一次
-                worldMatrix = XMMatrixTranspose(worldMatrix);
-            } else {
-                worldMatrix = DirectX::XMMatrixIdentity();
-            }
+            Matrix4x4 worldMatrix = transform->GetMatrix();
 
             // 计算到相机的距离
-            XMFLOAT3 objectPos = XMFLOAT3(
-                XMVectorGetX(worldMatrix.r[3]),
-                XMVectorGetY(worldMatrix.r[3]),
-                XMVectorGetZ(worldMatrix.r[3])
-            );
+            Vector3 objectPos = Vector3(worldMatrix[3][0], worldMatrix[3][1], worldMatrix[3][2]);
             float distance = sqrtf(
                 powf(objectPos.x - cameraPos.x, 2) +
                 powf(objectPos.y - cameraPos.y, 2) +
@@ -137,13 +124,13 @@ void TransparentPass::Execute(RenderCommandContext* context)
             // 设置材质参数（包括Alpha）
             if (material) {
                 const auto& props = material->GetProperties();
-                XMFLOAT4 albedoWithAlpha = {
+                Vector4 albedoWithAlpha = {
                     props.baseColor.x,
                     props.baseColor.y,
                     props.baseColor.z,
                     transObj.alpha
                 };
-                context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedoWithAlpha), sizeof(XMFLOAT4));
+                context->SetConstantBuffer("MaterialAlbedo", reinterpret_cast<const float*>(&albedoWithAlpha), sizeof(Vector4));
                 context->SetConstantBuffer("MaterialMetallic", reinterpret_cast<const float*>(&props.metallic), sizeof(float));
                 context->SetConstantBuffer("MaterialRoughness", reinterpret_cast<const float*>(&props.roughness), sizeof(float));
 
@@ -199,12 +186,12 @@ void TransparentPass::SetDepthBuffer(void* depthBuffer)
     LOG_DEBUG("TransparentPass", "设置深度缓冲区（只读）: 0x{0:x}", reinterpret_cast<uintptr_t>(depthBuffer));
 }
 
-void TransparentPass::SetViewMatrix(const XMMATRIX& view)
+void TransparentPass::SetViewMatrix(const Prisma::Matrix4x4& view)
 {
     m_view = view;
 }
 
-void TransparentPass::SetProjectionMatrix(const XMMATRIX& projection)
+void TransparentPass::SetProjectionMatrix(const Prisma::Matrix4x4& projection)
 {
     m_projection = projection;
 }
