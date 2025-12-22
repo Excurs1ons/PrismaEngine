@@ -1,10 +1,9 @@
 #include "RenderBackendVulkan.h"
 #include "../platform/ApplicationWindows.h"
-#include "Camera2D.h"
 #include "LogScope.h"
 #include "Logger.h"
-#include "SceneManager.h"
 #include "RenderErrorHandling.h"
+#include "SceneManager.h"
 #include "math/MathTypes.h"
 #include <stdexcept>
 #include <unordered_map>
@@ -18,32 +17,25 @@ class VulkanRenderCommandContext : public RenderCommandContext {
 public:
     VulkanRenderCommandContext(RenderBackendVulkan* backend) : m_backend(backend) {
         // 验证后端有效性
-        if (!m_backend) {
+        if (m_backend == nullptr) {
             throw std::runtime_error("VulkanRenderCommandContext: Backend is null");
         }
     }
 
-    void SetConstantBuffer(const char* name, FXMMATRIX matrix) override {
-        if (!name) {
+    void SetConstantBuffer(const std::string& name,Matrix4x4 matrix) override {
+        RenderCommandContext::SetConstantBuffer(name, matrix);
+        if (name.empty()) {
             LOG_WARNING("VulkanRenderCommand", "SetConstantBuffer called with null name");
             return;
         }
-
-        // 存储矩阵数据
-        XMFLOAT4X4 matrixData;
-        XMStoreFloat4x4(&matrixData, matrix);
-
+        //TODO:
         // 在实际实现中，这里应该更新Vulkan uniform buffer
-        m_constantBuffers[name] = std::vector<float>(
-            reinterpret_cast<float*>(&matrixData),
-            reinterpret_cast<float*>(&matrixData) + 16
-        );
 
         LOG_DEBUG("VulkanRenderCommand", "Set constant buffer '{0}' with matrix data", name);
     }
 
-    void SetConstantBuffer(const char* name, const float* data, size_t size) override {
-        if (!name || !data) {
+    void SetConstantBuffer(const std::string& name, const float* data, size_t size) override {
+        if (name.empty() || (data == nullptr)) {
             LOG_WARNING("VulkanRenderCommand", "SetConstantBuffer called with null parameters");
             return;
         }
@@ -54,13 +46,13 @@ public:
         }
 
         // 复制数据到常量缓冲区映射
-        m_constantBuffers[name] = std::vector<float>(data, data + size / sizeof(float));
+        m_constantBuffers[name] = std::vector<float>(data, data + (size / sizeof(float)));
 
         LOG_DEBUG("VulkanRenderCommand", "Set constant buffer '{0}' with {1} bytes", name, size);
     }
 
     void SetVertexBuffer(const void* data, uint32_t sizeInBytes, uint32_t strideInBytes) override {
-        if (!data || sizeInBytes == 0 || strideInBytes == 0) {
+        if ((data == nullptr) || sizeInBytes == 0 || strideInBytes == 0) {
             LOG_WARNING("VulkanRenderCommand", "Invalid vertex buffer parameters");
             return;
         }
@@ -73,7 +65,7 @@ public:
     }
 
     void SetIndexBuffer(const void* data, uint32_t sizeInBytes, bool use16BitIndices = true) override {
-        if (!data || sizeInBytes == 0) {
+        if ((data == nullptr) || sizeInBytes == 0) {
             LOG_WARNING("VulkanRenderCommand", "Invalid index buffer parameters");
             return;
         }
@@ -85,8 +77,8 @@ public:
         LOG_DEBUG("VulkanRenderCommand", "Set index buffer: {0} bytes, 16-bit: {1}", sizeInBytes, use16BitIndices);
     }
 
-    void SetShaderResource(const char* name, void* resource) override {
-        if (!name) {
+    void SetShaderResource(const std::string& name, void* resource) override {
+        if (name.empty()) {
             LOG_WARNING("VulkanRenderCommand", "SetShaderResource called with null name");
             return;
         }
@@ -97,8 +89,8 @@ public:
                   name, reinterpret_cast<uintptr_t>(resource));
     }
 
-    void SetSampler(const char* name, void* sampler) override {
-        if (!name) {
+    void SetSampler(const std::string& name, void* sampler) override {
+        if (name.empty()) {
             LOG_WARNING("VulkanRenderCommand", "SetSampler called with null name");
             return;
         }
@@ -335,7 +327,7 @@ void RenderBackendVulkan::Shutdown() {
     LOG_INFO("Vulkan", "Vulkan renderer shutdown completed");
 }
 
-void RenderBackendVulkan::BeginFrame(DirectX::XMFLOAT4 clearColor) {
+void RenderBackendVulkan::BeginFrame(Prisma::Color clearColor) {
     if (isFrameActive) {
         LOG_WARNING("RendererVulkan", "BeginFrame called while frame is already active");
         return;

@@ -64,8 +64,8 @@ void SkyboxRenderPass::Execute(RenderCommandContext* context)
         if (!m_constantBuffer.empty()) {
             LOG_DEBUG("SkyboxRenderPass", "设置常量缓冲区");
             // 天空盒需要特殊的视图矩阵处理（移除平移）
-            XMMATRIX modifiedViewProjection = m_viewProjection;
-            modifiedViewProjection.r[3] = XMVectorSet(0.0f, 0.0f, 0.0f, 1.0f);
+            Matrix4x4 modifiedViewProjection = m_viewProjection;
+            modifiedViewProjection[3] = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
             context->SetConstantBuffer("ConstantBuffer", modifiedViewProjection);
         }
         
@@ -130,7 +130,7 @@ void SkyboxRenderPass::SetCubeMapTexture(void* cubeMapTexture)
     LOG_DEBUG("SkyboxRenderPass", "设置立方体贴图纹理: 0x{0:x}", reinterpret_cast<uintptr_t>(cubeMapTexture));
 }
 
-void SkyboxRenderPass::SetViewProjectionMatrix(const XMMATRIX& viewProjection)
+void SkyboxRenderPass::SetViewProjectionMatrix(const Matrix4x4& viewProjection)
 {
     m_viewProjection = viewProjection;
     LOG_DEBUG("SkyboxRenderPass", "设置视图投影矩阵");
@@ -139,12 +139,10 @@ void SkyboxRenderPass::SetViewProjectionMatrix(const XMMATRIX& viewProjection)
     if (m_constantBuffer.empty()) {
         m_constantBuffer.resize(16); // 4x4 矩阵
     }
-
-    // 将矩阵数据复制到常量缓冲区
-    XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(m_constantBuffer.data()), m_viewProjection);
+    //TODO:
 }
 
-void SkyboxRenderPass::SetViewMatrix(const XMMATRIX& view)
+void SkyboxRenderPass::SetViewMatrix(const Matrix4x4& view)
 {
     m_view = view;
     // 重新计算视图投影矩阵
@@ -155,10 +153,11 @@ void SkyboxRenderPass::SetViewMatrix(const XMMATRIX& view)
         m_constantBuffer.resize(16); // 4x4 矩阵
     }
 
-    XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(m_constantBuffer.data()), m_viewProjection);
+    //TODO:
+
 }
 
-void SkyboxRenderPass::SetProjectionMatrix(const XMMATRIX& projection)
+void SkyboxRenderPass::SetProjectionMatrix(const Matrix4x4& projection)
 {
     m_projection = projection;
     // 重新计算视图投影矩阵
@@ -168,8 +167,8 @@ void SkyboxRenderPass::SetProjectionMatrix(const XMMATRIX& projection)
     if (m_constantBuffer.empty()) {
         m_constantBuffer.resize(16); // 4x4 矩阵
     }
+    // TODO:
 
-    XMStoreFloat4x4(reinterpret_cast<XMFLOAT4X4*>(m_constantBuffer.data()), m_viewProjection);
 }
 
 void SkyboxRenderPass::InitializeSkyboxMesh()

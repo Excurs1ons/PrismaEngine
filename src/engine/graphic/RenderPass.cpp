@@ -10,7 +10,7 @@ RenderPass::~RenderPass()
 }
 
 RenderPass2D::RenderPass2D()
-    : m_cameraMatrix(XMMatrixIdentity())
+    : m_cameraMatrix({})
     , m_width(0)
     , m_height(0)
 {
@@ -26,13 +26,13 @@ void RenderPass2D::Execute(RenderCommandContext* context)
     // 在这里会实际执行所有排队的2D渲染命令
 }
 
-void RenderPass2D::AddMeshToRenderQueue(std::shared_ptr<Mesh> mesh, FXMMATRIX transform)
+void RenderPass2D::AddMeshToRenderQueue(const std::shared_ptr<Mesh>& mesh, const PrismaMath::mat4& transform)
 {
     // 将网格和变换添加到渲染队列中
     // 在实际实现中，我们会存储这些信息并在Execute时使用
 }
 
-void RenderPass2D::SetCameraMatrix(FXMMATRIX viewProjection)
+void RenderPass2D::SetCameraMatrix(const PrismaMath::mat4& viewProjection)
 {
     m_cameraMatrix = viewProjection;
 }
