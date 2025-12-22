@@ -6,6 +6,7 @@
 #include "graphic/interfaces/IResourceManager.h"
 #include <atomic>
 #include <filesystem>
+#include <functional>
 #include <queue>
 #include <shared_mutex>
 #include <thread>

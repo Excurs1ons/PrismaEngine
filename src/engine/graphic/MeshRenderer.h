@@ -5,12 +5,13 @@
 #include "Transform.h"
 #include "RenderComponent.h"
 #include <memory>
+#include <utility>
 
 class MeshRenderer :public RenderComponent
 {
 private:
     std::shared_ptr<Mesh> m_mesh;
-    std::shared_ptr<Material> m_material;
+    std::shared_ptr<Engine::Material> m_material;
     
 protected:
     void DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh> mesh);
@@ -21,23 +22,23 @@ public:
     void Render(RenderCommandContext* context) override;
 
     void SetMesh(std::shared_ptr<Mesh> mesh) {
-        m_mesh = mesh;
+        m_mesh = std::move(mesh);
     }
     
-    void SetMaterial(std::shared_ptr<Material> material) {
+    void SetMaterial(std::shared_ptr<Engine::Material> material) override {
         m_material = material;
     }
 
-    std::shared_ptr<Mesh> GetMesh() const {
+    [[nodiscard]] std::shared_ptr<Mesh> GetMesh() const {
         return m_mesh;
     }
 
-    std::shared_ptr<Material> GetMaterial() const {
+    [[nodiscard]] std::shared_ptr<Engine::Material> GetMaterial() const override {
         return m_material;
     }
-    virtual void Update(float deltaTime) override;
+    void Update(float deltaTime) override;
     MeshRenderer();
-    virtual ~MeshRenderer() override;
-    virtual void Initialize() override;
-    virtual void Shutdown() override;
+    ~MeshRenderer() override;
+    void Initialize() override;
+    void Shutdown() override;
 };

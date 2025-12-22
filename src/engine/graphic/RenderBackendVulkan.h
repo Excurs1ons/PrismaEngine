@@ -27,7 +27,7 @@ public:
 
     void SetGuiRenderCallback(GuiRenderCallback callback) override { m_guiRenderCallback = callback; }
 
-    void BeginFrame(DirectX::XMFLOAT4 clearColor = {0.0f, 0.0f, 0.0f, 1.0f}) override;
+    void BeginFrame(Prisma::Color clearColor = {0.0f, 0.0f, 0.0f, 1.0f}) override;
     void EndFrame() override;
 
     void Resize(uint32_t width, uint32_t height) override;

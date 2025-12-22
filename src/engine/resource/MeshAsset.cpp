@@ -23,23 +23,23 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
 
         // 创建三角形顶点
         triangle.vertices.resize(3);
-        triangle.vertices[0].position = XMFLOAT4(0.0f, 0.5f, 0.0f, 1.0f);
-        triangle.vertices[0].normal   = XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[0].texCoord = XMFLOAT4(0.5f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[0].tangent  = XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[0].color    = XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f};
+        triangle.vertices[0].position = Prisma::Vector4(0.0f, 0.5f, 0.0f, 1.0f);
+        triangle.vertices[0].normal   = Prisma::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        triangle.vertices[0].texCoord = Prisma::Vector4(0.5f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[0].tangent  = Prisma::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[0].color    = Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        triangle.vertices[1].position = XMFLOAT4(-0.5f, -0.5f, 0.0f, 1.0f);
-        triangle.vertices[1].normal   = XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[1].texCoord = XMFLOAT4(0.0f, 1.0f, 0.0f, 0.0f);
-        triangle.vertices[1].tangent  = XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[1].color    = XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f};
+        triangle.vertices[1].position = Prisma::Vector4(-0.5f, -0.5f, 0.0f, 1.0f);
+        triangle.vertices[1].normal   = Prisma::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        triangle.vertices[1].texCoord = Prisma::Vector4(0.0f, 1.0f, 0.0f, 0.0f);
+        triangle.vertices[1].tangent  = Prisma::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[1].color    = Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        triangle.vertices[2].position = XMFLOAT4(0.5f, -0.5f, 0.0f, 1.0f);
-        triangle.vertices[2].normal   = XMFLOAT4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[2].texCoord = XMFLOAT4(1.0f, 1.0f, 0.0f, 0.0f);
-        triangle.vertices[2].tangent  = XMFLOAT4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[2].color    = XMVECTORF32{1.0f, 1.0f, 1.0f, 1.0f};
+        triangle.vertices[2].position = Prisma::Vector4(0.5f, -0.5f, 0.0f, 1.0f);
+        triangle.vertices[2].normal   = Prisma::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        triangle.vertices[2].texCoord = Prisma::Vector4(1.0f, 1.0f, 0.0f, 0.0f);
+        triangle.vertices[2].tangent  = Prisma::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[2].color    = Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
         // 创建三角形索引
         triangle.indices = {0, 1, 2};
@@ -48,18 +48,18 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
         m_subMeshes.push_back(triangle);
 
         // 计算包围盒
-        XMVECTOR minVec = XMVectorSet(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-        XMVECTOR maxVec = XMVectorSet(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
+        Prisma::Vector4 minVec = Prisma::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+        Prisma::Vector4 maxVec = Prisma::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 
         for (const auto& subMesh : m_subMeshes) {
             for (const auto& vertex : subMesh.vertices) {
-                XMVECTOR pos = XMLoadFloat4(&vertex.position);
-                minVec       = XMVectorMin(minVec, pos);
-                maxVec       = XMVectorMax(maxVec, pos);
+                Prisma::Vector4 pos = Prisma::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
+                minVec       = Prisma::Math::Min(minVec, pos);
+                maxVec       = Prisma::Math::Max(maxVec, pos);
             }
         }
 
-        BoundingBox::CreateFromPoints(m_boundingBox, minVec, maxVec);
+        m_boundingBox = BoundingBox(minVec, maxVec);
 
         // 设置路径和名称
         m_path                = path;
@@ -212,18 +212,18 @@ void MeshAsset::Deserialize(InputArchive& archive) {
 
     // 重新计算包围盒
     if (!m_subMeshes.empty()) {
-        XMVECTOR minVec = XMVectorSet(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-        XMVECTOR maxVec = XMVectorSet(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
+        Prisma::Vector4 minVec = Prisma::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+        Prisma::Vector4 maxVec = Prisma::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 
         for (const auto& subMesh : m_subMeshes) {
             for (const auto& vertex : subMesh.vertices) {
-                XMVECTOR pos = XMLoadFloat4(&vertex.position);
-                minVec       = XMVectorMin(minVec, pos);
-                maxVec       = XMVectorMax(maxVec, pos);
+                Prisma::Vector4 pos = Prisma::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
+                minVec       = Prisma::Math::Min(minVec, pos);
+                maxVec       = Prisma::Math::Max(maxVec, pos);
             }
         }
 
-        BoundingBox::CreateFromPoints(m_boundingBox, minVec, maxVec);
+        m_boundingBox = BoundingBox(minVec, maxVec);
     }
 }
 
@@ -254,18 +254,18 @@ void MeshAsset::AddSubMesh(const SubMesh& subMesh) {
     m_isLoaded = true;
 
     // 更新包围盒
-    XMVECTOR minVec = XMVectorSet(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-    XMVECTOR maxVec = XMVectorSet(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
+    Prisma::Vector3 minVec = Prisma::Vector3(FLT_MAX, FLT_MAX, FLT_MAX);
+    Prisma::Vector3 maxVec = Prisma::Vector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
     for (const auto& mesh : m_subMeshes) {
         for (const auto& vertex : mesh.vertices) {
-            XMVECTOR pos = XMLoadFloat4(&vertex.position);
-            minVec       = XMVectorMin(minVec, pos);
-            maxVec       = XMVectorMax(maxVec, pos);
+            Prisma::Vector4 pos = Prisma::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
+            minVec       = Prisma::Math::Min(minVec, pos);
+            maxVec       = Prisma::Math::Max(maxVec, pos);
         }
     }
 
-    BoundingBox::CreateFromPoints(m_boundingBox, minVec, maxVec);
+    m_boundingBox = BoundingBox(minVec, maxVec);
 }
 
 void MeshAsset::SetBoundingBox(const BoundingBox& boundingBox) {

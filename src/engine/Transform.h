@@ -19,7 +19,7 @@ public:
 
     [[nodiscard]] Prisma::Vector3 GetPosition() const;
     // 获取变换矩阵
-    Prisma::Matrix4x4 GetMatrix() {
+    [[nodiscard]] Prisma::Matrix4x4 GetMatrix() const {
         // 创建旋转矩阵（从四元数转换为矩阵）
         glm::quat quat(rotation.w, rotation.x, rotation.y, rotation.z);
         Prisma::Matrix4x4 rotationMatrix = Prisma::Math::QuaternionToMatrix(quat);
@@ -31,14 +31,13 @@ public:
         Prisma::Matrix4x4 scaleMatrix = Prisma::Math::Scale(scale);
 
         // 组合变换：先缩放，再旋转，最后平移 (S * R * T)
-        Prisma::Matrix4x4 worldMatrix = Prisma::Math::Multiply(scaleMatrix, rotationMatrix);
-        worldMatrix = Prisma::Math::Multiply(worldMatrix, translationMatrix);
+        const Prisma::Matrix4x4& worldMatrix =
+            Prisma::Math::Multiply(Prisma::Math::Multiply(scaleMatrix, rotationMatrix), translationMatrix);
 
-        // 将矩阵数据复制到浮点数组
-        matrix = worldMatrix;
-        return matrix;
+        return worldMatrix;
     }
 
 private:
     Prisma::Matrix4x4 matrix = {};
+    void UpdateMatrix();
 };

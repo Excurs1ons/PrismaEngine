@@ -42,8 +42,8 @@ public:
     PrismaMath::vec4 GetColor() const;
 
     // 材质相关方法
-    void SetMaterial(std::shared_ptr<Engine::Material> material);
-    std::shared_ptr<Engine::Material> GetMaterial() const { return m_material; }
+    virtual void SetMaterial(std::shared_ptr<Engine::Material> material);
+    virtual std::shared_ptr<Engine::Material> GetMaterial() const { return m_material; }
     std::shared_ptr<Engine::Material> GetOrCreateMaterial();
     
     // Component接口实现
