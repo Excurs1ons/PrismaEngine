@@ -236,6 +236,138 @@ auto compressed = SnappyCompression::compress(packet.data(), packet.size());
 networkManager->send(compressed);
 ```
 
+#### 内嵌资源压缩
+
+对于编译到代码中的资源（着色器字符串、字体字节数组等），提供编译时压缩方案：
+
+```cpp
+// tools/compress/resource_compressor.py
+import snappy
+import sys
+
+def compress_to_header(input_file, output_header, var_name):
+    with open(input_file, 'rb') as f:
+        data = f.read()
+
+    compressed = snappy.compress(data)
+
+    output = f"""// Auto-generated compressed resource
+// Original size: {len(data)} bytes
+// Compressed size: {len(compressed)} bytes
+// Compression ratio: {len(data)/len(compressed):.2f}x
+
+#include <cstdint>
+#include <cstddef>
+
+namespace Engine::Embedded {{
+alignas(16) constexpr uint8_t {var_name}[] = {{
+    {', '.join(f'0x{b:02x}' for b in compressed)}
+}};
+
+constexpr size_t {var_name}_Size = sizeof({var_name});
+constexpr size_t {var_name}_OriginalSize = {len(data)};
+}}
+}}
+"""
+
+    with open(output_header, 'w') as f:
+        f.write(output)
+
+if __name__ == '__main__':
+    compress_to_header(sys.argv[1], sys.argv[2], sys.argv[3])
+```
+
+```bash
+# CMake 集成
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/embedded_font_compressed.h
+    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/compress/resource_compressor.py
+        ${CMAKE_SOURCE_DIR}/assets/fonts/DefaultFont.ttf
+        ${CMAKE_CURRENT_BINARY_DIR}/embedded_font_compressed.h
+        DefaultFont_Compressed
+    DEPENDS ${CMAKE_SOURCE_DIR}/assets/fonts/DefaultFont.ttf
+    VERBATIM
+)
+
+add_custom_target(compress_embedded_resources
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/embedded_font_compressed.h
+)
+```
+
+```cpp
+// 运行时使用
+#include "embedded_font_compressed.h"
+#include "Engine/Compress/SnappyCompression.h"
+
+namespace Engine {
+namespace Assets {
+
+struct EmbeddedFont {
+    static const uint8_t* getData() {
+        return Embedded::DefaultFont_Compressed;
+    }
+
+    static size_t getCompressedSize() {
+        return Embedded::DefaultFont_Compressed_Size;
+    }
+
+    static size_t getOriginalSize() {
+        return Embedded::DefaultFont_Compressed_OriginalSize;
+    }
+
+    // 一次性解压到缓存
+    static std::vector<uint8_t> decompress() {
+        auto compressed = getData();
+        auto size = getCompressedSize();
+        return Compress::SnappyCompression::decompress(compressed, size);
+    }
+};
+
+} // namespace Assets
+} // namespace Engine
+```
+
+**使用示例**：
+```cpp
+// 应用启动时预解压
+class ResourceCache {
+public:
+    void initialize() {
+        // 解压内嵌字体
+        auto fontData = Assets::EmbeddedFont::decompress();
+        m_defaultFont = Font::loadFromMemory(fontData);
+
+        // 解压内嵌着色器
+        auto shaderData = Assets::EmbeddedShader::decompress();
+        m_defaultShader = Renderer::createShader(shaderData);
+    }
+};
+```
+
+**压缩效果示例**：
+
+| 资源类型 | 原始大小 | 压缩后 | 节省 |
+|----------|----------|--------|------|
+| TrueType 字体 (500KB) | 500 KB | 280 KB | 44% |
+| SPIR-V 着色器 (50KB) | 50 KB | 32 KB | 36% |
+| GLSL 源码 (20KB) | 20 KB | 8 KB | 60% |
+| PNG 图标 (10KB) | 10 KB | 9 KB | 10% |
+
+**高级用法 - 多资源打包**：
+```cpp
+// 将多个内嵌资源打包到一个压缩块
+struct EmbeddedResourcePack {
+    struct ResourceEntry {
+        uint32_t offset;
+        uint32_t compressedSize;
+        uint32_t originalSize;
+        uint32_t nameHash;  // or name offset
+    };
+
+    static std::vector<uint8_t> getResource(const char* name);
+};
+```
+
 #### CMake 配置
 
 ```cmake
