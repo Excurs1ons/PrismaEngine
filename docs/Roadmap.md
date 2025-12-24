@@ -238,7 +238,14 @@ networkManager->send(compressed);
 
 #### 内嵌资源压缩
 
-对于编译到代码中的资源（着色器字符串、字体字节数组等），提供编译时压缩方案：
+对于编译到代码中的资源（着色器字符串、字体字节数组等），提供**按需解压**方案：
+
+**设计原则**：
+- 资源保持压缩状态存储在二进制中
+- 首次访问时才触发解压（懒加载）
+- 解压后缓存到内存，避免重复解压
+- 支持异步解压，避免阻塞主线程
+- 启动画面/加载条用于掩盖资源解压时间
 
 ```cpp
 // tools/compress/resource_compressor.py
@@ -261,7 +268,7 @@ def compress_to_header(input_file, output_header, var_name):
 
 namespace Engine::Embedded {{
 alignas(16) constexpr uint8_t {var_name}[] = {{
-    {', '.join(f'0x{b:02x}' for b in compressed)}
+    {', '.join(f'0x{{b:02x}}' for b in compressed)}
 }};
 
 constexpr size_t {var_name}_Size = sizeof({var_name});
@@ -277,34 +284,61 @@ if __name__ == '__main__':
     compress_to_header(sys.argv[1], sys.argv[2], sys.argv[3])
 ```
 
-```bash
-# CMake 集成
-add_custom_command(
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/embedded_font_compressed.h
-    COMMAND python3 ${CMAKE_SOURCE_DIR}/tools/compress/resource_compressor.py
-        ${CMAKE_SOURCE_DIR}/assets/fonts/DefaultFont.ttf
-        ${CMAKE_CURRENT_BINARY_DIR}/embedded_font_compressed.h
-        DefaultFont_Compressed
-    DEPENDS ${CMAKE_SOURCE_DIR}/assets/fonts/DefaultFont.ttf
-    VERBATIM
-)
-
-add_custom_target(compress_embedded_resources
-    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/embedded_font_compressed.h
-)
-```
-
 ```cpp
-// 运行时使用
+// 运行时 - 按需解压缓存
 #include "embedded_font_compressed.h"
 #include "Engine/Compress/SnappyCompression.h"
+#include <mutex>
+#include <unordered_map>
 
 namespace Engine {
 namespace Assets {
 
+class ResourceCache {
+public:
+    // 同步获取（首次调用会解压并缓存）
+    static std::span<const uint8_t> get(const char* name) {
+        std::lock_guard lock(s_mutex);
+
+        auto it = s_cache.find(name);
+        if (it != s_cache.end()) {
+            return it->second;
+        }
+
+        // 首次访问 - 解压并缓存
+        auto compressed = getCompressedData(name);
+        auto decompressed = Compress::SnappyCompression::decompress(
+            compressed.data(), compressed.size());
+
+        s_cache[name] = decompressed;
+        return decompressed;
+    }
+
+    // 异步预加载（在加载界面/启动画面时调用）
+    static Future<void> preloadAsync(const char* name) {
+        return JobSystem::submit([name]() {
+            get(name);  // 触发解压和缓存
+        });
+    }
+
+    // 批量预加载（返回进度回调）
+    static void preloadBatch(std::span<const char*> names,
+                            std::function<void(size_t, size_t)> progress) {
+        for (size_t i = 0; i < names.size(); ++i) {
+            preloadAsync(names[i]);
+            progress(i + 1, names.size());
+        }
+    }
+
+private:
+    static std::unordered_map<std::string, std::vector<uint8_t>> s_cache;
+    static std::mutex s_mutex;
+};
+
+// 具体资源访问器
 struct EmbeddedFont {
-    static const uint8_t* getData() {
-        return Embedded::DefaultFont_Compressed;
+    static std::span<const uint8_t> getData() {
+        return ResourceCache::get("DefaultFont");
     }
 
     static size_t getCompressedSize() {
@@ -314,12 +348,11 @@ struct EmbeddedFont {
     static size_t getOriginalSize() {
         return Embedded::DefaultFont_Compressed_OriginalSize;
     }
+};
 
-    // 一次性解压到缓存
-    static std::vector<uint8_t> decompress() {
-        auto compressed = getData();
-        auto size = getCompressedSize();
-        return Compress::SnappyCompression::decompress(compressed, size);
+struct EmbeddedShader {
+    static std::span<const uint8_t> getData() {
+        return ResourceCache::get("DefaultShader");
     }
 };
 
@@ -327,46 +360,90 @@ struct EmbeddedFont {
 } // namespace Engine
 ```
 
-**使用示例**：
+**使用场景 - 启动画面掩盖加载**：
 ```cpp
-// 应用启动时预解压
-class ResourceCache {
+class LoadingScreen : public Scene {
 public:
-    void initialize() {
-        // 解压内嵌字体
-        auto fontData = Assets::EmbeddedFont::decompress();
-        m_defaultFont = Font::loadFromMemory(fontData);
+    void onEnter() override {
+        // 显示加载界面
+        showLoadingBar();
 
-        // 解压内嵌着色器
-        auto shaderData = Assets::EmbeddedShader::decompress();
-        m_defaultShader = Renderer::createShader(shaderData);
+        // 预加载核心资源（异步，显示进度）
+        const char* criticalResources[] = {
+            "DefaultFont",
+            "DefaultShader",
+            "UIAtlas",
+            "StartupMusic"
+        };
+
+        size_t loadedCount = 0;
+        Assets::ResourceCache::preloadBatch(criticalResources,
+            [&](size_t current, size_t total) {
+                loadedCount = current;
+                updateLoadingBar(float(current) / total);
+            });
+
+        // 预加载完成后进入主菜单
+        whenAllDone([this]() {
+            SceneManager::loadScene<MainMenu>();
+        });
+    }
+};
+```
+
+**游戏场景按需加载**：
+```cpp
+class GameScene : public Scene {
+public:
+    void onEnter() override {
+        // 显示"正在加载..." 提示
+
+        // 只预加载本场景需要的资源
+        Assets::ResourceCache::preloadAsync("Level1Mesh");
+        Assets::ResourceCache::preloadAsync("Level1Textures");
+
+        // 玩家进入某个区域时才加载该区域资源
+        m_regionLoadTrigger = [this](const Rect& region) {
+            if (region.contains(playerPosition())) {
+                Assets::ResourceCache::preloadAsync(region.shaderName);
+            }
+        };
     }
 };
 ```
 
 **压缩效果示例**：
 
-| 资源类型 | 原始大小 | 压缩后 | 节省 |
-|----------|----------|--------|------|
-| TrueType 字体 (500KB) | 500 KB | 280 KB | 44% |
-| SPIR-V 着色器 (50KB) | 50 KB | 32 KB | 36% |
-| GLSL 源码 (20KB) | 20 KB | 8 KB | 60% |
-| PNG 图标 (10KB) | 10 KB | 9 KB | 10% |
+| 资源类型 | 原始大小 | 压缩后 | 节省 | 解压时间 |
+|----------|----------|--------|------|----------|
+| TrueType 字体 (500KB) | 500 KB | 280 KB | 44% | ~1ms |
+| SPIR-V 着色器 (50KB) | 50 KB | 32 KB | 36% | <0.1ms |
+| GLSL 源码 (20KB) | 20 KB | 8 KB | 60% | <0.1ms |
+| PNG 图标 (10KB) | 10 KB | 9 KB | 10% | <0.1ms |
 
-**高级用法 - 多资源打包**：
-```cpp
-// 将多个内嵌资源打包到一个压缩块
-struct EmbeddedResourcePack {
-    struct ResourceEntry {
-        uint32_t offset;
-        uint32_t compressedSize;
-        uint32_t originalSize;
-        uint32_t nameHash;  // or name offset
-    };
-
-    static std::vector<uint8_t> getResource(const char* name);
-};
+**启动画面时间分配示例**：
 ```
+┌─────────────────────────────────────────────────┐
+│  Loading Screen (3-5 seconds)                  │
+├─────────────────────────────────────────────────┤
+│  ▓▓▓▓▓▓▓▓▓░░░░░░ 60%                         │
+│  Loading assets...                             │
+├─────────────────────────────────────────────────┤
+│  解压系统资源 (0.5s)                            │
+│  加载着色器 (0.3s)                              │
+│  加载纹理 (1.5s) ← 从文件/网络读取             │
+│  解压纹理 (0.5s)                               │
+│  初始化场景 (0.2s)                             │
+│  预留缓冲 (1s)                                  │
+└─────────────────────────────────────────────────┘
+```
+
+**关键点**：
+- 启动画面的主要目的是掩盖**磁盘/网络 I/O**，而非解压时间
+- Snappy 解压非常快（~500MB/s），通常不是瓶颈
+- 真正的耗时操作是：纹理上传GPU、着色器编译、网络请求
+- 按需解压避免启动时一次性解压所有资源
+- 异步预加载让用户体验更流畅
 
 #### CMake 配置
 
