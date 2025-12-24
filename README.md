@@ -171,6 +171,7 @@ Related Repositories:
 - [🔄 RenderGraph Migration Plan](docs/RenderGraph_Migration_Plan.md) - Detailed migration strategy
 - [🎮 Rendering System](docs/RenderingSystem.md) - Current rendering architecture
 - [💾 Asset Serialization](docs/AssetSerialization.md) - Resource management system
+- [📦 Embedded Resources](docs/EmbeddedResources.md) - Declaration-style embedded resource system with compression
 - [📝 Development Notes](docs/MEMO.md) - Technical implementation details
 
 ### 🗺️ Project Planning
