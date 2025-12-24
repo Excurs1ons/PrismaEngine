@@ -2,13 +2,16 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-lightgrey.svg)](https://github.com/Excurs1ons/PrismaEngine)
-[![Build Prisma Engine](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build.yml)
+[![PrismaAndroid](https://img.shields.io/badge/PrismaAndroid-Vulkan%20Runtime-success.svg)](https://github.com/Excurs1ons/PrismaAndroid)
+[![Vulkan Migration](https://img.shields.io/badge/Vulkan%20Backend-In%20Progress-blue.svg)](docs/Roadmap.md)
 [![RenderGraph](https://img.shields.io/badge/RenderGraph-Planning-orange.svg)](docs/RenderGraph_Migration_Plan.md)
 
 
 Prisma Engine is a modern 3D game engine built from scratch, focusing on learning advanced graphics programming techniques and modern rendering architectures. The project implements cutting-edge rendering systems including ScriptableRenderPipeline and is currently migrating to a RenderGraph-based architecture for optimal performance and flexibility.
 
 English | [简体中文](docs/README_zh.md)
+
+> **Note**: [PrismaAndroid](https://github.com/Excurs1ons/PrismaAndroid) contains a fully functional Vulkan runtime (~1300 lines) that is being progressively migrated into the engine's rendering abstraction layer.
 
 ## 🎯 Project Goals
 
@@ -39,9 +42,18 @@ English | [简体中文](docs/README_zh.md)
 
 ### ⚠️ Development Status
 - This is a learning project focused on modern graphics programming
+- **Vulkan Backend Migration**: PrismaAndroid's production-ready Vulkan renderer is being integrated into the engine
 - Actively migrating to RenderGraph architecture (see [migration plan](docs/RenderGraph_Migration_Plan.md))
 - Performance optimizations and bug fixes ongoing
 - Community contributions and feedback are welcome!
+
+### 📊 Current Progress (30-35%)
+- ✅ ECS Component System, Scene Management, Camera2D/3D
+- ✅ DirectX 12 Backend (65% complete)
+- ✅ **Vulkan Backend (PrismaAndroid) - 80% complete**
+- 🔄 ScriptableRenderPipeline framework
+- ⏳ RenderGraph architecture (planning phase)
+- ❌ Physics, Animation, Editor UI (not started)
 
 ## 📋 System Requirements
 
@@ -142,6 +154,15 @@ PrismaEngine/
 ├── CMakeLists.txt                 # Main CMake configuration
 ├── CMakePresets.json              # CMake presets
 └── .gitmodules                    # Git submodule configuration
+
+Related Repositories:
+├── PrismaAndroid/                 # Vulkan Android Runtime (being migrated)
+│   ├── app/src/main/cpp/
+│   │   ├── VulkanContext.{h,cpp}  # Vulkan context management
+│   │   ├── RendererVulkan.{h,cpp} # Full Vulkan renderer (~1300 lines)
+│   │   ├── ShaderVulkan.{h,cpp}   # SPIR-V shader loading
+│   │   └── TextureAsset.{h,cpp}   # Texture asset management
+│   └── ...
 ```
 
 ## 📚 Documentation
