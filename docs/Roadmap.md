@@ -120,7 +120,144 @@ src/engine/graphic/
 
 ---
 
-### 3. HAP 视频播放系统
+### 3. Google Snappy 压缩库集成
+
+#### 背景
+[Snappy](https://github.com/google/snappy) 是 Google 开源的高速压缩/解压缩库，特点：
+- 极快的压缩/解压速度 (约 500MB/s/核)
+- 适中的压缩比 (50-70% 原始大小)
+- 稳定可靠，广泛用于生产环境
+- 跨平台支持 (Windows/Linux/macOS/Android)
+
+#### 应用场景
+
+| 场景 | 说明 | 优先级 |
+|------|------|--------|
+| **资源压缩** | 纹理/网格/音频资源打包压缩 | 高 |
+| **网络传输** | 多人游戏数据包压缩 | 中 |
+| **HAP 视频** | HAP 格式内部使用 Snappy 压缩 | 高 |
+| **存档文件** | 游戏存档序列化数据压缩 | 中 |
+| **日志压缩** | 运行时日志文件压缩 | 低 |
+
+#### 系统架构
+
+```
+src/engine/compress/
+├── Compression.h              # 压缩接口抽象
+├── SnappyCompression.h/cpp    # Snappy 实现
+├── CompressionStream.h/cpp    # 流式压缩
+└── CompressionUtils.h/cpp     # 工具函数
+
+third_party/snappy/
+├── snappy-c.h                 # C 接口
+├── snappy-sinksource.h        # 流处理
+├── snappy-stubs-internal.h    # 内部实现
+└── snappy_unittest.cc         # 单元测试
+```
+
+#### API 设计
+
+```cpp
+namespace Engine {
+namespace Compress {
+
+// 压缩接口
+class ICompression {
+public:
+    virtual std::vector<uint8_t> compress(
+        const uint8_t* data, size_t size) = 0;
+    virtual std::vector<uint8_t> decompress(
+        const uint8_t* data, size_t size) = 0;
+    virtual float getCompressionRatio() const = 0;
+};
+
+// Snappy 实现
+class SnappyCompression : public ICompression {
+public:
+    std::vector<uint8_t> compress(
+        const uint8_t* data, size_t size) override;
+
+    std::vector<uint8_t> decompress(
+        const uint8_t* data, size_t size) override;
+
+    float getCompressionRatio() const override;
+};
+
+// 工具函数
+namespace Utils {
+    std::vector<uint8_t> compressFile(const std::string& path);
+    bool decompressToFile(const std::vector<uint8_t>& compressed,
+                         const std::string& outputPath);
+    size_t estimateCompressedSize(size_t originalSize);
+}
+
+} // namespace Compress
+} // namespace Engine
+```
+
+#### 实现阶段
+
+| 阶段 | 内容 | 状态 |
+|------|------|------|
+| **Phase 1** | Snappy 库集成 (CMake + vcpkg) | ⏳ 计划中 |
+| **Phase 2** | 压缩接口抽象层实现 | ⏳ 计划中 |
+| **Phase 3** | 流式压缩支持 | ⏳ 计划中 |
+| **Phase 4** | 资源系统集成 | ⏳ 计划中 |
+| **Phase 5** | 性能测试与优化 | ⏳ 计划中 |
+
+#### 性能基准
+
+| 数据类型 | 原始大小 | 压缩后 | 压缩比 | 压缩速度 | 解压速度 |
+|----------|----------|--------|--------|----------|----------|
+| JSON 文本 | 1 MB | ~400 KB | 2.5x | ~500 MB/s | ~800 MB/s |
+| 纹理数据 | 4 MB | ~2.5 MB | 1.6x | ~450 MB/s | ~750 MB/s |
+| 网格数据 | 500 KB | ~250 KB | 2.0x | ~520 MB/s | ~780 MB/s |
+| HAP 帧 | 变化 | 变化 | ~1.8x | ~480 MB/s | ~760 MB/s |
+
+#### 集成示例
+
+```cpp
+// 资源加载时自动解压
+auto compressedData = ResourceManager::loadRaw("assets/models.cps");
+auto decompressed = SnappyCompression::decompress(
+    compressedData.data(), compressedData.size());
+Model* model = Model::deserialize(decompressed);
+
+// 存档保存时压缩
+auto saveData = SaveGame::serialize(gameObject);
+auto compressedSave = SnappyCompression::compress(
+    saveData.data(), saveData.size());
+File::writeAllBytes("save_001.sav", compressedSave);
+
+// 网络数据包压缩
+Packet packet;
+packet.writeGameObjectState(gameObject);
+auto compressed = SnappyCompression::compress(packet.data(), packet.size());
+networkManager->send(compressed);
+```
+
+#### CMake 配置
+
+```cmake
+# 添加 Snappy 子模块或使用 vcpkg
+option(PRISMA_USE_SNAPPY "Enable Snappy compression" ON)
+
+if(PRISMA_USE_SNAPPY)
+    find_package(Snappy REQUIRED)
+    target_link_libraries(Engine PRIVATE Snappy::snappy)
+    target_compile_definitions(Engine PRIVATE PRISMA_USE_SNAPPY=1)
+endif()
+```
+
+#### 关键技术点
+- 内存映射文件 (mmap) 零拷贝压缩
+- 多线程并行压缩（大文件分块）
+- SIMD 指令优化 (ARM NEON / x86 SSE)
+- 与 HAP 解码器的深度集成
+
+---
+
+### 4. HAP 视频播放系统
 
 #### 背景
 [HAP](https://github.com/vidvox/hap) 是高性能 GPU 加速视频编解码格式，特点：
@@ -519,6 +656,7 @@ material->setTexture("VideoTexture", outputTexture);
 | 物理系统 | 5% | 🔴 未开始 |
 | RenderGraph 架构 | 10% | 🔴 规划中 |
 | **HLSL → SPIR-V 编译流程** | **0%** | 🔴 **规划中** |
+| **Google Snappy 压缩库** | **0%** | 🔴 **规划中** |
 | **Google Swappy 集成** | **0%** | 🔴 **规划中** |
 | **HAP 视频播放系统** | **0%** | 🔴 **规划中** |
 | 高级渲染 (RTXGI) | 0% | 🔴 未开始 |
@@ -640,24 +778,27 @@ src/engine/graphic/
 | 功能 | 优先级 | 依赖 |
 |------|--------|------|
 | **HLSL → SPIR-V** | 🔴 高 | Vulkan 迁移完成 |
+| **Google Snappy** | 🔴 高 | - |
+| **HAP 视频播放** | 🟢 低 | Snappy 集成完成 |
 | **Google Swappy** | 🟡 中 | Vulkan 迁移完成 |
-| **HAP 视频播放** | 🟢 低 | 纹理系统完善 |
 
 #### 技术栈概览
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    高级渲染功能栈                            │
-├─────────────────────────────────────────────────────────────┤
-│  HLSL ──DXC──► SPIR-V ──► Vulkan/DX12 统一着色器           │
-├─────────────────────────────────────────────────────────────┤
-│  Swappy ──► 帧率同步 ──► 功耗优化 ──► 性能统计              │
-├─────────────────────────────────────────────────────────────┤
-│  HAP ──Snappy──► GPU 解码 ──► VideoTexture ──► 材质播放     │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      高级渲染功能栈                              │
+├─────────────────────────────────────────────────────────────────┤
+│  HLSL ──DXC──► SPIR-V ──► Vulkan/DX12 统一着色器              │
+├─────────────────────────────────────────────────────────────────┤
+│  Snappy ──► 资源压缩 ──► 网络传输 ──► HAP 视频                 │
+├─────────────────────────────────────────────────────────────────┤
+│  Swappy ──► 帧率同步 ──► 功耗优化 ──► 性能统计                 │
+├─────────────────────────────────────────────────────────────────┤
+│  HAP ──Snappy──► GPU 解码 ──► VideoTexture ──► 材质播放        │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-游戏引擎开发是一项复杂的系统工程，需要持续的投入和耐心。当前项目拥有良好的架构基础，但需要大量实现工作才能达到可用状态。**PrismaAndroid 的 Vulkan 实现为项目提供了一个功能完整的起点，将大大加速跨平台渲染能力的实现。通过 HLSL→SPIR-V 统一着色器流程、Google Swappy 帧率管理优化、以及 HAP 视频播放能力，引擎将具备现代化的高级渲染特性。**
+游戏引擎开发是一项复杂的系统工程，需要持续的投入和耐心。当前项目拥有良好的架构基础，但需要大量实现工作才能达到可用状态。**PrismaAndroid 的 Vulkan 实现为项目提供了一个功能完整的起点，将大大加速跨平台渲染能力的实现。通过 HLSL→SPIR-V 统一着色器流程、Google Snappy 高速压缩、Google Swappy 帧率管理优化、以及 HAP 视频播放能力，引擎将具备现代化的高级渲染特性。**
 
 ---
 
