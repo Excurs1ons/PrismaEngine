@@ -1,10 +1,13 @@
 # Prisma Engine
 
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-lightgrey.svg)](https://github.com/Excurs1ons/PrismaEngine)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Excurs1ons/PrismaEngine)
 [![PrismaAndroid](https://img.shields.io/badge/PrismaAndroid-Vulkan%20Runtime-success.svg)](https://github.com/Excurs1ons/PrismaAndroid)
-[![Vulkan Migration](https://img.shields.io/badge/Vulkan%20Backend-In%20Progress-blue.svg)](Roadmap.md)
-[![RenderGraph](https://img.shields.io/badge/RenderGraph-Planning-orange.svg)](RenderGraph_Migration_Plan.md)
+
+[![Vulkan Migration](https://img.shields.io/badge/Vulkan%20Backend-In%20Progress-blue.svg)](docs/Roadmap.md)
+[![RenderGraph](https://img.shields.io/badge/RenderGraph-Planning-orange.svg)](docs/RenderGraph_Migration_Plan.md)
 
 Prisma Engine 是一个从零开始构建的现代 3D 游戏引擎，专注于学习高级图形编程技术和现代渲染架构。
 
