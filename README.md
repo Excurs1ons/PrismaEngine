@@ -2,10 +2,11 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Android-lightgrey.svg)](https://github.com/Excurs1ons/PrismaEngine)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Excurs1ons/PrismaEngine)
 [![PrismaAndroid](https://img.shields.io/badge/PrismaAndroid-Vulkan%20Runtime-success.svg)](https://github.com/Excurs1ons/PrismaAndroid)
+
 [![Vulkan Migration](https://img.shields.io/badge/Vulkan%20Backend-In%20Progress-blue.svg)](docs/Roadmap.md)
 [![RenderGraph](https://img.shields.io/badge/RenderGraph-Planning-orange.svg)](docs/RenderGraph_Migration_Plan.md)
-
 
 Prisma Engine is a modern 3D game engine built from scratch, focusing on learning advanced graphics programming techniques and modern rendering architectures.
 
