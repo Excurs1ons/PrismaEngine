@@ -82,6 +82,7 @@ private:
         size_t currentPosition = 0;                 // 当前播放位置
         float duration = 0.0f;                      // 音频时长
         bool isActive = false;                      // 是否活跃
+        VoiceState state = VoiceState::Stopped;
     };
 
     // ========== 初始化相关 ==========
