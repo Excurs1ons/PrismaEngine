@@ -19,6 +19,20 @@
     #endif
 #endif
 
+// ------------------------------------------------------------
+// Time 类实现 - Time 定义在全局命名空间
+// ------------------------------------------------------------
+float Time::DeltaTime = 0.0f;
+float Time::TotalTime = 0.0f;
+float Time::TimeScale = 1.0f;
+
+float Time::GetTime() {
+    using namespace std::chrono;
+    static auto start = high_resolution_clock::now();
+    auto now = high_resolution_clock::now();
+    return duration<float>(now - start).count();
+}
+
 namespace Engine {
 
 // ------------------------------------------------------------
@@ -31,20 +45,6 @@ static WindowHandle s_currentWindow = nullptr;
 #if !defined(_WIN32) && !defined(__ANDROID__)
 static Platform::EventCallback s_eventCallback = nullptr;
 #endif
-
-// ------------------------------------------------------------
-// Time 类实现
-// ------------------------------------------------------------
-float Time::DeltaTime = 0.0f;
-float Time::TotalTime = 0.0f;
-float Time::TimeScale = 1.0f;
-
-float Time::GetTime() {
-    using namespace std::chrono;
-    static auto start = high_resolution_clock::now();
-    auto now = high_resolution_clock::now();
-    return duration<float>(now - start).count();
-}
 
 // ------------------------------------------------------------
 // 平台生命周期管理

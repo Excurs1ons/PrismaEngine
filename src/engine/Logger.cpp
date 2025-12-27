@@ -21,7 +21,7 @@ void Logger::SetPlatformLogger(Engine::IPlatformLogger* platformLogger) {
 }
 
 // LogLevel 转 PlatformLogLevel 辅助函数
-static PlatformLogLevel ConvertLogLevel(LogLevel level) {
+static Engine::PlatformLogLevel ConvertLogLevel(LogLevel level) {
     switch (level) {
         case LogLevel::Trace:   return PlatformLogLevel::Trace;
         case LogLevel::Debug:   return PlatformLogLevel::Debug;
