@@ -61,28 +61,6 @@ struct ShaderReflection {
     std::vector<std::string> defines;
 };
 
-/// @brief 着色器编译选项
-struct ShaderCompileOptions {
-    bool debug = false;
-    bool optimize = true;
-    bool skipValidation = false;
-    bool enable16BitTypes = false;
-    bool allResourcesBound = false;
-    bool avoidFlowControl = false;
-    bool preferFlowControl = false;
-    bool enableStrictness = false;
-    bool ieeeStrictness = false;
-    bool warningsAsErrors = false;
-    bool resourcesMayAlias = false;
-    int optimizationLevel = 3;  // 0-3, higher is more optimization
-    uint32_t flags = 0;  // 编译标志位
-    std::vector<std::string> additionalDefines;
-    std::string additionalIncludePath;
-    std::string additionalArguments;
-    std::vector<std::string> dependencies;  // 依赖的其他着色器
-    std::vector<std::string> includeDirectories;  // 包含目录
-};
-
 /// @brief 着色器抽象接口
 class IShader {
 public:

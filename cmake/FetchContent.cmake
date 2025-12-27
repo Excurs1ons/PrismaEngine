@@ -147,6 +147,9 @@ if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN)
         set(SDL_EXAMPLES OFF CACHE BOOL "Build SDL3 examples" FORCE)
         set(SDL_INSTALL_TESTS OFF CACHE BOOL "Install SDL3 tests" FORCE)
 
+        # 禁用 SDL3 的预编译头（Android NDK 构建时可能有问题）
+        set(SDL_PCH OFF CACHE BOOL "Build SDL3 with PCH" FORCE)
+
         FetchContent_MakeAvailable(SDL3)
         message(STATUS "SDL3: 使用 FetchContent")
     else()
@@ -157,7 +160,7 @@ endif()
 
 # Vulkan-Headers - 当启用 Vulkan 渲染时
 if(PRISMA_ENABLE_RENDER_VULKAN)
-    if(ANDROID)
+    if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
         # Android 平台使用 NDK 自带的 Vulkan，不需要额外下载
         message(STATUS "Vulkan: 使用 Android NDK 的 Vulkan")
     elseif(PRISMA_USE_FETCHCONTENT)
