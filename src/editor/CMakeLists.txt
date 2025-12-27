@@ -67,7 +67,6 @@ set_target_properties(Editor PROPERTIES
 
 # 安装规则
 install(TARGETS Editor
-    EXPORT PrismaEngineTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
     RUNTIME DESTINATION bin

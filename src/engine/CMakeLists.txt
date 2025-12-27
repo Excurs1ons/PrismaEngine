@@ -363,7 +363,6 @@ target_compile_definitions(Engine PUBLIC
 
 # 安装规则
 install(TARGETS Engine
-    EXPORT PrismaEngineTargets
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
