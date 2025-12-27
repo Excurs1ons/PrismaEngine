@@ -47,7 +47,6 @@ on:
         type: boolean
 
 env:
-  VCPKG_VERSION: 'latest'
   CMAKE_VERSION: '3.31.0'
   ANDROID_NDK_VERSION: 27.0.12077973
 
@@ -88,7 +87,6 @@ jobs:
             echo "game=false" >> $GITHUB_OUTPUT
           fi
         else
-          # For tags and manual dispatch, build all selected components
           echo "editor=${{ github.event.inputs.build_editor || 'true' }}" >> $GITHUB_OUTPUT
           echo "engine=${{ github.event.inputs.build_engine || 'true' }}" >> $GITHUB_OUTPUT
           echo "game=${{ github.event.inputs.build_game || 'true' }}" >> $GITHUB_OUTPUT
@@ -103,89 +101,6 @@ jobs:
           echo "is_release=false" >> $GITHUB_OUTPUT
         fi
 
-  # Build Editor if needed
-  build-editor:
-    needs: [detect-changes, build-engine]
-    if: needs.detect-changes.outputs.build_editor == 'true' && (needs.detect-changes.outputs.engine == 'false' || needs.build-engine.result == 'success')
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        build_type: [Release, Debug]
-        platform: [x64, x86]
-        include:
-          - platform: x64
-            arch: x64
-            artifact_suffix: win64
-          - platform: x86
-            arch: Win32
-            artifact_suffix: win32
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Cache vcpkg
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/vcpkg_installed
-          C:/vcpkg
-        key: vcpkg-editor-${{ matrix.platform }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
-        restore-keys: |
-          vcpkg-editor-${{ matrix.platform }}-${{ matrix.build_type }}-
-          vcpkg-editor-${{ matrix.platform }}-
-
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v2.0
-      with:
-        cmake-version: ${{ env.CMAKE_VERSION }}
-
-    - name: Setup vcpkg
-      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
-      run: |
-        ./vcpkg/bootstrap-vcpkg.bat
-        ./vcpkg/vcpkg integrate install
-
-    - name: Configure CMake
-      run: |
-        cmake -B build-${{ matrix.platform }}-${{ matrix.build_type }} `
-          -G "Visual Studio 17 2022" `
-          -A ${{ matrix.arch }} `
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
-          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform }}-windows
-
-    - name: Build
-      run: |
-        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
-          --config ${{ matrix.build_type }} `
-          --target Editor `
-          --parallel
-
-    - name: Package
-      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
-      run: |
-        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
-        # Copy executable
-        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/Editor.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
-        # Copy required DLLs
-        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No DLLs to copy"
-        # Copy assets
-        xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
-        # Create archive
-        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
-        7z a ../PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip *
-
-    - name: Upload artifacts
-      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
-      uses: actions/upload-artifact@v4
-      with:
-        name: PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
-        path: PrismaEditor-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip
-        retention-days: 30
-
   # Build Engine if needed
   build-engine:
     needs: detect-changes
@@ -199,21 +114,13 @@ jobs:
             build_type: Release
             arch: x64
             artifact_suffix: win64
+            preset: windows-x64-release
           - os: windows-latest
             platform: windows
             build_type: Debug
             arch: x64
             artifact_suffix: win64-debug
-          - os: windows-latest
-            platform: windows
-            build_type: Release
-            arch: Win32
-            artifact_suffix: win32
-          - os: windows-latest
-            platform: windows
-            build_type: Debug
-            arch: Win32
-            artifact_suffix: win32-debug
+            preset: windows-x64-debug
           - os: ubuntu-latest
             platform: android
             build_type: Release
@@ -231,49 +138,33 @@ jobs:
       with:
         submodules: recursive
 
-    # Windows specific setup
-    - name: Cache vcpkg (Windows)
-      if: matrix.platform == 'windows'
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/vcpkg_installed
-          C:/vcpkg
-        key: vcpkg-engine-${{ matrix.arch }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
-        restore-keys: |
-          vcpkg-engine-${{ matrix.arch }}-${{ matrix.build_type }}-
-          vcpkg-engine-${{ matrix.arch }}-
-
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
-    - name: Setup vcpkg (Windows)
-      if: matrix.platform == 'windows' && steps.cache-vcpkg.outputs.cache-hit != 'true'
-      run: |
-        ./vcpkg/bootstrap-vcpkg.bat
-        ./vcpkg/vcpkg integrate install
+    # Windows build
+    - name: Cache CMake build (Windows)
+      if: matrix.platform == 'windows'
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./build/${{ matrix.preset }}
+        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ matrix.preset }}-
+          ${{ runner.os }}-build-
 
     - name: Configure CMake (Windows)
       if: matrix.platform == 'windows'
-      run: |
-        cmake -B build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} `
-          -G "Visual Studio 17 2022" `
-          -A ${{ matrix.arch }} `
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
-          -DVCPKG_TARGET_TRIPLET=${{ matrix.arch }}-windows
+      run: cmake --preset ${{ matrix.preset }}
 
     - name: Build Engine (Windows)
       if: matrix.platform == 'windows'
       run: |
-        cmake --build build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} `
-          --config ${{ matrix.build_type }} `
-          --target Engine `
-          --parallel
+        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --parallel
 
-    # Android specific setup
+    # Android build
     - name: Setup Android NDK
       if: matrix.platform == 'android'
       uses: android-actions/setup-android@v3
@@ -290,21 +181,16 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y ninja-build
 
-    - name: Cache vcpkg (Android)
+    - name: Cache CMake build (Android)
       if: matrix.platform == 'android'
       uses: actions/cache@v4
       with:
         path: |
-          ./vcpkg_installed
-        key: vcpkg-engine-android-${{ matrix.abi }}-${{ hashFiles('vcpkg.json') }}
+          ./build-android-${{ matrix.abi }}-release
+        key: ${{ runner.os }}-build-android-${{ matrix.abi }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'android/CMakeLists.txt') }}
         restore-keys: |
-          vcpkg-engine-android-${{ matrix.abi }}-
-
-    - name: Setup vcpkg (Android)
-      if: matrix.platform == 'android' && steps.cache-vcpkg.outputs.cache-hit != 'true'
-      run: |
-        ./vcpkg/bootstrap-vcpkg.sh
-        ./vcpkg/vcpkg install sdl3 imgui nlohmann-json vulkan --triplet ${{ matrix.abi }}-android
+          ${{ runner.os }}-build-android-${{ matrix.abi }}-
+          ${{ runner.os }}-build-android-
 
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
@@ -320,9 +206,7 @@ jobs:
     - name: Build Engine (Android)
       if: matrix.platform == 'android'
       run: |
-        cmake --build build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} \
-          --config ${{ matrix.build_type }} \
-          --parallel 2
+        cmake --build build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} --parallel 2
 
     - name: Package (Windows)
       if: matrix.platform == 'windows' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
@@ -331,7 +215,7 @@ jobs:
         mkdir -p package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/include
 
         # Copy library files
-        copy build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/PrismaEngine.lib package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/
+        copy build/${{ matrix.preset }}/lib/${{ matrix.build_type }}/PrismaEngine.lib package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/
 
         # Copy headers
         xcopy src/engine\*.h package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/include /E /I /Y 2>nul || echo "No headers to copy"
@@ -365,7 +249,7 @@ jobs:
         path: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.tar.gz
         retention-days: 30
 
-  # Build Game if needed
+  # Build Game if needed (simplified, vcpkg-free)
   build-game:
     needs: [detect-changes, build-engine]
     if: needs.detect-changes.outputs.game == 'true' && (needs.detect-changes.outputs.engine == 'false' || needs.build-engine.result == 'success')
@@ -374,6 +258,11 @@ jobs:
       matrix:
         build_type: [Release, Debug]
         platform: [x64]
+        include:
+          - build_type: Release
+            preset: windows-x64-release
+          - build_type: Debug
+            preset: windows-x64-debug
 
     steps:
     - name: Checkout repository
@@ -381,50 +270,31 @@ jobs:
       with:
         submodules: recursive
 
-    - name: Cache vcpkg
-      uses: actions/cache@v4
-      with:
-        path: |
-          ${{ github.workspace }}/vcpkg_installed
-          C:/vcpkg
-        key: vcpkg-game-${{ matrix.platform }}-${{ matrix.build_type }}-${{ hashFiles('vcpkg.json') }}
-        restore-keys: |
-          vcpkg-game-${{ matrix.platform }}-${{ matrix.build_type }}-
-          vcpkg-game-${{ matrix.platform }}-
-
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
-    - name: Setup vcpkg
-      if: steps.cache-vcpkg.outputs.cache-hit != 'true'
-      run: |
-        ./vcpkg/bootstrap-vcpkg.bat
-        ./vcpkg/vcpkg integrate install
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./build/${{ matrix.preset }}
+        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ matrix.preset }}-
+          ${{ runner.os }}-build-
 
     - name: Configure CMake
-      run: |
-        cmake -B build-${{ matrix.platform }}-${{ matrix.build_type }} `
-          -G "Visual Studio 17 2022" `
-          -A ${{ matrix.platform }} `
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} `
-          -DCMAKE_TOOLCHAIN_FILE=./vcpkg/scripts/buildsystems/vcpkg.cmake `
-          -DVCPKG_TARGET_TRIPLET=${{ matrix.platform }}-windows
+      run: cmake --preset ${{ matrix.preset }}
 
     - name: Build Runtime
       run: |
-        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
-          --config ${{ matrix.build_type }} `
-          --target Runtime `
-          --parallel
+        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --target Runtime --parallel
 
     - name: Build Game
       run: |
-        cmake --build build-${{ matrix.platform }}-${{ matrix.build_type }} `
-          --config ${{ matrix.build_type }} `
-          --target Game `
-          --parallel
+        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --target Game --parallel
 
     - name: Package
       if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
@@ -432,8 +302,8 @@ jobs:
         mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
 
         # Copy executables and DLLs
-        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/Runtime.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
-        copy build-${{ matrix.platform }}-${{ matrix.build_type }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No additional DLLs"
+        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/Runtime.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
+        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No additional DLLs"
 
         # Copy game data
         xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
@@ -451,9 +321,74 @@ jobs:
         path: PrismaGame-${{ matrix.platform }}-${{ matrix.build_type }}.zip
         retention-days: 30
 
+  # Build Editor if needed (simplified, vcpkg-free)
+  build-editor:
+    needs: [detect-changes, build-engine]
+    if: needs.detect-changes.outputs.editor == 'true' && (needs.detect-changes.outputs.engine == 'false' || needs.build-engine.result == 'success')
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        build_type: [Release, Debug]
+        platform: [x64]
+        include:
+          - build_type: Release
+            preset: windows-x64-release
+          - build_type: Debug
+            preset: windows-x64-debug
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./build/${{ matrix.preset }}
+        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-build-${{ matrix.preset }}-
+          ${{ runner.os }}-build-
+
+    - name: Configure CMake
+      run: cmake --preset ${{ matrix.preset }}
+
+    - name: Build Editor
+      run: |
+        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --target Editor --parallel
+
+    - name: Package
+      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
+      run: |
+        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
+        # Copy executable
+        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/Editor.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
+        # Copy required DLLs
+        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No DLLs to copy"
+        # Copy assets
+        xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
+        # Create archive
+        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
+        7z a ../PrismaEditor-${{ matrix.platform }}-${{ matrix.build_type }}.zip *
+
+    - name: Upload artifacts
+      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEditor-${{ matrix.platform }}-${{ matrix.build_type }}
+        path: PrismaEditor-${{ matrix.platform }}-${{ matrix.build_type }}.zip
+        retention-days: 30
+
   # Create combined release
   create-release:
-    needs: [detect-changes, build-editor, build-engine, build-game]
+    needs: [detect-changes, build-engine, build-game, build-editor]
     runs-on: ubuntu-latest
     if: needs.detect-changes.outputs.is_release == 'true'
 
@@ -477,9 +412,9 @@ jobs:
           fi
         done
 
-        # Create comprehensive README
+        # Create README
         cat > PrismaEngine-${{ github.ref_name }}/README.md << 'EOF'
-        # Prisma Engine
+        # Prisma Engine Release
 
         This package contains all Prisma Engine components.
 
@@ -497,17 +432,9 @@ jobs:
 
         ## Quick Start
 
-        1. **Using the Editor**
-           - Extract `PrismaEditor-win64-Release.zip`
-           - Run `Editor.exe`
-
-        2. **Developing with the Engine**
-           - Extract the appropriate Engine SDK for your platform
-           - Follow integration instructions in the package
-
-        3. **Playing the Game**
-           - Extract `PrismaGame-x64-Release.zip`
-           - Run `Runtime.exe`
+        1. **Editor**: Extract and run Editor.exe
+        2. **Engine SDK**: Extract for development
+        3. **Game**: Extract and run Runtime.exe
         EOF
 
         # Create final archive
@@ -525,26 +452,15 @@ jobs:
         body: |
           ## Prisma Engine ${{ github.ref_name }}
 
-          🎮 A complete game engine solution
+          A cross-platform game engine with Windows and Android support.
 
-          ### 📦 Complete Package
-          Download `PrismaEngine-Complete-${{ github.ref_name }}.tar.gz` for all components.
+          ### Download
+          - `PrismaEngine-Complete-*.tar.gz` - All components
 
-          ### 🔧 Individual Components
-          Individual component artifacts are also available for selective download.
-
-          ### 🚀 What's New
+          ### What's New
           ${{ github.event.head_commit.message }}
 
-          ### 📋 System Requirements
-          - **Editor**: Windows 10+, DirectX 12, 4GB RAM (8GB recommended)
-          - **Engine SDK**: Windows 10+ or Android 7.0+
-          - **Game**: Windows 10+ or Android 7.0+
-
-          ### 📚 Documentation
-          See README in the package for detailed usage instructions.
-
           ---
-          Built with ❤️ using GitHub Actions
+          Built with GitHub Actions
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
