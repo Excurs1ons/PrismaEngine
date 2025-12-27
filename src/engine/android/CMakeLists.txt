@@ -3,6 +3,20 @@ cmake_minimum_required(VERSION 3.31)
 
 # ========== Android 平台配置 ==========
 
+# Android 平台默认使用动态库（.so）
+option(PRISMA_ENGINE_BUILD_SHARED "Build engine as shared library (so)" ON)
+
+# 设置库类型变量
+if(PRISMA_ENGINE_BUILD_SHARED)
+    set(PRISMA_ENGINE_TYPE SHARED)
+    set(PRISMA_ENGINE_LIBRARY_TYPE SHARED)
+    message(STATUS "Android Engine: Building as SHARED library (.so)")
+else()
+    set(PRISMA_ENGINE_TYPE STATIC)
+    set(PRISMA_ENGINE_LIBRARY_TYPE STATIC)
+    message(STATUS "Android Engine: Building as STATIC library (.a)")
+endif()
+
 # 禁用 SDL3（Android 不需要 SDL3，使用 Vulkan + OpenAL）
 set(PRISMA_ENABLE_AUDIO_SDL3 OFF CACHE BOOL "Enable SDL3 audio device" FORCE)
 set(PRISMA_ENABLE_RENDER_SDL3 OFF CACHE BOOL "Enable SDL3 render device" FORCE)
@@ -44,8 +58,8 @@ set(ENGINE_HEADERS
     ${ENGINE_GRAPHIC_HEADERS}
 )
 
-# 创建Android动态库
-add_library(engine SHARED
+# 创建Android引擎库
+add_library(engine ${PRISMA_ENGINE_TYPE}
     ${ENGINE_SOURCES}
     ${ENGINE_HEADERS}
     ../pch.h
@@ -76,9 +90,23 @@ endif()
 
 # 设置编译定义
 target_compile_definitions(engine
-    PRIVATE ENGINE_EXPORTS
     PUBLIC ANDROID
 )
+
+# ========== 导出符号配置 ==========
+
+# 动态库需要导出宏，静态库不需要
+if(PRISMA_ENGINE_BUILD_SHARED)
+    target_compile_definitions(engine PRIVATE
+        ENGINE_BUILD_SHARED=1
+        ENGINE_EXPORTS=1
+    )
+else()
+    # 静态库不需要导出宏
+    target_compile_definitions(engine PRIVATE
+        ENGINE_BUILD_STATIC=1
+    )
+endif()
 
 # Android特定编译选项
 target_compile_options(engine PRIVATE
