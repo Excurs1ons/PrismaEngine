@@ -19,8 +19,12 @@
 
 // 前置声明，避免循环依赖
 namespace Engine {
-    enum class KeyCode;
-    enum class MouseButton;
+    namespace Input {
+        enum KeyCode;  // KeyCode 是非作用域枚举，定义在 Engine::Input 中
+        using MouseButton = int;
+    }
+    using Input::KeyCode;
+    using Input::MouseButton;
 }
 
 // 条件包含 KeyCode.h（如果存在）

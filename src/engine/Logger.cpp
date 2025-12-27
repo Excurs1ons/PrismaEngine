@@ -16,7 +16,7 @@ bool Logger::IsInitialized() const {
     return initialized_;
 }
 
-void Logger::SetPlatformLogger(IPlatformLogger* platformLogger) {
+void Logger::SetPlatformLogger(Engine::IPlatformLogger* platformLogger) {
     platformLogger_ = platformLogger;
 }
 
