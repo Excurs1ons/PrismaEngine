@@ -17,6 +17,7 @@
       },
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
+        "PRISMA_BUILD_EDITOR": "OFF",
         "CMAKE_TOOLCHAIN_FILE": ""
       },
       "condition": {
