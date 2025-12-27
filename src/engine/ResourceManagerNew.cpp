@@ -29,13 +29,14 @@
 #if defined(_WIN32)
 #include <Windows.h>
 #include <d3dcompiler.h>
-#include <filesystem>
+
 #include <wrl/client.h>
-namespace fs = std::filesystem;
+
 #else
 #include <sys/stat.h>
 #endif
 
+#include <filesystem>
 namespace PrismaEngine::Graphic {
 
 ResourceManager::ResourceManager()
@@ -43,7 +44,7 @@ ResourceManager::ResourceManager()
     , m_cacheDirectory("cache/resources") {
 
     // 创建缓存目录
-    fs::create_directories(m_cacheDirectory);
+    std::filesystem::create_directories(m_cacheDirectory);
 }
 
 ResourceManager::~ResourceManager() {
@@ -791,7 +792,7 @@ void ResourceManager::CheckFileModifications() {
 
     for (auto& [name, timestamp] : m_fileTimestamps) {
         std::error_code ec;
-        auto currentFtime = fs::last_write_time(name, ec);
+        auto currentFtime = std::filesystem::last_write_time(name, ec);
         if (!ec && currentFtime != timestamp) {
             timestamp = currentFtime;
             needsUpdate = true;

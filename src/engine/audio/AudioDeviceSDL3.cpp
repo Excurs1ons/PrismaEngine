@@ -28,7 +28,7 @@ AudioDeviceSDL3::AudioDeviceSDL3() {
     m_audioSpec.freq = 44100;
     m_audioSpec.format = SDL_AUDIO_F32;
     m_audioSpec.channels = 2;
-    m_audioSpec.samples = 512;
+    // SDL3不再使用samples成员，buffer size由SDL内部管理
 
     // 初始化统计
     ResetStats();
@@ -61,9 +61,7 @@ bool AudioDeviceSDL3::Initialize(const AudioDesc& desc) {
     if (desc.outputFormat.channels != 0) {
         m_audioSpec.channels = static_cast<int>(desc.outputFormat.channels);
     }
-    if (desc.bufferSize != 0) {
-        m_audioSpec.samples = static_cast<int>(desc.bufferSize);
-    }
+    // SDL3不再使用samples成员，buffer size由SDL内部管理
 
     // 打开音频设备
     if (!OpenAudioDevice(desc.outputFormat)) {
@@ -75,14 +73,16 @@ bool AudioDeviceSDL3::Initialize(const AudioDesc& desc) {
     // 设置音频回调
     SetupAudioCallback();
 
-    // 初始化混音缓冲区
-    m_mixBuffer.resize(m_audioSpec.samples * m_audioSpec.channels);
+    // 初始化混音缓冲区 - 使用固定大小作为默认值
+    // SDL3会动态调整缓冲区大小
+    size_t defaultBufferSize = 4096; // 保守估计
+    m_mixBuffer.resize(defaultBufferSize);
 
     m_masterVolume = 1.0f;
     m_initialized.store(true);
 
-    LOG_INFO("Audio", "SDL3音频设备初始化成功，频率:{}Hz, 声道:{}, 缓冲区:{}采样",
-              m_obtainedSpec.freq, m_obtainedSpec.channels, m_obtainedSpec.samples);
+    LOG_INFO("Audio", "SDL3音频设备初始化成功，频率:{}Hz, 声道:{}",
+              m_obtainedSpec.freq, m_obtainedSpec.channels);
     return true;
 }
 
@@ -486,7 +486,7 @@ bool AudioDeviceSDL3::InitializeSDLAudio() {
 
 bool AudioDeviceSDL3::OpenAudioDevice(const AudioFormat& format) {
     // 打开音频设备
-    m_deviceId = SDL_OpenAudioDevice(nullptr, 0, &m_audioSpec, &m_obtainedSpec, 0);
+    m_deviceId = SDL_OpenAudioDevice(0, &m_audioSpec);
     if (m_deviceId == 0) {
         LOG_ERROR("Audio", "无法打开SDL音频设备: {}", SDL_GetError());
         return false;
