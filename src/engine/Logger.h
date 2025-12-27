@@ -14,6 +14,11 @@
 #include <type_traits>
 #include <vector>
 
+// 前置声明，避免循环依赖
+namespace Engine {
+class IPlatformLogger;
+}
+
 // 日志配置
 struct LogConfig {
     LogLevel minLevel         = 
@@ -66,6 +71,9 @@ public:
     bool Initialize(const LogConfig& config = LogConfig());
     bool IsInitialized() const;
     void Shutdown();
+
+    // 设置平台日志接口（必须在 Platform 初始化后调用）
+    void SetPlatformLogger(IPlatformLogger* platformLogger);
 
     void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
 
@@ -200,6 +208,9 @@ public:
 
 private:
     bool initialized_ = false;
+
+    // 平台日志接口（由外部设置）
+    IPlatformLogger* platformLogger_ = nullptr;
     // 内部方法
     void EnqueueEntry(LogEntry&& entry);
     void ProcessQueue();
