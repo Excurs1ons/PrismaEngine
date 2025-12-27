@@ -9,10 +9,10 @@
     {
       "name": "windows-base",
       "hidden": true,
-      "description": "Base Windows configuration",
+      "description": "Base Windows configuration (使用 FetchContent 管理依赖)",
       "generator": "Visual Studio 17 2022",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/vcpkg/scripts/buildsystems/vcpkg.cmake"
+        "PRISMA_USE_FETCHCONTENT": "ON"
       },
       "condition": {
         "type": "equals",
