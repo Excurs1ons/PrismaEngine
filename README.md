@@ -20,13 +20,14 @@ English | [简体中文](docs/README_zh.md)
 |--------|--------|
 | ECS Component System | ✅ 70% |
 | DirectX 12 Backend | ✅ 65% |
-| **Vulkan Backend (PrismaAndroid)** | ✅ **80%** |
-| ScriptableRenderPipeline | 🔄 40% |
+| Vulkan Backend (PrismaAndroid) | ✅ 80% |
+| Platform Layer | ✅ 80% |
+| Logger System | ✅ 85% |
 | Audio System | ⏳ 15% |
 | Physics System | ❌ 5% |
 | Editor Tools | ⏳ 10% |
 
-**Overall: ~30-35%**
+**Overall: ~35-40%**
 
 ## Quick Start
 
@@ -34,10 +35,6 @@ English | [简体中文](docs/README_zh.md)
 # Clone with submodules
 git clone --recursive https://github.com/Excurs1ons/PrismaEngine.git
 cd PrismaEngine
-
-# Bootstrap vcpkg
-./vcpkg/bootstrap-vcpkg.bat
-./vcpkg/vcpkg install
 
 # Build
 cmake --preset=windows-x64-debug
@@ -73,15 +70,21 @@ cmake --build --preset=windows-x64-debug
 
 ```
 PrismaEngine/
-├── src/                   # Source code
-│   ├── engine/           # Core engine modules
-│   ├── editor/           # Game editor
-│   ├── game/             # Game framework
-│   └── runtime/          # Game runtime
-├── projects/             # Platform-specific projects
-├── docs/                 # Documentation
-├── assets/               # Game assets
-└── tools/                # Development tools
+├── src/                       # Source code
+│   ├── engine/               # Core engine modules
+│   │   ├── Platform.h/cpp     # Unified platform interface (static)
+│   │   ├── PlatformWindows.cpp   # Windows implementation
+│   │   ├── PlatformSDL.cpp       # Linux/macOS implementation
+│   │   ├── PlatformAndroid.cpp   # Android implementation
+│   │   ├── IPlatformLogger.h  # Logger interface
+│   │   └── Logger.h/cpp       # Logging system
+│   ├── editor/               # Game editor
+│   ├── game/                 # Game framework
+│   └── runtime/              # Game runtime
+├── projects/                 # Platform-specific projects
+├── docs/                     # Documentation
+├── assets/                   # Game assets
+└── tools/                    # Development tools
 ```
 
 ## License

@@ -21,13 +21,14 @@ Prisma Engine 是一个从零开始构建的现代 3D 游戏引擎，专注于�
 |------|--------|
 | ECS 组件系统 | ✅ 70% |
 | DirectX 12 后端 | ✅ 65% |
-| **Vulkan 后端 (PrismaAndroid)** | ✅ **80%** |
-| ScriptableRenderPipeline | 🔄 40% |
+| Vulkan 后端 (PrismaAndroid) | ✅ 80% |
+| Platform 层 | ✅ 80% |
+| Logger 系统 | ✅ 85% |
 | 音频系统 | ⏳ 15% |
 | 物理系统 | ❌ 5% |
 | 编辑器工具 | ⏳ 10% |
 
-**总体: ~30-35%**
+**总体: ~35-40%**
 
 ## 快速开始
 
@@ -35,10 +36,6 @@ Prisma Engine 是一个从零开始构建的现代 3D 游戏引擎，专注于�
 # 克隆仓库及子模块
 git clone --recursive https://github.com/Excurs1ons/PrismaEngine.git
 cd PrismaEngine
-
-# 初始化 vcpkg
-./vcpkg/bootstrap-vcpkg.bat
-./vcpkg/vcpkg install
 
 # 构建项目
 cmake --preset=windows-x64-debug
@@ -74,15 +71,21 @@ cmake --build --preset=windows-x64-debug
 
 ```
 PrismaEngine/
-├── src/                   # 源代码
-│   ├── engine/           # 核心引擎模块
-│   ├── editor/           # 游戏编辑器
-│   ├── game/             # 游戏框架
-│   └── runtime/          # 游戏运行时
-├── projects/             # 平台特定项目
-├── docs/                 # 文档
-├── assets/               # 游戏资源
-└── tools/                # 开发工具
+├── src/                       # 源代码
+│   ├── engine/               # 核心引擎模块
+│   │   ├── Platform.h/cpp     # 统一平台接口（静态函数）
+│   │   ├── PlatformWindows.cpp   # Windows 实现
+│   │   ├── PlatformSDL.cpp       # Linux/macOS 实现
+│   │   ├── PlatformAndroid.cpp   # Android 实现
+│   │   ├── IPlatformLogger.h  # 日志接口
+│   │   └── Logger.h/cpp       # 日志系统
+│   ├── editor/               # 游戏编辑器
+│   ├── game/                 # 游戏框架
+│   └── runtime/              # 游戏运行时
+├── projects/                 # 平台特定项目
+├── docs/                     # 文档
+├── assets/                   # 游戏资源
+└── tools/                    # 开发工具
 ```
 
 ## 许可证

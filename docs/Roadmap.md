@@ -12,9 +12,11 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 |------|--------|------|
 | 基础架构 (ECS/Scene/Resource) | 70% | 🟡 进行中 |
 | DirectX 12 后端 | 65% | 🟡 进行中 |
-| **Vulkan 后端 (PrismaAndroid)** | **80%** | 🟢 **已完成** |
+| Vulkan 后端 (PrismaAndroid) | 80% | 🟢 已完成 |
+| Platform 层 | 80% | 🟢 已完成 |
+| Logger 系统 | 85% | 🟢 已完成 |
 | 音频系统 | 15% | 🔴 未开始 |
-| 跨平台支持 | 25% | 🔴 未开始 |
+| 跨平台支持 | 60% | 🟡 进行中 |
 | 编辑器工具 | 10% | 🔴 未开始 |
 | 物理系统 | 5% | 🔴 未开始 |
 
@@ -53,9 +55,12 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 - ❌ 后处理效果
 
 ### 跨平台支持
-- ✅ Windows平台 (DirectX 12)
-- 🔄 Android平台 (Vulkan)
-- 🔄 SDL3集成
+- ✅ Windows平台 (DirectX 12) - PlatformWindows.cpp
+- ✅ Android平台 (Vulkan) - PlatformAndroid.cpp
+- ✅ Linux/macOS (SDL3/Vulkan) - PlatformSDL.cpp
+- ✅ 日志系统统一接口
+- ✅ 条件编译保护
+- 🔄 输入系统完善中
 
 ### 其他系统
 - 🔄 音频系统 (架构已定义)
@@ -84,6 +89,15 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 完整文档导航见: [Index.md](Index.md)
 
+## 最近更新
+
+### 2025-12-28
+- ✅ 重构 Platform 为静态函数接口
+- ✅ 合并 PlatformWindows/PlatformSDL/PlatformAndroid 到单一类
+- ✅ 新增 IPlatformLogger 接口，打破循环依赖
+- ✅ Android 支持 logcat 日志输出
+- ✅ 添加条件编译保护跨平台头文件依赖
+
 ---
 
-*最后更新: 2025-12-25*
+*最后更新: 2025-12-28*
