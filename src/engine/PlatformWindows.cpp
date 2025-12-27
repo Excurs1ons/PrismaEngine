@@ -79,6 +79,10 @@ void Platform::Shutdown() {
     s_initialized = false;
 }
 
+bool Platform::IsInitialized() {
+    return s_initialized;
+}
+
 // ------------------------------------------------------------
 // 窗口管理
 // ------------------------------------------------------------
@@ -218,6 +222,10 @@ bool Platform::SetWindowIcon(const std::string& path) {
         return true;
     }
     return false;
+}
+
+WindowHandle Platform::GetCurrentWindow() {
+    return s_currentWindow;
 }
 
 // ------------------------------------------------------------

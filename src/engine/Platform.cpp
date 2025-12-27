@@ -38,13 +38,11 @@ namespace Engine {
 // ------------------------------------------------------------
 // 静态变量定义
 // ------------------------------------------------------------
+#if !defined(_WIN32) && !defined(__ANDROID__)
 static bool s_initialized = false;
 static bool s_shouldClose = false;
 static WindowHandle s_currentWindow = nullptr;
-
-#if !defined(_WIN32) && !defined(__ANDROID__)
 static Platform::EventCallback s_eventCallback = nullptr;
-#endif
 
 // ------------------------------------------------------------
 // 平台生命周期管理
@@ -79,9 +77,12 @@ WindowHandle Platform::GetCurrentWindow() {
     return s_currentWindow;
 }
 
+#endif // !defined(_WIN32) && !defined(__ANDROID__)
+
 // ------------------------------------------------------------
 // 时间管理（通用实现，平台可覆盖）
 // ------------------------------------------------------------
+#if !defined(_WIN32) && !defined(__ANDROID__)
 uint64_t Platform::GetTimeMicroseconds() {
     auto now = std::chrono::high_resolution_clock::now();
     auto duration = now.time_since_epoch();
@@ -91,6 +92,7 @@ uint64_t Platform::GetTimeMicroseconds() {
 double Platform::GetTimeSeconds() {
     return GetTimeMicroseconds() / 1000000.0;
 }
+#endif
 
 // ------------------------------------------------------------
 // 线程和同步（通用实现）
