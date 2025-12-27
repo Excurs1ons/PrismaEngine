@@ -1,6 +1,12 @@
 # Android Engine Library - 生成 libEngine.so
 cmake_minimum_required(VERSION 3.31)
 
+# ========== Android 平台配置 ==========
+
+# 禁用 SDL3（Android 不需要 SDL3，使用 Vulkan + OpenAL）
+set(PRISMA_ENABLE_AUDIO_SDL3 OFF CACHE BOOL "Enable SDL3 audio device" FORCE)
+set(PRISMA_ENABLE_RENDER_SDL3 OFF CACHE BOOL "Enable SDL3 render device" FORCE)
+
 # 包含父级目录的graphic配置
 include(../graphic/CMakeLists.txt)
 
@@ -82,17 +88,17 @@ target_compile_options(engine PRIVATE
 )
 
 # 查找依赖包
-# 强制使用静态链接的 SDL3
-set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as static library" FORCE)
-set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
-find_package(SDL3 CONFIG REQUIRED)
+# SDL3 已禁用，不再查找
+# set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as static library" FORCE)
+# set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
+# find_package(SDL3 CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 
 # 链接依赖库
 target_link_libraries(engine PUBLIC
-    SDL3::SDL3-static
+    # SDL3::SDL3-static  # SDL3 已禁用
     Vulkan::Vulkan
     nlohmann_json::nlohmann_json
     imgui::imgui
@@ -107,10 +113,10 @@ target_link_libraries(engine PRIVATE
     jnigraphics
 )
 
-# 确保使用SDL3音频后端
-target_sources(engine PRIVATE
-    ../audio/AudioBackendSDL3.cpp
-)
+# SDL3 音频后端已在主 CMakeLists.txt 中通过 PRISMA_ENABLE_AUDIO_SDL3 控制
+# target_sources(engine PRIVATE
+#     ../audio/AudioBackendSDL3.cpp
+# )
 
 # 设置输出名称
 set_target_properties(engine PROPERTIES

@@ -4,11 +4,14 @@
 # ========== 音频设备选项 ==========
 
 # XAudio2 (Windows)
-option(PRISMA_ENABLE_AUDIO_XAUDIO2 "Enable XAudio2 audio device (Windows only)" ON)
-
+option(PRISMA_ENABLE_AUDIO_XAUDIO2 "Enable XAudio2 audio device (Windows only)" OFF)
 # OpenAL (跨平台)
 option(PRISMA_ENABLE_AUDIO_OPENAL "Enable OpenAL audio device" OFF)
-
+if(ANDROID)
+    set(PRISMA_ENABLE_AUDIO_OPENAL ON)
+elseif (Windows)
+    set(PRISMA_ENABLE_AUDIO_XAUDIO2 ON)
+endif ()
 # SDL3 Audio (跨平台)
 option(PRISMA_ENABLE_AUDIO_SDL3 "Enable SDL3 audio device" OFF)
 

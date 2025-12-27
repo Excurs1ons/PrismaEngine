@@ -318,8 +318,17 @@ void AudioDeviceOpenAL::StopAll() {
 void AudioDeviceOpenAL::PauseAll() {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    alSourcePausev(static_cast<ALsizei>(m_activeVoices.size()),
-                   reinterpret_cast<ALuint*>(m_activeVoices.data()));
+    // 收集所有活跃音频源的 sourceId
+    std::vector<ALuint> sources;
+    sources.reserve(m_activeVoices.size());
+    for (const auto& [voiceId, voice] : m_activeVoices) {
+        if (voice && voice->sourceId != 0) {
+            sources.push_back(voice->sourceId);
+        }
+    }
+
+    alSourcePausev(static_cast<ALsizei>(sources.size()),
+                   sources.data());
 
     for (auto& voice : m_voicePool) {
         if (voice.isActive && voice.state == VoiceState::Playing) {
