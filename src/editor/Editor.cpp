@@ -1,6 +1,6 @@
 #include "Editor.h"
 #include "Logger.h"
-#include "PlatformSDL.h"
+#include "Platform.h"
 #include "RenderBackend.h"
 #include "../graphic/RenderSystemNew.h"
 #include <iostream>
@@ -44,8 +44,7 @@ bool Editor::Initialize()
     LOG_INFO("Editor", "正在初始化编辑器");
 
     // 1. 初始化平台 (SDL)
-    auto platform = PlatformSDL::GetInstance();
-    if (!platform->Initialize()) {
+    if (!Platform::Initialize()) {
         LOG_FATAL("System", "平台初始化失败");
         return false;
     }
@@ -55,7 +54,7 @@ bool Editor::Initialize()
     // props.FullScreenMode = FullScreenMode::Window;
     // props.ShowState = WindowShowState::Maximize;
 
-    m_window = platform->CreateWindow(props);
+    m_window = Platform::CreateWindow(props);
 
     if (!m_window) {
         LOG_FATAL("System", "无法创建窗口");
@@ -96,7 +95,6 @@ bool Editor::InitializeImGui()
     ImGui::StyleColorsDark();
 
     // 2. 初始化平台/渲染器后端
-    auto platform = PlatformSDL::GetInstance();
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
     renderSystem->Initialize();
     // 初始化 SDL3
@@ -106,7 +104,8 @@ bool Editor::InitializeImGui()
     }
 
     // 注册事件回调
-    platform->SetEventCallback([](const SDL_Event* event) -> bool {
+    Platform::SetEventCallback([](const void* eventPtr) -> bool {
+        const SDL_Event* event = static_cast<const SDL_Event*>(eventPtr);
         ImGui_ImplSDL3_ProcessEvent(event);
 
         if (event->type == SDL_EVENT_WINDOW_RESIZED) {
@@ -129,13 +128,12 @@ bool Editor::InitializeImGui()
 
 int Editor::Run()
 {
-    auto platform = PlatformSDL::GetInstance();
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
     bool running = true;
 
     while (running) {
-        platform->PumpEvents();
-        if (platform->ShouldClose(m_window)) {
+        Platform::PumpEvents();
+        if (Platform::ShouldClose(m_window)) {
             running = false;
         }
 
@@ -175,5 +173,5 @@ void Editor::Shutdown()
     }
 
     // 清理平台
-    PlatformSDL::GetInstance()->Shutdown();
+    Platform::Shutdown();
 }
