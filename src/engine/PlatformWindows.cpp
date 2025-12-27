@@ -16,7 +16,10 @@ namespace Engine {
 // ------------------------------------------------------------
 static LARGE_INTEGER s_frequency;
 static bool s_useQPC = false;
+static bool s_initialized = false;
+static bool s_shouldClose = false;
 static HWND s_hwnd = nullptr;
+static HWND s_currentWindow = nullptr;
 static bool g_keyStates[256] = { false };
 
 // ------------------------------------------------------------
@@ -422,7 +425,7 @@ const char* Platform::GetTemporaryPath() {
 // ------------------------------------------------------------
 // 线程和同步
 // ------------------------------------------------------------
-PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
+Platform::PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
     DWORD threadId;
     HANDLE thread = ::CreateThread(
         nullptr,           // 默认安全属性
@@ -432,7 +435,7 @@ PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
         0,                 // 立即运行
         &threadId          // 线程ID
     );
-    return static_cast<PlatformThreadHandle>(thread);
+    return static_cast<Platform::PlatformThreadHandle>(thread);
 }
 
 void Platform::JoinThread(PlatformThreadHandle thread) {
@@ -441,9 +444,9 @@ void Platform::JoinThread(PlatformThreadHandle thread) {
     }
 }
 
-PlatformMutexHandle Platform::CreateMutex() {
+Platform::PlatformMutexHandle Platform::CreateMutex() {
     HANDLE mutex = CreateMutexA(nullptr, FALSE, nullptr);
-    return static_cast<PlatformMutexHandle>(mutex);
+    return static_cast<Platform::PlatformMutexHandle>(mutex);
 }
 
 void Platform::DestroyMutex(PlatformMutexHandle mtx) {
