@@ -172,7 +172,7 @@ add_library(Engine STATIC
 
 # Windows 平台添加 UTF-8 编译支持
 if(WIN32)
-    target_compile_options(Engine PRIVATE /utf-8)
+    target_compile_options(Engine PUBLIC /utf-8)
 endif()
 
 # ========== 依赖项配置 ==========
@@ -187,8 +187,8 @@ endif()
 if(PRISMA_ENABLE_AUDIO_OPENAL)
     find_package(OpenAL QUIET)
     if(OpenAL_FOUND)
-        target_include_directories(Engine PRIVATE ${OpenAL_INCLUDE_DIRS})
-        target_link_libraries(Engine PRIVATE ${OpenAL_LIBRARIES})
+        target_include_directories(Engine PUBLIC ${OpenAL_INCLUDE_DIRS})
+        target_link_libraries(Engine PUBLIC ${OpenAL_LIBRARIES})
     else()
         message(WARNING "OpenAL not found, but device is enabled")
     endif()
@@ -209,8 +209,8 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
         if(EXISTS "${SDL3_INCLUDE_DIRS}/SDL.h" AND EXISTS "${SDL3_LIBRARIES}")
             message(STATUS "Found SDL3: ${SDL3_LIBRARIES}")
             message(STATUS "SDL3 include dirs: ${SDL3_INCLUDE_DIRS}")
-            target_include_directories(Engine PRIVATE ${SDL3_INCLUDE_DIRS})
-            target_link_libraries(Engine PRIVATE ${SDL3_LIBRARIES})
+            target_include_directories(Engine PUBLIC ${SDL3_INCLUDE_DIRS})
+            target_link_libraries(Engine PUBLIC ${SDL3_LIBRARIES})
         else()
             message(FATAL_ERROR "SDL3 not found in vcpkg installed directory")
             message(STATUS "VCPKG_PATH: ${VCPKG_PATH}")
@@ -222,7 +222,7 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
         set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as static library" FORCE)
         set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
         find_package(SDL3 CONFIG REQUIRED)
-        target_link_libraries(Engine PRIVATE SDL3::SDL3-static)
+        target_link_libraries(Engine PUBLIC SDL3::SDL3-static)
     endif()
 endif()
 
@@ -236,19 +236,19 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
         # 检查Vulkan头文件是否存在
         if(EXISTS "${Vulkan_INCLUDE_DIRS}/vulkan/vulkan.h")
             message(STATUS "Found Vulkan headers for Android: ${Vulkan_INCLUDE_DIRS}/vulkan")
-            target_include_directories(Engine PRIVATE ${Vulkan_INCLUDE_DIRS})
+            target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
 
             # Android平台Vulkan是系统库，不需要静态库文件
             # 只需在链接时指定库名
-            target_link_libraries(Engine PRIVATE vulkan)
+            target_link_libraries(Engine PUBLIC vulkan)
         else()
             message(FATAL_ERROR "Vulkan headers not found for Android")
         endif()
     else()
         find_package(Vulkan QUIET)
         if(Vulkan_FOUND)
-            target_include_directories(Engine PRIVATE ${Vulkan_INCLUDE_DIRS})
-            target_link_libraries(Engine PRIVATE ${Vulkan_LIBRARIES})
+            target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
+            target_link_libraries(Engine PUBLIC ${Vulkan_LIBRARIES})
         else()
             message(WARNING "Vulkan not found, but backend is enabled")
         endif()
@@ -258,22 +258,22 @@ endif()
 if(PRISMA_ENABLE_RENDER_OPENGL)
     find_package(OpenGL QUIET)
     if(OPENGL_FOUND)
-        target_include_directories(Engine PRIVATE ${OPENGL_INCLUDE_DIRS})
-        target_link_libraries(Engine PRIVATE ${OPENGL_LIBRARIES})
+        target_include_directories(Engine PUBLIC ${OPENGL_INCLUDE_DIRS})
+        target_link_libraries(Engine PUBLIC ${OPENGL_LIBRARIES})
     else()
         message(WARNING "OpenGL not found, but backend is enabled")
     endif()
 
     find_package(glad QUIET)
     if(glad_FOUND)
-        target_include_directories(Engine PRIVATE ${glad_INCLUDE_DIRS})
-        target_link_libraries(Engine PRIVATE ${glad_LIBRARIES})
+        target_include_directories(Engine PUBLIC ${glad_INCLUDE_DIRS})
+        target_link_libraries(Engine PUBLIC ${glad_LIBRARIES})
     endif()
 
     find_package(glfw3 QUIET)
     if(GLFW3_FOUND)
-        target_include_directories(Engine PRIVATE ${glfw3_INCLUDE_DIRS})
-        target_link_libraries(Engine PRIVATE glfw)
+        target_include_directories(Engine PUBLIC ${glfw3_INCLUDE_DIRS})
+        target_link_libraries(Engine PUBLIC glfw)
     endif()
 endif()
 
@@ -282,11 +282,10 @@ endif()
 target_include_directories(Engine
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/resource
-        ${CMAKE_CURRENT_SOURCE_DIR}/audio
-        ${CMAKE_CURRENT_SOURCE_DIR}/graphic
-        ${CMAKE_CURRENT_SOURCE_DIR}/config
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/resource>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/graphic>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
 )
 
 # 在Android平台上添加vcpkg包含路径
@@ -303,10 +302,10 @@ if(ANDROID)
     endif()
 
     message(STATUS "Using VCPKG_PATH: ${VCPKG_PATH}")
-    target_include_directories(Engine PRIVATE ${VCPKG_PATH}/include)
+    target_include_directories(Engine PUBLIC ${VCPKG_PATH}/include)
 
     # 添加GLM包含路径（由于vcpkg的glm没有顶层glm.hpp）
-    target_include_directories(Engine PRIVATE ${VCPKG_PATH}/include/glm)
+    target_include_directories(Engine PUBLIC ${VCPKG_PATH}/include/glm)
 
     # 查找并链接vcpkg安装的库
     find_path(GLM_INCLUDE_DIR glm/glm.hpp
@@ -317,7 +316,7 @@ if(ANDROID)
     # 如果上述方式失败，尝试直接从项目根目录查找
     if(NOT GLM_INCLUDE_DIR)
         set(GLM_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../vcpkg_installed/arm64-android")
-        find_path(GLM_INCLUDE_DIR glm/glm.hpp
+        find_path(GLM_INCLUDE_DIR glm.hpp
             PATHS ${GLM_INSTALL_DIR}/include
             NO_DEFAULT_PATH
         )
@@ -326,16 +325,15 @@ if(ANDROID)
 
     if(GLM_INCLUDE_DIR)
         message(STATUS "Found GLM: ${GLM_INCLUDE_DIR}")
-        target_include_directories(Engine PRIVATE ${GLM_INCLUDE_DIR})
+        target_include_directories(Engine PUBLIC ${GLM_INCLUDE_DIR})
     else()
         # 尝试绝对路径
         set(GLM_ABS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../vcpkg_installed/arm64-android/include")
-        if(EXISTS "${GLM_ABS_PATH}/glm/glm.hpp")
+        if(EXISTS "${GLM_ABS_PATH}/glm.hpp")
             message(STATUS "Found GLM using absolute path: ${GLM_ABS_PATH}")
-            target_include_directories(Engine PRIVATE ${GLM_ABS_PATH})
+            target_include_directories(Engine PUBLIC ${GLM_ABS_PATH})
         else()
-            message(FATAL_ERROR "GLM not found in vcpkg installed directory")
-            message(FATAL_ERROR "Expected path: ${GLM_ABS_PATH}/glm/glm.hpp")
+            message(FATAL_ERROR "GLM not found in vcpkg installed directory. Expected path: ${GLM_ABS_PATH}/glm.hpp")
         endif()
     endif()
 endif()
@@ -345,14 +343,14 @@ endif()
 # 根据选项选择数学库
 if(WIN32 AND PRISMA_USE_DIRECTXMATH AND NOT PRISMA_FORCE_GLM)
     # Windows平台使用DirectXMath
-    target_compile_definitions(Engine PRIVATE
+    target_compile_definitions(Engine PUBLIC
         PRISMA_USE_DIRECTXMATH
         PRISMA_USING_DIRECTXMATH=1
     )
     message(STATUS "Using DirectXMath on Windows")
 else()
     # 默认使用GLM
-    target_compile_definitions(Engine PRIVATE
+    target_compile_definitions(Engine PUBLIC
         PRISMA_USE_GLM
         PRISMA_USING_GLM=1
     )
@@ -368,14 +366,14 @@ if(NOT ANDROID)
     # 查找并链接 nlohmann_json 和 imgui
     find_package(nlohmann_json CONFIG REQUIRED)
     find_package(imgui CONFIG REQUIRED)
-    target_link_libraries(Engine PRIVATE
+    target_link_libraries(Engine PUBLIC
         nlohmann_json::nlohmann_json
         imgui::imgui
     )
 endif()
 
 # 根据启用的设备定义宏
-target_compile_definitions(Engine PRIVATE
+target_compile_definitions(Engine PUBLIC
     PRISMA_DEFAULT_AUDIO_DEVICE=${PRISMA_DEFAULT_AUDIO_BACKEND}
     PRISMA_DEFAULT_RENDER_DEVICE=${PRISMA_DEFAULT_RENDER_BACKEND}
 )
