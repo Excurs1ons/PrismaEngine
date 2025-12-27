@@ -11,8 +11,13 @@
       "hidden": true,
       "description": "Base Windows configuration (使用 FetchContent 管理依赖)",
       "generator": "Visual Studio 17 2022",
+      "environment": {
+        "CMAKE_TOOLCHAIN_FILE": "",
+        "VCPKG_ROOT": ""
+      },
       "cacheVariables": {
-        "PRISMA_USE_FETCHCONTENT": "ON"
+        "PRISMA_USE_FETCHCONTENT": "ON",
+        "CMAKE_TOOLCHAIN_FILE": ""
       },
       "condition": {
         "type": "equals",
