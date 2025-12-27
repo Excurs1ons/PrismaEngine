@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <stdexcept>
+#include <sstream>
 namespace Engine {
     namespace Serialization {
         // 序列化格式枚举
