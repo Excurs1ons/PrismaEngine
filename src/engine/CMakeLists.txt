@@ -195,62 +195,57 @@ if(PRISMA_ENABLE_AUDIO_OPENAL)
 endif()
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
-    # On Android, manually locate SDL3 from vcpkg
+    # SDL3 由 FetchContent.cmake 管理
     if(ANDROID)
-        # Extract the vcpkg path from CMAKE_PREFIX_PATH (first path before semicolon)
-        list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
-        message(STATUS "Searching for SDL3 in ${VCPKG_PATH}")
+        # Android 平台: 查找已下载的 SDL3
+        list(GET CMAKE_PREFIX_PATH 0 DEPS_PATH)
+        message(STATUS "Searching for SDL3 in ${DEPS_PATH}")
 
-        # Directly set the paths since we know where they are
-        set(SDL3_INCLUDE_DIRS "${VCPKG_PATH}/include/SDL3")
-        set(SDL3_LIBRARIES "${VCPKG_PATH}/lib/libSDL3.a")
+        set(SDL3_INCLUDE_DIRS "${DEPS_PATH}/include/SDL3")
+        set(SDL3_LIBRARIES "${DEPS_PATH}/lib/libSDL3.a")
 
-        # Check if files exist
         if(EXISTS "${SDL3_INCLUDE_DIRS}/SDL.h" AND EXISTS "${SDL3_LIBRARIES}")
             message(STATUS "Found SDL3: ${SDL3_LIBRARIES}")
-            message(STATUS "SDL3 include dirs: ${SDL3_INCLUDE_DIRS}")
             target_include_directories(Engine PUBLIC ${SDL3_INCLUDE_DIRS})
             target_link_libraries(Engine PUBLIC ${SDL3_LIBRARIES})
         else()
-            message(FATAL_ERROR "SDL3 not found in vcpkg installed directory")
-            message(STATUS "VCPKG_PATH: ${VCPKG_PATH}")
-            message(STATUS "SDL3_INCLUDE_DIRS: ${SDL3_INCLUDE_DIRS}")
-            message(STATUS "SDL3_LIBRARIES: ${SDL3_LIBRARIES}")
+            message(FATAL_ERROR "SDL3 not found in dependencies directory")
         endif()
     else()
-        # 强制使用静态链接的 SDL3
-        set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as static library" FORCE)
-        set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
-        find_package(SDL3 CONFIG REQUIRED)
-        target_link_libraries(Engine PUBLIC SDL3::SDL3-static)
+        # Windows 桌面平台: 使用 FetchContent 提供的目标
+        if(TARGET SDL3::SDL3-static)
+            target_link_libraries(Engine PUBLIC SDL3::SDL3-static)
+        elseif(TARGET SDL3::SDL3-shared)
+            target_link_libraries(Engine PUBLIC SDL3::SDL3-shared)
+        elseif(TARGET SDL3)
+            target_link_libraries(Engine PUBLIC SDL3)
+        else()
+            message(FATAL_ERROR "SDL3 target not found")
+        endif()
     endif()
 endif()
 
 # 渲染设备依赖
 if(PRISMA_ENABLE_RENDER_VULKAN)
     if(ANDROID)
-        # Android平台Vulkan是系统库
-        list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
-        set(Vulkan_INCLUDE_DIRS "${VCPKG_PATH}/include")
-
-        # 检查Vulkan头文件是否存在
-        if(EXISTS "${Vulkan_INCLUDE_DIRS}/vulkan/vulkan.h")
-            message(STATUS "Found Vulkan headers for Android: ${Vulkan_INCLUDE_DIRS}/vulkan")
-            target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
-
-            # Android平台Vulkan是系统库，不需要静态库文件
-            # 只需在链接时指定库名
-            target_link_libraries(Engine PUBLIC vulkan)
-        else()
-            message(FATAL_ERROR "Vulkan headers not found for Android")
-        endif()
+        # Android 平台 Vulkan 是系统库
+        target_link_libraries(Engine PUBLIC vulkan)
     else()
-        find_package(Vulkan QUIET)
-        if(Vulkan_FOUND)
-            target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
-            target_link_libraries(Engine PUBLIC ${Vulkan_LIBRARIES})
+        # Windows 平台: 使用 FetchContent 提供的 Vulkan-Headers
+        # 注意: Vulkan-Headers 只提供头文件，运行时需要 Vulkan SDK 或驱动
+        if(TARGET Vulkan::Headers)
+            target_link_libraries(Engine PUBLIC Vulkan::Headers)
+        elseif(TARGET Vulkan-Headers)
+            target_link_libraries(Engine PUBLIC Vulkan-Headers)
         else()
-            message(WARNING "Vulkan not found, but backend is enabled")
+            # 回退到系统查找
+            find_package(Vulkan QUIET)
+            if(Vulkan_FOUND)
+                target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
+                target_link_libraries(Engine PUBLIC ${Vulkan_LIBRARIES})
+            else()
+                message(WARNING "Vulkan headers not found, but backend is enabled")
+            endif()
         endif()
     endif()
 endif()
@@ -288,66 +283,18 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
 )
 
-# 在Android平台上添加vcpkg包含路径
-# 在Android平台上添加vcpkg包含路径
+# Android平台依赖路径配置
 if(ANDROID)
-    # 优先使用外部传入的绝对路径，如果没有传，再尝试从 CMAKE_PREFIX_PATH 获取
-    if(MY_VCPKG_PATH)
-        set(VCPKG_PATH ${MY_VCPKG_PATH})
-        message(STATUS "Engine using injected VCPKG_PATH: ${VCPKG_PATH}")
-    else()
-        list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
-        message(STATUS "Engine using CMAKE_PREFIX_PATH: ${VCPKG_PATH}")
+    # Android 平台优先使用 FetchContent 下载的依赖
+    # 依赖会被下载到 ${CMAKE_BINARY_DIR}/_deps/
+
+    # 如果需要使用外部依赖路径，可通过 MY_DEPS_PATH 传入
+    if(MY_DEPS_PATH)
+        set(DEPS_PATH ${MY_DEPS_PATH})
+        message(STATUS "Android using injected DEPS_PATH: ${DEPS_PATH}")
+        target_include_directories(Engine PUBLIC ${DEPS_PATH})
+        target_include_directories(Engine PUBLIC ${DEPS_PATH}/glm)
     endif()
-
-    # 3. 直接添加 Vcpkg 的 include 目录 (使用 PUBLIC 传递给 App)
-    target_include_directories(Engine PUBLIC ${VCPKG_PATH})
-
-    # 4. 显式添加 glm 目录 (解决 gtc 找不到的问题)
-    target_include_directories(Engine PUBLIC ${VCPKG_PATH}/glm)
-
-    # --- SDL3 查找逻辑 ---
-    if(PRISMA_ENABLE_AUDIO_SDL3)
-        set(SDL3_INCLUDE_DIRS "${VCPKG_PATH}/SDL3") # 注意：这里通常是 include/SDL3 或者就是 include
-        set(SDL3_LIBRARIES "${VCPKG_PATH}/../lib/libSDL3.a") # 回到上级找 lib
-
-        # 修正：通常 vcpkg 装的 SDL3 头文件在 include/SDL3 下，lib 在 lib 下
-        # 如果你的目录结构是 include/SDL3/SDL.h，那上面是对的
-        # 如果是 include/SDL3.h，那下面要改
-
-        # 通用检查：无论 SDL3 在哪，只要能找到头文件就行
-        find_path(SDL3_H_PATH SDL.h
-                PATHS ${VCPKG_PATH}/SDL3 ${VCPKG_PATH}
-                NO_DEFAULT_PATH
-        )
-
-        if(SDL3_H_PATH)
-            get_filename_component(SDL3_INCLUDE_DIRS ${SDL3_H_PATH} DIRECTORY)
-            message(STATUS "Found SDL3 headers: ${SDL3_INCLUDE_DIRS}")
-            target_include_directories(Engine PUBLIC ${SDL3_INCLUDE_DIRS})
-
-            # 查找 lib
-            find_library(SDL3_LIB_PATH libSDL3.a PATHS ${VCPKG_PATH}/../lib NO_DEFAULT_PATH)
-            if(SDL3_LIB_PATH)
-                target_link_libraries(Engine PUBLIC ${SDL3_LIB_PATH})
-            else()
-                message(WARNING "SDL3 lib not found")
-            endif()
-        else()
-            message(WARNING "SDL3 headers not found in ${VCPKG_PATH}, skipping SDL3")
-        endif()
-    endif()
-
-    # --- Vulkan 查找逻辑 ---
-    if(PRISMA_ENABLE_RENDER_VULKAN)
-        target_include_directories(Engine PUBLIC ${VCPKG_PATH})
-        target_link_libraries(Engine PUBLIC vulkan)
-    endif()
-
-    # --- GLM ---
-    # GLM 是 header-only，不需要 find_library，上面加了 include 就够了
-    # 如果 Engine 代码里有 find_package(glm CONFIG ...)，可能会失败，建议在 Android 下屏蔽掉
-    # 因为我们已经手动加了路径
 endif()
 # ========== 编译定义 ==========
 
@@ -369,20 +316,41 @@ else()
 endif()
 
 
-# Windows 平台需要链接的额外依赖
-if(NOT ANDROID)
-    message(STATUS "Not Android...")
-    # 查找并链接 GLM
-    find_package(glm CONFIG REQUIRED)
-    target_link_libraries(Engine PUBLIC glm::glm-header-only)
+# 基础依赖 (GLM, nlohmann_json, stb)
+# 注意: 这些依赖由主 CMakeLists.txt 中的 FetchContent.cmake 管理
 
-    # 查找并链接 nlohmann_json 和 imgui
-    find_package(nlohmann_json CONFIG REQUIRED)
-    find_package(imgui CONFIG REQUIRED)
-    target_link_libraries(Engine PUBLIC
-        nlohmann_json::nlohmann_json
-        imgui::imgui
-    )
+# 链接 GLM (使用 target 链接，但由于 GLM 是 header-only，不会出现 install(EXPORT) 问题)
+if(TARGET glm::glm-header-only)
+    target_link_libraries(Engine PUBLIC glm::glm-header-only)
+elseif(TARGET glm)
+    target_link_libraries(Engine PUBLIC glm)
+endif()
+
+# 链接 nlohmann_json (PRIVATE - 内部使用)
+if(TARGET nlohmann_json::nlohmann_json)
+    target_link_libraries(Engine PRIVATE nlohmann_json::nlohmann_json)
+elseif(TARGET nlohmann_json)
+    target_link_libraries(Engine PRIVATE nlohmann_json)
+endif()
+
+# 链接 stb (如果需要)
+# stb 通常是 header-only，不强制链接
+
+# Windows 平台额外依赖
+if(WIN32 AND NOT ANDROID)
+    # DirectX-Headers (PRIVATE - 内部使用)
+    if(TARGET Microsoft::DirectX-Headers)
+        target_link_libraries(Engine PRIVATE Microsoft::DirectX-Headers)
+    elseif(TARGET DirectX-Headers)
+        target_link_libraries(Engine PRIVATE DirectX-Headers)
+    endif()
+
+    # ImGui - 编辑器 UI 框架 (PRIVATE - 内部使用)
+    if(TARGET imgui::imgui)
+        target_link_libraries(Engine PRIVATE imgui::imgui)
+    elseif(TARGET imgui)
+        target_link_libraries(Engine PRIVATE imgui)
+    endif()
 endif()
 
 # 根据启用的设备定义宏
