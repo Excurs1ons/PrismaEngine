@@ -23,13 +23,13 @@ void Logger::SetPlatformLogger(Engine::IPlatformLogger* platformLogger) {
 // LogLevel 转 PlatformLogLevel 辅助函数
 static Engine::PlatformLogLevel ConvertLogLevel(LogLevel level) {
     switch (level) {
-        case LogLevel::Trace:   return PlatformLogLevel::Trace;
-        case LogLevel::Debug:   return PlatformLogLevel::Debug;
-        case LogLevel::Info:    return PlatformLogLevel::Info;
-        case LogLevel::Warning: return PlatformLogLevel::Warning;
-        case LogLevel::Error:   return PlatformLogLevel::Error;
-        case LogLevel::Fatal:   return PlatformLogLevel::Fatal;
-        default:                return PlatformLogLevel::Info;
+        case LogLevel::Trace:   return Engine::PlatformLogLevel::Trace;
+        case LogLevel::Debug:   return Engine::PlatformLogLevel::Debug;
+        case LogLevel::Info:    return Engine::PlatformLogLevel::Info;
+        case LogLevel::Warning: return Engine::PlatformLogLevel::Warning;
+        case LogLevel::Error:   return Engine::PlatformLogLevel::Error;
+        case LogLevel::Fatal:   return Engine::PlatformLogLevel::Fatal;
+        default:                return Engine::PlatformLogLevel::Info;
     }
 }
 
