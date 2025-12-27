@@ -1,6 +1,4 @@
-[submodule "vcpkg"]
-	path = vcpkg
-	url = https://github.com/Microsoft/vcpkg.git
+
 [submodule "projects/android/PrismaAndroid"]
 	path = projects/android/PrismaAndroid
 	url = https://github.com/Excurs1ons/PrismaAndroid.git
