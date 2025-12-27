@@ -103,6 +103,10 @@ message(STATUS "=== FetchContent 依赖管理 ===")
 
 # GLM (总是需要)
 if(PRISMA_USE_FETCHCONTENT)
+    # 禁用 GLM 的测试和示例
+    set(GLM_BUILD_TESTS OFF CACHE BOOL "Build GLM tests" FORCE)
+    set(GLM_BUILD_EXAMPLES OFF CACHE BOOL "Build GLM examples" FORCE)
+
     FetchContent_MakeAvailable(glm)
     message(STATUS "GLM: 使用 FetchContent")
 else()
@@ -137,6 +141,11 @@ if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN)
         set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as shared library" FORCE)
         set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
         set(SDL_TEST_LIBRARY OFF CACHE BOOL "Build SDL3 test library" FORCE)
+
+        # 禁用 SDL3 的测试和示例
+        set(SDL_TESTS OFF CACHE BOOL "Build SDL3 tests" FORCE)
+        set(SDL_EXAMPLES OFF CACHE BOOL "Build SDL3 examples" FORCE)
+        set(SDL_INSTALL_TESTS OFF CACHE BOOL "Install SDL3 tests" FORCE)
 
         FetchContent_MakeAvailable(SDL3)
         message(STATUS "SDL3: 使用 FetchContent")
