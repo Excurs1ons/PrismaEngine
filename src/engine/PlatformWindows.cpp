@@ -1,8 +1,7 @@
 #ifdef _WIN32
-#include "PlatformWindows.h"
-#include <Logger.h>
+
+#include "Platform.h"
 #include <Windows.h>
-#include <chrono>
 #include <codecvt>
 #include <filesystem>
 #include <iostream>
@@ -10,45 +9,43 @@
 #include <shlobj.h>
 #include <thread>
 
-#undef CreateWindow
-#undef CreateMutex
-
 namespace Engine {
-static LARGE_INTEGER s_frequency;
-static bool s_use_qpc = false;
 
-// 全局键盘状态数组
+// ------------------------------------------------------------
+// Windows 平台静态变量
+// ------------------------------------------------------------
+static LARGE_INTEGER s_frequency;
+static bool s_useQPC = false;
+static HWND s_hwnd = nullptr;
 static bool g_keyStates[256] = { false };
 
-PlatformWindows::PlatformWindows() {
-}
-
+// ------------------------------------------------------------
+// Windows 窗口过程
+// ------------------------------------------------------------
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
         case WM_CLOSE:
-            LOG_INFO("Platform", "窗口即将关闭");
+            std::cout << "[Platform] 窗口即将关闭" << std::endl;
             DestroyWindow(hwnd);
             return 0;
         case WM_DESTROY:
-            LOG_INFO("Platform", "窗口已关闭");
+            std::cout << "[Platform] 窗口已关闭" << std::endl;
             PostQuitMessage(0);
             return 0;
         case WM_KEYDOWN:
-            // 处理按键按下
             if (wParam < 256) {
                 if (!g_keyStates[wParam]) {
                     g_keyStates[wParam] = true;
                     char keyChar = (wParam >= 'A' && wParam <= 'Z') ? static_cast<char>(wParam) : ' ';
-                    LOG_INFO("Platform", "KeyDown: key={0} char='{1}'", static_cast<int>(wParam), keyChar);
+                    std::cout << "[Platform] KeyDown: key=" << static_cast<int>(wParam) << " char='" << keyChar << "'" << std::endl;
                 }
             }
             return 0;
         case WM_KEYUP:
-            // 处理按键释放
             if (wParam < 256) {
                 g_keyStates[wParam] = false;
                 char keyChar = (wParam >= 'A' && wParam <= 'Z') ? static_cast<char>(wParam) : ' ';
-                LOG_INFO("Platform", "KeyUp: key={0} char='{1}'", static_cast<int>(wParam), keyChar);
+                std::cout << "[Platform] KeyUp: key=" << static_cast<int>(wParam) << " char='" << keyChar << "'" << std::endl;
             }
             return 0;
         default:
@@ -56,11 +53,33 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     }
 }
 
-WindowHandle PlatformWindows::GetWindowHandle() const {
-    return hwnd;
+// ------------------------------------------------------------
+// 平台生命周期管理
+// ------------------------------------------------------------
+bool Platform::Initialize() {
+    if (s_initialized) {
+        return true;
+    }
+
+    s_useQPC = QueryPerformanceFrequency(&s_frequency) != 0;
+    s_initialized = true;
+    s_shouldClose = false;
+    return true;
 }
 
-WindowHandle PlatformWindows::CreateWindow(const WindowProps& props) {
+void Platform::Shutdown() {
+    if (!s_initialized) {
+        return;
+    }
+
+    s_hwnd = nullptr;
+    s_initialized = false;
+}
+
+// ------------------------------------------------------------
+// 窗口管理
+// ------------------------------------------------------------
+WindowHandle Platform::CreateWindow(const WindowProps& props) {
     // 注册窗口类
     static bool classRegistered = false;
     if (!classRegistered) {
@@ -79,22 +98,22 @@ WindowHandle PlatformWindows::CreateWindow(const WindowProps& props) {
         wc.hIconSm       = nullptr;
 
         if (!RegisterClassExA(&wc)) {
-            LOG_ERROR("Platform", "注册窗口类失败");
+            std::cerr << "[Platform] ERROR: 注册窗口类失败" << std::endl;
             return nullptr;
         }
         classRegistered = true;
     }
-    
+
     // 确定窗口样式
     DWORD style = WS_OVERLAPPEDWINDOW;
     if (!props.Resizable) {
         style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
     }
-    
+
     // 计算窗口大小（包括边框）
     RECT rect = {0, 0, static_cast<LONG>(props.Width), static_cast<LONG>(props.Height)};
     AdjustWindowRect(&rect, style, FALSE);
-    
+
     // 创建窗口
     HWND hwnd = CreateWindowExA(
         0,                              // 扩展窗口样式
@@ -110,66 +129,43 @@ WindowHandle PlatformWindows::CreateWindow(const WindowProps& props) {
         GetModuleHandle(nullptr),       // 实例句柄
         nullptr                         // 附加数据
     );
-    
+
     if (!hwnd) {
-        LOG_ERROR("Platform", "创建窗口失败");
+        std::cerr << "[Platform] ERROR: 创建窗口失败" << std::endl;
         return nullptr;
     }
-    
+
     // 显示窗口
     int showCmd = SW_SHOW;
     switch (props.ShowState) {
-        case WindowShowState::Show:
-            showCmd = SW_SHOW;
-            break;
-        case WindowShowState::Hide:
-            showCmd = SW_HIDE;
-            break;
-        case WindowShowState::Maximize:
-            showCmd = SW_MAXIMIZE;
-            break;
-        case WindowShowState::Minimize:
-            showCmd = SW_MINIMIZE;
-            break;
-        default:
-            showCmd = SW_SHOW;
-            break;
+        case WindowShowState::Show:    showCmd = SW_SHOW; break;
+        case WindowShowState::Hide:    showCmd = SW_HIDE; break;
+        case WindowShowState::Maximize: showCmd = SW_MAXIMIZE; break;
+        case WindowShowState::Minimize: showCmd = SW_MINIMIZE; break;
+        default: showCmd = SW_SHOW; break;
     }
-    
+
     ShowWindow(hwnd, showCmd);
     UpdateWindow(hwnd);
-    
-    // 保存窗口句柄
-    this->hwnd = hwnd;
-    
-    LOG_INFO("Platform", "创建窗口成功: {0}", props.Title);
+
+    s_hwnd = hwnd;
+    s_currentWindow = hwnd;
+
+    std::cout << "[Platform] 创建窗口成功: " << props.Title << std::endl;
     return hwnd;
 }
 
-bool PlatformWindows::SetWindowIcon(const std::string& path) {
-    std::string finalPath = path + ".ico";  // Windows 固定 ico
-    HICON hIcon           = (HICON)LoadImageA(nullptr, finalPath.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
-    if (hIcon) {
-        SendMessage(hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
-        SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
-        return true;
-    }
-    return false;
-}
-
-
-void PlatformWindows::DestroyWindow(WindowHandle window) {
-    // 销毁窗口的实现
+void Platform::DestroyWindow(WindowHandle window) {
     if (window) {
         ::DestroyWindow(static_cast<HWND>(window));
     }
-    if (hwnd) {
-        hwnd = nullptr;
+    if (s_hwnd == window) {
+        s_hwnd = nullptr;
+        s_currentWindow = nullptr;
     }
 }
 
-void PlatformWindows::GetWindowSize(WindowHandle window, int& outW, int& outH) {
-    // 获取窗口尺寸的实现
+void Platform::GetWindowSize(WindowHandle window, int& outW, int& outH) {
     if (window) {
         RECT rect;
         if (GetWindowRect(static_cast<HWND>(window), &rect)) {
@@ -179,37 +175,53 @@ void PlatformWindows::GetWindowSize(WindowHandle window, int& outW, int& outH) {
     }
 }
 
-void PlatformWindows::SetWindowTitle(WindowHandle window, const char* title) {
-    // 设置窗口标题的实现
+void Platform::SetWindowTitle(WindowHandle window, const char* title) {
     if (window && title) {
         SetWindowTextA(static_cast<HWND>(window), title);
     }
 }
 
-bool PlatformWindows::ShouldClose(WindowHandle window) const {
-    // 如果窗口句柄无效，认为应该关闭
+void Platform::PumpEvents() {
+    MSG msg;
+    while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+
+    // 检查 WM_QUIT 消息
+    if (msg.message == WM_QUIT) {
+        s_shouldClose = true;
+    }
+}
+
+bool Platform::ShouldClose(WindowHandle window) {
     if (!window) {
         return true;
     }
 
-    // 检查窗口是否仍然存在
     if (!IsWindow(static_cast<HWND>(window))) {
         return true;
     }
 
-    // 检查是否有 WM_QUIT 消息
-    MSG msg;
-    if (PeekMessage(&msg, NULL, 0, 0, PM_NOREMOVE)) {
-        if (msg.message == WM_QUIT) {
-            return true;
-        }
-    }
+    return s_shouldClose;
+}
 
+bool Platform::SetWindowIcon(const std::string& path) {
+    std::string finalPath = path + ".ico";
+    HICON hIcon = (HICON)LoadImageA(nullptr, finalPath.c_str(), IMAGE_ICON, 32, 32, LR_LOADFROMFILE);
+    if (hIcon && s_hwnd) {
+        SendMessage(s_hwnd, WM_SETICON, ICON_BIG, (LPARAM)hIcon);
+        SendMessage(s_hwnd, WM_SETICON, ICON_SMALL, (LPARAM)hIcon);
+        return true;
+    }
     return false;
 }
 
-uint64_t PlatformWindows::GetTimeMicroseconds() const {
-    if (s_use_qpc) {
+// ------------------------------------------------------------
+// 时间管理
+// ------------------------------------------------------------
+uint64_t Platform::GetTimeMicroseconds() {
+    if (s_useQPC) {
         LARGE_INTEGER counter;
         QueryPerformanceCounter(&counter);
         return static_cast<uint64_t>((counter.QuadPart * 1000000) / s_frequency.QuadPart);
@@ -218,177 +230,14 @@ uint64_t PlatformWindows::GetTimeMicroseconds() const {
     }
 }
 
-double PlatformWindows::GetTimeSeconds() const {
-    // 获取秒时间
+double Platform::GetTimeSeconds() {
     return GetTimeMicroseconds() / 1000000.0;
 }
 
-bool PlatformWindows::IsMouseButtonDown(MouseButton btn) const {
-    // 检查鼠标按键状态
-    SHORT state = GetAsyncKeyState(btn);
-    return (state & 0x8000) != 0;
-}
-
-void PlatformWindows::GetMousePosition(float& x, float& y) const {
-    // 获取鼠标位置
-    POINT point;
-    if (GetCursorPos(&point)) {
-        x = static_cast<float>(point.x);
-        y = static_cast<float>(point.y);
-    } else {
-        x = 0.0f;
-        y = 0.0f;
-    }
-}
-
-void PlatformWindows::SetMousePosition(float x, float y) {
-    // 设置鼠标位置
-    SetCursorPos(static_cast<int>(x), static_cast<int>(y));
-}
-
-void PlatformWindows::SetMouseLock(bool locked) {
-    // 设置鼠标锁定状态
-    if (locked) {
-        // 锁定鼠标到当前窗口
-        RECT rect;
-        GetClientRect(hwnd, &rect);
-        ClientToScreen(hwnd, reinterpret_cast<POINT*>(&rect.left));
-        ClientToScreen(hwnd, reinterpret_cast<POINT*>(&rect.right));
-        ClipCursor(&rect);
-    } else {
-        ClipCursor(nullptr);
-    }
-}
-
-bool PlatformWindows::FileExists(const char* path) const {
-    // 检查文件是否存在
-    if (!path)
-        return false;
-    return std::filesystem::exists(path);
-}
-
-size_t PlatformWindows::FileSize(const char* path) const {
-    // 获取文件大小
-    if (!path)
-        return 0;
-    if (!std::filesystem::exists(path)) {
-        return 0;
-    }
-    return std::filesystem::file_size(path);
-}
-
-size_t PlatformWindows::ReadFile(const char* path, void* dst, size_t maxBytes) const {
-    // 读取文件内容
-    if (!path || !dst) {
-        return 0;
-    }
-
-    FILE* file = nullptr;
-    fopen_s(&file, path, "rb");
-    if (!file) {
-        return 0;
-    }
-
-    fseek(file, 0, SEEK_END);
-    long fileSize = ftell(file);
-    rewind(file);
-
-    size_t bytesToRead = (fileSize < static_cast<long>(maxBytes)) ? fileSize : maxBytes;
-    size_t bytesRead   = fread(dst, 1, bytesToRead, file);
-    fclose(file);
-    return bytesRead;
-}
-
-const char* PlatformWindows::GetExecutablePath() const {
-    // 获取可执行文件路径
-    static char path[MAX_PATH] = {0};
-    GetModuleFileNameA(nullptr, path, MAX_PATH);
-    return path;
-}
-
-const char* PlatformWindows::GetPersistentPath() const {
-    // 获取持久化存储路径
-    static char path[MAX_PATH] = {0};
-    // 使用 AppData/Roaming 目录
-    if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, path))) {
-        return path;
-    }
-    return nullptr;
-}
-
-const char* PlatformWindows::GetTemporaryPath() const {
-    // 获取临时文件路径
-    static char path[MAX_PATH] = {0};
-    GetTempPathA(MAX_PATH, path);
-    return path;
-}
-
-PlatformThreadHandle PlatformWindows::CreateThread(ThreadFunc entry, void* userData) {
-    // 创建线程
-    DWORD threadId;
-    HANDLE thread = ::CreateThread(
-        nullptr,           // 默认安全属性
-        0,                 // 默认堆栈大小
-        reinterpret_cast<LPTHREAD_START_ROUTINE>(entry),
-        userData,          // 参数
-        0,                 // 立即运行
-        &threadId          // 线程ID
-    );
-    return static_cast<PlatformThreadHandle>(thread);
-}
-
-void PlatformWindows::JoinThread(PlatformThreadHandle thread) {
-    // 等待线程结束
-    if (thread) {
-        WaitForSingleObject(static_cast<HANDLE>(thread), INFINITE);
-    }
-}
-
-PlatformMutexHandle PlatformWindows::CreateMutex() {
-    // 创建互斥锁
-    HANDLE mutex = CreateMutexA(nullptr, FALSE, nullptr);
-    return static_cast<PlatformMutexHandle>(mutex);
-}
-
-void PlatformWindows::DestroyMutex(PlatformMutexHandle mtx) {
-    // 销毁互斥锁
-    if (mtx) {
-        CloseHandle(static_cast<HANDLE>(mtx));
-    }
-}
-
-void PlatformWindows::LockMutex(PlatformMutexHandle mtx) {
-    // 锁定互斥锁
-    if (mtx) {
-        WaitForSingleObject(static_cast<HANDLE>(mtx), INFINITE);
-    }
-}
-
-void PlatformWindows::UnlockMutex(PlatformMutexHandle mtx) {
-    // 解锁互斥锁
-    if (mtx) {
-        ReleaseMutex(static_cast<HANDLE>(mtx));
-    }
-}
-
-void PlatformWindows::SleepMilliseconds(uint32_t ms) {
-    // 睡眠指定毫秒数
-    std::this_thread::sleep_for(std::chrono::milliseconds(ms));
-}
-
-bool PlatformWindows::Initialize() {
-    // 初始化平台
-    s_use_qpc = QueryPerformanceFrequency(&s_frequency) != 0;
-
-    return true;
-}
-
-void PlatformWindows::Shutdown() {
-    // 关闭平台
-}
-
-bool PlatformWindows::IsKeyDown(KeyCode key) const {
-    // 将 KeyCode 映射到 Windows 虚拟键码
+// ------------------------------------------------------------
+// 输入管理
+// ------------------------------------------------------------
+bool Platform::IsKeyDown(KeyCode key) {
     int virtualKey = 0;
 
     switch (key) {
@@ -447,55 +296,204 @@ bool PlatformWindows::IsKeyDown(KeyCode key) const {
         case KeyCode::F12: virtualKey = VK_F12; break;
 
         // 方向键
-        case KeyCode::ArrowUp: virtualKey = VK_UP; break;
-        case KeyCode::ArrowDown: virtualKey = VK_DOWN; break;
-        case KeyCode::ArrowLeft: virtualKey = VK_LEFT; break;
+        case KeyCode::ArrowUp:    virtualKey = VK_UP; break;
+        case KeyCode::ArrowDown:  virtualKey = VK_DOWN; break;
+        case KeyCode::ArrowLeft:  virtualKey = VK_LEFT; break;
         case KeyCode::ArrowRight: virtualKey = VK_RIGHT; break;
 
         // 特殊键
-        case KeyCode::Space: virtualKey = VK_SPACE; break;
-        case KeyCode::Enter: virtualKey = VK_RETURN; break;
-        case KeyCode::Escape: virtualKey = VK_ESCAPE; break;
+        case KeyCode::Space:     virtualKey = VK_SPACE; break;
+        case KeyCode::Enter:     virtualKey = VK_RETURN; break;
+        case KeyCode::Escape:    virtualKey = VK_ESCAPE; break;
         case KeyCode::Backspace: virtualKey = VK_BACK; break;
-        case KeyCode::Tab: virtualKey = VK_TAB; break;
-        case KeyCode::CapsLock: virtualKey = VK_CAPITAL; break;
+        case KeyCode::Tab:       virtualKey = VK_TAB; break;
+        case KeyCode::CapsLock:  virtualKey = VK_CAPITAL; break;
 
         // 修饰键
-        case KeyCode::LeftShift: virtualKey = VK_LSHIFT; break;
-        case KeyCode::RightShift: virtualKey = VK_RSHIFT; break;
-        case KeyCode::LeftControl: virtualKey = VK_LCONTROL; break;
+        case KeyCode::LeftShift:    virtualKey = VK_LSHIFT; break;
+        case KeyCode::RightShift:   virtualKey = VK_RSHIFT; break;
+        case KeyCode::LeftControl:  virtualKey = VK_LCONTROL; break;
         case KeyCode::RightControl: virtualKey = VK_RCONTROL; break;
-        case KeyCode::LeftAlt: virtualKey = VK_LMENU; break;
-        case KeyCode::RightAlt: virtualKey = VK_RMENU; break;
+        case KeyCode::LeftAlt:      virtualKey = VK_LMENU; break;
+        case KeyCode::RightAlt:     virtualKey = VK_RMENU; break;
 
         // 符号键
-        case KeyCode::Grave: virtualKey = VK_OEM_3; break;          // ` ~
-        case KeyCode::Minus: virtualKey = VK_OEM_MINUS; break;    // - _
-        case KeyCode::Equal: virtualKey = VK_OEM_PLUS; break;     // = +
-        case KeyCode::LeftBracket: virtualKey = VK_OEM_4; break;  // [ {
-        case KeyCode::RightBracket: virtualKey = VK_OEM_6; break; // ] }
-        case KeyCode::Backslash: virtualKey = VK_OEM_5; break;    // \ |
-        case KeyCode::Semicolon: virtualKey = VK_OEM_1; break;    // ; :
-        case KeyCode::Apostrophe: virtualKey = VK_OEM_7; break;   // ' "
-        case KeyCode::Comma: virtualKey = VK_OEM_COMMA; break;    // , <
-        case KeyCode::Period: virtualKey = VK_OEM_PERIOD; break;  // . >
-        case KeyCode::Slash: virtualKey = VK_OEM_2; break;        // / ?
+        case KeyCode::Grave:      virtualKey = VK_OEM_3; break;
+        case KeyCode::Minus:      virtualKey = VK_OEM_MINUS; break;
+        case KeyCode::Equal:      virtualKey = VK_OEM_PLUS; break;
+        case KeyCode::LeftBracket:  virtualKey = VK_OEM_4; break;
+        case KeyCode::RightBracket: virtualKey = VK_OEM_6; break;
+        case KeyCode::Backslash:  virtualKey = VK_OEM_5; break;
+        case KeyCode::Semicolon:  virtualKey = VK_OEM_1; break;
+        case KeyCode::Apostrophe: virtualKey = VK_OEM_7; break;
+        case KeyCode::Comma:      virtualKey = VK_OEM_COMMA; break;
+        case KeyCode::Period:     virtualKey = VK_OEM_PERIOD; break;
+        case KeyCode::Slash:      virtualKey = VK_OEM_2; break;
 
         default: return false;
     }
 
-    // 使用事件驱动的键盘状态
-    bool pressed = g_keyStates[virtualKey];
-    return pressed;
+    return g_keyStates[virtualKey];
 }
 
-void PlatformWindows::PumpEvents() {
-    MSG msg;
-    while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
+bool Platform::IsMouseButtonDown(MouseButton btn) {
+    SHORT state = GetAsyncKeyState(btn);
+    return (state & 0x8000) != 0;
+}
+
+void Platform::GetMousePosition(float& x, float& y) {
+    POINT point;
+    if (GetCursorPos(&point)) {
+        x = static_cast<float>(point.x);
+        y = static_cast<float>(point.y);
+    } else {
+        x = 0.0f;
+        y = 0.0f;
     }
 }
-}  // namespace Engine
+
+void Platform::SetMousePosition(float x, float y) {
+    SetCursorPos(static_cast<int>(x), static_cast<int>(y));
+}
+
+void Platform::SetMouseLock(bool locked) {
+    if (locked && s_hwnd) {
+        RECT rect;
+        GetClientRect(s_hwnd, &rect);
+        ClientToScreen(s_hwnd, reinterpret_cast<POINT*>(&rect.left));
+        ClientToScreen(s_hwnd, reinterpret_cast<POINT*>(&rect.right));
+        ClipCursor(&rect);
+    } else {
+        ClipCursor(nullptr);
+    }
+}
+
+// ------------------------------------------------------------
+// 文件系统
+// ------------------------------------------------------------
+bool Platform::FileExists(const char* path) {
+    if (!path) return false;
+    return std::filesystem::exists(path);
+}
+
+size_t Platform::FileSize(const char* path) {
+    if (!path) return 0;
+    if (!std::filesystem::exists(path)) return 0;
+    return std::filesystem::file_size(path);
+}
+
+size_t Platform::ReadFile(const char* path, void* dst, size_t maxBytes) {
+    if (!path || !dst) return 0;
+
+    FILE* file = nullptr;
+    fopen_s(&file, path, "rb");
+    if (!file) return 0;
+
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    rewind(file);
+
+    size_t bytesToRead = (fileSize < static_cast<long>(maxBytes)) ? fileSize : maxBytes;
+    size_t bytesRead   = fread(dst, 1, bytesToRead, file);
+    fclose(file);
+    return bytesRead;
+}
+
+const char* Platform::GetExecutablePath() {
+    static char path[MAX_PATH] = {0};
+    GetModuleFileNameA(nullptr, path, MAX_PATH);
+    return path;
+}
+
+const char* Platform::GetPersistentPath() {
+    static char path[MAX_PATH] = {0};
+    if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, path))) {
+        return path;
+    }
+    return nullptr;
+}
+
+const char* Platform::GetTemporaryPath() {
+    static char path[MAX_PATH] = {0};
+    GetTempPathA(MAX_PATH, path);
+    return path;
+}
+
+// ------------------------------------------------------------
+// 线程和同步
+// ------------------------------------------------------------
+PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
+    DWORD threadId;
+    HANDLE thread = ::CreateThread(
+        nullptr,           // 默认安全属性
+        0,                 // 默认堆栈大小
+        reinterpret_cast<LPTHREAD_START_ROUTINE>(entry),
+        userData,          // 参数
+        0,                 // 立即运行
+        &threadId          // 线程ID
+    );
+    return static_cast<PlatformThreadHandle>(thread);
+}
+
+void Platform::JoinThread(PlatformThreadHandle thread) {
+    if (thread) {
+        WaitForSingleObject(static_cast<HANDLE>(thread), INFINITE);
+    }
+}
+
+PlatformMutexHandle Platform::CreateMutex() {
+    HANDLE mutex = CreateMutexA(nullptr, FALSE, nullptr);
+    return static_cast<PlatformMutexHandle>(mutex);
+}
+
+void Platform::DestroyMutex(PlatformMutexHandle mtx) {
+    if (mtx) {
+        CloseHandle(static_cast<HANDLE>(mtx));
+    }
+}
+
+void Platform::LockMutex(PlatformMutexHandle mtx) {
+    if (mtx) {
+        WaitForSingleObject(static_cast<HANDLE>(mtx), INFINITE);
+    }
+}
+
+void Platform::UnlockMutex(PlatformMutexHandle mtx) {
+    if (mtx) {
+        ReleaseMutex(static_cast<HANDLE>(mtx));
+    }
+}
+
+// ------------------------------------------------------------
+// IPlatformLogger 接口实现
+// ------------------------------------------------------------
+void Platform::LogToConsole(PlatformLogLevel level, const char* tag, const char* message) {
+    (void)level;
+    (void)tag;
+    std::cout << message << std::endl;
+}
+
+const char* Platform::GetLogDirectoryPath() {
+    static char path[MAX_PATH] = {0};
+    static bool initialized = false;
+
+    if (!initialized) {
+        char localAppData[MAX_PATH] = {0};
+        if (SUCCEEDED(SHGetFolderPathA(nullptr, CSIDL_LOCAL_APPDATA, nullptr, SHGFP_TYPE_CURRENT, localAppData))) {
+            std::filesystem::path logPath(localAppData);
+            logPath /= "PrismaEngine";
+            logPath /= "logs";
+            strcpy_s(path, MAX_PATH, logPath.string().c_str());
+            initialized = true;
+        } else {
+            strcpy_s(path, MAX_PATH, "logs");
+            initialized = true;
+        }
+    }
+
+    return path;
+}
+
+} // namespace Engine
 
 #endif // _WIN32

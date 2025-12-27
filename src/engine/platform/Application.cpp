@@ -2,7 +2,7 @@
 #include "Engine.h"
 #include "Export.h"
 #include "Logger.h"
-#include "PlatformWindows.h"
+#include "Platform.h"
 
 namespace Engine {
 /// <summary>

@@ -1,5 +1,6 @@
 #include "Logger.h"
 #include "LogScope.h"
+#include "IPlatformLogger.h"
 #include "pch.h"
 #include <filesystem>
 #include <iostream>
@@ -13,6 +14,23 @@
 #endif
 bool Logger::IsInitialized() const {
     return initialized_;
+}
+
+void Logger::SetPlatformLogger(IPlatformLogger* platformLogger) {
+    platformLogger_ = platformLogger;
+}
+
+// LogLevel 转 PlatformLogLevel 辅助函数
+static PlatformLogLevel ConvertLogLevel(LogLevel level) {
+    switch (level) {
+        case LogLevel::Trace:   return PlatformLogLevel::Trace;
+        case LogLevel::Debug:   return PlatformLogLevel::Debug;
+        case LogLevel::Info:    return PlatformLogLevel::Info;
+        case LogLevel::Warning: return PlatformLogLevel::Warning;
+        case LogLevel::Error:   return PlatformLogLevel::Error;
+        case LogLevel::Fatal:   return PlatformLogLevel::Fatal;
+        default:                return PlatformLogLevel::Info;
+    }
 }
 
 CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
@@ -49,21 +67,36 @@ bool Logger::Initialize(const LogConfig& config)
     initialized_ = true;
     config_ = config;
 
+    // 确定日志文件路径
+    std::string logFilePath = config_.logFilePath;
+
+    // 如果 platformLogger_ 可用，使用平台特定的日志目录
+    if (platformLogger_) {
+        const char* platformLogDir = platformLogger_->GetLogDirectoryPath();
+        if (platformLogDir) {
+            // 使用平台日志目录 + 原始文件名
+            std::filesystem::path originalPath(config_.logFilePath);
+            std::filesystem::path platformPath(platformLogDir);
+            platformPath /= originalPath.filename();  // 只取文件名
+            logFilePath = platformPath.string();
+        }
+    }
+
     // 创建日志目录
-    std::filesystem::path logPath(config_.logFilePath);
+    std::filesystem::path logPath(logFilePath);
     if (logPath.has_parent_path()) {
         std::filesystem::create_directories(logPath.parent_path());
     }
 
     // 打开日志文件
     if (config_.target & LogTarget::File) {
-        fileStream_.open(config_.logFilePath, std::ios::app);
+        fileStream_.open(logFilePath, std::ios::app);
         if (!fileStream_.is_open()) {
-            std::cerr << "Failed to open log file: " << config_.logFilePath << std::endl;
+            std::cerr << "Failed to open log file: " << logFilePath << std::endl;
         }
         else {
-            if (std::filesystem::exists(config_.logFilePath)) {
-                currentFileSize_ = std::filesystem::file_size(config_.logFilePath);
+            if (std::filesystem::exists(logFilePath)) {
+                currentFileSize_ = std::filesystem::file_size(logFilePath);
             }
         }
     }
@@ -441,7 +474,16 @@ std::string Logger::GetTimestamp(const std::chrono::system_clock::time_point& ti
 }
 
 void Logger::WriteToConsole(const std::string& message, bool useColors) {
-    std::cout << message << std::endl;
+    if (platformLogger_) {
+        // 使用平台特定的日志输出
+        // 注意：这里 message 已经是格式化后的完整字符串，包含时间戳、级别等
+        // 为了保持平台日志的统一格式，我们直接输出到标准输出
+        // 如果需要使用平台的 logcat，可以在 FormatEntry 中移除格式化
+        std::cout << message << std::endl;
+    } else {
+        // 回退到标准输出
+        std::cout << message << std::endl;
+    }
 }
 
 void Logger::WriteToFile(const std::string& message) {

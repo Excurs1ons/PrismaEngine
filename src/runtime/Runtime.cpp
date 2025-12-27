@@ -17,7 +17,7 @@
 #include "../engine/Common.h"
 #include "../engine/DynamicLoader.h"
 #include "Export.h"
-#include "PlatformWindows.h"
+#include "Platform.h"
 #include <iostream>
 #include <thread>
 #include <chrono>

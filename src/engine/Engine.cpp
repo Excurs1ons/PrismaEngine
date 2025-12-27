@@ -6,10 +6,7 @@
 #include "SceneManager.h"
 #include "ThreadManager.h"
 #include "InputManager.h"
-
-#if defined(PRISMA_PLATFORM_WINDOWS) || defined(_WIN32)
-#include "PlatformWindows.h"
-#endif
+#include "Platform.h"
 #include "RenderSystemNew.h"
 
 namespace Engine {
@@ -55,22 +52,23 @@ namespace Engine {
         isRunning_ = true;
 
 #if defined(PRISMA_PLATFORM_WINDOWS) || defined(_WIN32)
-        auto platform = PlatformWindows::GetInstance();
-
-        // 初始化输入管理器
-        InputManager::GetInstance().SetPlatform(platform.get());
+        // 初始化平台
+        Platform::Initialize();
 
         // 主循环
         while (IsRunning()) {
             LOG_TRACE("Engine","Ticking...");
             Tick();
-            platform->PumpEvents();
+            Platform::PumpEvents();
 
             // 检查窗口是否应该关闭
-            if (platform->ShouldClose(platform->GetWindowHandle())) {
+            if (Platform::ShouldClose(Platform::GetCurrentWindow())) {
                 isRunning_ = false;
             }
         }
+
+        // 关闭平台
+        Platform::Shutdown();
 #else
         // Android/其他平台的主循环由外部控制
         while (IsRunning()) {
