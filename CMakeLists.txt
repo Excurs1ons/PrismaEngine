@@ -227,30 +227,30 @@ if(WIN32)
     set(CPACK_NSIS_MODIFY_PATH ON)
 endif()
 
-# 安装配置文件
-include(CMakePackageConfigHelpers)
-configure_package_config_file(
-    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PrismaEngineConfig.cmake.in"
-    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
-    INSTALL_DESTINATION lib/cmake/PrismaEngine
-)
-
-write_basic_package_version_file(
-    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion
-)
-
-install(FILES 
-    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
-    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
-    DESTINATION lib/cmake/PrismaEngine
-)
-
-install(EXPORT PrismaEngineTargets
-    FILE PrismaEngineTargets.cmake
-    NAMESPACE PrismaEngine::
-    DESTINATION lib/cmake/PrismaEngine
-)
+# 安装配置文件 (可选: 如果不需要外部项目使用引擎，可以注释掉)
+# include(CMakePackageConfigHelpers)
+# configure_package_config_file(
+#     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PrismaEngineConfig.cmake.in"
+#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
+#     INSTALL_DESTINATION lib/cmake/PrismaEngine
+# )
+#
+# write_basic_package_version_file(
+#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
+#     VERSION ${PROJECT_VERSION}
+#     COMPATIBILITY SameMajorVersion
+# )
+#
+# install(FILES
+#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
+#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
+#     DESTINATION lib/cmake/PrismaEngine
+# )
+#
+# install(EXPORT PrismaEngineTargets
+#     FILE PrismaEngineTargets.cmake
+#     NAMESPACE PrismaEngine::
+#     DESTINATION lib/cmake/PrismaEngine
+# )
 
 include(CPack)

@@ -66,7 +66,6 @@ set_target_properties(Game PROPERTIES
 
 # 安装规则
 install(TARGETS Game
-    EXPORT PrismaEngineTargets
     LIBRARY DESTINATION lib
     RUNTIME DESTINATION bin
 )
