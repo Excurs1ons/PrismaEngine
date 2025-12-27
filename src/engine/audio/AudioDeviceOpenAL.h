@@ -61,6 +61,10 @@ public:
     void SetEventCallback(AudioEventCallback callback) override;
     void RemoveEventCallback() override;
 
+    // EFX音效
+    bool ApplyEffect(AudioVoiceId voiceId, EffectType effectType, const void* params) override;
+    void RemoveEffects(AudioVoiceId voiceId) override;
+
     // 统计
     AudioStats GetStats() const override;
     void ResetStats() override;
@@ -84,6 +88,7 @@ private:
         AudioClip clip;                   // 音频剪辑
         PlayDesc desc;                    // 播放描述
         float playbackPosition = 0.0f;    // 播放位置
+        VoiceState state = VoiceState::Stopped;
     };
 
     // ========== 初始化相关 ==========
