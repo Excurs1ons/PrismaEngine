@@ -1,5 +1,0 @@
-<resources xmlns:tools="http://schemas.android.com/tools"
-tools:shrinkMode="strict"
-tools:discard="@layout/unused_*"
-    />
-<!--tools:keep="@layout/activity_main,@style/Theme.Plasma,@drawable/ic_launcher" -->
