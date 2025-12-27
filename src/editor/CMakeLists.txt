@@ -26,13 +26,25 @@ target_include_directories(Editor
         ${CMAKE_CURRENT_SOURCE_DIR}/../engine/platform
 )
 
-# 查找并链接 DirectX 12 (使用 Windows SDK)
-find_package(directx-headers CONFIG REQUIRED)
-
 # 链接依赖
-target_link_libraries(Editor 
+# DirectX-Headers 由 FetchContent.cmake 管理
+target_link_libraries(Editor
     PRIVATE Engine
-    Microsoft::DirectX-Headers
+)
+
+# 链接 DirectX-Headers
+if(TARGET Microsoft::DirectX-Headers)
+    target_link_libraries(Editor PRIVATE Microsoft::DirectX-Headers)
+elseif(TARGET DirectX-Headers)
+    target_link_libraries(Editor PRIVATE DirectX-Headers)
+else()
+    find_package(directx-headers CONFIG REQUIRED)
+    target_link_libraries(Editor PRIVATE Microsoft::DirectX-Headers)
+endif()
+
+# Windows 系统库
+target_link_libraries(Editor
+    PRIVATE
     d3d12
     dxgi
     d3dcompiler
