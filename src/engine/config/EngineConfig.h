@@ -248,15 +248,35 @@
 // 内存对齐
 #define PRISMA_ALIGN(size) __attribute__((aligned(size)))
 
-// 导出/导入
-#ifdef _MSC_VER
-    #ifdef PRISMA_ENGINE_EXPORTS
-        #define PRISMA_API __declspec(dllexport)
+// 导出/导入宏
+// 用于控制引擎 API 的可见性
+#if defined(PRISMA_ENGINE_BUILD_SHARED)
+    // 构建动态库
+    #if defined(_MSC_VER)
+        // Windows DLL
+        #ifdef ENGINE_EXPORTS
+            #define PRISMA_API __declspec(dllexport)
+        #else
+            #define PRISMA_API __declspec(dllimport)
+        #endif
     #else
-        #define PRISMA_API __declspec(dllimport)
+        // Linux/Unix 共享库
+        #define PRISMA_API __attribute__((visibility("default")))
     #endif
+#elif defined(PRISMA_ENGINE_BUILD_STATIC)
+    // 构建静态库
+    #define PRISMA_API
 #else
-    #define PRISMA_API __attribute__((visibility("default")))
+    // 未指定构建类型，默认为静态库
+    #define PRISMA_API
+#endif
+
+// 便捷宏
+#define PRISMA_LOCAL  // 用于内部函数，不导出
+#if defined(_MSC_VER)
+    #define PRISMA_LOCAL
+#else
+    #define PRISMA_LOCAL __attribute__((visibility("hidden")))
 #endif
 
 // 条件编译提示
