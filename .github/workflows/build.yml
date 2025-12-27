@@ -9,7 +9,6 @@ on:
       - 'resources/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
-      - 'vcpkg.json'
       - '.github/workflows/build.yml'
   pull_request:
     branches: [ main, develop ]
@@ -19,12 +18,14 @@ on:
       - 'resources/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
-      - 'vcpkg.json'
+
+env:
+  CMAKE_VERSION: '3.31.0'
 
 jobs:
   build-windows:
     runs-on: windows-latest
-    
+
     strategy:
       matrix:
         preset: [windows-x64-debug, windows-x64-release]
@@ -33,7 +34,7 @@ jobs:
             build_type: debug
           - preset: windows-x64-release
             build_type: release
-        
+
     steps:
     - uses: actions/checkout@v4
       with:
@@ -47,167 +48,48 @@ jobs:
         Write-Host "Build Preset: ${{ matrix.preset }}"
         Write-Host "Build Type: ${{ matrix.build_type }}"
         Write-Host "Work Dir: $(Get-Location)"
-        try {
-          $cmakeVersion = cmake --version | Select-Object -First 1
-          Write-Host "CMake Version: $cmakeVersion"
-        } catch {
-          Write-Host "CMake Version: Unavailable"
-        }
-        try {
-          $gitVersion = git --version
-          Write-Host "Git Version: $gitVersion"
-        } catch {
-          Write-Host "Git Version: Unavailable"
-        }
-        try {
-          $pythonVersion = python --version 2>$null
-          if (-not $pythonVersion) { $pythonVersion = & python -V 2>$null }
-          if ($pythonVersion) {
-            Write-Host "Python Version: $pythonVersion"
-          } else {
-            Write-Host "Python Version: Python not found"
-          }
-        } catch {
-          Write-Host "Python Version: Python not found"
-        }
-        try {
-          # 简化内存查询逻辑，防止单行复杂命令解析出错
-          $os = Get-CimInstance -ClassName Win32_OperatingSystem
-          $total = [math]::Round($os.TotalVisibleMemorySize/1MB, 2)
-          $free = [math]::Round($os.FreePhysicalMemory/1MB, 2)
-          Write-Host "Memory (MB): Total=$total, Free=$free"
-        } catch {
-          Write-Host "Memory info unavailable"
-        }
-    
-    - name: Cache vcpkg dependencies
-      uses: actions/cache@v4
-      id: cache-vcpkg
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
       with:
-        path: |
-          ./vcpkg_installed
-          ./vcpkg/buildtrees
-          ./vcpkg/downloads
-          ./vcpkg/packages
-        key: ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}-v4
-        restore-keys: |
-          ${{ runner.os }}-vcpkg-${{ hashFiles('**/vcpkg.json') }}-
-          ${{ runner.os }}-vcpkg-
-    
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
         path: |
           ./build/${{ matrix.preset }}
-        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'vcpkg.json') }}
+        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
         restore-keys: |
           ${{ runner.os }}-build-${{ matrix.preset }}-
           ${{ runner.os }}-build-
-    
-    - name: Fetch all history for vcpkg
-      run: |
-        git fetch --all
-      
-    - name: Setup vcpkg
-      shell: powershell
-      run: |
-        if ('${{ steps.cache-vcpkg.outputs.cache-hit }}' -eq 'true') {
-          Write-Host "Cache hit! vcpkg dependencies restored from cache"
-        } else {
-          Write-Host "Cache miss. Will install vcpkg dependencies..."
-        }
 
-        # 设置vcpkg安装到项目目录
-        $env:VCPKG_ROOT = "./vcpkg"
-        $env:VCPKG_INSTALLED_DIR = "./vcpkg_installed"
-
-        ./vcpkg/bootstrap-vcpkg.bat
-      
     - name: Configure CMake
-      run: |
-        cmake --preset ${{ matrix.preset }}
-      
+      run: cmake --preset ${{ matrix.preset }}
+
     - name: Build
       run: |
         echo "开始构建 ${{ matrix.build_type }} 配置..."
-        # 使用最大并行度构建，但限制在合理范围内以避免资源耗尽
-        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --parallel 4 || {
-          echo "构建失败，尝试获取详细错误信息..."
-          cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
-          exit 1
-        }
-      
+        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --parallel 4
+
     - name: Install
       run: |
         echo "开始安装 ${{ matrix.build_type }} 配置..."
-        cmake --install build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.preset }}/install || {
-          echo "安装失败，尝试获取详细错误信息..."
-          cmake --install build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.preset }}/install --verbose 2>&1 | tail -n 100
-          exit 1
-        }
-      
+        cmake --install build/${{ matrix.preset }} --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --prefix build/${{ matrix.preset }}/install
+
     - name: Create Distribution Package
       run: |
         echo "创建分发包..."
-        cmake --build build/${{ matrix.preset }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
-          echo "创建分发包失败，尝试获取详细错误信息..."
-          cmake --build build/${{ matrix.preset }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
-          exit 1
-        }
-        cmake --build build/${{ matrix.preset }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} || {
-          echo "创建Windows分发包失败，尝试获取详细错误信息..."
-          cmake --build build/${{ matrix.preset }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }} --verbose 2>&1 | tail -n 100
-          exit 1
-        }
-      
+        cmake --build build/${{ matrix.preset }} --target dist --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
+        cmake --build build/${{ matrix.preset }} --target dist-win --config ${{ matrix.build_type == 'release' && 'Release' || 'Debug' }}
+
     - name: Verify Build Artifacts
       shell: powershell
       run: |
         Write-Host "Verifying Build Artifacts..."
         Get-ChildItem -Path "build/${{ matrix.preset }}" -Force
-        
-        # Check distribution package
-        $tarFile = Get-ChildItem -Path "build/${{ matrix.preset }}" -Filter "PrismaEngine-*.tar.gz" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($tarFile) {
-          Write-Host "Found tar.gz package: $($tarFile.Name)"
-          try {
-            # tar在管道被Select-Object关闭时会报错退出，导致ExitCode=1
-            tar -tzf $tarFile.FullName | Select-Object -First 10
-            # 强制重置退出码，忽略管道断开错误
-            if ($LastExitCode -ne 0) { $global:LastExitCode = 0 }
-          } catch {
-            Write-Host "Cannot list tar.gz content, but file exists."
-          }
-        } else {
-          Write-Host "Warning: tar.gz package not found."
-        }
-        
-        $zipFile = Get-ChildItem -Path "build/${{ matrix.preset }}" -Filter "PrismaEngine-*.zip" -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($zipFile) {
-          Write-Host "Found zip package: $($zipFile.Name)"
-          try {
-            Add-Type -AssemblyName System.IO.Compression.FileSystem
-            $zip = [IO.Compression.ZipFile]::OpenRead($zipFile.FullName)
-            $zip.Entries | Select-Object -First 10 | ForEach-Object { $_.FullName }
-            $zip.Dispose() # 显式释放文件句柄
-          } catch {
-            Write-Host "Cannot list zip content, but file exists."
-          }
-        } else {
-          Write-Host "Warning: zip package not found."
-        }
-        
-        # Check install directory
-        $installDir = "build/${{ matrix.preset }}/install"
-        if (Test-Path $installDir -PathType Container) {
-          Write-Host "Install directory content:"
-          Get-ChildItem -Path $installDir -Force
-        } else {
-          Write-Host "Warning: Install directory not found."
-        }
-        
-        # 显式以成功状态退出，防止之前的非致命错误导致步骤失败
         exit 0
+
     - name: Upload Artifacts
       uses: actions/upload-artifact@v4
       with:
