@@ -20,17 +20,25 @@ add_library(Game SHARED
 
 # 包含目录
 target_include_directories(Game
-    PRIVATE 
+    PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}
 )
-
-# 查找并链接 DirectX 12 (使用 Windows SDK)
-find_package(directx-headers CONFIG REQUIRED)
 
 # 链接依赖
 target_link_libraries(Game
     PRIVATE Engine
-    Microsoft::DirectX-Headers
+)
+
+# 链接 DirectX-Headers (由 FetchContent.cmake 管理)
+if(TARGET Microsoft::DirectX-Headers)
+    target_link_libraries(Game PRIVATE Microsoft::DirectX-Headers)
+elseif(TARGET DirectX-Headers)
+    target_link_libraries(Game PRIVATE DirectX-Headers)
+endif()
+
+# Windows 系统库
+target_link_libraries(Game
+    PRIVATE
     d3d12
     dxgi
     d3dcompiler
