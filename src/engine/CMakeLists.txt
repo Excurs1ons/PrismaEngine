@@ -89,17 +89,11 @@ endif()
 # Vulkan (跨平台)
 if(PRISMA_ENABLE_RENDER_VULKAN)
     list(APPEND ENGINE_GRAPHIC_SOURCES
-        graphic/adapters/vulkan/RenderDeviceVulkan.cpp
         graphic/adapters/vulkan/VulkanShader.cpp
-        graphic/adapters/vulkan/VulkanMaterial.cpp
-        graphic/adapters/vulkan/VulkanMesh.cpp
         ${VULKAN_SOURCES}
     )
     list(APPEND ENGINE_GRAPHIC_HEADERS
-        graphic/adapters/vulkan/RenderDeviceVulkan.h
         graphic/adapters/vulkan/VulkanShader.h
-        graphic/adapters/vulkan/VulkanMaterial.h
-        graphic/adapters/vulkan/VulkanMesh.h
         ${VULKAN_HEADERS}
     )
     message(STATUS "Adding Vulkan render device")
@@ -198,32 +192,35 @@ endif()
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
     # SDL3 由 FetchContent.cmake 管理
-    if(ANDROID)
-        # Android 平台: 查找已下载的 SDL3
-        list(GET CMAKE_PREFIX_PATH 0 DEPS_PATH)
-        message(STATUS "Searching for SDL3 in ${DEPS_PATH}")
-
-        set(SDL3_INCLUDE_DIRS "${DEPS_PATH}/include/SDL3")
-        set(SDL3_LIBRARIES "${DEPS_PATH}/lib/libSDL3.a")
-
-        if(EXISTS "${SDL3_INCLUDE_DIRS}/SDL.h" AND EXISTS "${SDL3_LIBRARIES}")
-            message(STATUS "Found SDL3: ${SDL3_LIBRARIES}")
-            target_include_directories(Engine PUBLIC ${SDL3_INCLUDE_DIRS})
-            target_link_libraries(Engine PUBLIC ${SDL3_LIBRARIES})
-        else()
-            message(FATAL_ERROR "SDL3 not found in dependencies directory")
+    # 尝试所有可能的 SDL3 目标名称
+    get_cmake_property(_TARGETS TARGETS)
+    message(STATUS "Available targets containing 'SDL3':")
+    foreach(_TARGET ${_TARGETS})
+        if(_TARGET MATCHES "SDL3")
+            message(STATUS "  - ${_TARGET}")
         endif()
+    endforeach()
+
+    if(TARGET SDL3-static)
+        target_link_libraries(Engine PUBLIC SDL3-static)
+        message(STATUS "Linking SDL3-static")
+    elseif(TARGET SDL3::SDL3-static)
+        target_link_libraries(Engine PUBLIC SDL3::SDL3-static)
+        message(STATUS "Linking SDL3::SDL3-static")
+    elseif(TARGET SDL3_static)
+        target_link_libraries(Engine PUBLIC SDL3_static)
+        message(STATUS "Linking SDL3_static")
+    elseif(TARGET SDL3::SDL3-shared)
+        target_link_libraries(Engine PUBLIC SDL3::SDL3-shared)
+        message(STATUS "Linking SDL3::SDL3-shared")
+    elseif(TARGET SDL3_shared)
+        target_link_libraries(Engine PUBLIC SDL3_shared)
+        message(STATUS "Linking SDL3_shared")
+    elseif(TARGET SDL3)
+        target_link_libraries(Engine PUBLIC SDL3)
+        message(STATUS "Linking SDL3")
     else()
-        # Windows 桌面平台: 使用 FetchContent 提供的目标
-        if(TARGET SDL3::SDL3-static)
-            target_link_libraries(Engine PUBLIC SDL3::SDL3-static)
-        elseif(TARGET SDL3::SDL3-shared)
-            target_link_libraries(Engine PUBLIC SDL3::SDL3-shared)
-        elseif(TARGET SDL3)
-            target_link_libraries(Engine PUBLIC SDL3)
-        else()
-            message(FATAL_ERROR "SDL3 target not found")
-        endif()
+        message(FATAL_ERROR "SDL3 target not found. Available targets: SDL3-static, SDL3::SDL3-static, SDL3_static, SDL3::SDL3-shared, SDL3_shared, SDL3")
     endif()
 endif()
 

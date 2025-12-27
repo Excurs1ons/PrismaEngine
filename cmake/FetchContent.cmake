@@ -157,7 +157,10 @@ endif()
 
 # Vulkan-Headers - 当启用 Vulkan 渲染时
 if(PRISMA_ENABLE_RENDER_VULKAN)
-    if(PRISMA_USE_FETCHCONTENT)
+    if(ANDROID)
+        # Android 平台使用 NDK 自带的 Vulkan，不需要额外下载
+        message(STATUS "Vulkan: 使用 Android NDK 的 Vulkan")
+    elseif(PRISMA_USE_FETCHCONTENT)
         FetchContent_MakeAvailable(Vulkan-Headers)
         message(STATUS "Vulkan-Headers: 使用 FetchContent")
     else()
@@ -250,12 +253,19 @@ if(PRISMA_USE_FETCHCONTENT)
 
     # SDL3
     if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN)
-        if(TARGET SDL3::SDL3-static)
-            # 已有正确目标
-        elseif(TARGET SDL3_static)
+        # SDL3 在 Android 上可能创建 SDL3-static 目标
+        # 为所有常见变体创建别名
+        if(TARGET SDL3-static AND NOT TARGET SDL3::SDL3-static)
+            add_library(SDL3::SDL3-static ALIAS SDL3-static)
+        endif()
+        if(TARGET SDL3_static AND NOT TARGET SDL3::SDL3-static)
             add_library(SDL3::SDL3-static ALIAS SDL3_static)
-        elseif(TARGET SDL3::SDL3-shared)
-            add_library(SDL3::SDL3-static ALIAS SDL3::SDL3-shared)
+        endif()
+        if(TARGET SDL3-shared AND NOT TARGET SDL3::SDL3-shared)
+            add_library(SDL3::SDL3-shared ALIAS SDL3-shared)
+        endif()
+        if(TARGET SDL3_shared AND NOT TARGET SDL3::SDL3-shared)
+            add_library(SDL3::SDL3-shared ALIAS SDL3_shared)
         endif()
     endif()
 
