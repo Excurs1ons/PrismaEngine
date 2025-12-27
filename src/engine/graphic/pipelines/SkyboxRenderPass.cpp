@@ -23,6 +23,7 @@ SkyboxRenderPass::SkyboxRenderPass()
     InitializeSkyboxMesh();
 
     // 使用硬编码的天空盒着色器
+#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
     m_skyboxShader = std::make_shared<Shader>();
     if (m_skyboxShader->CompileFromString(Graphic::SKYBOX_VERTEX_SHADER, Graphic::SKYBOX_PIXEL_SHADER)) {
         m_skyboxShader->SetName("SkyboxDefault");
@@ -31,6 +32,14 @@ SkyboxRenderPass::SkyboxRenderPass()
         LOG_ERROR("SkyboxRenderPass", "天空盒着色器编译失败");
         m_skyboxShader.reset();
     }
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN)
+    // TODO: Vulkan着色器支持尚未完全实现
+    LOG_WARNING("SkyboxRenderPass", "Vulkan着色器支持尚未实现，天空盒渲染暂时禁用");
+    m_skyboxShader = nullptr;
+#else
+    m_skyboxShader = nullptr;
+    LOG_WARNING("SkyboxRenderPass", "无可用渲染后端，天空盒渲染禁用");
+#endif
 }
 
 SkyboxRenderPass::~SkyboxRenderPass()
