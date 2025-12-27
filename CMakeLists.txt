@@ -1,5 +1,19 @@
 cmake_minimum_required(VERSION 3.31)
 
+# ========== 依赖管理方式选择 ==========
+# 本项目使用 FetchContent 管理依赖，不使用 vcpkg
+# 如果环境变量中设置了 CMAKE_TOOLCHAIN_FILE，需要清除它
+
+if(DEFINED ENV{CMAKE_TOOLCHAIN_FILE})
+    message(WARNING "检测到环境变量 CMAKE_TOOLCHAIN_FILE=$ENV{CMAKE_TOOLCHAIN_FILE}")
+    message(STATUS "本项目使用 FetchContent 管理依赖，已自动忽略 vcpkg toolchain")
+    unset(CMAKE_TOOLCHAIN_FILE CACHE)
+    unset(ENV{CMAKE_TOOLCHAIN_FILE})
+endif()
+
+# 确保不自动查找 vcpkg.cmake
+set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "")
+
 project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
 # 设置HTTP和HTTPS代理
 #set(ENV{HTTP_PROXY} "http://127.0.0.1:7897")

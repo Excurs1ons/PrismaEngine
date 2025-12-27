@@ -1,5 +1,20 @@
 # 引擎核心库 - 条件编译版本
 
+# ========== 库类型配置 ==========
+
+option(PRISMA_ENGINE_BUILD_SHARED "Build engine as shared library (DLL/so)" OFF)
+
+# 设置库类型变量
+if(PRISMA_ENGINE_BUILD_SHARED)
+    set(PRISMA_ENGINE_TYPE SHARED)
+    set(PRISMA_ENGINE_LIBRARY_TYPE SHARED)
+    message(STATUS "Engine: Building as SHARED library")
+else()
+    set(PRISMA_ENGINE_TYPE STATIC)
+    set(PRISMA_ENGINE_LIBRARY_TYPE STATIC)
+    message(STATUS "Engine: Building as STATIC library")
+endif()
+
 # 包含graphic子目录的CMakeLists.txt来定义变量
 include(graphic/CMakeLists.txt)
 
@@ -156,15 +171,38 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
     message(STATUS "Adding SDL3 audio device")
 endif()
 
-# ========== 创建静态库 ==========
+# ========== 创建引擎库 ==========
 
-add_library(Engine STATIC
+add_library(Engine ${PRISMA_ENGINE_TYPE}
     ${ENGINE_SOURCES}
     ${ENGINE_HEADERS}
     pch.h
     pch.cpp
     packing/pipeline.h
 )
+
+# ========== 导出符号配置 ==========
+
+# 动态库需要导出宏，静态库不需要
+if(PRISMA_ENGINE_BUILD_SHARED)
+    if(WIN32)
+        # Windows DLL 导出/导入宏
+        target_compile_definitions(Engine PRIVATE
+            ENGINE_BUILD_SHARED=1
+            ENGINE_EXPORTS=1
+        )
+    else()
+        # Linux/Unix 共享库
+        target_compile_definitions(Engine PRIVATE
+            ENGINE_BUILD_SHARED=1
+        )
+    endif()
+else()
+    # 静态库不需要导出宏
+    target_compile_definitions(Engine PRIVATE
+        ENGINE_BUILD_STATIC=1
+    )
+endif()
 
 # Windows 平台添加 UTF-8 编译支持
 if(WIN32)
