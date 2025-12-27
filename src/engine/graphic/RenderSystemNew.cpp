@@ -178,6 +178,7 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
     // 直接创建新的适配器设备
     switch (desc.backendType) {
         case RenderBackendType::DirectX12: {
+#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
             // 准备设备描述
             DeviceDesc deviceDesc;
             deviceDesc.name = desc.name;
@@ -193,13 +194,15 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
             if (!m_device) {
                 LOG_ERROR("Render", "DX12设备创建失败");
                 return false;
+#endif
             }
             break;
-        }
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
         case RenderBackendType::Vulkan: {
             // TODO: 实现Vulkan工厂
             LOG_ERROR("Render", "Vulkan后端暂未实现");
             return false;
+#endif
         }
         default: {
             LOG_ERROR("Render", "不支持的渲染后端类型: {0}", static_cast<int>(desc.backendType));

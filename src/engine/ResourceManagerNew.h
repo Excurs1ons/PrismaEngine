@@ -43,7 +43,7 @@ public:
     void Update(float deltaTime) override;
 
     // IResourceManager接口实现
-    bool Initialize(IRenderDevice* device);
+    bool Initialize(IRenderDevice* device) override;
     void Shutdown() override;
 
     // 纹理管理

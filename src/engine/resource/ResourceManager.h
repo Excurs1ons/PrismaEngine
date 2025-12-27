@@ -14,16 +14,13 @@
 #include <string>
 #include <type_traits>
 #include <unordered_map>
+#include "Mesh.h"
+#include "Shader.h"
+#include "Material.h"
 #if defined(FindResource)
 #undef FindResource
 #endif
 
-// 前向声明
-namespace Engine {
-    class Material;
-    class Mesh;
-    class Shader;
-}
 
 namespace Engine {
 namespace Resource {
