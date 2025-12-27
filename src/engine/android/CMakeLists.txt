@@ -58,6 +58,16 @@ target_include_directories(engine
         ../platform
 )
 
+# Android NDK头文件目录
+if(ANDROID)
+    if(DEFINED ANDROID_NDK)
+        target_include_directories(engine PRIVATE
+            ${ANDROID_NDK}/sysroot/usr/include
+            ${ANDROID_NDK}/sources/android/native_app_glue
+        )
+    endif()
+endif()
+
 # 设置编译定义
 target_compile_definitions(engine
     PRIVATE ENGINE_EXPORTS

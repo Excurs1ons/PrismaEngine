@@ -289,55 +289,66 @@ target_include_directories(Engine
 )
 
 # 在Android平台上添加vcpkg包含路径
+# 在Android平台上添加vcpkg包含路径
 if(ANDROID)
-    # CMAKE_PREFIX_PATH 可能是单个路径而不是列表
-    set(VCPKG_PATH ${CMAKE_PREFIX_PATH})
-    message(STATUS "CMAKE_PREFIX_PATH: ${VCPKG_PATH}")
-
-    # 如果包含分号，只取第一个路径
-    string(FIND "${VCPKG_PATH}" \; SEMICOLON_POS)
-    if(SEMICOLON_POS GREATER -1)
-        string(SUBSTRING "${VCPKG_PATH}" 0 ${SEMICOLON_POS} FIRST_PATH)
-        set(VCPKG_PATH ${FIRST_PATH})
-    endif()
-
-    message(STATUS "Using VCPKG_PATH: ${VCPKG_PATH}")
-    target_include_directories(Engine PUBLIC ${VCPKG_PATH}/include)
-
-    # 添加GLM包含路径（由于vcpkg的glm没有顶层glm.hpp）
-    target_include_directories(Engine PUBLIC ${VCPKG_PATH}/include/glm)
-
-    # 查找并链接vcpkg安装的库
-    find_path(GLM_INCLUDE_DIR glm/glm.hpp
-        PATHS ${VCPKG_PATH}/include
-        NO_DEFAULT_PATH
-    )
-
-    # 如果上述方式失败，尝试直接从项目根目录查找
-    if(NOT GLM_INCLUDE_DIR)
-        set(GLM_INSTALL_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../vcpkg_installed/arm64-android")
-        find_path(GLM_INCLUDE_DIR glm.hpp
-            PATHS ${GLM_INSTALL_DIR}/include
-            NO_DEFAULT_PATH
-        )
-        message(STATUS "Trying alternative path: ${GLM_INSTALL_DIR}")
-    endif()
-
-    if(GLM_INCLUDE_DIR)
-        message(STATUS "Found GLM: ${GLM_INCLUDE_DIR}")
-        target_include_directories(Engine PUBLIC ${GLM_INCLUDE_DIR})
+    # 优先使用外部传入的绝对路径，如果没有传，再尝试从 CMAKE_PREFIX_PATH 获取
+    if(MY_VCPKG_PATH)
+        set(VCPKG_PATH ${MY_VCPKG_PATH})
+        message(STATUS "Engine using injected VCPKG_PATH: ${VCPKG_PATH}")
     else()
-        # 尝试绝对路径
-        set(GLM_ABS_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../vcpkg_installed/arm64-android/include")
-        if(EXISTS "${GLM_ABS_PATH}/glm.hpp")
-            message(STATUS "Found GLM using absolute path: ${GLM_ABS_PATH}")
-            target_include_directories(Engine PUBLIC ${GLM_ABS_PATH})
+        list(GET CMAKE_PREFIX_PATH 0 VCPKG_PATH)
+        message(STATUS "Engine using CMAKE_PREFIX_PATH: ${VCPKG_PATH}")
+    endif()
+
+    # 3. 直接添加 Vcpkg 的 include 目录 (使用 PUBLIC 传递给 App)
+    target_include_directories(Engine PUBLIC ${VCPKG_PATH})
+
+    # 4. 显式添加 glm 目录 (解决 gtc 找不到的问题)
+    target_include_directories(Engine PUBLIC ${VCPKG_PATH}/glm)
+
+    # --- SDL3 查找逻辑 ---
+    if(PRISMA_ENABLE_AUDIO_SDL3)
+        set(SDL3_INCLUDE_DIRS "${VCPKG_PATH}/SDL3") # 注意：这里通常是 include/SDL3 或者就是 include
+        set(SDL3_LIBRARIES "${VCPKG_PATH}/../lib/libSDL3.a") # 回到上级找 lib
+
+        # 修正：通常 vcpkg 装的 SDL3 头文件在 include/SDL3 下，lib 在 lib 下
+        # 如果你的目录结构是 include/SDL3/SDL.h，那上面是对的
+        # 如果是 include/SDL3.h，那下面要改
+
+        # 通用检查：无论 SDL3 在哪，只要能找到头文件就行
+        find_path(SDL3_H_PATH SDL.h
+                PATHS ${VCPKG_PATH}/SDL3 ${VCPKG_PATH}
+                NO_DEFAULT_PATH
+        )
+
+        if(SDL3_H_PATH)
+            get_filename_component(SDL3_INCLUDE_DIRS ${SDL3_H_PATH} DIRECTORY)
+            message(STATUS "Found SDL3 headers: ${SDL3_INCLUDE_DIRS}")
+            target_include_directories(Engine PUBLIC ${SDL3_INCLUDE_DIRS})
+
+            # 查找 lib
+            find_library(SDL3_LIB_PATH libSDL3.a PATHS ${VCPKG_PATH}/../lib NO_DEFAULT_PATH)
+            if(SDL3_LIB_PATH)
+                target_link_libraries(Engine PUBLIC ${SDL3_LIB_PATH})
+            else()
+                message(WARNING "SDL3 lib not found")
+            endif()
         else()
-            message(FATAL_ERROR "GLM not found in vcpkg installed directory. Expected path: ${GLM_ABS_PATH}/glm.hpp")
+            message(WARNING "SDL3 headers not found in ${VCPKG_PATH}, skipping SDL3")
         endif()
     endif()
-endif()
 
+    # --- Vulkan 查找逻辑 ---
+    if(PRISMA_ENABLE_RENDER_VULKAN)
+        target_include_directories(Engine PUBLIC ${VCPKG_PATH})
+        target_link_libraries(Engine PUBLIC vulkan)
+    endif()
+
+    # --- GLM ---
+    # GLM 是 header-only，不需要 find_library，上面加了 include 就够了
+    # 如果 Engine 代码里有 find_package(glm CONFIG ...)，可能会失败，建议在 Android 下屏蔽掉
+    # 因为我们已经手动加了路径
+endif()
 # ========== 编译定义 ==========
 
 # 根据选项选择数学库
@@ -357,8 +368,10 @@ else()
     message(STATUS "Using GLM")
 endif()
 
+
 # Windows 平台需要链接的额外依赖
 if(NOT ANDROID)
+    message(STATUS "Not Android...")
     # 查找并链接 GLM
     find_package(glm CONFIG REQUIRED)
     target_link_libraries(Engine PUBLIC glm::glm-header-only)
