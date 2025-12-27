@@ -93,12 +93,14 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
         graphic/adapters/vulkan/VulkanShader.cpp
         graphic/adapters/vulkan/VulkanMaterial.cpp
         graphic/adapters/vulkan/VulkanMesh.cpp
+        ${VULKAN_SOURCES}
     )
     list(APPEND ENGINE_GRAPHIC_HEADERS
         graphic/adapters/vulkan/RenderDeviceVulkan.h
         graphic/adapters/vulkan/VulkanShader.h
         graphic/adapters/vulkan/VulkanMaterial.h
         graphic/adapters/vulkan/VulkanMesh.h
+        ${VULKAN_HEADERS}
     )
     message(STATUS "Adding Vulkan render device")
 endif()

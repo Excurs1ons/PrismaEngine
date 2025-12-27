@@ -14,6 +14,15 @@ set(PIPELINE_FORWARD_HEADERS
     graphic/pipelines/forward/TransparentPass.h
 )
 
+# Vulkan 后端文件 (条件编译)
+set(VULKAN_SOURCES
+    graphic/RenderBackendVulkan.cpp
+)
+
+set(VULKAN_HEADERS
+    graphic/RenderBackendVulkan.h
+)
+
 set(ENGINE_GRAPHIC_SOURCES
     ${PIPELINE_FORWARD_SOURCES}
     graphic/pipelines/SkyboxRenderPass.cpp
@@ -21,7 +30,6 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Material.cpp
     graphic/Mesh.cpp
     graphic/MeshRenderer.cpp
-    graphic/RenderBackendVulkan.cpp
     graphic/RenderComponent.cpp
     graphic/RenderPass.cpp
     graphic/RenderSystemNew.cpp
@@ -32,6 +40,8 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/interfaces/IPipelineState.cpp
     # DX12 adapter files (conditionally included)
     # graphic/adapters/dx12/ files will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_DX12
+    # Vulkan backend files (conditionally included)
+    # VULKAN_SOURCES will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_VULKAN
 )
 
 set(ENGINE_GRAPHIC_HEADERS
@@ -42,7 +52,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/Mesh.h
     graphic/MeshRenderer.h
     graphic/RenderBackend.h
-    graphic/RenderBackendVulkan.h
     graphic/RenderCommandContext.h
     graphic/RenderComponent.h
     graphic/RenderGraph.h
@@ -69,4 +78,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/interfaces/IFence.h
     # DX12 adapter headers (conditionally included)
     # graphic/adapters/dx12/ files will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_DX12
+    # Vulkan backend headers (conditionally included)
+    # VULKAN_HEADERS will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_VULKAN
 )
