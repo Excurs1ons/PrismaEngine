@@ -3,9 +3,8 @@
 #include <memory>
 #include "RenderCommandContext.h"
 #include "math/MathTypes.h"
-
+#include "Mesh.h"
 // 前向声明
-class Mesh;
 
 class RenderPass
 {

@@ -7,7 +7,9 @@
 #include "ThreadManager.h"
 #include "InputManager.h"
 
+#if defined(PRISMA_PLATFORM_WINDOWS) || defined(_WIN32)
 #include "PlatformWindows.h"
+#endif
 #include "RenderSystemNew.h"
 
 namespace Engine {
@@ -21,7 +23,7 @@ namespace Engine {
     }
     bool EngineCore::Initialize() {
         LOG_INFO("Engine", "引擎初始化开始");
-        
+
         // 核心子系统
         if (!RegisterSystem<ThreadManager>()) {
             return false;
@@ -43,14 +45,16 @@ namespace Engine {
         if (!RegisterSystem<PhysicsSystem>()) {
             return false;
         }     // 物理世界管理
-        
+
         LOG_INFO("Engine", "引擎初始化完成");
         return true;
     }
-    
+
     int EngineCore::MainLoop() {
 
         isRunning_ = true;
+
+#if defined(PRISMA_PLATFORM_WINDOWS) || defined(_WIN32)
         auto platform = PlatformWindows::GetInstance();
 
         // 初始化输入管理器
@@ -61,19 +65,26 @@ namespace Engine {
             LOG_TRACE("Engine","Ticking...");
             Tick();
             platform->PumpEvents();
-            
+
             // 检查窗口是否应该关闭
             if (platform->ShouldClose(platform->GetWindowHandle())) {
                 isRunning_ = false;
             }
         }
+#else
+        // Android/其他平台的主循环由外部控制
+        while (IsRunning()) {
+            LOG_TRACE("Engine","Ticking...");
+            Tick();
+        }
+#endif
         LOG_INFO("Engine", "引擎已停止运行，应用程序将关闭");
         return 0;
     }
 
     void EngineCore::Shutdown() {
         LOG_INFO("Engine", "引擎开始关闭");
-        
+
         // 统一销毁
         // std::rbegin 反向迭代
         for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
@@ -82,8 +93,8 @@ namespace Engine {
 
         // 反向析构
         // unique_ptr 会自动 delete T，触发 T 的析构函数
-        m_systems.clear(); 
-        
+        m_systems.clear();
+
         isRunning_ = false;
         LOG_INFO("Engine", "引擎关闭完成");
     }
