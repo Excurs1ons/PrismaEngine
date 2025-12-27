@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.31)
 
 project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
-
+# 设置HTTP和HTTPS代理
+#set(ENV{HTTP_PROXY} "http://127.0.0.1:7897")
+#set(ENV{HTTPS_PROXY} "http://127.0.0.1:7897")
+# 本地开发时如果需要代理，请通过环境变量 HTTP_PROXY 和 HTTPS_PROXY 设置
+# 不要在 CMakeLists.txt 中硬编码代理地址，这会导致 CI 环境构建失败
 # 检查是否在 Visual Studio 中
 if (CMAKE_GENERATOR MATCHES "Visual Studio")
     # 设置 Windows SDK 版本以确保使用最新版本
@@ -25,20 +29,38 @@ if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Default install path" FORCE)
 endif()
 
-if(DEFINED CMAKE_TOOLCHAIN_FILE)
-    set(VCPKG_MANIFEST_MODE ON)
+# ========== 依赖管理配置 ==========
 
-    # 启用vcpkg manifest以解决构建时的警告
+# 使用 FetchContent 管理依赖 (推荐)
+option(PRISMA_USE_FETCHCONTENT "使用 CMake FetchContent 管理依赖" ON)
+
+# 包含设备选项配置 (需要在 FetchContent 之前)
+include(cmake/DeviceOptions.cmake)
+
+# Editor构建选项 (默认在Windows上启用，其他平台禁用)
+# 需要在 FetchContent 之前定义，因为 FetchContent.cmake 需要知道是否要获取 Editor 相关依赖
+if(WIN32 AND NOT ANDROID)
+    option(PRISMA_BUILD_EDITOR "Build Editor application" ON)
+else()
+    option(PRISMA_BUILD_EDITOR "Build Editor application" OFF)
+endif()
+
+if(PRISMA_USE_FETCHCONTENT)
+    # 使用 FetchContent 下载依赖
+    include(cmake/FetchContent.cmake)
+elseif(DEFINED CMAKE_TOOLCHAIN_FILE)
+    # 回退到 vcpkg (如果指定了 toolchain)
+    set(VCPKG_MANIFEST_MODE ON)
     set(VCPKG_ENABLE_MANIFEST ON)
 
-    # 对于Visual Studio生成器，传递VcpkgEnableManifest参数给MSBuild
     if(CMAKE_GENERATOR MATCHES "Visual Studio")
         set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "configs/Directory.Build.props")
     endif()
-endif()
 
-# 包含设备选项配置
-include(cmake/DeviceOptions.cmake)
+    message(STATUS "使用 vcpkg 管理依赖 (toolchain: ${CMAKE_TOOLCHAIN_FILE})")
+else()
+    message(STATUS "使用系统/已安装的库")
+endif()
 
 # 动态设置输出目录
 # 构建目录结构: build/{system}-{platform}-{build_type}
@@ -81,13 +103,6 @@ if(ANDROID)
     message(STATUS "Building for Android")
 else()
     message(STATUS "Building for Windows")
-endif()
-
-# Editor构建选项 (默认在Windows上启用，其他平台禁用)
-if(WIN32 AND NOT ANDROID)
-    option(PRISMA_BUILD_EDITOR "Build Editor application" ON)
-else()
-    option(PRISMA_BUILD_EDITOR "Build Editor application" OFF)
 endif()
 
 # 添加核心模块

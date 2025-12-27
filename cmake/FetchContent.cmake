@@ -158,20 +158,30 @@ endif()
 # DirectX-Headers (Windows only) - 当启用 DX12 渲染或编辑器时
 if(WIN32 AND (PRISMA_ENABLE_RENDER_DX12 OR PRISMA_BUILD_EDITOR))
     if(PRISMA_USE_FETCHCONTENT)
-        FetchContent_MakeAvailable(DirectX-Headers)
+        # DirectX-Headers 是纯头文件库，需要手动处理
+        FetchContent_GetProperties(directx-headers)
 
-        # DirectX-Headers 需要手动创建 INTERFACE 目标
-        if(NOT TARGET DirectX-Headers)
-            add_library(DirectX-Headers INTERFACE)
-            target_include_directories(DirectX-Headers INTERFACE
-                ${directx-headers_SOURCE_DIR}/include
+        if(NOT directx-headers_POPULATED)
+            # 使用 FetchContent_Declare 声明的内容下载
+            FetchContent_Populate(directx-headers QUIET
+                GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
+                GIT_TAG v1.614.1
+                GIT_SHALLOW TRUE
             )
-        endif()
-        if(NOT TARGET Microsoft::DirectX-Headers)
-            add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
-        endif()
 
-        message(STATUS "DirectX-Headers: 使用 FetchContent")
+            # 创建 INTERFACE 目标
+            if(NOT TARGET DirectX-Headers)
+                add_library(DirectX-Headers INTERFACE)
+                target_include_directories(DirectX-Headers INTERFACE
+                    ${directx-headers_SOURCE_DIR}/include
+                )
+            endif()
+            if(NOT TARGET Microsoft::DirectX-Headers)
+                add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
+            endif()
+
+            message(STATUS "DirectX-Headers: 使用 FetchContent")
+        endif()
     else()
         find_package(directx-headers CONFIG REQUIRED)
         message(STATUS "DirectX-Headers: 使用系统/vcpkg")
