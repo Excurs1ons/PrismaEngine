@@ -44,6 +44,5 @@ set_target_properties(Runtime PROPERTIES
 
 # 安装规则
 install(TARGETS Runtime
-    EXPORT PrismaEngineTargets
     RUNTIME DESTINATION bin
 )
