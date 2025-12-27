@@ -16,6 +16,15 @@ message(STATUS "Android STL: ${ANDROID_STL}")
 # 包含Android工具链代理
 include(${CMAKE_SOURCE_DIR}/cmake/AndroidToolchainProxy.cmake)
 
+# 添加NDK头文件路径
+if(DEFINED ANDROID_NDK)
+    include_directories(
+        ${ANDROID_NDK}/sysroot/usr/include
+        ${ANDROID_NDK}/sources/android/native_app_glue
+        ${ANDROID_NDK}/sources/android/cpufeatures
+    )
+endif()
+
 # 添加Engine子目录
 add_subdirectory(src/engine/android engine)
 

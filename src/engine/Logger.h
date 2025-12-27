@@ -3,7 +3,7 @@
 #include "LogScope.h"
 #include "LogEntry.h"
 #include <chrono>
-#include <cstdint>
+#include <cstddef>
 #include <fstream>
 #include <mutex>
 #include <queue>

@@ -1,1 +1,18 @@
-include(${ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake)
+# 检查并设置ANDROID_NDK变量
+if(NOT DEFINED ANDROID_NDK AND DEFINED ENV{ANDROID_NDK})
+    set(ANDROID_NDK $ENV{ANDROID_NDK})
+endif()
+
+if(NOT DEFINED ANDROID_NDK AND DEFINED ANDROID_NDK_HOME)
+    set(ANDROID_NDK ${ANDROID_NDK_HOME})
+endif()
+
+if(NOT DEFINED ANDROID_NDK AND DEFINED CMAKE_ANDROID_NDK)
+    set(ANDROID_NDK ${CMAKE_ANDROID_NDK})
+endif()
+
+if(DEFINED ANDROID_NDK)
+    include(${ANDROID_NDK}/build/cmake/android.toolchain.cmake)
+else()
+    message(FATAL_ERROR "ANDROID_NDK is not defined. Please set ANDROID_NDK, ANDROID_NDK_HOME, or CMAKE_ANDROID_NDK")
+endif()
