@@ -1,13 +1,10 @@
 #include "VulkanShader.h"
-#include "VulkanRenderDevice.h"
-#include "../RenderErrorHandling.h"
-#include <spirv_cross.hpp>
-#include <spirv_glsl.hpp>
+#include "RenderDeviceVulkan.h"
 #include <fstream>
 
 namespace PrismaEngine::Graphic::Vulkan {
 
-VulkanShader::VulkanShader(VulkanRenderDevice* device,
+VulkanShader::VulkanShader(RenderDeviceVulkan* device,
                            const ShaderDesc& desc,
                            const std::vector<uint32_t>& spirv,
                            const ShaderReflection& reflection)
@@ -233,7 +230,7 @@ bool VulkanShader::CreateShaderModule() {
     createInfo.pCode = m_spirv.data();
 
     VkResult result = vkCreateShaderModule(
-        static_cast<VkDevice>(m_device->GetNativeDevice()),
+        m_device->GetDevice(),
         &createInfo,
         nullptr,
         &m_shaderModule
@@ -250,12 +247,16 @@ bool VulkanShader::CreateShaderModule() {
 void VulkanShader::DestroyShaderModule() {
     if (m_shaderModule != VK_NULL_HANDLE && m_device) {
         vkDestroyShaderModule(
-            static_cast<VkDevice>(m_device->GetNativeDevice()),
+            m_device->GetDevice(),
             m_shaderModule,
             nullptr
         );
         m_shaderModule = VK_NULL_HANDLE;
     }
+}
+
+VkDevice VulkanShader::GetNativeDevice() const {
+    return m_device ? m_device->GetDevice() : VK_NULL_HANDLE;
 }
 
 } // namespace PrismaEngine::Graphic::Vulkan
