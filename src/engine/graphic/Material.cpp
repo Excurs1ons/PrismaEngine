@@ -103,13 +103,13 @@ std::shared_ptr<Material> Material::CreateDefault() {
 
     // 使用硬编码的默认着色器
     auto defaultShader = std::make_shared<Shader>();
-    if (defaultShader->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
-        defaultShader->SetName("DefaultMaterialShader");
-        material->SetShader(defaultShader);
-        //LOG_INFO("Material", "默认材质加载了硬编码着色器");
-    } else {
-        //LOG_ERROR("Material", "默认材质无法编译硬编码着色器");
-    }
+//    if (defaultShader->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
+//        defaultShader->SetName("DefaultMaterialShader");
+//        material->SetShader(defaultShader);
+//        //LOG_INFO("Material", "默认材质加载了硬编码着色器");
+//    } else {
+//        //LOG_ERROR("Material", "默认材质无法编译硬编码着色器");
+//    }
 
     material->m_isLoaded = true;
     return material;

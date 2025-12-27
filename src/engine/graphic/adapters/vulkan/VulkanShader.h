@@ -1,14 +1,15 @@
 #pragma once
-
+#include "graphic/interfaces/RenderTypes.h"
+#include <vulkan/vulkan.h>
 #include "interfaces/IShader.h"
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+
 
 namespace PrismaEngine::Graphic::Vulkan {
 
 // 前置声明
-class VulkanRenderDevice;
+class RenderDeviceVulkan;
 
 /// @brief Vulkan着色器适配器
 /// 实现IShader接口，包装编译后的Vulkan SPIR-V字节码
@@ -19,7 +20,7 @@ public:
     /// @param desc 着色器描述
     /// @param spirv SPIR-V字节码
     /// @param reflection 反射信息
-    VulkanShader(VulkanRenderDevice* device,
+    VulkanShader(RenderDeviceVulkan* device,
                  const ShaderDesc& desc,
                  const std::vector<uint32_t>& spirv,
                  const ShaderReflection& reflection);
@@ -91,8 +92,9 @@ public:
     VkShaderStageFlagBits GetVkShaderStage() const;
 
 
+    VkDevice GetNativeDevice() const;
 private:
-    VulkanRenderDevice* m_device;
+    RenderDeviceVulkan* m_device = nullptr;
     ShaderDesc m_desc;
     std::vector<uint32_t> m_spirv;
     std::vector<uint8_t> m_bytecode;  // 兼容IShader接口
