@@ -73,7 +73,7 @@ public:
     void Shutdown();
 
     // 设置平台日志接口（必须在 Platform 初始化后调用）
-    void SetPlatformLogger(IPlatformLogger* platformLogger);
+    void SetPlatformLogger(Engine::IPlatformLogger* platformLogger);
 
     void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
 
@@ -210,7 +210,7 @@ private:
     bool initialized_ = false;
 
     // 平台日志接口（由外部设置）
-    IPlatformLogger* platformLogger_ = nullptr;
+    Engine::IPlatformLogger* platformLogger_ = nullptr;
     // 内部方法
     void EnqueueEntry(LogEntry&& entry);
     void ProcessQueue();
