@@ -32,6 +32,7 @@ enum class ResourceType {
 
 // 渲染后端类型
 enum class RenderBackendType {
+    None,
     DirectX12,
     Vulkan,
     OpenGL
