@@ -2,6 +2,7 @@
 
 #include "IRenderTarget.h"
 #include "RenderTypes.h"
+#include "math/MathTypes.h"
 #include <string>
 
 namespace PrismaEngine::Graphic {
