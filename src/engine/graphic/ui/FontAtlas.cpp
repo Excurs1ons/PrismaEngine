@@ -2,7 +2,6 @@
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceFactory.h"
 #include "interfaces/ITexture.h"
-#include "interfaces/RenderTypes.h"
 
 // stb 头文件（由 FetchContent 下载，通过 CMake include 目录添加）
 // 注意：STB_IMPLEMENTATION 宏在 stb_impl.cpp 中定义，这里只包含头文件
@@ -189,7 +188,7 @@ bool FontAtlas::LoadFromTTF(const std::string& ttfPath, float fontSize, const ui
     return true;
 }
 
-void FontAtlas::UploadToGPU(IRenderDevice* device) {
+void FontAtlas::UploadToGPU(Graphic::IRenderDevice* device) {
     if (!m_loaded || m_uploaded) {
         return;
     }
@@ -197,9 +196,9 @@ void FontAtlas::UploadToGPU(IRenderDevice* device) {
     auto factory = device->GetResourceFactory();
 
     // 创建纹理描述
-    TextureDesc texDesc = {};
-    texDesc.type = TextureType::Texture2D;
-    texDesc.format = TextureFormat::RGBA8_UNorm;
+    Graphic::TextureDesc texDesc = {};
+    texDesc.type = Graphic::TextureType::Texture2D;
+    texDesc.format = Graphic::TextureFormat::RGBA8_UNorm;
     texDesc.width = m_atlasWidth;
     texDesc.height = m_atlasHeight;
     texDesc.depth = 1;
@@ -212,9 +211,9 @@ void FontAtlas::UploadToGPU(IRenderDevice* device) {
     texDesc.dataSize = m_pixels.size();
 
     // 创建纹理
-    m_texture.reset(factory->CreateTexture(texDesc));
-
-    if (m_texture) {
+    auto texture = factory->CreateTextureImpl(texDesc);
+    if (texture) {
+        m_texture = std::move(texture);
         m_uploaded = true;
     } else {
         std::cerr << "Failed to create font atlas texture" << std::endl;

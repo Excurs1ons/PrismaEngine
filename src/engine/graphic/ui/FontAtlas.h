@@ -7,8 +7,10 @@
 
 namespace PrismaEngine {
 
+namespace Graphic {
 class ITexture;
 class IRenderDevice;
+}
 
 // 字形信息
 struct CharGlyph {
@@ -33,13 +35,13 @@ public:
     bool LoadFromTTF(const std::string& ttfPath, float fontSize, const uint32_t* charRanges);
 
     // 上传图集到 GPU
-    void UploadToGPU(IRenderDevice* device);
+    void UploadToGPU(Graphic::IRenderDevice* device);
 
     // 获取字形信息
     const CharGlyph* GetGlyph(char32_t codepoint) const;
 
     // 获取纹理
-    ITexture* GetTexture() const { return m_texture.get(); }
+    Graphic::ITexture* GetTexture() const { return m_texture.get(); }
 
     // 获取字体大小
     float GetFontSize() const { return m_fontSize; }
@@ -60,7 +62,7 @@ private:
     uint32_t m_atlasHeight;
     std::vector<unsigned char> m_pixels;  // RGBA8
     std::unordered_map<char32_t, CharGlyph> m_glyphs;
-    std::shared_ptr<ITexture> m_texture;
+    std::shared_ptr<Graphic::ITexture> m_texture;
     float m_fontSize;
     float m_lineHeight;
     bool m_loaded;
