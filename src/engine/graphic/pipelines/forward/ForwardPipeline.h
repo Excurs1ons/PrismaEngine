@@ -47,7 +47,7 @@ public:
     class TransparentPass* GetTransparentPass() const { return m_transparentPass.get(); }
 
     /// @brief 获取 UI Pass
-    class UIPass* GetUIPass() const { return m_uiPass.get(); }
+    ::PrismaEngine::UIPass* GetUIPass() const { return m_uiPass.get(); }
 
     // === 渲染统计 ===
 
@@ -74,7 +74,7 @@ private:
     std::shared_ptr<class OpaquePass> m_opaquePass;
     std::shared_ptr<class SkyboxPass> m_skyboxPass;
     std::shared_ptr<class TransparentPass> m_transparentPass;
-    std::shared_ptr<class UIPass> m_uiPass;
+    std::shared_ptr<class ::PrismaEngine::UIPass> m_uiPass;
 
     // 相机接口
     class Engine::Graphic::ICamera* m_camera;
