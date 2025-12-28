@@ -1,7 +1,14 @@
 #include "UIPass.h"
 #include "FontAtlas.h"
 #include "Mesh.h"
-#include "math/Math.h"
+#include "math/MathTypes.h"
+
+// 使用 GLM 的正交投影函数
+namespace PrismaEngine::UIHelpers {
+    inline PrismaMath::mat4 OrthographicLH(float viewWidth, float viewHeight, float nearZ, float farZ) {
+        return glm::orthoLH(0.0f, viewWidth, 0.0f, viewHeight, nearZ, farZ);
+    }
+}
 
 namespace PrismaEngine {
 
@@ -27,7 +34,7 @@ void UIPass::Execute(const Graphic::PassExecutionContext& context) {
         static_cast<float>(context.sceneData->viewport.height));
 
     // 创建正交投影矩阵 (左上角为原点)
-    PrismaMath::mat4 projectionMatrix = Prisma::OrthographicLH(
+    PrismaMath::mat4 projectionMatrix = UIHelpers::OrthographicLH(
         static_cast<float>(context.sceneData->viewport.width),
         static_cast<float>(context.sceneData->viewport.height),
         -1.0f,  // near
