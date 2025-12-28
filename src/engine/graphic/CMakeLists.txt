@@ -78,6 +78,8 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Mesh.cpp
     graphic/MeshRenderer.cpp
     graphic/RenderComponent.cpp
+    graphic/RenderBackend.cpp
+    graphic/RenderCommandContext.cpp
     graphic/RenderPass.cpp
     graphic/RenderSystemNew.cpp
     graphic/ScriptableRenderPipeline.cpp
