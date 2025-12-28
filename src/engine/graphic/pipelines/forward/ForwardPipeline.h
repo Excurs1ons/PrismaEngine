@@ -1,64 +1,86 @@
 #pragma once
 
-#include "graphic/ScriptableRenderPipeline.h"
-#include "graphic/pipelines/SkyboxRenderPass.h"
+#include "graphic/LogicalPass.h"
+#include "graphic/LogicalPipeline.h"
+#include "graphic/interfaces/IPass.h"
 #include "graphic/ICamera.h"
-#include "DepthPrePass.h"
-#include "OpaquePass.h"
-#include "TransparentPass.h"
+#include "graphic/interfaces/IRenderTarget.h"
+#include "math/MathTypes.h"
 #include <memory>
+#include <vector>
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
-namespace Forward {
+namespace PrismaEngine::Graphic {
 
-// 前向渲染管线
-class ForwardPipeline
-{
+/// @brief 前向渲染管线实现
+/// 管理和执行前向渲染的所有 Pass
+/// 顺序：DepthPrePass → OpaquePass → SkyboxPass → TransparentPass → UIPass
+class ForwardPipeline : public LogicalForwardPipeline {
 public:
     ForwardPipeline();
-    ~ForwardPipeline();
+    ~ForwardPipeline() override;
 
-    // 初始化前向渲染管线
-    bool Initialize(ScriptableRenderPipeline* renderPipe);
+    /// @brief 初始化管线
+    /// 创建并添加所有 Pass
+    bool Initialize();
 
-    // 关闭渲染管线
-    void Shutdown();
+    /// @brief 更新管线数据
+    /// @param deltaTime 时间增量
+    /// @param camera 相机接口
+    void Update(float deltaTime, class Engine::Graphic::ICamera* camera);
 
-    // 更新渲染管线（每帧调用）
-    void Update(float deltaTime);
+    /// @brief 执行管线渲染
+    /// @param context 执行上下文
+    void Execute(const PassExecutionContext& context) override;
 
-    // 设置相机
-    void SetCamera(ICamera* camera);
+    // === Pass 访问 ===
 
-    // 设置渲染目标（由RenderSystem调用）
-    void SetRenderTargets(void* renderTarget, void* depthBuffer, uint32_t width, uint32_t height);
+    /// @brief 获取深度预渲染 Pass
+    class DepthPrePass* GetDepthPrePass() const { return m_depthPrePass.get(); }
 
-private:
-    // 渲染管线引用
-    ScriptableRenderPipeline* m_renderPipe;
+    /// @brief 获取不透明物体 Pass
+    class OpaquePass* GetOpaquePass() const { return m_opaquePass.get(); }
 
-    // 渲染通道
-    std::shared_ptr<SkyboxRenderPass> m_skyboxRenderPass;
-    std::shared_ptr<DepthPrePass> m_depthPrePass;
-    std::shared_ptr<OpaquePass> m_opaquePass;
-    std::shared_ptr<TransparentPass> m_transparentPass;
+    /// @brief 获取天空盒 Pass
+    class SkyboxPass* GetSkyboxPass() const { return m_skyboxPass.get(); }
 
-    // 相机引用
-    ICamera* m_camera;
+    /// @brief 获取透明物体 Pass
+    class TransparentPass* GetTransparentPass() const { return m_transparentPass.get(); }
 
-    // 渲染统计
+    /// @brief 获取 UI Pass
+    class UIPass* GetUIPass() const { return m_uiPass.get(); }
+
+    // === 渲染统计 ===
+
     struct RenderStats {
-        uint32_t depthPrePassObjects = 0;
-        uint32_t opaquePassObjects = 0;
-        uint32_t transparentPassObjects = 0;
+        uint32_t totalDrawCalls = 0;
+        uint32_t totalTriangles = 0;
+        uint32_t opaqueObjects = 0;
+        uint32_t transparentObjects = 0;
         float lastFrameTime = 0.0f;
     };
+
+    const RenderStats& GetRenderStats() const { return m_stats; }
+
+private:
+    /// @brief 更新所有 Pass 的相机数据
+    void UpdatePassesCameraData(class Engine::Graphic::ICamera* camera);
+
+    /// @brief 收集渲染统计
+    void CollectStats();
+
+private:
+    // Pass 实例（使用 shared_ptr 管理生命周期）
+    std::shared_ptr<class DepthPrePass> m_depthPrePass;
+    std::shared_ptr<class OpaquePass> m_opaquePass;
+    std::shared_ptr<class SkyboxPass> m_skyboxPass;
+    std::shared_ptr<class TransparentPass> m_transparentPass;
+    std::shared_ptr<class UIPass> m_uiPass;
+
+    // 相机接口
+    class Engine::Graphic::ICamera* m_camera;
+
+    // 渲染统计
     RenderStats m_stats;
 };
 
-} // namespace Forward
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic

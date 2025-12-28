@@ -1,81 +1,97 @@
 #pragma once
 
-#include "graphic/RenderPass.h"
+#include "graphic/LogicalPass.h"
+#include "graphic/interfaces/IPass.h"
+#include "graphic/interfaces/IDeviceContext.h"
+#include "graphic/interfaces/IRenderTarget.h"
+#include "math/MathTypes.h"
 #include <memory>
+#include <vector>
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
-namespace Deferred {
+namespace PrismaEngine::Graphic {
 
-// 后处理效果类型
-enum class PostProcessEffect : uint32_t {
-    None = 0,
-    ToneMapping = 1,
-    GammaCorrection = 2,
-    FXAA = 3,
-    SMAA = 4,
-    Bloom = 5,
-    SSR = 6,  // Screen Space Reflections
-    SSAO = 7, // Screen Space Ambient Occlusion
-    DepthOfField = 8
-};
+/// @brief 合成逻辑 Pass
+/// 将光照结果与后处理效果合成最终图像
+class CompositionPass : public LogicalPass {
+public:
+    // 后处理效果类型
+    enum class PostProcessEffect : uint32_t {
+        None = 0,
+        ToneMapping = 1 << 0,
+        GammaCorrection = 1 << 1,
+        FXAA = 1 << 2,
+        SMAA = 1 << 3,
+        Bloom = 1 << 4,
+        SSR = 1 << 5,   // Screen Space Reflections
+        SSAO = 1 << 6,  // Screen Space Ambient Occlusion
+        DepthOfField = 1 << 7
+    };
 
-// 合成通道 - 将光照结果与后处理效果合成最终图像
-class CompositionPass : public RenderPass
-{
+    // 渲染统计
+    struct RenderStats {
+        uint32_t postProcessEffects = 0;
+        float renderTime = 0.0f;
+    };
+
 public:
     CompositionPass();
-    ~CompositionPass();
+    ~CompositionPass() override = default;
 
-    // 渲染通道执行函数
-    void Execute(RenderCommandContext* context) override;
+    // === IPass 接口实现 ===
 
-    // 设置渲染目标（最终输出的屏幕缓冲区）
-    void SetRenderTarget(void* renderTarget) override;
+    /// @brief 执行 Pass
+    /// @param context 执行上下文
+    void Execute(const PassExecutionContext& context) override;
 
-    // 清屏操作
-    void ClearRenderTarget(float r, float g, float b, float a) override;
+    /// @brief 更新 Pass 数据
+    /// @param deltaTime 时间增量
+    void Update(float deltaTime) override;
 
-    // 设置视口
-    void SetViewport(uint32_t width, uint32_t height) override;
+    // === 输入缓冲区设置 ===
 
-    // 设置光照缓冲区
-    void SetLightingBuffer(void* lightingBuffer);
+    /// @brief 设置光照缓冲区
+    void SetLightingBuffer(IRenderTarget* lightingBuffer) { m_lightingBuffer = lightingBuffer; }
+    IRenderTarget* GetLightingBuffer() const { return m_lightingBuffer; }
 
-    // 设置环境光遮蔽缓冲区
-    void SetAOBuffer(void* aoBuffer);
+    /// @brief 设置 AO 缓冲区
+    void SetAOBuffer(IRenderTarget* aoBuffer) { m_aoBuffer = aoBuffer; }
+    IRenderTarget* GetAOBuffer() const { return m_aoBuffer; }
 
-    // 设置泛光缓冲区
-    void SetBloomBuffer(void* bloomBuffer);
+    /// @brief 设置泛光缓冲区
+    void SetBloomBuffer(IRenderTarget* bloomBuffer) { m_bloomBuffer = bloomBuffer; }
+    IRenderTarget* GetBloomBuffer() const { return m_bloomBuffer; }
 
-    // 启用/禁用后处理效果
+    // === 后处理效果设置 ===
+
+    /// @brief 设置后处理效果
     void SetPostProcessEffect(PostProcessEffect effect, bool enable);
 
-    // 检查后处理效果是否启用
+    /// @brief 检查后处理效果是否启用
     bool IsPostProcessEffectEnabled(PostProcessEffect effect) const;
 
-    // 设置色调映射参数
+    /// @brief 设置色调映射参数
     void SetToneMappingParams(float exposure, float gamma);
 
-    // 设置FXAA参数
+    /// @brief 设置 FXAA 参数
     void SetFXAAParams(float edgeThresholdMin, float edgeThresholdMax);
 
-    // 设置SSAO参数
+    /// @brief 设置 SSAO 参数
     void SetSSAOParams(float radius, float bias, float power);
 
+    // === 渲染统计 ===
+
+    /// @brief 获取渲染统计
+    const RenderStats& GetRenderStats() const { return m_stats; }
+    RenderStats& GetRenderStats() { return m_stats; }
+
+    /// @brief 重置渲染统计
+    void ResetStats() { m_stats = RenderStats(); }
+
 private:
-    // 渲染目标
-    void* m_renderTarget = nullptr;
-
     // 输入缓冲区
-    void* m_lightingBuffer = nullptr;
-    void* m_aoBuffer = nullptr;
-    void* m_bloomBuffer = nullptr;
-
-    // 视口尺寸
-    uint32_t m_width = 0;
-    uint32_t m_height = 0;
+    IRenderTarget* m_lightingBuffer;
+    IRenderTarget* m_aoBuffer;
+    IRenderTarget* m_bloomBuffer;
 
     // 后处理效果状态
     struct PostProcessSettings {
@@ -95,13 +111,13 @@ private:
         float gamma = 2.2f;
     } m_toneMappingParams;
 
-    // FXAA参数
+    // FXAA 参数
     struct FXAAParams {
         float edgeThresholdMin = 0.0312f;
         float edgeThresholdMax = 0.125f;
     } m_fxaaParams;
 
-    // SSAO参数
+    // SSAO 参数
     struct SSAOParams {
         float radius = 0.5f;
         float bias = 0.025f;
@@ -109,37 +125,7 @@ private:
     } m_ssaoParams;
 
     // 渲染统计
-    struct CompositionPassStats {
-        uint32_t postProcessEffects = 0;
-        float renderTime = 0.0f;
-    } m_stats;
-
-    // 渲染全屏四边形
-    void RenderFullScreenQuad(RenderCommandContext* context);
-
-    // 应用色调映射
-    void ApplyToneMapping(RenderCommandContext* context);
-
-    // 应用FXAA抗锯齿
-    void ApplyFXAA(RenderCommandContext* context);
-
-    // 应用SMAA抗锯齿
-    void ApplySMAA(RenderCommandContext* context);
-
-    // 应用泛光效果
-    void ApplyBloom(RenderCommandContext* context);
-
-    // 应用SSR效果
-    void ApplySSR(RenderCommandContext* context);
-
-    // 应用SSAO效果
-    void ApplySSAO(RenderCommandContext* context);
-
-    // 应用景深效果
-    void ApplyDepthOfField(RenderCommandContext* context);
+    RenderStats m_stats;
 };
 
-} // namespace Deferred
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic

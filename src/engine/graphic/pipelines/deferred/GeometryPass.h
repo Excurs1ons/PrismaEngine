@@ -1,76 +1,77 @@
 #pragma once
 
-#include "graphic/RenderPass.h"
-#include "GBuffer.h"
-#include "../../../math/MathTypes.h"
+#include "graphic/LogicalPass.h"
+#include "graphic/interfaces/IPass.h"
+#include "graphic/interfaces/IDeviceContext.h"
+#include "graphic/interfaces/IRenderTarget.h"
+#include "graphic/interfaces/IGBuffer.h"
+#include "math/MathTypes.h"
 #include <memory>
 
-namespace Engine {
-class Shader;
+namespace PrismaEngine::Graphic {
 
-namespace Graphic {
-namespace Pipelines {
-namespace Deferred {
+/// @brief 几何逻辑 Pass
+/// 将场景几何信息渲染到 G-Buffer
+class GeometryPass : public ForwardRenderPass {
+public:
+    // 渲染统计
+    struct RenderStats {
+        uint32_t drawCalls = 0;
+        uint32_t triangles = 0;
+        uint32_t objects = 0;
+        uint32_t culledObjects = 0;
+    };
 
-// 几何通道 - 将场景几何信息渲染到G-Buffer
-class GeometryPass : public RenderPass
-{
 public:
     GeometryPass();
-    ~GeometryPass();
+    ~GeometryPass() override = default;
 
-    // 渲染通道执行函数
-    void Execute(RenderCommandContext* context) override;
+    // === IPass 接口实现 ===
 
-    // 设置渲染目标（通过G-Buffer）
-    void SetGBuffer(std::shared_ptr<GBuffer> gbuffer);
+    /// @brief 执行 Pass
+    /// @param context 执行上下文
+    void Execute(const PassExecutionContext& context) override;
 
-    // 清屏操作（通常由G-Buffer处理）
-    void ClearRenderTarget(float r, float g, float b, float a) override;
+    /// @brief 更新 Pass 数据
+    /// @param deltaTime 时间增量
+    void Update(float deltaTime) override;
 
-    // 设置视口
-    void SetViewport(uint32_t width, uint32_t height) override;
+    // === G-Buffer 设置 ===
 
-    // 设置视图矩阵
-    void SetViewMatrix(const PrismaMath::mat4& view);
+    /// @brief 设置 G-Buffer
+    /// @param gBuffer G-Buffer 接口指针
+    void SetGBuffer(IGBuffer* gBuffer) { m_gBuffer = gBuffer; }
 
-    // 设置投影矩阵
-    void SetProjectionMatrix(const PrismaMath::mat4& projection);
+    /// @brief 获取 G-Buffer
+    IGBuffer* GetGBuffer() const { return m_gBuffer; }
 
-    // 设置视图投影矩阵
-    void SetViewProjectionMatrix(const PrismaMath::mat4& viewProjection);
+    // === 深度预渲染设置 ===
 
-    // 启用/禁用深度预渲染
-    void SetDepthPrePass(bool enable);
+    /// @brief 设置是否启用深度预渲染
+    /// @param enable 是否启用
+    void SetDepthPrePass(bool enable) { m_depthPrePass = enable; }
+
+    /// @brief 获取深度预渲染状态
+    bool GetDepthPrePass() const { return m_depthPrePass; }
+
+    // === 渲染统计 ===
+
+    /// @brief 获取渲染统计
+    const RenderStats& GetRenderStats() const { return m_stats; }
+    RenderStats& GetRenderStats() { return m_stats; }
+
+    /// @brief 重置渲染统计
+    void ResetStats() { m_stats = RenderStats(); }
 
 private:
-    // G-Buffer引用
-    std::shared_ptr<GBuffer> m_gbuffer;
-
-    // 相机矩阵
-    PrismaMath::mat4 m_view = PrismaMath::mat4(1.0f);
-    PrismaMath::mat4 m_projection = PrismaMath::mat4(1.0f);
-    PrismaMath::mat4 m_viewProjection = PrismaMath::mat4(1.0f);
-
-    // 视口尺寸
-    uint32_t m_width = 0;
-    uint32_t m_height = 0;
+    // G-Buffer
+    IGBuffer* m_gBuffer;
 
     // 深度预渲染标志
-    bool m_depthPrePass = true;
+    bool m_depthPrePass;
 
     // 渲染统计
-    struct GeometryPassStats {
-        uint32_t renderedObjects = 0;
-        uint32_t culledObjects = 0;
-        uint32_t triangles = 0;
-    } m_stats;
-
-    // 延迟渲染几何通道着色器
-    std::shared_ptr<Shader> m_shader;
+    RenderStats m_stats;
 };
 
-} // namespace Deferred
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic
