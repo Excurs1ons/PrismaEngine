@@ -1,69 +1,72 @@
 #pragma once
 
-#include "graphic/RenderPass.h"
+#include "graphic/LogicalPass.h"
+#include "graphic/interfaces/IPass.h"
+#include "graphic/interfaces/IDeviceContext.h"
+#include "graphic/interfaces/IRenderTarget.h"
+#include "math/MathTypes.h"
 #include <memory>
 #include <vector>
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
-namespace Forward {
+namespace PrismaEngine::Graphic {
 
-// 透明物体渲染通道 - 使用深度缓冲和Alpha混合
-class TransparentPass : public RenderPass
-{
+/// @brief 透明物体逻辑 Pass
+/// 使用深度缓冲和 Alpha 混合渲染透明物体
+class TransparentPass : public ForwardRenderPass {
+public:
+    // 渲染统计
+    struct RenderStats {
+        uint32_t drawCalls = 0;
+        uint32_t triangles = 0;
+        uint32_t transparentObjects = 0;
+    };
+
 public:
     TransparentPass();
-    ~TransparentPass();
+    ~TransparentPass() override = default;
 
-    // 渲染通道执行函数
-    void Execute(RenderCommandContext* context) override;
+    // === IPass 接口实现 ===
 
-    // 设置渲染目标
-    void SetRenderTarget(void* renderTarget) override;
+    /// @brief 执行 Pass
+    /// @param context 执行上下文
+    void Execute(const PassExecutionContext& context) override;
 
-    // 清屏操作
-    void ClearRenderTarget(float r, float g, float b, float a) override;
+    /// @brief 更新 Pass 数据
+    /// @param deltaTime 时间增量
+    void Update(float deltaTime) override;
 
-    // 设置视口
-    void SetViewport(uint32_t width, uint32_t height) override;
+    // === 渲染设置 ===
 
-    // 设置深度缓冲区（只读）
-    void SetDepthBuffer(void* depthBuffer);
+    /// @brief 设置深度写入
+    /// @param enable 是否启用深度写入
+    void SetDepthWrite(bool enable) { m_depthWrite = enable; }
 
-    // 设置视图矩阵
-    void SetViewMatrix(const Prisma::Matrix4x4& view);
+    /// @brief 获取深度写入状态
+    bool GetDepthWrite() const { return m_depthWrite; }
 
-    // 设置投影矩阵
-    void SetProjectionMatrix(const Prisma::Matrix4x4& projection);
+    /// @brief 设置深度测试
+    /// @param enable 是否启用深度测试
+    void SetDepthTest(bool enable) { m_depthTest = enable; }
 
-    // 启用/禁用深度写入
-    void SetDepthWrite(bool enable);
+    /// @brief 获取深度测试状态
+    bool GetDepthTest() const { return m_depthTest; }
+
+    // === 渲染统计 ===
+
+    /// @brief 获取渲染统计
+    const RenderStats& GetRenderStats() const { return m_stats; }
+    RenderStats& GetRenderStats() { return m_stats; }
+
+    /// @brief 重置渲染统计
+    void ResetStats() { m_stats = RenderStats(); }
 
 private:
-    // 深度缓冲区（只读）
-    void* m_depthBuffer = nullptr;
+    // 渲染状态
+    bool m_depthWrite;
+    bool m_depthTest;
 
-    // 相机矩阵
-    Prisma::Matrix4x4 m_view = {};
-    Prisma::Matrix4x4 m_projection = {};
-    Prisma::Matrix4x4 m_viewProjection = {};
-
-    // 深度写入标志
-    bool m_depthWrite = false;
-
-    // 渲染目标
-    void* m_renderTarget = nullptr;
-
-    // 视口尺寸
-    uint32_t m_width = 0;
-    uint32_t m_height = 0;
-
-    // 渲染上下文
-    RenderCommandContext* m_context = nullptr;
+    // 渲染统计
+    RenderStats m_stats;
 };
 
-} // namespace Forward
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic

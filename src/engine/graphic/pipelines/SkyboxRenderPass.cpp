@@ -1,194 +1,69 @@
 #include "SkyboxRenderPass.h"
-#include "Logger.h"
-#include "ResourceManager.h"
-#include "Shader.h"
-#include "DefaultShader.h"
-// 使用自定义颜色常量替代 DirectXColors
-namespace Colors {
-    const PrismaMath::vec4 Black = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-    const PrismaMath::vec4 White = PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-}
+#include "math/Math.h"
+#include <iostream>
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
+namespace PrismaEngine::Graphic {
 
-SkyboxRenderPass::SkyboxRenderPass()
-    : m_cubeMapTexture(nullptr)
-    , m_renderTarget(nullptr)
-    , m_width(0)
-    , m_height(0)
-{
-    LOG_DEBUG("SkyboxRenderPass", "构造函数被调用");
+SkyboxPass::SkyboxPass()
+    : ForwardRenderPass("SkyboxPass")
+    , m_cubeMapTexture(nullptr)
+    , m_initialized(false)
+    , m_meshInitialized(false) {
+    // 天空盒在不透明物体之后渲染，但在透明物体之前
+    m_priority = 200;
     InitializeSkyboxMesh();
-
-    // 使用硬编码的天空盒着色器
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    m_skyboxShader = std::make_shared<Shader>();
-    if (m_skyboxShader->CompileFromString(Graphic::SKYBOX_VERTEX_SHADER, Graphic::SKYBOX_PIXEL_SHADER)) {
-        m_skyboxShader->SetName("SkyboxDefault");
-        LOG_DEBUG("SkyboxRenderPass", "天空盒着色器编译成功");
-    } else {
-        LOG_ERROR("SkyboxRenderPass", "天空盒着色器编译失败");
-        m_skyboxShader.reset();
-    }
-#elif defined(PRISMA_ENABLE_RENDER_VULKAN)
-    // TODO: Vulkan着色器支持尚未完全实现
-    LOG_WARNING("SkyboxRenderPass", "Vulkan着色器支持尚未实现，天空盒渲染暂时禁用");
-    m_skyboxShader = nullptr;
-#else
-    m_skyboxShader = nullptr;
-    LOG_WARNING("SkyboxRenderPass", "无可用渲染后端，天空盒渲染禁用");
-#endif
 }
 
-SkyboxRenderPass::~SkyboxRenderPass()
-{
-    LOG_DEBUG("SkyboxRenderPass", "析构函数被调用");
+void SkyboxPass::Update(float deltaTime) {
+    UpdateTime(deltaTime);
 }
 
-void SkyboxRenderPass::Execute(RenderCommandContext* context)
-{
-    //LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法开始");
-
-    if (!context) {
-        LOG_WARNING("SkyboxRenderPass", "Render context is null");
+void SkyboxPass::Execute(const PassExecutionContext& context) {
+    if (!context.deviceContext) {
         return;
     }
 
     // 验证必要资源
-    if (!IsInitialized()) {
-        LOG_WARNING("SkyboxRenderPass", "Skybox not properly initialized, skipping render");
+    if (!m_meshInitialized) {
         return;
     }
 
-    // 即使没有立方体贴图，天空盒着色器也会渲染默认的粉红色背景
-  // 所以我们不需要跳过渲染
+    // 设置视口
+    context.deviceContext->SetViewport(0.0f, 0.0f,
+        static_cast<float>(context.sceneData->viewport.width),
+        static_cast<float>(context.sceneData->viewport.height));
 
-    //LOG_DEBUG("SkyboxRenderPass", "上下文有效，开始渲染逻辑");
-    //LOG_DEBUG("SkyboxRenderPass", "着色器和网格数据有效");
+    // 天空盒需要特殊的视图投影矩阵（移除平移部分）
+    PrismaMath::mat4 modifiedViewProjection = m_viewProjection;
+    modifiedViewProjection[3] = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
-    try {
-        // 1. 设置常量缓冲区（视图投影矩阵）
-        if (!m_constantBuffer.empty()) {
-            LOG_DEBUG("SkyboxRenderPass", "设置常量缓冲区");
-            // 天空盒需要特殊的视图矩阵处理（移除平移）
-            PrismaMath::mat4 modifiedViewProjection = m_viewProjection;
-            modifiedViewProjection[3] = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-            context->SetConstantBuffer("ConstantBuffer", modifiedViewProjection);
-        }
-        
-        // 2. 设置顶点和索引缓冲区
-        LOG_DEBUG("SkyboxRenderPass", "设置顶点缓冲区，顶点数量: {0}", m_vertices.size());
-        context->SetVertexBuffer(m_vertices.data(), 
-                               static_cast<uint32_t>(m_vertices.size() * sizeof(float)), 
-                               3 * sizeof(float)); // 3个float表示一个顶点位置
-        
-        LOG_DEBUG("SkyboxRenderPass", "设置索引缓冲区，索引数量: {0}", m_indices.size());
-        context->SetIndexBuffer(m_indices.data(), 
-                              static_cast<uint32_t>(m_indices.size() * sizeof(uint16_t)), 
-                              true); // 使用16位索引
-        
-        // 3. 绘制立方体
-        //LOG_DEBUG("SkyboxRenderPass", "调用 DrawIndexed，索引数量: {0}", m_indices.size());
-        context->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
+    // 设置常量数据（视图投影矩阵）
+    context.deviceContext->SetConstantData(0, &modifiedViewProjection, sizeof(PrismaMath::mat4));
 
-        //LOG_VERBOSE("SkyboxRenderPass", "天空盒渲染完成");
+    // 设置顶点数据
+    context.deviceContext->SetVertexData(
+        m_vertices.data(),
+        static_cast<uint32_t>(m_vertices.size() * sizeof(Vertex)),
+        static_cast<uint32_t>(sizeof(Vertex))
+    );
 
-        // 设置立方体贴图
-        if (m_cubeMapTexture) {
-            context->SetShaderResource("CubeMap", m_cubeMapTexture);
-        }
+    // 设置索引数据
+    context.deviceContext->SetIndexData(
+        m_indices.data(),
+        static_cast<uint32_t>(m_indices.size() * sizeof(uint32_t)),
+        false  // 32 位索引
+    );
 
-    } catch (const std::exception& e) {
-        LOG_ERROR("SkyboxRenderPass", "Exception during execute: {0}", e.what());
-    }
-    
-    //LOG_DEBUG("SkyboxRenderPass", "执行 Execute 方法结束");
-}
-
-void SkyboxRenderPass::SetRenderTarget(void* renderTarget)
-{
-    m_renderTarget = renderTarget;
-    LOG_DEBUG("SkyboxRenderPass", "设置渲染目标: 0x{0:x}", reinterpret_cast<uintptr_t>(renderTarget));
-}
-
-void SkyboxRenderPass::ClearRenderTarget(float r, float g, float b, float a)
-{
-    // 天空盒渲染通道不需要清屏操作
-    LOG_DEBUG("SkyboxRenderPass", "忽略清屏操作，颜色: ({0}, {1}, {2}, {3})", r, g, b, a);
-}
-
-void SkyboxRenderPass::SetViewport(uint32_t width, uint32_t height)
-{
-    m_width = width;
-    m_height = height;
-    LOG_DEBUG("SkyboxRenderPass", "设置视口为 {0}x{1}", width, height);
-}
-
-void SkyboxRenderPass::SetDepthBuffer(void* depthBuffer)
-{
-    // 天空盒不需要特殊的深度缓冲处理，但需要保存以避免编译警告
-    (void)depthBuffer;
-    LOG_DEBUG("SkyboxRenderPass", "设置深度缓冲区: 0x{0:x}", reinterpret_cast<uintptr_t>(depthBuffer));
-}
-
-void SkyboxRenderPass::SetCubeMapTexture(void* cubeMapTexture)
-{
-    m_cubeMapTexture = cubeMapTexture;
-    LOG_DEBUG("SkyboxRenderPass", "设置立方体贴图纹理: 0x{0:x}", reinterpret_cast<uintptr_t>(cubeMapTexture));
-}
-
-void SkyboxRenderPass::SetViewProjectionMatrix(const PrismaMath::mat4& viewProjection)
-{
-    m_viewProjection = viewProjection;
-    LOG_DEBUG("SkyboxRenderPass", "设置视图投影矩阵");
-
-    // 更新常量缓冲区
-    if (m_constantBuffer.empty()) {
-        m_constantBuffer.resize(16); // 4x4 矩阵
-    }
-    //TODO:
-}
-
-void SkyboxRenderPass::SetViewMatrix(const PrismaMath::mat4& view)
-{
-    m_view = view;
-    // 重新计算视图投影矩阵
-    m_viewProjection = m_view * m_projection;
-
-    // 更新常量缓冲区
-    if (m_constantBuffer.empty()) {
-        m_constantBuffer.resize(16); // 4x4 矩阵
+    // 设置立方体贴图纹理
+    if (m_cubeMapTexture) {
+        context.deviceContext->SetTexture(m_cubeMapTexture, 0);
     }
 
-    //TODO:
-
+    // 绘制
+    context.deviceContext->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
 }
 
-void SkyboxRenderPass::SetProjectionMatrix(const PrismaMath::mat4& projection)
-{
-    m_projection = projection;
-    // 重新计算视图投影矩阵
-    m_viewProjection = m_view * m_projection;
-
-    // 更新常量缓冲区
-    if (m_constantBuffer.empty()) {
-        m_constantBuffer.resize(16); // 4x4 矩阵
-    }
-    // TODO:
-
-}
-
-void SkyboxRenderPass::InitializeSkyboxMesh()
-{
-    // 初始化天空盒立方体网格
-    // 创建一个立方体网格用于渲染天空盒
-    LOG_DEBUG("SkyboxRenderPass", "初始化天空盒网格");
-    
-    // 在实际实现中，我们会在这里创建立方体顶点和索引数据
-    // 并将其存储在 m_skyboxMesh 中
-    
+void SkyboxPass::InitializeSkyboxMesh() {
     // 定义立方体的8个顶点
     // 前面 (Z+)
     // 1----2
@@ -197,7 +72,7 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
     // |  \ |
     // |   \|
     // 0----3
-    
+
     // 后面 (Z-)
     // 5----6
     // |\   |
@@ -205,55 +80,106 @@ void SkyboxRenderPass::InitializeSkyboxMesh()
     // |  \ |
     // |   \|
     // 4----7
-    
-    // 顶点数据
-    m_vertices = {
-        // 前面
-        -1.0f, -1.0f,  1.0f,  // 0
-         1.0f, -1.0f,  1.0f,  // 1
-         1.0f,  1.0f,  1.0f,  // 2
-        -1.0f,  1.0f,  1.0f,  // 3
-        // 后面
-        -1.0f, -1.0f, -1.0f,  // 4
-         1.0f, -1.0f, -1.0f,  // 5
-         1.0f,  1.0f, -1.0f,  // 6
-        -1.0f,  1.0f, -1.0f,  // 7
-    };
-    
+
+    // 创建立方体顶点
+    m_vertices.resize(24);
+
+    // 前面 (Z+)
+    m_vertices[0].position = PrismaMath::vec4(-1.0f, -1.0f,  1.0f, 1.0f);
+    m_vertices[1].position = PrismaMath::vec4( 1.0f, -1.0f,  1.0f, 1.0f);
+    m_vertices[2].position = PrismaMath::vec4( 1.0f,  1.0f,  1.0f, 1.0f);
+    m_vertices[3].position = PrismaMath::vec4(-1.0f,  1.0f,  1.0f, 1.0f);
+
+    // 后面 (Z-)
+    m_vertices[4].position = PrismaMath::vec4(-1.0f, -1.0f, -1.0f, 1.0f);
+    m_vertices[5].position = PrismaMath::vec4( 1.0f, -1.0f, -1.0f, 1.0f);
+    m_vertices[6].position = PrismaMath::vec4( 1.0f,  1.0f, -1.0f, 1.0f);
+    m_vertices[7].position = PrismaMath::vec4(-1.0f,  1.0f, -1.0f, 1.0f);
+
+    // 左面 (X-)
+    m_vertices[8].position  = PrismaMath::vec4(-1.0f, -1.0f, -1.0f, 1.0f);
+    m_vertices[9].position  = PrismaMath::vec4(-1.0f, -1.0f,  1.0f, 1.0f);
+    m_vertices[10].position = PrismaMath::vec4(-1.0f,  1.0f,  1.0f, 1.0f);
+    m_vertices[11].position = PrismaMath::vec4(-1.0f,  1.0f, -1.0f, 1.0f);
+
+    // 右面 (X+)
+    m_vertices[12].position = PrismaMath::vec4( 1.0f, -1.0f,  1.0f, 1.0f);
+    m_vertices[13].position = PrismaMath::vec4( 1.0f, -1.0f, -1.0f, 1.0f);
+    m_vertices[14].position = PrismaMath::vec4( 1.0f,  1.0f, -1.0f, 1.0f);
+    m_vertices[15].position = PrismaMath::vec4( 1.0f,  1.0f,  1.0f, 1.0f);
+
+    // 上面 (Y+)
+    m_vertices[16].position = PrismaMath::vec4(-1.0f,  1.0f,  1.0f, 1.0f);
+    m_vertices[17].position = PrismaMath::vec4( 1.0f,  1.0f,  1.0f, 1.0f);
+    m_vertices[18].position = PrismaMath::vec4( 1.0f,  1.0f, -1.0f, 1.0f);
+    m_vertices[19].position = PrismaMath::vec4(-1.0f,  1.0f, -1.0f, 1.0f);
+
+    // 下面 (Y-)
+    m_vertices[20].position = PrismaMath::vec4(-1.0f, -1.0f, -1.0f, 1.0f);
+    m_vertices[21].position = PrismaMath::vec4( 1.0f, -1.0f, -1.0f, 1.0f);
+    m_vertices[22].position = PrismaMath::vec4( 1.0f, -1.0f,  1.0f, 1.0f);
+    m_vertices[23].position = PrismaMath::vec4(-1.0f, -1.0f,  1.0f, 1.0f);
+
+    // 设置法线（指向立方体中心外）
+    for (auto& v : m_vertices) {
+        v.normal = PrismaMath::vec4(v.position.x, v.position.y, v.position.z, 0.0f);
+    }
+
+    // 设置纹理坐标（立方体贴图采样）
+    m_vertices[0].texCoord  = PrismaMath::vec4( 1.0f,  0.0f,  0.0f, 0.0f);  // 前面
+    m_vertices[1].texCoord  = PrismaMath::vec4( 1.0f,  1.0f,  0.0f, 0.0f);
+    m_vertices[2].texCoord  = PrismaMath::vec4( 0.0f,  1.0f,  0.0f, 0.0f);
+    m_vertices[3].texCoord  = PrismaMath::vec4( 0.0f,  0.0f,  0.0f, 0.0f);
+
+    m_vertices[4].texCoord  = PrismaMath::vec4( 1.0f,  0.0f,  0.0f, 0.0f);  // 后面
+    m_vertices[5].texCoord  = PrismaMath::vec4( 0.0f,  0.0f,  0.0f, 0.0f);
+    m_vertices[6].texCoord  = PrismaMath::vec4( 0.0f,  1.0f,  0.0f, 0.0f);
+    m_vertices[7].texCoord  = PrismaMath::vec4( 1.0f,  1.0f,  0.0f, 0.0f);
+
+    m_vertices[8].texCoord  = PrismaMath::vec4( 0.0f,  0.0f,  0.0f, 0.0f);  // 左面
+    m_vertices[9].texCoord  = PrismaMath::vec4( 1.0f,  0.0f,  0.0f, 0.0f);
+    m_vertices[10].texCoord = PrismaMath::vec4( 1.0f,  1.0f,  0.0f, 0.0f);
+    m_vertices[11].texCoord = PrismaMath::vec4( 0.0f,  1.0f,  0.0f, 0.0f);
+
+    m_vertices[12].texCoord = PrismaMath::vec4( 1.0f,  0.0f,  0.0f, 0.0f);  // 右面
+    m_vertices[13].texCoord = PrismaMath::vec4( 0.0f,  0.0f,  0.0f, 0.0f);
+    m_vertices[14].texCoord = PrismaMath::vec4( 0.0f,  1.0f,  0.0f, 0.0f);
+    m_vertices[15].texCoord = PrismaMath::vec4( 1.0f,  1.0f,  0.0f, 0.0f);
+
+    m_vertices[16].texCoord = PrismaMath::vec4( 0.0f,  1.0f,  0.0f, 0.0f);  // 上面
+    m_vertices[17].texCoord = PrismaMath::vec4( 1.0f,  1.0f,  0.0f, 0.0f);
+    m_vertices[18].texCoord = PrismaMath::vec4( 1.0f,  0.0f,  0.0f, 0.0f);
+    m_vertices[19].texCoord = PrismaMath::vec4( 0.0f,  0.0f,  0.0f, 0.0f);
+
+    m_vertices[20].texCoord = PrismaMath::vec4( 1.0f,  0.0f,  0.0f, 0.0f);  // 下面
+    m_vertices[21].texCoord = PrismaMath::vec4( 0.0f,  0.0f,  0.0f, 0.0f);
+    m_vertices[22].texCoord = PrismaMath::vec4( 0.0f,  1.0f,  0.0f, 0.0f);
+    m_vertices[23].texCoord = PrismaMath::vec4( 1.0f,  1.0f,  0.0f, 0.0f);
+
+    // 设置颜色（白色）
+    for (auto& v : m_vertices) {
+        v.color = PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+        v.tangent = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 0.0f);
+    }
+
     // 索引数据 (三角形列表)
     m_indices = {
         // 前面
-        0, 1, 2,
-        2, 3, 0,
+        0, 1, 2,  2, 3, 0,
         // 后面
-        6, 5, 4,
-        4, 7, 6,
+        6, 5, 4,  4, 7, 6,
         // 左面
-        4, 0, 3,
-        3, 7, 4,
+        4, 0, 3,  3, 7, 4,
         // 右面
-        1, 5, 6,
-        6, 2, 1,
+        1, 5, 6,  6, 2, 1,
         // 上面
-        3, 2, 6,
-        6, 7, 3,
+        3, 2, 6,  6, 7, 3,
         // 下面
-        4, 5, 1,
-        1, 0, 4
+        4, 5, 1,  1, 0, 4
     };
-    
-    LOG_INFO("SkyboxRenderPass", "天空盒网格数据已准备: {0}个顶点, {1}个索引",
-              m_vertices.size() / 3, m_indices.size());
+
+    m_meshInitialized = true;
+    m_initialized = true;
 }
 
-bool SkyboxRenderPass::IsInitialized() const {
-    return m_skyboxShader != nullptr &&
-           !m_vertices.empty() &&
-           !m_indices.empty() &&
-           m_width > 0 &&
-           m_height > 0;
-}
-
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic
