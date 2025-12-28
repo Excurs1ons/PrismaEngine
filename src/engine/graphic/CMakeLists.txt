@@ -84,6 +84,7 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/RenderSystemNew.cpp
     graphic/ScriptableRenderPipeline.cpp
     graphic/Shader.cpp
+    graphic/stb_impl.cpp
     # New interface files
     graphic/interfaces/RenderTypes.cpp
     graphic/interfaces/IPipelineState.cpp
