@@ -12,14 +12,14 @@ class MeshRenderer :public RenderComponent
 private:
     std::shared_ptr<Mesh> m_mesh;
     std::shared_ptr<Engine::Material> m_material;
-    
+
 protected:
-    void DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh> mesh);
-    
+    void DrawMesh(PrismaEngine::Graphic::RenderCommandContext* context, std::shared_ptr<Mesh> mesh);
+
 public:
     // 移除了内联的Render实现，在cpp文件中实现
-    
-    void Render(RenderCommandContext* context) override;
+
+    void Render(PrismaEngine::Graphic::RenderCommandContext* context) override;
 
     void SetMesh(std::shared_ptr<Mesh> mesh) {
         m_mesh = std::move(mesh);
