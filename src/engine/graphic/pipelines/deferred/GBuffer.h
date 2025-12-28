@@ -5,6 +5,9 @@
 
 namespace PrismaEngine::Graphic {
 
+// 前置声明
+class RenderCommandContext;
+
 // G-Buffer渲染目标结构
 // 使用MRT（Multiple Render Targets）技术
 enum class GBufferTarget : uint32_t {

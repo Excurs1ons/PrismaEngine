@@ -112,14 +112,14 @@ void GBuffer::SetAsRenderTarget(RenderCommandContext* context)
 
     // TODO: 设置多个渲染目标
     void* renderTargets[4] = {
-        GetRenderTargetView(GBufferTarget::Position),
-        GetRenderTargetView(GBufferTarget::Normal),
-        GetRenderTargetView(GBufferTarget::Albedo),
-        GetRenderTargetView(GBufferTarget::Emissive)
+        m_renderTargets[static_cast<uint32_t>(GBufferTarget::Position)].renderTargetView,
+        m_renderTargets[static_cast<uint32_t>(GBufferTarget::Normal)].renderTargetView,
+        m_renderTargets[static_cast<uint32_t>(GBufferTarget::Albedo)].renderTargetView,
+        m_renderTargets[static_cast<uint32_t>(GBufferTarget::Emissive)].renderTargetView
     };
 
-    // 设置MRT
-    context->SetRenderTargets(renderTargets, 4, GetDepthStencilView());
+    // TODO: 需要转换为 IRenderTarget** 类型
+    // context->SetRenderTargets(renderTargets, 4, m_depthStencilView);
 }
 
 void GBuffer::SetAsShaderResources(RenderCommandContext* context)
@@ -132,10 +132,10 @@ void GBuffer::SetAsShaderResources(RenderCommandContext* context)
     LOG_DEBUG("GBuffer", "设置G-Buffer为着色器资源");
 
     // TODO: 绑定所有G-Buffer纹理为着色器资源
-    context->SetShaderResource("GBufferPosition", GetShaderResourceView(GBufferTarget::Position));
-    context->SetShaderResource("GBufferNormal", GetShaderResourceView(GBufferTarget::Normal));
-    context->SetShaderResource("GBufferAlbedo", GetShaderResourceView(GBufferTarget::Albedo));
-    context->SetShaderResource("GBufferEmissive", GetShaderResourceView(GBufferTarget::Emissive));
+    context->SetShaderResource("GBufferPosition", m_renderTargets[static_cast<uint32_t>(GBufferTarget::Position)].shaderResourceView);
+    context->SetShaderResource("GBufferNormal", m_renderTargets[static_cast<uint32_t>(GBufferTarget::Normal)].shaderResourceView);
+    context->SetShaderResource("GBufferAlbedo", m_renderTargets[static_cast<uint32_t>(GBufferTarget::Albedo)].shaderResourceView);
+    context->SetShaderResource("GBufferEmissive", m_renderTargets[static_cast<uint32_t>(GBufferTarget::Emissive)].shaderResourceView);
     context->SetShaderResource("GBufferDepth", m_depthShaderResourceView);
 }
 
