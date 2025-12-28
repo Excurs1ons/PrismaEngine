@@ -401,8 +401,14 @@ elseif(TARGET nlohmann_json)
     target_link_libraries(Engine PUBLIC nlohmann_json)
 endif()
 
-# 链接 stb (如果需要)
-# stb 通常是 header-only，不强制链接
+# 添加 stb include 目录 (header-only 库)
+if(TARGET stb)
+    # stb target created by FetchContent
+    target_link_libraries(Engine PUBLIC stb)
+elseif(DEFINED stb_SOURCE_DIR)
+    # 手动添加 stb 源目录到 include 路径
+    target_include_directories(Engine PRIVATE ${stb_SOURCE_DIR})
+endif()
 
 # Windows 平台额外依赖
 if(WIN32 AND NOT ANDROID)

@@ -3,10 +3,13 @@
 #include "interfaces/IResourceFactory.h"
 #include "interfaces/ITexture.h"
 
+// stb 库实现宏
 #define STB_TRUETYPE_IMPLEMENTATION
-#include <stb_truetype.h>
 #define STB_RECT_PACK_IMPLEMENTATION
-#include <stb_rect_pack.h>
+
+// stb 头文件（由 FetchContent 下载，通过 CMake include 目录添加）
+#include "stb_truetype.h"
+#include "stb_rect_pack.h"
 
 #include <fstream>
 #include <iostream>

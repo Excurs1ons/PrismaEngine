@@ -135,6 +135,13 @@ endif()
 # stb (总是需要)
 if(PRISMA_USE_FETCHCONTENT)
     FetchContent_MakeAvailable(stb)
+    # 创建 stb 接口库 (header-only)
+    if(NOT TARGET stb)
+        add_library(stb INTERFACE IMPORTED GLOBAL)
+        set_target_properties(stb PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${stb_SOURCE_DIR}"
+        )
+    endif()
     message(STATUS "stb: 使用 FetchContent")
 else()
     # stb 通常是 header-only，从系统查找
