@@ -8,6 +8,7 @@ on:
       - 'src/**'
       - 'assets/**'
       - 'resources/**'
+      - 'cmake/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
       - '.github/workflows/build.yml'
@@ -17,6 +18,7 @@ on:
       - 'src/**'
       - 'assets/**'
       - 'resources/**'
+      - 'cmake/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
 
