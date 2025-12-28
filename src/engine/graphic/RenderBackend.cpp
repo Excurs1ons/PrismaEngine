@@ -160,11 +160,11 @@ IDeviceContext* RenderBackend::CreateCommandContext() {
 }
 
 void* RenderBackend::GetDefaultRenderTarget() {
-    return m_nativeRenderTarget;
+    return nullptr;  // TODO: 返回有效的渲染目标句柄
 }
 
 void* RenderBackend::GetDefaultDepthBuffer() {
-    return m_nativeDepthStencil;
+    return nullptr;  // TODO: 返回有效的深度缓冲句柄
 }
 
 void RenderBackend::GetRenderTargetSize(uint32_t& width, uint32_t& height) {
