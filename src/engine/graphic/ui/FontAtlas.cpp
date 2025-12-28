@@ -2,6 +2,7 @@
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceFactory.h"
 #include "interfaces/ITexture.h"
+#include "RenderTypes.h"
 
 // stb 头文件（由 FetchContent 下载，通过 CMake include 目录添加）
 // 注意：STB_IMPLEMENTATION 宏在 stb_impl.cpp 中定义，这里只包含头文件
@@ -125,7 +126,7 @@ bool FontAtlas::LoadFromTTF(const std::string& ttfPath, float fontSize, const ui
                     &fontInfo,
                     m_pixels.data() + (rect.y * m_atlasWidth + rect.x) * 4,
                     gw, gh, m_atlasWidth * 4,
-                    scale,
+                    scale, scale,
                     codepoint
                 );
 
@@ -154,7 +155,10 @@ bool FontAtlas::LoadFromTTF(const std::string& ttfPath, float fontSize, const ui
                 pc.y1 = rect.y + gh;
                 pc.xoff = ix0;
                 pc.yoff = iy0;
-                pc.xadvance = stbtt_GetCodepointAdvance(&fontInfo, 0, codepoint) * scale;
+                // 使用 stbtt_GetCodepointHMetrics 获取 advance 值
+                int advanceWidth;
+                stbtt_GetCodepointHMetrics(&fontInfo, codepoint, &advanceWidth, nullptr);
+                pc.xadvance = static_cast<int>(advanceWidth * scale);
                 pc.xoff2 = ix1;
                 pc.yoff2 = iy1;
             } else {
@@ -164,7 +168,10 @@ bool FontAtlas::LoadFromTTF(const std::string& ttfPath, float fontSize, const ui
 
                 pc.xoff = ix0;
                 pc.yoff = iy0;
-                pc.xadvance = stbtt_GetCodepointAdvance(&fontInfo, 0, codepoint) * scale;
+                // 使用 stbtt_GetCodepointHMetrics 获取 advance 值
+                int advanceWidth;
+                stbtt_GetCodepointHMetrics(&fontInfo, codepoint, &advanceWidth, nullptr);
+                pc.xadvance = static_cast<int>(advanceWidth * scale);
                 pc.xoff2 = ix1;
                 pc.yoff2 = iy1;
             }
