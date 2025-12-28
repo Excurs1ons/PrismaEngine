@@ -30,4 +30,7 @@ private:
 
     // 创建相机游戏对象
     static std::shared_ptr<GameObject> CreateCamera(const std::string& name, Prisma::Vector3 pos, Quaternion rotation);
+
+    // 创建调试文本（FPS 等信息）
+    std::shared_ptr<GameObject> CreateDebugText(const std::string& name);
 };
