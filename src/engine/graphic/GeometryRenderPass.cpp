@@ -2,6 +2,8 @@
 #include "Mesh.h"
 #include "Logger.h"
 
+using PrismaEngine::Graphic::RenderCommandContext;
+
 namespace Engine {
 
 GeometryRenderPass::GeometryRenderPass()
@@ -19,7 +21,7 @@ GeometryRenderPass::~GeometryRenderPass()
 {
 }
 
-void GeometryRenderPass::Execute(RenderCommandContext* context)
+void GeometryRenderPass::Execute(PrismaEngine::Graphic::RenderCommandContext* context)
 {
     if (!context) {
         LOG_WARNING("GeometryRenderPass", "Render command context is null");
