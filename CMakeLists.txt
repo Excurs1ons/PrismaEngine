@@ -268,3 +268,10 @@ endif()
 # )
 
 include(CPack)
+
+# ========== 修复 OpenFBX 安装规则 ==========
+# OpenFBX 的安装规则会尝试安装不存在的文件，需要删除其 cmake_install.cmake
+if(WIN32 AND EXISTS "${CMAKE_BINARY_DIR}/_deps/openfbx-build/cmake_install.cmake")
+    file(REMOVE "${CMAKE_BINARY_DIR}/_deps/openfbx-build/cmake_install.cmake")
+    message(STATUS "Removed OpenFBX install rules to prevent installation errors")
+endif()
