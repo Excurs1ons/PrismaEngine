@@ -1,6 +1,10 @@
 // stb 库实现
 // 避免符号重定义错误 - 只在这个文件里定义实现宏
 
+// 定义 STB 库为静态链接，避免符号导出问题
+#define STBTT_STATIC
+#define STBRP_STATIC
+
 // STB 库需要在定义 IMPLEMENTATION 宏之前包含相应的头文件
 // stb_truetype.h
 #define STB_TRUETYPE_IMPLEMENTATION
