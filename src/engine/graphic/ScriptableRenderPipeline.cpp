@@ -65,7 +65,7 @@ void ScriptableRenderPipeline::Execute()
         m_cachedContext = nullptr;
     }
 
-    m_cachedContext = m_renderBackend->CreateCommandContext();
+    m_cachedContext = static_cast<RenderCommandContext*>(m_renderBackend->CreateCommandContext());
     if (!m_cachedContext) {
         LOG_ERROR("ScriptableRenderPipeline", "无法创建命令上下文");
         return;
