@@ -65,6 +65,15 @@ jobs:
           ${{ runner.os }}-build-${{ matrix.preset }}-
           ${{ runner.os }}-build-
 
+    - name: Clean CMake cache
+      shell: powershell
+      run: |
+        # 删除 CMake 缓存文件以确保干净的配置
+        if (Test-Path "build/${{ matrix.preset }}/CMakeCache.txt") {
+            Remove-Item "build/${{ matrix.preset }}/CMakeCache.txt" -Force
+            Write-Host "Removed CMakeCache.txt"
+        }
+
     - name: Configure CMake
       run: cmake --preset ${{ matrix.preset }}
 

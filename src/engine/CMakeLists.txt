@@ -53,6 +53,11 @@ if(ANDROID)
     list(FILTER CORE_HEADERS EXCLUDE REGEX "targetver.h")
 endif()
 
+# 在非Android平台上排除Android特定头文件
+if(NOT ANDROID)
+    list(FILTER CORE_HEADERS EXCLUDE REGEX "PlatformAndroid.h")
+endif()
+
 # ========== 渲染设备条件编译 ==========
 # 注意：必须在设置 ENGINE_SOURCES 之前添加，因为 ENGINE_SOURCES 使用 ENGINE_GRAPHIC_SOURCES 的值
 
