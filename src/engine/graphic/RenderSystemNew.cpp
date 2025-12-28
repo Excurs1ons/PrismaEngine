@@ -242,7 +242,7 @@ bool RenderSystem::InitializePipelines() {
     // }
 
     // 初始化前向渲染管线
-    m_forwardPipeline = std::make_unique<::Engine::Graphic::Pipelines::Forward::ForwardPipeline>();
+    m_forwardPipeline = std::make_unique<PrismaEngine::Graphic::ForwardPipeline>();
     // TODO: 需要重新设计以适配新架构
     // 临时跳过
     // if (!m_forwardPipeline->Initialize(m_legacyPipeline.get())) {

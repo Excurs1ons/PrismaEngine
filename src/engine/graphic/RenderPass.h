@@ -13,6 +13,7 @@
 // 前向声明
 namespace PrismaEngine::Graphic {
 class IDeviceContext;
+class RenderCommandContext;
 }
 
 /// @deprecated 使用 graphic/LogicalPass.h 中的 LogicalPass 替代
@@ -23,7 +24,7 @@ public:
     virtual ~RenderPass();
 
     /// @deprecated 使用 IPass::Execute(const PassExecutionContext&) 替代
-    virtual void Execute(class RenderCommandContext* context) = 0;
+    virtual void Execute(PrismaEngine::Graphic::RenderCommandContext* context) = 0;
 
     /// @deprecated 使用 IDeviceContext::SetRenderTarget() 替代
     virtual void SetRenderTarget(void* renderTarget) = 0;
@@ -42,7 +43,7 @@ public:
     RenderPass2D();
     ~RenderPass2D() override;
 
-    void Execute(RenderCommandContext* context) override;
+    void Execute(PrismaEngine::Graphic::RenderCommandContext* context) override;
 
     void AddMeshToRenderQueue(const std::shared_ptr<Mesh>& mesh, const PrismaMath::mat4& transform);
     void SetCameraMatrix(const PrismaMath::mat4& viewProjection);
