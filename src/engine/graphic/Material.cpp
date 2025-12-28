@@ -3,6 +3,7 @@
 #include "Logger.h"
 #include "ResourceManager.h"
 #include "DefaultShader.h"
+#include "RenderCommandContext.h"
 
 using namespace Engine;
 

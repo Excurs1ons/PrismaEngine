@@ -4,6 +4,8 @@
 #include "Logger.h"
 #include <cassert>
 
+using PrismaEngine::Graphic::RenderCommandContext;
+
 void MeshRenderer::DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh> mesh)
 {
     LOG_DEBUG("MeshRenderer", "DrawMesh called. mesh ptr={0}, subMeshes={1}", reinterpret_cast<uintptr_t>(mesh.get()), mesh ? mesh->subMeshes.size() : 0);
@@ -42,7 +44,7 @@ void MeshRenderer::DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh>
 }
 
 // 将内联实现移出到此处
-void MeshRenderer::Render(RenderCommandContext* context)
+void MeshRenderer::Render(PrismaEngine::Graphic::RenderCommandContext* context)
 {
     LOG_DEBUG("MeshRenderer", "Render called. mesh present={0} material present={1} context ptr={2}", (bool)m_mesh, (bool)m_material, reinterpret_cast<uintptr_t>(context));
 
