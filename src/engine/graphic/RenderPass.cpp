@@ -1,6 +1,8 @@
 #include "RenderPass.h"
 #include "Mesh.h"
 
+using PrismaEngine::Graphic::RenderCommandContext;
+
 RenderPass::RenderPass()
 {
 }
@@ -20,7 +22,7 @@ RenderPass2D::~RenderPass2D()
 {
 }
 
-void RenderPass2D::Execute(RenderCommandContext* context)
+void RenderPass2D::Execute(PrismaEngine::Graphic::RenderCommandContext* context)
 {
     // 2D渲染通道执行逻辑
     // 在这里会实际执行所有排队的2D渲染命令
