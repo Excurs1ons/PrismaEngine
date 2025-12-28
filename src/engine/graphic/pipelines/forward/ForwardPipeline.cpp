@@ -23,7 +23,7 @@ bool ForwardPipeline::Initialize() {
     m_opaquePass = std::make_shared<OpaquePass>();
     m_skyboxPass = std::make_shared<SkyboxPass>();
     m_transparentPass = std::make_shared<TransparentPass>();
-    m_uiPass = std::make_shared<::PrismaEngine::UIPass>();
+    m_uiPass = std::make_shared<PrismaEngine::UIPass>();
 
     // 添加到 Pipeline（会按优先级自动排序）
     AddPass(m_depthPrePass.get());
