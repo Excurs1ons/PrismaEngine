@@ -2,7 +2,7 @@
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceFactory.h"
 #include "interfaces/ITexture.h"
-#include "RenderTypes.h"
+#include "interfaces/RenderTypes.h"
 
 // stb 头文件（由 FetchContent 下载，通过 CMake include 目录添加）
 // 注意：STB_IMPLEMENTATION 宏在 stb_impl.cpp 中定义，这里只包含头文件
