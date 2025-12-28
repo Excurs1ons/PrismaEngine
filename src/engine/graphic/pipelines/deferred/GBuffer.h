@@ -1,12 +1,9 @@
 #pragma once
 
-#include "../../../math/MathTypes.h"
+#include "math/MathTypes.h"
 #include <memory>
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
-namespace Deferred {
+namespace PrismaEngine::Graphic {
 
 // G-Buffer渲染目标结构
 // 使用MRT（Multiple Render Targets）技术
@@ -120,7 +117,4 @@ private:
     bool m_created = false;
 };
 
-} // namespace Deferred
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic

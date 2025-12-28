@@ -1,85 +1,86 @@
 #pragma once
 
-#include "graphic/RenderPass.h"
+#include "graphic/LogicalPass.h"
+#include "graphic/interfaces/IPass.h"
+#include "graphic/interfaces/IDeviceContext.h"
+#include "graphic/interfaces/IRenderTarget.h"
+#include "math/MathTypes.h"
 #include <memory>
 #include <vector>
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
-namespace Forward {
+namespace PrismaEngine::Graphic {
 
-// 不透明物体渲染通道 - 主要的前向渲染Pass
-class OpaquePass : public RenderPass
-{
+/// @brief 不透明物体逻辑 Pass
+/// 前向渲染的主要 Pass，渲染不透明物体
+class OpaquePass : public ForwardRenderPass {
 public:
-    OpaquePass();
-    ~OpaquePass();
-
-    // 渲染通道执行函数
-    void Execute(RenderCommandContext* context) override;
-
-    // 设置渲染目标
-    void SetRenderTarget(void* renderTarget) override;
-
-    // 清屏操作
-    void ClearRenderTarget(float r, float g, float b, float a) override;
-
-    // 设置视口
-    void SetViewport(uint32_t width, uint32_t height) override;
-
-    // 设置深度缓冲区
-    void SetDepthBuffer(void* depthBuffer);
-
-    // 设置视图矩阵
-    void SetViewMatrix(const Prisma::Matrix4x4& view);
-
-    // 设置投影矩阵
-    void SetProjectionMatrix(const Prisma::Matrix4x4& projection);
-
-    // 设置光源信息
+    // 光源结构
     struct Light {
-        Prisma::Vector3 position;
-        Prisma::Color color;
-        float intensity;
-        Prisma::Vector3 direction;  // 用于方向光
+        PrismaMath::vec3 position;
+        PrismaMath::vec4 color;     // RGB + intensity
+        PrismaMath::vec3 direction;  // 用于方向光
         int type;  // 0=directional, 1=point, 2=spot
     };
-    void SetLights(const std::vector<Light>& lights);
 
-    // 设置环境光
-    void SetAmbientLight(const Prisma::Color& color);
+public:
+    OpaquePass();
+    ~OpaquePass() override = default;
 
-private:
-    // 深度缓冲区
-    void* m_depthBuffer = nullptr;
+    // === IPass 接口实现 ===
 
-    // 相机矩阵
-    Prisma::Matrix4x4 m_view = Prisma::Matrix4x4();
-    Prisma::Matrix4x4 m_projection = Prisma::Matrix4x4();
-    Prisma::Matrix4x4 m_viewProjection = Prisma::Matrix4x4();
+    /// @brief 执行 Pass
+    /// @param context 执行上下文
+    void Execute(const PassExecutionContext& context) override;
 
-    // 光照数据
-    std::vector<Light> m_lights;
-    Prisma::Vector3 m_ambientLight = Prisma::Vector3(0.1f, 0.1f, 0.1f);
+    /// @brief 更新 Pass 数据
+    /// @param deltaTime 时间增量
+    void Update(float deltaTime) override;
 
-    // 渲染目标
-    void* m_renderTarget = nullptr;
+    // === 光照设置 ===
 
-    // 视口尺寸
-    uint32_t m_width = 0;
-    uint32_t m_height = 0;
+    /// @brief 设置光源列表
+    /// @param lights 光源数组
+    void SetLights(const std::vector<Light>& lights) { m_lights = lights; }
 
-    // 渲染统计
+    /// @brief 获取光源列表
+    const std::vector<Light>& GetLights() const { return m_lights; }
+
+    /// @brief 设置环境光颜色
+    /// @param color 环境光颜色
+    void SetAmbientColor(const PrismaMath::vec3& color) { m_ambientColor = color; }
+
+    /// @brief 获取环境光颜色
+    const PrismaMath::vec3& GetAmbientColor() const { return m_ambientColor; }
+
+    /// @brief 设置环境光强度
+    /// @param intensity 环境光强度
+    void SetAmbientIntensity(float intensity) { m_ambientIntensity = intensity; }
+
+    /// @brief 获取环境光强度
+    float GetAmbientIntensity() const { return m_ambientIntensity; }
+
+    // === 渲染统计 ===
+
+    /// @brief 获取渲染统计
     struct RenderStats {
         uint32_t drawCalls = 0;
         uint32_t triangles = 0;
         uint32_t objects = 0;
     };
+    const RenderStats& GetRenderStats() const { return m_stats; }
+    RenderStats& GetRenderStats() { return m_stats; }
+
+    /// @brief 重置渲染统计
+    void ResetStats() { m_stats = RenderStats(); }
+
+private:
+    // 光照数据
+    std::vector<Light> m_lights;
+    PrismaMath::vec3 m_ambientColor;
+    float m_ambientIntensity;
+
+    // 渲染统计
     RenderStats m_stats;
 };
 
-} // namespace Forward
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic

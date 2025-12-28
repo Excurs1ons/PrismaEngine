@@ -2,10 +2,7 @@
 #include "RenderCommandContext.h"
 #include "Logger.h"
 
-namespace Engine {
-namespace Graphic {
-namespace Pipelines {
-namespace Deferred {
+namespace PrismaEngine::Graphic {
 
 // G-Buffer格式定义
 const uint32_t GBufferFormats::POSITION_FORMAT = 10;  // DXGI_FORMAT_R16G16B16A16_FLOAT
@@ -182,7 +179,4 @@ void* GBuffer::GetDepthStencilView() const
     return m_depthStencilView;
 }
 
-} // namespace Deferred
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic

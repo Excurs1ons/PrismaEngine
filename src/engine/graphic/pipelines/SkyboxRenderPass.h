@@ -1,86 +1,63 @@
 #pragma once
 
-#include "graphic/RenderPass.h"
+#include "graphic/LogicalPass.h"
 #include "graphic/Material.h"
 #include "graphic/Mesh.h"
+#include "graphic/Shader.h"
+#include "graphic/interfaces/IPass.h"
+#include "graphic/interfaces/IDeviceContext.h"
+#include "graphic/interfaces/IRenderTarget.h"
+#include "graphic/interfaces/ITexture.h"
 #include "math/MathTypes.h"
 #include <memory>
 #include <vector>
 
-namespace Engine {
+namespace PrismaEngine::Graphic {
 
-class Shader; // 前向声明
-
-namespace Graphic {
-namespace Pipelines {
-
-// 天空盒渲染通道
-class SkyboxRenderPass : public RenderPass
-{
+/// @brief 天空盒逻辑 Pass
+/// 负责渲染天空盒，不包含具体图形 API
+class SkyboxPass : public ForwardRenderPass {
 public:
-    SkyboxRenderPass();
-    ~SkyboxRenderPass();
-    
-    // 渲染通道执行函数
-    void Execute(RenderCommandContext* context) override;
-    
-    // 设置渲染目标
-    void SetRenderTarget(void* renderTarget) override;
-    
-    // 清屏操作
-    void ClearRenderTarget(float r, float g, float b, float a) override;
-    
-    // 设置视口
-    void SetViewport(uint32_t width, uint32_t height) override;
+    SkyboxPass();
+    ~SkyboxPass() override = default;
 
-    // 设置深度缓冲区
-    void SetDepthBuffer(void* depthBuffer);
+    // === IPass 接口实现 ===
 
-    // 设置天空盒立方体贴图
-    void SetCubeMapTexture(void* cubeMapTexture);
-    
-    // 设置视图投影矩阵
-    void SetViewProjectionMatrix(const PrismaMath::mat4& viewProjection);
+    /// @brief 执行 Pass
+    /// @param context 执行上下文
+    void Execute(const PassExecutionContext& context) override;
 
-    // 设置视图和投影矩阵
-    void SetViewMatrix(const PrismaMath::mat4& view);
-    void SetProjectionMatrix(const PrismaMath::mat4& projection);
+    /// @brief 更新 Pass 数据
+    /// @param deltaTime 时间增量
+    void Update(float deltaTime) override;
+
+    // === 天空盒特有功能 ===
+
+    /// @brief 设置立方体纹理
+    /// @param cubeTexture 纹理接口指针
+    void SetCubeMapTexture(ITexture* cubeTexture) { m_cubeMapTexture = cubeTexture; }
+
+    /// @brief 获取立方体纹理
+    ITexture* GetCubeMapTexture() const { return m_cubeMapTexture; }
 
 private:
-    // 天空盒立方体贴图纹理
-    void* m_cubeMapTexture;
-    
-    // 视图和投影矩阵
-    PrismaMath::mat4 m_view;
-    PrismaMath::mat4 m_projection;
-    PrismaMath::mat4 m_viewProjection;
-    
-    // 渲染目标
-    void* m_renderTarget;
-    
-    // 视口尺寸
-    uint32_t m_width;
-    uint32_t m_height;
-    
-    // 天空盒网格和材质
-    std::shared_ptr<Mesh> m_skyboxMesh;
-    std::shared_ptr<Material> m_skyboxMaterial;
-    std::shared_ptr<Shader> m_skyboxShader;
-    
-    // 网格数据
-    std::vector<float> m_vertices;
-    std::vector<uint16_t> m_indices;
-    
-    // 常量缓冲区数据
-    std::vector<float> m_constantBuffer;
-    
-    // 初始化天空盒网格
+    /// @brief 初始化天空盒网格
     void InitializeSkyboxMesh();
 
-    // 检查资源是否已正确初始化
-    bool IsInitialized() const;
+    /// @brief 检查资源是否已正确初始化
+    bool IsInitialized() const { return m_initialized; }
+
+private:
+    // 资源
+    ITexture* m_cubeMapTexture;  // 立方体贴图纹理
+
+    // 网格数据
+    std::vector<Vertex> m_vertices;
+    std::vector<uint32_t> m_indices;
+
+    // 标志
+    bool m_initialized;
+    bool m_meshInitialized;
 };
 
-} // namespace Pipelines
-} // namespace Graphic
-} // namespace Engine
+} // namespace PrismaEngine::Graphic
