@@ -1,5 +1,10 @@
 #pragma once
 
+/// @file GeometryRenderPass.h
+/// @deprecated 此文件已被弃用，请使用 graphic/pipelines/deferred/GeometryPass.h
+/// @note 旧版 GeometryRenderPass 类已被新的 GeometryPass 替代
+/// @note 此文件仅为向后兼容保留，将在未来版本中移除
+
 #include "RenderPass.h"
 #include <vector>
 #include <memory>
@@ -9,45 +14,30 @@ class Mesh;
 
 namespace Engine {
 
-// 几何渲染通道类
-class GeometryRenderPass : public RenderPass
+/// @deprecated 使用 graphic/pipelines/deferred/GeometryPass.h 中的 GeometryPass 替代
+class [[deprecated("Use GeometryPass from graphic/pipelines/deferred/GeometryPass.h instead")]] GeometryRenderPass : public RenderPass
 {
 public:
     GeometryRenderPass();
     ~GeometryRenderPass();
-    
-    // 渲染通道执行函数
+
     void Execute(RenderCommandContext* context) override;
-    
-    // 设置渲染目标
     void SetRenderTarget(void* renderTarget) override;
-    
-    // 清屏操作
     void ClearRenderTarget(float r, float g, float b, float a) override;
-    
-    // 设置视口
     void SetViewport(uint32_t width, uint32_t height) override;
-    
-    // 添加网格到渲染队列
     void AddMeshToRenderQueue(std::shared_ptr<Mesh> mesh, const float* transform);
-    
+
 private:
-    // 渲染目标
-    void* m_renderTarget;
-    
-    // 清屏颜色
-    float m_clearColor[4];
-    
-    // 视口尺寸
-    uint32_t m_width;
-    uint32_t m_height;
-    
-    // 待渲染的网格队列
+    void* m_renderTarget = nullptr;
+    float m_clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
+    uint32_t m_width = 0;
+    uint32_t m_height = 0;
+
     struct RenderItem {
         std::shared_ptr<Mesh> mesh;
-        float transform[16]; // 4x4变换矩阵
+        float transform[16];
     };
-    
+
     std::vector<RenderItem> m_renderQueue;
 };
 
