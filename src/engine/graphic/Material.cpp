@@ -55,7 +55,7 @@ void Material::SetShader(std::shared_ptr<Shader> shader) {
     m_shader = shader;
 }
 
-void Material::Apply(RenderCommandContext* context) {
+void Material::Apply(PrismaEngine::Graphic::RenderCommandContext* context) {
     if (!context) {
         LOG_WARNING("Material", "Apply: context is null");
         return;

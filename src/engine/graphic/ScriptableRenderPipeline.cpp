@@ -1,8 +1,10 @@
 #include "ScriptableRenderPipeline.h"
+#include "RenderBackend.h"
+#include "RenderCommandContext.h"
 #include "Logger.h"
 // TODO: 更新以使用新架构
 
-namespace Engine {
+using namespace PrismaEngine::Graphic;
 
 ScriptableRenderPipeline::ScriptableRenderPipeline()
     : m_renderBackend(nullptr)
