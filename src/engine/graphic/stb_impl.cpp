@@ -5,10 +5,11 @@
 #define STBTT_STATIC
 #define STBRP_STATIC
 
-// 首先包含 stb_rect_pack.h 的声明部分（不定义 IMPLEMENTATION）
+// stb_rect_pack.h 需要独立实现
+#define STB_RECT_PACK_IMPLEMENTATION
 #include "stb_rect_pack.h"
 
-// 然后定义并实现 stb_truetype（它内部会处理 rect pack）
+// stb_truetype.h
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
