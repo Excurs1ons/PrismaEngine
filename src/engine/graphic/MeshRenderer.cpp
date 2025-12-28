@@ -2,6 +2,7 @@
 #include "Transform.h"
 #include "GameObject.h"
 #include "Logger.h"
+#include "RenderCommandContext.h"
 #include <cassert>
 
 using PrismaEngine::Graphic::RenderCommandContext;

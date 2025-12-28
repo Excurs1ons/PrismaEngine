@@ -1,9 +1,12 @@
 #include "RenderComponent.h"
+#include "RenderCommandContext.h"
 
 #include <utility>
 #include "Material.h"
 #include "Transform.h"
 #include "Logger.h"
+
+using PrismaEngine::Graphic::RenderCommandContext;
 
 RenderComponent::RenderComponent()
     : m_vertexCount(0)
