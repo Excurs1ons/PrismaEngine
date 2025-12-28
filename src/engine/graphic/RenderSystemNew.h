@@ -133,8 +133,8 @@ private:
     std::shared_ptr<IPipeline> m_mainPipeline;
 
     // TODO: 移除或重新设计这些组件
-    std::unique_ptr<::Engine::ScriptableRenderPipeline> m_legacyPipeline;
-    std::unique_ptr<::Engine::Graphic::Pipelines::Forward::ForwardPipeline> m_forwardPipeline;
+    std::unique_ptr<class ScriptableRenderPipeline> m_legacyPipeline;
+    std::unique_ptr<class PrismaEngine::Graphic::ForwardPipeline> m_forwardPipeline;
 
     // 渲染线程
     WorkerThread m_renderThread;

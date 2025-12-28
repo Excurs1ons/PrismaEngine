@@ -120,9 +120,9 @@ public:
 
 /// @brief 逻辑 Pipeline 抽象接口
 /// 职责：管理和执行 IPass
-class IPipeline {
+class ILogicalPipeline {
 public:
-    virtual ~IPipeline() = default;
+    virtual ~ILogicalPipeline() = default;
 
     /// @brief 获取 Pipeline 名称
     virtual const char* GetName() const = 0;
