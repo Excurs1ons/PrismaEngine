@@ -65,8 +65,15 @@ jobs:
           ${{ runner.os }}-build-${{ matrix.preset }}-
           ${{ runner.os }}-build-
 
+    - name: Clean old install rules
+      shell: powershell
+      run: |
+        # 删除旧的 cmake_install.cmake 文件以强制重新生成
+        Get-ChildItem -Path "build/${{ matrix.preset }}" -Recurse -Filter "cmake_install.cmake" | Remove-Item -Force
+        Write-Host "Removed old cmake_install.cmake files"
+
     - name: Configure CMake
-      run: cmake --preset ${{ matrix.preset }} --fresh
+      run: cmake --preset ${{ matrix.preset }}
 
     - name: Build
       run: |
