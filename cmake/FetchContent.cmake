@@ -239,7 +239,6 @@ endif()
 # OpenFBX (Windows only)
 if(WIN32 AND PRISMA_USE_FETCHCONTENT)
     # 禁用 OpenFBX 的安装规则（避免安装阶段的错误）
-    set(CMAKE_SKIP_INSTALL_RULES ON CACHE BOOL "Skip install" FORCE)
     set(OPENFBX_INSTALL OFF CACHE BOOL "OpenFBX install" FORCE)
     FetchContent_MakeAvailable(openfbx)
     message(STATUS "OpenFBX: 使用 FetchContent")
