@@ -2,6 +2,7 @@
 
 #include "interfaces/IPass.h"
 #include "interfaces/IRenderTarget.h"
+#include "interfaces/IGBuffer.h"
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -10,7 +11,7 @@ namespace PrismaEngine::Graphic {
 
 /// @brief 逻辑 Pipeline 类
 /// 职责：管理和执行 IPass
-class LogicalPipeline : public IPipeline {
+class LogicalPipeline : public ILogicalPipeline {
 public:
     LogicalPipeline(const char* name);
     virtual ~LogicalPipeline();
