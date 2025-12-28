@@ -1,6 +1,5 @@
 #include "RenderCommandContext.h"
 #include "interfaces/IRenderTarget.h"
-#include "interfaces/IDepthStencil.h"
 #include "interfaces/IPipelineState.h"
 #include "interfaces/ITexture.h"
 #include "interfaces/IBuffer.h"

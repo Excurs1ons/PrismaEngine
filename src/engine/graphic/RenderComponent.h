@@ -1,10 +1,14 @@
 #pragma once
 #include "GameObject.h"
 #include "Component.h"
-#include "RenderCommandContext.h"
 #include "../math/MathTypes.h"
 #include <vector>
 #include <memory>
+
+// 前向声明
+namespace PrismaEngine::Graphic {
+    class RenderCommandContext;
+}
 
 namespace Engine {
     class Material; // 前向声明
@@ -33,7 +37,7 @@ public:
     uint32_t GetIndexCount() const { return m_indexCount; }
     
     // 渲染方法
-    virtual void Render(RenderCommandContext* context);
+    virtual void Render(PrismaEngine::Graphic::RenderCommandContext* context);
     
     // 设置颜色 (为了向后兼容，现在设置材质的基础颜色)
     void SetColor(float r, float g, float b, float a = 1.0f);

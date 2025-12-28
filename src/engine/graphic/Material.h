@@ -1,9 +1,13 @@
 #pragma once
 #include "../resource/ResourceBase.h"
-#include "RenderCommandContext.h"
 #include "../math/MathTypes.h"
 #include <string>
 #include <memory>
+
+// 前向声明
+namespace PrismaEngine::Graphic {
+    class RenderCommandContext;
+}
 
 namespace Engine {
 
@@ -48,7 +52,7 @@ namespace Engine {
         std::shared_ptr<Shader> GetShader() const { return m_shader; }
 
         // 应用材质到渲染上下文
-        void Apply(RenderCommandContext* context);
+        void Apply(PrismaEngine::Graphic::RenderCommandContext* context);
 
         // 创建默认材质
         static std::shared_ptr<Material> CreateDefault();

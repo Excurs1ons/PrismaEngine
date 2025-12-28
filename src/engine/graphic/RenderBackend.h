@@ -2,6 +2,7 @@
 
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IDeviceContext.h"
+#include "interfaces/RenderTypes.h"
 #include "math/MathTypes.h"
 #include <cstdint>
 #include <functional>
@@ -12,13 +13,8 @@ namespace PrismaEngine::Graphic {
 class Platform;
 using WindowHandle = void*;
 
-/// @brief 渲染后端类型
-enum class RenderBackendType : uint32_t {
-    None = 0,
-    SDL3 = 1,
-    DirectX12 = 2,
-    Vulkan = 3
-};
+// 使用 RenderTypes.h 中定义的 RenderBackendType
+// enum class RenderBackendType { DirectX12, Vulkan, OpenGL };
 
 /// @brief 渲染器特性
 enum class RendererFeature : uint32_t {

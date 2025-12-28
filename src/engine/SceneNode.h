@@ -1,6 +1,11 @@
 #pragma once
 #include <memory>
 
+// 前向声明
+namespace PrismaEngine::Graphic {
+    class RenderCommandContext;
+}
+
 class SceneNode {
 public:
     // 添加子节点
@@ -25,7 +30,7 @@ public:
     }
 
     // 渲染节点（递归调用子节点）
-    virtual void Render(RenderCommandContext* context) {
+    virtual void Render(PrismaEngine::Graphic::RenderCommandContext* context) {
         // 应用当前节点的变换
         PushTransform();
 
@@ -42,7 +47,7 @@ public:
     }
 
 protected:
-    virtual void OnRender(RenderCommandContext* context) {
+    virtual void OnRender(PrismaEngine::Graphic::RenderCommandContext* context) {
         // 默认不做任何渲染
     }
 

@@ -32,7 +32,7 @@ std::string RenderBackend::GetAPIName() const {
     switch (m_backendType) {
         case RenderBackendType::DirectX12: return "DirectX12";
         case RenderBackendType::Vulkan: return "Vulkan";
-        case RenderBackendType::SDL3: return "SDL3";
+        case RenderBackendType::OpenGL: return "OpenGL";
         default: return "Unknown";
     }
 }
