@@ -4,6 +4,8 @@
 #include "Logger.h"
 #include "ResourceManager.h"
 #include "graphic/Material.h"
+#include "graphic/ui/TextRendererComponent.h"
+#include "FPSCounter.h"
 
 TriangleExample::TriangleExample()
 = default;
@@ -54,7 +56,11 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     scene->AddGameObject(referenceTriangle1);
     scene->AddGameObject(referenceTriangle2);
 
-    LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形，1个立方体，1个地面（索引缓冲区测试）");
+    // 创建调试文本显示 FPS 等信息（屏幕中央）
+    auto debugText = CreateDebugText("DebugText");
+    scene->AddGameObject(debugText);
+
+    LOG_INFO("TriangleExample", "示例场景创建完成：1个相机，2个三角形，1个四边形，1个立方体，1个地面，1个调试文本（索引缓冲区测试）");
 
     return scene;
 }
@@ -302,4 +308,32 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     LOG_DEBUG("TriangleExample", "Created 3D camera '{0}' at position ({1}, {2}, {3})", name, pos.x, pos.y, pos.z);
 
     return game_object;
+}
+
+std::shared_ptr<GameObject> TriangleExample::CreateDebugText(const std::string& name)
+{
+    using namespace PrismaEngine;
+
+    // 创建游戏对象
+    auto gameObject = std::make_shared<GameObject>(name);
+
+    // 添加变换组件并设置位置（屏幕中央）
+    auto transform = gameObject->transform();
+    transform->position.x = 0.0f;   // 屏幕中央 X
+    transform->position.y = 0.0f;   // 屏幕中央 Y
+    transform->position.z = 0.0f;
+
+    // 添加文本渲染组件
+    auto textRenderer = gameObject->AddComponent<TextRendererComponent>();
+    textRenderer->SetText("FPS: --");
+    textRenderer->SetColor({0.0f, 1.0f, 0.0f, 1.0f}); // 绿色
+    // 设置字体（使用默认字体路径和大小）
+    textRenderer->SetFont("assets/fonts/default.ttf", 24.0f);
+
+    // 添加 FPS 计数器组件
+    auto fpsCounter = gameObject->AddComponent<FPSCounter>();
+
+    LOG_DEBUG("TriangleExample", "Created debug text '{0}' at screen center", name);
+
+    return gameObject;
 }
