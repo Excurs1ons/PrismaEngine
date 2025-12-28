@@ -121,5 +121,3 @@ void ScriptableRenderPipeline::SetViewportSize(uint32_t width, uint32_t height)
     
     LOG_DEBUG("ScriptableRenderPipe", "Viewport size set to {0}x{1}", width, height);
 }
-
-} // namespace Engine
