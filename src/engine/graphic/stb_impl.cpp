@@ -5,14 +5,12 @@
 #define STBTT_STATIC
 #define STBRP_STATIC
 
-// STB 库需要在定义 IMPLEMENTATION 宏之前包含相应的头文件
-// stb_truetype.h
+// 首先包含 stb_rect_pack.h 的声明部分（不定义 IMPLEMENTATION）
+#include "stb_rect_pack.h"
+
+// 然后定义并实现 stb_truetype（它内部会处理 rect pack）
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
-
-// stb_rect_pack.h (独立实现，不依赖 stb_truetype)
-#define STB_RECT_PACK_IMPLEMENTATION
-#include "stb_rect_pack.h"
 
 // stb_image.h (独立实现)
 #define STB_IMAGE_IMPLEMENTATION
