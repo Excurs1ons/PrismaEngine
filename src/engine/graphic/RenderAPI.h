@@ -13,8 +13,8 @@ namespace PrismaEngine::Graphic {
 class Platform;
 using WindowHandle = void*;
 
-// 使用 RenderTypes.h 中定义的 RenderBackendType
-// enum class RenderBackendType { DirectX12, Vulkan, OpenGL };
+// 使用 RenderTypes.h 中定义的 RenderAPIType
+// enum class RenderAPIType { DirectX12, Vulkan, OpenGL };
 
 /// @brief 渲染器特性
 enum class RendererFeature : uint32_t {
@@ -33,13 +33,13 @@ enum class RendererFeature : uint32_t {
 /// @brief 渲染命令（旧格式，待废弃）
 struct RenderCommand {};
 
-/// @brief 渲染后端抽象类
-/// 实现 IRenderDevice 接口，提供设备级别的图形API抽象
+/// @brief 渲染 API
+/// 渲染子系统的统一抽象层，提供设备级别的图形API抽象
 /// 注意：这是一个临时适配器，后续应由具体后端（DX12/Vulkan）直接实现 IRenderDevice
-class RenderBackend : public IRenderDevice {
+class RenderAPI : public IRenderDevice {
 public:
-    RenderBackend();
-    virtual ~RenderBackend();
+    RenderAPI();
+    virtual ~RenderAPI();
 
     // === IRenderDevice 接口实现 ===
 
@@ -130,7 +130,7 @@ public:
     virtual void SetGuiRenderCallback(GuiRenderCallback callback);
 
     /// @brief 获取后端类型
-    RenderBackendType GetBackendType() const { return m_backendType; }
+    RenderAPIType GetBackendType() const { return m_backendType; }
 
     /// @brief 是否已初始化
     bool IsInitialized() const { return isInitialized; }
@@ -142,7 +142,7 @@ public:
     bool isInitialized = false;
 
 protected:
-    RenderBackendType m_backendType = RenderBackendType::None;
+    RenderAPIType m_backendType = RenderAPIType::None;
     RendererFeature m_supportedFeatures = static_cast<RendererFeature>(0);
 
     // 资源工厂

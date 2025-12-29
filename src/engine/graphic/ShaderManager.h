@@ -126,10 +126,10 @@ public:
     void PrecompileAllShaders(const std::string& shaderDir);
 
     // 设置当前渲染后端类型
-    void SetRenderBackendType(PrismaEngine::Graphic::RenderBackendType type);
+    void SetRenderAPIType(PrismaEngine::Graphic::RenderAPIType type);
 
     // 获取当前渲染后端类型
-    PrismaEngine::Graphic::RenderBackendType GetRenderBackendType() const;
+    PrismaEngine::Graphic::RenderAPIType GetRenderAPIType() const;
 
     // 获取着色器缓存统计
     struct ShaderStats {
@@ -166,7 +166,7 @@ private:
     std::string m_searchPath = "shaders/";
 
     // 当前后端类型
-    PrismaEngine::Graphic::RenderBackendType m_backendType = PrismaEngine::Graphic::RenderBackendType::DirectX12;
+    PrismaEngine::Graphic::RenderAPIType m_backendType = PrismaEngine::Graphic::RenderAPIType::DirectX12;
 
     // 统计信息
     mutable ShaderStats m_stats;

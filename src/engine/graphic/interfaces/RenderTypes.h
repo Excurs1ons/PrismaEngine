@@ -30,8 +30,8 @@ enum class ResourceType {
     Sampler
 };
 
-// 渲染后端类型
-enum class RenderBackendType {
+// 渲染 API 类型
+enum class RenderAPIType {
     None,
     DirectX12,
     Vulkan,
