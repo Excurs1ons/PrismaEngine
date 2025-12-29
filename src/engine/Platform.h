@@ -152,7 +152,7 @@ public:
     // ------------------------------------------------------------
     // IPlatformLogger 接口实现
     // ------------------------------------------------------------
-    static void LogToConsole(PlatformLogLevel level, const char* tag, const char* message);
+    static void LogToConsole(LogLevel level, const char* tag, const char* message);
     static const char* GetLogDirectoryPath();
 
     // ------------------------------------------------------------

@@ -1,16 +1,6 @@
 #pragma once
-
+#include "LogEntry.h"
 namespace Engine {
-
-// 平台日志级别 - 与 Logger::LogLevel 独立，避免循环依赖
-enum class PlatformLogLevel {
-    Trace = 0,
-    Debug = 1,
-    Info = 2,
-    Warning = 3,
-    Error = 4,
-    Fatal = 5
-};
 
 /**
  * @brief 平台日志接口
@@ -33,7 +23,7 @@ public:
      * - Android: 使用 __android_log_print 输出到 logcat
      * - Linux/SDL: 输出到 std::cout
      */
-    virtual void LogToConsole(PlatformLogLevel level, const char* tag, const char* message) = 0;
+    virtual void LogToConsole(LogLevel level, const char* tag, const char* message) = 0;
 
     /**
      * @brief 获取日志文件存储目录路径
