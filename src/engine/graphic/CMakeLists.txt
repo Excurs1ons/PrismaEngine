@@ -78,11 +78,11 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Mesh.cpp
     graphic/MeshRenderer.cpp
     graphic/RenderComponent.cpp
-    graphic/RenderAPI.cpp
+    # graphic/RenderAPI.cpp  # 废弃：使用 IRenderDevice 接口替代
     graphic/RenderCommandContext.cpp
     graphic/RenderPass.cpp
     graphic/RenderSystemNew.cpp
-    graphic/ScriptableRenderPipeline.cpp
+    # graphic/ScriptableRenderPipeline.cpp  # 已删除：使用 LogicalPipeline 替代
     graphic/Shader.cpp
     graphic/stb_impl.cpp
     # New interface files
@@ -104,14 +104,13 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/Material.h
     graphic/Mesh.h
     graphic/MeshRenderer.h
-    graphic/RenderAPI.h
+    # graphic/RenderAPI.h  # 废弃：使用 IRenderDevice 接口替代
     graphic/RenderCommandContext.h
     graphic/RenderComponent.h
     graphic/RenderGraph.h
     graphic/RenderPass.h
-#    graphic/RenderSystem.h
     graphic/RenderSystemNew.h
-    graphic/ScriptableRenderPipeline.h
+    # graphic/ScriptableRenderPipeline.h  # 已删除：使用 LogicalPipeline 替代
     graphic/ICamera.h
     graphic/Shader.h
     # New interface headers
