@@ -1,7 +1,7 @@
 #pragma once
 
 #include "IPlatformLogger.h"
-
+#include "KeyCode.h"
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -17,28 +17,6 @@
 #endif
 #endif
 
-// 前置声明，避免循环依赖
-namespace Engine {
-    namespace Input {
-        enum KeyCode;  // KeyCode 是非作用域枚举，定义在 Engine::Input 中
-        using MouseButton = int;
-    }
-    using Input::KeyCode;
-    using Input::MouseButton;
-}
-
-// 条件包含 KeyCode.h（如果存在）
-// 使用宏检测或直接尝试包含
-#if defined(__has_include)
-    #if __has_include("KeyCode.h")
-        #include <KeyCode.h>
-        #define PRISMA_HAS_KEYCODE 1
-    #endif
-#elif !defined(__ANDROID__)
-    // 非 Android 平台假设有 KeyCode.h
-    #include <KeyCode.h>
-    #define PRISMA_HAS_KEYCODE 1
-#endif
 
 // SDL 相关（仅在非 Windows/Android 平台）
 #if !defined(_WIN32) && !defined(__ANDROID__)
@@ -82,7 +60,12 @@ struct WindowProps {
 };
 
 using WindowHandle = void*;
-
+// ------------------------------------------------------------
+// 类型定义
+// ------------------------------------------------------------
+using PlatformThreadHandle = void*;
+using PlatformMutexHandle  = void*;
+using ThreadFunc = void* (*)(void*);
 // ------------------------------------------------------------
 // Platform - 静态平台抽象层
 // 所有函数都是静态的，使用宏控制平台实现
@@ -91,12 +74,10 @@ namespace Engine {
 
 class Platform {
 public:
-    // ------------------------------------------------------------
-    // 类型定义
-    // ------------------------------------------------------------
-    using PlatformThreadHandle = void*;
-    using PlatformMutexHandle  = void*;
-    using ThreadFunc = void* (*)(void*);
+    static bool s_initialized;
+    static bool s_shouldClose;
+    static WindowHandle s_currentWindow;
+
 
 #if !defined(_WIN32) && !defined(__ANDROID__)
     using EventCallback = std::function<bool(const void*)>;
@@ -134,8 +115,8 @@ public:
     // 输入管理（需要 KeyCode 支持）
     // ------------------------------------------------------------
 #if defined(PRISMA_HAS_KEYCODE) || defined(_WIN32) || defined(__ANDROID__)
-    static bool IsKeyDown(KeyCode key);
-    static bool IsMouseButtonDown(MouseButton btn);
+    static bool IsKeyDown(Engine::Input::KeyCode key);
+    static bool IsMouseButtonDown(Engine::Input::MouseButton btn);
     static void GetMousePosition(float& x, float& y);
     static void SetMousePosition(float x, float y);
     static void SetMouseLock(bool locked);

@@ -77,7 +77,7 @@ void RenderSystem::Shutdown() {
     // 清理资源
     m_mainPipeline.reset();
     m_forwardPipeline.reset();
-    m_legacyPipeline.reset();
+    //m_legacyPipeline.reset();
     m_resourceManager.reset();
     m_device.reset();
 
@@ -233,7 +233,7 @@ bool RenderSystem::InitializeResourceManager() {
 
 bool RenderSystem::InitializePipelines() {
     // 初始化旧的渲染管线（兼容性）
-    m_legacyPipeline = std::make_unique<ScriptableRenderPipeline>();
+    //m_legacyPipeline = std::make_unique<ScriptableRenderPipeline>();
     // TODO: 需要重新设计管线系统以适配新架构
     // 临时跳过初始化
     // if (!m_legacyPipeline->Initialize(m_legacyBackend.get())) {

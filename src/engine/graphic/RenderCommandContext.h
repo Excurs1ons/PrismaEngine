@@ -71,7 +71,7 @@ public:
     /// @deprecated 使用 SetConstantData 替代
     void SetConstantBuffer(const std::string& name, const PrismaMath::mat4& matrix);
 
-    /// @deprecated 使用 SetConstantData 替代
+    virtual /// @deprecated 使用 SetConstantData 替代
     void SetConstantBuffer(const std::string& name, const float* data, size_t size);
 
     /// @deprecated 使用 SetVertexData 替代

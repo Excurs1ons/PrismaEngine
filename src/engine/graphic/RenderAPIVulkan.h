@@ -1,11 +1,13 @@
 #pragma once
+#include "graphic/interfaces/RenderTypes.h"
 #include "RenderAPI.h"
 #include "RenderCommandContext.h"
 #include <vulkan/vulkan.h>
 #include <optional>
 #include <vector>
 namespace Engine {
-
+    using namespace PrismaEngine;
+using namespace PrismaEngine::Graphic;
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     bool IsComplete() { return graphicsFamily.has_value(); }
@@ -22,12 +24,12 @@ public:
     ~RenderBackendVulkan() override {}
 
     // 添加带参数的初始化方法
-    bool Initialize(Platform* platform, void* windowHandle, void* surface, uint32_t width, uint32_t height) override;
+    bool Initialize(Platform* platform, void* windowHandle, void* surface, uint32_t width, uint32_t height);
     void Shutdown() override;
 
     void SetGuiRenderCallback(GuiRenderCallback callback) override { m_guiRenderCallback = callback; }
 
-    void BeginFrame(Prisma::Color clearColor = {0.0f, 0.0f, 0.0f, 1.0f}) override;
+    void BeginFrame(Prisma::Color clearColor = {0.0f, 0.0f, 0.0f, 1.0f});
     void EndFrame() override;
 
     void Resize(uint32_t width, uint32_t height) override;

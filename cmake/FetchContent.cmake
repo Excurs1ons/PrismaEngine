@@ -97,6 +97,14 @@ FetchContent_Declare(
 )
 
 # stb - 图像加载库
+# 优先使用项目中的本地副本 (external/stb)
+get_filename_component(PRISMA_ROOT "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+set(PRISMA_STB_DIR "${PRISMA_ROOT}/external/stb")
+if(EXISTS "${PRISMA_STB_DIR}")
+    # 使用本地 stb
+    set(FETCHCONTENT_SOURCE_DIR_STB "${PRISMA_STB_DIR}")
+endif()
+
 set(FETCHCONTENT_STB_DIR "${FETCHCONTENT_BASE_DIR}/stb")
 FetchContent_Declare(
     stb
