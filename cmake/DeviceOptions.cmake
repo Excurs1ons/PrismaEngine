@@ -1,33 +1,59 @@
 # DeviceOptions.cmake
 # 设备编译选项配置
 
+# ========== 平台默认配置 ==========
+
+# Windows 平台默认使用 DirectX12 + XAudio2
+if(WIN32)
+    set(PRISMA_ENABLE_RENDER_DX12_DEFAULT ON)
+    set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT ON)
+    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT OFF)
+    set(PRISMA_ENABLE_AUDIO_OPENAL_DEFAULT OFF)
+elseif(ANDROID)
+    # Android 平台默认使用 Vulkan + OpenAL
+    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
+    set(PRISMA_ENABLE_AUDIO_OPENAL_DEFAULT ON)
+    set(PRISMA_ENABLE_RENDER_DX12_DEFAULT OFF)
+    set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
+elseif(APPLE)
+    # macOS/iOS 平台默认使用 Metal + OpenAL
+    set(PRISMA_ENABLE_RENDER_METAL_DEFAULT ON)
+    set(PRISMA_ENABLE_AUDIO_OPENAL_DEFAULT ON)
+    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT OFF)
+    set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
+else()
+    # Linux/其他平台默认使用 Vulkan + OpenAL
+    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
+    set(PRISMA_ENABLE_AUDIO_OPENAL_DEFAULT ON)
+    set(PRISMA_ENABLE_RENDER_DX12_DEFAULT OFF)
+    set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
+    set(PRISMA_ENABLE_RENDER_METAL_DEFAULT OFF)
+endif()
+
 # ========== 音频设备选项 ==========
 
 # XAudio2 (Windows)
-option(PRISMA_ENABLE_AUDIO_XAUDIO2 "Enable XAudio2 audio device (Windows only)" OFF)
+option(PRISMA_ENABLE_AUDIO_XAUDIO2 "Enable XAudio2 audio device (Windows only)" ${PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT})
+
 # OpenAL (跨平台)
-option(PRISMA_ENABLE_AUDIO_OPENAL "Enable OpenAL audio device" OFF)
-if(ANDROID)
-    set(PRISMA_ENABLE_AUDIO_OPENAL ON)
-elseif(WIN32)
-    set(PRISMA_ENABLE_AUDIO_XAUDIO2 ON)
-endif ()
+option(PRISMA_ENABLE_AUDIO_OPENAL "Enable OpenAL audio device" ${PRISMA_ENABLE_AUDIO_OPENAL_DEFAULT})
+
 # SDL3 Audio (跨平台)
 option(PRISMA_ENABLE_AUDIO_SDL3 "Enable SDL3 audio device" OFF)
 
 # ========== 渲染设备选项 ==========
 
 # DirectX12 (Windows)
-option(PRISMA_ENABLE_RENDER_DX12 "Enable DirectX12 render device (Windows only)" ON)
+option(PRISMA_ENABLE_RENDER_DX12 "Enable DirectX12 render device (Windows only)" ${PRISMA_ENABLE_RENDER_DX12_DEFAULT})
 
 # OpenGL (跨平台)
 option(PRISMA_ENABLE_RENDER_OPENGL "Enable OpenGL render device" OFF)
 
 # Vulkan (跨平台)
-option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan render device" OFF)
+option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan render device" ${PRISMA_ENABLE_RENDER_VULKAN_DEFAULT})
 
 # Metal (macOS/iOS)
-option(PRISMA_ENABLE_RENDER_METAL "Enable Metal render device (Apple only)" OFF)
+option(PRISMA_ENABLE_RENDER_METAL "Enable Metal render device (Apple only)" ${PRISMA_ENABLE_RENDER_METAL_DEFAULT})
 
 # WebGPU (Web)
 option(PRISMA_ENABLE_RENDER_WEBGPU "Enable WebGPU render device" OFF)
