@@ -4,10 +4,8 @@
 #include "interfaces/ITexture.h"
 
 // stb 头文件（由 FetchContent 下载，通过 CMake include 目录添加）
-// 定义 STB 库为静态链接，避免符号导出问题
-#define STBTT_STATIC
-#define STBRP_STATIC
-// 注意：STB_IMPLEMENTATION 宏在 stb_impl.cpp 中定义，这里只包含头文件
+// 注意：STB_IMPLEMENTATION 宏在 stb_impl.cpp 中定义
+// 这里不定义 STBTT_STATIC/STBRP_STATIC，以便使用 extern 声明
 #include "stb_truetype.h"
 #include "stb_rect_pack.h"
 
