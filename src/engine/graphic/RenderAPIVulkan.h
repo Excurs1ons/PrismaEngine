@@ -1,5 +1,5 @@
 #pragma once
-#include "RenderBackend.h"
+#include "RenderAPI.h"
 #include "RenderCommandContext.h"
 #include <vulkan/vulkan.h>
 #include <optional>
@@ -14,8 +14,8 @@ struct QueueFamilyIndices {
 // 前向声明
 class VulkanRenderCommandContext;
 
-class RenderBackendVulkan : public RenderBackend {
-    friend class RenderBackend;
+class RenderBackendVulkan : public RenderAPI {
+    friend class RenderAPI;
 
 public:
     RenderBackendVulkan();

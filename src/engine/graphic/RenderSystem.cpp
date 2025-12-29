@@ -22,7 +22,7 @@
 //
 // // 静态适配器方法定义
 // bool RenderSystem::Initialize(
-//     Platform* platform, RenderBackendType renderBackendType,
+//     Platform* platform, RenderAPIType renderBackendType,
 //     WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
 //
 //     // 创建适配器
@@ -51,13 +51,13 @@
 //         LOG_ERROR("Render", "无法创建默认窗口");
 //         return false;
 //     }
-//     bool result = Initialize(platform, Engine::RenderBackendType::DirectX12, windowHandle, nullptr, 1600, 900);
+//     bool result = Initialize(platform, Engine::RenderAPIType::DirectX12, windowHandle, nullptr, 1600, 900);
 //     if (result && renderBackend) {
 //         renderBackend->isInitialized = true;
 //     }
 //     return result;
 // #else
-//     bool result = Initialize(platform, Engine::RenderBackendType::DirectX12, nullptr, nullptr, 1600, 900);
+//     bool result = Initialize(platform, Engine::RenderAPIType::DirectX12, nullptr, nullptr, 1600, 900);
 //     if (result && renderBackend) {
 //         renderBackend->isInitialized = true;
 //     }
@@ -109,21 +109,21 @@
 // }
 //
 // // RenderSystem::Adapter方法实现
-// bool RenderSystem::Adapter::Initialize(Platform* platform, RenderBackendType renderBackendType,
+// bool RenderSystem::Adapter::Initialize(Platform* platform, RenderAPIType renderBackendType,
 //                                      WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height) {
 //     // 创建新的渲染系统描述
 //     PrismaEngine::Graphic::RenderSystemDesc desc;
-//     // 转换Engine::RenderBackendType到PrismaEngine::Graphic::RenderBackendType
+//     // 转换Engine::RenderAPIType到PrismaEngine::Graphic::RenderAPIType
 //     switch (renderBackendType) {
-//         case Engine::RenderBackendType::DirectX12:
-//             desc.backendType = PrismaEngine::Graphic::RenderBackendType::DirectX12;
+//         case Engine::RenderAPIType::DirectX12:
+//             desc.backendType = PrismaEngine::Graphic::RenderAPIType::DirectX12;
 //             break;
-//         case Engine::RenderBackendType::Vulkan:
-//             desc.backendType = PrismaEngine::Graphic::RenderBackendType::Vulkan;
+//         case Engine::RenderAPIType::Vulkan:
+//             desc.backendType = PrismaEngine::Graphic::RenderAPIType::Vulkan;
 //             break;
-//         case Engine::RenderBackendType::SDL3:
+//         case Engine::RenderAPIType::SDL3:
 //         default:
-//             desc.backendType = PrismaEngine::Graphic::RenderBackendType::OpenGL; // Fallback
+//             desc.backendType = PrismaEngine::Graphic::RenderAPIType::OpenGL; // Fallback
 //             break;
 //     }
 //     desc.windowHandle = windowHandle;

@@ -7,12 +7,12 @@
 namespace PrismaEngine::Graphic {
 
 std::unique_ptr<IShader> ShaderFactory::CreateShader(
-    RenderBackendType backendType,
+    RenderAPIType backendType,
     const std::string& sourceCode,
     const ShaderDesc& desc) {
     
     switch (backendType) {
-        case RenderBackendType::DirectX12:
+        case RenderAPIType::DirectX12:
             // 在实际实现中，这里需要编译HLSL源码为DX12字节码
             // 并创建DX12Shader实例
             // 注意：这需要一个有效的DX12RenderDevice实例
@@ -22,7 +22,7 @@ std::unique_ptr<IShader> ShaderFactory::CreateShader(
             // return std::make_unique<DX12Shader>(device, desc, bytecode, reflection);
             break;
             
-        case RenderBackendType::Vulkan:
+        case RenderAPIType::Vulkan:
             // 为Vulkan着色器预留实现空间
             // 示例伪代码：
             // auto spirv = CompileGLSLToSPIRV(sourceCode, desc);
@@ -37,7 +37,7 @@ std::unique_ptr<IShader> ShaderFactory::CreateShader(
 }
 
 std::unique_ptr<IShader> ShaderFactory::CreateShaderFromFile(
-    RenderBackendType backendType,
+    RenderAPIType backendType,
     const std::string& filepath,
     const ShaderDesc& desc) {
     

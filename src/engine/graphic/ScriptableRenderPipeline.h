@@ -11,7 +11,7 @@
 
 // 前向声明
 namespace PrismaEngine::Graphic {
-    class RenderBackend;
+    class RenderAPI;
     class RenderCommandContext;
 }
 
@@ -23,7 +23,7 @@ public:
     ~ScriptableRenderPipeline();
 
     /// @deprecated 使用 LogicalPipeline::Initialize() 或子类的 Initialize() 方法
-    virtual bool Initialize(PrismaEngine::Graphic::RenderBackend* renderBackend);
+    virtual bool Initialize(PrismaEngine::Graphic::RenderAPI* renderBackend);
 
     /// @deprecated 使用 LogicalPipeline::Execute() 替代
     virtual void Shutdown();
@@ -38,13 +38,13 @@ public:
     virtual void RemoveRenderPass(std::shared_ptr<RenderPass> renderPass);
 
     /// @deprecated 通过 IPass 接口获取设备
-    virtual PrismaEngine::Graphic::RenderBackend* GetRenderBackend() const { return m_renderBackend; }
+    virtual PrismaEngine::Graphic::RenderAPI* GetRenderBackend() const { return m_renderBackend; }
 
     /// @deprecated 使用 IPass::SetViewport() 替代
     virtual void SetViewportSize(uint32_t width, uint32_t height);
 
 private:
-    PrismaEngine::Graphic::RenderBackend* m_renderBackend = nullptr;
+    PrismaEngine::Graphic::RenderAPI* m_renderBackend = nullptr;
     std::vector<std::shared_ptr<RenderPass>> m_renderPasses;
     uint32_t m_width = 0;
     uint32_t m_height = 0;

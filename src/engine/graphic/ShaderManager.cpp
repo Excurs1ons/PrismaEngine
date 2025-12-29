@@ -1,5 +1,5 @@
 #include "ShaderManager.h"
-#include "RenderBackend.h"
+#include "RenderAPI.h"
 #include "Logger.h"
 #include "ShaderFactory.h"  // 添加对ShaderFactory的引用
 #include "EngineShaderAdapter.h"  // 添加对适配器的引用
@@ -180,14 +180,14 @@ void ShaderManager::PrecompileAllShaders(const std::string& shaderDir)
     }
 }
 
-void ShaderManager::SetRenderBackendType(PrismaEngine::Graphic::RenderBackendType type) 
+void ShaderManager::SetRenderAPIType(PrismaEngine::Graphic::RenderAPIType type) 
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     m_backendType = type;
     LOG_INFO("ShaderManager", "设置渲染后端类型: {0}", static_cast<int>(type));
 }
 
-PrismaEngine::Graphic::RenderBackendType ShaderManager::GetRenderBackendType() const 
+PrismaEngine::Graphic::RenderAPIType ShaderManager::GetRenderAPIType() const 
 {
     std::lock_guard<std::mutex> lock(m_mutex);
     return m_backendType;

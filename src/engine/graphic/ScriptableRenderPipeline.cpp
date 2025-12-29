@@ -1,5 +1,5 @@
 #include "ScriptableRenderPipeline.h"
-#include "RenderBackend.h"
+#include "RenderAPI.h"
 #include "RenderCommandContext.h"
 #include "Logger.h"
 // TODO: 更新以使用新架构
@@ -20,7 +20,7 @@ ScriptableRenderPipeline::~ScriptableRenderPipeline()
     Shutdown();
 }
 
-bool ScriptableRenderPipeline::Initialize(RenderBackend* renderBackend)
+bool ScriptableRenderPipeline::Initialize(RenderAPI* renderBackend)
 {
     LOG_DEBUG("ScriptableRenderPipeline", "初始化渲染管线");
     
