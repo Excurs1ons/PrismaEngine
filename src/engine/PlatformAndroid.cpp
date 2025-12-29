@@ -255,26 +255,26 @@ void Platform::UnlockMutex(PlatformMutexHandle mtx) {
 // ------------------------------------------------------------
 // IPlatformLogger 接口实现 - 使用 Android logcat
 // ------------------------------------------------------------
-void Platform::LogToConsole(PlatformLogLevel level, const char* tag, const char* message) {
-    // 将 PlatformLogLevel 映射到 Android 日志优先级
+void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
+    // 将 LogLevel 映射到 Android 日志优先级
     int priority;
     switch (level) {
-        case PlatformLogLevel::Trace:
+        case LogLevel::Trace:
             priority = ANDROID_LOG_VERBOSE;
             break;
-        case PlatformLogLevel::Debug:
+        case LogLevel::Debug:
             priority = ANDROID_LOG_DEBUG;
             break;
-        case PlatformLogLevel::Info:
+        case LogLevel::Info:
             priority = ANDROID_LOG_INFO;
             break;
-        case PlatformLogLevel::Warning:
+        case LogLevel::Warning:
             priority = ANDROID_LOG_WARN;
             break;
-        case PlatformLogLevel::Error:
+        case LogLevel::Error:
             priority = ANDROID_LOG_ERROR;
             break;
-        case PlatformLogLevel::Fatal:
+        case LogLevel::Fatal:
             priority = ANDROID_LOG_FATAL;
             break;
         default:
