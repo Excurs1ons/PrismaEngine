@@ -1,9 +1,6 @@
 // stb 库实现
 // 避免符号重定义错误 - 只在这个文件里定义实现宏
-
-// 定义 STB 库为静态链接，避免符号导出问题
-#define STBTT_STATIC
-#define STBRP_STATIC
+// 不定义 STBTT_STATIC/STBRP_STATIC，以便函数可以被其他编译单元链接
 
 // stb_rect_pack.h 需要独立实现
 #define STB_RECT_PACK_IMPLEMENTATION
