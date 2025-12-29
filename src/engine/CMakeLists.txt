@@ -133,14 +133,14 @@ set(ENGINE_HEADERS
 
 # 基础音频文件（总是包含）
 list(APPEND ENGINE_SOURCES
-    audio/AudioFactory.cpp
+    audio/AudioAPI.cpp
 )
 
 list(APPEND ENGINE_HEADERS
     audio/AudioTypes.h
     audio/IAudioDevice.h
     audio/AudioManager.h
-    audio/AudioFactory.h
+    audio/AudioAPI.h
 )
 
 # XAudio2 (Windows)
@@ -432,6 +432,36 @@ target_compile_definitions(Engine PUBLIC
     PRISMA_DEFAULT_AUDIO_DEVICE=${PRISMA_DEFAULT_AUDIO_BACKEND}
     PRISMA_DEFAULT_RENDER_DEVICE=${PRISMA_DEFAULT_RENDER_BACKEND}
 )
+
+# 定义音频后端启用宏（用于 AudioAPI.cpp 中的条件编译）
+if(PRISMA_ENABLE_AUDIO_XAUDIO2)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_XAUDIO2=1)
+endif()
+
+if(PRISMA_ENABLE_AUDIO_OPENAL)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_OPENAL=1)
+endif()
+
+if(PRISMA_ENABLE_AUDIO_SDL3)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
+endif()
+
+# 定义渲染后端启用宏（用于 Shader.cpp 等文件中的条件编译）
+if(PRISMA_ENABLE_RENDER_DX12)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_DX12=1)
+endif()
+
+if(PRISMA_ENABLE_RENDER_OPENGL)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_OPENGL=1)
+endif()
+
+if(PRISMA_ENABLE_RENDER_VULKAN)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
+endif()
+
+if(PRISMA_ENABLE_RENDER_METAL)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_METAL=1)
+endif()
 
 # 安装规则
 install(TARGETS Engine
