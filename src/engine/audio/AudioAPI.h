@@ -14,9 +14,9 @@ class AudioDeviceSDL3;
 class AudioDeviceXAudio2;
 class AudioDeviceNull;
 
-/// @brief 音频设备工厂
-/// 负责根据平台和配置创建合适的音频设备
-class AudioFactory {
+/// @brief 音频 API
+/// 音频子系统的统一抽象层，负责设备创建、平台检测、设备查询等
+class AudioAPI {
 public:
     // ========== 工厂方法 ==========
 
@@ -114,7 +114,7 @@ private:
 
 // ========== 内联实现 ==========
 
-inline std::string AudioFactory::GetDeviceName(AudioDeviceType deviceType) {
+inline std::string AudioAPI::GetDeviceName(AudioDeviceType deviceType) {
     switch (deviceType) {
         case AudioDeviceType::Auto: return "Auto";
         case AudioDeviceType::OpenAL: return "OpenAL";
@@ -125,7 +125,7 @@ inline std::string AudioFactory::GetDeviceName(AudioDeviceType deviceType) {
     }
 }
 
-inline std::string AudioFactory::GetDeviceDescription(AudioDeviceType deviceType) {
+inline std::string AudioAPI::GetDeviceDescription(AudioDeviceType deviceType) {
     switch (deviceType) {
         case AudioDeviceType::Auto:
             return "自动选择最佳音频设备";

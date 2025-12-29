@@ -1,5 +1,5 @@
 #pragma once
-#if defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
+
 #include "IAudioDevice.h"
 #include <mutex>
 #include <wrl/client.h>
@@ -214,5 +214,3 @@ private:
 };
 
 } // namespace Engine::Audio
-
-#endif
