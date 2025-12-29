@@ -248,7 +248,7 @@ double Platform::GetTimeSeconds() {
 // ------------------------------------------------------------
 // 输入管理
 // ------------------------------------------------------------
-bool Platform::IsKeyDown(KeyCode key) {
+bool Platform::IsKeyDown(Engine::Input::KeyCode key) {
     int virtualKey = 0;
 
     switch (key) {
@@ -347,7 +347,7 @@ bool Platform::IsKeyDown(KeyCode key) {
     return g_keyStates[virtualKey];
 }
 
-bool Platform::IsMouseButtonDown(MouseButton btn) {
+bool Platform::IsMouseButtonDown(Engine::Input::MouseButton btn) {
     SHORT state = GetAsyncKeyState(btn);
     return (state & 0x8000) != 0;
 }
@@ -433,7 +433,7 @@ const char* Platform::GetTemporaryPath() {
 // ------------------------------------------------------------
 // 线程和同步
 // ------------------------------------------------------------
-Platform::PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
+PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
     DWORD threadId;
     HANDLE thread = ::CreateThread(
         nullptr,           // 默认安全属性
@@ -443,7 +443,7 @@ Platform::PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* us
         0,                 // 立即运行
         &threadId          // 线程ID
     );
-    return static_cast<Platform::PlatformThreadHandle>(thread);
+    return static_cast<PlatformThreadHandle>(thread);
 }
 
 void Platform::JoinThread(PlatformThreadHandle thread) {
@@ -452,9 +452,9 @@ void Platform::JoinThread(PlatformThreadHandle thread) {
     }
 }
 
-Platform::PlatformMutexHandle Platform::CreateMutex() {
+PlatformMutexHandle Platform::CreateMutex() {
     HANDLE mutex = CreateMutexA(nullptr, FALSE, nullptr);
-    return static_cast<Platform::PlatformMutexHandle>(mutex);
+    return static_cast<PlatformMutexHandle>(mutex);
 }
 
 void Platform::DestroyMutex(PlatformMutexHandle mtx) {
@@ -478,7 +478,7 @@ void Platform::UnlockMutex(PlatformMutexHandle mtx) {
 // ------------------------------------------------------------
 // IPlatformLogger 接口实现
 // ------------------------------------------------------------
-void Platform::LogToConsole(PlatformLogLevel level, const char* tag, const char* message) {
+void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
     (void)level;
     (void)tag;
     std::cout << message << std::endl;
