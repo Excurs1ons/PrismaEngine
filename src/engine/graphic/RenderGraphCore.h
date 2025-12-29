@@ -6,7 +6,7 @@
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
-#include "RenderAPI.h"
+#include "interfaces/IRenderDevice.h"
 #include "RenderCommandContext.h"
 #include "Logger.h"
 
@@ -158,7 +158,7 @@ public:
 
     // 图编译和执行
     void compile();
-    void execute(RenderAPI* backend);
+    void execute(PrismaEngine::Graphic::IRenderDevice* backend);
     void present(ResourceHandle backbuffer);
 
     // 调试和分析
@@ -216,8 +216,8 @@ private:
     void generateBarriers();
 
     // 资源生命周期管理
-    void allocateResources(RenderAPI* backend);
-    void deallocateResources(RenderAPI* backend);
+    void allocateResources(PrismaEngine::Graphic::IRenderDevice* backend);
+    void deallocateResources(PrismaEngine::Graphic::IRenderDevice* backend);
 
     // 调试辅助
     void validateGraph() const;
