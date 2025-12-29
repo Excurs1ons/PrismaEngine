@@ -1,6 +1,8 @@
-#include "AudioFactory.h"
+#include "AudioAPI.h"
 
-// 条件包含音频设备头文件
+// 音频设备头文件 - 仅包含通用接口，具体实现由 CMake 控制
+#include "AudioDeviceNull.h"  // Null 设备总是可用
+
 #ifdef PRISMA_ENABLE_AUDIO_XAUDIO2
 #include "AudioDeviceXAudio2.h"
 #endif
@@ -10,10 +12,9 @@
 #endif
 
 #ifdef PRISMA_ENABLE_AUDIO_SDL3
+#include <SDL3/SDL.h>
 #include "AudioDeviceSDL3.h"
 #endif
-
-#include "AudioDeviceNull.h"
 #include "../Logger.h"
 #include <cstdlib>
 #include <fstream>
@@ -25,7 +26,7 @@ namespace Engine::Audio {
 
 // ========== 工厂方法实现 ==========
 
-std::unique_ptr<IAudioDevice> AudioFactory::CreateDevice(AudioDeviceType deviceType,
+std::unique_ptr<IAudioDevice> AudioAPI::CreateDevice(AudioDeviceType deviceType,
                                                         const AudioDesc& desc) {
     LOG_INFO("Audio", "创建音频设备，设备类型: {} ({})",
              GetDeviceName(deviceType),
@@ -61,7 +62,7 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateDevice(AudioDeviceType deviceT
     }
 }
 
-std::unique_ptr<IAudioDevice> AudioFactory::CreateBestDevice(const AudioDesc& desc) {
+std::unique_ptr<IAudioDevice> AudioAPI::CreateBestDevice(const AudioDesc& desc) {
     // 1. 首先检查环境变量
     AudioDeviceType envDevice = GetDeviceFromEnvironment();
     if (envDevice != AudioDeviceType::Auto && IsDeviceSupported(envDevice)) {
@@ -92,7 +93,7 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateBestDevice(const AudioDesc& de
 
 // ========== 平台检测 ==========
 
-std::vector<AudioDeviceType> AudioFactory::GetSupportedDevices() {
+std::vector<AudioDeviceType> AudioAPI::GetSupportedDevices() {
     std::vector<AudioDeviceType> devices;
 
     Platform platform = GetCurrentPlatform();
@@ -128,7 +129,7 @@ std::vector<AudioDeviceType> AudioFactory::GetSupportedDevices() {
     return devices;
 }
 
-bool AudioFactory::IsDeviceSupported(AudioDeviceType deviceType) {
+bool AudioAPI::IsDeviceSupported(AudioDeviceType deviceType) {
     // Auto和Null总是支持的
     if (deviceType == AudioDeviceType::Auto || deviceType == AudioDeviceType::Null) {
         return true;
@@ -138,7 +139,7 @@ bool AudioFactory::IsDeviceSupported(AudioDeviceType deviceType) {
     return std::find(supported.begin(), supported.end(), deviceType) != supported.end();
 }
 
-AudioDeviceType AudioFactory::GetRecommendedDevice() {
+AudioDeviceType AudioAPI::GetRecommendedDevice() {
     Platform platform = GetCurrentPlatform();
 
     switch (platform) {
@@ -163,7 +164,7 @@ AudioDeviceType AudioFactory::GetRecommendedDevice() {
 
 // ========== 版本信息 ==========
 
-std::string AudioFactory::GetDeviceVersion(AudioDeviceType deviceType) {
+std::string AudioAPI::GetDeviceVersion(AudioDeviceType deviceType) {
     switch (deviceType) {
         case AudioDeviceType::OpenAL:
             // 查询OpenAL版本
@@ -196,7 +197,7 @@ std::string AudioFactory::GetDeviceVersion(AudioDeviceType deviceType) {
 
 // ========== 调试 ==========
 
-void AudioFactory::PrintSupportedDevices() {
+void AudioAPI::PrintSupportedDevices() {
     LOG_INFO("Audio", "=== 支持的音频设备 ===");
 
     auto devices = GetSupportedDevices();
@@ -216,7 +217,7 @@ void AudioFactory::PrintSupportedDevices() {
     LOG_INFO("Audio", "====================");
 }
 
-bool AudioFactory::TestDeviceAvailability(AudioDeviceType deviceType) {
+bool AudioAPI::TestDeviceAvailability(AudioDeviceType deviceType) {
     if (!IsDeviceSupported(deviceType)) {
         return false;
     }
@@ -237,8 +238,9 @@ bool AudioFactory::TestDeviceAvailability(AudioDeviceType deviceType) {
 }
 
 // ========== 私有方法实现 ==========
+
 #ifdef PRISMA_ENABLE_AUDIO_OPENAL
-std::unique_ptr<IAudioDevice> AudioFactory::CreateOpenALDevice(const AudioDesc& desc) {
+std::unique_ptr<IAudioDevice> AudioAPI::CreateOpenALDevice(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceOpenAL>();
     if (device->Initialize(desc)) {
         return device;
@@ -248,7 +250,7 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateOpenALDevice(const AudioDesc& 
 #endif
 
 #ifdef PRISMA_ENABLE_AUDIO_SDL3
-std::unique_ptr<IAudioDevice> AudioFactory::CreateSDL3Device(const AudioDesc& desc) {
+std::unique_ptr<IAudioDevice> AudioAPI::CreateSDL3Device(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceSDL3>();
     if (device->Initialize(desc)) {
         return device;
@@ -258,7 +260,7 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateSDL3Device(const AudioDesc& de
 #endif
 
 #ifdef PRISMA_ENABLE_AUDIO_XAUDIO2
-std::unique_ptr<IAudioDevice> AudioFactory::CreateXAudio2Device(const AudioDesc& desc) {
+std::unique_ptr<IAudioDevice> AudioAPI::CreateXAudio2Device(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceXAudio2>();
     if (device->Initialize(desc)) {
         return device;
@@ -266,7 +268,8 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateXAudio2Device(const AudioDesc&
     return nullptr;
 }
 #endif
-std::unique_ptr<IAudioDevice> AudioFactory::CreateNullDevice(const AudioDesc& desc) {
+
+std::unique_ptr<IAudioDevice> AudioAPI::CreateNullDevice(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceNull>();
     if (device->Initialize(desc)) {
         return device;
@@ -274,7 +277,7 @@ std::unique_ptr<IAudioDevice> AudioFactory::CreateNullDevice(const AudioDesc& de
     return nullptr;
 }
 
-AudioFactory::Platform AudioFactory::GetCurrentPlatform() {
+AudioAPI::Platform AudioAPI::GetCurrentPlatform() {
 #if defined(_WIN32) || defined(_WIN64)
     return Platform::Windows;
 #elif defined(__linux__)
@@ -293,7 +296,7 @@ AudioFactory::Platform AudioFactory::GetCurrentPlatform() {
 #endif
 }
 
-AudioDeviceType AudioFactory::GetDeviceFromEnvironment() {
+AudioDeviceType AudioAPI::GetDeviceFromEnvironment() {
     const char* envVar = std::getenv("PRISMA_AUDIO_DEVICE");
     if (!envVar) {
         return AudioDeviceType::Auto;
@@ -311,7 +314,7 @@ AudioDeviceType AudioFactory::GetDeviceFromEnvironment() {
     return AudioDeviceType::Auto;
 }
 
-AudioDeviceType AudioFactory::GetDeviceFromConfig() {
+AudioDeviceType AudioAPI::GetDeviceFromConfig() {
     // 这里可以读取配置文件
     // 例如：config/audio.json
 
