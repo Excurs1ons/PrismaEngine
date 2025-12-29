@@ -1,7 +1,7 @@
 #include "InputManager.h"
 #include "Logger.h"
 
-namespace Engine {
+namespace Engine::Input {
 
 bool InputManager::IsKeyDown(KeyCode key) const {
     if (!m_platform) {

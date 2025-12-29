@@ -9,7 +9,7 @@
 using namespace Engine::Graphic;
 
 namespace Engine {
-
+using namespace Input;
 Camera3DController::Camera3DController() : Component() {
     m_mouseControl = false;  // 默认关闭鼠标控制
     m_firstMouse = true;
@@ -25,7 +25,7 @@ void Camera3DController::Initialize() {
     }
 
     // 获取初始鼠标位置
-    InputManager::GetInstance().GetMousePosition(m_lastMouseX, m_lastMouseY);
+    Input::InputManager::GetInstance().GetMousePosition(m_lastMouseX, m_lastMouseY);
 }
 
 void Camera3DController::Update(float deltaTime) {

@@ -132,8 +132,6 @@ private:
     std::unique_ptr<IResourceManager> m_resourceManager;
     std::shared_ptr<IPipeline> m_mainPipeline;
 
-    // TODO: 移除或重新设计这些组件
-    std::unique_ptr<class ScriptableRenderPipeline> m_legacyPipeline;
     std::unique_ptr<class PrismaEngine::Graphic::ForwardPipeline> m_forwardPipeline;
 
     // 渲染线程
