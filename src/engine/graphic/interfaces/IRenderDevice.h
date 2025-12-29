@@ -30,10 +30,10 @@ public:
     virtual void Shutdown() = 0;
 
     /// @brief 获取设备名称
-    virtual std::string GetName() const = 0;
+    [[nodiscard]] virtual std::string GetName() const = 0;
 
     /// @brief 获取API名称 (DirectX12, Vulkan等)
-    virtual std::string GetAPIName() const = 0;
+    [[nodiscard]] virtual std::string GetAPIName() const = 0;
 
     // === 命令缓冲区管理 ===
 
@@ -70,7 +70,7 @@ public:
 
     /// @brief 获取资源工厂
     /// @return 资源工厂指针
-    virtual IResourceFactory* GetResourceFactory() const = 0;
+    [[nodiscard]] virtual IResourceFactory* GetResourceFactory() const = 0;
 
     // === 交换链管理 ===
 
@@ -87,7 +87,7 @@ public:
 
     /// @brief 获取当前交换链
     /// @return 交换链指针
-    virtual ISwapChain* GetSwapChain() const = 0;
+    [[nodiscard]] virtual ISwapChain* GetSwapChain() const = 0;
 
     // === 帧管理 ===
 
@@ -103,22 +103,22 @@ public:
     // === 查询支持的功能 ===
 
     /// @brief 检查是否支持多线程
-    virtual bool SupportsMultiThreaded() const = 0;
+    [[nodiscard]] virtual bool SupportsMultiThreaded() const = 0;
 
     /// @brief 检查是否支持绑定less纹理
-    virtual bool SupportsBindlessTextures() const = 0;
+    [[nodiscard]] virtual bool SupportsBindlessTextures() const = 0;
 
     /// @brief 检查是否支持计算着色器
-    virtual bool SupportsComputeShader() const = 0;
+    [[nodiscard]] virtual bool SupportsComputeShader() const = 0;
 
     /// @brief 检查是否支持光线追踪
-    virtual bool SupportsRayTracing() const = 0;
+    [[nodiscard]] virtual bool SupportsRayTracing() const = 0;
 
     /// @brief 检查是否支持网格着色器
-    virtual bool SupportsMeshShader() const = 0;
+    [[nodiscard]] virtual bool SupportsMeshShader() const = 0;
 
     /// @brief 检查是否支持可变速率着色
-    virtual bool SupportsVariableRateShading() const = 0;
+    [[nodiscard]] virtual bool SupportsVariableRateShading() const = 0;
 
     // === 渲染统计 ===
 
@@ -128,7 +128,7 @@ public:
         uint64_t usedMemory = 0;
         uint64_t availableMemory = 0;
     };
-    virtual GPUMemoryInfo GetGPUMemoryInfo() const = 0;
+    [[nodiscard]] virtual GPUMemoryInfo GetGPUMemoryInfo() const = 0;
 
     /// @brief 获取渲染统计信息
     struct RenderStats {
@@ -137,7 +137,7 @@ public:
         uint32_t triangles = 0;
         float frameTime = 0.0f;
     };
-    virtual RenderStats GetRenderStats() const = 0;
+    [[nodiscard]] virtual RenderStats GetRenderStats() const = 0;
 
     // === 调试功能 ===
 

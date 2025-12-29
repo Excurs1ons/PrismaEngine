@@ -11,6 +11,8 @@
 #include <dbghelp.h>
 #pragma comment(lib, "dbghelp.lib")
 #endif
+#elif defined (__ANDROID__) || (ANDROID)
+#include <android/log.h>
 #endif
 bool Logger::IsInitialized() const {
     return initialized_;
@@ -19,20 +21,6 @@ bool Logger::IsInitialized() const {
 void Logger::SetPlatformLogger(Engine::IPlatformLogger* platformLogger) {
     platformLogger_ = platformLogger;
 }
-
-// LogLevel 转 PlatformLogLevel 辅助函数
-static Engine::PlatformLogLevel ConvertLogLevel(LogLevel level) {
-    switch (level) {
-        case LogLevel::Trace:   return Engine::PlatformLogLevel::Trace;
-        case LogLevel::Debug:   return Engine::PlatformLogLevel::Debug;
-        case LogLevel::Info:    return Engine::PlatformLogLevel::Info;
-        case LogLevel::Warning: return Engine::PlatformLogLevel::Warning;
-        case LogLevel::Error:   return Engine::PlatformLogLevel::Error;
-        case LogLevel::Fatal:   return Engine::PlatformLogLevel::Fatal;
-        default:                return Engine::PlatformLogLevel::Info;
-    }
-}
-
 CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
     switch (level) {
     case LogLevel::Trace:
