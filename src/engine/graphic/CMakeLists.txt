@@ -78,7 +78,6 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Mesh.cpp
     graphic/MeshRenderer.cpp
     graphic/RenderComponent.cpp
-    # graphic/RenderAPI.cpp  # 废弃：使用 IRenderDevice 接口替代
     graphic/RenderCommandContext.cpp
     graphic/RenderPass.cpp
     graphic/RenderSystemNew.cpp
@@ -104,7 +103,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/Material.h
     graphic/Mesh.h
     graphic/MeshRenderer.h
-    # graphic/RenderAPI.h  # 废弃：使用 IRenderDevice 接口替代
     graphic/RenderCommandContext.h
     graphic/RenderComponent.h
     graphic/RenderGraph.h
