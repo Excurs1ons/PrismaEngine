@@ -3,7 +3,6 @@
 #include "../SceneManager.h"
 #include "../Camera3D.h"
 #include "../core/ECS.h"
-#include "ScriptableRenderPipeline.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
 #ifdef PRISMA_ENABLE_RENDER_DX12
