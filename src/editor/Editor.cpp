@@ -1,7 +1,6 @@
 #include "Editor.h"
 #include "Logger.h"
 #include "Platform.h"
-#include "RenderAPI.h"
 #include "../graphic/RenderSystemNew.h"
 #include <iostream>
 #include <stdexcept>
