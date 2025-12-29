@@ -1,9 +1,17 @@
 #include "AudioSystem.h"
 #include "../Helper.h"
-#include "AudioBackendSDL3.h"
-#include "AudioBackendXAudio2.h"
 #include "Logger.h"
+
+// 条件包含音频后端头文件
+#ifdef PRISMA_ENABLE_AUDIO_SDL3
 #include <SDL3/SDL_init.h>
+#include "AudioBackendSDL3.h"
+#endif
+
+#ifdef PRISMA_ENABLE_AUDIO_XAUDIO2
+#include "AudioBackendXAudio2.h"
+#endif
+
 #include <fstream>
 #include <iostream>
 #include <vector>
@@ -22,12 +30,18 @@ namespace Engine {
         bool AudioSystem::Initialize(AudioBackendType audioBackendType, AudioFormat audioFormat)
         {
             switch (audioBackendType) {
+#ifdef PRISMA_ENABLE_AUDIO_SDL3
                 case AudioBackendType::SDL3:
                     audioBackend = std::make_unique<AudioBackendSDL3>();
                     break;
+#endif
+
+#ifdef PRISMA_ENABLE_AUDIO_XAUDIO2
                 case AudioBackendType::XAudio2:
                     audioBackend = std::make_unique<AudioBackendXAudio2>();
                     break;
+#endif
+
                 case AudioBackendType::None:
                 default:
                     LOG_ERROR("AudioSystem",
@@ -42,11 +56,13 @@ namespace Engine {
             return false;
         }
         // 音频回调函数
+#ifdef PRISMA_ENABLE_AUDIO_SDL3
         void audioCallback(void* userdata, Uint8* stream, int len) {
             // 这里填充音频数据
             // 例如播放静音
             SDL_memset(stream, 0, len);
         }
+#endif
         bool AudioSystem::Initialize()
         {
             AudioFormat audioFormat;
