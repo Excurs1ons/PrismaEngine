@@ -139,30 +139,46 @@ set(ENGINE_GRAPHIC_HEADERS
 )
 
 # ==============================================================================
-# Android 平台特定渲染器
+# Vulkan 渲染后端
 # ==============================================================================
 
-if(ANDROID)
-    set(ANDROID_RENDERER_SOURCES
-        graphic/platform/android/RendererVulkan.cpp
-        graphic/platform/android/RendererOpenGL.cpp
-        graphic/platform/android/ShaderVulkan.cpp
-        graphic/platform/android/ShaderOpenGL.cpp
-        graphic/platform/android/TextureAsset.cpp
-        graphic/platform/android/VulkanContext.cpp
+if(PRISMA_ENABLE_VULKAN OR ANDROID)
+    set(VULKAN_BACKEND_SOURCES
+        graphic/adapters/vulkan/RendererVulkan.cpp
+        graphic/adapters/vulkan/ShaderVulkan.cpp
+        graphic/adapters/vulkan/TextureAsset.cpp
+        graphic/adapters/vulkan/VulkanContext.cpp
     )
 
-    set(ANDROID_RENDERER_HEADERS
-        graphic/platform/android/RendererAPI.h
-        graphic/platform/android/RendererVulkan.h
-        graphic/platform/android/RendererOpenGL.h
-        graphic/platform/android/ShaderVulkan.h
-        graphic/platform/android/ShaderOpenGL.h
-        graphic/platform/android/TextureAsset.h
-        graphic/platform/android/VulkanContext.h
+    set(VULKAN_BACKEND_HEADERS
+        graphic/adapters/vulkan/RendererAPI.h
+        graphic/adapters/vulkan/RendererVulkan.h
+        graphic/adapters/vulkan/ShaderVulkan.h
+        graphic/adapters/vulkan/TextureAsset.h
+        graphic/adapters/vulkan/VulkanContext.h
     )
 
-    # 将 Android 渲染器添加到主列表
-    list(APPEND ENGINE_GRAPHIC_SOURCES ${ANDROID_RENDERER_SOURCES})
-    list(APPEND ENGINE_GRAPHIC_HEADERS ${ANDROID_RENDERER_HEADERS})
+    # 将 Vulkan 后端添加到主列表
+    list(APPEND ENGINE_GRAPHIC_SOURCES ${VULKAN_BACKEND_SOURCES})
+    list(APPEND ENGINE_GRAPHIC_HEADERS ${VULKAN_BACKEND_HEADERS})
+endif()
+
+# ==============================================================================
+# OpenGL 渲染后端
+# ==============================================================================
+
+if(PRISMA_ENABLE_OPENGL OR ANDROID)
+    set(OPENGL_BACKEND_SOURCES
+        graphic/adapters/opengl/RendererOpenGL.cpp
+        graphic/adapters/opengl/ShaderOpenGL.cpp
+    )
+
+    set(OPENGL_BACKEND_HEADERS
+        graphic/adapters/opengl/RendererOpenGL.h
+        graphic/adapters/opengl/ShaderOpenGL.h
+    )
+
+    # 将 OpenGL 后端添加到主列表
+    list(APPEND ENGINE_GRAPHIC_SOURCES ${OPENGL_BACKEND_SOURCES})
+    list(APPEND ENGINE_GRAPHIC_HEADERS ${OPENGL_BACKEND_HEADERS})
 endif()
