@@ -249,6 +249,7 @@ double Platform::GetTimeSeconds() {
 // 输入管理
 // ------------------------------------------------------------
 bool Platform::IsKeyDown(Engine::Input::KeyCode key) {
+    using KeyCode = Engine::Input::KeyCode;
     int virtualKey = 0;
 
     switch (key) {
