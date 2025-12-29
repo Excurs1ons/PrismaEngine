@@ -1,13 +1,12 @@
 #include "Engine.h"
 #include "Logger.h"
 #include "PhysicsSystem.h"
-#include "RenderSystem.h"
+#include "RenderSystemNew.h"
 #include "ResourceManager.h"
 #include "SceneManager.h"
 #include "ThreadManager.h"
 #include "InputManager.h"
 #include "Platform.h"
-#include "RenderSystemNew.h"
 
 namespace Engine {
     EngineCore::EngineCore() : isRunning_(false) {
