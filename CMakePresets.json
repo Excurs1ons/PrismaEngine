@@ -18,7 +18,11 @@
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
         "PRISMA_BUILD_EDITOR": "OFF",
-        "CMAKE_TOOLCHAIN_FILE": ""
+        "CMAKE_TOOLCHAIN_FILE": "",
+        "PRISMA_ENABLE_RENDER_DX12": "ON",
+        "PRISMA_ENABLE_AUDIO_XAUDIO2": "ON",
+        "PRISMA_ENABLE_RENDER_VULKAN": "OFF",
+        "PRISMA_ENABLE_AUDIO_OPENAL": "OFF"
       },
       "condition": {
         "type": "equals",
