@@ -15,7 +15,7 @@ public:
     /// @param desc 着色器描述信息
     /// @return 创建的着色器实例
     static std::unique_ptr<IShader> CreateShader(
-        RenderBackendType backendType,
+        RenderAPIType backendType,
         const std::string& sourceCode,
         const ShaderDesc& desc);
 
@@ -25,7 +25,7 @@ public:
     /// @param desc 着色器描述信息
     /// @return 创建的着色器实例
     static std::unique_ptr<IShader> CreateShaderFromFile(
-        RenderBackendType backendType,
+        RenderAPIType backendType,
         const std::string& filepath,
         const ShaderDesc& desc);
 };

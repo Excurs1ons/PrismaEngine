@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../ManagerBase.h"
-#include "RenderBackend.h"
+#include "RenderAPI.h"
 #include "ScriptableRenderPipeline.h"
 #include "pipelines/forward/ForwardPipeline.h"
 #include "interfaces/IRenderDevice.h"
@@ -20,7 +20,7 @@ class DX12RenderDevice;
 
 /// @brief 渲染系统描述
 struct RenderSystemDesc {
-    RenderBackendType backendType = RenderBackendType::DirectX12;
+    RenderAPIType backendType = RenderAPIType::DirectX12;
     void* windowHandle = nullptr;
     void* surface = nullptr;
     uint32_t width = 1600;

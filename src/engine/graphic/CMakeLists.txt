@@ -60,11 +60,11 @@ set(PIPELINE_DEFERRED_HEADERS
 
 # Vulkan 后端文件 (条件编译)
 set(VULKAN_SOURCES
-    graphic/RenderBackendVulkan.cpp
+    graphic/RenderAPIVulkan.cpp
 )
 
 set(VULKAN_HEADERS
-    graphic/RenderBackendVulkan.h
+    graphic/RenderAPIVulkan.h
 )
 
 set(ENGINE_GRAPHIC_SOURCES
@@ -78,7 +78,7 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Mesh.cpp
     graphic/MeshRenderer.cpp
     graphic/RenderComponent.cpp
-    graphic/RenderBackend.cpp
+    graphic/RenderAPI.cpp
     graphic/RenderCommandContext.cpp
     graphic/RenderPass.cpp
     graphic/RenderSystemNew.cpp
@@ -104,7 +104,7 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/Material.h
     graphic/Mesh.h
     graphic/MeshRenderer.h
-    graphic/RenderBackend.h
+    graphic/RenderAPI.h
     graphic/RenderCommandContext.h
     graphic/RenderComponent.h
     graphic/RenderGraph.h

@@ -1,6 +1,6 @@
 // #pragma once
 // #include "ManagerBase.h"
-// #include "RenderBackend.h"
+// #include "RenderAPI.h"
 // #include "WorkerThread.h"
 // #include "ScriptableRenderPipeline.h"
 // #include "pipelines/forward/ForwardPipeline.h"
@@ -17,7 +17,7 @@
 //
 //     // 添加带参数的初始化方法
 //     bool Initialize(
-//         Platform* platform, RenderBackendType renderBackendType, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height);
+//         Platform* platform, RenderAPIType renderBackendType, WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height);
 //     bool Initialize() override;
 //     void Shutdown() override;
 //     void Update(float deltaTime) override;
@@ -32,11 +32,11 @@
 //     void Present();
 //     void Resize(uint32_t width, uint32_t height);
 //
-//     RenderBackend* GetRenderBackend() const { return renderBackend.get(); }
+//     RenderAPI* GetRenderBackend() const { return renderBackend.get(); }
 //     ScriptableRenderPipeline* GetRenderPipe() const { return renderPipe.get(); }
 //
 // private:
-//     std::unique_ptr<RenderBackend> renderBackend;
+//     std::unique_ptr<RenderAPI> renderBackend;
 //     std::unique_ptr<ScriptableRenderPipeline> renderPipe;
 //     std::unique_ptr<Graphic::Pipelines::Forward::ForwardPipeline> forwardPipeline;
 //     WorkerThread renderThread;
@@ -48,7 +48,7 @@
 //     class Adapter {
 //     public:
 //         Adapter(RenderSystem* renderSystem);
-//         bool Initialize(Platform* platform, RenderBackendType renderBackendType,
+//         bool Initialize(Platform* platform, RenderAPIType renderBackendType,
 //                        WindowHandle windowHandle, void* surface, uint32_t width, uint32_t height);
 //         void Shutdown();
 //         void Update(float deltaTime);
