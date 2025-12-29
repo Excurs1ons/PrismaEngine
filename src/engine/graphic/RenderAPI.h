@@ -39,14 +39,14 @@ struct RenderCommand {};
 class RenderAPI : public IRenderDevice {
 public:
     RenderAPI();
-    virtual ~RenderAPI();
+    ~RenderAPI() override;
 
     // === IRenderDevice 接口实现 ===
 
     bool Initialize(const DeviceDesc& desc) override;
     void Shutdown() override;
-    std::string GetName() const override;
-    std::string GetAPIName() const override;
+    [[nodiscard]] std::string GetName() const override;
+    [[nodiscard]] std::string GetAPIName() const override;
 
     // 命令缓冲区管理
     std::unique_ptr<ICommandBuffer> CreateCommandBuffer(CommandBufferType type) override;
@@ -60,14 +60,14 @@ public:
     void WaitForFence(IFence* fence) override;
 
     // 资源管理
-    IResourceFactory* GetResourceFactory() const override;
+    [[nodiscard]] IResourceFactory* GetResourceFactory() const override;
 
     // 交换链管理
     std::unique_ptr<ISwapChain> CreateSwapChain(void* windowHandle,
                                                  uint32_t width,
                                                  uint32_t height,
                                                  bool vsync = true) override;
-    ISwapChain* GetSwapChain() const override;
+    [[nodiscard]] ISwapChain* GetSwapChain() const override;
 
     // 帧管理
     void BeginFrame() override;
@@ -75,15 +75,15 @@ public:
     void Present() override;
 
     // 功能查询
-    bool SupportsMultiThreaded() const override;
-    bool SupportsBindlessTextures() const override;
-    bool SupportsComputeShader() const override;
-    bool SupportsRayTracing() const override;
-    bool SupportsMeshShader() const override;
-    bool SupportsVariableRateShading() const override;
+    [[nodiscard]] bool SupportsMultiThreaded() const override;
+    [[nodiscard]] bool SupportsBindlessTextures() const override;
+    [[nodiscard]] bool SupportsComputeShader() const override;
+    [[nodiscard]] bool SupportsRayTracing() const override;
+    [[nodiscard]] bool SupportsMeshShader() const override;
+    [[nodiscard]] bool SupportsVariableRateShading() const override;
 
-    GPUMemoryInfo GetGPUMemoryInfo() const override;
-    RenderStats GetRenderStats() const override;
+    [[nodiscard]] GPUMemoryInfo GetGPUMemoryInfo() const override;
+    [[nodiscard]] RenderStats GetRenderStats() const override;
 
     // 调试
     void BeginDebugMarker(const std::string& name) override;
@@ -130,14 +130,14 @@ public:
     virtual void SetGuiRenderCallback(GuiRenderCallback callback);
 
     /// @brief 获取后端类型
-    RenderAPIType GetBackendType() const { return m_backendType; }
+    [[nodiscard]] RenderAPIType GetBackendType() const { return m_backendType; }
 
     /// @brief 是否已初始化
-    bool IsInitialized() const { return isInitialized; }
+    [[nodiscard]] bool IsInitialized() const { return isInitialized; }
 
     // === 公共成员（兼容旧代码） ===
 
-    int32_t GetCurrentFrame() const { return m_currentFrame; }
+    [[nodiscard]] int32_t GetCurrentFrame() const { return m_currentFrame; }
     int m_currentFrame = 0;
     bool isInitialized = false;
 

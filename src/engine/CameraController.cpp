@@ -37,10 +37,10 @@ void CameraController::HandleInput() {
     static int frameCount = 0;
     frameCount++;
     if (frameCount % 60 == 0) {  // 每秒打印一次
-        bool wPressed = InputManager::GetInstance().IsKeyDown(KeyCode::W);
-        bool aPressed = InputManager::GetInstance().IsKeyDown(KeyCode::A);
-        bool sPressed = InputManager::GetInstance().IsKeyDown(KeyCode::S);
-        bool dPressed = InputManager::GetInstance().IsKeyDown(KeyCode::D);
+        bool wPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::W);
+        bool aPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::A);
+        bool sPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::S);
+        bool dPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::D);
         LOG_TRACE("CameraController", "Input test - W:{0} A:{1} S:{2} D:{3}", wPressed, aPressed, sPressed, dPressed);
     }
 
@@ -48,22 +48,22 @@ void CameraController::HandleInput() {
     PrismaMath::vec3 currentPos = m_camera->GetPosition();
 
     // WASD 或 方向键控制相机移动
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::W) || InputManager::GetInstance().IsKeyDown(KeyCode::ArrowUp)) {
+    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::W) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowUp)) {
         // 向上移动 (在2D中通常是减少Y值，因为我们使用右手坐标系)
         currentPos.y -= moveSpeed;
         moved = true;
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::S) || InputManager::GetInstance().IsKeyDown(KeyCode::ArrowDown)) {
+    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::S) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowDown)) {
         // 向下移动 (增加Y值)
         currentPos.y += moveSpeed;
         moved = true;
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::A) || InputManager::GetInstance().IsKeyDown(KeyCode::ArrowLeft)) {
+    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::A) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowLeft)) {
         // 向左移动 (减少X值)
         currentPos.x -= moveSpeed;
         moved = true;
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::D) || InputManager::GetInstance().IsKeyDown(KeyCode::ArrowRight)) {
+    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::D) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowRight)) {
         // 向右移动 (增加X值)
         currentPos.x += moveSpeed;
         moved = true;
