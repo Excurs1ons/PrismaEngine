@@ -137,3 +137,32 @@ set(ENGINE_GRAPHIC_HEADERS
     # Vulkan backend headers (conditionally included)
     # VULKAN_HEADERS will be added in parent CMakeLists.txt based on PRISMA_ENABLE_RENDER_VULKAN
 )
+
+# ==============================================================================
+# Android 平台特定渲染器
+# ==============================================================================
+
+if(ANDROID)
+    set(ANDROID_RENDERER_SOURCES
+        graphic/platform/android/RendererVulkan.cpp
+        graphic/platform/android/RendererOpenGL.cpp
+        graphic/platform/android/ShaderVulkan.cpp
+        graphic/platform/android/ShaderOpenGL.cpp
+        graphic/platform/android/TextureAsset.cpp
+        graphic/platform/android/VulkanContext.cpp
+    )
+
+    set(ANDROID_RENDERER_HEADERS
+        graphic/platform/android/RendererAPI.h
+        graphic/platform/android/RendererVulkan.h
+        graphic/platform/android/RendererOpenGL.h
+        graphic/platform/android/ShaderVulkan.h
+        graphic/platform/android/ShaderOpenGL.h
+        graphic/platform/android/TextureAsset.h
+        graphic/platform/android/VulkanContext.h
+    )
+
+    # 将 Android 渲染器添加到主列表
+    list(APPEND ENGINE_GRAPHIC_SOURCES ${ANDROID_RENDERER_SOURCES})
+    list(APPEND ENGINE_GRAPHIC_HEADERS ${ANDROID_RENDERER_HEADERS})
+endif()
