@@ -16,11 +16,13 @@ namespace Engine {
 // ------------------------------------------------------------
 static LARGE_INTEGER s_frequency;
 static bool s_useQPC = false;
-static bool s_initialized = false;
-static bool s_shouldClose = false;
-static HWND s_hwnd = nullptr;
-static HWND s_currentWindow = nullptr;
 static bool g_keyStates[256] = { false };
+static HWND s_hwnd = nullptr;
+
+// Platform 类静态成员定义
+bool Platform::s_initialized = false;
+bool Platform::s_shouldClose = false;
+WindowHandle Platform::s_currentWindow = nullptr;
 
 // ------------------------------------------------------------
 // Windows 窗口过程
