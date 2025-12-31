@@ -2,8 +2,8 @@
 # 使用 CMake FetchContent 替代 vcpkg 管理依赖
 
 # 包含 CMake 内置的 FetchContent 模块
-# 使用绝对路径避免与自己文件名冲突
-include(${CMAKE_ROOT}/Modules/FetchContent.cmake)
+# 让 CMake 自动查找内置模块，避免 CMAKE_ROOT 路径问题
+include(FetchContent)
 
 # ========== 选项配置 ==========
 
