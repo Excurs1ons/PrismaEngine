@@ -4,14 +4,14 @@ if (ANDROID)
     set(RUNTIME_SOURCES android/AndroidRuntime.cpp)
 elseif (WIN32)
     # 源文件
-    set(RUNTIME_SOURCES WindowsRuntime.cpp)
+    set(RUNTIME_SOURCES windows/WindowsRuntime.cpp)
     set(RUNTIME_RESOURCES
             resources/windows/icons/Runtime.ico
             resources/windows/icons/small.ico)
 elseif (APPLE)
     message(FATAL_ERROR "尚不支持此平台:APPLE")
 elseif (LINUX)
-    set(RUNTIME_SOURCES LinuxRuntime.cpp)
+    set(RUNTIME_SOURCES linux/LinuxRuntime.cpp)
 endif ()
 
 # 创建可执行程序
