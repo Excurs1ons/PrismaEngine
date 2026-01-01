@@ -1,17 +1,6 @@
 cmake_minimum_required(VERSION 3.31)
 
-# ========== 依赖管理方式选择 ==========
-# 本项目使用 FetchContent 管理依赖，不使用 vcpkg
-# 如果环境变量中设置了 CMAKE_TOOLCHAIN_FILE，需要清除它
 
-if(DEFINED ENV{CMAKE_TOOLCHAIN_FILE})
-    message(WARNING "检测到环境变量 CMAKE_TOOLCHAIN_FILE=$ENV{CMAKE_TOOLCHAIN_FILE}")
-    message(STATUS "本项目使用 FetchContent 管理依赖，已自动忽略 vcpkg toolchain")
-    unset(CMAKE_TOOLCHAIN_FILE CACHE)
-    unset(ENV{CMAKE_TOOLCHAIN_FILE})
-endif()
-
-# 确保不自动查找 vcpkg.cmake
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "")
 
 project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
@@ -26,6 +15,9 @@ if (CMAKE_GENERATOR MATCHES "Visual Studio")
     set(CMAKE_SYSTEM_VERSION 10.0 CACHE STRING "Windows SDK Version" FORCE)
     # 确保使用最新的 Windows SDK
     set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "latest" CACHE STRING "WindowsTargetPlatformVersion" FORCE)
+elseif (CMAKE_GENERATOR MATCHES "Ninja")
+    set(CMAKE_NINJA_GENERATOR_PLATFORM "x64")
+    set(CMAKE_NINJA_GENERATOR_TOOLSET "host=x64")
 endif()
 
 # 启用 C++20 标准
@@ -61,17 +53,7 @@ endif()
 
 if(PRISMA_USE_FETCHCONTENT)
     # 使用 FetchContent 下载依赖
-    include(cmake/FetchContent.cmake)
-elseif(DEFINED CMAKE_TOOLCHAIN_FILE)
-    # 回退到 vcpkg (如果指定了 toolchain)
-    set(VCPKG_MANIFEST_MODE ON)
-    set(VCPKG_ENABLE_MANIFEST ON)
-
-    if(CMAKE_GENERATOR MATCHES "Visual Studio")
-        set(CMAKE_VS_GLOBAL_PROJECT_PROPERTIES "configs/Directory.Build.props")
-    endif()
-
-    message(STATUS "使用 vcpkg 管理依赖 (toolchain: ${CMAKE_TOOLCHAIN_FILE})")
+    include(cmake/FetchThirdPartyDeps.cmake)
 else()
     message(STATUS "使用系统/已安装的库")
 endif()

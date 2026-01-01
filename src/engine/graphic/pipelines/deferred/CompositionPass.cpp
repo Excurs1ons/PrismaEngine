@@ -77,6 +77,8 @@ void CompositionPass::SetPostProcessEffect(PostProcessEffect effect, bool enable
     case PostProcessEffect::DepthOfField:
         m_postProcessSettings.depthOfField = enable;
         break;
+        case PostProcessEffect::None:
+            break;
     }
 }
 
