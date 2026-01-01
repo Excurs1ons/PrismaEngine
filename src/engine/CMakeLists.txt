@@ -377,13 +377,6 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
 )
 
-# Android平台NDK头文件路径
-if(ANDROID)
-    target_include_directories(Engine PUBLIC
-        $ENV{ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include
-    )
-endif()
-
 # Android平台依赖路径配置
 if(ANDROID)
     # Android 平台优先使用 FetchContent 下载的依赖

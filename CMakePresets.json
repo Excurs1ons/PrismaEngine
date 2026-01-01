@@ -32,6 +32,7 @@
       "description": "Base Android configuration (使用 FetchContent 管理依赖)",
       "generator": "Ninja",
       "cacheVariables": {
+        "CMAKE_SYSTEM_NAME": "Android",
         "PRISMA_USE_FETCHCONTENT": "ON",
         "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_ENABLE_RENDER_DX12": "OFF",
@@ -99,6 +100,7 @@
       "inherits": "android-base",
       "description": "Release build for Android arm64-v8a using Ninja",
       "binaryDir": "${sourceDir}/build/android-arm64-v8a-release",
+      "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "ANDROID_ABI": "arm64-v8a"
@@ -110,6 +112,7 @@
       "inherits": "android-base",
       "description": "Debug build for Android arm64-v8a using Ninja",
       "binaryDir": "${sourceDir}/build/android-arm64-v8a-debug",
+      "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "ANDROID_ABI": "arm64-v8a"
