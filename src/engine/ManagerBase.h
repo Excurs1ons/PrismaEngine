@@ -14,6 +14,5 @@ public:
     }
 protected:
     ManagerBase() = default;
-    virtual ~ManagerBase() = default;
 };
 }  // namespace Engine

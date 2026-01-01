@@ -33,5 +33,14 @@ void InputManager::SetPlatform(Platform* platform) {
     m_platform = platform;
     LOG_INFO("InputManager", "Platform instance set");
 }
+InputManager::~InputManager() {
+    InputManager::Shutdown();
+}
+bool InputManager::Initialize() {
+    return true;
+}
+void InputManager::Shutdown() {
+
+}
 
 } // namespace Engine

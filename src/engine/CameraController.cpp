@@ -25,7 +25,7 @@ void CameraController::Initialize() {
     }
 
     // 获取初始鼠标位置
-    Input::InputManager::GetInstance().GetMousePosition(m_lastMouseX, m_lastMouseY);
+    Input::InputManager::GetInstance()->GetMousePosition(m_lastMouseX, m_lastMouseY);
 }
 
 void CameraController::Update(float deltaTime) {
@@ -43,46 +43,46 @@ void CameraController::HandleKeyboardInput(float deltaTime) {
     bool moved = false;
 
     // WASD 控制移动
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::W)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::W)) {
         LOG_INFO("CameraController", "W key pressed - moving forward");
         m_camera->MoveLocal(moveAmount, 0.0f, 0.0f);  // 前进
         moved = true;
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::S)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::S)) {
         m_camera->MoveLocal(-moveAmount, 0.0f, 0.0f);  // 后退
         moved = true;
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::A)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::A)) {
         m_camera->MoveLocal(0.0f, -moveAmount, 0.0f);  // 左移
         moved = true;
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::D)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::D)) {
         m_camera->MoveLocal(0.0f, moveAmount, 0.0f);   // 右移
         moved = true;
     }
 
     // Q/E 控制上下移动
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::Q)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::Q)) {
         m_camera->MoveLocal(0.0f, 0.0f, -moveAmount);  // 下降
         moved = true;
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::E)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::E)) {
         m_camera->MoveLocal(0.0f, 0.0f, moveAmount);   // 上升
         moved = true;
     }
 
     // 方向键控制旋转
     float rotationAmount = m_rotationSpeed * deltaTime;
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowLeft)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::ArrowLeft)) {
         m_camera->Rotate(0.0f, -PrismaEngine::Math::Radians(rotationAmount), 0.0f);  // 左转
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowRight)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::ArrowRight)) {
         m_camera->Rotate(0.0f, PrismaEngine::Math::Radians(rotationAmount), 0.0f);   // 右转
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowUp)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::ArrowUp)) {
         m_camera->Rotate(-PrismaEngine::Math::Radians(rotationAmount), 0.0f, 0.0f);  // 上看
     }
-    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowDown)) {
+    if (InputManager::GetInstance()->IsKeyDown(KeyCode::ArrowDown)) {
         m_camera->Rotate(PrismaEngine::Math::Radians(rotationAmount), 0.0f, 0.0f);   // 下看
     }
 }
@@ -94,7 +94,7 @@ void CameraController::HandleMouseInput(float deltaTime) {
 
     // 获取当前鼠标位置
     float mouseX, mouseY;
-    InputManager::GetInstance().GetMousePosition(mouseX, mouseY);
+    InputManager::GetInstance()->GetMousePosition(mouseX, mouseY);
 
     if (m_firstMouse) {
         m_lastMouseX = mouseX;
