@@ -1,5 +1,10 @@
 # 引擎核心库 - 条件编译版本
 
+# ========== Android 平台 vendor 库 ==========
+if(ANDROID)
+    add_subdirectory(vendor/android/game-activity_static)
+endif()
+
 # ========== 库类型配置 ==========
 
 option(PRISMA_ENGINE_BUILD_SHARED "Build engine as shared library (DLL/so)" OFF)
@@ -188,6 +193,21 @@ add_library(Engine ${PRISMA_ENGINE_TYPE}
     packing/pipeline.h
 )
 
+# Android 平台添加 game-activity 源文件
+if(ANDROID)
+    target_sources(Engine PRIVATE
+        ${GAME_ACTIVITY_SOURCES}
+    )
+    target_include_directories(Engine PRIVATE
+        ${GAME_ACTIVITY_INCLUDE_DIRS}
+    )
+    target_link_libraries(Engine PUBLIC
+        ${GAME_ACTIVITY_LIB}
+        android
+        log
+    )
+endif()
+
 # ========== 导出符号配置 ==========
 
 # 动态库需要导出宏，静态库不需要
@@ -300,6 +320,8 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     if(ANDROID)
         # Android 平台 Vulkan 是系统库
         target_link_libraries(Engine PUBLIC vulkan)
+        # Android 平台需要 game-activity_static
+        target_link_libraries(Engine PUBLIC game-activity_static)
     else()
         # Windows 平台: 使用 FetchContent 提供的 Vulkan-Headers
         # 注意: Vulkan-Headers 只提供头文件，运行时需要 Vulkan SDK 或驱动
@@ -353,8 +375,14 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/graphic>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
-
 )
+
+# Android平台NDK头文件路径
+if(ANDROID)
+    target_include_directories(Engine PUBLIC
+        $ENV{ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/windows-x86_64/sysroot/usr/include
+    )
+endif()
 
 # Android平台依赖路径配置
 if(ANDROID)
