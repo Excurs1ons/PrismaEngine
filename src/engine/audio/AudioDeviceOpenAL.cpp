@@ -4,7 +4,7 @@
 #include <cstring>
 #include <chrono>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 // ========== OpenAL工厂函数 ==========
 

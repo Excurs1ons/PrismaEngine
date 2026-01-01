@@ -385,38 +385,38 @@ void RendererVulkan::createScene() {
         
         auto texture = TextureAsset::loadAsset(assetManager, "textures/android_robot.png", &vulkanContext_);
 
-        Vector3 red(1.0f, 1.0f, 1.0f);
+        Vector4 red(1.0f, 1.0f, 1.0f,1.0f);
         std::vector<Vertex> vertices = {
             // Front
-            Vertex(Vector3(-0.5f, -0.5f,  0.5f), red, Vector2(0.0f, 0.0f)),
-            Vertex(Vector3( 0.5f, -0.5f,  0.5f), red, Vector2(1.0f, 0.0f)),
-            Vertex(Vector3( 0.5f,  0.5f,  0.5f), red, Vector2(1.0f, 1.0f)),
-            Vertex(Vector3(-0.5f,  0.5f,  0.5f), red, Vector2(0.0f, 1.0f)),
-            // Back
-            Vertex(Vector3( 0.5f, -0.5f, -0.5f), red, Vector2(0.0f, 0.0f)),
-            Vertex(Vector3(-0.5f, -0.5f, -0.5f), red, Vector2(1.0f, 0.0f)),
-            Vertex(Vector3(-0.5f,  0.5f, -0.5f), red, Vector2(1.0f, 1.0f)),
-            Vertex(Vector3( 0.5f,  0.5f, -0.5f), red, Vector2(0.0f, 1.0f)),
-            // Top
-            Vertex(Vector3(-0.5f,  0.5f, -0.5f), red, Vector2(0.0f, 0.0f)),
-            Vertex(Vector3(-0.5f,  0.5f,  0.5f), red, Vector2(0.0f, 1.0f)),
-            Vertex(Vector3( 0.5f,  0.5f,  0.5f), red, Vector2(1.0f, 1.0f)),
-            Vertex(Vector3( 0.5f,  0.5f, -0.5f), red, Vector2(1.0f, 0.0f)),
-            // Bottom
-            Vertex(Vector3(-0.5f, -0.5f, -0.5f), red, Vector2(0.0f, 0.0f)),
-            Vertex(Vector3( 0.5f, -0.5f, -0.5f), red, Vector2(1.0f, 0.0f)),
-            Vertex(Vector3( 0.5f, -0.5f,  0.5f), red, Vector2(1.0f, 1.0f)),
-            Vertex(Vector3(-0.5f, -0.5f,  0.5f), red, Vector2(0.0f, 1.0f)),
-            // Right
-            Vertex(Vector3( 0.5f, -0.5f, -0.5f), red, Vector2(0.0f, 0.0f)),
-            Vertex(Vector3( 0.5f,  0.5f, -0.5f), red, Vector2(1.0f, 0.0f)),
-            Vertex(Vector3( 0.5f,  0.5f,  0.5f), red, Vector2(1.0f, 1.0f)),
-            Vertex(Vector3( 0.5f, -0.5f,  0.5f), red, Vector2(0.0f, 1.0f)),
-            // Left
-            Vertex(Vector3(-0.5f, -0.5f, -0.5f), red, Vector2(0.0f, 0.0f)),
-            Vertex(Vector3(-0.5f, -0.5f,  0.5f), red, Vector2(1.0f, 0.0f)),
-            Vertex(Vector3(-0.5f,  0.5f,  0.5f), red, Vector2(1.0f, 1.0f)),
-            Vertex(Vector3(-0.5f,  0.5f, -0.5f), red, Vector2(0.0f, 1.0f)),
+            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            // Back,0.0f
+            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            // Top,0.0f
+            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
+            // Bottom,0.0f
+            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            // Right,0.0f
+            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            // Left,0.0f
+            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
         };
 
         std::vector<Index> indices = {

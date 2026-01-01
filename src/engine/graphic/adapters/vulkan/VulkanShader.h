@@ -4,6 +4,7 @@
 #include "interfaces/IShader.h"
 #include <string>
 #include <vector>
+#include <RenderDesc.h>
 
 
 namespace PrismaEngine::Graphic::Vulkan {
