@@ -12,7 +12,9 @@ std::vector<uint32_t> ShaderVulkan::loadShader(AAssetManager* assetManager, cons
         aout << "Failed to open shader file: " << fileName << std::endl;
         return {};
     }
-
+    else{
+        aout << "加载Shader成功：" << fileName << std::endl;
+    }
     size_t size = AAsset_getLength(asset);
     std::vector<uint32_t> buffer(size / sizeof(uint32_t));
     

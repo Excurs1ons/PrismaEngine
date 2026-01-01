@@ -383,7 +383,7 @@ void RendererVulkan::createScene() {
         go->name = "Cube";
         go->position = Vector3(0, 0, -2.0f); // Behind the robot
         
-        auto texture = TextureAsset::loadAsset(assetManager, "android_robot.png", &vulkanContext_);
+        auto texture = TextureAsset::loadAsset(assetManager, "textures/android_robot.png", &vulkanContext_);
 
         Vector3 red(1.0f, 1.0f, 1.0f);
         std::vector<Vertex> vertices = {
