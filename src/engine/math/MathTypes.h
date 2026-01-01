@@ -67,8 +67,9 @@ using UVector4 = glm::uvec4;
 
 // 矩阵类型
 using Matrix3x3 = glm::mat3;
+using Matrix3 = Matrix3x3;
 using Matrix4x4 = glm::mat4;
-
+using Matrix4 = Matrix4x4;
 // 四元数类型
 using Quaternion = glm::quat;
 

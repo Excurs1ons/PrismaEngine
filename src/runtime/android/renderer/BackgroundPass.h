@@ -4,7 +4,8 @@
 #include "RenderPass.h"
 #include <vulkan/vulkan.h>
 #include <vector>
-#include "../MathTypes.h"
+#include "math/MathTypes.h"
+using namespace Prisma;
 // 前向声明
 struct android_app;
 class SkyboxRenderer;
