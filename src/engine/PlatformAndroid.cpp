@@ -13,7 +13,7 @@
 #include <thread>
 #include <unistd.h>
 
-namespace Engine {
+namespace PrismaEngine {
 
 // ------------------------------------------------------------
 // Android 平台静态变量
@@ -97,13 +97,13 @@ double Platform::GetTimeSeconds() {
 // ------------------------------------------------------------
 // 输入管理 - Android 输入通过触摸事件处理
 // ------------------------------------------------------------
-bool Platform::IsKeyDown(Engine::Input::KeyCode key) {
+bool Platform::IsKeyDown(Input::KeyCode key) {
     // Android: 键盘输入通常通过软键盘，这里返回 false
     (void)key;
     return false;
 }
 
-bool Platform::IsMouseButtonDown(Engine::Input::MouseButton btn) {
+bool Platform::IsMouseButtonDown(Input::MouseButton btn) {
     // Android: 没有鼠标，返回 false
     (void)btn;
     return false;

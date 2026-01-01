@@ -14,7 +14,7 @@
 #include "math/MathTypes.h"
 #include "ShaderOpenGL.h"
 #include "TextureAsset.h"
-using namespace Prisma;
+using namespace PrismaEngine;
 //! executes glGetString and outputs the result to logcat
 #define PRINT_GL_STRING(s) {aout << #s": "<< glGetString(s) << std::endl;}
 
@@ -292,12 +292,12 @@ void RendererOpenGL::createModels() {
      * |   \ |
      * 3 --- 2
      */
-    Vector3 white(1.0f, 1.0f, 1.0f);
+    Vector4 white(1.0f, 1.0f, 1.0f,1.0f);
     std::vector<Vertex> vertices = {
-            Vertex(Vector3(1, 1, 0), white, Vector2(0, 0)), // 0
-            Vertex(Vector3(-1, 1, 0), white, Vector2(1, 0)), // 1
-            Vertex(Vector3(-1, -1, 0), white, Vector2(1, 1)), // 2
-            Vertex(Vector3(1, -1, 0), white, Vector2(0, 1)) // 3
+            Vertex(Vector4(1, 1, 0,0), white, Vector4(0, 0,0,0)), // 0
+            Vertex(Vector4(-1, 1, 0,0), white, Vector4(1, 0,0,0)), // 1
+            Vertex(Vector4(-1, -1, 0,0), white, Vector4(1, 1,0,0)), // 2
+            Vertex(Vector4(1, -1, 0,0), white, Vector4(0, 1,0,0)) // 3
     };
     std::vector<Index> indices = {
             0, 1, 2, 0, 2, 3
