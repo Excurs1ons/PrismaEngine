@@ -4,7 +4,7 @@
 #include "Components.h"
 #include <vector>
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Core {
 namespace ECS {
 

@@ -1,6 +1,6 @@
 #pragma once
 #include "KeyCode.h"
-namespace Engine {
+namespace PrismaEngine {
     namespace Input {
 
         enum InputBackendType {

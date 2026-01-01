@@ -2,7 +2,7 @@
 #include "Engine.h"
 #include "IApplication.h"
 #include <memory>
-namespace Engine {
+namespace PrismaEngine {
 class Application : public IApplication<Application> {
 public:
     friend class IApplication;

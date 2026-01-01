@@ -1,7 +1,7 @@
 #include "PhysicsSystem.h"
 #include "Logger.h"
 
-namespace Engine {
+namespace PrismaEngine {
 
 bool PhysicsSystem::Initialize() {
     LOG_INFO("Physics", "物理系统初始化开始");

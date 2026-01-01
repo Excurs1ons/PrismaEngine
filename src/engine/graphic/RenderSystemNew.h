@@ -31,9 +31,9 @@ struct RenderSystemDesc {
 
 /// @brief 新的渲染系统
 /// 使用抽象接口，支持多后端
-class RenderSystem : public ::Engine::ManagerBase<RenderSystem> {
+class RenderSystem : public ::PrismaEngine::ManagerBase<RenderSystem> {
 public:
-    friend class ::Engine::ManagerBase<RenderSystem>;
+    friend class ::PrismaEngine::ManagerBase<RenderSystem>;
     static constexpr std::string GetName() { return "RenderSystem"; }
 
     // === 初始化和关闭 ===

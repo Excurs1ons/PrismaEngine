@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
 
         // 资产元数据

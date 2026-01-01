@@ -2,7 +2,7 @@
 
 #include "MathTypes.h"
 
-namespace Prisma {
+namespace PrismaEngine {
 namespace Math {
 
 // DirectXMath行主序到Vulkan列主序的转换工具类
@@ -105,4 +105,4 @@ struct MatrixUtils {
 };
 
 } // namespace Math
-} // namespace Prisma
+} // namespace PrismaEngine

@@ -10,7 +10,7 @@ namespace PrismaEngine::Graphic {
     class RenderCommandContext;
 }
 
-namespace Engine {
+namespace PrismaEngine {
     class Material; // 前向声明
 }
 
@@ -46,9 +46,9 @@ public:
     PrismaMath::vec4 GetColor() const;
 
     // 材质相关方法
-    virtual void SetMaterial(std::shared_ptr<Engine::Material> material);
-    virtual std::shared_ptr<Engine::Material> GetMaterial() const { return m_material; }
-    std::shared_ptr<Engine::Material> GetOrCreateMaterial();
+    virtual void SetMaterial(std::shared_ptr<PrismaEngine::Material> material);
+    virtual std::shared_ptr<PrismaEngine::Material> GetMaterial() const { return m_material; }
+    std::shared_ptr<PrismaEngine::Material> GetOrCreateMaterial();
     
     // Component接口实现
     void Initialize() override;
@@ -60,8 +60,8 @@ private:
     uint32_t m_vertexCount;
     uint32_t m_indexCount;
     bool m_use16BitIndices; // 缓存索引类型，避免运行时检查
-    Prisma::Color m_color;
+    PrismaEngine::Color m_color;
 
     // 材质系统
-    std::shared_ptr<Engine::Material> m_material;
+    std::shared_ptr<PrismaEngine::Material> m_material;
 };

@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 /// @brief 音频设备抽象接口
 /// 这是音频系统的核心抽象，不同的音频后端只需要实现这一个接口

@@ -1,7 +1,7 @@
 #include "Serializable.h"
 #include <filesystem>
 
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
         // 实现非模板方法
         void OutputArchive::SetCurrent(const std::string& key) {

@@ -17,7 +17,7 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 
-using namespace Engine;
+using namespace PrismaEngine;
 
 /// @brief 日志输出测试演示
 void ShowDemo() {

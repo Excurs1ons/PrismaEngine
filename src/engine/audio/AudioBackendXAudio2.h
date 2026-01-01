@@ -9,7 +9,7 @@ using namespace Microsoft::WRL;
 #ifdef PlaySound
 #undef PlaySound
 #endif
-namespace Engine {
+namespace PrismaEngine {
 	namespace Audio {
 
 		class AudioBackendXAudio2 : public AudioBackend, public IXAudio2VoiceCallback

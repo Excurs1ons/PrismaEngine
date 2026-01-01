@@ -3,7 +3,7 @@
 #include "core/ECS.h"
 #include <iostream>
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Scripting {
 
 MonoRuntime& MonoRuntime::GetInstance() {

@@ -4,6 +4,7 @@
 
 #ifndef HANDLE_H
 #define HANDLE_H
+#include <optional>
 
 // 基础句柄类型
 class Handle {

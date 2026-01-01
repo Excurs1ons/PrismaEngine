@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace Engine::Resource {
+namespace PrismaEngine::Resource {
 
 class DefaultShaders {
 public:

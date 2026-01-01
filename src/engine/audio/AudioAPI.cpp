@@ -22,7 +22,7 @@
 #include <algorithm>
 #include <iterator>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 // ========== 工厂方法实现 ==========
 

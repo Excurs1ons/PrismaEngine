@@ -1,11 +1,11 @@
 #include "MeshAsset.h"
 #include "AssetSerializer.h"
 #include "Logger.h"
-#include "math/Math.h"
+
 #include <fstream>
 #include <sstream>
 
-namespace Engine {
+namespace PrismaEngine {
 using namespace Serialization;
 bool MeshAsset::Load(const std::filesystem::path& path) {
     try {
@@ -24,23 +24,23 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
 
         // 创建三角形顶点
         triangle.vertices.resize(3);
-        triangle.vertices[0].position = Prisma::Vector4(0.0f, 0.5f, 0.0f, 1.0f);
-        triangle.vertices[0].normal   = Prisma::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[0].texCoord = Prisma::Vector4(0.5f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[0].tangent  = Prisma::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[0].color    = Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+        triangle.vertices[0].position = PrismaEngine::Vector4(0.0f, 0.5f, 0.0f, 1.0f);
+        triangle.vertices[0].normal   = PrismaEngine::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        triangle.vertices[0].texCoord = PrismaEngine::Vector4(0.5f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[0].tangent  = PrismaEngine::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[0].color    = PrismaEngine::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        triangle.vertices[1].position = Prisma::Vector4(-0.5f, -0.5f, 0.0f, 1.0f);
-        triangle.vertices[1].normal   = Prisma::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[1].texCoord = Prisma::Vector4(0.0f, 1.0f, 0.0f, 0.0f);
-        triangle.vertices[1].tangent  = Prisma::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[1].color    = Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+        triangle.vertices[1].position = PrismaEngine::Vector4(-0.5f, -0.5f, 0.0f, 1.0f);
+        triangle.vertices[1].normal   = PrismaEngine::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        triangle.vertices[1].texCoord = PrismaEngine::Vector4(0.0f, 1.0f, 0.0f, 0.0f);
+        triangle.vertices[1].tangent  = PrismaEngine::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[1].color    = PrismaEngine::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
-        triangle.vertices[2].position = Prisma::Vector4(0.5f, -0.5f, 0.0f, 1.0f);
-        triangle.vertices[2].normal   = Prisma::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[2].texCoord = Prisma::Vector4(1.0f, 1.0f, 0.0f, 0.0f);
-        triangle.vertices[2].tangent  = Prisma::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[2].color    = Prisma::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+        triangle.vertices[2].position = PrismaEngine::Vector4(0.5f, -0.5f, 0.0f, 1.0f);
+        triangle.vertices[2].normal   = PrismaEngine::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+        triangle.vertices[2].texCoord = PrismaEngine::Vector4(1.0f, 1.0f, 0.0f, 0.0f);
+        triangle.vertices[2].tangent  = PrismaEngine::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
+        triangle.vertices[2].color    = PrismaEngine::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
 
         // 创建三角形索引
         triangle.indices = {0, 1, 2};
@@ -49,14 +49,14 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
         m_subMeshes.push_back(triangle);
 
         // 计算包围盒
-        Prisma::Vector4 minVec = Prisma::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-        Prisma::Vector4 maxVec = Prisma::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
+        PrismaEngine::Vector4 minVec = PrismaEngine::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+        PrismaEngine::Vector4 maxVec = PrismaEngine::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 
         for (const auto& subMesh : m_subMeshes) {
             for (const auto& vertex : subMesh.vertices) {
-                Prisma::Vector4 pos = Prisma::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
-                minVec       = Prisma::Math::Min(minVec, pos);
-                maxVec       = Prisma::Math::Max(maxVec, pos);
+                PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
+                minVec       = PrismaEngine::Math::Min(minVec, pos);
+                maxVec       = PrismaEngine::Math::Max(maxVec, pos);
             }
         }
 
@@ -213,14 +213,14 @@ void MeshAsset::Deserialize(InputArchive& archive) {
 
     // 重新计算包围盒
     if (!m_subMeshes.empty()) {
-        Prisma::Vector4 minVec = Prisma::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-        Prisma::Vector4 maxVec = Prisma::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
+        PrismaEngine::Vector4 minVec = PrismaEngine::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
+        PrismaEngine::Vector4 maxVec = PrismaEngine::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
 
         for (const auto& subMesh : m_subMeshes) {
             for (const auto& vertex : subMesh.vertices) {
-                Prisma::Vector4 pos = Prisma::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
-                minVec       = Prisma::Math::Min(minVec, pos);
-                maxVec       = Prisma::Math::Max(maxVec, pos);
+                PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
+                minVec       = PrismaEngine::Math::Min(minVec, pos);
+                maxVec       = PrismaEngine::Math::Max(maxVec, pos);
             }
         }
 
@@ -255,14 +255,14 @@ void MeshAsset::AddSubMesh(const SubMesh& subMesh) {
     m_isLoaded = true;
 
     // 更新包围盒
-    Prisma::Vector3 minVec = Prisma::Vector3(FLT_MAX, FLT_MAX, FLT_MAX);
-    Prisma::Vector3 maxVec = Prisma::Vector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
+    PrismaEngine::Vector3 minVec = PrismaEngine::Vector3(FLT_MAX, FLT_MAX, FLT_MAX);
+    PrismaEngine::Vector3 maxVec = PrismaEngine::Vector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
 
     for (const auto& mesh : m_subMeshes) {
         for (const auto& vertex : mesh.vertices) {
-            Prisma::Vector4 pos = Prisma::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
-            minVec       = Prisma::Math::Min(minVec, pos);
-            maxVec       = Prisma::Math::Max(maxVec, pos);
+            PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
+            minVec       = PrismaEngine::Math::Min(minVec, pos);
+            maxVec       = PrismaEngine::Math::Max(maxVec, pos);
         }
     }
 

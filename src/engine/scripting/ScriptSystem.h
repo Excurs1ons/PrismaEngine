@@ -5,18 +5,18 @@
 #include <unordered_map>
 #include <vector>
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Scripting {
 
 // 前向声明
 class ScriptComponent;
 
 // 脚本系统 - ECS系统，管理所有脚本组件
-class ScriptSystem : public Engine::Core::ECS::ISystem {
+class ScriptSystem : public PrismaEngine::Core::ECS::ISystem {
 public:
-    static constexpr Engine::Core::ECS::SystemTypeID TYPE_ID = 9;
+    static constexpr PrismaEngine::Core::ECS::SystemTypeID TYPE_ID = 9;
 
-      Engine::Core::ECS::SystemTypeID GetTypeID() const override { return TYPE_ID; }
+      PrismaEngine::Core::ECS::SystemTypeID GetTypeID() const override { return TYPE_ID; }
 
     void Initialize() override;
 
@@ -28,13 +28,13 @@ public:
     bool LoadAssembly(const std::string& assemblyPath);
 
     // 为实体添加脚本
-    void AddScript(Engine::Core::ECS::EntityID entity, const std::string& scriptPath);
+    void AddScript(PrismaEngine::Core::ECS::EntityID entity, const std::string& scriptPath);
 
     // 移除脚本
-    void RemoveScript(Engine::Core::ECS::EntityID entity, const std::string& scriptPath);
+    void RemoveScript(PrismaEngine::Core::ECS::EntityID entity, const std::string& scriptPath);
 
     // 清除实体的所有脚本
-    void ClearScripts(Engine::Core::ECS::EntityID entity);
+    void ClearScripts(PrismaEngine::Core::ECS::EntityID entity);
 
     // 热重载
     void ReloadScripts();
@@ -48,12 +48,12 @@ public:
 private:
     // 脚本管理
     struct EntityScripts {
-        Engine::Core::ECS::EntityID entity;
+        PrismaEngine::Core::ECS::EntityID entity;
         std::vector<std::shared_ptr<ScriptComponent>> scripts;
     };
 
     std::vector<EntityScripts> m_entityScripts;
-    std::unordered_map<Engine::Core::ECS::EntityID, size_t> m_entityIndex;
+    std::unordered_map<PrismaEngine::Core::ECS::EntityID, size_t> m_entityIndex;
 
     // 已加载的程序集
     std::vector<std::string> m_loadedAssemblies;
@@ -65,7 +65,7 @@ private:
     bool m_initialized = false;
 
     // 获取实体的脚本列表
-    EntityScripts* GetEntityScripts(Engine::Core::ECS::EntityID entity);
+    EntityScripts* GetEntityScripts(PrismaEngine::Core::ECS::EntityID entity);
 
     // 清理已销毁的实体
     void CleanupDestroyedEntities();
@@ -78,11 +78,11 @@ private:
 };
 
 // 脚本组件（ECS版本）
-class ScriptComponent : public Engine::Core::ECS::IComponent {
+class ScriptComponent : public PrismaEngine::Core::ECS::IComponent {
 public:
-    static constexpr Engine::Core::ECS::ComponentTypeID TYPE_ID = 9;
+    static constexpr PrismaEngine::Core::ECS::ComponentTypeID TYPE_ID = 9;
 
-    Engine::Core::ECS::ComponentTypeID GetTypeID() const override { return TYPE_ID; }
+    PrismaEngine::Core::ECS::ComponentTypeID GetTypeID() const override { return TYPE_ID; }
 
     // 脚本文件路径
     std::vector<std::string> scriptPaths;

@@ -1,7 +1,7 @@
 #pragma once
 // 嵌入资源 - 以字节数组形式存储的必要资源
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Resource {
 
 // 默认顶点着色器 (编译后的字节码)

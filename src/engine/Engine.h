@@ -7,7 +7,7 @@
 #include <memory>
 #include <vector>
 
-namespace Engine {
+namespace PrismaEngine {
 class EngineCore {
 
 public:
@@ -26,7 +26,7 @@ private:
         // 如果需要初始化
         bool result = m_systems.back()->Initialize();
         if (!result) {
-            LOG_ERROR("Engine", "子系统初始化失败: {}", T::GetName());
+            LOG_ERROR("Engine", "子系统初始化失败: {}", typeid(T).name());
         }
         return result;
     }

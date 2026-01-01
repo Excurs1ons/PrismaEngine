@@ -6,7 +6,7 @@
 #include "MetaData.h"
 #include "resource/Archive.h"
 
-namespace Engine {
+namespace PrismaEngine {
 
 class Asset;  // 前向声明
 

@@ -8,7 +8,7 @@
 #include <thread>
 #include <unordered_map>
 
-namespace Engine {
+namespace PrismaEngine {
 class ThreadManager : public ManagerBase<ThreadManager> {
 public:
     friend class ManagerBase<ThreadManager>;

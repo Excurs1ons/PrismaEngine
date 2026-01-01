@@ -8,7 +8,7 @@
 #include <array>
 #include <mutex>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 /// @brief OpenAL音频设备实现
 /// OpenAL是跨平台的3D音频API，特别适合游戏音频

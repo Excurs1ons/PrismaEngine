@@ -1,11 +1,11 @@
 #include "Material.h"
-#include "Shader.h"
-#include "Logger.h"
-#include "ResourceManager.h"
+#include "../core/AssetManager.h"
 #include "DefaultShader.h"
+#include "Logger.h"
 #include "RenderCommandContext.h"
+#include "Shader.h"
 
-using namespace Engine;
+using namespace PrismaEngine;
 
 Material::Material()
     : m_isLoaded(false) {

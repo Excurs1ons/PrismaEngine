@@ -9,7 +9,7 @@
 #include <mutex>
 #include "Logger.h"
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Core {
 namespace ECS {
 

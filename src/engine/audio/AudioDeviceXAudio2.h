@@ -11,7 +11,7 @@
 #include <atomic>
 
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 /// @brief XAudio2音频设备实现
 /// XAudio2是Windows平台的高性能音频API，支持低延迟和硬件加速

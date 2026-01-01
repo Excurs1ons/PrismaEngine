@@ -5,7 +5,7 @@
 #include "Platform.h"  // 包含WindowHandle定义
 
 
-class Editor : public Engine::IApplication<Editor>
+class Editor : public PrismaEngine::IApplication<Editor>
 {
 public:
     friend class IApplication;

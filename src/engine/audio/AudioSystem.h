@@ -7,7 +7,7 @@
 #include <memory>
 #include <string>
 
-namespace Engine {
+namespace PrismaEngine {
 	namespace Audio {
 
 		//CRTP模式

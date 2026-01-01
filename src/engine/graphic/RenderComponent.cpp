@@ -74,14 +74,14 @@ void RenderComponent::Render(RenderCommandContext* context)
     // 设置世界矩阵 (寄存器 b1)
     if (auto* transform = m_owner->transform()) {
         // 手动构建世界矩阵：位置 * 旋转 * 缩放
-        Prisma::Matrix4x4 translation = Prisma::Math::Translation(transform->position);
-        Prisma::Matrix4x4 rotationX = Prisma::Math::RotationX(transform->rotation.x);
-        Prisma::Matrix4x4 rotationY = Prisma::Math::RotationY(transform->rotation.y);
-        Prisma::Matrix4x4 rotationZ = Prisma::Math::RotationZ(transform->rotation.z);
-        Prisma::Matrix4x4 scale = Prisma::Math::Scale(transform->scale);
+        PrismaEngine::Matrix4x4 translation = PrismaEngine::Math::Translation(transform->position);
+        PrismaEngine::Matrix4x4 rotationX = PrismaEngine::Math::RotationX(transform->rotation.x);
+        PrismaEngine::Matrix4x4 rotationY = PrismaEngine::Math::RotationY(transform->rotation.y);
+        PrismaEngine::Matrix4x4 rotationZ = PrismaEngine::Math::RotationZ(transform->rotation.z);
+        PrismaEngine::Matrix4x4 scale = PrismaEngine::Math::Scale(transform->scale);
 
         // 组合矩阵：S * R * T
-        Prisma::Matrix4x4 worldMatrix = scale * rotationZ * rotationY * rotationX * translation;
+        PrismaEngine::Matrix4x4 worldMatrix = scale * rotationZ * rotationY * rotationX * translation;
 
         context->SetConstantBuffer("World", reinterpret_cast<const float*>(&worldMatrix), 16);
     }
@@ -122,7 +122,7 @@ void RenderComponent::Render(RenderCommandContext* context)
 
 void RenderComponent::SetColor(float r, float g, float b, float a)
 {
-    m_color = Prisma::Color(r, g, b, a);
+    m_color = PrismaEngine::Color(r, g, b, a);
 
     // 如果已有材质，更新其基础颜色
     if (m_material) {
@@ -131,7 +131,7 @@ void RenderComponent::SetColor(float r, float g, float b, float a)
 }
 
 // 获取颜色
-Prisma::Color RenderComponent::GetColor() const
+PrismaEngine::Color RenderComponent::GetColor() const
 {
     if (m_material) {
         const auto& color = m_material->GetProperties().baseColor;
@@ -141,7 +141,7 @@ Prisma::Color RenderComponent::GetColor() const
 }
 
 // 材质相关方法
-void RenderComponent::SetMaterial(std::shared_ptr<Engine::Material> material)
+void RenderComponent::SetMaterial(std::shared_ptr<PrismaEngine::Material> material)
 {
     m_material = std::move(material);
     if (m_material) {
@@ -150,12 +150,12 @@ void RenderComponent::SetMaterial(std::shared_ptr<Engine::Material> material)
     }
 }
 
-std::shared_ptr<Engine::Material> RenderComponent::GetOrCreateMaterial()
+std::shared_ptr<PrismaEngine::Material> RenderComponent::GetOrCreateMaterial()
 {
     if (!m_material) {
-        m_material = Engine::Material::CreateDefault();
+        m_material = PrismaEngine::Material::CreateDefault();
         // 同步颜色到新材质
-        Prisma::Color color;
+        PrismaEngine::Color color;
         m_material->SetBaseColor(m_color);
     }
     return m_material;

@@ -4,7 +4,7 @@
 #include "WorkerThread.h"
 #include <string>
 
-namespace Engine {
+namespace PrismaEngine {
 
 class PhysicsSystem : public ManagerBase<PhysicsSystem> {
 public:

@@ -1,5 +1,5 @@
 #include "JobSystem.h"
-namespace Engine {
+namespace PrismaEngine {
 
 bool JobSystem::Initialize() {
     return false;

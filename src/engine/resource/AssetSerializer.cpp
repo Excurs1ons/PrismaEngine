@@ -2,7 +2,7 @@
 #include "Logger.h"
 #include <filesystem>
 
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
 
         // OutputArchive模板特化实现

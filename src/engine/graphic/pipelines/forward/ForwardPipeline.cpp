@@ -54,7 +54,7 @@ bool ForwardPipeline::Initialize() {
     return true;
 }
 
-void ForwardPipeline::Update(float deltaTime, Engine::Graphic::ICamera* camera) {
+void ForwardPipeline::Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera) {
     m_camera = camera;
     m_stats.lastFrameTime = deltaTime;
 
@@ -79,7 +79,7 @@ void ForwardPipeline::Execute(const PassExecutionContext& context) {
     CollectStats();
 }
 
-void ForwardPipeline::UpdatePassesCameraData(Engine::Graphic::ICamera* camera) {
+void ForwardPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* camera) {
     if (!camera) {
         return;
     }

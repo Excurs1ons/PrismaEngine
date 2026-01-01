@@ -4,7 +4,7 @@
 #include <fstream>
 
 
-namespace Engine::Input {
+namespace PrismaEngine::Input {
 
 InputManager& InputManager::GetInstance()
 {
@@ -31,8 +31,8 @@ void InputManager::Update()
     // 清除单帧状态
     m_keyPressedThisFrame.clear();
     m_keyReleasedThisFrame.clear();
-    m_mouseDelta = Prisma::Vector2(0, 0);
-    m_scrollDelta = Prisma::Vector2(0, 0);
+    m_mouseDelta = PrismaEngine::Vector2(0, 0);
+    m_scrollDelta = PrismaEngine::Vector2(0, 0);
 
     // 更新手柄状态
     UpdateGamepadStates();

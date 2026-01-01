@@ -11,7 +11,7 @@ class MeshRenderer :public RenderComponent
 {
 private:
     std::shared_ptr<Mesh> m_mesh;
-    std::shared_ptr<Engine::Material> m_material;
+    std::shared_ptr<PrismaEngine::Material> m_material;
 
 protected:
     void DrawMesh(PrismaEngine::Graphic::RenderCommandContext* context, std::shared_ptr<Mesh> mesh);
@@ -25,7 +25,7 @@ public:
         m_mesh = std::move(mesh);
     }
     
-    void SetMaterial(std::shared_ptr<Engine::Material> material) override {
+    void SetMaterial(std::shared_ptr<PrismaEngine::Material> material) override {
         m_material = material;
     }
 
@@ -33,7 +33,7 @@ public:
         return m_mesh;
     }
 
-    [[nodiscard]] std::shared_ptr<Engine::Material> GetMaterial() const override {
+    [[nodiscard]] std::shared_ptr<PrismaEngine::Material> GetMaterial() const override {
         return m_material;
     }
     void Update(float deltaTime) override;

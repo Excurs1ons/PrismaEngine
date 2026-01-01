@@ -15,7 +15,7 @@
 #include <vector>
 
 // 前置声明，避免循环依赖
-namespace Engine {
+namespace PrismaEngine {
 class IPlatformLogger;
 }
 
@@ -73,7 +73,7 @@ public:
     void Shutdown();
 
     // 设置平台日志接口（必须在 Platform 初始化后调用）
-    void SetPlatformLogger(Engine::IPlatformLogger* platformLogger);
+    void SetPlatformLogger(PrismaEngine::IPlatformLogger* platformLogger);
 
     void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
 
@@ -210,7 +210,7 @@ private:
     bool initialized_ = false;
 
     // 平台日志接口（由外部设置）
-    Engine::IPlatformLogger* platformLogger_ = nullptr;
+    PrismaEngine::IPlatformLogger* platformLogger_ = nullptr;
     // 内部方法
     void EnqueueEntry(LogEntry&& entry);
     void ProcessQueue();

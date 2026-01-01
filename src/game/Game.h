@@ -7,7 +7,7 @@
 
 #ifndef GAME_H
 #define GAME_H
-class Game : public Engine::Application {
+class Game : public PrismaEngine::Application {
 public:
     bool Initialize() override;
     int Run() override;

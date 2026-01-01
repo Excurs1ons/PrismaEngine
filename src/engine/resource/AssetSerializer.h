@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Serializable.h"
-#include "ResourceBase.h"
+#include "AssetBase.h"
 #include <fstream>
 #include <memory>
 #include <nlohmann/json.hpp>
@@ -15,7 +15,7 @@
 
 using json = nlohmann::json;
 
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
 
         // Asset序列化器

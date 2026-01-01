@@ -8,7 +8,7 @@ namespace PrismaEngine::Graphic {
 
 class EngineShaderAdapter : public IShader {
 public:
-    explicit EngineShaderAdapter(std::shared_ptr<Engine::Shader> engineShader);
+    explicit EngineShaderAdapter(std::shared_ptr<PrismaEngine::Shader> engineShader);
     
     // IShader接口实现
     ShaderType GetShaderType() const override;
@@ -48,7 +48,7 @@ public:
     const std::vector<std::string>& GetDefines() const override;
 
 private:
-    std::shared_ptr<Engine::Shader> m_engineShader;
+    std::shared_ptr<PrismaEngine::Shader> m_engineShader;
     std::string m_emptyString;
     std::vector<uint8_t> m_emptyBytecode;
     ShaderReflection m_emptyReflection;

@@ -22,7 +22,7 @@ using Microsoft::WRL::ComPtr;
 #undef FindResource
 #endif
 
-using namespace Engine;
+using namespace PrismaEngine;
 using namespace StringUtils;
 
 namespace {
@@ -63,8 +63,8 @@ bool Shader::IsLoaded() const {
     return m_impl != nullptr;
 }
 
-ResourceType Shader::GetType() const {
-    return ResourceType::Shader;
+AssetType Shader::GetType() const {
+    return AssetType::Shader;
 }
 
 // 着色器特定方法

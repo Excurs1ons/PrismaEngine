@@ -74,7 +74,7 @@ using ThreadFunc = void* (*)(void*);
 // Platform - 静态平台抽象层
 // 所有函数都是静态的，使用宏控制平台实现
 // ------------------------------------------------------------
-namespace Engine {
+namespace PrismaEngine {
 
 class Platform {
 public:
@@ -119,8 +119,8 @@ public:
     // 输入管理（需要 KeyCode 支持）
     // ------------------------------------------------------------
 #if defined(PRISMA_HAS_KEYCODE) || defined(_WIN32) || defined(__ANDROID__)
-    static bool IsKeyDown(Engine::Input::KeyCode key);
-    static bool IsMouseButtonDown(Engine::Input::MouseButton btn);
+    static bool IsKeyDown(PrismaEngine::Input::KeyCode key);
+    static bool IsMouseButtonDown(PrismaEngine::Input::MouseButton btn);
     static void GetMousePosition(float& x, float& y);
     static void SetMousePosition(float x, float y);
     static void SetMouseLock(bool locked);

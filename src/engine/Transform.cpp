@@ -1,5 +1,5 @@
 #include "Transform.h"
-Prisma::Vector3 Transform::GetPosition() const {
+PrismaEngine::Vector3 Transform::GetPosition() const {
     return position;
 }
 void Transform::UpdateMatrix() {

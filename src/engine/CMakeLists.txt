@@ -15,6 +15,13 @@ else()
     message(STATUS "Engine: Building as STATIC library")
 endif()
 
+
+# Windows平台定义 - 必须在任何include之前
+if(WIN32)
+    add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
+    add_compile_options(/DNOMINMAX /DWIN32_LEAN_AND_MEAN)
+endif()
+
 # 包含graphic子目录的CMakeLists.txt来定义变量
 include(graphic/CMakeLists.txt)
 
@@ -340,10 +347,13 @@ endif()
 target_include_directories(Engine
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/core>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/math>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/resource>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/graphic>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
+
 )
 
 # Android平台依赖路径配置

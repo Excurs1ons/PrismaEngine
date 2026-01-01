@@ -316,8 +316,8 @@ RenderContext RenderSystem::GetRenderContext() const {
     context.renderTargetHeight = m_desc.height;
 
     // 添加场景数据
-    auto& world = ::Engine::Core::ECS::World::GetInstance();
-    auto sceneManager = static_cast<::Engine::SceneManager*>(world.GetSystem<::Engine::SceneManager>());
+    auto& world = ::PrismaEngine::Core::ECS::World::GetInstance();
+    auto sceneManager = static_cast<::PrismaEngine::SceneManager*>(world.GetSystem<::PrismaEngine::SceneManager>());
     if (sceneManager) {
         auto activeScene = sceneManager->GetCurrentScene();
         if (activeScene) {

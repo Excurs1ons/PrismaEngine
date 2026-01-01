@@ -4,7 +4,7 @@
 
 using PrismaEngine::Graphic::RenderCommandContext;
 
-namespace Engine {
+namespace PrismaEngine {
 
 GeometryRenderPass::GeometryRenderPass()
     : m_renderTarget(nullptr)

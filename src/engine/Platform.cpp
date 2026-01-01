@@ -33,7 +33,7 @@ float Time::GetTime() {
     return duration<float>(now - start).count();
 }
 
-namespace Engine {
+namespace PrismaEngine {
 
 // ------------------------------------------------------------
 // 静态变量定义

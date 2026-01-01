@@ -3,7 +3,7 @@
 #include <string>
 #include <stdexcept>
 #include <sstream>
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
         // 序列化格式枚举
         enum class SerializationFormat {

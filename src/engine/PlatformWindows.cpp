@@ -9,7 +9,7 @@
 #include <shlobj.h>
 #include <thread>
 
-namespace Engine {
+namespace PrismaEngine {
 
 // ------------------------------------------------------------
 // Windows 平台静态变量
@@ -250,8 +250,8 @@ double Platform::GetTimeSeconds() {
 // ------------------------------------------------------------
 // 输入管理
 // ------------------------------------------------------------
-bool Platform::IsKeyDown(Engine::Input::KeyCode key) {
-    using KeyCode = Engine::Input::KeyCode;
+bool Platform::IsKeyDown(PrismaEngine::Input::KeyCode key) {
+    using KeyCode = PrismaEngine::Input::KeyCode;
     int virtualKey = 0;
 
     switch (key) {
@@ -350,7 +350,7 @@ bool Platform::IsKeyDown(Engine::Input::KeyCode key) {
     return g_keyStates[virtualKey];
 }
 
-bool Platform::IsMouseButtonDown(Engine::Input::MouseButton btn) {
+bool Platform::IsMouseButtonDown(PrismaEngine::Input::MouseButton btn) {
     SHORT state = GetAsyncKeyState(btn);
     return (state & 0x8000) != 0;
 }

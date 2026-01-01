@@ -1,8 +1,9 @@
 #pragma once
 
 #include "Component.h"
-#include <time.h>
+#include "ui/TextRendererComponent.h"
 #include <string>
+#include <time.h>
 
 /// @brief FPS 计数器组件
 /// 每秒更新一次显示的 FPS 值
