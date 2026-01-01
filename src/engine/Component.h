@@ -1,18 +1,22 @@
 #pragma once
+
+
+#include "math/MathTypes.h"
+#include <string>
+
+namespace PrismaEngine {
+
 class GameObject;
 
 class Component {
+public:
+    virtual ~Component() = default;
+    virtual void Update(float deltaTime) {}
+
+    void SetOwner(GameObject* owner) { this->owner = owner; }
+    [[nodiscard]] GameObject* GetOwner() const { return owner; }
 
 protected:
-    GameObject* m_owner = nullptr;
-public:
-    virtual GameObject* gameObject();
-
-    virtual void Update(float deltaTime);
-    Component();
-    //Component():m_owner(nullptr) {}
-    virtual ~Component() {}
-    virtual void Owner(GameObject* owner) { m_owner = owner; }
-    virtual void Initialize() {}
-    virtual void Shutdown() {}
+    GameObject* owner = nullptr;
 };
+} // namespace Engine

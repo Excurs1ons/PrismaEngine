@@ -1,11 +1,11 @@
 #ifndef MY_APPLICATION_SKYBOXRENDERER_H
 #define MY_APPLICATION_SKYBOXRENDERER_H
 
+#include "../../engine/CubemapTextureAsset.h"
 #include "Component.h"
-#include "CubemapTextureAsset.h"
 #include <memory>
 #include <vector>
-
+using namespace PrismaEngine;
 /**
  * @brief Skybox渲染组件
  *

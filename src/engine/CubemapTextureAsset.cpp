@@ -1,6 +1,6 @@
 #include "CubemapTextureAsset.h"
+#include "../runtime/android/VulkanContext.h"
 #include "AndroidOut.h"
-#include "VulkanContext.h"
 #include <android/asset_manager.h>
 #include <android/imagedecoder.h>
 #include <vector>

@@ -1,9 +1,9 @@
 #pragma once
-#include "GameObject.h"
-#include "Component.h"
+#include "../Component.h"
 #include "../math/MathTypes.h"
-#include <vector>
+#include "GameObject.h"
 #include <memory>
+#include <vector>
 
 // 前向声明
 namespace PrismaEngine::Graphic {

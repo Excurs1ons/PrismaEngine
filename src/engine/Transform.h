@@ -2,17 +2,17 @@
 #include "Component.h"
 #include "Logger.h"
 #include "math/MathTypes.h"
-
+namespace PrismaEngine {
 class GameObject;  // 前向声明以避免循环依赖
 
 class Transform : public Component
 {
 public:
     // 添加简单的变换属性
-    PrismaEngine::Vector3 position = {0.0f, 0.0f, 0.0f};
-    PrismaEngine::Vector3 eulerAngles = { 0.0f, 0.0f, 0.0f };
+    Vector3 position = {0.0f, 0.0f, 0.0f};
+    Vector3 eulerAngles = { 0.0f, 0.0f, 0.0f };
     Quaternion rotation = PrismaEngine::Math::QuaternionIdentity();
-    PrismaEngine::Vector3 scale = { 1.0f, 1.0f, 1.0f };
+    Vector3 scale = { 1.0f, 1.0f, 1.0f };
 
     [[nodiscard]] PrismaEngine::Vector3 GetPosition() const;
     // 获取变换矩阵
@@ -38,3 +38,4 @@ private:
     PrismaEngine::Matrix4x4 matrix = {};
     void UpdateMatrix();
 };
+}
