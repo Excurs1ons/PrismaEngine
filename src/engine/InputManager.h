@@ -3,14 +3,14 @@
 #include "Platform.h"
 #include "Singleton.h"
 
-namespace Engine::Input {
+namespace PrismaEngine::Input {
 
 class InputManager : public Singleton<InputManager> {
 public:
     friend class Singleton<InputManager>;
 
-    bool IsKeyDown(Engine::Input::KeyCode key) const;
-    bool IsMouseButtonDown(Engine::Input::MouseButton button) const;
+    bool IsKeyDown(PrismaEngine::Input::KeyCode key) const;
+    bool IsMouseButtonDown(PrismaEngine::Input::MouseButton button) const;
     void GetMousePosition(float& x, float& y) const;
 
     void SetPlatform(Platform* platform);

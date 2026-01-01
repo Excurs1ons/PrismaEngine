@@ -12,7 +12,7 @@
 // 前向声明
 class Mesh;
 
-namespace Engine {
+namespace PrismaEngine {
 
 /// @deprecated 使用 graphic/pipelines/deferred/GeometryPass.h 中的 GeometryPass 替代
 class [[deprecated("Use GeometryPass from graphic/pipelines/deferred/GeometryPass.h instead")]] GeometryRenderPass : public RenderPass

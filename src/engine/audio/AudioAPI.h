@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 // 前置声明设备类
 class AudioDeviceOpenAL;

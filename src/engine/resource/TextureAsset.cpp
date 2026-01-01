@@ -45,7 +45,7 @@ bool LoadImageFromFile(const std::filesystem::path& path,
     return true;
 }
 
-namespace Engine {
+namespace PrismaEngine {
 using namespace Serialization;
 bool TextureAsset::Load(const std::filesystem::path& path) {
     try {

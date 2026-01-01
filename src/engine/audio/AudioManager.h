@@ -7,7 +7,7 @@
 #include <string>
 #include <functional>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 // 前置声明
 class IAudioLoader;

@@ -1,5 +1,4 @@
 #include "SkyboxRenderPass.h"
-#include "math/Math.h"
 #include <iostream>
 
 namespace PrismaEngine::Graphic {

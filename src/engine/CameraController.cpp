@@ -6,9 +6,9 @@
 #include "GameObject.h"
 #include "math/MathTypes.h"
 #include <cmath>
-using namespace Engine::Graphic;
+using namespace PrismaEngine::Graphic;
 
-namespace Engine {
+namespace PrismaEngine {
 using namespace Input;
 CameraController::CameraController() : Component() {
     m_mouseControl = false;  // 默认关闭鼠标控制
@@ -74,16 +74,16 @@ void CameraController::HandleKeyboardInput(float deltaTime) {
     // 方向键控制旋转
     float rotationAmount = m_rotationSpeed * deltaTime;
     if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowLeft)) {
-        m_camera->Rotate(0.0f, -Prisma::Math::Radians(rotationAmount), 0.0f);  // 左转
+        m_camera->Rotate(0.0f, -PrismaEngine::Math::Radians(rotationAmount), 0.0f);  // 左转
     }
     if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowRight)) {
-        m_camera->Rotate(0.0f, Prisma::Math::Radians(rotationAmount), 0.0f);   // 右转
+        m_camera->Rotate(0.0f, PrismaEngine::Math::Radians(rotationAmount), 0.0f);   // 右转
     }
     if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowUp)) {
-        m_camera->Rotate(-Prisma::Math::Radians(rotationAmount), 0.0f, 0.0f);  // 上看
+        m_camera->Rotate(-PrismaEngine::Math::Radians(rotationAmount), 0.0f, 0.0f);  // 上看
     }
     if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowDown)) {
-        m_camera->Rotate(Prisma::Math::Radians(rotationAmount), 0.0f, 0.0f);   // 下看
+        m_camera->Rotate(PrismaEngine::Math::Radians(rotationAmount), 0.0f, 0.0f);   // 下看
     }
 }
 
@@ -116,7 +116,7 @@ void CameraController::HandleMouseInput(float deltaTime) {
     yOffset *= sensitivity;
 
     if (std::abs(xOffset) > 0.01f || std::abs(yOffset) > 0.01f) {
-        m_camera->Rotate(Prisma::Math::Radians(yOffset), Prisma::Math::Radians(xOffset), 0.0f);
+        m_camera->Rotate(PrismaEngine::Math::Radians(yOffset), PrismaEngine::Math::Radians(xOffset), 0.0f);
     }
 }
 

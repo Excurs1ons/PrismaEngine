@@ -120,10 +120,10 @@ void TextRendererComponent::RebuildMesh() {
         Vertex v0, v1, v2, v3;
 
         // 位置 (左上, 右上, 左下, 右下)
-        v0.position = PrismaMath::vec4(x0, y0, 0.0f, 1.0f);
-        v1.position = PrismaMath::vec4(x1, y0, 0.0f, 1.0f);
-        v2.position = PrismaMath::vec4(x0, y1, 0.0f, 1.0f);
-        v3.position = PrismaMath::vec4(x1, y1, 0.0f, 1.0f);
+        v0.position = Vector4(x0, y0, 0.0f,0.0f);
+        v1.position = Vector4(x1, y0, 0.0f,0.0f);
+        v2.position = Vector4(x0, y1, 0.0f,0.0f);
+        v3.position = Vector4(x1, y1, 0.0f,0.0f);
 
         // UV 坐标
         v0.texCoord = PrismaMath::vec4(glyph->u0, glyph->v0, 0.0f, 0.0f);

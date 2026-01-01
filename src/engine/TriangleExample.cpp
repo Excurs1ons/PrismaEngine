@@ -1,11 +1,11 @@
 #include "TriangleExample.h"
+#include "AssetManager.h"
 #include "Camera.h"
 #include "CameraController.h"
+#include "FPSCounter.h"
 #include "Logger.h"
-#include "ResourceManager.h"
 #include "graphic/Material.h"
 #include "graphic/ui/TextRendererComponent.h"
-#include "FPSCounter.h"
 
 TriangleExample::TriangleExample()
 = default;
@@ -20,7 +20,7 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
-    auto camera = cameraObj->GetComponent<Engine::Graphic::Camera>();
+    auto camera = cameraObj->GetComponent<PrismaEngine::Graphic::Camera>();
     if (camera) {
         scene->SetMainCamera(camera);
         LOG_INFO("TriangleExample", "Main camera set for scene");
@@ -65,8 +65,8 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     return scene;
 }
 
-std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& name, Prisma::Vector3 pos,
-                                                          Prisma::Color color)
+std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& name, PrismaEngine::Vector3 pos,
+                                                          PrismaEngine::Color color)
 {
     // 创建游戏对象
     auto gameObject = std::make_shared<GameObject>(name);
@@ -103,7 +103,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     return gameObject;
 }
 
-std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name, Prisma::Vector3 pos,Prisma::Color color,float size)
+std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name, PrismaEngine::Vector3 pos,PrismaEngine::Color color,float size)
 {
     // 创建游戏对象
     auto gameObject = std::make_shared<GameObject>(name);
@@ -152,8 +152,8 @@ std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name,
     return gameObject;
 }
 
-std::shared_ptr<GameObject> TriangleExample::CreateCube(const std::string& name, Prisma::Vector3 pos,
-                                                        Prisma::Color color, float size)
+std::shared_ptr<GameObject> TriangleExample::CreateCube(const std::string& name, PrismaEngine::Vector3 pos,
+                                                        PrismaEngine::Color color, float size)
 {
     // 创建游戏对象
     auto gameObject = std::make_shared<GameObject>(name);
@@ -224,8 +224,8 @@ std::shared_ptr<GameObject> TriangleExample::CreateCube(const std::string& name,
     return gameObject;
 }
 
-std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& name, Prisma::Vector3 pos,
-                                                         Prisma::Color color, float size)
+std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& name, PrismaEngine::Vector3 pos,
+                                                         PrismaEngine::Color color, float size)
 {
     // 创建游戏对象
     auto gameObject = std::make_shared<GameObject>(name);
@@ -276,9 +276,9 @@ std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& nam
     return gameObject;
 }
 
-std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& name, Prisma::Vector3 pos, Quaternion rotation)
+std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& name, PrismaEngine::Vector3 pos, Quaternion rotation)
 {
-    using namespace Engine::Graphic;
+    using namespace PrismaEngine::Graphic;
 
     // 创建游戏对象
     auto game_object = std::make_shared<GameObject>(name);
@@ -295,7 +295,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
 
     // 设置透视投影
     float aspect_ratio = 16.0f / 9.0f;
-    camera->SetPerspectiveProjection(Prisma::Math::PI/4.0f, aspect_ratio, 0.1F, 1000.0f);
+    camera->SetPerspectiveProjection(PrismaEngine::Math::PI/4.0f, aspect_ratio, 0.1F, 1000.0f);
 
     // 设置清除颜色为深蓝色
     //camera->SetClearColor(0.0F, 1.0f, 0.5f, 1.0f);

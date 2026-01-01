@@ -7,7 +7,7 @@
 #include <vector>
 
 namespace PrismaEngine::Graphic {
-
+using namespace PrismaEngine;
 // 前置声明
 class IResource;
 class ITexture;
@@ -15,6 +15,78 @@ class IBuffer;
 class IShader;
 class IPipeline;
 class IFence;
+
+struct Vertex {
+    Vertex(const Vector4& inPosition, const Vector4& inColor, const Vector4& inUV)
+        : position(inPosition), color(inColor), uv(inUV), normal(Vector4(0, 0, 0, 0)), texCoord(Vector4(0, 0, 0, 0)), tangent(Vector4(0, 0, 0, 0)) {}
+
+    Vertex() {
+        position = Vector4(0, 0, 0,0);
+        color = Vector4(1, 1, 1, 1);
+        uv = Vector4(0, 0,0,0);
+        normal = Vector4(0, 0, 0, 0);
+        texCoord = Vector4(0, 0, 0, 0);
+        tangent = Vector4(0, 0, 0, 0);
+    }
+
+    Vertex(const Vector4& inPosition, const Vector4& inColor, const Vector4& inUV, const Vector4& inNormal, const Vector4& inTexCoord, const Vector4& inTangent) {
+        position = inPosition;
+        color = inColor;
+        uv = inUV;
+        normal = inNormal;
+        texCoord = inTexCoord;
+        tangent = inTangent;
+    }
+    Vector4 position;
+    Vector4 color;
+    Vector4 uv;
+    Vector4 normal;       // 法线
+    Vector4 texCoord;     // 纹理坐标
+    Vector4 tangent;      // 切线
+    constexpr static uint32_t GetVertexStride() { return sizeof(Vertex); }
+};
+
+
+// 简单的包围盒结构
+struct BoundingBox {
+    PrismaMath::vec3 minBounds;
+    PrismaMath::vec3 maxBounds;
+
+    BoundingBox() {
+        minBounds = PrismaMath::vec3(0, 0, 0);
+        maxBounds = PrismaMath::vec3(0, 0, 0);
+    }
+    BoundingBox(const PrismaMath::vec3& minVal, const PrismaMath::vec3& maxVal) {
+        minBounds = minVal;
+        maxBounds = maxVal;
+    }
+
+    // 扩展包围盒以包含点
+    void Encapsulate(const PrismaMath::vec3& point) {
+        if (point.x < minBounds.x) minBounds.x = point.x;
+        if (point.y < minBounds.y) minBounds.y = point.y;
+        if (point.z < minBounds.z) minBounds.z = point.z;
+        if (point.x > maxBounds.x) maxBounds.x = point.x;
+        if (point.y > maxBounds.y) maxBounds.y = point.y;
+        if (point.z > maxBounds.z) maxBounds.z = point.z;
+    }
+
+    // 合并另一个包围盒
+    void Merge(const BoundingBox& other) {
+        Encapsulate(other.minBounds);
+        Encapsulate(other.maxBounds);
+    }
+
+    // 获取中心点
+    [[nodiscard]] PrismaMath::vec3 GetCenter() const {
+        return (minBounds + maxBounds) * 0.5f;
+    }
+
+    // 获取尺寸
+    [[nodiscard]] PrismaMath::vec3 GetSize() const {
+        return maxBounds - minBounds;
+    }
+};
 
 // 资源ID类型
 using ResourceId = uint64_t;
@@ -624,9 +696,9 @@ enum class StencilOp {
 
     // 光源结构
     struct Light {
-        Prisma::Vector3 position;
-        Prisma::Vector4 color;     // RGB + intensity
-        Prisma::Vector3 direction;  // 用于方向光
+        PrismaEngine::Vector3 position;
+        PrismaEngine::Vector4 color;     // RGB + intensity
+        PrismaEngine::Vector3 direction;  // 用于方向光
         int type;  // 0=directional, 1=point, 2=spot
     };
 

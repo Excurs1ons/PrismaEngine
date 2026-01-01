@@ -14,16 +14,72 @@ Mesh Mesh::GetCubeMesh()
     // 立方体的8个顶点
     subMesh.vertices = {
         // 前面 (Z+)
-        { PrismaMath::vec4(-0.5f, -0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0, 0, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(0.5f, -0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(0.5f, 0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1, 1, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(-0.5f, 0.5f, 0.5f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0, 1, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
+        Vertex{
+            Vector4(-0.5f, -0.5f, 0.5f, 1.0f),
+            Vector4(0, 0, 1, 0),
+            Vector4(0, 0, 0, 0),
+            Vector4(1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+        },
+        Vertex{
+            Vector4(0.5f,  -0.5f,  0.5f, 0 ),
+            Vector4(0, 0, 1, 0),
+            Vector4(1, 0, 0, 0),
+            Vector4(1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f) ,
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        },
+        Vertex{
+            Vector4(0.5f,   0.5f,   0.5f, 0),
+            Vector4(0, 0, 1, 0),
+            Vector4(1, 1, 0, 0),
+            Vector4(1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f) ,
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        },
+        Vertex{
+            Vector4(-0.5f,  0.5f,  0.5f, 0 ),
+            Vector4(0, 0, 1, 0),
+            Vector4(0, 1, 0, 0),
+            Vector4(1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f) ,
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        },
 
         // 后面 (Z-)
-        { PrismaMath::vec4(-0.5f, -0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(0, 0, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(0.5f, -0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(0.5f, 0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(1, 1, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(-0.5f, 0.5f, -0.5f, 1.0f), PrismaMath::vec4(0, 0, -1, 0), PrismaMath::vec4(0, 1, 0, 0), PrismaMath::vec4(-1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) }
+        Vertex{
+            Vector4(-0.5f, -0.5f, -0.5f, 0),
+            Vector4(0, 0, -1, 0),
+            Vector4(0, 0, 0, 0),
+            Vector4(-1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        },
+        Vertex{
+            Vector4(0.5f, -0.5f, -0.5f, 0),
+            Vector4(0, 0, -1, 0),
+            Vector4(1, 0, 0, 0),
+            Vector4(-1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        },
+        Vertex{
+            Vector4(0.5f, 0.5f, -0.5f, 0),
+            Vector4(0, 0, -1, 0),
+            Vector4(1, 1, 0, 0),
+            Vector4(-1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f) ,
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        },
+        Vertex{
+            Vector4(-0.5f, 0.5f, -0.5f, 0),
+            Vector4(0, 0, -1, 0),
+            Vector4(0, 1, 0, 0),
+            Vector4(-1, 0, 0, 0),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f),
+            Vector4(1.0f, 1.0f, 1.0f, 1.0f)
+        }
     };
     
     // 立方体的12个三角形（36个索引）
@@ -61,11 +117,13 @@ Mesh Mesh::GetTriangleMesh()
     subMesh.materialIndex = 0;
     
     // 三角形的3个顶点
-    subMesh.vertices = {
-        { PrismaMath::vec4(0.0f, 0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.5f, 0.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 0.0f, 0.0f, 1.0f) },
-        { PrismaMath::vec4(-0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(0.0f, 1.0f, 0.0f, 1.0f) },
-        { PrismaMath::vec4(0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(0.0f, 0.0f, 1.0f, 1.0f) }
-    };
+    subMesh.vertices =
+        {
+        Vertex{ Vector4(0.0f, 0.5f, 0.0f, 1.0f), Vector4(0, 0, 1, 0), Vector4(0.5f, 0.0f, 0, 0), Vector4(1, 0, 0, 0),
+            Vector4(1.0f, 0.0f, 0.0f, 1.0f), Vector4(1.0f, 1.0f, 1.0f, 1.0f) },
+        Vertex{ Vector4(-0.5f, -0.5f, 0.0f, 1.0f), Vector4(0, 0, 1, 0), Vector4(0.0f, 1.0f, 0, 0), Vector4(1, 0, 0, 0), Vector4(0.0f, 1.0f, 0.0f, 1.0f), Vector4(1.0f, 1.0f, 1.0f, 1.0f) },
+        Vertex{ Vector4(0.5f, -0.5f, 0.0f, 1.0f), Vector4(0, 0, 1, 0), Vector4(1.0f, 1.0f, 0, 0), Vector4(1, 0, 0, 0), Vector4(0.0f, 0.0f, 1.0f, 1.0f), Vector4(1.0f, 1.0f, 1.0f, 1.0f) }
+        };
     
     // 三角形的1个三角形（3个索引）
     subMesh.indices = { 0, 1, 2 };
@@ -90,10 +148,10 @@ Mesh Mesh::GetQuadMesh()
     
     // 四边形的4个顶点
     subMesh.vertices = {
-        { PrismaMath::vec4(-0.5f, 0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.0f, 0.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(0.5f, 0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1.0f, 0.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(1.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) },
-        { PrismaMath::vec4(-0.5f, -0.5f, 0.0f, 1.0f), PrismaMath::vec4(0, 0, 1, 0), PrismaMath::vec4(0.0f, 1.0f, 0, 0), PrismaMath::vec4(1, 0, 0, 0), PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f) }
+        Vertex{ Vector4(-0.5f, 0.5f, 0.0f, 1.0f), Vector4(0, 0, 1, 0), Vector4(0.0f, 0.0f, 0, 0), Vector4(1, 0, 0, 0), Vector4(1.0f, 1.0f, 1.0f, 1.0f) , Vector4(1.0f, 1.0f, 1.0f, 1.0f)},
+        Vertex{ Vector4(0.5f, 0.5f, 0.0f, 1.0f), Vector4(0, 0, 1, 0), Vector4(1.0f, 0.0f, 0, 0), Vector4(1, 0, 0, 0), Vector4(1.0f, 1.0f, 1.0f, 1.0f) , Vector4(1.0f, 1.0f, 1.0f, 1.0f)},
+        Vertex{ Vector4(0.5f, -0.5f, 0.0f, 1.0f), Vector4(0, 0, 1, 0), Vector4(1.0f, 1.0f, 0, 0), Vector4(1, 0, 0, 0), Vector4(1.0f, 1.0f, 1.0f, 1.0f) , Vector4(1.0f, 1.0f, 1.0f, 1.0f)},
+        Vertex{ Vector4(-0.5f, -0.5f, 0.0f, 1.0f), Vector4(0, 0, 1, 0), Vector4(0.0f, 1.0f, 0, 0), Vector4(1, 0, 0, 0), Vector4(1.0f, 1.0f, 1.0f, 1.0f) , Vector4(1.0f, 1.0f, 1.0f, 1.0f)}
     };
     
     // 四边形的2个三角形（6个索引）

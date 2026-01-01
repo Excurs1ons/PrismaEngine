@@ -1,10 +1,11 @@
 #pragma once
-#include "ResourceManager.h"
-#include "interfaces/RenderTypes.h"
+#include "../core/AssetManager.h"
+#include "AssetBase.h"
 #include "interfaces/IShader.h"
+#include "interfaces/RenderTypes.h"
+#include <filesystem>
 #include <memory>
 #include <string>
-#include <filesystem>
 
 // 前置声明特定平台的着色器类
 namespace PrismaEngine::Graphic::DX12 {
@@ -15,22 +16,22 @@ namespace PrismaEngine::Graphic::Vulkan {
     class VulkanShader;
 }
 
-namespace Engine {
+namespace PrismaEngine {
 class RenderDevice;  // 前置声明
 
 /// @brief 着色器资源类
 /// 根据编译时的宏定义自动选择使用DX12Shader或VulkanShader
-class Shader : public ResourceBase {
+class Shader : public AssetBase {
 public:
     Shader();
     Shader(std::shared_ptr<PrismaEngine::Graphic::IShader> impl);
     ~Shader();
 
-    // IResource implementation
+    // IAsset implementation
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
     bool IsLoaded() const override;
-    ResourceType GetType() const override;
+    AssetType GetType() const override;
 
     // 着色器特定方法
     PrismaEngine::Graphic::ShaderType GetShaderType() const;

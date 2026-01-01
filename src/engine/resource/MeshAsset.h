@@ -4,7 +4,7 @@
 #include "Mesh.h"
 #include <vector>
 
-namespace Engine {
+namespace PrismaEngine {
 
 // 网格资产类
 class MeshAsset : public Asset {
@@ -16,7 +16,7 @@ public:
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
     bool IsLoaded() const override { return m_isLoaded; }
-    ResourceType GetType() const override { return ResourceType::Mesh; }
+    AssetType GetType() const override { return AssetType::Mesh; }
 
     // Serializable接口实现
     void Serialize(Serialization::OutputArchive& archive) const override;

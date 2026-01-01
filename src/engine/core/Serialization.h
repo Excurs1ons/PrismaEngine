@@ -7,7 +7,7 @@
 #include <functional>
 #include <unordered_map>
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Core {
 
 // 序列化格式

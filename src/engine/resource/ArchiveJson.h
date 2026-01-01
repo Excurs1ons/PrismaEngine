@@ -4,7 +4,7 @@
 #include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
 
         // JSON输出存档

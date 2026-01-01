@@ -1,6 +1,6 @@
 #pragma once
 #include <string>
-namespace Engine {
+namespace PrismaEngine {
     namespace Input {
 
         using MouseButton = int;

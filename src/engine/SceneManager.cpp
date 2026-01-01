@@ -1,7 +1,7 @@
 #include "SceneManager.h"
 #include "TriangleExample.h"
 #include <Logger.h>
-namespace Engine {
+namespace PrismaEngine {
 void SceneManager::Shutdown() {}
 void SceneManager::Update(float delta_time) {
     if (m_currentScene) {

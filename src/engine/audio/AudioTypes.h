@@ -10,7 +10,7 @@
 #include <functional>
 #include <chrono>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 // 前置声明
 struct AudioClip;

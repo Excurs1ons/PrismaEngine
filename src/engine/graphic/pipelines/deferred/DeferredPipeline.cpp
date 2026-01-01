@@ -65,7 +65,7 @@ bool DeferredPipeline::Initialize() {
     return true;
 }
 
-void DeferredPipeline::Update(float deltaTime, Engine::Graphic::ICamera* camera) {
+void DeferredPipeline::Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera) {
     m_camera = camera;
     m_stats.lastFrameTime = deltaTime;
 
@@ -125,7 +125,7 @@ bool DeferredPipeline::IsPostProcessEffectEnabled(PostProcessEffect effect) cons
     return false;
 }
 
-void DeferredPipeline::UpdatePassesCameraData(Engine::Graphic::ICamera* camera) {
+void DeferredPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* camera) {
     if (!camera) {
         return;
     }

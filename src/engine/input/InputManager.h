@@ -7,7 +7,7 @@
 #include <memory>
 #include "../math/MathTypes.h"
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Input {
 
 // 按键码定义

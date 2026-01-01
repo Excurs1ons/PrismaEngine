@@ -13,7 +13,7 @@
 #include <mono/metadata/mono-config.h>
 #endif
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Scripting {
 
 #ifdef PRISMA_ENABLE_MONO

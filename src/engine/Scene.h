@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-using namespace Engine;
+using namespace PrismaEngine;
 
 class Scene
 {
@@ -30,12 +30,12 @@ public:
     const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
     
     // 获取主相机
-    Engine::Graphic::ICamera* GetMainCamera();
+    PrismaEngine::Graphic::ICamera* GetMainCamera();
 
     // 设置主相机 (非拥有引用)
-    void SetMainCamera(Engine::Graphic::ICamera* camera);
+    void SetMainCamera(PrismaEngine::Graphic::ICamera* camera);
 
 private:
     std::vector<std::shared_ptr<GameObject>> m_gameObjects;
-    Engine::Graphic::ICamera* m_mainCamera = nullptr;
+    PrismaEngine::Graphic::ICamera* m_mainCamera = nullptr;
 };

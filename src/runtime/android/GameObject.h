@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
-using namespace Prisma;
+using namespace PrismaEngine;
 class GameObject {
 public:
     std::string name;
