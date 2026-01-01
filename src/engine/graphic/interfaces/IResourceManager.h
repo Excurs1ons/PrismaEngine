@@ -1,10 +1,11 @@
 #pragma once
 
-#include "RenderTypes.h"
 #include "IPipelineState.h"
 #include "ISampler.h"
 #include "IShader.h"
 #include "ITexture.h"
+#include "RenderDesc.h"
+#include "RenderTypes.h"
 
 #include <memory>
 #include <shared_mutex>
