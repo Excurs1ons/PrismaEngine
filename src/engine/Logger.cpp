@@ -15,11 +15,11 @@
 #include <android/log.h>
 #endif
 bool Logger::IsInitialized() const {
-    return initialized_;
+    return initialized;
 }
 
 void Logger::SetPlatformLogger(PrismaEngine::IPlatformLogger* platformLogger) {
-    platformLogger_ = platformLogger;
+    this->platformLogger = platformLogger;
 }
 CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
     switch (level) {
@@ -45,23 +45,23 @@ CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
 /// @brief 初始化日志系统
 bool Logger::Initialize(const LogConfig& config)
 {
-    if (initialized_) {
+    if (initialized) {
         LogInternal(LogLevel::Warning,
                     "Engine",
                     "日志系统已初始化，无法重复初始化",
                     SourceLocation(__FILE__, __LINE__, __FUNCTION__));
         return false;
     }
-    initialized_ = true;
+    initialized = true;
     config_ = config;
 
     // 确定日志文件路径
     std::string logFilePath = config_.logFilePath;
 
     // 如果 platformLogger_ 可用，使用平台特定的日志目录
-    if (platformLogger_) {
-        const char* platformLogDir = platformLogger_->GetLogDirectoryPath();
-        if (platformLogDir) {
+    if (platformLogger != nullptr) {
+        const char* platformLogDir = platformLogger->GetLogDirectoryPath();
+        if (platformLogDir != nullptr) {
             // 使用平台日志目录 + 原始文件名
             std::filesystem::path originalPath(config_.logFilePath);
             std::filesystem::path platformPath(platformLogDir);
@@ -462,12 +462,9 @@ std::string Logger::GetTimestamp(const std::chrono::system_clock::time_point& ti
 }
 
 void Logger::WriteToConsole(const std::string& message, bool useColors) {
-    if (platformLogger_) {
+    if (platformLogger != nullptr) {
         // 使用平台特定的日志输出
-        // 注意：这里 message 已经是格式化后的完整字符串，包含时间戳、级别等
-        // 为了保持平台日志的统一格式，我们直接输出到标准输出
-        // 如果需要使用平台的 logcat，可以在 FormatEntry 中移除格式化
-        std::cout << message << std::endl;
+        platformLogger->LogToConsole(LogLevel::Info, "", message.c_str());
     } else {
         // 回退到标准输出
         std::cout << message << std::endl;

@@ -3,11 +3,12 @@
 //
 
 #if defined(__ANDROID__) || defined(ANDROID)
+#include "AndroidLogger.h"
 #include <jni.h>
 
 #include "AndroidOut.h"
 #include "Renderer.h"
-
+#include "Logger.h"
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
 
@@ -24,6 +25,7 @@ void handle_cmd(android_app *pApp, int32_t cmd) {
     switch (cmd) {
         case APP_CMD_INIT_WINDOW:
             aout << "Event: \"APP_CMD_INIT_WINDOW\" 窗口初始化" << std::endl;
+            LOG_INFO("Event", "窗口初始化(APP_CMD_INIT_WINDOW)");
             // A new window is created, associate a renderer with it. You may replace this with a
             // "game" class if that suits your needs. Remember to change all instances of userData
             // if you change the class here as a reinterpret_cast is dangerous this in the
@@ -77,8 +79,16 @@ bool motion_event_filter_func(const GameActivityMotionEvent *motionEvent) {
  */
 void android_main(struct android_app *pApp) {
     // Can be removed, useful to ensure your code is running
-    aout << "主函数开始" << std::endl;
 
+    Logger &logger = Logger::GetInstance();
+    PrismaEngine::AndroidLogger androidLogger;
+    logger.SetPlatformLogger(&androidLogger);
+    LogConfig config;
+    config.enableColors = false;
+    config.target = LogTarget::Console;
+    logger.Initialize(config);
+    aout << "主函数开始" << '\n';
+    LOG_INFO("Event", "主函数开始");
     // Register an event handler for Android events
     pApp->onAppCmd = handle_cmd;
 
@@ -88,14 +98,14 @@ void android_main(struct android_app *pApp) {
     android_app_set_motion_event_filter(pApp, motion_event_filter_func);
 
     // This sets up a typical game/event loop. It will run until the app is destroyed.
-    do {
+    while (!pApp->destroyRequested) {
         // Process all pending events before running game logic.
         bool done = false;
         while (!done) {
             // 0 is non-blocking.
             int timeout = 0;
-            int events;
-            android_poll_source *pSource;
+            int events = 0;
+            android_poll_source *pSource = nullptr;
             int result = ALooper_pollOnce(timeout, nullptr, &events,
                                           reinterpret_cast<void**>(&pSource));
             switch (result) {
@@ -106,12 +116,12 @@ void android_main(struct android_app *pApp) {
                     done = true;
                     break;
                 case ALOOPER_EVENT_ERROR:
-                    aout << "ALooper_pollOnce returned an error" << std::endl;
+                    aout << "ALooper_pollOnce returned an error" << '\n';
                     break;
                 case ALOOPER_POLL_CALLBACK:
                     break;
                 default:
-                    if (pSource) {
+                    if (pSource != nullptr) {
                         pSource->process(pApp, pSource);
                     }
             }
@@ -129,7 +139,7 @@ void android_main(struct android_app *pApp) {
             // Render a frame
             pRenderer->render();
         }
-    } while (!pApp->destroyRequested);
+    }
 }
 }
 #endif
