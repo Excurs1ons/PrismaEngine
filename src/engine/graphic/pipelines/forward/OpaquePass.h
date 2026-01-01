@@ -1,28 +1,18 @@
 #pragma once
 
-#include "graphic/LogicalPass.h"
+#include "ForwardRenderPassBase.h"
+#include "graphic/RenderTypes.h"
 #include "graphic/interfaces/IPass.h"
-#include "graphic/interfaces/IDeviceContext.h"
 #include "graphic/interfaces/IRenderTarget.h"
 #include "math/MathTypes.h"
-#include <memory>
 #include <vector>
-
 namespace PrismaEngine::Graphic {
 
 /// @brief 不透明物体逻辑 Pass
 /// 前向渲染的主要 Pass，渲染不透明物体
 class OpaquePass : public ForwardRenderPass {
 public:
-    // 光源结构
-    struct Light {
-        PrismaMath::vec3 position;
-        PrismaMath::vec4 color;     // RGB + intensity
-        PrismaMath::vec3 direction;  // 用于方向光
-        int type;  // 0=directional, 1=point, 2=spot
-    };
 
-public:
     OpaquePass();
     ~OpaquePass() override = default;
 
