@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 
-namespace Engine {
+namespace PrismaEngine {
 
 class ISubSystem {
 public:

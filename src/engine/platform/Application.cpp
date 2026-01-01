@@ -4,7 +4,7 @@
 #include "Logger.h"
 #include "Platform.h"
 
-namespace Engine {
+namespace PrismaEngine {
 /// <summary>
 /// 应用程序初始化，需要完成平台层和引擎的初始化
 /// </summary>

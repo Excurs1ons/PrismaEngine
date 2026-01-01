@@ -3,7 +3,7 @@
 #include <string>
 #include <vector>
 
-namespace Engine {
+namespace PrismaEngine {
 	namespace Audio {
 
 		// 音频后端类型

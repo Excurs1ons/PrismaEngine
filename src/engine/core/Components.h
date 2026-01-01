@@ -5,7 +5,7 @@
 #include "../math/Math.h"
 #include <string>
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Core {
 namespace ECS {
 
@@ -50,21 +50,21 @@ public:
     // 获取前向向量
     PrismaMath::vec3 GetForward() const {
         auto forward = PrismaMath::vec3(0, 0, 1);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
+        auto rotationMatrix = PrismaEngine::Math::QuaternionToMatrix(rotation);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(forward, 0));
     }
 
     // 获取右向量
     PrismaMath::vec3 GetRight() const {
         auto right = PrismaMath::vec3(1, 0, 0);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
+        auto rotationMatrix = PrismaEngine::Math::QuaternionToMatrix(rotation);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(right, 0));
     }
 
     // 获取上向量
     PrismaMath::vec3 GetUp() const {
         auto up = PrismaMath::vec3(0, 1, 0);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
+        auto rotationMatrix = PrismaEngine::Math::QuaternionToMatrix(rotation);
         return PrismaMath::vec3(rotationMatrix * PrismaMath::vec4(up, 0));
     }
 
@@ -76,10 +76,10 @@ public:
 
     // 设置旋转（欧拉角）
     void SetEulerAngles(const PrismaMath::vec3& euler) {
-        rotation = Prisma::FromEulerAngles(
-            Prisma::Radians(euler.x),
-            Prisma::Radians(euler.y),
-            Prisma::Radians(euler.z)
+        rotation = PrismaEngine::FromEulerAngles(
+            PrismaEngine::Radians(euler.x),
+            PrismaEngine::Radians(euler.y),
+            PrismaEngine::Radians(euler.z)
         );
         UpdateMatrix();
     }
@@ -92,18 +92,18 @@ public:
 
     // 变换矩阵属性
     PrismaMath::vec3 position;
-    Prisma::Quaternion rotation; // Quaternion
+    PrismaEngine::Quaternion rotation; // Quaternion
     PrismaMath::vec3 scale;
 
 private:
     PrismaMath::mat4 m_worldMatrix;
 
     void UpdateMatrix() {
-        auto translation = Prisma::Math::Translation(position);
-        auto rotationMatrix = Prisma::Math::QuaternionToMatrix(rotation);
-        auto scaleMatrix = Prisma::Math::Scale(scale);
+        auto translation = PrismaEngine::Math::Translation(position);
+        auto rotationMatrix = PrismaEngine::Math::QuaternionToMatrix(rotation);
+        auto scaleMatrix = PrismaEngine::Math::Scale(scale);
 
-        m_worldMatrix = Prisma::Math::Multiply(Prisma::Math::Multiply(scaleMatrix, rotationMatrix), translation);
+        m_worldMatrix = PrismaEngine::Math::Multiply(PrismaEngine::Math::Multiply(scaleMatrix, rotationMatrix), translation);
     }
 };
 
@@ -138,7 +138,7 @@ public:
     };
 
     ProjectionType projectionType = ProjectionType::Perspective;
-    float fov = Prisma::HALF_PI / 2.0f; // 45度
+    float fov = PrismaEngine::HALF_PI / 2.0f; // 45度
     float nearPlane = 0.1f;
     float farPlane = 1000.0f;
     float orthoSize = 10.0f;
@@ -146,10 +146,10 @@ public:
     // 获取投影矩阵
     PrismaMath::mat4 GetProjectionMatrix(float aspectRatio) const {
         if (projectionType == ProjectionType::Perspective) {
-            return Prisma::PerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane);
+            return PrismaEngine::PerspectiveFovLH(fov, aspectRatio, nearPlane, farPlane);
         } else {
             float halfSize = orthoSize * 0.5f;
-            return Prisma::OrthographicLH(
+            return PrismaEngine::OrthographicLH(
                 halfSize * aspectRatio, halfSize, nearPlane, farPlane
             );
         }
@@ -182,8 +182,8 @@ public:
     float range = 10.0f;
 
     // 聚光灯参数
-    float innerConeAngle = Prisma::Radians(30.0f);
-    float outerConeAngle = Prisma::Radians(45.0f);
+    float innerConeAngle = PrismaEngine::Radians(30.0f);
+    float outerConeAngle = PrismaEngine::Radians(45.0f);
 
     // 阴影
     bool castShadows = false;

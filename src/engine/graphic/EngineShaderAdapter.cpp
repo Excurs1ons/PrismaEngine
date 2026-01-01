@@ -3,7 +3,7 @@
 
 namespace PrismaEngine::Graphic {
 
-EngineShaderAdapter::EngineShaderAdapter(std::shared_ptr<Engine::Shader> engineShader)
+EngineShaderAdapter::EngineShaderAdapter(std::shared_ptr<PrismaEngine::Shader> engineShader)
     : m_engineShader(std::move(engineShader)) {
 }
 

@@ -1,14 +1,14 @@
 #include "Engine.h"
+#include "AssetManager.h"
+#include "InputManager.h"
 #include "Logger.h"
 #include "PhysicsSystem.h"
+#include "Platform.h"
 #include "RenderSystemNew.h"
-#include "ResourceManager.h"
 #include "SceneManager.h"
 #include "ThreadManager.h"
-#include "InputManager.h"
-#include "Platform.h"
 
-namespace Engine {
+namespace PrismaEngine {
     EngineCore::EngineCore() : isRunning_(false) {
         // 初始化日志系统
         if (!Logger::GetInstance().IsInitialized()) {
@@ -25,7 +25,7 @@ namespace Engine {
             return false;
         }    // 管理 JobSystem 和 独立线程
 
-        if (!RegisterSystem<ResourceManager>()) {
+        if (!RegisterSystem<AssetManager>()) {
             return false;
         }   // 负责 IO 和资源缓存
 

@@ -1,7 +1,7 @@
 #pragma once
 #include "Singleton.h"
 
-namespace Engine {
+namespace PrismaEngine {
 
 template<typename T>
 class IApplication :public Singleton<T> {

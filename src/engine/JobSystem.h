@@ -7,7 +7,7 @@
 #include <queue>
 #include <thread>
 #include <vector>
-namespace Engine {
+namespace PrismaEngine {
 
 class JobSystem : public ISubSystem {
     friend class Singleton<JobSystem>;

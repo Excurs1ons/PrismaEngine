@@ -5,7 +5,7 @@
 #ifdef PlaySound
 #undef PlaySound
 #endif
-namespace Engine {
+namespace PrismaEngine {
     namespace Audio {
 
         bool AudioBackendXAudio2::Initialize(const AudioFormat& format)

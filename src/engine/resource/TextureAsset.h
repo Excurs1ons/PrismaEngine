@@ -4,7 +4,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace Engine {
+namespace PrismaEngine {
 // 纹理资产类
 class TextureAsset : public Asset {
 public:
@@ -15,7 +15,7 @@ public:
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
     bool IsLoaded() const override { return m_isLoaded; }
-    ResourceType GetType() const override { return ResourceType::Texture; }
+    AssetType GetType() const override { return AssetType::Texture; }
 
     // Serializable接口实现
     void Serialize(Serialization::OutputArchive& archive) const override;

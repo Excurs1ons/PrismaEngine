@@ -3,7 +3,7 @@
 #include "Singleton.h"
 #include <memory>
 
-namespace Engine {
+namespace PrismaEngine {
 template <typename T> class ManagerBase : public ISubSystem {
 public:
     ManagerBase(const ManagerBase&)            = delete;

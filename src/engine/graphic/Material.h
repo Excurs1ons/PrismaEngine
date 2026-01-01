@@ -1,5 +1,5 @@
 #pragma once
-#include "../resource/ResourceBase.h"
+#include "AssetBase.h"
 #include "../math/MathTypes.h"
 #include <string>
 #include <memory>
@@ -9,13 +9,13 @@ namespace PrismaEngine::Graphic {
     class RenderCommandContext;
 }
 
-namespace Engine {
+namespace PrismaEngine {
 
     class Shader; // 前向声明
 
     // 材质属性结构
     struct MaterialProperties {
-        Prisma::Color baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
+        PrismaEngine::Color baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
         float metallic = 0.0f;     // 金属度 [0, 1]
         float roughness = 0.5f;    // 粗糙度 [0, 1]
         float emissive = 0.0f;     // 自发光强度
@@ -29,7 +29,7 @@ namespace Engine {
         std::string emissiveTexture;   // 自发光纹理
     };
 
-    class Material : public ResourceBase
+    class Material : public AssetBase
     {
     public:
         Material();
@@ -61,8 +61,8 @@ namespace Engine {
         bool Load(const std::filesystem::path& path) override;
         void Unload() override;
         bool IsLoaded() const override;
-        ResourceType GetType() const override {
-            return ResourceType::Material;
+        AssetType GetType() const override {
+            return AssetType::Material;
         }
 
         // 获取材质属性

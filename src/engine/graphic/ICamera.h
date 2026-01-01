@@ -2,7 +2,7 @@
 
 #include "math/MathTypes.h"
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Graphic {
 
 // 相机接口

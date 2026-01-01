@@ -2,24 +2,24 @@
 #include <filesystem>
 #include <iostream>
 
-namespace Engine {
+namespace PrismaEngine {
 // ============================================================================
 // 资源类型枚举
 // ============================================================================
-enum class ResourceType { Unknown, Shader, Texture, Mesh, Model, Audio, Material, Config };
+enum class AssetType { Unknown, Shader, Texture, Mesh, Model, Audio, Material, Config, Animation, Scene, Script };
 
 // 前向声明
-class ResourceManager;
+class AssetManager;
 
 // 资源基类（同前）
-class ResourceBase {
+class AssetBase {
 public:
     std::string name;
-    virtual ~ResourceBase()                                 = default;
+    virtual ~AssetBase()                                 = default;
     virtual bool Load(const std::filesystem::path& path) = 0;
     virtual void Unload()                                = 0;
     virtual bool IsLoaded() const                        = 0;
-    virtual ResourceType GetType() const                 = 0;
+    virtual AssetType GetType() const                 = 0;
 
     const std::filesystem::path& GetPath() const { return m_path; }
     const std::string& GetName() const { return m_name; }
@@ -33,8 +33,8 @@ protected:
     std::string m_name;
     bool m_isLoaded = false;
 
-    // 允许 ResourceManager 和 ResourceFallback 访问 protected 成员
-    friend class ResourceManager;
+    // 允许 AssetManager 和 ResourceFallback 访问 protected 成员
+    friend class AssetManager;
     friend class ResourceFallback;
 };
 

@@ -4,7 +4,7 @@
 #include <mutex>
 #include <thread>
 
-namespace Engine {
+namespace PrismaEngine {
 
 bool ThreadManager::Initialize() {
     LOG_INFO("Thread", "线程管理器初始化开始");

@@ -2,21 +2,21 @@
 #include "Logger.h"
 #include "ResourceFallbackImpl.h"
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Resource {
 
-std::shared_ptr<ResourceBase> ResourceFallback::CreateDefaultResource(
-    ResourceType type,
+std::shared_ptr<AssetBase> AssetFallback::CreateDefaultResource(
+    AssetType type,
     const std::string& relativePath)
 {
     switch (type) {
-        case ResourceType::Shader:
+        case AssetType::Shader:
             return CreateDefaultShader(relativePath);
 
-        case ResourceType::Mesh:
+        case AssetType::Mesh:
             return CreateDefaultMesh(relativePath);
 
-        case ResourceType::Material:
+        case AssetType::Material:
             return CreateDefaultMaterial(relativePath);
 
         default:
@@ -25,10 +25,10 @@ std::shared_ptr<ResourceBase> ResourceFallback::CreateDefaultResource(
     }
 }
 
-std::shared_ptr<ResourceBase> ResourceFallback::CreateFallbackResource(
-    ResourceType type,
+std::shared_ptr<AssetBase> AssetFallback::CreateFallbackResource(
+    AssetType type,
     const std::string& relativePath,
-    std::shared_ptr<ResourceBase> failedResource)
+    std::shared_ptr<AssetBase> failedResource)
 {
     LOG_WARNING("ResourceFallback", "资源 {0} 加载失败，创建默认回退资源", relativePath);
 

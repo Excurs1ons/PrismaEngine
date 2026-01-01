@@ -1,16 +1,17 @@
 #pragma once
+#include "../core/AssetBase.h"
+#include "AssetSerializer.h"
 #include "MetaData.h"
 #include "Serializable.h"
 #include "SerializationVersion.h"
-#include "AssetSerializer.h"
 #include <filesystem>
 #include <memory>
 #include <string>
 
-namespace Engine {
+namespace PrismaEngine {
 using namespace Serialization;
 // Asset基类，继承自IResource和Serializable
-class Asset : public ResourceBase ,public Serializable {
+class Asset : public AssetBase ,public Serializable {
 public:
     Asset()          = default;
     virtual ~Asset() = default;

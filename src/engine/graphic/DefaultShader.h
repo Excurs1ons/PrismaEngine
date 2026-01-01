@@ -1,7 +1,7 @@
 #pragma once
 // 默认着色器硬编码 - 避免外部文件依赖
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Graphic {
 
 // 默认顶点着色器 (HLSL)

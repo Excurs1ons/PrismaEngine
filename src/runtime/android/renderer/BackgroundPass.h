@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 #include "math/MathTypes.h"
-using namespace Prisma;
+using namespace PrismaEngine;
 // 前向声明
 struct android_app;
 class SkyboxRenderer;

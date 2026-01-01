@@ -2,7 +2,7 @@
 #include "Archive.h"
 #include <istream>
 
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
 
         // 二进制输出存档

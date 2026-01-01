@@ -3,7 +3,7 @@
 #include "Scene.h"
 #include <memory>
 
-namespace Engine {
+namespace PrismaEngine {
 
 class SceneManager : public ManagerBase<SceneManager> {
     friend class ManagerBase<SceneManager>;

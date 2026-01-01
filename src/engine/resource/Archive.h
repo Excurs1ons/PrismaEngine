@@ -3,7 +3,7 @@
 #include <string>
 #include <filesystem>
 
-namespace Engine {
+namespace PrismaEngine {
     namespace Serialization {
         class InputArchive {
         public:

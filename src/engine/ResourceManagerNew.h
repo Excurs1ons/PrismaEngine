@@ -30,9 +30,9 @@ struct ResourceLoadTask {
 };
 
 /// @brief 资源管理器实现
-class ResourceManager : public ::Engine::ManagerBase<ResourceManager>, public IResourceManager {
+class ResourceManager : public ::PrismaEngine::ManagerBase<ResourceManager>, public IResourceManager {
 public:
-    friend class ::Engine::ManagerBase<ResourceManager>;
+    friend class ::PrismaEngine::ManagerBase<ResourceManager>;
     static constexpr std::string GetName() { return "ResourceManager"; }
 public:
     ResourceManager();
