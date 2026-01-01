@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Vector3.h"
+#include "math/MathTypes.h"
 #include <cstdint>
 #include <memory>
 #include <string>
