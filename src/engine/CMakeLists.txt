@@ -29,11 +29,6 @@ file(GLOB_RECURSE CORE_SOURCES
 list(FILTER CORE_SOURCES EXCLUDE REGEX "graphic/")
 list(FILTER CORE_SOURCES EXCLUDE REGEX "audio/")
 
-# 排除Windows特定文件
-if(ANDROID)
-    list(FILTER CORE_SOURCES EXCLUDE REGEX "framework.h")
-    list(FILTER CORE_SOURCES EXCLUDE REGEX "targetver.h")
-endif()
 
 # 如果未启用SDL3，排除SDL相关文件
 if(NOT PRISMA_ENABLE_AUDIO_SDL3)
