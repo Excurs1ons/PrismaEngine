@@ -1,10 +1,10 @@
 #pragma once
 #include "Component.h"
-#include "MathTypes.h"
+#include "math/MathTypes.h"
 #include <memory>
 #include <string>
 #include <vector>
-
+using namespace Prisma;
 class GameObject {
 public:
     std::string name;
@@ -34,7 +34,7 @@ public:
     Vector3 rotation{0.0f, 0.0f, 0.0f}; // Euler angles in degrees
     Vector3 scale{1.0f, 1.0f, 1.0f};
 
-    Matrix4 getTransformMatrix() {
+    Matrix4 getTransformMatrix() const {
         Matrix4 model = glm::mat4(1.0f);
         model = glm::translate(model, position);
         model = glm::rotate(model, glm::radians(rotation.x), Vector3(1, 0, 0));
