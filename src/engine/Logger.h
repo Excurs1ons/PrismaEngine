@@ -124,7 +124,9 @@ public:
         static_assert(CheckFormattable<Args...>(),
             "One or more log arguments are not formattable.");
 
-        if (level < config_.minLevel) return;
+        if (level < config_.minLevel) {
+            return;
+        }
         std::string message = std::format(fmt, std::forward<Args>(args)...);
         LogInternal(level, category, message, loc);
     }
@@ -207,10 +209,10 @@ public:
     CallStackOutput GetCallStackOutputForLevel(LogLevel level);
 
 private:
-    bool initialized_ = false;
+    bool initialized = false;
 
     // 平台日志接口（由外部设置）
-    PrismaEngine::IPlatformLogger* platformLogger_ = nullptr;
+    PrismaEngine::IPlatformLogger* platformLogger = nullptr;
     // 内部方法
     void EnqueueEntry(LogEntry&& entry);
     void ProcessQueue();
