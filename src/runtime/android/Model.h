@@ -1,10 +1,10 @@
 #ifndef ANDROIDGLINVESTIGATIONS_MODEL_H
 #define ANDROIDGLINVESTIGATIONS_MODEL_H
 
-#include "MathTypes.h"
+#include "math/MathTypes.h"
 #include "TextureAsset.h"
 #include <vector>
-
+using namespace Prisma;
 struct Vertex {
     Vertex(const Vector3 &inPosition, const Vector3 &inColor, const Vector2 &inUV) 
         : position(inPosition), color(inColor), uv(inUV) {}

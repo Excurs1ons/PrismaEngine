@@ -11,10 +11,10 @@
 
 #include "Utility.h"
 #include "AndroidOut.h"
-#include "MathTypes.h"
+#include "math/MathTypes.h"
 #include "ShaderOpenGL.h"
 #include "TextureAsset.h"
-
+using namespace Prisma;
 //! executes glGetString and outputs the result to logcat
 #define PRINT_GL_STRING(s) {aout << #s": "<< glGetString(s) << std::endl;}
 
