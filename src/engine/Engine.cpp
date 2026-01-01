@@ -100,7 +100,7 @@ bool EngineCore::IsRunning() const {
     return isRunning_;
 }
 
-void EngineCore::Tick() {
+void EngineCore::Tick() const {
     // 计算时间差
     static auto lastTime = std::chrono::high_resolution_clock::now();
     auto currentTime     = std::chrono::high_resolution_clock::now();

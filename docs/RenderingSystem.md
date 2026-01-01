@@ -1,318 +1,470 @@
-# PrismaEngine 渲染系统架构文档
+# Rendering System Architecture / 渲染系统架构文档
 
-## 概述
+## Overview / 概述
 
-PrismaEngine的渲染系统采用现代化的模块化设计，支持多个图形API后端，并正在向RenderGraph架构迁移。当前实现包括ScriptableRenderPipeline系统，支持灵活的渲染通道组合。
+Prisma Engine's rendering system uses a modern modular design with support for multiple graphics API backends. The system is migrating towards a RenderGraph architecture while maintaining the current ScriptableRenderPipeline implementation.
 
-## 架构概览
+PrismaEngine 的渲染系统采用现代化的模块化设计，支持多个图形API后端，并正在向 RenderGraph 架构迁移。当前实现包括 ScriptableRenderPipeline 系统，支持灵活的渲染通道组合。
+
+## Architecture Overview / 架构概览
 
 ```
 RenderSystem
-├── RenderBackend (抽象层)
-│   ├── RenderBackendDirectX12 (Windows)
-│   ├── RenderBackendVulkan (Cross-platform)
-│   └── RenderBackendSDL3 (Legacy)
-├── ScriptableRenderPipeline
-│   ├── ForwardRenderPass
-│   ├── SkyboxRenderPass
-│   └── GeometryRenderPass
-└── RenderGraph (正在实现中)
+├── RenderBackend (抽象层 / Abstraction)
+│   ├── DirectX 12 (Windows) / DirectX 12 (Windows)
+│   ├── Vulkan (Cross-platform) / Vulkan (跨平台)
+│   └── [Future: Metal] (macOS/iOS)
+│
+├── Resource Adapters / 资源适配器
+│   ├── DX12ResourceFactory (Windows)
+│   └── VulkanResourceFactory (Cross-platform)
+│
+├── Render Pipelines / 渲染管线
+│   ├── Forward Pipeline / 前向管线
+│   │   ├── DepthPrePass
+│   │   ├── OpaquePass
+│   │   └── TransparentPass
+│   └── Deferred Pipeline / 延迟管线
+│       ├── GeometryPass
+│       └── CompositionPass
+│
+└── RenderGraph (In Progress / 开发中)
     ├── ResourceHandle
-    ├── RenderPassBuilder
-    └── 自动依赖管理
+    ├── PassBuilder
+    └── Auto dependency management / 自动依赖管理
 ```
 
-## 核心组件
+## Core Components / 核心组件
 
-### 1. RenderSystem
+### 1. RenderSystem / 渲染系统
 
-渲染系统的主管理类，负责：
-- 初始化和管理渲染后端
-- 执行渲染管线
-- 管理渲染回调（GUI等）
+Main management class for the rendering system.
+
+渲染系统的主管理类。
 
 ```cpp
-class RenderSystem : public ManagerBase<RenderSystem> {
+namespace PrismaEngine {
+namespace Graphic {
+
+class RenderSystem {
 public:
-    // 初始化渲染系统
-    bool Initialize(Platform* platform, RenderBackendType type,
+    // Initialize rendering system / 初始化渲染系统
+    bool Initialize(Platform* platform, RenderAPI api,
                    WindowHandle window, void* surface,
                    uint32_t width, uint32_t height);
 
-    // 渲染流程控制
+    // Frame control / 帧控制
     void BeginFrame();
     void EndFrame();
     void Present();
     void Resize(uint32_t width, uint32_t height);
 
-    // 获取渲染后端和管线
-    RenderBackend* GetRenderBackend() const;
-    ScriptableRenderPipeline* GetRenderPipeline() const;
+    // Get rendering backend / 获取渲染后端
+    IRenderBackend* GetBackend() const;
 };
+
+} // namespace Graphic
+} // namespace PrismaEngine
 ```
 
-### 2. RenderBackend (渲染后端)
+### 2. Rendering Backends / 渲染后端
 
-抽象了不同图形API的差异：
+#### DirectX 12 (Windows) / DirectX 12 (Windows)
 
-#### DirectX 12 后端
-- 支持Windows平台
-- 原生支持Enhanced Barriers
-- PIX调试工具集成
+Located in `src/engine/graphic/adapters/dx12/`:
 
-#### Vulkan 后端
-- 跨平台支持（Windows、Android、Linux）
-- 细粒度同步控制
-- RenderDoc调试支持
+位置：`src/engine/graphic/adapters/dx12/`：
 
-### 3. ScriptableRenderPipeline
+- **DX12ResourceFactory**: Resource creation
+- **Enhanced Barriers**: Enhanced Barrier support
+- **PIX Integration**: Debug tool integration
 
-可编程渲染管线，支持动态添加渲染通道：
+#### Vulkan (Cross-platform) / Vulkan（跨平台）
+
+Located in `src/engine/graphic/adapters/vulkan/`:
+
+位置：`src/engine/graphic/adapters/vulkan/`：
+
+- **VulkanShader**: SPIR-V shader loading
+- Cross-platform: Windows, Linux, Android
+- **RenderDoc Support**: Debugging support
+
+### 3. Render Pipelines / 渲染管线
+
+#### Forward Pipeline / 前向管线
+
+Located in `src/engine/graphic/pipelines/forward/`:
+
+位置：`src/engine/graphic/pipelines/forward/`：
+
+```
+ForwardPipeline/
+├── DepthPrePass.*          # Pre-pass depth rendering
+├── OpaquePass.*            # Opaque geometry
+├── TransparentPass.*       # Transparent geometry
+└── ForwardRenderPassBase.* # Base class
+```
+
+#### Deferred Pipeline / 延迟管线
+
+Located in `src/engine/graphic/pipelines/deferred/`:
+
+位置：`src/engine/graphic/pipelines/deferred/`：
+
+```
+DeferredPipeline/
+├── GeometryPass.*          # Geometry rendering
+├── CompositionPass.*       # Lighting composition
+└── DeferredPipeline.*      # Pipeline coordinator
+```
+
+### 4. Resource Management / 资源管理
+
+#### RenderDesc / 渲染描述符
+
+Located in `src/engine/graphic/RenderDesc.h`:
+
+位置：`src/engine/graphic/RenderDesc.h`：
 
 ```cpp
-class ScriptableRenderPipeline {
+namespace PrismaEngine {
+namespace Graphic {
+
+// Mesh description / 网格描述
+struct MeshDesc {
+    const Vertex* vertices;
+    size_t vertexCount;
+    const uint32_t* indices;
+    size_t indexCount;
+};
+
+// Material description / 材质描述
+struct MaterialDesc {
+    glm::vec4 albedo;
+    float metallic;
+    float roughness;
+    float ao;
+    std::shared_ptr<TextureAsset> albedoMap;
+    std::shared_ptr<TextureAsset> normalMap;
+};
+
+// Texture description / 纹理描述
+struct TextureDesc {
+    uint32_t width;
+    uint32_t height;
+    Format format;
+    TextureUsage usage;
+    MemoryType memory;
+};
+
+} // namespace Graphic
+} // namespace PrismaEngine
+```
+
+#### IResourceFactory / 资源工厂接口
+
+```cpp
+namespace PrismaEngine {
+namespace Graphic {
+
+class IResourceFactory {
 public:
-    // 添加渲染通道
-    void AddRenderPass(std::shared_ptr<RenderPass> renderPass);
+    // Create buffer / 创建缓冲区
+    virtual std::shared_ptr<IBuffer> CreateBuffer(const BufferDesc& desc) = 0;
 
-    // 执行所有通道
-    void Execute();
+    // Create texture / 创建纹理
+    virtual std::shared_ptr<ITexture> CreateTexture(const TextureDesc& desc) = 0;
 
-    // 设置视口大小
-    void SetViewportSize(uint32_t width, uint32_t height);
+    // Create shader / 创建着色器
+    virtual std::shared_ptr<IShader> CreateShader(const ShaderDesc& desc) = 0;
 };
+
+} // namespace Graphic
+} // namespace PrismaEngine
 ```
 
-### 4. RenderPass (渲染通道)
+## Shaders / 着色器
 
-基类定义了渲染通道的接口：
+### HLSL Shaders (DirectX 12) / HLSL 着色器
+
+Located in `resources/common/shaders/hlsl/`:
+
+位置：`resources/common/shaders/hlsl/`：
+
+```
+hlsl/
+├── default.hlsl             # Default mesh shader / 默认网格着色器
+├── Skybox.hlsl              # Skybox rendering / 天空盒渲染
+└── Text.hlsl                # Text rendering / 文本渲染
+```
+
+### GLSL Shaders (Vulkan/OpenGL) / GLSL 着色器
+
+Located in `resources/common/shaders/glsl/`:
+
+位置：`resources/common/shaders/glsl/`：
+
+```
+glsl/
+├── clearcolor.vert/frag     # Clear color pass / 清屏通道
+├── shader.vert/frag         # Standard mesh / 标准网格
+└── skybox.vert/frag         # Skybox / 天空盒
+```
+
+### Shader Compilation / 着色器编译
+
+| Platform / 平台 | Compiler / 编译器 | Output / 输出 |
+|-----------------|-------------------|--------------|
+| Windows (DX12) | fxc/dxc | DXIL bytecode |
+| Windows (Vulkan) | glslangValidator | SPIR-V |
+| Android | Android Gradle Plugin | SPIR-V (automatic) |
+| Linux | glslangValidator | SPIR-V |
+
+## Platform-Specific Rendering / 平台特定渲染
+
+### Windows Rendering / Windows 渲染
+
+- **Primary API**: DirectX 12
+- **Fallback**: Vulkan (optional)
+- Entry point: `src/runtime/windows/WindowsRuntime.cpp`
+
+### Linux Rendering / Linux 渲染
+
+- **Primary API**: Vulkan
+- Entry point: `src/runtime/linux/LinuxRuntime.cpp`
+
+### Android Rendering / Android 渲染
+
+- **Primary API**: Vulkan
+- **Shaders**: Automatically compiled from GLSL to SPIR-V
+- **Assets**: Loaded via `AAssetManager`
+- Entry point: `src/runtime/android/AndroidRuntime.cpp`
+
+See: [Android Integration](VulkanIntegration.md) for details.
+
+详见：[Android 集成](VulkanIntegration.md)
+
+## Camera System / 相机系统
+
+### Camera Class / 相机类
+
+Located in `src/engine/graphic/Camera.h`:
+
+位置：`src/engine/graphic/Camera.h`：
 
 ```cpp
-class RenderPass {
+namespace PrismaEngine {
+namespace Graphic {
+
+class Camera {
 public:
-    // 执行渲染
-    virtual void Execute(RenderCommandContext* context) = 0;
+    // Get view matrix / 获取视图矩阵
+    glm::mat4 GetViewMatrix() const;
 
-    // 设置渲染目标
-    virtual void SetRenderTarget(void* renderTarget) = 0;
+    // Get projection matrix / 获取投影矩阵
+    glm::mat4 GetProjectionMatrix() const;
 
-    // 清屏操作
-    virtual void ClearRenderTarget(float r, float g, float b, float a) = 0;
+    // Get view-projection matrix / 获取视图-投影矩阵
+    glm::mat4 GetViewProjectionMatrix() const;
 
-    // 设置视口
-    virtual void SetViewport(uint32_t width, uint32_t height) = 0;
+    // Camera controls / 相机控制
+    void SetPosition(const glm::vec3& position);
+    void SetRotation(const glm::vec3& rotation);
+    void SetFieldOfView(float fov);
+    void SetAspectRatio(float aspect);
+
+private:
+    glm::vec3 m_position;
+    glm::vec3 m_rotation;
+    float m_fov;
+    float m_aspect;
+    float m_near;
+    float m_far;
 };
+
+} // namespace Graphic
+} // namespace PrismaEngine
 ```
 
-### 5. 具体渲染通道实现
+## Material System / 材质系统
 
-#### ForwardRenderPass
-前向渲染通道，支持：
-- PBR材质渲染
-- 多光源支持
-- 阴影映射
+### Material Class / 材质类
 
-#### SkyboxRenderPass
-天空盒渲染：
-- 立方体贴图采样
-- 视图矩阵移除平移
-- 深度缓冲优化
+Located in `src/engine/graphic/Material.h`:
 
-#### GeometryRenderPass
-几何体渲染：
-- 网格渲染
-- 实例化渲染
-- GPU蒙皮支持
-
-## 使用示例
-
-### 设置渲染管线
+位置：`src/engine/graphic/Material.h`：
 
 ```cpp
-// 创建渲染系统
-auto renderSystem = RenderSystem::GetInstance();
+namespace PrismaEngine {
+namespace Graphic {
 
-// 初始化（自动选择后端）
-renderSystem->Initialize(platform.get(),
-                        RenderBackendType::Vulkan,
-                        window, nullptr, 1920, 1080);
-
-// 获取渲染管线
-auto pipeline = renderSystem->GetRenderPipeline();
-
-// 添加渲染通道
-auto skyboxPass = std::make_shared<SkyboxRenderPass>();
-auto forwardPass = std::make_shared<ForwardRenderPass>();
-
-pipeline->AddRenderPass(skyboxPass);
-pipeline->AddRenderPass(forwardPass);
-```
-
-### 创建自定义渲染通道
-
-```cpp
-class CustomRenderPass : public RenderPass {
+class Material {
 public:
-    void Execute(RenderCommandContext* context) override {
-        // 设置着色器常量
-        context->SetConstantBuffer("ViewProjection", viewProjectionMatrix);
+    // Material properties / 材质属性
+    void SetAlbedo(const glm::vec4& albedo);
+    void SetMetallic(float metallic);
+    void SetRoughness(float roughness);
 
-        // 设置顶点和索引缓冲区
-        context->SetVertexBuffer(vertexData, vertexSize, stride);
-        context->SetIndexBuffer(indexData, indexSize, true);
+    // Texture maps / 纹理贴图
+    void SetAlbedoMap(std::shared_ptr<TextureAsset> texture);
+    void SetNormalMap(std::shared_ptr<TextureAsset> texture);
+    void SetRoughnessMap(std::shared_ptr<TextureAsset> texture);
 
-        // 执行绘制
-        context->DrawIndexed(indexCount);
-    }
-
-    // 实现其他必需的方法...
+    // Serialization / 序列化
+    nlohmann::json Serialize() const;
+    void Deserialize(const nlohmann::json& data);
 };
+
+} // namespace Graphic
+} // namespace PrismaEngine
 ```
 
-### 渲染循环
+## Usage Examples / 使用示例
+
+### Setting Up Rendering / 设置渲染
 
 ```cpp
-// 游戏循环
+// Initialize render system / 初始化渲染系统
+auto renderSystem = Graphic::RenderSystem::GetInstance();
+
+renderSystem->Initialize(
+    platform.get(),
+    Graphic::RenderAPI::Vulkan,
+    window, nullptr, 1920, 1080
+);
+
+// Create camera / 创建相机
+auto camera = std::make_shared<Graphic::Camera>();
+camera->SetPosition(glm::vec3(0.0f, 2.0f, 5.0f));
+
+// Create material / 创建材质
+auto material = std::make_shared<Graphic::Material>();
+material->SetAlbedo(glm::vec4(1.0f, 0.0f, 0.0f, 1.0f));
+material->SetMetallic(0.5f);
+material->SetRoughness(0.3f);
+```
+
+### Rendering Loop / 渲染循环
+
+```cpp
+// Game loop / 游戏循环
 while (running) {
-    // 开始帧
+    // Begin frame / 开始帧
     renderSystem->BeginFrame();
 
-    // 场景渲染（通过管线自动执行）
-    // pipeline->Execute() 在EndFrame前自动调用
+    // Update camera / 更新相机
+    camera->Update(deltaTime);
 
-    // GUI渲染（通过回调）
-    if (guiCallback) {
-        guiCallback(commandBuffer);
-    }
+    // Render scene / 渲染场景
+    renderSystem->RenderScene(scene, camera);
 
-    // 结束帧并呈现
+    // Render GUI / 渲染 GUI
+    renderSystem->RenderGUI();
+
+    // End frame and present / 结束帧并呈现
     renderSystem->EndFrame();
     renderSystem->Present();
 }
 ```
 
-## RenderGraph 迁移
+## RenderGraph Migration / RenderGraph 迁移
 
-### 当前状态
-正在从ScriptableRenderPipeline迁移到RenderGraph架构，详见：
-[RenderGraph迁移计划](RenderGraph_Migration_Plan.md)
+### Current Status / 当前状态
 
-### 迁移优势
-1. **自动资源管理**：智能的生命周期跟踪和内存别名
-2. **依赖解析**：自动处理资源同步和屏障
-3. **性能优化**：并行执行和批处理优化
-4. **调试友好**：图形化的依赖关系查看器
+Migrating from ScriptableRenderPipeline to RenderGraph architecture.
 
-### 迁移后的使用方式
+正在从 ScriptableRenderPipeline 迁移到 RenderGraph 架构。
+
+See: [RenderGraph Migration Plan](RenderGraph_Migration_Plan.md)
+
+### Migration Benefits / 迁移优势
+
+1. **Automatic Resource Management** / 自动资源管理 - Smart lifecycle tracking
+2. **Dependency Resolution** / 依赖解析 - Automatic synchronization
+3. **Performance Optimization** / 性能优化 - Parallel execution
+4. **Debug Friendly** / 调试友好 - Visual dependency viewer
+
+### Future RenderGraph Usage / 未来的 RenderGraph 用法
 
 ```cpp
-// 创建RenderGraph
+// Create RenderGraph / 创建 RenderGraph
 RenderGraph graph;
 
-// 创建资源
-auto backbuffer = graph.getBackbuffer();
-auto depthBuffer = graph.createTexture(
+// Create resources / 创建资源
+auto backbuffer = graph.GetBackbuffer();
+auto depthBuffer = graph.CreateTexture(
     ResourceDesc::DepthStencil(1920, 1080, Format::D32_Float),
     "DepthBuffer"
 );
 
-// 添加GBuffer通道
-graph.addPass<GBufferData>("GBuffer")
-    .write(colorTarget)
-    .write(normalTarget)
-    .write(depthBuffer)
-    .setExecuteFunc([](RenderGraphContext& ctx, GBufferData& data) {
-        renderGeometry(ctx);
+// Add GBuffer pass / 添加 GBuffer 通道
+graph.AddPass<GBufferData>("GBuffer")
+    .Write(colorTarget)
+    .Write(normalTarget)
+    .Write(depthBuffer)
+    .SetExecuteFunc([](RenderGraphContext& ctx, GBufferData& data) {
+        RenderGeometry(ctx);
     });
 
-// 添加光照通道
-graph.addPass<LightingData>("Lighting")
-    .read(colorTarget)
-    .read(normalTarget)
-    .read(depthBuffer)
-    .write(backbuffer)
-    .setExecuteFunc([](RenderGraphContext& ctx, LightingData& data) {
-        applyLighting(ctx);
-    });
-
-// 编译并执行
-graph.compile();
-graph.execute(renderBackend);
+// Compile and execute / 编译并执行
+graph.Compile();
+graph.Execute(renderBackend);
 ```
 
-## 性能优化
+## Performance Optimizations / 性能优化
 
-### 已实现的优化
-1. **多线程支持**：渲染命令准备并行化
-2. **资源池化**：减少内存分配开销
-3. **批处理**：减少Draw Call数量
-4. **状态缓存**：避免重复的状态设置
+### Implemented / 已实现
 
-### 计划中的优化（RenderGraph）
-1. **自动资源别名**：内存重用
-2. **屏障优化**：最小化GPU同步
-3. **异步计算**：利用Compute Queue
-4. **GPU驱动渲染**：Indirect Draw
+- **Multi-threading** / 多线程 - Parallel command preparation
+- **Resource Pooling** / 资源池化 - Reduce allocation overhead
+- **Batching** / 批处理 - Reduce draw calls
+- **State Caching** / 状态缓存 - Avoid redundant state changes
 
-## 调试和性能分析
+### Planned (RenderGraph) / 计划中
 
-### 可用工具
-- **GPU调试器**：RenderDoc、PIX、Nsight
-- **性能分析**：集成性能标记和统计
-- **日志系统**：详细的渲染日志
-- **可视化工具**：RenderGraph依赖查看器（计划中）
+- **Automatic Resource Aliasing** / 自动资源别名 - Memory reuse
+- **Barrier Optimization** / 屏障优化 - Minimize GPU sync
+- **Async Compute** / 异步计算 - Utilize compute queue
+- **GPU-Driven Rendering** / GPU 驱动渲染 - Indirect draw
 
-### 调试技巧
-1. 使用`LOG_DEBUG`宏跟踪渲染流程
-2. 检查GPU状态和资源内容
-3. 使用帧调试器分析Draw Call
-4. 监控GPU时间和内存使用
+## Debugging and Profiling / 调试和性能分析
 
-## 扩展指南
+### Available Tools / 可用工具
 
-### 添加新的渲染后端
-1. 继承`RenderBackend`类
-2. 实现所有纯虚函数
-3. 创建对应的`RenderCommandContext`
-4. 在`RenderBackendType`中添加新类型
+- **GPU Debuggers**: RenderDoc, PIX, Nsight
+- **Profiling**: Integrated performance markers
+- **Logging**: Detailed rendering logs
+- **Visual Tools**: RenderGraph dependency viewer (planned)
 
-### 创建渲染效果
-1. 实现新的`RenderPass`
-2. 编写对应的着色器
-3. 添加到渲染管线
-4. 测试和优化性能
+## Best Practices / 最佳实践
 
-## 最佳实践
+1. **Resource Management / 资源管理**
+   - Use RAII for GPU resources / 使用 RAII 管理 GPU 资源
+   - Avoid frequent creation/destruction / 避免频繁创建/销毁
+   - Utilize object pools and caching / 利用对象池和缓存
 
-1. **资源管理**
-   - 使用RAII管理GPU资源
-   - 避免频繁的创建/销毁
-   - 利用对象池和缓存
+2. **Performance / 性能**
+   - Batch similar operations / 批量处理相似操作
+   - Minimize state changes / 最小化状态切换
+   - Use async execution / 使用异步执行
 
-2. **性能优化**
-   - 批量处理相似操作
-   - 最小化状态切换
-   - 使用异步执行
+3. **Error Handling / 错误处理**
+   - Check all GPU operation results / 检查所有 GPU 操作结果
+   - Use assertions and logging / 使用断言和日志
+   - Provide fallback options / 提供降级方案
 
-3. **错误处理**
-   - 检查所有GPU操作结果
-   - 使用断言和日志
-   - 提供降级方案
+4. **Cross-Platform / 跨平台**
+   - Use abstraction layers / 使用抽象层
+   - Test on all target platforms / 测试所有目标平台
+   - Consider hardware differences / 考虑硬件差异
 
-4. **跨平台考虑**
-   - 使用抽象层
-   - 测试所有目标平台
-   - 考虑硬件差异
+## Related Documentation / 相关文档
+- [Directory Structure](DirectoryStructure.md) - File organization / 文件组织
+- [Resource Management](ResourceManager.md) - Asset loading / 资产加载
+- [Vulkan Integration](VulkanIntegration.md) - Android Vulkan setup / Android Vulkan 设置
+- [Shader Compilation](#shader-compilation) - Shader workflows / 着色器工作流
 
-## 未来计划
-
-1. **完成RenderGraph迁移**（Q1 2024）
-2. **实时光线追踪支持**（Q2 2024）
-3. **GPU驱动渲染**（Q3 2024）
-4. **AI加速渲染**（Q4 2024）
-
-## 相关资源
-
-- [DirectX 12 文档](https://docs.microsoft.com/en-us/windows/win32/directx12)
-- [Vulkan 规范](https://www.khronos.org/vulkan/)
-- [RenderGraph 设计模式](https://github.com/google/filament/blob/master/docs/Filament.md#rendergraph)
+## External Resources / 外部资源
+- [DirectX 12 Documentation](https://docs.microsoft.com/en-us/windows/win32/directx12)
+- [Vulkan Specification](https://www.khronos.org/vulkan/)
+- [RenderGraph Design Pattern](https://github.com/google/filament/blob/master/docs/Filament.md#rendergraph)

@@ -15,7 +15,7 @@ public:
     bool Initialize();
     bool IsInitialized() const;
     int MainLoop();
-    void Tick();
+    void Tick() const;
     void Shutdown();
     bool IsRunning() const;
 private:
