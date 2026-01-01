@@ -11,8 +11,7 @@
       "hidden": true,
       "description": "Base Windows configuration (使用 FetchContent 管理依赖)",
       "generator": "Visual Studio 17 2022",
-      "environment": {
-      },
+      "environment": {},
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
         "PRISMA_BUILD_EDITOR": "OFF",
@@ -25,6 +24,26 @@
         "type": "equals",
         "lhs": "${hostSystemName}",
         "rhs": "Windows"
+      }
+    },
+    {
+      "name": "android-base",
+      "hidden": true,
+      "description": "Base Android configuration (使用 FetchContent 管理依赖)",
+      "generator": "Ninja",
+      "environment": {},
+      "cacheVariables": {
+        "PRISMA_USE_FETCHCONTENT": "ON",
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_ENABLE_RENDER_DX12": "OFF",
+        "PRISMA_ENABLE_AUDIO_XAUDIO2": "OFF",
+        "PRISMA_ENABLE_RENDER_VULKAN": "ON",
+        "PRISMA_ENABLE_AUDIO_OPENAL": "ON"
+      },
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Android"
       }
     },
     {
@@ -74,6 +93,30 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "android-arm64-v8a-release",
+      "displayName": "Android arm64-v8a Release",
+      "inherits": "android-base",
+      "description": "Release build for Android arm64-v8a using Ninja",
+      "binaryDir": "${sourceDir}/build/android-arm64-v8a-release",
+      "architecture": "Android",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "android-arm64-v8a-debug",
+      "displayName": "Android arm64-v8a Debug",
+      "inherits": "android-base",
+      "description": "Debug build for Android arm64-v8a using Ninja",
+      "binaryDir": "${sourceDir}/build/android-arm64-v8a-debug",
+      "architecture": "Android",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
     }
   ],
   "buildPresets": [
@@ -92,6 +135,14 @@
     {
       "name": "windows-x86-release",
       "configurePreset": "windows-x86-release"
+    },
+    {
+      "name": "android-arm64-v8a-debug",
+      "configurePreset": "android-arm64-v8a-debug"
+    },
+    {
+      "name": "android-arm64-v8a-release",
+      "configurePreset": "android-arm64-v8a-release"
     }
   ]
 }
