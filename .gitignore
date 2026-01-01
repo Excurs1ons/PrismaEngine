@@ -344,3 +344,6 @@ local.properties
 
 # Claude Code 相关文件
 .claude/
+
+# Android 项目自动生成的 assets（从 resources/runtime/android 复制）
+projects/android/PrismaAndroid/app/src/main/assets/
