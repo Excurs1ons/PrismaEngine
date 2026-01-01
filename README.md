@@ -17,18 +17,18 @@ English | [简体中文](docs/README_zh.md)
 
 | Module | Status | Description |
 |--------|--------|-------------|
-| ECS Component System | ✅ 70% | Entity Component System |
+| ECS Component System | ✅ 75% | Entity Component System |
 | DirectX 12 Backend | ✅ 65% | Primary Windows rendering backend |
-| Vulkan Backend | ✅ 80% | Cross-platform (Windows/Linux/Android) |
-| Platform Layer | ✅ 90% | Windows/Linux/Android abstraction |
-| Logger System | ✅ 85% | Cross-platform logging |
+| Vulkan Backend | ✅ 85% | Cross-platform (Windows/Linux/Android) |
+| Platform Layer | ✅ 95% | Windows/Linux/Android abstraction |
+| Logger System | ✅ 95% | Cross-platform logging |
 | Audio System | ✅ 40% | XAudio2/SDL3 backends |
 | Resource Management | ✅ 60% | AssetManager implementation |
-| Android Runtime | ✅ 80% | Full Vulkan support (~1456 lines) |
+| Android Runtime | ✅ 85% | Full Vulkan support with game-activity |
 | Physics System | ❌ 5% | Planned |
 | Editor Tools | ⏳ 10% | ImGui basic integration |
 
-**Overall: ~45-50%**
+**Overall: ~50-55%**
 
 ## Quick Start
 
