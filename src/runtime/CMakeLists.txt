@@ -6,8 +6,8 @@ elseif (WIN32)
     # 源文件
     set(RUNTIME_SOURCES WindowsRuntime.cpp)
     set(RUNTIME_RESOURCES
-            ../../resources/runtime/windows/Runtime.ico
-            ../../resources/runtime/windows/small.ico)
+            resources/windows/icons/Runtime.ico
+            resources/windows/icons/small.ico)
 elseif (APPLE)
     message(FATAL_ERROR "尚不支持此平台:APPLE")
 elseif (LINUX)
@@ -17,7 +17,7 @@ endif ()
 # 创建可执行程序
 add_executable(Runtime
     ${RUNTIME_SOURCES}
-    ${RUNTIME_RESOURCES}
+#    ${RUNTIME_RESOURCES}
 )
 
 # 包含目录

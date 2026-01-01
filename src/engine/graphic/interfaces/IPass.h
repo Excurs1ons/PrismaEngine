@@ -4,11 +4,9 @@
 #include "RenderTypes.h"
 #include "math/MathTypes.h"
 #include <string>
+#include "interfaces/IDeviceContext.h"
 
 namespace PrismaEngine::Graphic {
-
-// 前置声明
-class IDeviceContext;
 
 /// @brief 场景数据结构
 /// 包含 Pass 执行所需的场景信息

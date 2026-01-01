@@ -1,6 +1,5 @@
 #pragma once
 
-#define NOMINMAX
 #include "Logger.h"
 #include "math/MathTypes.h"
 #include <Windows.h>

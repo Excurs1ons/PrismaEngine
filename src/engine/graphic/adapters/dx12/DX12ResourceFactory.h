@@ -202,6 +202,9 @@ private:
 
     /// @brief Convert texture format to DXGI format
     DXGI_FORMAT GetDXGIFormat(TextureFormat format) const;
+
+public:
+    void Reset() override;
 };
 
 } // namespace PrismaEngine::Graphic::DX12
