@@ -1,6 +1,6 @@
 #include "TriangleExample.h"
-#include "Camera3D.h"
-#include "Camera3DController.h"
+#include "Camera.h"
+#include "CameraController.h"
 #include "Logger.h"
 #include "ResourceManager.h"
 #include "graphic/Material.h"
@@ -20,7 +20,7 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
-    auto camera = cameraObj->GetComponent<Engine::Graphic::Camera3D>();
+    auto camera = cameraObj->GetComponent<Engine::Graphic::Camera>();
     if (camera) {
         scene->SetMainCamera(camera);
         LOG_INFO("TriangleExample", "Main camera set for scene");
@@ -291,7 +291,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     transform->rotation = rotation;
 
     // 添加3D相机组件
-    auto *camera = game_object->AddComponent<Camera3D>();
+    auto *camera = game_object->AddComponent<Camera>();
 
     // 设置透视投影
     float aspect_ratio = 16.0f / 9.0f;
@@ -301,7 +301,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     //camera->SetClearColor(0.0F, 1.0f, 0.5f, 1.0f);
 
     // 添加3D相机控制器组件
-    auto camera_controller = game_object->AddComponent<Camera3DController>();
+    auto camera_controller = game_object->AddComponent<CameraController>();
     camera_controller->SetMoveSpeed(5.0f);      // 设置移动速度
     camera_controller->SetRotationSpeed(90.0f);  // 设置旋转速度
 

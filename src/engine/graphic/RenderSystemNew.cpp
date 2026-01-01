@@ -1,7 +1,7 @@
 #include "RenderSystemNew.h"
 #include "../Logger.h"
 #include "../SceneManager.h"
-#include "../Camera3D.h"
+#include "../Camera.h"
 #include "../core/ECS.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
