@@ -1,5 +1,7 @@
 #include "DepthPrePass.h"
 
+#include "ForwardRenderPassBase.h"
+
 namespace PrismaEngine::Graphic {
 
 DepthPrePass::DepthPrePass()

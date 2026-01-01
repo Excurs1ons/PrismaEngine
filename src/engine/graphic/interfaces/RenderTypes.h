@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Vector3.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -620,5 +621,14 @@ enum class StencilOp {
         // 根签名（具体类型取决于后端）
         void* rootSignature = nullptr;
     };
+
+    // 光源结构
+    struct Light {
+        Prisma::Vector3 position;
+        Prisma::Vector4 color;     // RGB + intensity
+        Prisma::Vector3 direction;  // 用于方向光
+        int type;  // 0=directional, 1=point, 2=spot
+    };
+
 
 } // namespace PrismaEngine::Graphic
