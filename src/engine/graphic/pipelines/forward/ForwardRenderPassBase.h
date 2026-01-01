@@ -12,7 +12,14 @@ namespace PrismaEngine::Graphic {
 /// 用于前向渲染管线中的 Pass
 class ForwardRenderPass : public LogicalPass {
 public:
-    ForwardRenderPass(const char* name);
+    ForwardRenderPass(const char* name)
+            : LogicalPass(name)
+            , m_view(PrismaMath::mat4(1.0f))
+            , m_projection(PrismaMath::mat4(1.0f))
+            , m_viewProjection(PrismaMath::mat4(1.0f)) {
+    }
+
+
     ~ForwardRenderPass() override = default;
 
     // === 相机数据 ===
@@ -43,8 +50,6 @@ protected:
     PrismaMath::mat4 m_viewProjection;
 };
 }
-
-
 
 
 #endif //FORWARDRENDERPASSBASE_H

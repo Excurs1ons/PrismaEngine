@@ -5,6 +5,7 @@
 #include "graphic/interfaces/IDeviceContext.h"
 #include "graphic/interfaces/IRenderTarget.h"
 #include "math/MathTypes.h"
+#include "ForwardRenderPassBase.h"
 #include <memory>
 #include <vector>
 

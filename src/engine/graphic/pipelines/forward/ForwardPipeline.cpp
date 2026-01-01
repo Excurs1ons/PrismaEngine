@@ -37,7 +37,7 @@ bool ForwardPipeline::Initialize() {
     m_opaquePass->SetAmbientIntensity(1.0f);
 
     // 设置默认方向光
-    OpaquePass::Light directionalLight;
+    Light directionalLight;
     directionalLight.position = PrismaMath::vec3(0.0f, 100.0f, 0.0f);
     directionalLight.color = PrismaMath::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     directionalLight.direction = PrismaMath::vec3(0.0f, -1.0f, -1.0f);

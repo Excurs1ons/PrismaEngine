@@ -1,7 +1,6 @@
 #pragma once
-
+#include "interfaces/RenderTypes.h"
 #include "ForwardRenderPassBase.h"
-#include "graphic/RenderTypes.h"
 #include "graphic/interfaces/IPass.h"
 #include "graphic/interfaces/IRenderTarget.h"
 #include "math/MathTypes.h"

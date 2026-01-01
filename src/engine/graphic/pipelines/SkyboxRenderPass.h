@@ -1,11 +1,12 @@
 #pragma once
 
+#include "forward/ForwardRenderPassBase.h"
 #include "graphic/LogicalPass.h"
 #include "graphic/Material.h"
 #include "graphic/Mesh.h"
 #include "graphic/Shader.h"
-#include "graphic/interfaces/IPass.h"
 #include "graphic/interfaces/IDeviceContext.h"
+#include "graphic/interfaces/IPass.h"
 #include "graphic/interfaces/IRenderTarget.h"
 #include "graphic/interfaces/ITexture.h"
 #include "math/MathTypes.h"

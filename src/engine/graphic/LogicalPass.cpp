@@ -23,11 +23,6 @@ void LogicalPass::SetViewport(uint32_t width, uint32_t height) {
     m_height = height;
 }
 
-ForwardRenderPass::ForwardRenderPass(const char* name)
-    : LogicalPass(name)
-    , m_view(PrismaMath::mat4(1.0f))
-    , m_projection(PrismaMath::mat4(1.0f))
-    , m_viewProjection(PrismaMath::mat4(1.0f)) {
-}
+
 
 } // namespace PrismaEngine::Graphic

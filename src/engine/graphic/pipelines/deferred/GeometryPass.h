@@ -7,6 +7,7 @@
 #include "graphic/interfaces/IGBuffer.h"
 #include "math/MathTypes.h"
 #include <memory>
+#include <pipelines/forward/ForwardRenderPassBase.h>
 
 namespace PrismaEngine::Graphic {
 
