@@ -13,11 +13,6 @@
 
 namespace PrismaEngine::Graphic {
 
-// 前向声明
-class VulkanResourceFactory;
-class VulkanSwapChain;
-class VulkanCommandBuffer;
-
 /// @brief Vulkan 渲染设备实现
 class VulkanRenderDevice : public IRenderDevice {
 public:
@@ -169,8 +164,8 @@ private:
     uint32_t m_currentImageIndex = 0;
 
     // 组件
-    std::unique_ptr<VulkanResourceFactory> m_resourceFactory;
-    std::unique_ptr<VulkanSwapChain> m_swapChainObj;
+    std::unique_ptr<IResourceFactory> m_resourceFactory;
+    std::unique_ptr<ISwapChain> m_swapChainObj;
 
     // 统计
     RenderStats m_stats = {};

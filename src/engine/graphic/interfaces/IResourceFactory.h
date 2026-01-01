@@ -24,6 +24,7 @@ public:
     /// @brief 关闭工厂
     virtual void Shutdown() = 0;
 
+    virtual void Reset() = 0;
     // === 纹理创建 ===
 
     /// @brief 创建纹理实现
