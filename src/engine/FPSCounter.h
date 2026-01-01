@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Component.h"
-#include "Time.h"
+#include <time.h>
 #include <string>
 
 /// @brief FPS 计数器组件

@@ -1,11 +1,16 @@
 #include "RenderAPIVulkan.h"
-#include "../Logger.h"
-#include "../LogScope.h"
+#include "Logger.h"
+#include "LogScope.h"
 #include <algorithm>
 #include <set>
 #include <string>
 #include <cstring>
 
+#if defined(__ANDROID__) || defined(ANDROID)
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_android.h>
+
+#endif
 namespace PrismaEngine::Graphic {
 
 // ============================================================================
@@ -657,7 +662,7 @@ bool VulkanRenderDevice::CreateSwapChain(uint32_t width, uint32_t height, bool v
     vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
 
     LOG_INFO("VulkanRenderDevice", "Swap chain created: {0}x{1}, format: {2}",
-             extent.width, extent.height, surfaceFormat.format);
+             extent.width, extent.height, (int)surfaceFormat.format);
 
     return true;
 }

@@ -225,6 +225,7 @@ struct DeviceDesc {
     void* windowHandle = nullptr;
     uint32_t width = 1920;
     uint32_t height = 1080;
+    bool vsync = true;
     bool enableDebug = false;
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;

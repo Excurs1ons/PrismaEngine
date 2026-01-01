@@ -110,7 +110,17 @@ if(PRISMA_ENABLE_AUDIO_XAUDIO2 OR PRISMA_ENABLE_AUDIO_OPENAL OR PRISMA_ENABLE_AU
 endif()
 
 if(NOT HAS_AUDIO_DEVICE)
-    message(FATAL_ERROR "At least one audio device must be enabled!")
+    if(PRISMA_ENABLE_AUDIO_OPENAL_DEFAULT)
+        message(STATUS "没有配置音频设备，已自动选择平台默认值:OPENAL")
+        set(PRISMA_ENABLE_AUDIO_OPENAL ON)
+    elseif (PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT)
+        message(STATUS "没有配置音频设备，已自动选择平台默认值:XAUDIO2")
+        set(PRISMA_ENABLE_AUDIO_XAUDIO2 ON)
+    elseif (PRISMA_ENABLE_AUDIO_SDL3_DEFAULT)
+        message(STATUS "没有配置音频设备，已自动选择平台默认值:SDL3")
+        set(PRISMA_ENABLE_AUDIO_SDL3 ON)
+    endif ()
+
 endif()
 
 set(HAS_RENDER_DEVICE OFF)
