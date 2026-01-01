@@ -1,7 +1,7 @@
 # 运行时可执行程序
 if (ANDROID)
     # 源文件
-    set(RUNTIME_SOURCES AndroidRuntime.cpp)
+    set(RUNTIME_SOURCES android/AndroidRuntime.cpp)
 elseif (WIN32)
     # 源文件
     set(RUNTIME_SOURCES WindowsRuntime.cpp)

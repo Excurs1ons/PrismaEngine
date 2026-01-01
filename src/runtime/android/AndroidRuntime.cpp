@@ -1,7 +1,6 @@
 //
 // Created by JasonGu on 26-1-1.
 //
-#pragma once
 
 #if defined(__ANDROID__) || defined(ANDROID)
 #include <jni.h>
