@@ -1,7 +1,7 @@
-#include "TextureAsset.h"
-#include "Utility.h"
+#include "../runtime/android/TextureAsset.h"
+#include "../runtime/android/Utility.h"
+#include "../runtime/android/VulkanContext.h"
 #include "AndroidOut.h"
-#include "VulkanContext.h"
 #include <android/imagedecoder.h>
 #include <vector>
 

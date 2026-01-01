@@ -2,7 +2,7 @@
 #include "GameObject.h"
 #include <memory>
 #include <vector>
-
+using namespace PrismaEngine;
 class Scene {
 public:
     void addGameObject(std::shared_ptr<GameObject> go) {

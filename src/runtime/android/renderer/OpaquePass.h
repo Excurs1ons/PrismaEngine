@@ -1,6 +1,6 @@
 #ifndef PRISMA_ANDROID_OPAQUE_PASS_H
 #define PRISMA_ANDROID_OPAQUE_PASS_H
-#include "Model.h"
+#include "../../../engine/Model.h"
 #include "RenderPass.h"
 #include <memory>
 #include <vector>
