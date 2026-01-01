@@ -3,7 +3,13 @@
 #include "KeyCode.h"
 #include "InputManager.h"
 
-class Camera2D;
+namespace Engine {
+namespace Graphic {
+
+class Camera;
+
+}
+}
 
 namespace Engine {
 
@@ -18,11 +24,25 @@ public:
     void SetMoveSpeed(float speed) { m_moveSpeed = speed; }
     float GetMoveSpeed() const { return m_moveSpeed; }
 
-private:
-    void HandleInput();
+    void SetRotationSpeed(float speed) { m_rotationSpeed = speed; }
+    float GetRotationSpeed() const { return m_rotationSpeed; }
 
-    float m_moveSpeed = 2.0f;  // 相机移动速度 (单位/秒)
-    Camera2D* m_camera = nullptr;
+    // 是否启用鼠标控制
+    void SetMouseControl(bool enable) { m_mouseControl = enable; }
+    bool GetMouseControl() const { return m_mouseControl; }
+
+private:
+    void HandleKeyboardInput(float deltaTime);
+    void HandleMouseInput(float deltaTime);
+
+    float m_moveSpeed = 5.0f;        // 相机移动速度 (单位/秒)
+    float m_rotationSpeed = 90.0f;   // 相机旋转速度 (度/秒)
+    bool m_mouseControl = true;      // 是否启用鼠标控制
+
+    Engine::Graphic::Camera* m_camera = nullptr;
+    float m_lastMouseX = 0.0f;
+    float m_lastMouseY = 0.0f;
+    bool m_firstMouse = true;
 };
 
 } // namespace Engine
