@@ -28,6 +28,10 @@
     #endif
     #include <functional>
 #endif
+// Android 平台前向声明
+#ifdef __ANDROID__
+struct android_app;
+#endif
 
 // ------------------------------------------------------------
 // 时间类 - 独立定义，避免依赖 chrono
