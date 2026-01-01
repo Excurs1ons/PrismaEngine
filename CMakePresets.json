@@ -31,19 +31,21 @@
       "hidden": true,
       "description": "Base Android configuration (使用 FetchContent 管理依赖)",
       "generator": "Ninja",
-      "environment": {},
+      "environment": {
+        "CMAKE_TOOLCHAIN_FILE": "",
+        "VCPKG_ROOT": ""
+      },
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
         "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_ENABLE_RENDER_DX12": "OFF",
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "OFF",
         "PRISMA_ENABLE_RENDER_VULKAN": "ON",
-        "PRISMA_ENABLE_AUDIO_OPENAL": "ON"
-      },
-      "condition": {
-        "type": "equals",
-        "lhs": "${hostSystemName}",
-        "rhs": "Android"
+        "PRISMA_ENABLE_AUDIO_OPENAL": "ON",
+        "CMAKE_FIND_PACKAGE_PREFER_CONFIG": "OFF",
+        "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
+        "ANDROID_PLATFORM": "android-24",
+        "CMAKE_ANDROID_STL_TYPE": "c++_shared"
       }
     },
     {
@@ -100,10 +102,9 @@
       "inherits": "android-base",
       "description": "Release build for Android arm64-v8a using Ninja",
       "binaryDir": "${sourceDir}/build/android-arm64-v8a-release",
-      "architecture": "Android",
-      "toolset": "host=x64",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "ANDROID_ABI": "arm64-v8a"
       }
     },
     {
@@ -112,10 +113,9 @@
       "inherits": "android-base",
       "description": "Debug build for Android arm64-v8a using Ninja",
       "binaryDir": "${sourceDir}/build/android-arm64-v8a-debug",
-      "architecture": "Android",
-      "toolset": "host=x64",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ANDROID_ABI": "arm64-v8a"
       }
     }
   ],
