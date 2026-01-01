@@ -1,4 +1,4 @@
-#include "Camera3D.h"
+#include "Camera.h"
 #include "GameObject.h"
 #include "Logger.h"
 #include "math/Math.h"
@@ -6,7 +6,7 @@
 namespace Engine {
 namespace Graphic {
 
-Camera3D::Camera3D()
+Camera::Camera()
     : m_fov(Prisma::Math::PI / 4.0f)
     , m_aspectRatio(16.0f / 9.0f)
     , m_nearPlane(0.1f)
@@ -25,10 +25,10 @@ Camera3D::Camera3D()
     m_projectionMatrix = PrismaMath::mat4(1.0f);
 }
 
-Camera3D::~Camera3D() {
+Camera::~Camera() {
 }
 
-void Camera3D::Initialize() {
+void Camera::Initialize() {
     LOG_INFO("Camera3D", "Camera3D component initialized for GameObject '{0}'", m_owner->name);
 
     // 初始化Transform的旋转（相机默认看向-Z方向）
@@ -39,12 +39,12 @@ void Camera3D::Initialize() {
     }
 }
 
-void Camera3D::Update(float deltaTime) {
+void Camera::Update(float deltaTime) {
     // 更新视图矩阵（如果需要）
     UpdateViewMatrix();
 }
 
-void Camera3D::SetPerspectiveProjection(float fov, float aspectRatio, float nearPlane, float farPlane) {
+void Camera::SetPerspectiveProjection(float fov, float aspectRatio, float nearPlane, float farPlane) {
     m_fov = fov;
     m_aspectRatio = aspectRatio;
     m_nearPlane = nearPlane;
@@ -52,20 +52,20 @@ void Camera3D::SetPerspectiveProjection(float fov, float aspectRatio, float near
     m_isProjectionDirty = true;
 }
 
-PrismaMath::vec4 Camera3D::GetClearColor() const {
+PrismaMath::vec4 Camera::GetClearColor() const {
     return m_clearColor;
 }
 
-void Camera3D::SetClearColor(float r, float g, float b, float a) {
+void Camera::SetClearColor(float r, float g, float b, float a) {
     m_clearColor = PrismaMath::vec4(r, g, b, a);
 }
 
-PrismaMath::mat4 Camera3D::GetViewMatrix() const {
+PrismaMath::mat4 Camera::GetViewMatrix() const {
     UpdateViewMatrix();
     return m_viewMatrix;
 }
 
-PrismaMath::mat4 Camera3D::GetProjectionMatrix() const {
+PrismaMath::mat4 Camera::GetProjectionMatrix() const {
     if (m_isProjectionDirty) {
         m_projectionMatrix = Prisma::Math::Perspective(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
         m_isProjectionDirty = false;
@@ -73,49 +73,49 @@ PrismaMath::mat4 Camera3D::GetProjectionMatrix() const {
     return m_projectionMatrix;
 }
 
-PrismaMath::mat4 Camera3D::GetViewProjectionMatrix() const {
+PrismaMath::mat4 Camera::GetViewProjectionMatrix() const {
     return Prisma::Math::Multiply(GetViewMatrix(), GetProjectionMatrix());
 }
 
-PrismaMath::vec3 Camera3D::GetPosition() const {
+PrismaMath::vec3 Camera::GetPosition() const {
     if (auto transform = m_owner->transform()) {
         return PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
     }
     return PrismaMath::vec3(0.0f, 0.0f, 0.0f);
 }
 
-PrismaMath::vec3 Camera3D::GetForward() const {
+PrismaMath::vec3 Camera::GetForward() const {
     UpdateVectors();
     return m_forward;
 }
 
-PrismaMath::vec3 Camera3D::GetUp() const {
+PrismaMath::vec3 Camera::GetUp() const {
     UpdateVectors();
     return m_up;
 }
 
-PrismaMath::vec3 Camera3D::GetRight() const {
+PrismaMath::vec3 Camera::GetRight() const {
     UpdateVectors();
     return m_right;
 }
 
-void Camera3D::SetFOV(float fov) {
+void Camera::SetFOV(float fov) {
     m_fov = fov;
     m_isProjectionDirty = true;
 }
 
-void Camera3D::SetNearFarPlanes(float nearPlane, float farPlane) {
+void Camera::SetNearFarPlanes(float nearPlane, float farPlane) {
     m_nearPlane = nearPlane;
     m_farPlane = farPlane;
     m_isProjectionDirty = true;
 }
 
-void Camera3D::SetAspectRatio(float aspectRatio) {
+void Camera::SetAspectRatio(float aspectRatio) {
     m_aspectRatio = aspectRatio;
     m_isProjectionDirty = true;
 }
 
-void Camera3D::MoveWorld(float x, float y, float z) {
+void Camera::MoveWorld(float x, float y, float z) {
     if (auto transform = m_owner->transform()) {
         transform->position.x += x;
         transform->position.y += y;
@@ -124,7 +124,7 @@ void Camera3D::MoveWorld(float x, float y, float z) {
     }
 }
 
-void Camera3D::MoveWorld(const PrismaMath::vec3& direction) {
+void Camera::MoveWorld(const PrismaMath::vec3& direction) {
     if (auto transform = m_owner->transform()) {
         transform->position.x += direction.x;
         transform->position.y += direction.y;
@@ -133,7 +133,7 @@ void Camera3D::MoveWorld(const PrismaMath::vec3& direction) {
     }
 }
 
-void Camera3D::MoveLocal(float forward, float right, float up) {
+void Camera::MoveLocal(float forward, float right, float up) {
     UpdateVectors();
 
     // 计算移动向量
@@ -145,7 +145,7 @@ void Camera3D::MoveLocal(float forward, float right, float up) {
     MoveWorld(movement);
 }
 
-void Camera3D::Rotate(float pitch, float yaw, float roll) {
+void Camera::Rotate(float pitch, float yaw, float roll) {
     if (auto transform = m_owner->transform()) {
         // 创建旋转增量（弧度）
         glm::quat deltaRotation = Prisma::Math::FromEulerAngles(glm::vec3(
@@ -163,7 +163,7 @@ void Camera3D::Rotate(float pitch, float yaw, float roll) {
     }
 }
 
-void Camera3D::LookAt(const PrismaMath::vec3& target) {
+void Camera::LookAt(const PrismaMath::vec3& target) {
     if (auto transform = m_owner->transform()) {
         PrismaMath::vec3 position = GetPosition();
         PrismaMath::vec3 direction = Prisma::Math::Normalize(target - position);
@@ -195,11 +195,11 @@ void Camera3D::LookAt(const PrismaMath::vec3& target) {
     }
 }
 
-void Camera3D::LookAt(float x, float y, float z) {
+void Camera::LookAt(float x, float y, float z) {
     LookAt(PrismaMath::vec3(x, y, z));
 }
 
-void Camera3D::UpdateViewMatrix() const {
+void Camera::UpdateViewMatrix() const {
     if (!m_isViewDirty) {
         return;
     }
@@ -231,11 +231,11 @@ void Camera3D::UpdateViewMatrix() const {
     }
 }
 
-void Camera3D::UpdateVectors() const {
+void Camera::UpdateVectors() const {
     UpdateViewMatrix();
 }
 
-void Camera3D::MarkViewDirty() const {
+void Camera::MarkViewDirty() const {
     m_isViewDirty = true;
 }
 

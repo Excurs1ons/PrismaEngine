@@ -1,78 +1,122 @@
 #include "CameraController.h"
-#include "Camera2D.h"
+#include "Camera.h"
 #include "InputManager.h"
 #include "Logger.h"
 #include "Platform.h"
 #include "GameObject.h"
 #include "math/MathTypes.h"
+#include <cmath>
+using namespace Engine::Graphic;
 
 namespace Engine {
-
+using namespace Input;
 CameraController::CameraController() : Component() {
+    m_mouseControl = false;  // 默认关闭鼠标控制
+    m_firstMouse = true;
 }
 
 void CameraController::Initialize() {
-    // 获取同一GameObject上的Camera2D组件
-    m_camera = m_owner->GetComponent<Camera2D>();
+    // 获取同一GameObject上的Camera组件
+    m_camera = m_owner->GetComponent<Camera>();
     if (!m_camera) {
-        LOG_WARNING("CameraController", "No Camera2D component found on GameObject '{0}'", m_owner->name);
+        LOG_WARNING("CameraController", "No Camera component found on GameObject '{0}'", m_owner->name);
     } else {
         LOG_INFO("CameraController", "CameraController initialized for GameObject '{0}'", m_owner->name);
     }
+
+    // 获取初始鼠标位置
+    Input::InputManager::GetInstance().GetMousePosition(m_lastMouseX, m_lastMouseY);
 }
 
 void CameraController::Update(float deltaTime) {
-    if (!m_camera) {
+    if (m_camera == nullptr) {
+        LOG_WARNING("CameraController", "Camera not found on GameObject");
         return;
     }
 
-    HandleInput();
+    HandleKeyboardInput(deltaTime);
+    HandleMouseInput(deltaTime);
 }
 
-void CameraController::HandleInput() {
-    float moveSpeed = m_moveSpeed * Time::DeltaTime;  // 基于时间的移动
+void CameraController::HandleKeyboardInput(float deltaTime) {
+    float moveAmount = m_moveSpeed * deltaTime;
     bool moved = false;
 
-    // 测试输入系统是否工作
-    static int frameCount = 0;
-    frameCount++;
-    if (frameCount % 60 == 0) {  // 每秒打印一次
-        bool wPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::W);
-        bool aPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::A);
-        bool sPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::S);
-        bool dPressed = Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::D);
-        LOG_TRACE("CameraController", "Input test - W:{0} A:{1} S:{2} D:{3}", wPressed, aPressed, sPressed, dPressed);
-    }
-
-    // 获取当前相机位置
-    PrismaMath::vec3 currentPos = m_camera->GetPosition();
-
-    // WASD 或 方向键控制相机移动
-    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::W) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowUp)) {
-        // 向上移动 (在2D中通常是减少Y值，因为我们使用右手坐标系)
-        currentPos.y -= moveSpeed;
+    // WASD 控制移动
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::W)) {
+        LOG_INFO("CameraController", "W key pressed - moving forward");
+        m_camera->MoveLocal(moveAmount, 0.0f, 0.0f);  // 前进
         moved = true;
     }
-    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::S) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowDown)) {
-        // 向下移动 (增加Y值)
-        currentPos.y += moveSpeed;
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::S)) {
+        m_camera->MoveLocal(-moveAmount, 0.0f, 0.0f);  // 后退
         moved = true;
     }
-    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::A) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowLeft)) {
-        // 向左移动 (减少X值)
-        currentPos.x -= moveSpeed;
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::A)) {
+        m_camera->MoveLocal(0.0f, -moveAmount, 0.0f);  // 左移
         moved = true;
     }
-    if (Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::D) || Input::InputManager::GetInstance().IsKeyDown(Input::KeyCode::ArrowRight)) {
-        // 向右移动 (增加X值)
-        currentPos.x += moveSpeed;
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::D)) {
+        m_camera->MoveLocal(0.0f, moveAmount, 0.0f);   // 右移
         moved = true;
     }
 
-    // 如果有移动，设置新位置并打印位置信息（用于调试）
-    if (moved) {
-        m_camera->SetPosition(currentPos.x, currentPos.y, currentPos.z);
-        LOG_INFO("CameraController", "Camera moved to position: ({0}, {1}, {2})", currentPos.x, currentPos.y, currentPos.z);
+    // Q/E 控制上下移动
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::Q)) {
+        m_camera->MoveLocal(0.0f, 0.0f, -moveAmount);  // 下降
+        moved = true;
+    }
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::E)) {
+        m_camera->MoveLocal(0.0f, 0.0f, moveAmount);   // 上升
+        moved = true;
+    }
+
+    // 方向键控制旋转
+    float rotationAmount = m_rotationSpeed * deltaTime;
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowLeft)) {
+        m_camera->Rotate(0.0f, -Prisma::Math::Radians(rotationAmount), 0.0f);  // 左转
+    }
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowRight)) {
+        m_camera->Rotate(0.0f, Prisma::Math::Radians(rotationAmount), 0.0f);   // 右转
+    }
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowUp)) {
+        m_camera->Rotate(-Prisma::Math::Radians(rotationAmount), 0.0f, 0.0f);  // 上看
+    }
+    if (InputManager::GetInstance().IsKeyDown(KeyCode::ArrowDown)) {
+        m_camera->Rotate(Prisma::Math::Radians(rotationAmount), 0.0f, 0.0f);   // 下看
+    }
+}
+
+void CameraController::HandleMouseInput(float deltaTime) {
+    if (!m_mouseControl) {
+        return;
+    }
+
+    // 获取当前鼠标位置
+    float mouseX, mouseY;
+    InputManager::GetInstance().GetMousePosition(mouseX, mouseY);
+
+    if (m_firstMouse) {
+        m_lastMouseX = mouseX;
+        m_lastMouseY = mouseY;
+        m_firstMouse = false;
+        return;
+    }
+
+    // 计算鼠标偏移
+    float xOffset = mouseX - m_lastMouseX;
+    float yOffset = m_lastMouseY - mouseY;  // 反转Y轴
+
+    m_lastMouseX = mouseX;
+    m_lastMouseY = mouseY;
+
+    // 应用旋转
+    float sensitivity = 0.1f;
+    xOffset *= sensitivity;
+    yOffset *= sensitivity;
+
+    if (std::abs(xOffset) > 0.01f || std::abs(yOffset) > 0.01f) {
+        m_camera->Rotate(Prisma::Math::Radians(yOffset), Prisma::Math::Radians(xOffset), 0.0f);
     }
 }
 
