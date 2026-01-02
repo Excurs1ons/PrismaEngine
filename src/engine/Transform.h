@@ -34,6 +34,7 @@ public:
 
         return worldMatrix;
     }
+    Vector3 GetForward() const;
 
 private:
     PrismaEngine::Matrix4x4 matrix = {};
