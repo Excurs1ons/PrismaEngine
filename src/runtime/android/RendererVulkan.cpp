@@ -397,35 +397,65 @@ void RendererVulkan::createScene() {
         Vector4 red(1.0f, 1.0f, 1.0f,1.0f);
         std::vector<Vertex> vertices = {
             // Front
-            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(
+                    Vector4(-0.5f, -0.5f,  0.5f,0.0f),
+                    red,
+                    Vector4(0.0f, 0.0f, 0.0f, 0.0f),
+                    Vector4 (0, 0, 1,1.0f)
+                    ),
+            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f),
+                   Vector4 (0, 0, 1,1.0f)),
+            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f),
+                   Vector4 (0, 0, 1,1.0f)),
+            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f),
+                   Vector4 (0, 0, 1,1.0f)),
             // Back,0.0f
-            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f),
+                   Vector4 (0, 0, -1,1)),
+            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f),
+                   Vector4 (0, 0, -1,1)),
+            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f),
+                   Vector4 (0, 0, -1,1)),
+            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f),
+                   Vector4 (0, 0, -1,1)),
             // Top,0.0f
-            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f),
+                   Vector4 (0, 1, 0,1)),
+            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
+                ,Vector4 (0, 1, 0,1)
+            ),
+            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
+                    ,Vector4 (0, 1, 0,1)
+                    ),
+            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
+                    ,Vector4 (0, 1, 0,1)),
             // Bottom,0.0f
-            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)
+                    ,Vector4 (0, -1, 0,1)),
+            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
+                    ,Vector4 (0, -1, 0,1)),
+            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
+                    ,Vector4 (0, -1, 0,1)),
+            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
+                    ,Vector4 (0, -1, 0,1)),
             // Right,0.0f
-            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
-            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)
+                    ,Vector4 (1, 0, 0,1)),
+            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
+                    ,Vector4 (1, 0, 0,1)),
+            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
+                ,Vector4 (1, 0, 0,1)),
+            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
+                    ,Vector4 (1, 0, 0,1)),
             // Left,0.0f
-            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)),
-            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)),
+            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)
+                    ,Vector4 (-1, 0, 0,1)),
+            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
+                    ,Vector4 (-1, 0, 0,1)),
+            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
+                    ,Vector4 (-1, 0, 0,1)),
+            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
+                    ,Vector4 (-1, 0, 0,1)),
         };
 
         std::vector<Index> indices = {
