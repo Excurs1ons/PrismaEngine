@@ -2,7 +2,9 @@
 #include "RendererOpenGL.h"
 #include "AndroidOut.h"
 #include "RendererVulkan.h"
+#include "AndroidInputBackend.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <chrono>
 
 Renderer::Renderer(android_app *pApp) : app_(pApp) {
     // Decide which backend to use. For now, default to OpenGL.
@@ -33,6 +35,10 @@ void Renderer::onConfigChanged() {
 }
 
 void Renderer::handleInput() {
+    // 首先更新输入系统（处理上一帧的状态）
+    auto& inputBackend = PrismaEngine::Input::AndroidInputBackend::GetInstance();
+    inputBackend.Update();
+
     // handle all queued inputs
     auto *inputBuffer = android_app_swap_input_buffers(app_);
     if (!inputBuffer) {
@@ -40,15 +46,27 @@ void Renderer::handleInput() {
         return;
     }
 
+    static int eventCount = 0;
+    static auto lastLogTime = std::chrono::steady_clock::now();
+
     // handle motion events (motionEventsCounts can be 0).
-    for (auto i = 0; i < inputBuffer->motionEventsCount; i++) {
+    auto motionEventCount = inputBuffer->motionEventsCount;
+    if (motionEventCount > 0) {
+        auto now = std::chrono::steady_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastLogTime).count();
+        if (duration > 1000) {  // 每秒最多输出一次
+            aout << "handleInput: motionEventsCount=" << motionEventCount << std::endl;
+            lastLogTime = now;
+        }
+    }
+
+    for (auto i = 0; i < motionEventCount; i++) {
         auto &motionEvent = inputBuffer->motionEvents[i];
         auto action = motionEvent.action;
 
         // Find the pointer index, mask and bitshift to turn it into a readable value.
         auto pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK)
                 >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-        aout << "Pointer(s): ";
 
         // get the x and y position of this event if it is not ACTION_MOVE.
         auto &pointer = motionEvent.pointers[pointerIndex];
@@ -59,18 +77,19 @@ void Renderer::handleInput() {
         switch (action & AMOTION_EVENT_ACTION_MASK) {
             case AMOTION_EVENT_ACTION_DOWN:
             case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                aout << "(" << pointer.id << ", " << x << ", " << y << ") "
-                     << "Pointer Down";
+                aout << "Renderer: DOWN event, fingerId=" << pointer.id << " pos=(" << x << ", " << y << ")" << std::endl;
+                inputBackend.OnTouchBegan(pointer.id, x, y);
                 break;
 
             case AMOTION_EVENT_ACTION_CANCEL:
-                // treat the CANCEL as an UP event: doing nothing in the app, except
-                // removing the pointer from the cache if pointers are locally saved.
-                // code pass through on purpose.
+                aout << "Renderer: CANCEL event, fingerId=" << pointer.id << std::endl;
+                inputBackend.OnTouchCancelled(pointer.id);
+                break;
+
             case AMOTION_EVENT_ACTION_UP:
             case AMOTION_EVENT_ACTION_POINTER_UP:
-                aout << "(" << pointer.id << ", " << x << ", " << y << ") "
-                     << "Pointer Up";
+                aout << "Renderer: UP event, fingerId=" << pointer.id << " pos=(" << x << ", " << y << ")" << std::endl;
+                inputBackend.OnTouchEnded(pointer.id, x, y);
                 break;
 
             case AMOTION_EVENT_ACTION_MOVE:
@@ -81,17 +100,12 @@ void Renderer::handleInput() {
                     pointer = motionEvent.pointers[index];
                     x = GameActivityPointerAxes_getX(&pointer);
                     y = GameActivityPointerAxes_getY(&pointer);
-                    aout << "(" << pointer.id << ", " << x << ", " << y << ")";
-
-                    if (index != (motionEvent.pointerCount - 1)) aout << ",";
-                    aout << " ";
+                    inputBackend.OnTouchMoved(pointer.id, x, y);
                 }
-                aout << "Pointer Move";
                 break;
             default:
-                aout << "Unknown MotionEvent Action: " << action;
+                break;
         }
-        aout << std::endl;
     }
     // clear the motion input count in this buffer for main thread to re-use.
     android_app_clear_motion_events(inputBuffer);
