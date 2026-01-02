@@ -443,9 +443,9 @@ void RendererVulkan::createScene() {
         // 添加交互式旋转组件（仅触摸旋转）
         auto rotationComp = std::make_shared<PrismaEngine::InteractiveRotationComponent>();
         rotationComp->SetInteractionMode(PrismaEngine::InteractiveRotationComponent::InteractionMode::TouchRotate);
-        rotationComp->SetTouchSensitivity(2.0f);  // 降低灵敏度，因为加速度会累积
-        rotationComp->SetAxisMode(PrismaEngine::InteractiveRotationComponent::AxisMode::Both);  // X和Y轴旋转
-        rotationComp->SetDamping(0.99f);  // 更小的阻尼，让惯性持续时间更长
+        rotationComp->SetTouchSensitivity(1.0f);  // 增大灵敏度
+        rotationComp->SetAxisMode(PrismaEngine::InteractiveRotationComponent::AxisMode::Both);
+        rotationComp->SetDamping(0.01f);  // 阻尼 0.99，每帧只衰减 1%
         go->AddComponent(rotationComp);
 
         scene_->addGameObject(go);
