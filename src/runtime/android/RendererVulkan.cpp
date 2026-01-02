@@ -1,4 +1,5 @@
 #include "RendererVulkan.h"
+#include "../../engine/Camera.h"
 #include "../../engine/CubemapTextureAsset.h"
 #include "../../engine/TextureAsset.h"
 #include "AndroidOut.h"
@@ -364,6 +365,27 @@ void RendererVulkan::init() {
 void RendererVulkan::createScene() {
     scene_ = std::make_unique<Scene>();
     auto assetManager = app_->activity->assetManager;
+
+    // 创建主相机
+    {
+        auto cameraGO = std::make_shared<GameObject>();
+        cameraGO->name = "MainCamera";
+
+        // 修改 Transform 的位置而不是 GameObject 的 position
+        auto transform = cameraGO->GetTransform();
+        transform->position = Vector3(0.0f, 0.0f, 3.0f);
+
+        auto camera = cameraGO->AddComponent<PrismaEngine::Graphic::Camera>();
+        camera->SetPerspectiveProjection(
+            PrismaEngine::Math::Radians(45.0f),  // FOV
+            16.0f / 9.0f,                         // 初始宽高比（稍后动态更新）
+            0.1f,                                  // 近平面
+            100.0f                                 // 远平面（增大到 100）
+        );
+
+        scene_->addGameObject(cameraGO);
+        aout << "Main camera created at (0, 0, 3)" << std::endl;
+    }
 
     // 1. Robot
     {
@@ -1050,7 +1072,14 @@ void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
         }
     }
 
-    // 计算宽高比
+    // 获取主相机
+    auto mainCamera = scene_->getMainCamera();
+    if (!mainCamera) {
+        aout << "Warning: No main camera found in scene!" << std::endl;
+        return;
+    }
+
+    // 计算宽高比（处理屏幕旋转）
     float aspectRatio;
     if (vulkanContext_.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
         vulkanContext_.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
@@ -1059,19 +1088,14 @@ void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
         aspectRatio = vulkanContext_.swapChainExtent.width / (float) vulkanContext_.swapChainExtent.height;
     }
 
-    // 投影矩阵（所有对象共享）
-    Matrix4 proj = glm::perspective(
-        glm::radians(45.0f),
-        aspectRatio,
-        0.1f,
-        10.0f);
+    // 更新相机宽高比
+    mainCamera->SetAspectRatio(aspectRatio);
+
+    // 从 Camera 获取矩阵（替换硬编码）
+    Matrix4 proj = mainCamera->GetProjectionMatrix();
     proj[1][1] *= -1;  // Vulkan Y轴翻转
 
-    // 视图矩阵（所有对象共享）
-    Matrix4 view = glm::lookAt(
-        glm::vec3(0.0f, 0.0f, 3.0f),
-        glm::vec3(0.0f, 0.0f, 0.0f),
-        glm::vec3(0.0f, 1.0f, 0.0f));
+    Matrix4 view = mainCamera->GetViewMatrix();
 
     // 更新MeshRenderer对象的UBO
     if (renderPipeline_) {
@@ -1312,6 +1336,20 @@ void RendererVulkan::recreateSwapChain() {
     // 更新 SwapChain 尺寸为当前最新的屏幕尺寸
     vulkanContext_.swapChainExtent = capabilities.currentExtent;
     vulkanContext_.currentTransform = capabilities.currentTransform;
+
+    // 更新主相机宽高比
+    if (scene_ && scene_->getMainCamera()) {
+        float aspectRatio;
+        if (vulkanContext_.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
+            vulkanContext_.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
+            aspectRatio = vulkanContext_.swapChainExtent.height / (float) vulkanContext_.swapChainExtent.width;
+        } else {
+            aspectRatio = vulkanContext_.swapChainExtent.width / (float) vulkanContext_.swapChainExtent.height;
+        }
+
+        scene_->getMainCamera()->SetAspectRatio(aspectRatio);
+        aout << "Camera aspect ratio updated: " << aspectRatio << std::endl;
+    }
 
     // 处理最小化的情况
     if (capabilities.currentExtent.width == 0 || capabilities.currentExtent.height == 0) {
