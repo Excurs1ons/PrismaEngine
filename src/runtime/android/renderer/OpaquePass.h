@@ -122,7 +122,7 @@ public:
      */
     void updateUniformBuffer(const std::vector<std::shared_ptr<GameObject>>& gameObjects,
                              const Matrix4& view, const Matrix4& proj,
-                             uint32_t currentImage, float time);
+                             uint32_t currentImage, float deltaTime);
 
 private:
     /**
