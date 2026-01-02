@@ -30,12 +30,12 @@ public:
     const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
     
     // 获取主相机
-    PrismaEngine::Graphic::ICamera* GetMainCamera();
+    std::shared_ptr<PrismaEngine::Graphic::ICamera> GetMainCamera();
 
     // 设置主相机 (非拥有引用)
-    void SetMainCamera(PrismaEngine::Graphic::ICamera* camera);
+    void SetMainCamera(std::shared_ptr<PrismaEngine::Graphic::ICamera> camera);
 
 private:
     std::vector<std::shared_ptr<GameObject>> m_gameObjects;
-    PrismaEngine::Graphic::ICamera* m_mainCamera = nullptr;
+    std::shared_ptr<PrismaEngine::Graphic::ICamera> m_mainCamera;
 };

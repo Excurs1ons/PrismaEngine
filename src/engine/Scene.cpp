@@ -39,12 +39,12 @@ const std::vector<std::shared_ptr<GameObject>>& Scene::GetGameObjects() const
     return m_gameObjects;
 }
 
-PrismaEngine::Graphic::ICamera* Scene::GetMainCamera()
+std::shared_ptr<PrismaEngine::Graphic::ICamera> Scene::GetMainCamera()
 {
     return m_mainCamera;
 }
 
-void Scene::SetMainCamera(PrismaEngine::Graphic::ICamera* camera)
+void Scene::SetMainCamera(std::shared_ptr<PrismaEngine::Graphic::ICamera> camera)
 {
     m_mainCamera = camera;
     LOG_INFO("Scene", "Main camera set to {0}", camera ? "valid camera" : "nullptr");

@@ -20,7 +20,7 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
-    auto camera = cameraObj->GetComponent<PrismaEngine::Graphic::Camera>();
+    auto camera = cameraObj->GetComponent<PrismaEngine::Graphic::ICamera>();
     if (camera) {
         scene->SetMainCamera(camera);
         LOG_INFO("TriangleExample", "Main camera set for scene");
@@ -72,7 +72,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     auto gameObject = std::make_shared<GameObject>(name);
     
     // 添加变换组件并设置位置
-    auto transform = gameObject->transform();
+    auto transform = gameObject->GetTransform();
     transform->position.x = pos.x;
     transform->position.y = pos.y;
     transform->position.z = pos.z;
@@ -109,7 +109,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name,
     auto gameObject = std::make_shared<GameObject>(name);
 
     // 添加变换组件并设置位置
-    auto transform = gameObject->transform();
+    auto transform = gameObject->GetTransform();
     transform->position.x = pos.x;
     transform->position.y = pos.y;
     transform->position.z = pos.z;
@@ -159,7 +159,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCube(const std::string& name,
     auto gameObject = std::make_shared<GameObject>(name);
 
     // 添加变换组件并设置位置
-    auto transform = gameObject->transform();
+    auto transform = gameObject->GetTransform();
     transform->position.x = pos.x;
     transform->position.y = pos.y;
     transform->position.z = pos.z;
@@ -231,7 +231,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& nam
     auto gameObject = std::make_shared<GameObject>(name);
 
     // 添加变换组件并设置位置
-    auto transform = gameObject->transform();
+    auto transform = gameObject->GetTransform();
     transform->position.x = pos.x;
     transform->position.y = pos.y;
     transform->position.z = 0.0f;
@@ -284,7 +284,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     auto game_object = std::make_shared<GameObject>(name);
 
     // 添加变换组件并设置位置
-    auto *transform = game_object->transform();
+    auto transform = game_object->GetTransform();
     transform->position.x = pos.x;
     transform->position.y = pos.y;
     transform->position.z = pos.z;
@@ -318,7 +318,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateDebugText(const std::string& 
     auto gameObject = std::make_shared<GameObject>(name);
 
     // 添加变换组件并设置位置（屏幕中央）
-    auto transform = gameObject->transform();
+    auto transform = gameObject->GetTransform();
     transform->position.x = 0.0f;   // 屏幕中央 X
     transform->position.y = 0.0f;   // 屏幕中央 Y
     transform->position.z = 0.0f;
