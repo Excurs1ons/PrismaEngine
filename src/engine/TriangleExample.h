@@ -4,7 +4,7 @@
 #include "Scene.h"
 #include "Transform.h"
 #include <memory>
-
+using namespace PrismaEngine;
 // 三角形示例类，展示如何创建场景、相机和渲染组件
 class TriangleExample
 {
