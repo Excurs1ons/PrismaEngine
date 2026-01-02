@@ -2,8 +2,9 @@
 #include "../../engine/CubemapTextureAsset.h"
 #include "../../engine/TextureAsset.h"
 #include "AndroidOut.h"
+#include "AndroidInputBackend.h"
+#include "InteractiveRotationComponent.h"
 #include "MeshRenderer.h"
-#include "RotationComponent.h"
 #include "Scene.h"
 #include "ShaderVulkan.h"
 #include "SkyboxRenderer.h"
@@ -122,6 +123,10 @@ void RendererVulkan::init() {
 
     // 初始化帧时间
     lastFrameTime_ = std::chrono::high_resolution_clock::now();
+
+    // 初始化输入系统
+    auto& inputBackend = PrismaEngine::Input::AndroidInputBackend::GetInstance();
+    inputBackend.Initialize(app_);
     
     // 1. Create Instance
     VkApplicationInfo appInfo{};
@@ -435,9 +440,12 @@ void RendererVulkan::createScene() {
         auto model = std::make_shared<Model>(vertices, indices, texture);
         go->AddComponent(std::make_shared<MeshRenderer>(model));
 
-        // 添加自动旋转组件（30度/秒）
-        auto rotationComp = std::make_shared<PrismaEngine::RotationComponent>();
-        rotationComp->setRotationSpeed(30.0f, 30.0f, 0.0f);
+        // 添加交互式旋转组件（仅触摸旋转）
+        auto rotationComp = std::make_shared<PrismaEngine::InteractiveRotationComponent>();
+        rotationComp->SetInteractionMode(PrismaEngine::InteractiveRotationComponent::InteractionMode::TouchRotate);
+        rotationComp->SetTouchSensitivity(2.0f);  // 降低灵敏度，因为加速度会累积
+        rotationComp->SetAxisMode(PrismaEngine::InteractiveRotationComponent::AxisMode::Both);  // X和Y轴旋转
+        rotationComp->SetDamping(0.99f);  // 更小的阻尼，让惯性持续时间更长
         go->AddComponent(rotationComp);
 
         scene_->addGameObject(go);
