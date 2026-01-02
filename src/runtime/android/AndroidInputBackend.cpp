@@ -1,6 +1,7 @@
 #include "AndroidInputBackend.h"
 #include "AndroidOut.h"
 #include <algorithm>
+#include <chrono>
 
 namespace PrismaEngine {
 namespace Input {
@@ -24,6 +25,19 @@ void AndroidInputBackend::Update() {
     // 保存上一帧的触摸点
     previousTouches_ = activeTouches_;
     previousTouchCount_ = static_cast<int>(activeTouches_.size());
+
+    // 调试日志
+    static auto lastDebugTime = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastDebugTime).count();
+
+    if (!activeTouches_.empty() && duration > 500) {
+        aout << "Update: activeTouches_ count=" << activeTouches_.size() << std::endl;
+        for (const auto& pair : activeTouches_) {
+            aout << "  fingerId=" << pair.first << " phase=" << static_cast<int>(pair.second.phase) << std::endl;
+        }
+        lastDebugTime = now;
+    }
 
     // 更新触摸点阶段
     UpdateTouchPhases();
@@ -168,19 +182,21 @@ void AndroidInputBackend::UpdateTouchPhases() {
         // 查找上一帧的状态
         auto prevIt = previousTouches_.find(touch.fingerId);
 
+        // 如果是新的触摸点（上一帧不存在），保持 Began 状态
+        if (prevIt == previousTouches_.end()) {
+            touch.phase = TouchPhase::Began;
+            continue;  // 跳过后续处理
+        }
+
+        // 已存在的触摸点，更新阶段
         if (touch.phase == TouchPhase::Began) {
-            // Began 在下一帧变为 Moved 或 Stationary
+            // Began 在下一帧变为 Stationary
             touch.phase = TouchPhase::Stationary;
         } else if (touch.phase == TouchPhase::Moved) {
             // 如果位置没变，变为 Stationary
             if (std::abs(touch.deltaX) < 0.01f && std::abs(touch.deltaY) < 0.01f) {
                 touch.phase = TouchPhase::Stationary;
             }
-        }
-
-        // 如果是新的触摸点（上一帧不存在），保持 Began
-        if (prevIt == previousTouches_.end()) {
-            touch.phase = TouchPhase::Began;
         }
     }
 }
