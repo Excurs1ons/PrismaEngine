@@ -1,6 +1,6 @@
 #ifndef PRISMA_ANDROID_OPAQUE_PASS_H
 #define PRISMA_ANDROID_OPAQUE_PASS_H
-#include "../../../engine/Model.h"
+#include "Model.h"
 #include "RenderPass.h"
 #include <memory>
 #include <vector>
@@ -10,7 +10,9 @@
 struct android_app;
 
 class MeshRenderer;
+namespace PrismaEngine{
 class GameObject;
+}
 struct Scene;
 
 // === 数据结构定义（暂时保留，后续会移动到各 Pass 中） ===

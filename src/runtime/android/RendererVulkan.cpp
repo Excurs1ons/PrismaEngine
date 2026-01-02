@@ -373,7 +373,7 @@ void RendererVulkan::createScene() {
 //        std::vector<Index> indices = { 0, 1, 2, 0, 2, 3 };
 //
 //        auto model = std::make_shared<Model>(vertices, indices, texture);
-//        go->addComponent(std::make_shared<MeshRenderer>(model));
+//        go->AddComponent(std::make_shared<MeshRenderer>(model));
 //        scene_->addGameObject(go);
     }
 
@@ -429,7 +429,7 @@ void RendererVulkan::createScene() {
         };
 
         auto model = std::make_shared<Model>(vertices, indices, texture);
-        go->addComponent(std::make_shared<MeshRenderer>(model));
+        go->AddComponent(std::make_shared<MeshRenderer>(model));
         scene_->addGameObject(go);
     }
 
@@ -454,11 +454,11 @@ void RendererVulkan::createScene() {
         skyboxGO->position = Vector3(0, 0, 0);  // Skybox位置不重要，因为它始终围绕相机
 
         if (cubemap) {
-            skyboxGO->addComponent(std::make_shared<SkyboxRenderer>(cubemap));
+            skyboxGO->AddComponent(std::make_shared<SkyboxRenderer>(cubemap));
             aout << "成功使用立方体贴图创建天空盒!" << std::endl;
         } else {
             // 即使没有纹理，也添加SkyboxRenderer（会使用纯色渲染）
-            skyboxGO->addComponent(std::make_shared<SkyboxRenderer>(nullptr));
+            skyboxGO->AddComponent(std::make_shared<SkyboxRenderer>(nullptr));
             aout << "未找到立方体贴图，创建纯色天空盒!" << std::endl;
         }
         scene_->addGameObject(skyboxGO);
@@ -489,9 +489,9 @@ void RendererVulkan::createVertexBuffer() {
 
     for (size_t i = 0; i < gameObjects.size(); i++) {
         auto go = gameObjects[i];
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()) {
             meshRendererIndices.push_back(i);
-        } else if (go->getComponent<SkyboxRenderer>()) {
+        } else if (go->GetComponent<SkyboxRenderer>()) {
             skyboxIndex = i;
         }
     }
@@ -501,7 +501,7 @@ void RendererVulkan::createVertexBuffer() {
     for (size_t j = 0; j < meshRendererIndices.size(); j++) {
         size_t i = meshRendererIndices[j];
         auto go = gameObjects[i];
-        auto meshRenderer = go->getComponent<MeshRenderer>();
+        auto meshRenderer = go->GetComponent<MeshRenderer>();
         auto model = meshRenderer->getModel();
         VkDeviceSize bufferSize = sizeof(Vertex) * model->getVertexCount();
 
@@ -586,9 +586,9 @@ void RendererVulkan::createIndexBuffer() {
 
     for (size_t i = 0; i < gameObjects.size(); i++) {
         auto go = gameObjects[i];
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()) {
             meshRendererIndices.push_back(i);
-        } else if (go->getComponent<SkyboxRenderer>()) {
+        } else if (go->GetComponent<SkyboxRenderer>()) {
             skyboxIndex = i;
         }
     }
@@ -597,7 +597,7 @@ void RendererVulkan::createIndexBuffer() {
     for (size_t j = 0; j < meshRendererIndices.size(); j++) {
         size_t i = meshRendererIndices[j];
         auto go = gameObjects[i];
-        auto meshRenderer = go->getComponent<MeshRenderer>();
+        auto meshRenderer = go->GetComponent<MeshRenderer>();
         auto model = meshRenderer->getModel();
         VkDeviceSize bufferSize = sizeof(Index) * model->getIndexCount();
 
@@ -654,9 +654,9 @@ void RendererVulkan::createUniformBuffers() {
 
     for (size_t i = 0; i < gameObjects.size(); i++) {
         auto go = gameObjects[i];
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()) {
             meshRendererIndices.push_back(i);
-        } else if (go->getComponent<SkyboxRenderer>()) {
+        } else if (go->GetComponent<SkyboxRenderer>()) {
             skyboxIndex = i;
         }
     }
@@ -685,9 +685,9 @@ void RendererVulkan::createDescriptorPool() {
     uint32_t skyboxCount = 0;
 
     for (auto& go : gameObjects) {
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()) {
             meshRendererCount++;
-        } else if (go->getComponent<SkyboxRenderer>()) {
+        } else if (go->GetComponent<SkyboxRenderer>()) {
             skyboxCount++;
         }
     }
@@ -783,9 +783,9 @@ void RendererVulkan::createDescriptorSets() {
 
     for (size_t i = 0; i < gameObjects.size(); i++) {
         auto go = gameObjects[i];
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()) {
             meshRendererIndices.push_back(i);
-        } else if (go->getComponent<SkyboxRenderer>()) {
+        } else if (go->GetComponent<SkyboxRenderer>()) {
             skyboxIndex = i;
         }
     }
@@ -810,7 +810,7 @@ void RendererVulkan::createDescriptorSets() {
             bufferInfo.range = sizeof(UniformBufferObject);
 
             auto go = gameObjects[i];
-            auto meshRenderer = go->getComponent<MeshRenderer>();
+            auto meshRenderer = go->GetComponent<MeshRenderer>();
             auto& textureAsset = meshRenderer->getModel()->getTexture();
 
             VkDescriptorImageInfo imageInfo{};
@@ -888,7 +888,7 @@ void RendererVulkan::createSkyboxDescriptorSets() {
     auto& gameObjects = scene_->getGameObjects();
     std::shared_ptr<SkyboxRenderer> skyboxRenderer;
     for (auto& go : gameObjects) {
-        skyboxRenderer = go->getComponent<SkyboxRenderer>();
+        skyboxRenderer = go->GetComponent<SkyboxRenderer>();
         if (skyboxRenderer) break;
     }
 
@@ -990,9 +990,9 @@ void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
 
     for (size_t i = 0; i < gameObjects.size(); i++) {
         auto go = gameObjects[i];
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()) {
             meshRendererIndices.push_back(i);
-        } else if (go->getComponent<SkyboxRenderer>()) {
+        } else if (go->GetComponent<SkyboxRenderer>()) {
             skyboxIndex = i;
         }
     }
@@ -1039,7 +1039,7 @@ void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
             }
 
             UniformBufferObject ubo{};
-            ubo.model = go->getTransformMatrix();
+            ubo.model = go->GetTransform()->GetMatrix();
             ubo.view = view;
             ubo.proj = proj;
 
