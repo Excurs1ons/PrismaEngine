@@ -43,6 +43,12 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 | **Google Swappy** | 中 | Vulkan迁移 | [SwappyIntegration.md](SwappyIntegration.md) |
 | **HAP 视频播放** | 低 | Snappy | [HAPVideoSystem.md](HAPVideoSystem.md) |
 
+### 相关库链接
+- [SDL3](https://github.com/libsdl-org/SDL) - 跨平台多媒体层
+- [Google Snappy](https://github.com/google/snappy) - 快速压缩库
+- [Google Swappy](https://developer.android.com/games/sdk/frame-pacing) - Android 帧率控制
+- [HAP Codec](https://github.com/Vidvox/hap) - GPU 加速视频编解码
+
 ## 各系统实现状态
 
 ### 2D/3D 渲染系统
@@ -57,15 +63,16 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 ### 跨平台支持
 - ✅ Windows平台 (DirectX 12) - PlatformWindows.cpp
 - ✅ Android平台 (Vulkan) - PlatformAndroid.cpp
-- ✅ Linux/macOS (SDL3/Vulkan) - PlatformSDL.cpp
+- ✅ Linux/macOS ([SDL3](https://github.com/libsdl-org/SDL)/Vulkan) - PlatformSDL.cpp
 - ✅ 日志系统统一接口
 - ✅ 条件编译保护
 - 🔄 输入系统完善中
 
 ### 其他系统
 - 🔄 音频系统 (架构已定义)
-- ❌ 物理系统 (JoltPhysics集成)
-- ❌ 动画系统
+- ❌ 物理系统 ([JoltPhysics](https://github.com/jrouwe/JoltPhysics))
+- ❌ 动画系统 (角色/骨骼动画)
+- ❌ UI 补间动画 ([Tweeny](https://github.com/mobius3/tweeny))
 - 🔄 编辑器框架
 
 ## 开发优先级
@@ -81,9 +88,13 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 3. 物理引擎集成
 
 ### 低优先级
-1. 高级渲染特性 (RTXGI)
-2. 动画系统
+1. 高级渲染特性 ([RTXGI](https://github.com/NVIDIA-RTX/RTXGI))
+2. 动画系统 (角色/骨骼)
 3. 脚本系统
+
+### UI 系统
+- ❌ UI 框架 ([Dear ImGui](https://github.com/ocornut/imgui) 编辑器)
+- ❌ 补间动画 ([Tweeny](https://github.com/mobius3/tweeny))
 
 ## 文档索引
 
