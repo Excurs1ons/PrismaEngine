@@ -6,9 +6,18 @@
 #include "RenderComponent.h"
 #include <memory>
 #include <utility>
+#include "Model.h"
+using namespace PrismaEngine;
 
 class MeshRenderer :public RenderComponent
 {
+public:
+    MeshRenderer(std::shared_ptr<Model> model) : model_(model) {}
+
+    std::shared_ptr<Model> getModel() const { return model_; }
+
+private:
+    std::shared_ptr<Model> model_;
 private:
     std::shared_ptr<Mesh> m_mesh;
     std::shared_ptr<PrismaEngine::Material> m_material;
