@@ -9,10 +9,9 @@ namespace PrismaEngine {
 class GameObject
 {
 public:
-    GameObject();
     std::string name;
     GameObject(std::string name, std::unique_ptr<Transform> transform = nullptr);
-    
+    GameObject();
     //get属性
     [[nodiscard]] std::shared_ptr<Transform> GetTransform() { return transform; }
     
