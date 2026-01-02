@@ -8,6 +8,7 @@ class GameObject;  // 前向声明以避免循环依赖
 class Transform : public Component
 {
 public:
+    friend class Component;
     // 添加简单的变换属性
     Vector3 position = {0.0f, 0.0f, 0.0f};
     Vector3 eulerAngles = { 0.0f, 0.0f, 0.0f };
