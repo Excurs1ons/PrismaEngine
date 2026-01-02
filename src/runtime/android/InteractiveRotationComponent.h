@@ -75,11 +75,13 @@ public:
 
     /**
      * 设置平滑阻尼（0-1）
-     * 0 = 无阻尼（立即停止）
-     * 1 = 最大阻尼（继续滑动）
+     * 0 = 无阻尼（永不停止）
+     * 0.01 = 轻微阻尼（每帧衰减1%）
+     * 0.1 = 中等阻尼
+     * 1 = 立即停止
      */
     void SetDamping(float damping) {
-        damping_ = glm::clamp(damping, 0.0f, 0.95f);
+        damping_ = glm::clamp(damping, 0.0f, 1.0f);
     }
 
     void Initialize() override {
@@ -101,7 +103,26 @@ public:
 
             // 应用旋转速度（无论是否拖拽）
             if (glm::length(velocity_) > 0.01f) {
-                trans->eulerAngles += velocity_ * deltaTime;
+                // 使用四元数应用基于摄像机视角的旋转
+                // 摄像机位置：(0, 0, 3)，看向原点，上方向：(0, 1, 0)
+                // 摄像机坐标系：右=(1,0,0), 上=(0,1,0), 前=(0,0,-1)
+
+                // velocity_.x: 屏幕Y轴滑动 → 绕摄像机右轴旋转
+                // velocity_.y: 屏幕X轴滑动 → 绕摄像机上轴旋转
+
+                float xAngle = velocity_.x * deltaTime;  // 绕右轴的角度（度）
+                float yAngle = velocity_.y * deltaTime;  // 绕上轴的角度（度）
+
+                // 绕摄像机右轴 (1, 0, 0) 的四元数
+                Quaternion xRot = glm::angleAxis(glm::radians(xAngle), Vector3(1, 0, 0));
+                // 绕摄像机上轴 (0, 1, 0) 的四元数
+                Quaternion yRot = glm::angleAxis(glm::radians(yAngle), Vector3(0, 1, 0));
+
+                // 组合旋转（Y轴旋转 * X轴旋转 * 当前旋转）
+                trans->rotation = yRot * xRot * trans->rotation;
+
+                // 更新欧拉角（用于显示，不影响实际旋转）
+                trans->eulerAngles = Math::ToEulerAngles(trans->rotation);
 
                 // 应用阻尼（只有不拖拽时才衰减）
                 if (!isDragging_) {
@@ -120,13 +141,6 @@ public:
                     aout << "Velocity stopped!" << std::endl;
                 }
             }
-
-            // 转换为四元数
-            trans->rotation = Math::FromEulerAngles(glm::vec3(
-                glm::radians(trans->eulerAngles.x),
-                glm::radians(trans->eulerAngles.y),
-                glm::radians(trans->eulerAngles.z)
-            ));
         }
     }
 
