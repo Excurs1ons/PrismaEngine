@@ -19,6 +19,9 @@ struct Vertex {
     Vertex(const Vector4& inPosition, const Vector4& inColor, const Vector4& inUV)
         : position(inPosition), color(inColor), uv(inUV), normal(Vector4(0, 0, 0, 0)), texCoord(Vector4(0, 0, 0, 0)), tangent(Vector4(0, 0, 0, 0)) {}
 
+    Vertex(const Vector4& inPosition, const Vector4& inColor, const Vector4& inUV, const Vector4& inNormal)
+        : position(inPosition), color(inColor), uv(inUV), normal(inNormal), texCoord(Vector4(0, 0, 0, 0)), tangent(Vector4(0, 0, 0, 0)) {}
+
     Vertex() {
         position = Vector4(0, 0, 0,0);
         color = Vector4(1, 1, 1, 1);
