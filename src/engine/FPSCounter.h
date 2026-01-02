@@ -4,6 +4,9 @@
 #include "ui/TextRendererComponent.h"
 #include <string>
 #include <time.h>
+#include "GameObject.h"
+
+using namespace PrismaEngine;
 
 /// @brief FPS 计数器组件
 /// 每秒更新一次显示的 FPS 值
@@ -13,7 +16,7 @@ public:
     ~FPSCounter() override = default;
 
     void Initialize() override {
-        m_textRenderer = gameObject()->GetComponent<PrismaEngine::TextRendererComponent>();
+        m_textRenderer = GetOwner()->GetComponent<PrismaEngine::TextRendererComponent>();
         if (m_textRenderer) {
             m_textRenderer->SetText("FPS: --");
             m_textRenderer->SetColor({0.0f, 1.0f, 0.0f, 1.0f}); // 绿色
@@ -52,7 +55,7 @@ public:
     }
 
 private:
-    PrismaEngine::TextRendererComponent* m_textRenderer = nullptr;
+    std::shared_ptr<PrismaEngine::TextRendererComponent> m_textRenderer = nullptr;
     float m_accumulatedTime = 0.0f;
     int m_frameCount = 0;
 };

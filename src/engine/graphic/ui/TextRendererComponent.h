@@ -1,7 +1,7 @@
 #pragma once
 
-#include "../Component.h"
-#include "../Mesh.h"
+#include "Component.h"
+#include "Mesh.h"
 #include "FontAtlas.h"
 #include <string>
 #include <vector>

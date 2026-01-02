@@ -69,18 +69,18 @@ void MeshRenderer::Render(PrismaEngine::Graphic::RenderCommandContext* context)
     // m_material->Apply(context); // 需要实现Material::Apply方法
 
     // 设置物体变换
-    if (m_owner) {
-        Transform* transform = m_owner->transform();
+    if (GetOwner()) {
+        auto transform = GetOwner()->GetTransform();
         if (!transform) {
             LOG_WARNING("MeshRenderer", "Render: owner has no Transform");
             assert(transform && "MeshRenderer::Render: owner transform is null");
         } else {
-            LOG_DEBUG("MeshRenderer", "Render: setting ObjectConstants from Transform ptr={0}", reinterpret_cast<uintptr_t>(transform));
+            LOG_DEBUG("MeshRenderer", "Render: setting ObjectConstants from Transform");
             context->SetConstantBuffer("ObjectConstants", transform->GetMatrix());
         }
     } else {
-        LOG_WARNING("MeshRenderer", "Render: m_owner is null");
-        assert(m_owner && "MeshRenderer::Render: owner is null");
+        LOG_WARNING("MeshRenderer", "Render: GetOwner() is null");
+        assert(GetOwner() && "MeshRenderer::Render: owner is null");
     }
 
     // 绘制网格
