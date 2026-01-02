@@ -16,6 +16,14 @@ public:
             const std::string& assetPath,
             VulkanContext* vulkanContext = nullptr);
 
+    // 创建白色 1x1 fallback 纹理（类似 Unity 的默认白色纹理）
+    // 当材质没有纹理时使用此纹理作为 fallback
+    static std::shared_ptr<TextureAsset> createWhiteFallback(VulkanContext* vulkanContext);
+
+    // 获取或创建全局白色 fallback 纹理（单例模式）
+    // 确保整个引擎只创建一个白色纹理，节省资源
+    static std::shared_ptr<TextureAsset> getOrCreateWhiteFallback(VulkanContext* vulkanContext);
+
     virtual ~TextureAsset();
 
     // 获取 Vulkan 资源句柄
