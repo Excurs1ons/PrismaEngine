@@ -13,6 +13,11 @@ public:
         return gameObjects_;
     }
 
+    /**
+     * 更新场景中的所有游戏对象
+     * 调用每个对象上的组件更新
+     * @param deltaTime 时间增量（秒）
+     */
     void update(float deltaTime) {
         for (auto& go : gameObjects_) {
             go->update(deltaTime);

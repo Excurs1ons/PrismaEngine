@@ -56,6 +56,9 @@ private:
     const int MAX_FRAMES_IN_FLIGHT = 2;
     uint32_t currentFrame = 0;
 
+    // 帧时间跟踪
+    std::chrono::time_point<std::chrono::high_resolution_clock> lastFrameTime_;
+
 
 
 
