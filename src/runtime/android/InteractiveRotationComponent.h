@@ -122,7 +122,7 @@ public:
                 trans->rotation = yRot * xRot * trans->rotation;
 
                 // 更新欧拉角（用于显示，不影响实际旋转）
-                trans->eulerAngles = Math::ToEulerAngles(trans->rotation);
+                trans->eulerAngles = glm::degrees(glm::eulerAngles(trans->rotation));
 
                 // 应用阻尼（只有不拖拽时才衰减）
                 if (!isDragging_) {
@@ -173,10 +173,10 @@ private:
                         aout << "Moving! delta=(" << delta.x << ", " << delta.y << ")" << std::endl;
 
                         // 屏幕空间滑动映射到物体旋转（基于摄像机视角）
-                        // 屏幕X轴左右滑动 → 绕世界Y轴旋转（水平自转）
-                        // 屏幕Y轴上下滑动 → 绕世界X轴旋转（上下翻转）
-                        float accelX = delta.y * touchSensitivity_;  // 屏幕Y → 绕X轴
-                        float accelY = delta.x * touchSensitivity_;  // 屏幕X → 绕Y轴
+                        // 屏幕X轴左右滑动 → 绕摄像机Y轴旋转（水平自转）
+                        // 屏幕Y轴上下滑动 → 绕摄像机X轴旋转（上下翻转）
+                        float accelX = delta.y * touchSensitivity_;  // 屏幕Y → 绕摄像机X轴
+                        float accelY = delta.x * touchSensitivity_;  // 屏幕X → 绕摄像机Y轴
 
                         // 加速度叠加到当前速度
                         velocity_.x += accelX;
