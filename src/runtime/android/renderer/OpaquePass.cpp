@@ -40,11 +40,22 @@ void OpaquePass::createPipeline(VkDevice device, VkRenderPass renderPass) {
         throw std::runtime_error("OpaquePass::createPipeline: android_app not set!");
     }
 
-    auto vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/shader.vert.spv");
-    auto fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/shader.frag.spv");
+    // 使用 lit shader（带 Phong 光照）
+    aout << "正在加载 lit shader..." << std::endl;
+    auto vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/lit.vert.spv");
+    auto fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/lit.frag.spv");
 
     if (vertShaderCode.empty() || fragShaderCode.empty()) {
-        throw std::runtime_error("Failed to load shader files!");
+        aout << "错误：无法加载 lit shader，尝试使用 unlit shader" << std::endl;
+        // Fallback 到 unlit shader
+        vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/unlit.vert.spv");
+        fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/unlit.frag.spv");
+        if (vertShaderCode.empty() || fragShaderCode.empty()) {
+            throw std::runtime_error("Failed to load any shader files!");
+        }
+        aout << "使用 unlit shader（fallback）" << std::endl;
+    } else {
+        aout << "成功加载 lit shader!" << std::endl;
     }
 
     VkShaderModule vertShaderModule;
@@ -88,21 +99,27 @@ void OpaquePass::createPipeline(VkDevice device, VkRenderPass renderPass) {
     bindingDescription.stride = sizeof(Vertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
+    // 添加法线属性：位置、颜色、UV、法线
+    std::array<VkVertexInputAttributeDescription, 4> attributeDescriptions{};
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
     attributeDescriptions[0].offset = offsetof(Vertex, position);
 
     attributeDescriptions[1].binding = 0;
     attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
     attributeDescriptions[1].offset = offsetof(Vertex, color);
 
     attributeDescriptions[2].binding = 0;
     attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;
+    attributeDescriptions[2].format = VK_FORMAT_R32G32B32A32_SFLOAT;
     attributeDescriptions[2].offset = offsetof(Vertex, uv);
+
+    attributeDescriptions[3].binding = 0;
+    attributeDescriptions[3].location = 3;
+    attributeDescriptions[3].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+    attributeDescriptions[3].offset = offsetof(Vertex, normal);
 
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
@@ -240,12 +257,16 @@ void OpaquePass::record(VkCommandBuffer cmdBuffer) {
         }
     }
 
+    aout << "OpaquePass: 渲染 " << meshRendererIndices.size() << " 个物体" << std::endl;
+
     // 渲染所有 MeshRenderer 对象
     for (size_t j = 0; j < meshRendererIndices.size(); j++) {
         size_t i = meshRendererIndices[j];
         auto go = gameObjects[i];
         auto meshRenderer = go->GetComponent<MeshRenderer>();
         auto model = meshRenderer->getModel();
+
+        aout << "  渲染物体 [" << j << "]: " << go->name << ", 顶点数: " << model->getVertexCount() << ", 索引数: " << model->getIndexCount() << std::endl;
 
         VkBuffer vertexBuffers[] = {renderObjects_[j].vertexBuffer};
         VkDeviceSize offsets[] = {0};
