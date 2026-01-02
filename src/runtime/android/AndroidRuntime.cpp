@@ -12,8 +12,8 @@
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
 
-#include "AndroidLogger.h"
-#include "Logger.h"
+// #include "AndroidLogger.h"
+// #include "Logger.h"
 extern "C" {
 
 #include <game-activity/native_app_glue/android_native_app_glue.c>
@@ -27,7 +27,7 @@ void handle_cmd(android_app *pApp, int32_t cmd) {
     switch (cmd) {
         case APP_CMD_INIT_WINDOW:
             aout << "Event: \"APP_CMD_INIT_WINDOW\" 窗口初始化" << std::endl;
-            LOG_INFO("Event", "窗口初始化(APP_CMD_INIT_WINDOW)");
+            // LOG_INFO("Event", "窗口初始化(APP_CMD_INIT_WINDOW)");
             // A new window is created, associate a renderer with it. You may replace this with a
             // "game" class if that suits your needs. Remember to change all instances of userData
             // if you change the class here as a reinterpret_cast is dangerous this in the
@@ -82,15 +82,17 @@ bool motion_event_filter_func(const GameActivityMotionEvent *motionEvent) {
 void android_main(struct android_app *pApp) {
     // Can be removed, useful to ensure your code is running
 
-    Logger &logger = Logger::GetInstance();
-    PrismaEngine::AndroidLogger androidLogger;
-    logger.SetPlatformLogger(&androidLogger);
-    LogConfig config;
-    config.enableColors = false;
-    config.target = LogTarget::Console;
-    logger.Initialize(config);
+//    Logger &logger = Logger::GetInstance();
+//    PrismaEngine::AndroidLogger androidLogger;
+//    logger.SetPlatformLogger(&androidLogger);
+//    LogConfig config;
+//    config.enableColors = false;
+//    config.target = LogTarget::Console;
+//    logger.Initialize(config);
+//    LOG_INFO("Event", "主函数开始");
+//
     aout << "主函数开始" << '\n';
-    LOG_INFO("Event", "主函数开始");
+
     // Register an event handler for Android events
     pApp->onAppCmd = handle_cmd;
 
