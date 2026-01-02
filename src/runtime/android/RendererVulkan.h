@@ -78,6 +78,10 @@ private:
 
     VkDescriptorPool descriptorPool;
 
+    // 光源 Uniform Buffer（全局共享）
+    VkBuffer lightUniformBuffer;
+    VkDeviceMemory lightUniformBufferMemory;
+
 };
 
 #endif //MY_APPLICATION_RENDERERVULKAN_H
