@@ -1,14 +1,21 @@
 #include "GameObject.h"
 #include "Component.h"
 #include "Transform.h"
+namespace PrismaEngine{
+    GameObject::GameObject(std::string name, std::unique_ptr<Transform> transform) {
+        this->name = name;
+        if (transform) {
+            this->transform = std::move(transform);
+        } else {
+            this->transform = std::make_unique<Transform>();
+            this->transform->SetOwner(this);
+            this->transform->Initialize();
+        }
+    }
 
-GameObject::GameObject(std::string name, std::unique_ptr<Transform> transform) {
-    this->name = name;
-    if (transform) {
-        this->m_transform = std::move(transform);
-    } else {
-        this->m_transform = std::make_unique<Transform>();
-        m_transform->Owner(this);
-        m_transform->Initialize();
+    GameObject::GameObject() {
+        this->transform = std::make_unique<Transform>();
+        this->transform->SetOwner(this);
+        this->transform->Initialize();
     }
 }

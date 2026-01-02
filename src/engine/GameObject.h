@@ -9,11 +9,12 @@ namespace PrismaEngine {
 class GameObject
 {
 public:
+    GameObject();
     std::string name;
     GameObject(std::string name, std::unique_ptr<Transform> transform = nullptr);
     
     //get属性
-    [[nodiscard]] Transform* GetTransform() const { return transform.get(); }
+    [[nodiscard]] std::shared_ptr<Transform> GetTransform() { return transform; }
     
 	/// @brief 添加组件
     template<typename T>
@@ -24,17 +25,6 @@ public:
         ptr->Owner(this);
         ptr->Initialize();
         return ptr;
-    }
-    
-	/// @brief 获取组件
-    template<typename T>
-    T* GetComponent() {
-        for (auto& comp : components) {
-            if (auto* casted = dynamic_cast<T*>(comp.get())) {
-                return casted;
-            }
-        }
-        return nullptr;
     }
 
     void Update(float deltaTime) {
@@ -78,7 +68,7 @@ public:
         return model;
     }
 private:
-    std::unique_ptr<Transform> transform;
+    std::shared_ptr<Transform> transform;
     std::vector<std::shared_ptr<Component>> components;
 };
 }
