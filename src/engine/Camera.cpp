@@ -212,8 +212,9 @@ void Camera::UpdateViewMatrix() const {
         PrismaMath::mat4 rotationMatrix = PrismaEngine::Math::QuaternionToMatrix(rotation);
 
         // 相机默认前向是-Z，所以需要额外旋转
-        PrismaMath::mat4 cameraFix = PrismaEngine::Math::RotationY(PrismaEngine::Math::PI);
-        rotationMatrix = PrismaEngine::Math::Multiply(cameraFix, rotationMatrix);
+        // 注意：这个 180 度旋转可能导致相机朝向错误，暂时禁用
+        // PrismaMath::mat4 cameraFix = PrismaEngine::Math::RotationY(PrismaEngine::Math::PI);
+        // rotationMatrix = PrismaEngine::Math::Multiply(cameraFix, rotationMatrix);
 
         // 计算世界坐标系的各轴
         m_forward = PrismaEngine::Math::Normalize(PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));  // Z轴（前向）
