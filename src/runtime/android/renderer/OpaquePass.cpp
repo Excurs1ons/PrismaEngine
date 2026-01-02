@@ -287,7 +287,7 @@ void OpaquePass::setDescriptorSetLayout(VkDescriptorSetLayout layout) {
 
 void OpaquePass::updateUniformBuffer(const std::vector<std::shared_ptr<GameObject>>& gameObjects,
                                      const Matrix4& view, const Matrix4& proj,
-                                     uint32_t currentImage, float time) {
+                                     uint32_t currentImage, float deltaTime) {
     // 获取所有 MeshRenderer 对象
     std::vector<size_t> meshRendererIndices;
     for (size_t i = 0; i < gameObjects.size(); i++) {
@@ -302,13 +302,6 @@ void OpaquePass::updateUniformBuffer(const std::vector<std::shared_ptr<GameObjec
         size_t i = meshRendererIndices[j];
         auto go = gameObjects[i];
 
-        // 更新立方体旋转动画
-        if (go->name == "Cube") {
-            go->rotation.x = time * 30.0f;
-            go->rotation.y = time * 30.0f;
-        }
-
-        std::shared_ptr<Transform> trans = go->GetTransform();
         UniformBufferObject ubo{};
         ubo.model = go->GetTransform()->GetMatrix();
         ubo.view = view;

@@ -3,6 +3,7 @@
 #include "../../engine/TextureAsset.h"
 #include "AndroidOut.h"
 #include "MeshRenderer.h"
+#include "RotationComponent.h"
 #include "Scene.h"
 #include "ShaderVulkan.h"
 #include "SkyboxRenderer.h"
@@ -118,6 +119,9 @@ RendererVulkan::~RendererVulkan() {
 
 void RendererVulkan::init() {
     aout << "Vulkan渲染器初始化..." << std::endl;
+
+    // 初始化帧时间
+    lastFrameTime_ = std::chrono::high_resolution_clock::now();
     
     // 1. Create Instance
     VkApplicationInfo appInfo{};
@@ -430,6 +434,12 @@ void RendererVulkan::createScene() {
 
         auto model = std::make_shared<Model>(vertices, indices, texture);
         go->AddComponent(std::make_shared<MeshRenderer>(model));
+
+        // 添加自动旋转组件（30度/秒）
+        auto rotationComp = std::make_shared<PrismaEngine::RotationComponent>();
+        rotationComp->setRotationSpeed(30.0f, 30.0f, 0.0f);
+        go->AddComponent(rotationComp);
+
         scene_->addGameObject(go);
     }
 
@@ -977,10 +987,15 @@ void RendererVulkan::createSkyboxDescriptorSets() {
  * 这确保了当屏幕旋转时，投影矩阵会自动适应新的屏幕方向
  */
 void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
-    // 获取时间（用于动画）
-    static auto startTime = std::chrono::high_resolution_clock::now();
+    // 计算帧时间
     auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - startTime).count();
+    float deltaTime = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - lastFrameTime_).count();
+    lastFrameTime_ = currentTime;
+
+    // 1. 先更新游戏逻辑（包括动画、物理等）
+    if (scene_) {
+        scene_->update(deltaTime);
+    }
 
     auto& gameObjects = scene_->getGameObjects();
 
@@ -1024,19 +1039,13 @@ void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
     if (renderPipeline_) {
         auto* opaquePass = renderPipeline_->getOpaquePass();
         if (opaquePass) {
-            opaquePass->updateUniformBuffer(gameObjects, view, proj, currentImage, time);
+            opaquePass->updateUniformBuffer(gameObjects, view, proj, currentImage, deltaTime);
         }
     } else {
         // 回退到旧的方式（如果 renderPipeline 未创建）
         for (size_t j = 0; j < meshRendererIndices.size(); j++) {
             size_t i = meshRendererIndices[j];
             auto go = gameObjects[i];
-
-            // 更新立方体旋转动画
-            if (go->name == "Cube") {
-                go->rotation.x = time * 30.0f;
-                go->rotation.y = time * 30.0f;
-            }
 
             UniformBufferObject ubo{};
             ubo.model = go->GetTransform()->GetMatrix();
