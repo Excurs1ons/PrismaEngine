@@ -3,7 +3,13 @@
 namespace PrismaEngine {
     namespace Input {
 
-        using MouseButton = int;
+        enum class MouseButton {
+            Left,
+            Right,
+            Middle,
+            Forward,
+            Backward
+        };
         enum KeyCode {
             // 字母键
             A = 0,
