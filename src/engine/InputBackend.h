@@ -6,7 +6,8 @@ namespace PrismaEngine {
         enum InputBackendType {
             Win32,
             SDL3,
-            DirectInput
+            DirectInput,
+            Native
         };
 
         class IInputBackend {
