@@ -3,7 +3,13 @@
 #include "../runtime/android/VulkanContext.h"
 #include "AndroidOut.h"
 #include <android/imagedecoder.h>
+#include <array>
+#include <mutex>
 #include <vector>
+
+// 全局白色 fallback 纹理（单例）
+static std::shared_ptr<TextureAsset> g_whiteFallbackTexture = nullptr;
+static std::mutex g_whiteFallbackMutex;
 
 // 辅助函数：创建 Vulkan 图像
 static void createVulkanImage(
@@ -105,6 +111,111 @@ static VkSampler createTextureSampler(VulkanContext* context, uint32_t mipLevels
         throw std::runtime_error("failed to create texture sampler!");
     }
     return sampler;
+}
+
+// 创建白色 1x1 fallback 纹理（类似 Unity 的默认白色纹理）
+std::shared_ptr<TextureAsset> TextureAsset::createWhiteFallback(VulkanContext* vulkanContext) {
+    if (!vulkanContext) {
+        return nullptr;
+    }
+
+    auto texture = std::shared_ptr<TextureAsset>(new TextureAsset(vulkanContext));
+
+    // 1x1 白色纹理数据 (RGBA: 255, 255, 255, 255)
+    const uint32_t width = 1;
+    const uint32_t height = 1;
+    const uint32_t mipLevels = 1;
+    const std::array<uint8_t, 4> whitePixel = {255, 255, 255, 255};
+
+    texture->size_ = glm::uvec2(width, height);
+    texture->mipLevels_ = mipLevels;
+
+    VkDeviceSize imageSize = sizeof(whitePixel);
+
+    // 创建暂存缓冲区
+    VkBuffer stagingBuffer;
+    VkDeviceMemory stagingBufferMemory;
+    vulkanContext->createBuffer(
+            imageSize,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer,
+            stagingBufferMemory);
+
+    // 复制白色像素数据
+    void* data;
+    vkMapMemory(vulkanContext->device, stagingBufferMemory, 0, imageSize, 0, &data);
+    memcpy(data, whitePixel.data(), imageSize);
+    vkUnmapMemory(vulkanContext->device, stagingBufferMemory);
+
+    // 创建 Vulkan 图像
+    createVulkanImage(
+            vulkanContext,
+            width,
+            height,
+            mipLevels,
+            texture->format_,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            texture->image_,
+            texture->imageMemory_);
+
+    // 转换图像布局并复制数据
+    vulkanContext->transitionImageLayout(
+            texture->image_,
+            texture->format_,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            mipLevels);
+
+    vulkanContext->copyBufferToImage(
+            stagingBuffer,
+            texture->image_,
+            width,
+            height);
+
+    // 转换到着色器只读布局
+    vulkanContext->transitionImageLayout(
+            texture->image_,
+            texture->format_,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+            mipLevels);
+
+    // 清理暂存缓冲区
+    vkDestroyBuffer(vulkanContext->device, stagingBuffer, nullptr);
+    vkFreeMemory(vulkanContext->device, stagingBufferMemory, nullptr);
+
+    // 创建图像视图和采样器
+    texture->imageView_ = createImageView(
+            vulkanContext,
+            texture->image_,
+            texture->format_,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            mipLevels);
+
+    texture->sampler_ = createTextureSampler(vulkanContext, mipLevels);
+
+    aout << "Created white fallback texture (1x1)" << std::endl;
+
+    return texture;
+}
+
+// 获取或创建全局白色 fallback 纹理（单例模式）
+std::shared_ptr<TextureAsset> TextureAsset::getOrCreateWhiteFallback(VulkanContext* vulkanContext) {
+    if (!vulkanContext) {
+        return nullptr;
+    }
+
+    std::lock_guard<std::mutex> lock(g_whiteFallbackMutex);
+
+    if (g_whiteFallbackTexture) {
+        return g_whiteFallbackTexture;
+    }
+
+    g_whiteFallbackTexture = createWhiteFallback(vulkanContext);
+    return g_whiteFallbackTexture;
 }
 
 // 主要加载函数
