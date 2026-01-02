@@ -1,14 +1,16 @@
 #include "OpaquePass.h"
-#include "../ShaderVulkan.h"
-#include "../Model.h"
-#include "../MeshRenderer.h"
-#include "../Scene.h"
-#include "../GameObject.h"
-#include "../AndroidOut.h"
+#include "ShaderVulkan.h"
+#include "Model.h"
+#include "MeshRenderer.h"
+#include "Scene.h"
+#include "GameObject.h"
+#include "AndroidOut.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <array>
 #include <stdexcept>
 #include <cstring>
+#include "Transform.h"
+using namespace PrismaEngine;
 
 // UBO 结构（与 RendererVulkan.cpp 中定义的一致）
 struct UniformBufferObject {
@@ -228,12 +230,12 @@ void OpaquePass::record(VkCommandBuffer cmdBuffer) {
     vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
 
     // 获取所有 MeshRenderer 对象
-    auto& gameObjects = scene_->getGameObjects();
+    auto& gameObjects = scene_->GetGameObjects();
     std::vector<size_t> meshRendererIndices;
 
     for (size_t i = 0; i < gameObjects.size(); i++) {
         auto go = gameObjects[i];
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()) {
             meshRendererIndices.push_back(i);
         }
     }
@@ -242,7 +244,7 @@ void OpaquePass::record(VkCommandBuffer cmdBuffer) {
     for (size_t j = 0; j < meshRendererIndices.size(); j++) {
         size_t i = meshRendererIndices[j];
         auto go = gameObjects[i];
-        auto meshRenderer = go->getComponent<MeshRenderer>();
+        auto meshRenderer = go->GetComponent<MeshRenderer>();
         auto model = meshRenderer->getModel();
 
         VkBuffer vertexBuffers[] = {renderObjects_[j].vertexBuffer};
@@ -290,7 +292,7 @@ void OpaquePass::updateUniformBuffer(const std::vector<std::shared_ptr<GameObjec
     std::vector<size_t> meshRendererIndices;
     for (size_t i = 0; i < gameObjects.size(); i++) {
         auto go = gameObjects[i];
-        if (go->getComponent<MeshRenderer>()) {
+        if (go->GetComponent<MeshRenderer>()!= nullptr) {
             meshRendererIndices.push_back(i);
         }
     }
@@ -306,8 +308,9 @@ void OpaquePass::updateUniformBuffer(const std::vector<std::shared_ptr<GameObjec
             go->rotation.y = time * 30.0f;
         }
 
+        std::shared_ptr<Transform> trans = go->GetTransform();
         UniformBufferObject ubo{};
-        ubo.model = go->getTransformMatrix();
+        ubo.model = go->GetTransform()->GetMatrix();
         ubo.view = view;
         ubo.proj = proj;
 

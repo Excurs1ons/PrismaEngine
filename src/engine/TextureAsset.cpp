@@ -1,4 +1,4 @@
-#include "../runtime/android/TextureAsset.h"
+#include "TextureAsset.h"
 #include "../runtime/android/Utility.h"
 #include "../runtime/android/VulkanContext.h"
 #include "AndroidOut.h"

@@ -199,7 +199,7 @@ if(ANDROID)
         ${GAME_ACTIVITY_SOURCES}
     )
     target_include_directories(Engine PRIVATE
-        ${GAME_ACTIVITY_INCLUDE_DIRS}
+            ${GAME_ACTIVITY_INCLUDE_DIRS}
     )
     target_link_libraries(Engine PUBLIC
         ${GAME_ACTIVITY_LIB}
