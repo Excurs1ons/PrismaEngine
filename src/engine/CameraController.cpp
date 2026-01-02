@@ -10,6 +10,7 @@ using namespace PrismaEngine::Graphic;
 
 namespace PrismaEngine {
 using namespace Input;
+using namespace Graphic;
 CameraController::CameraController() : Component() {
     m_mouseControl = false;  // 默认关闭鼠标控制
     m_firstMouse = true;
@@ -17,11 +18,11 @@ CameraController::CameraController() : Component() {
 
 void CameraController::Initialize() {
     // 获取同一GameObject上的Camera组件
-    m_camera = m_owner->GetComponent<Camera>();
+    m_camera = GetOwner()->GetComponent<Camera>();
     if (!m_camera) {
-        LOG_WARNING("CameraController", "No Camera component found on GameObject '{0}'", m_owner->name);
+        LOG_WARNING("CameraController", "No Camera component found on GameObject '{0}'", GetOwner()->name);
     } else {
-        LOG_INFO("CameraController", "CameraController initialized for GameObject '{0}'", m_owner->name);
+        LOG_INFO("CameraController", "CameraController initialized for GameObject '{0}'", GetOwner()->name);
     }
 
     // 获取初始鼠标位置
