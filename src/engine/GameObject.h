@@ -34,6 +34,7 @@ public:
 
     void AddComponent(const std::shared_ptr<Component>& component) {
         component->SetOwner(this);
+        component->Initialize();
         components.push_back(component);
     }
 
