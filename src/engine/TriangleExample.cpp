@@ -291,7 +291,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     transform->rotation = rotation;
 
     // 添加3D相机组件
-    auto *camera = game_object->AddComponent<Camera>();
+    auto camera = game_object->AddComponent<Camera>();
 
     // 设置透视投影
     float aspect_ratio = 16.0f / 9.0f;

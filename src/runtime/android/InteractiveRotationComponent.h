@@ -125,10 +125,10 @@ public:
                 trans->eulerAngles = glm::degrees(glm::eulerAngles(trans->rotation));
 
                 // 应用阻尼（只有不拖拽时才衰减）
-                if (!isDragging_) {
-                    velocity_ *= (1.0f - damping_);
-                }
-
+//                if (!isDragging_) {
+//                    velocity_ *= (1.0f - damping_);
+//                }
+                velocity_ *= (1.0f - damping_);
                 // 调试：输出速度和阻尼效果
                 static int logCounter = 0;
                 if (++logCounter % 60 == 0) {  // 每秒输出一次

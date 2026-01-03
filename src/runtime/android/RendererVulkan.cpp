@@ -373,7 +373,7 @@ void RendererVulkan::createScene() {
 
         // 修改 Transform 的位置而不是 GameObject 的 position
         auto transform = cameraGO->GetTransform();
-        transform->position = Vector3(0.0f, 0.0f, 3.0f);
+        transform->position = Vector3(0.0f, 0.0f, 6.0f);
 
         auto camera = cameraGO->AddComponent<PrismaEngine::Graphic::Camera>();
         camera->SetPerspectiveProjection(
@@ -493,13 +493,20 @@ void RendererVulkan::createScene() {
         go->AddComponent(std::make_shared<MeshRenderer>(model));
 
         // 添加交互式旋转组件（仅触摸旋转）
-        auto rotationComp = std::make_shared<PrismaEngine::InteractiveRotationComponent>();
+//        auto rotationComp = std::make_shared<PrismaEngine::InteractiveRotationComponent>();
+//        rotationComp->SetInteractionMode(PrismaEngine::InteractiveRotationComponent::InteractionMode::TouchRotate);
+//        rotationComp->SetTouchSensitivity(1.0f);  // 增大灵敏度
+//        rotationComp->SetAxisMode(PrismaEngine::InteractiveRotationComponent::AxisMode::Both);
+//        rotationComp->SetDamping(0.01f);  // 阻尼 0.99，每帧只衰减 1%
+//        go->AddComponent(rotationComp);
+
+
+        ;
+        auto rotationComp = go->AddComponent<PrismaEngine::InteractiveRotationComponent>();
         rotationComp->SetInteractionMode(PrismaEngine::InteractiveRotationComponent::InteractionMode::TouchRotate);
         rotationComp->SetTouchSensitivity(1.0f);  // 增大灵敏度
         rotationComp->SetAxisMode(PrismaEngine::InteractiveRotationComponent::AxisMode::Both);
         rotationComp->SetDamping(0.01f);  // 阻尼 0.99，每帧只衰减 1%
-        go->AddComponent(rotationComp);
-
         scene_->addGameObject(go);
     }
 
