@@ -6,7 +6,7 @@
 #include <vector>
 #include "OpaquePass.h"
 #include "BackgroundPass.h"
-
+#include "renderer/UIPass.h"
 
 // 前向声明
 class RenderPass;
