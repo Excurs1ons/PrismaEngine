@@ -131,6 +131,14 @@ set(ENGINE_SOURCES
     ${CORE_SOURCES}
     ${ENGINE_GRAPHIC_SOURCES}
 )
+
+# Debug 模式下添加 ImGui 支持
+if(PRISMA_ENABLE_IMGUI_DEBUG)
+    list(APPEND ENGINE_SOURCES DebugOverlay.cpp)
+    list(APPEND ENGINE_HEADERS DebugOverlay.h Build.h)
+    message(STATUS "Adding ImGui debug support")
+endif()
+
 set(ENGINE_HEADERS
     ${CORE_HEADERS}
     ${ENGINE_GRAPHIC_HEADERS}

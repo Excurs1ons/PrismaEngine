@@ -258,8 +258,17 @@ if(WIN32 AND (PRISMA_ENABLE_RENDER_DX12 OR PRISMA_BUILD_EDITOR))
     endif()
 endif()
 
-# ImGui (Windows only) - 编辑器需要
-if(WIN32 AND PRISMA_BUILD_EDITOR)
+# ImGui - Debug 模式或编辑器需要
+# 检查是否是 Debug 构建或启用了编辑器
+set(PRISMA_IS_DEBUG_BUILD FALSE)
+foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
+    if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CONFIG STREQUAL "Debug")
+        set(PRISMA_IS_DEBUG_BUILD TRUE)
+        break()
+    endif()
+endforeach()
+
+if(WIN32 AND (PRISMA_BUILD_EDITOR OR (PRISMA_IS_DEBUG_BUILD AND PRISMA_ENABLE_IMGUI_DEBUG)))
     if(PRISMA_USE_FETCHCONTENT)
         FetchContent_MakeAvailable(imgui)
 
@@ -273,7 +282,11 @@ if(WIN32 AND PRISMA_BUILD_EDITOR)
             add_library(imgui::imgui ALIAS imgui)
         endif()
 
-        message(STATUS "ImGui: 使用 FetchContent (docking分支)")
+        if(PRISMA_IS_DEBUG_BUILD AND PRISMA_ENABLE_IMGUI_DEBUG)
+            message(STATUS "ImGui: 使用 FetchContent (Debug 模式调试工具)")
+        else()
+            message(STATUS "ImGui: 使用 FetchContent (编辑器)")
+        endif()
     else()
         find_package(imgui CONFIG REQUIRED)
         message(STATUS "ImGui: 使用系统/vcpkg")
