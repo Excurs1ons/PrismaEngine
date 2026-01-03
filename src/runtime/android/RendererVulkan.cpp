@@ -1,7 +1,7 @@
 #include "RendererVulkan.h"
-#include "../../engine/Camera.h"
-#include "../../engine/CubemapTextureAsset.h"
-#include "../../engine/TextureAsset.h"
+#include "Camera.h"
+#include "CubemapTextureAsset.h"
+#include "TextureAsset.h"
 #include "AndroidOut.h"
 #include "AndroidInputBackend.h"
 #include "InteractiveRotationComponent.h"
@@ -9,8 +9,7 @@
 #include "Scene.h"
 #include "ShaderVulkan.h"
 #include "SkyboxRenderer.h"
-#include "renderer/BackgroundPass.h"
-#include "renderer/OpaquePass.h"
+
 #include <algorithm>
 #include <array>
 #include <chrono>
@@ -18,7 +17,11 @@
 #include <game-activity/native_app_glue/android_native_app_glue.h>
 #include <set>
 #include <vector>
+#include <math.h>
 #include <vulkan/vulkan_android.h>
+
+#include "2d/CanvasComponent.h"
+#include "2d/ButtonComponent.h"
 
 struct UniformBufferObject {
     alignas(16) Matrix4 model;
@@ -356,6 +359,9 @@ void RendererVulkan::init() {
 
     // 创建逻辑渲染管线（封装 Pass）
     createRenderPipeline();
+
+    // 创建 UI 组件和 UIPass（需要在 renderPipeline_ 创建后）
+    createUIComponents();
 
     createCommandBuffers();
 
@@ -955,6 +961,17 @@ void RendererVulkan::createRenderPipeline() {
     opaquePass->setScene(scene_.get());
     renderPipeline_->addPass(std::move(opaquePass));
 
+    // UIPass
+
+    auto uiPass = std::make_unique<PrismaEngine::UIPass>();
+    for (const auto& go:scene_->getGameObjects()) {
+        auto uiComponent = go->GetComponent<UIComponent>();
+        if(uiComponent != nullptr){
+            uiPass->addUIComponent(uiComponent);
+        }
+    }
+    renderPipeline_->addPass(std::move(uiPass));
+
     // 初始化 Pipeline
     renderPipeline_->initialize(vulkanContext_.device, vulkanContext_.renderPass);
 
@@ -1087,7 +1104,7 @@ void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
     }
 
     // 计算宽高比（处理屏幕旋转）
-    float aspectRatio;
+    float aspectRatio = NAN;
     if (vulkanContext_.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_90_BIT_KHR ||
         vulkanContext_.currentTransform & VK_SURFACE_TRANSFORM_ROTATE_270_BIT_KHR) {
         aspectRatio = vulkanContext_.swapChainExtent.height / (float) vulkanContext_.swapChainExtent.width;
@@ -1107,7 +1124,7 @@ void RendererVulkan::updateUniformBuffer(uint32_t currentImage) {
     // 更新MeshRenderer对象的UBO
     if (renderPipeline_) {
         auto* opaquePass = renderPipeline_->getOpaquePass();
-        if (opaquePass) {
+        if (opaquePass != nullptr) {
             opaquePass->updateUniformBuffer(gameObjects, view, proj, currentImage, deltaTime);
         }
     } else {
@@ -1526,6 +1543,63 @@ void RendererVulkan::recreateSwapChain() {
     aout << "SwapChain recreated successfully with new size: "
          << vulkanContext_.swapChainExtent.width << "x"
          << vulkanContext_.swapChainExtent.height << std::endl;
+}
+
+void RendererVulkan::createUIComponents() {
+    aout << "创建 UI 组件..." << std::endl;
+
+    using namespace PrismaEngine;
+
+    // 创建 Canvas
+    auto canvasGO = std::make_shared<GameObject>();
+    canvasGO->name = "UICanvas";
+    auto canvas = canvasGO->AddComponent<CanvasComponent>();
+    canvas->Initialize();
+    scene_->addGameObject(canvasGO);
+
+    // 创建 "Start Game" 按钮
+    auto startButtonGO = std::make_shared<GameObject>();
+    startButtonGO->name = "StartButton";
+    auto startButton = startButtonGO->AddComponent<ButtonComponent>();
+    startButton->Initialize();
+    startButton->SetPosition({0.0f, -100.0f});  // 相对于中心锚点的偏移
+    startButton->SetSize({300.0f, 80.0f});
+    startButton->SetText("Start Game");
+    startButton->SetOnClick([]() {
+        aout << "Start Game 按钮被点击!" << std::endl;
+    });
+    startButton->SetParent(canvas);
+    scene_->addGameObject(startButtonGO);
+
+    // 创建 "Settings" 按钮
+    auto settingsButtonGO = std::make_shared<GameObject>();
+    settingsButtonGO->name = "SettingsButton";
+    auto settingsButton = settingsButtonGO->AddComponent<ButtonComponent>();
+    settingsButton->Initialize();
+    settingsButton->SetPosition({0.0f, 0.0f});
+    settingsButton->SetSize({300.0f, 80.0f});
+    settingsButton->SetText("Settings");
+    settingsButton->SetOnClick([]() {
+        aout << "Settings 按钮被点击!" << std::endl;
+    });
+    settingsButton->SetParent(canvas);
+    scene_->addGameObject(settingsButtonGO);
+
+    // 创建 "Exit" 按钮
+    auto exitButtonGO = std::make_shared<GameObject>();
+    exitButtonGO->name = "ExitButton";
+    auto exitButton = exitButtonGO->AddComponent<ButtonComponent>();
+    exitButton->Initialize();
+    exitButton->SetPosition({0.0f, 100.0f});
+    exitButton->SetSize({300.0f, 80.0f});
+    exitButton->SetText("Exit");
+    exitButton->SetOnClick([]() {
+        aout << "Exit 按钮被点击!" << std::endl;
+    });
+    exitButton->SetParent(canvas);
+    scene_->addGameObject(exitButtonGO);
+
+    aout << "UI 组件创建完成" << std::endl;
 }
 
 

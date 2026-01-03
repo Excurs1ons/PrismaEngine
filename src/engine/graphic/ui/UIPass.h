@@ -2,6 +2,7 @@
 
 #include "../LogicalPass.h"
 #include "TextRendererComponent.h"
+#include "../../ui/UIComponent.h"
 #include "interfaces/IPass.h"
 #include "interfaces/IDeviceContext.h"
 #include "interfaces/IRenderTarget.h"
@@ -10,14 +11,23 @@
 
 namespace PrismaEngine {
 
+// 前向声明
+class UIComponent;
+
 // UI 渲染项
 struct UIRenderItem {
-    TextRendererComponent* textComponent;
+    enum class Type {
+        Text,
+        Component
+    } type = Type::Text;
+
+    TextRendererComponent* textComponent = nullptr;
+    UIComponent* uiComponent = nullptr;
     PrismaMath::mat4 transform;
 };
 
 /// @brief UI 逻辑 Pass
-/// 负责渲染 UI 元素（文本等），不包含具体图形 API
+/// 负责渲染 UI 元素（文本、按钮等），不包含具体图形 API
 class UIPass : public Graphic::LogicalPass {
 public:
     UIPass();
@@ -36,6 +46,10 @@ public:
     /// @param transform 变换矩阵
     void AddText(TextRendererComponent* text, const PrismaMath::mat4& transform);
 
+    /// @brief 添加 UI 组件到渲染队列
+    /// @param component UI 组件
+    void AddUIComponent(UIComponent* component);
+
     /// @brief 清空渲染队列
     void ClearQueue() { m_renderQueue.clear(); }
 
@@ -46,6 +60,9 @@ public:
     std::vector<UIRenderItem>& GetRenderQueue() { return m_renderQueue; }
 
 private:
+    /// @brief 渲染 UI 组件（矩形按钮等）
+    void RenderUIComponent(const Graphic::PassExecutionContext& context, UIComponent* component);
+
     std::vector<UIRenderItem> m_renderQueue;
 };
 
