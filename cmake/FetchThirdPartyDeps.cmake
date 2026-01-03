@@ -261,12 +261,19 @@ endif()
 # ImGui - Debug 模式或编辑器需要
 # 检查是否是 Debug 构建或启用了编辑器
 set(PRISMA_IS_DEBUG_BUILD FALSE)
-foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
-    if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR CONFIG STREQUAL "Debug")
-        set(PRISMA_IS_DEBUG_BUILD TRUE)
-        break()
-    endif()
-endforeach()
+# 单配置生成器检查 CMAKE_BUILD_TYPE
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(PRISMA_IS_DEBUG_BUILD TRUE)
+endif()
+# 多配置生成器检查 CMAKE_CONFIGURATION_TYPES
+if(NOT PRISMA_IS_DEBUG_BUILD)
+    foreach(CONFIG ${CMAKE_CONFIGURATION_TYPES})
+        if(CONFIG STREQUAL "Debug")
+            set(PRISMA_IS_DEBUG_BUILD TRUE)
+            break()
+        endif()
+    endforeach()
+endif()
 
 if(WIN32 AND (PRISMA_BUILD_EDITOR OR (PRISMA_IS_DEBUG_BUILD AND PRISMA_ENABLE_IMGUI_DEBUG)))
     if(PRISMA_USE_FETCHCONTENT)

@@ -47,7 +47,7 @@ namespace PrismaEngine {
             return false;
         }     // 物理世界管理
 
-#if PRISMA_ENABLE_IMGUI_DEBUG
+#if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
         // 初始化调试覆盖层
         DebugOverlay::GetInstance().Initialize();
 #endif
@@ -92,7 +92,7 @@ namespace PrismaEngine {
     void EngineCore::Shutdown() {
         LOG_INFO("Engine", "引擎开始关闭");
 
-#if PRISMA_ENABLE_IMGUI_DEBUG
+#if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
         // 关闭调试覆盖层
         DebugOverlay::GetInstance().Shutdown();
 #endif
@@ -133,21 +133,24 @@ void EngineCore::Tick() const {
         }
     }
 
-#if PRISMA_ENABLE_IMGUI_DEBUG
-    // 更新和渲染调试覆盖层
+#if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
+    // 更新调试覆盖层（消息时间等）
     DebugOverlay::GetInstance().Update(deltaTime);
 
-    // ImGui 新帧
-    ImGuiIO& io = ImGui::GetIO();
-    io.DeltaTime = deltaTime;
+    // ImGui 新帧 - 需要 ImGui 上下文已创建
+    // 注意：ImGui 上下文由平台/编辑器创建，这里只使用
+    if (ImGui::GetCurrentContext()) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.DeltaTime = deltaTime;
 
-    // 渲染调试覆盖层
-    DebugOverlay::GetInstance().Render();
+        // 渲染调试覆盖层
+        DebugOverlay::GetInstance().Render();
 
-    // ImGui 渲染
-    ImGui::Render();
-    // 注意：实际的 ImGui 绘制命令需要在渲染管线中执行
-    // 这里只准备数据，由 RenderSystem 负责实际的绘制
+        // ImGui 渲染 - 生成绘制命令
+        ImGui::Render();
+        // 注意：实际的 ImGui 绘制命令需要在渲染管线中执行
+        // 这里只准备数据，由 RenderSystem 负责实际的绘制
+    }
 #endif
 
     // 简单的退出条件：运行10秒后退出
