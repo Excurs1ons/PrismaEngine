@@ -7,6 +7,11 @@
 #include "RenderSystemNew.h"
 #include "SceneManager.h"
 #include "ThreadManager.h"
+#include "DebugOverlay.h"
+
+#if PRISMA_ENABLE_IMGUI_DEBUG
+#include "imgui.h"
+#endif
 
 namespace PrismaEngine {
     EngineCore::EngineCore() : isRunning_(false) {
@@ -41,6 +46,11 @@ namespace PrismaEngine {
         if (!RegisterSystem<PhysicsSystem>()) {
             return false;
         }     // 物理世界管理
+
+#if PRISMA_ENABLE_IMGUI_DEBUG
+        // 初始化调试覆盖层
+        DebugOverlay::GetInstance().Initialize();
+#endif
 
         LOG_INFO("Engine", "引擎初始化完成");
         return true;
@@ -82,6 +92,11 @@ namespace PrismaEngine {
     void EngineCore::Shutdown() {
         LOG_INFO("Engine", "引擎开始关闭");
 
+#if PRISMA_ENABLE_IMGUI_DEBUG
+        // 关闭调试覆盖层
+        DebugOverlay::GetInstance().Shutdown();
+#endif
+
         // 统一销毁
         // std::rbegin 反向迭代
         for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
@@ -117,6 +132,23 @@ void EngineCore::Tick() const {
             sys->Update(deltaTime);
         }
     }
+
+#if PRISMA_ENABLE_IMGUI_DEBUG
+    // 更新和渲染调试覆盖层
+    DebugOverlay::GetInstance().Update(deltaTime);
+
+    // ImGui 新帧
+    ImGuiIO& io = ImGui::GetIO();
+    io.DeltaTime = deltaTime;
+
+    // 渲染调试覆盖层
+    DebugOverlay::GetInstance().Render();
+
+    // ImGui 渲染
+    ImGui::Render();
+    // 注意：实际的 ImGui 绘制命令需要在渲染管线中执行
+    // 这里只准备数据，由 RenderSystem 负责实际的绘制
+#endif
 
     // 简单的退出条件：运行10秒后退出
     // 在实际应用中，这里应该检查窗口是否关闭、是否有退出请求等

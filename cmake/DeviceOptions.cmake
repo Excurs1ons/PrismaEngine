@@ -66,6 +66,14 @@ option(PRISMA_FORCE_GLM "Force use GLM on all platforms" OFF)
 
 # ========== 功能选项 ==========
 
+# ImGui 调试 UI
+option(PRISMA_ENABLE_IMGUI_DEBUG "Enable ImGui debug UI in Debug builds" ON)
+
+# 设置预处理器定义
+if(PRISMA_ENABLE_IMGUI_DEBUG)
+    add_definitions(-DPRISMA_ENABLE_IMGUI_DEBUG=1)
+endif()
+
 # 音频功能
 option(PRISMA_ENABLE_AUDIO_3D "Enable 3D audio support" ON)
 option(PRISMA_ENABLE_AUDIO_STREAMING "Enable audio streaming" ON)
