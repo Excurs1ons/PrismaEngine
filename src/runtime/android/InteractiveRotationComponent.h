@@ -166,9 +166,12 @@ private:
                 else if (isDragging_ && (touch->phase == Input::TouchPhase::Moved ||
                                         touch->phase == Input::TouchPhase::Stationary)) {
                     Vector2 currentPosition(touch->positionX, touch->positionY);
-                    Vector2 delta = currentPosition - lastTouchPosition_;
 
-                    // 只有真正移动时才更新速度（滑动作为加速度叠加）
+                    // 计算帧间位移（每帧都更新 lastTouchPosition_ 确保 delta 是帧间的）
+                    Vector2 delta = currentPosition - lastTouchPosition_;
+                    lastTouchPosition_ = currentPosition;  // 每帧更新，确保 delta 代表帧间位移
+
+                    // 只有真正移动时才应用加速度
                     if (glm::length(delta) > 0.001f) {
                         aout << "Moving! delta=(" << delta.x << ", " << delta.y << ")" << std::endl;
 
@@ -181,8 +184,6 @@ private:
                         // 加速度叠加到当前速度
                         velocity_.x += accelX;
                         velocity_.y += accelY;
-
-                        lastTouchPosition_ = currentPosition;
                     }
                 }
                 // 触摸结束
