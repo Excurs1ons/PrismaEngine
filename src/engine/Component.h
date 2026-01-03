@@ -14,13 +14,12 @@ public:
     virtual void Initialize(){};
     virtual void Update(float deltaTime) {}
     virtual void Shutdown(){};
-    void SetOwner(GameObject* owner) { this->owner = owner; }
-    void Owner(GameObject* owner){
-        SetOwner(owner);
+    void SetOwner(GameObject* gameObject) { this->owner = gameObject; }
+    void Owner(GameObject* gameObject){
+        SetOwner(gameObject);
     }
     [[nodiscard]] GameObject* GetOwner() const { return owner; }
 
-protected:
     GameObject* owner = nullptr;
 };
 } // namespace Engine

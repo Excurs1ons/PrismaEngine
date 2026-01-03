@@ -17,13 +17,12 @@ public:
     
 	/// @brief 添加组件
     template<typename T>
-    T* AddComponent() {
-        auto component = std::make_unique<T>();
-        T* ptr = component.get();
-        components.push_back(std::unique_ptr<Component>(component.release()));
-        ptr->Owner(this);
-        ptr->Initialize();
-        return ptr;
+    std::shared_ptr<T> AddComponent() {
+        auto component = std::make_shared<T>();
+        components.push_back(static_cast<std::shared_ptr<T>>(component));
+        component->Owner(this);
+        component->Initialize();
+        return component;
     }
 
     void Update(float deltaTime) {
