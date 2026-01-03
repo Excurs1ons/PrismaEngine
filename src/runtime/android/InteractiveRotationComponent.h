@@ -171,13 +171,20 @@ private:
                     Vector2 delta = currentPosition - lastTouchPosition_;
                     lastTouchPosition_ = currentPosition;  // 每帧更新，确保 delta 代表帧间位移
 
-                    // 直接使用帧间位移作为速度（而不是累加加速度）
-                    // 只有真正移动时才更新速度，静止时保持上一帧速度（用于松手后的惯性）
+                    // 只有真正移动时才应用加速度
                     if (glm::length(delta) > 0.001f) {
-                        velocity_.x = delta.y * touchSensitivity_;
-                        velocity_.y = delta.x * touchSensitivity_;
+                        aout << "Moving! delta=(" << delta.x << ", " << delta.y << ")" << std::endl;
+
+                        // 屏幕空间滑动映射到物体旋转（基于摄像机视角）
+                        // 屏幕X轴左右滑动 → 绕摄像机Y轴旋转（水平自转）
+                        // 屏幕Y轴上下滑动 → 绕摄像机X轴旋转（上下翻转）
+                        float accelX = delta.y * touchSensitivity_;  // 屏幕Y → 绕摄像机X轴
+                        float accelY = delta.x * touchSensitivity_;  // 屏幕X → 绕摄像机Y轴
+
+                        // 加速度叠加到当前速度
+                        velocity_.x += accelX;
+                        velocity_.y += accelY;
                     }
-                    // 静止时保持 velocity_ 不变，松手后可以继续惯性旋转
                 }
                 // 触摸结束
                 else if (touch->phase == Input::TouchPhase::Ended ||
