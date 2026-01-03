@@ -7,11 +7,9 @@
 #include "renderer/RenderPipeline.h"
 #include <memory>
 
-// 前向声明
-class BackgroundPass;
-class OpaquePass;
 
 struct android_app;
+
 
 class RendererVulkan : public RendererAPI {
 public:
@@ -29,6 +27,7 @@ public:
 private:
     // === 初始化方法 ===
     void createScene();
+    void createUIComponents();       // 创建 UI 组件
     void createRenderPipeline();     // 创建逻辑渲染管线（封装 Pass）
     void createFramebuffers();
     void createCommandPool();
@@ -65,6 +64,7 @@ private:
 
     // === 逻辑渲染管线 ===
     std::unique_ptr<RenderPipeline> renderPipeline_;
+    UIPass* uiPass_ = nullptr;  // 非拥有指针（指向 renderPipeline_ 中的 UIPass）
 
     // === 临时数据（初始化后会移动到 Pass 中） ===
     std::vector<RenderObjectData> renderObjects;

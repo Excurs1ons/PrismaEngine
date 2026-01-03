@@ -375,6 +375,8 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/graphic>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/input>
 )
 
 # Android平台依赖路径配置

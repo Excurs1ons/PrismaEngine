@@ -1,6 +1,6 @@
 #pragma once
 #include "GameObject.h"
-#include "../../engine/graphic/ICamera.h"
+#include "ICamera.h"
 #include <memory>
 #include <vector>
 using namespace PrismaEngine;
@@ -17,6 +17,10 @@ public:
                 mainCamera_ = camera;
             }
         }
+    }
+
+    int getGameObjectCount() const {
+        return gameObjects_.size();
     }
 
     const std::vector<std::shared_ptr<GameObject>>& getGameObjects() const {

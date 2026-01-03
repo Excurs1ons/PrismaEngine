@@ -113,6 +113,15 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
+# Tweeny - 补间动画库 (header-only, 用于 UI 动画)
+set(FETCHCONTENT_TWEENY_DIR "${FETCHCONTENT_BASE_DIR}/tweeny")
+FetchContent_Declare(
+    tweeny
+    GIT_REPOSITORY https://github.com/mobius3/tweeny.git
+    GIT_TAG master
+    GIT_SHALLOW TRUE
+)
+
 # ========== 基础库 (总是需要) ==========
 
 message(STATUS "")
@@ -154,6 +163,26 @@ if(PRISMA_USE_FETCHCONTENT)
 else()
     # stb 通常是 header-only，从系统查找
     message(STATUS "stb: 使用系统/vcpkg")
+endif()
+
+# Tweeny (总是需要 - UI 动画)
+if(PRISMA_USE_FETCHCONTENT)
+    FetchContent_MakeAvailable(tweeny)
+    # 创建 tweeny 接口库 (header-only)
+    # 注意：FetchContent_MakeAvailable 可能已创建目标，需要检查
+    if(NOT TARGET tweeny AND NOT TARGET tweeny::tweeny)
+        add_library(tweeny INTERFACE IMPORTED GLOBAL)
+        set_target_properties(tweeny PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${tweeny_SOURCE_DIR}"
+        )
+        add_library(tweeny::tweeny ALIAS tweeny)
+    elseif(NOT TARGET tweeny::tweeny AND TARGET tweeny)
+        # 如果 tweeny 目标存在但没有别名，创建别名
+        add_library(tweeny::tweeny ALIAS tweeny)
+    endif()
+    message(STATUS "Tweeny: 使用 FetchContent")
+else()
+    message(STATUS "Tweeny: 使用系统/vcpkg (如果可用)")
 endif()
 
 # ========== 条件依赖 ==========
