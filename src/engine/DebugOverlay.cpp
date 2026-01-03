@@ -267,4 +267,4 @@ DebugOverlay::~DebugOverlay() = default;
 
 } // namespace PrismaEngine
 
-#endif // PRISMA_ENABLE_IMGUI_DEBUG && _DEBUG
+#endif // PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG

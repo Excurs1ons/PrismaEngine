@@ -6,7 +6,7 @@
 
 #include "Build.h"
 
-#if PRISMA_ENABLE_IMGUI_DEBUG && defined(_DEBUG)
+#if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
 #include <string>
 #include <vector>
 #include <functional>
@@ -196,4 +196,4 @@ struct DebugOverlay {
 #define DEBUG_WATCH_INT(name, v)
 #define DEBUG_WATCH_BOOL(name, v)
 
-#endif // PRISMA_ENABLE_IMGUI_DEBUG && _DEBUG
+#endif // PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
