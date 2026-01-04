@@ -1,0 +1,162 @@
+name: Build Android Runtime
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'projects/android/PrismaAndroid/**'
+      - 'src/runtime/android/**'
+      - 'src/engine/**'
+      - '.github/workflows/build-android-runtime.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'projects/android/PrismaAndroid/**'
+      - 'src/runtime/android/**'
+      - 'src/engine/**'
+      - '.github/workflows/build-android-runtime.yml'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+        - Debug
+        - Release
+
+env:
+  CMAKE_VERSION: '3.31.0'
+  ANDROID_NDK_VERSION: 27.0.12077973
+
+jobs:
+  # Debug build (auto on push)
+  build-android-debug:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'Debug'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/android/PrismaAndroid
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
+
+    - name: Setup NDK
+      run: |
+        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+
+    - name: Setup Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-android-${{ hashFiles('projects/android/PrismaAndroid/**/*.gradle*') }}
+        restore-keys: gradle-android-
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          projects/android/PrismaAndroid/.cxx
+        key: ${{ runner.os }}-android-runtime-debug-${{ hashFiles('src/runtime/android/**', 'src/engine/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
+        restore-keys: |
+          ${{ runner.os }}-android-runtime-debug-
+          ${{ runner.os }}-android-runtime-
+
+    - name: Grant execute permission
+      run: chmod +x ./gradlew
+
+    - name: Build Debug APK
+      run: ./gradlew assembleDebug --build-cache --parallel
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-runtime-debug
+        path: projects/android/PrismaAndroid/app/build/outputs/apk/debug/*.apk
+        retention-days: 30
+        if-no-files-found: ignore
+
+  # Release build (manual only)
+  build-android-release:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'Release'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/android/PrismaAndroid
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
+
+    - name: Setup NDK
+      run: |
+        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
+        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+
+    - name: Setup Ninja
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-android-${{ hashFiles('projects/android/PrismaAndroid/**/*.gradle*') }}
+        restore-keys: gradle-android-
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          projects/android/PrismaAndroid/.cxx
+        key: ${{ runner.os }}-android-runtime-release-${{ hashFiles('src/runtime/android/**', 'src/engine/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
+        restore-keys: |
+          ${{ runner.os }}-android-runtime-release-
+          ${{ runner.os }}-android-runtime-
+
+    - name: Grant execute permission
+      run: chmod +x ./gradlew
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --build-cache --parallel
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-runtime-release
+        path: projects/android/PrismaAndroid/app/build/outputs/apk/release/*.apk
+        retention-days: 30
+        if-no-files-found: ignore

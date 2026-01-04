@@ -1,0 +1,159 @@
+name: Build Windows Runtime
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/runtime/**'
+      - 'src/game/**'
+      - 'src/engine/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'cmake/**'
+      - 'assets/**'
+      - '.github/workflows/build-windows-runtime.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/runtime/**'
+      - 'src/game/**'
+      - 'src/engine/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - 'cmake/**'
+      - 'assets/**'
+      - '.github/workflows/build-windows-runtime.yml'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+        - Debug
+        - Release
+
+env:
+  CMAKE_VERSION: '3.31.0'
+
+jobs:
+  # Debug build (auto on push)
+  build-runtime-debug:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'Debug'
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./build/windows-x64-debug
+        key: ${{ runner.os }}-runtime-debug-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-runtime-debug-
+          ${{ runner.os }}-runtime-
+
+    - name: Configure CMake
+      run: cmake --preset windows-x64-debug
+
+    - name: Build Runtime
+      run: |
+        cmake --build build/windows-x64-debug --config Debug --target Runtime --parallel
+
+    - name: Build Game
+      run: |
+        cmake --build build/windows-x64-debug --config Debug --target Game --parallel
+
+    - name: Package
+      run: |
+        mkdir -p package-x64-debug
+
+        # Copy executables and DLLs
+        copy build/windows-x64-debug/bin/Debug/Runtime.exe package-x64-debug/
+        copy build/windows-x64-debug/bin/Debug/*.dll package-x64-debug/ 2>nul || echo "No additional DLLs"
+
+        # Copy game data
+        xcopy assets package-x64-debug/assets /E /I /Y 2>nul || echo "No assets to copy"
+        xcopy projects package-x64-debug/projects /E /I /Y 2>nul || echo "No projects to copy"
+
+        # Create archive
+        cd package-x64-debug
+        7z a ../PrismaGame-x64-debug.zip *
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaGame-x64-debug
+        path: PrismaGame-x64-debug.zip
+        retention-days: 30
+
+  # Release build (manual only)
+  build-runtime-release:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.build_type == 'Release'
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: |
+          ./build/windows-x64-release
+        key: ${{ runner.os }}-runtime-release-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-runtime-release-
+          ${{ runner.os }}-runtime-
+
+    - name: Configure CMake
+      run: cmake --preset windows-x64-release
+
+    - name: Build Runtime
+      run: |
+        cmake --build build/windows-x64-release --config Release --target Runtime --parallel
+
+    - name: Build Game
+      run: |
+        cmake --build build/windows-x64-release --config Release --target Game --parallel
+
+    - name: Package
+      run: |
+        mkdir -p package-x64-release
+
+        # Copy executables and DLLs
+        copy build/windows-x64-release/bin/Release/Runtime.exe package-x64-release/
+        copy build/windows-x64-release/bin/Release/*.dll package-x64-release/ 2>nul || echo "No additional DLLs"
+
+        # Copy game data
+        xcopy assets package-x64-release/assets /E /I /Y 2>nul || echo "No assets to copy"
+        xcopy projects package-x64-release/projects /E /I /Y 2>nul || echo "No projects to copy"
+
+        # Create archive
+        cd package-x64-release
+        7z a ../PrismaGame-x64-release.zip *
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaGame-x64-release
+        path: PrismaGame-x64-release.zip
+        retention-days: 30

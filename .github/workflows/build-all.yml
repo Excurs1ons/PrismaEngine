@@ -1,110 +1,15 @@
-name: Build All Components
+name: Build All (Release)
 
 on:
-  push:
-    branches: [ main, develop ]
-    tags: [ 'v*' ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
-    inputs:
-      build_editor:
-        description: 'Build Editor'
-        required: true
-        default: true
-        type: boolean
-      build_engine:
-        description: 'Build Engine'
-        required: true
-        default: true
-        type: boolean
-      build_game:
-        description: 'Build Game'
-        required: true
-        default: true
-        type: boolean
-      platform:
-        description: 'Platform to build'
-        required: true
-        default: 'all'
-        type: choice
-        options:
-        - all
-        - windows
-        - android
-      build_type:
-        description: 'Build type'
-        required: true
-        default: 'Release'
-        type: choice
-        options:
-        - Release
-        - Debug
-      upload_artifacts:
-        description: 'Upload build artifacts'
-        required: true
-        default: true
-        type: boolean
 
 env:
   CMAKE_VERSION: '3.31.0'
   ANDROID_NDK_VERSION: 27.0.12077973
 
 jobs:
-  # Determine what to build based on changes
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      build_editor: ${{ steps.changes.outputs.editor }}
-      build_engine: ${{ steps.changes.outputs.engine }}
-      build_game: ${{ steps.changes.outputs.game }}
-      is_release: ${{ steps.release.outputs.is_release }}
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 2
-
-    - name: Check for Editor changes
-      id: changes
-      run: |
-        if [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "pull_request" ]; then
-          if git diff --name-only HEAD~1 HEAD | grep -q "^src/editor/"; then
-            echo "editor=true" >> $GITHUB_OUTPUT
-          else
-            echo "editor=false" >> $GITHUB_OUTPUT
-          fi
-
-          if git diff --name-only HEAD~1 HEAD | grep -q "^src/engine/"; then
-            echo "engine=true" >> $GITHUB_OUTPUT
-          else
-            echo "engine=false" >> $GITHUB_OUTPUT
-          fi
-
-          if git diff --name-only HEAD~1 HEAD | grep -E "^src/(game|runtime)/"; then
-            echo "game=true" >> $GITHUB_OUTPUT
-          else
-            echo "game=false" >> $GITHUB_OUTPUT
-          fi
-        else
-          echo "editor=${{ github.event.inputs.build_editor || 'true' }}" >> $GITHUB_OUTPUT
-          echo "engine=${{ github.event.inputs.build_engine || 'true' }}" >> $GITHUB_OUTPUT
-          echo "game=${{ github.event.inputs.build_game || 'true' }}" >> $GITHUB_OUTPUT
-        fi
-
-    - name: Check if release
-      id: release
-      run: |
-        if [[ $GITHUB_REF == refs/tags/* ]]; then
-          echo "is_release=true" >> $GITHUB_OUTPUT
-        else
-          echo "is_release=false" >> $GITHUB_OUTPUT
-        fi
-
-  # Build Engine if needed
   build-engine:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.engine == 'true'
+    name: Build Engine SDK
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -112,48 +17,37 @@ jobs:
           - os: windows-latest
             platform: windows
             build_type: Release
-            arch: x64
-            artifact_suffix: win64
+            artifact_suffix: win64-release
             preset: windows-x64-release
-          - os: windows-latest
-            platform: windows
-            build_type: Debug
-            arch: x64
-            artifact_suffix: win64-debug
-            preset: windows-x64-debug
           - os: ubuntu-latest
             platform: android
             build_type: Release
             abi: arm64-v8a
-            artifact_suffix: android-arm64
+            artifact_suffix: android-arm64-release
           - os: ubuntu-latest
             platform: android
             build_type: Release
             abi: armeabi-v7a
-            artifact_suffix: android-arm32
+            artifact_suffix: android-arm32-release
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: recursive
+        submodules: false
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
-    # Windows build
+    # Windows
     - name: Cache CMake build (Windows)
       if: matrix.platform == 'windows'
       uses: actions/cache@v4
       with:
-        path: |
-          ./build/${{ matrix.preset }}
-        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ matrix.preset }}-
-          ${{ runner.os }}-build-
+        path: ./build/${{ matrix.preset }}
+        key: ${{ runner.os }}-all-${{ matrix.preset }}-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Configure CMake (Windows)
       if: matrix.platform == 'windows'
@@ -161,10 +55,9 @@ jobs:
 
     - name: Build Engine (Windows)
       if: matrix.platform == 'windows'
-      run: |
-        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --parallel
+      run: cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --parallel
 
-    # Android build
+    # Android
     - name: Setup Android NDK
       if: matrix.platform == 'android'
       uses: android-actions/setup-android@v3
@@ -175,172 +68,68 @@ jobs:
         yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
         echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
 
-    - name: Setup Ninja (Android)
+    - name: Setup Ninja
       if: matrix.platform == 'android'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y ninja-build
+      run: sudo apt-get install -y ninja-build
 
     - name: Cache CMake build (Android)
       if: matrix.platform == 'android'
       uses: actions/cache@v4
       with:
-        path: |
-          ./build-android-${{ matrix.abi }}-release
-        key: ${{ runner.os }}-build-android-${{ matrix.abi }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'android/CMakeLists.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-build-android-${{ matrix.abi }}-
-          ${{ runner.os }}-build-android-
+        path: ./build-android-${{ matrix.abi }}-release
+        key: ${{ runner.os }}-all-android-${{ matrix.abi }}-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'android/CMakeLists.txt') }}
 
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
       run: |
-        cmake -S android -B build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} \
+        cmake -S android -B build-${{ matrix.artifact_suffix }} \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=24 \
           -DANDROID_STL=c++_shared \
-          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DCMAKE_BUILD_TYPE=Release \
           -G Ninja
 
     - name: Build Engine (Android)
       if: matrix.platform == 'android'
-      run: |
-        cmake --build build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} --parallel 2
+      run: cmake --build build-${{ matrix.artifact_suffix }} --parallel 2
 
     - name: Package (Windows)
-      if: matrix.platform == 'windows' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
+      if: matrix.platform == 'windows'
       run: |
-        mkdir -p package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}
-        mkdir -p package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/include
-
-        # Copy library files
-        copy build/${{ matrix.preset }}/lib/${{ matrix.build_type }}/PrismaEngine.lib package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/lib/${{ matrix.build_type }}/
-
-        # Copy headers
-        xcopy src/engine\*.h package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}/include /E /I /Y 2>nul || echo "No headers to copy"
-
-        # Create archive
-        cd package-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
-        7z a ../PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip *
+        mkdir -p package-${{ matrix.artifact_suffix }}/lib/Release
+        mkdir -p package-${{ matrix.artifact_suffix }}/include
+        copy build/${{ matrix.preset }}/lib/Release/PrismaEngine.lib package-${{ matrix.artifact_suffix }}/lib/Release/
+        xcopy src/engine\*.h package-${{ matrix.artifact_suffix }}/include /E /I /Y 2>nul || echo "No headers"
+        cd package-${{ matrix.artifact_suffix }}
+        7z a ../PrismaEngine-${{ matrix.artifact_suffix }}.zip *
 
     - name: Package (Android)
-      if: matrix.platform == 'android' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
+      if: matrix.platform == 'android'
       run: |
         mkdir -p artifacts/${{ matrix.abi }}
-        cmake --install build-${{ matrix.artifact_suffix }}-${{ matrix.build_type }} \
-          --config ${{ matrix.build_type }} \
-          --prefix artifacts/${{ matrix.abi }}
-        tar czf PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.tar.gz -C artifacts .
-
-    - name: Upload artifacts (Windows)
-      if: matrix.platform == 'windows' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
-      uses: actions/upload-artifact@v4
-      with:
-        name: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
-        path: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.zip
-        retention-days: 30
-
-    - name: Upload artifacts (Android)
-      if: matrix.platform == 'android' && (github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == '')
-      uses: actions/upload-artifact@v4
-      with:
-        name: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}
-        path: PrismaEngine-${{ matrix.artifact_suffix }}-${{ matrix.build_type }}.tar.gz
-        retention-days: 30
-
-  # Build Game if needed (simplified, vcpkg-free)
-  build-game:
-    needs: [detect-changes, build-engine]
-    if: needs.detect-changes.outputs.game == 'true' && (needs.detect-changes.outputs.engine == 'false' || needs.build-engine.result == 'success')
-    runs-on: windows-latest
-    strategy:
-      matrix:
-        build_type: [Release, Debug]
-        platform: [x64]
-        include:
-          - build_type: Release
-            preset: windows-x64-release
-          - build_type: Debug
-            preset: windows-x64-debug
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        submodules: recursive
-
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v2.0
-      with:
-        cmake-version: ${{ env.CMAKE_VERSION }}
-
-    - name: Cache CMake build
-      uses: actions/cache@v4
-      with:
-        path: |
-          ./build/${{ matrix.preset }}
-        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ matrix.preset }}-
-          ${{ runner.os }}-build-
-
-    - name: Configure CMake
-      run: cmake --preset ${{ matrix.preset }}
-
-    - name: Build Runtime
-      run: |
-        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --target Runtime --parallel
-
-    - name: Build Game
-      run: |
-        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --target Game --parallel
-
-    - name: Package
-      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
-      run: |
-        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
-
-        # Copy executables and DLLs
-        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/Runtime.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
-        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No additional DLLs"
-
-        # Copy game data
-        xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
-        xcopy projects package-${{ matrix.platform }}-${{ matrix.build_type }}/projects /E /I /Y 2>nul || echo "No projects to copy"
-
-        # Create archive
-        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
-        7z a ../PrismaGame-${{ matrix.platform }}-${{ matrix.build_type }}.zip *
+        cmake --install build-${{ matrix.artifact_suffix }} --config Release --prefix artifacts/${{ matrix.abi }}
+        tar czf PrismaEngine-${{ matrix.artifact_suffix }}.tar.gz -C artifacts .
 
     - name: Upload artifacts
-      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
       uses: actions/upload-artifact@v4
       with:
-        name: PrismaGame-${{ matrix.platform }}-${{ matrix.build_type }}
-        path: PrismaGame-${{ matrix.platform }}-${{ matrix.build_type }}.zip
+        name: PrismaEngine-${{ matrix.artifact_suffix }}
+        path: |
+          PrismaEngine-${{ matrix.artifact_suffix }}.zip
+          PrismaEngine-${{ matrix.artifact_suffix }}.tar.gz
         retention-days: 30
+        if-no-files-found: ignore
 
-  # Build Editor if needed (simplified, vcpkg-free)
   build-editor:
-    needs: [detect-changes, build-engine]
-    if: needs.detect-changes.outputs.editor == 'true' && (needs.detect-changes.outputs.engine == 'false' || needs.build-engine.result == 'success')
+    name: Build Editor
     runs-on: windows-latest
-    strategy:
-      matrix:
-        build_type: [Release, Debug]
-        platform: [x64]
-        include:
-          - build_type: Release
-            preset: windows-x64-release
-          - build_type: Debug
-            preset: windows-x64-debug
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: recursive
+        submodules: false
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
@@ -350,117 +139,112 @@ jobs:
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
-        path: |
-          ./build/${{ matrix.preset }}
-        key: ${{ runner.os }}-build-${{ matrix.preset }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-build-${{ matrix.preset }}-
-          ${{ runner.os }}-build-
+        path: ./build/windows-x64-release
+        key: ${{ runner.os }}-all-editor-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Configure CMake
-      run: cmake --preset ${{ matrix.preset }}
+      run: cmake --preset windows-x64-release
 
     - name: Build Editor
-      run: |
-        cmake --build build/${{ matrix.preset }} --config ${{ matrix.build_type }} --target Editor --parallel
+      run: cmake --build build/windows-x64-release --config Release --target Editor --parallel
 
     - name: Package
-      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
       run: |
-        mkdir -p package-${{ matrix.platform }}-${{ matrix.build_type }}
-        # Copy executable
-        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/Editor.exe package-${{ matrix.platform }}-${{ matrix.build_type }}/
-        # Copy required DLLs
-        copy build/${{ matrix.preset }}/bin/${{ matrix.build_type }}/*.dll package-${{ matrix.platform }}-${{ matrix.build_type }}/ 2>nul || echo "No DLLs to copy"
-        # Copy assets
-        xcopy assets package-${{ matrix.platform }}-${{ matrix.build_type }}/assets /E /I /Y 2>nul || echo "No assets to copy"
-        # Create archive
-        cd package-${{ matrix.platform }}-${{ matrix.build_type }}
-        7z a ../PrismaEditor-${{ matrix.platform }}-${{ matrix.build_type }}.zip *
+        mkdir -p package-x64-release
+        copy build/windows-x64-release/bin/Release/Editor.exe package-x64-release/
+        copy build/windows-x64-release/bin/Release/*.dll package-x64-release/ 2>nul || echo "No DLLs"
+        xcopy assets package-x64-release/assets /E /I /Y 2>nul || echo "No assets"
+        cd package-x64-release
+        7z a ../PrismaEditor-x64-release.zip *
 
     - name: Upload artifacts
-      if: github.event.inputs.upload_artifacts == 'true' || github.event.inputs.upload_artifacts == ''
       uses: actions/upload-artifact@v4
       with:
-        name: PrismaEditor-${{ matrix.platform }}-${{ matrix.build_type }}
-        path: PrismaEditor-${{ matrix.platform }}-${{ matrix.build_type }}.zip
+        name: PrismaEditor-x64-release
+        path: PrismaEditor-x64-release.zip
         retention-days: 30
 
-  # Create combined release
-  create-release:
-    needs: [detect-changes, build-engine, build-game, build-editor]
-    runs-on: ubuntu-latest
-    if: needs.detect-changes.outputs.is_release == 'true'
+  build-windows-runtime:
+    name: Build Windows Runtime
+    runs-on: windows-latest
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
       with:
-        path: artifacts
+        submodules: false
 
-    - name: Prepare release
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/windows-x64-release
+        key: ${{ runner.os }}-all-runtime-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+
+    - name: Configure CMake
+      run: cmake --preset windows-x64-release
+
+    - name: Build Runtime
+      run: cmake --build build/windows-x64-release --config Release --target Runtime --parallel
+
+    - name: Build Game
+      run: cmake --build build/windows-x64-release --config Release --target Game --parallel
+
+    - name: Package
       run: |
-        mkdir -p PrismaEngine-${{ github.ref_name }}
+        mkdir -p package-x64-release
+        copy build/windows-x64-release/bin/Release/Runtime.exe package-x64-release/
+        copy build/windows-x64-release/bin/Release/*.dll package-x64-release/ 2>nul || echo "No DLLs"
+        xcopy assets package-x64-release/assets /E /I /Y 2>nul || echo "No assets"
+        xcopy projects package-x64-release/projects /E /I /Y 2>nul || echo "No projects"
+        cd package-x64-release
+        7z a ../PrismaGame-x64-release.zip *
 
-        # Collect all artifacts
-        for artifact in artifacts/*; do
-          if [ -d "$artifact" ]; then
-            cp -r "$artifact"/* "PrismaEngine-${{ github.ref_name }}/"
-          fi
-        done
-
-        # Create README
-        cat > PrismaEngine-${{ github.ref_name }}/README.md << 'EOF'
-        # Prisma Engine Release
-
-        This package contains all Prisma Engine components.
-
-        ## Contents
-
-        ### Editor
-        - Windows: PrismaEditor-*.zip
-
-        ### Engine SDK
-        - Windows: PrismaEngine-*.zip
-        - Android: PrismaEngine-android-*.tar.gz
-
-        ### Game
-        - Windows: PrismaGame-*.zip
-
-        ## Quick Start
-
-        1. **Editor**: Extract and run Editor.exe
-        2. **Engine SDK**: Extract for development
-        3. **Game**: Extract and run Runtime.exe
-        EOF
-
-        # Create final archive
-        tar czf PrismaEngine-Complete-${{ github.ref_name }}.tar.gz PrismaEngine-${{ github.ref_name }}
-
-    - name: Create Release
-      uses: softprops/action-gh-release@v2
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
-        files: |
-          PrismaEngine-Complete-*.tar.gz
-        draft: false
-        prerelease: false
-        generate_release_notes: true
-        name: Prisma Engine ${{ github.ref_name }}
-        body: |
-          ## Prisma Engine ${{ github.ref_name }}
+        name: PrismaGame-x64-release
+        path: PrismaGame-x64-release.zip
+        retention-days: 30
 
-          A cross-platform game engine with Windows and Android support.
+  build-android-runtime:
+    name: Build Android Runtime
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: projects/android/PrismaAndroid
 
-          ### Download
-          - `PrismaEngine-Complete-*.tar.gz` - All components
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
 
-          ### What's New
-          ${{ github.event.head_commit.message }}
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
 
-          ---
-          Built with GitHub Actions
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-android-all-${{ hashFiles('projects/android/PrismaAndroid/**/*.gradle*') }}
+
+    - name: Grant execute permission
+      run: chmod +x ./gradlew
+
+    - name: Build Release APK
+      run: ./gradlew assembleRelease --build-cache --parallel
+
+    - name: Upload APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-runtime-release
+        path: projects/android/PrismaAndroid/app/build/outputs/apk/release/*.apk
+        retention-days: 30
+        if-no-files-found: ignore
