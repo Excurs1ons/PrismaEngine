@@ -321,3 +321,7 @@ std::string RendererOpenGL::GetName() const {
 void RendererOpenGL::render() {
 
 }
+
+void RendererOpenGL::handleInput() {
+
+}
