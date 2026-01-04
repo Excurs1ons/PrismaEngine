@@ -6,18 +6,12 @@ on:
     paths:
       - 'src/editor/**'
       - 'src/engine/**'
-      - 'CMakeLists.txt'
-      - 'CMakePresets.json'
-      - 'cmake/**'
       - '.github/workflows/build-editor.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'src/editor/**'
       - 'src/engine/**'
-      - 'CMakeLists.txt'
-      - 'CMakePresets.json'
-      - 'cmake/**'
       - '.github/workflows/build-editor.yml'
   workflow_dispatch:
     inputs:
