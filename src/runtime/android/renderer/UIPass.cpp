@@ -323,12 +323,6 @@ void UIPass::updateVertexBuffer(VkDevice device) {
 
     m_vertexData.clear();
 
-    static int updateCount = 0;
-    if (updateCount < 3) {
-        aout << "UIPass: 更新顶点缓冲区，UI 组件数量: " << m_uiComponents.size() << std::endl;
-        updateCount++;
-    }
-
     // 遍历所有 UI 组件，生成顶点数据
     for (const auto& component : m_uiComponents) {
         if (!component || !component->IsVisible()) {
@@ -338,15 +332,6 @@ void UIPass::updateVertexBuffer(VkDevice device) {
         const auto& pos = component->GetScreenPosition();
         const auto& size = component->GetSize();
         const auto& color = component->GetColor();
-
-        // 调试输出
-        static int debugCount = 0;
-        if (debugCount < 10) {
-            aout << "UI 组件: pos=(" << pos.x << ", " << pos.y
-                 << ") size=(" << size.x << "x" << size.y
-                 << ") color=(" << color.x << ", " << color.y << ", " << color.z << ", " << color.w << ")" << std::endl;
-            debugCount++;
-        }
 
         // 将屏幕坐标转换为 NDC (-1 到 1)
         // 屏幕坐标系：左上角为原点，X 向右，Y 向下
@@ -378,12 +363,6 @@ void UIPass::updateVertexBuffer(VkDevice device) {
     }
 
     m_vertexDataDirty = false;
-
-    static int debugCount = 0;
-    if (debugCount < 3) {
-        aout << "UIPass: Updated vertex buffer with " << m_vertexData.size() / 6 << " UI elements." << std::endl;
-        debugCount++;
-    }
 }
 
 // ============================================================
@@ -391,12 +370,6 @@ void UIPass::updateVertexBuffer(VkDevice device) {
 // ============================================================
 
 void UIPass::record(VkCommandBuffer cmdBuffer) {
-    static int recordCount = 0;
-    if (recordCount < 3) {
-        aout << "UIPass::record() 被调用，UI 组件数量: " << m_uiComponents.size() << std::endl;
-        recordCount++;
-    }
-
     if (m_uiComponents.empty()) {
         return;
     }

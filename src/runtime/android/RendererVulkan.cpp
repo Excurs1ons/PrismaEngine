@@ -979,17 +979,13 @@ void RendererVulkan::createRenderPipeline() {
 
     // 创建并添加 UIPass
     auto uiPass = std::make_unique<PrismaEngine::UIPass>();
-    int uiComponentCount = 0;
     for (const auto& go : scene_->getGameObjects()) {
         auto uiComponent = go->GetComponent<UIComponent>();
         // 跳过 Canvas（它只是一个容器，不应该被渲染）
         if (uiComponent != nullptr && dynamic_cast<PrismaEngine::CanvasComponent*>(uiComponent.get()) == nullptr) {
             uiPass->addUIComponent(uiComponent);
-            uiComponentCount++;
-            aout << "  添加 UI 组件: " << go->name << std::endl;
         }
     }
-    aout << "总共添加了 " << uiComponentCount << " 个 UI 组件到 UIPass" << std::endl;
     uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
     uiPass->setAndroidApp(app_);
     uiPass->setPhysicalDevice(vulkanContext_.physicalDevice);
@@ -1580,25 +1576,29 @@ void RendererVulkan::createUIComponents() {
     float screenWidth = static_cast<float>(vulkanContext_.swapChainExtent.width);
     float screenHeight = static_cast<float>(vulkanContext_.swapChainExtent.height);
 
-    aout << "屏幕尺寸: " << screenWidth << "x" << screenHeight << std::endl;
-
     // 创建 Canvas（设置为实际屏幕尺寸）
     auto canvasGO = std::make_shared<GameObject>();
     canvasGO->name = "UICanvas";
     auto canvas = canvasGO->AddComponent<CanvasComponent>();
     canvas->Initialize();
     canvas->SetSize({screenWidth, screenHeight});
-    canvas->SetPosition({0.0f, 0.0f});  // 左上角
-    aout << "Canvas 尺寸: " << canvas->GetSize().x << "x" << canvas->GetSize().y << std::endl;
     scene_->addGameObject(canvasGO);
+
+    // 按钮位置是相对于 Canvas 中心的偏移（因为 anchor 默认是 0.5, 0.5）
+    // 所以位置应该是相对于 (0, 0) 的偏移
+    float buttonWidth = 300.0f;
+    float buttonHeight = 80.0f;
+    float spacing = 20.0f;
+    float totalHeight = 3 * buttonHeight + 2 * spacing;
+    float startY = -totalHeight / 2.0f;  // 负值表示向上偏移
 
     // 创建 "Start Game" 按钮
     auto startButtonGO = std::make_shared<GameObject>();
     startButtonGO->name = "StartButton";
     auto startButton = startButtonGO->AddComponent<ButtonComponent>();
     startButton->Initialize();
-    startButton->SetPosition({0.0f, -100.0f});  // 相对于中心锚点的偏移
-    startButton->SetSize({300.0f, 80.0f});
+    startButton->SetPosition({0.0f, startY});  // 相对于 Canvas 中心
+    startButton->SetSize({buttonWidth, buttonHeight});
     startButton->SetText("Start Game");
     startButton->SetOnClick([]() {
         aout << "Start Game 按钮被点击!" << std::endl;
@@ -1611,8 +1611,8 @@ void RendererVulkan::createUIComponents() {
     settingsButtonGO->name = "SettingsButton";
     auto settingsButton = settingsButtonGO->AddComponent<ButtonComponent>();
     settingsButton->Initialize();
-    settingsButton->SetPosition({0.0f, 0.0f});
-    settingsButton->SetSize({300.0f, 80.0f});
+    settingsButton->SetPosition({0.0f, startY + buttonHeight + spacing});
+    settingsButton->SetSize({buttonWidth, buttonHeight});
     settingsButton->SetText("Settings");
     settingsButton->SetOnClick([]() {
         aout << "Settings 按钮被点击!" << std::endl;
@@ -1625,8 +1625,8 @@ void RendererVulkan::createUIComponents() {
     exitButtonGO->name = "ExitButton";
     auto exitButton = exitButtonGO->AddComponent<ButtonComponent>();
     exitButton->Initialize();
-    exitButton->SetPosition({0.0f, 100.0f});
-    exitButton->SetSize({300.0f, 80.0f});
+    exitButton->SetPosition({0.0f, startY + 2 * (buttonHeight + spacing)});
+    exitButton->SetSize({buttonWidth, buttonHeight});
     exitButton->SetText("Exit");
     exitButton->SetOnClick([]() {
         aout << "Exit 按钮被点击!" << std::endl;
