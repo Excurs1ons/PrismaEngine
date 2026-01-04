@@ -46,7 +46,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: 'recursive'
+        submodules: true  # 只初始化一层子模块，避免 PrismaAndroid 嵌套问题
 
     - name: Print Build Environment Info
       shell: powershell
