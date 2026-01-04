@@ -120,12 +120,21 @@ jobs:
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
       run: |
-        cmake -C projects/android/Engine.cmake -B build-${{ matrix.artifact_suffix }} \
+        cmake -B build-${{ matrix.artifact_suffix }} \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=24 \
           -DANDROID_STL=c++_shared \
           -DCMAKE_BUILD_TYPE=Debug \
+          -DPRISMA_BUILD_EDITOR=OFF \
+          -DPRISMA_ENABLE_RENDER_VULKAN=ON \
+          -DPRISMA_ENABLE_RENDER_DX12=OFF \
+          -DPRISMA_ENABLE_RENDER_OPENGL=OFF \
+          -DPRISMA_ENABLE_AUDIO_SDL3=OFF \
+          -DPRISMA_ENABLE_AUDIO_OPENAL=ON \
+          -DPRISMA_USE_DIRECTXMATH=OFF \
+          -DPRISMA_FORCE_GLM=ON \
+          -DPRISMA_USE_FETCHCONTENT=ON \
           -G Ninja
 
     - name: Build Engine (Android)
@@ -259,12 +268,21 @@ jobs:
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
       run: |
-        cmake -C projects/android/Engine.cmake -B build-${{ matrix.artifact_suffix }} \
+        cmake -B build-${{ matrix.artifact_suffix }} \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=24 \
           -DANDROID_STL=c++_shared \
           -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+          -DPRISMA_BUILD_EDITOR=OFF \
+          -DPRISMA_ENABLE_RENDER_VULKAN=ON \
+          -DPRISMA_ENABLE_RENDER_DX12=OFF \
+          -DPRISMA_ENABLE_RENDER_OPENGL=OFF \
+          -DPRISMA_ENABLE_AUDIO_SDL3=OFF \
+          -DPRISMA_ENABLE_AUDIO_OPENAL=ON \
+          -DPRISMA_USE_DIRECTXMATH=OFF \
+          -DPRISMA_FORCE_GLM=ON \
+          -DPRISMA_USE_FETCHCONTENT=ON \
           -G Ninja
 
     - name: Build Engine (Android)
