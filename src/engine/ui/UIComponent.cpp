@@ -7,13 +7,15 @@ void UIComponent::Update(float deltaTime) {
 }
 
 Vector2 UIComponent::GetScreenPosition() const {
-    Vector2 parentPos{0.0f, 0.0f};
-    Vector2 parentSize{1920.0f, 1080.0f};  // 默认屏幕尺寸
-
-    if (m_parent != nullptr) {
-        parentPos = m_parent->GetScreenPosition();
-        parentSize = m_parent->GetSize();
+    // 如果没有父组件（根组件），直接返回自己的位置
+    // 假设根组件的位置就是屏幕坐标
+    if (m_parent == nullptr) {
+        return m_position;
     }
+
+    // 有父组件，计算相对于父组件的位置
+    Vector2 parentPos = m_parent->GetScreenPosition();
+    Vector2 parentSize = m_parent->GetSize();
 
     // 计算锚点在父组件中的位置
     Vector2 anchorPos = parentPos + Vector2(
