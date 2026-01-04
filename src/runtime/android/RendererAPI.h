@@ -7,6 +7,7 @@ public:
     virtual void init() = 0;
     virtual void render() = 0;
     virtual void onConfigChanged() = 0;  // 处理屏幕旋转等配置变化
+    virtual void handleInput() = 0;      // 处理输入（包括 UI 交互）
 };
 
 #endif //MY_APPLICATION_RENDERERAPI_H
