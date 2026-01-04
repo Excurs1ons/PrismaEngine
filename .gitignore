@@ -289,7 +289,7 @@ vcpkg-lock.json
 /*/local.properties
 
 # Gradle wrapper
-gradle/wrapper/gradle-wrapper.jar
+# gradle/wrapper/gradle-wrapper.jar  # Commented out - needed for CI
 
 !*.hlsl
 */External/
@@ -322,7 +322,7 @@ clion-*.txt
 
 # vcpkg directories and files
 !vcpkg.json
-*/gradle-wrapper.jar
+# */gradle-wrapper.jar  # Commented out - needed for CI
 
 /build
 *.iml

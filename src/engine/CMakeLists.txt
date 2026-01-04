@@ -60,9 +60,11 @@ if(ANDROID)
     list(FILTER CORE_HEADERS EXCLUDE REGEX "targetver.h")
 endif()
 
-# 在非Android平台上排除Android特定头文件
+# 在非Android平台上排除Android特定文件
 if(NOT ANDROID)
-    list(FILTER CORE_HEADERS EXCLUDE REGEX "PlatformAndroid.h")
+    list(FILTER CORE_SOURCES EXCLUDE REGEX "Android")
+    list(FILTER CORE_HEADERS EXCLUDE REGEX "Android")
+    message(STATUS "Excluding Android-specific files on non-Android platform")
 endif()
 
 # ========== 渲染设备条件编译 ==========
