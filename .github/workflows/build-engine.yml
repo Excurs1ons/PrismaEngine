@@ -102,11 +102,9 @@ jobs:
       if: matrix.platform == 'android'
       uses: android-actions/setup-android@v3
 
-    - name: Setup NDK
+    - name: Set NDK path
       if: matrix.platform == 'android'
-      run: |
-        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+      run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle" >> $GITHUB_ENV
 
     - name: Setup Ninja (Android)
       if: matrix.platform == 'android'
@@ -243,11 +241,9 @@ jobs:
       if: matrix.platform == 'android'
       uses: android-actions/setup-android@v3
 
-    - name: Setup NDK
+    - name: Set NDK path
       if: matrix.platform == 'android'
-      run: |
-        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+      run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle" >> $GITHUB_ENV
 
     - name: Setup Ninja (Android)
       if: matrix.platform == 'android'
