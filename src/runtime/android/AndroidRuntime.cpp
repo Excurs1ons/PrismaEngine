@@ -41,7 +41,7 @@ void handle_cmd(android_app *pApp, int32_t cmd) {
         case APP_CMD_WINDOW_REDRAW_NEEDED:
         case APP_CMD_CONTENT_RECT_CHANGED:
             // 处理屏幕旋转等配置变化
-            if (pApp->userData) {
+            if (pApp->userData != nullptr) {
                 auto *pRenderer = reinterpret_cast<Renderer *>(pApp->userData);
                 pRenderer->onConfigChanged();
             }
