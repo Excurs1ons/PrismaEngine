@@ -146,13 +146,13 @@ public:
                 // 调试：输出速度和阻尼效果
                 static int logCounter = 0;
                 if (++logCounter % 60 == 0) {  // 每秒输出一次
-                    aout << "Velocity: (" << velocity_.x << ", " << velocity_.y << "), damping=" << damping_ << std::endl;
+                    //aout << "Velocity: (" << velocity_.x << ", " << velocity_.y << "), damping=" << damping_ << std::endl;
                 }
 
                 // 停止条件
                 if (glm::length(velocity_) < 0.01f) {
                     velocity_ = Vector3(0, 0, 0);
-                    aout << "Velocity stopped!" << std::endl;
+                    //aout << "Velocity stopped!" << std::endl;
                 }
             }
         }
@@ -171,7 +171,7 @@ private:
             if (touch) {
                 // 检查是否是新触摸
                 if (touch->phase == Input::TouchPhase::Began && !isDragging_) {
-                    aout << "Touch Began! Starting drag" << std::endl;
+                    // aout << "Touch Began! Starting drag" << std::endl;
                     isDragging_ = true;
                     // 不要清零速度，保持之前可能的惯性
                     lastTouchPosition_ = Vector2(touch->positionX, touch->positionY);
@@ -187,7 +187,7 @@ private:
 
                     // 只有真正移动时才应用加速度
                     if (glm::length(delta) > 0.001f) {
-                        aout << "Moving! delta=(" << delta.x << ", " << delta.y << ")" << std::endl;
+                        // aout << "Moving! delta=(" << delta.x << ", " << delta.y << ")" << std::endl;
 
                         // 屏幕空间滑动映射到物体旋转（基于摄像机视角）
                         // 屏幕X轴左右滑动 → 绕摄像机Y轴旋转（水平自转）
@@ -203,7 +203,7 @@ private:
                 // 触摸结束
                 else if (touch->phase == Input::TouchPhase::Ended ||
                          touch->phase == Input::TouchPhase::Cancelled) {
-                    aout << "Touch Ended/Cancelled! Keeping velocity=(" << velocity_.x << ", " << velocity_.y << ")" << std::endl;
+                    // aout << "Touch Ended/Cancelled! Keeping velocity=(" << velocity_.x << ", " << velocity_.y << ")" << std::endl;
                     isDragging_ = false;
                     // 不清零速度，让它继续惯性旋转
                 }
