@@ -267,7 +267,7 @@ void OpaquePass::record(VkCommandBuffer cmdBuffer) {
         }
     }
 
-    aout << "OpaquePass: 渲染 " << meshRendererIndices.size() << " 个物体" << std::endl;
+    // aout << "OpaquePass: 渲染 " << meshRendererIndices.size() << " 个物体" << std::endl;
 
     // 渲染所有 MeshRenderer 对象
     for (size_t j = 0; j < meshRendererIndices.size(); j++) {
@@ -276,7 +276,7 @@ void OpaquePass::record(VkCommandBuffer cmdBuffer) {
         auto meshRenderer = go->GetComponent<MeshRenderer>();
         auto model = meshRenderer->getModel();
 
-        aout << "  渲染物体 [" << j << "]: " << go->name << ", 顶点数: " << model->getVertexCount() << ", 索引数: " << model->getIndexCount() << std::endl;
+        // aout << "  渲染物体 [" << j << "]: " << go->name << ", 顶点数: " << model->getVertexCount() << ", 索引数: " << model->getIndexCount() << std::endl;
 
         VkBuffer vertexBuffers[] = {renderObjects_[j].vertexBuffer};
         VkDeviceSize offsets[] = {0};
