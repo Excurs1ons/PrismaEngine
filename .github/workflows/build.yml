@@ -12,6 +12,8 @@ on:
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
       - '.github/workflows/build.yml'
+      - '.gitmodules'
+      - 'projects/**'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -21,6 +23,9 @@ on:
       - 'cmake/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
+      - '.github/workflows/build.yml'
+      - '.gitmodules'
+      - 'projects/**'
 
 env:
   CMAKE_VERSION: '3.31.0'
