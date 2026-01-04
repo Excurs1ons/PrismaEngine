@@ -13,7 +13,6 @@
 [![Build Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-editor.yml?branch=main&label=Editor)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-editor.yml)
 [![Build Windows Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-runtime.yml?branch=main&label=Windows%20Runtime)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-runtime.yml)
 [![Build Android Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-runtime.yml?branch=main&label=Android%20Runtime)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-runtime.yml)
-[![Android CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android.yml?branch=main&label=Android%20CI)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android.yml)
 
 [![Vulkan Backend](https://img.shields.io/badge/Vulkan%20Backend-Implemented-success.svg)](docs/VulkanIntegration.md)
 [![RenderGraph](https://img.shields.io/badge/RenderGraph-In%20Progress-orange.svg)](docs/RenderGraph_Migration_Plan.md)
