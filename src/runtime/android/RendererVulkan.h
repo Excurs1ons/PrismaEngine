@@ -19,6 +19,7 @@ public:
     void init() override;
     void render() override;
     void onConfigChanged() override;  // 处理屏幕旋转
+    void handleInput() override;     // 处理输入（包括 UI 交互）
 
     // SwapChain 重建相关函数（处理屏幕旋转）
     void cleanupSwapChain();      // 清理旧的 SwapChain 相关资源
@@ -81,6 +82,9 @@ private:
     // 光源 Uniform Buffer（全局共享）
     VkBuffer lightUniformBuffer;
     VkDeviceMemory lightUniformBufferMemory;
+
+    // 状态栏高度（从 contentRect.top 缓存，用于坐标转换）
+    int32_t statusBarHeight_ = 0;
 
 };
 
