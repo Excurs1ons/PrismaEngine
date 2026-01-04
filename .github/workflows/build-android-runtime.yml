@@ -53,10 +53,8 @@ jobs:
     - name: Setup Android NDK
       uses: android-actions/setup-android@v3
 
-    - name: Setup NDK
-      run: |
-        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+    - name: Set NDK path
+      run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle" >> $GITHUB_ENV
 
     - name: Setup Ninja
       run: |
@@ -118,10 +116,8 @@ jobs:
     - name: Setup Android NDK
       uses: android-actions/setup-android@v3
 
-    - name: Setup NDK
-      run: |
-        yes | $ANDROID_HOME/tools/bin/sdkmanager --install "ndk;${{ env.ANDROID_NDK_VERSION }}"
-        echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}" >> $GITHUB_ENV
+    - name: Set NDK path
+      run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle" >> $GITHUB_ENV
 
     - name: Setup Ninja
       run: |
