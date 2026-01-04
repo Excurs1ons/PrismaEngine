@@ -359,11 +359,11 @@ void RendererVulkan::init() {
     createDescriptorSets();
     createSkyboxDescriptorSets();  // 创建Skybox描述符集
 
+    // 创建 UI 组件（必须在 createRenderPipeline 之前，这样 UIPass 才能找到 UI 组件）
+    createUIComponents();
+
     // 创建逻辑渲染管线（封装 Pass）
     createRenderPipeline();
-
-    // 创建 UI 组件和 UIPass（需要在 renderPipeline_ 创建后）
-    createUIComponents();
 
     createCommandBuffers();
 
@@ -977,15 +977,22 @@ void RendererVulkan::createRenderPipeline() {
     opaquePass->setScene(scene_.get());
     renderPipeline_->addPass(std::move(opaquePass));
 
-    // UIPass
-
+    // 创建并添加 UIPass
     auto uiPass = std::make_unique<PrismaEngine::UIPass>();
-    for (const auto& go:scene_->getGameObjects()) {
+    int uiComponentCount = 0;
+    for (const auto& go : scene_->getGameObjects()) {
         auto uiComponent = go->GetComponent<UIComponent>();
-        if(uiComponent != nullptr){
+        // 跳过 Canvas（它只是一个容器，不应该被渲染）
+        if (uiComponent != nullptr && dynamic_cast<PrismaEngine::CanvasComponent*>(uiComponent.get()) == nullptr) {
             uiPass->addUIComponent(uiComponent);
+            uiComponentCount++;
+            aout << "  添加 UI 组件: " << go->name << std::endl;
         }
     }
+    aout << "总共添加了 " << uiComponentCount << " 个 UI 组件到 UIPass" << std::endl;
+    uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
+    uiPass->setAndroidApp(app_);
+    uiPass->setPhysicalDevice(vulkanContext_.physicalDevice);
     renderPipeline_->addPass(std::move(uiPass));
 
     // 初始化 Pipeline
@@ -1537,6 +1544,9 @@ void RendererVulkan::recreateSwapChain() {
         if (auto* opaquePass = renderPipeline_->getOpaquePass()) {
             opaquePass->setSwapChainExtent(vulkanContext_.swapChainExtent);
         }
+        if (auto* uiPass = renderPipeline_->getUIPass()) {
+            uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
+        }
         // 重新初始化所有 Pass（重建 Pipeline 和 PipelineLayout）
         renderPipeline_->initialize(vulkanContext_.device, vulkanContext_.renderPass);
     }
@@ -1566,11 +1576,20 @@ void RendererVulkan::createUIComponents() {
 
     using namespace PrismaEngine;
 
-    // 创建 Canvas
+    // 获取实际屏幕尺寸
+    float screenWidth = static_cast<float>(vulkanContext_.swapChainExtent.width);
+    float screenHeight = static_cast<float>(vulkanContext_.swapChainExtent.height);
+
+    aout << "屏幕尺寸: " << screenWidth << "x" << screenHeight << std::endl;
+
+    // 创建 Canvas（设置为实际屏幕尺寸）
     auto canvasGO = std::make_shared<GameObject>();
     canvasGO->name = "UICanvas";
     auto canvas = canvasGO->AddComponent<CanvasComponent>();
     canvas->Initialize();
+    canvas->SetSize({screenWidth, screenHeight});
+    canvas->SetPosition({0.0f, 0.0f});  // 左上角
+    aout << "Canvas 尺寸: " << canvas->GetSize().x << "x" << canvas->GetSize().y << std::endl;
     scene_->addGameObject(canvasGO);
 
     // 创建 "Start Game" 按钮
