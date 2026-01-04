@@ -54,16 +54,17 @@ jobs:
             arch: x64
             artifact_suffix: win64-debug
             preset: windows-x64-debug
-          - os: ubuntu-latest
-            platform: android
-            build_type: Debug
-            abi: arm64-v8a
-            artifact_suffix: android-arm64-debug
-          - os: ubuntu-latest
-            platform: android
-            build_type: Debug
-            abi: armeabi-v7a
-            artifact_suffix: android-arm32-debug
+          # Android builds disabled - using build-android-runtime.yml instead
+          # - os: ubuntu-latest
+          #   platform: android
+          #   build_type: Debug
+          #   abi: arm64-v8a
+          #   artifact_suffix: android-arm64-debug
+          # - os: ubuntu-latest
+          #   platform: android
+          #   build_type: Debug
+          #   abi: armeabi-v7a
+          #   artifact_suffix: android-arm32-debug
 
     steps:
     - name: Checkout repository
@@ -193,16 +194,17 @@ jobs:
             arch: x64
             artifact_suffix: win64-release
             preset: windows-x64-release
-          - os: ubuntu-latest
-            platform: android
-            build_type: Release
-            abi: arm64-v8a
-            artifact_suffix: android-arm64-release
-          - os: ubuntu-latest
-            platform: android
-            build_type: Release
-            abi: armeabi-v7a
-            artifact_suffix: android-arm32-release
+          # Android builds disabled - using build-android-runtime.yml instead
+          # - os: ubuntu-latest
+          #   platform: android
+          #   build_type: Release
+          #   abi: arm64-v8a
+          #   artifact_suffix: android-arm64-release
+          # - os: ubuntu-latest
+          #   platform: android
+          #   build_type: Release
+          #   abi: armeabi-v7a
+          #   artifact_suffix: android-arm32-release
 
     steps:
     - name: Checkout repository
