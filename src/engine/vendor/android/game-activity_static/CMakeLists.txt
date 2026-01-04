@@ -27,7 +27,7 @@ else()
     message(FATAL_ERROR "Unknown ANDROID_ABI: ${ANDROID_ABI}")
 endif()
 
-# 创建静态库
+# 创建静态库（直接从源文件编译，不使用预编译库）
 add_library(game-activity_static STATIC
     ${GAME_ACTIVITY_SOURCES}
 )
@@ -35,11 +35,6 @@ add_library(game-activity_static STATIC
 # 导出头文件路径，支持 #include <game-activity/xxx.h> 形式
 target_include_directories(game-activity_static PUBLIC
     ${GAME_ACTIVITY_INCLUDE_ROOT}
-)
-
-# 链接预编译的静态库
-target_link_libraries(game-activity_static PUBLIC
-    ${GAME_ACTIVITY_LIB_DIR}/libgame-activity_static.a
 )
 
 # 链接 Android 系统库
