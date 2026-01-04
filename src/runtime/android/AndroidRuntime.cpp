@@ -10,8 +10,8 @@
 #include "Renderer.h"
 #include "GameManager.h"
 
-#include <game-activity/GameActivity.cpp>
-#include <game-text-input/gametextinput.cpp>
+#include <game-activity/GameActivity.h>
+#include <game-text-input/gametextinput.h>
 
 // #include "AndroidLogger.h"
 // #include "Logger.h"
