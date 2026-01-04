@@ -31,7 +31,7 @@ else()
     message(FATAL_ERROR "Unknown ANDROID_ABI: ${ANDROID_ABI}")
 endif()
 
-# 创建共享库
+# 创建共享库（直接从源文件编译，不使用预编译库）
 add_library(game-activity SHARED
     ${GAME_ACTIVITY_SOURCES}
 )
@@ -39,11 +39,6 @@ add_library(game-activity SHARED
 # 添加头文件路径
 target_include_directories(game-activity PUBLIC
     ${GAME_ACTIVITY_INCLUDE_DIRS}
-)
-
-# 链接预编译的静态库
-target_link_libraries(game-activity PUBLIC
-    ${GAME_ACTIVITY_LIB_DIR}/libgame-activity.a
 )
 
 # 链接 Android 系统库
