@@ -46,7 +46,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
-        submodules: true  # 只初始化一层子模块，避免 PrismaAndroid 嵌套问题
+        submodules: false
+    - name: Init submodules
+      run: |
+        git submodule update --init --recommend-shallow -- jobs 0 projects/android/PrismaAndroid
 
     - name: Print Build Environment Info
       shell: powershell
