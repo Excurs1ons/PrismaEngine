@@ -43,6 +43,9 @@ set(PRISMA_FORCE_GLM ON CACHE BOOL "Force use GLM" FORCE)
 # 启用 FetchContent 管理依赖
 set(PRISMA_USE_FETCHCONTENT ON CACHE BOOL "Use FetchContent" FORCE)
 
+# 禁用 ImGui Debug (Android 不支持 ImGui)
+set(PRISMA_ENABLE_IMGUI_DEBUG OFF CACHE BOOL "Enable ImGui debug UI in Debug builds" FORCE)
+
 # ========== 包含引擎的 CMake 模块 ==========
 
 # 获取 PrismaEngine 根目录
