@@ -989,6 +989,11 @@ void RendererVulkan::createRenderPipeline() {
     uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
     uiPass->setAndroidApp(app_);
     uiPass->setPhysicalDevice(vulkanContext_.physicalDevice);
+
+    // 获取内容区域偏移（状态栏高度等）
+    // app_->contentRect 包含内容区域相对于窗口的偏移
+    uiPass->setContentOffset(app_->contentRect.left, app_->contentRect.top);
+
     renderPipeline_->addPass(std::move(uiPass));
 
     // 初始化 Pipeline
@@ -1542,6 +1547,10 @@ void RendererVulkan::recreateSwapChain() {
         }
         if (auto* uiPass = renderPipeline_->getUIPass()) {
             uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
+
+            // 获取内容区域偏移（状态栏高度等）
+            // app_->contentRect 包含内容区域相对于窗口的偏移
+            uiPass->setContentOffset(app_->contentRect.left, app_->contentRect.top);
         }
         // 重新初始化所有 Pass（重建 Pipeline 和 PipelineLayout）
         renderPipeline_->initialize(vulkanContext_.device, vulkanContext_.renderPass);
@@ -1572,6 +1581,16 @@ void RendererVulkan::createUIComponents() {
 
     using namespace PrismaEngine;
 
+    // 获取实际窗口尺寸
+    int32_t windowWidth = ANativeWindow_getWidth(app_->window);
+    int32_t windowHeight = ANativeWindow_getHeight(app_->window);
+    aout << "Window size: " << windowWidth << "x" << windowHeight << std::endl;
+    aout << "SwapChain size: " << vulkanContext_.swapChainExtent.width << "x" << vulkanContext_.swapChainExtent.height << std::endl;
+
+    // 获取内容区域（排除状态栏）
+    int32_t statusBarHeight = app_->contentRect.top;
+    aout << "Status bar height: " << statusBarHeight << std::endl;
+
     // 获取实际屏幕尺寸
     float screenWidth = static_cast<float>(vulkanContext_.swapChainExtent.width);
     float screenHeight = static_cast<float>(vulkanContext_.swapChainExtent.height);
@@ -1581,6 +1600,7 @@ void RendererVulkan::createUIComponents() {
     canvasGO->name = "UICanvas";
     auto canvas = canvasGO->AddComponent<CanvasComponent>();
     canvas->Initialize();
+    canvas->SetPosition({0.0f, 0.0f});  // 确保 Canvas 原点在左上角
     canvas->SetSize({screenWidth, screenHeight});
     scene_->addGameObject(canvasGO);
 
@@ -1604,6 +1624,7 @@ void RendererVulkan::createUIComponents() {
         aout << "Start Game 按钮被点击!" << std::endl;
     });
     startButton->SetParent(canvas);
+    canvas->AddChild(startButton.get());
     scene_->addGameObject(startButtonGO);
 
     // 创建 "Settings" 按钮
@@ -1618,6 +1639,7 @@ void RendererVulkan::createUIComponents() {
         aout << "Settings 按钮被点击!" << std::endl;
     });
     settingsButton->SetParent(canvas);
+    canvas->AddChild(settingsButton.get());
     scene_->addGameObject(settingsButtonGO);
 
     // 创建 "Exit" 按钮
@@ -1632,6 +1654,7 @@ void RendererVulkan::createUIComponents() {
         aout << "Exit 按钮被点击!" << std::endl;
     });
     exitButton->SetParent(canvas);
+    canvas->AddChild(exitButton.get());
     scene_->addGameObject(exitButtonGO);
 
     aout << "UI 组件创建完成" << std::endl;
@@ -1639,6 +1662,65 @@ void RendererVulkan::createUIComponents() {
 
 
 void RendererVulkan::onConfigChanged() {
+    // 更新状态栏高度（contentRect 会在 APP_CMD_CONTENT_RECT_CHANGED 时更新）
+    statusBarHeight_ = app_->contentRect.top;
+    aout << "contentRect"
+    << "top:" << app_->contentRect.top
+    << "bottom:" << app_->contentRect.bottom
+    << "left:" << app_->contentRect.left
+    << "right:" << app_->contentRect.right
+    << std::endl;
+    // 如果 contentRect.top 为 0，尝试通过 JNI 获取真实的状态栏高度
+    if (statusBarHeight_ == 0 && app_->activity->env) {
+        JNIEnv* env = app_->activity->env;
+        JavaVM* vm = app_->activity->vm;
+        JavaVMAttachArgs attachArgs = {JNI_VERSION_1_6, "NativeThread", nullptr};
+        jint attachResult = vm->AttachCurrentThread(&env, &attachArgs);
+        if (attachResult == JNI_OK) {
+            // 获取 WindowManager
+            jobject windowManager = nullptr;
+            jclass activityClass = env->GetObjectClass(app_->activity->javaGameActivity);
+            if (activityClass) {
+                jmethodID getWindowManagerMethod = env->GetMethodID(activityClass, "getWindowManager", "()Landroid/view/WindowManager;");
+                if (getWindowManagerMethod) {
+                    jobject wm = env->CallObjectMethod(app_->activity->javaGameActivity, getWindowManagerMethod);
+                    if (wm) {
+                        // 获取 DisplayMetrics
+                        jclass windowManagerClass = env->FindClass("android/view/WindowManager");
+                        if (windowManagerClass) {
+                            jmethodID getDefaultDisplayMethod = env->GetMethodID(windowManagerClass, "getDefaultDisplay", "()Landroid/view/Display;");
+                            if (getDefaultDisplayMethod) {
+                                jobject display = env->CallObjectMethod(wm, getDefaultDisplayMethod);
+                                if (display) {
+                                    jclass displayClass = env->GetObjectClass(display);
+                                    jmethodID getMetricsMethod = env->GetMethodID(displayClass, "getMetrics", "(Landroid/util/DisplayMetrics;)V");
+                                    if (getMetricsMethod) {
+                                        jclass metricsClass = env->FindClass("android/util/DisplayMetrics");
+                                        jmethodID metricsInit = env->GetMethodID(metricsClass, "<init>", "()V");
+                                        jobject metrics = env->NewObject(metricsClass, metricsInit);
+                                        env->CallVoidMethod(display, getMetricsMethod, metrics);
+
+                                        // 获取 statusBarHeight
+                                        jfieldID densityDpiField = env->GetFieldID(metricsClass, "densityDpi", "I");
+                                        jint densityDpi = env->GetIntField(metrics, densityDpiField);
+
+                                        // 状态栏高度通常是 24dp
+                                        statusBarHeight_ = (24 * densityDpi) / 160;
+
+                                        env->DeleteLocalRef(metrics);
+                                    }
+                                    env->DeleteLocalRef(displayClass);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            vm->DetachCurrentThread();
+        }
+        aout << "Status bar height (JNI): " << statusBarHeight_ << std::endl;
+    }
+
     // 检测屏幕旋转，当 transform 变化时重建 SwapChain
     VkSurfaceCapabilitiesKHR capabilities;
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
@@ -1653,5 +1735,115 @@ void RendererVulkan::onConfigChanged() {
         aout << "New transform: 0x" << std::hex << capabilities.currentTransform << std::dec << std::endl;
 
         recreateSwapChain();
+    }
+}
+
+void RendererVulkan::handleInput() {
+    using namespace PrismaEngine;
+    using namespace PrismaEngine::Input;
+
+    auto& inputBackend = AndroidInputBackend::GetInstance();
+    inputBackend.Update();
+
+    // 处理 Android 原始输入事件
+    auto *inputBuffer = android_app_swap_input_buffers(app_);
+    if (inputBuffer == nullptr) {
+        return;
+    }
+
+    // 处理触摸事件
+    for (auto i = 0; i < inputBuffer->motionEventsCount; i++) {
+        auto &motionEvent = inputBuffer->motionEvents[i];
+        auto action = motionEvent.action;
+        auto pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK)
+                >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+        auto &pointer = motionEvent.pointers[pointerIndex];
+        auto x = GameActivityPointerAxes_getX(&pointer);
+        auto y = GameActivityPointerAxes_getY(&pointer);
+
+        switch (action & AMOTION_EVENT_ACTION_MASK) {
+            case AMOTION_EVENT_ACTION_DOWN:
+            case AMOTION_EVENT_ACTION_POINTER_DOWN:
+                inputBackend.OnTouchBegan(pointer.id, x, y);
+                break;
+            case AMOTION_EVENT_ACTION_CANCEL:
+                inputBackend.OnTouchCancelled(pointer.id);
+                break;
+            case AMOTION_EVENT_ACTION_UP:
+            case AMOTION_EVENT_ACTION_POINTER_UP:
+                inputBackend.OnTouchEnded(pointer.id, x, y);
+                break;
+            case AMOTION_EVENT_ACTION_MOVE:
+                for (auto index = 0; index < motionEvent.pointerCount; index++) {
+                    pointer = motionEvent.pointers[index];
+                    x = GameActivityPointerAxes_getX(&pointer);
+                    y = GameActivityPointerAxes_getY(&pointer);
+                    inputBackend.OnTouchMoved(pointer.id, x, y);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    android_app_clear_motion_events(inputBuffer);
+
+    // 处理键盘事件
+    for (auto i = 0; i < inputBuffer->keyEventsCount; i++) {
+        // 可以在这里添加键盘处理
+    }
+    android_app_clear_key_events(inputBuffer);
+
+    // 处理 UI 输入
+    // 触摸坐标是相对于内容区域的（不包括状态栏），需要转换为渲染坐标系（窗口坐标）
+    // 渲染使用的窗口坐标原点是窗口顶部，触摸坐标原点是内容区域顶部（状态栏下方）
+
+    for (int i = 0; i < inputBackend.GetTouchCount(); i++) {
+        const Touch* touch = inputBackend.GetTouch(i);
+        if (touch == nullptr) continue;
+
+        // 将触摸坐标从内容区域坐标转换为窗口坐标
+        // 内容区域从状态栏下方开始，所以需要加上状态栏高度
+        PrismaMath::vec2 touchPos(
+            touch->positionX,
+            touch->positionY - statusBarHeight_
+        );
+
+        // 获取所有 Canvas 组件
+        for (const auto& go : scene_->getGameObjects()) {
+            auto canvas = go->GetComponent<CanvasComponent>();
+            if (!canvas) continue;
+
+            // 检查 Canvas 的所有子组件
+            for (auto* child : canvas->GetChildren()) {
+                if (!child || !child->IsInteractable()) continue;
+
+                auto* button = dynamic_cast<ButtonComponent*>(child);
+                if (button) {
+                    // 检查是否点击
+                    if (child->HitTest(touchPos)) {
+                        // 触摸在按钮上
+                        if (touch->phase == TouchPhase::Began) {
+                            if (!button->IsHovered()) {
+                                button->OnHoverEnter();
+                            }
+                            button->OnPressed();
+                        } else if (touch->phase == TouchPhase::Ended) {
+                            button->OnReleased();
+                        } else if (touch->phase == TouchPhase::Cancelled) {
+                            if (button->IsHovered()) {
+                                button->OnHoverLeave();
+                            }
+                            button->OnReleased();
+                        }
+                        return;
+                    } else {
+                        // 触摸不在按钮上，清除 hover 状态
+                        if (button->IsHovered() && button->IsPressed()) {
+                            button->OnHoverLeave();
+                        }
+                    }
+                }
+            }
+        }
     }
 }
