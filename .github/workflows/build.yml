@@ -49,7 +49,7 @@ jobs:
         submodules: false
     - name: Init submodules
       run: |
-        git submodule update --init --recommend-shallow -- jobs 0 projects/android/PrismaAndroid
+        git submodule update --init --recommend-shallow --jobs=0 projects/android/PrismaAndroid
 
     - name: Print Build Environment Info
       shell: powershell
