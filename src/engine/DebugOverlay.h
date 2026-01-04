@@ -6,11 +6,13 @@
 
 #include "Build.h"
 
-#if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
+// 即使在非 Debug 构建中，也需要这些类型用于空操作定义
 #include <string>
 #include <vector>
 #include <functional>
 #include <memory>
+
+#if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
 
 namespace PrismaEngine {
 
