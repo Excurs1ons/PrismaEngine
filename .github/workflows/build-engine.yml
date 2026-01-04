@@ -48,17 +48,16 @@ jobs:
             arch: x64
             artifact_suffix: win64-debug
             preset: windows-x64-debug
-          # Android builds disabled - using build-android-runtime.yml instead
-          # - os: ubuntu-latest
-          #   platform: android
-          #   build_type: Debug
-          #   abi: arm64-v8a
-          #   artifact_suffix: android-arm64-debug
-          # - os: ubuntu-latest
-          #   platform: android
-          #   build_type: Debug
-          #   abi: armeabi-v7a
-          #   artifact_suffix: android-arm32-debug
+          - os: ubuntu-latest
+            platform: android
+            build_type: Debug
+            abi: arm64-v8a
+            artifact_suffix: android-arm64-debug
+          - os: ubuntu-latest
+            platform: android
+            build_type: Debug
+            abi: armeabi-v7a
+            artifact_suffix: android-arm32-debug
 
     steps:
     - name: Checkout repository
@@ -113,7 +112,7 @@ jobs:
       with:
         path: |
           ./build-android-${{ matrix.abi }}-debug
-        key: ${{ runner.os }}-engine-android-${{ matrix.abi }}-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'android/CMakeLists.txt') }}
+        key: ${{ runner.os }}-engine-android-${{ matrix.abi }}-${{ hashFiles('src/engine/**', 'projects/android/Engine.cmake', 'cmake/**') }}
         restore-keys: |
           ${{ runner.os }}-engine-android-${{ matrix.abi }}-
           ${{ runner.os }}-engine-android-
@@ -121,7 +120,7 @@ jobs:
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
       run: |
-        cmake -S android -B build-${{ matrix.artifact_suffix }} \
+        cmake -C projects/android/Engine.cmake -B build-${{ matrix.artifact_suffix }} \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=24 \
@@ -188,17 +187,16 @@ jobs:
             arch: x64
             artifact_suffix: win64-release
             preset: windows-x64-release
-          # Android builds disabled - using build-android-runtime.yml instead
-          # - os: ubuntu-latest
-          #   platform: android
-          #   build_type: Release
-          #   abi: arm64-v8a
-          #   artifact_suffix: android-arm64-release
-          # - os: ubuntu-latest
-          #   platform: android
-          #   build_type: Release
-          #   abi: armeabi-v7a
-          #   artifact_suffix: android-arm32-release
+          - os: ubuntu-latest
+            platform: android
+            build_type: Release
+            abi: arm64-v8a
+            artifact_suffix: android-arm64-release
+          - os: ubuntu-latest
+            platform: android
+            build_type: Release
+            abi: armeabi-v7a
+            artifact_suffix: android-arm32-release
 
     steps:
     - name: Checkout repository
@@ -253,7 +251,7 @@ jobs:
       with:
         path: |
           ./build-android-${{ matrix.abi }}-release
-        key: ${{ runner.os }}-engine-rel-android-${{ matrix.abi }}-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'android/CMakeLists.txt') }}
+        key: ${{ runner.os }}-engine-rel-android-${{ matrix.abi }}-${{ hashFiles('src/engine/**', 'projects/android/Engine.cmake', 'cmake/**') }}
         restore-keys: |
           ${{ runner.os }}-engine-rel-android-${{ matrix.abi }}-
           ${{ runner.os }}-engine-rel-android-
@@ -261,7 +259,7 @@ jobs:
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
       run: |
-        cmake -S android -B build-${{ matrix.artifact_suffix }} \
+        cmake -C projects/android/Engine.cmake -B build-${{ matrix.artifact_suffix }} \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=24 \
