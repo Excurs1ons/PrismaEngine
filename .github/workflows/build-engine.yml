@@ -5,17 +5,11 @@ on:
     branches: [ main, develop ]
     paths:
       - 'src/engine/**'
-      - 'CMakeLists.txt'
-      - 'CMakePresets.json'
-      - 'cmake/**'
       - '.github/workflows/build-engine.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'src/engine/**'
-      - 'CMakeLists.txt'
-      - 'CMakePresets.json'
-      - 'cmake/**'
       - '.github/workflows/build-engine.yml'
   workflow_dispatch:
     inputs:
