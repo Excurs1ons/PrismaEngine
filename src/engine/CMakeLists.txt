@@ -200,7 +200,7 @@ add_library(Engine ${PRISMA_ENGINE_TYPE}
     ${ENGINE_HEADERS}
     pch.h
     pch.cpp
-    packing/pipeline.h
+    packing/Pipeline.h
 )
 
 # Android 平台添加 game-activity 源文件
