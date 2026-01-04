@@ -32,9 +32,9 @@ void AndroidInputBackend::Update() {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastDebugTime).count();
 
     if (!activeTouches_.empty() && duration > 500) {
-        aout << "Update: activeTouches_ count=" << activeTouches_.size() << std::endl;
+        // aout << "Update: activeTouches_ count=" << activeTouches_.size() << std::endl;
         for (const auto& pair : activeTouches_) {
-            aout << "  fingerId=" << pair.first << " phase=" << static_cast<int>(pair.second.phase) << std::endl;
+            // aout << "  fingerId=" << pair.first << " phase=" << static_cast<int>(pair.second.phase) << std::endl;
         }
         lastDebugTime = now;
     }
