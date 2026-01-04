@@ -84,6 +84,20 @@ public:
         damping_ = glm::clamp(damping, 0.0f, 1.0f);
     }
 
+    /**
+     * 获取当前旋转速度（用于状态保存）
+     */
+    Vector3 GetVelocity() const {
+        return velocity_;
+    }
+
+    /**
+     * 设置旋转速度（用于状态恢复）
+     */
+    void SetVelocity(const Vector3& velocity) {
+        velocity_ = velocity;
+    }
+
     void Initialize() override {
         // 记录初始角度
         if (auto* go = GetOwner()) {
