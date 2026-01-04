@@ -6,14 +6,12 @@ on:
     paths:
       - 'projects/android/PrismaAndroid/**'
       - 'src/runtime/android/**'
-      - 'src/engine/**'
       - '.github/workflows/build-android-runtime.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'projects/android/PrismaAndroid/**'
       - 'src/runtime/android/**'
-      - 'src/engine/**'
       - '.github/workflows/build-android-runtime.yml'
   workflow_dispatch:
     inputs:
@@ -75,7 +73,7 @@ jobs:
       with:
         path: |
           projects/android/PrismaAndroid/.cxx
-        key: ${{ runner.os }}-android-runtime-debug-${{ hashFiles('src/runtime/android/**', 'src/engine/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
+        key: ${{ runner.os }}-android-runtime-debug-${{ hashFiles('src/runtime/android/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
         restore-keys: |
           ${{ runner.os }}-android-runtime-debug-
           ${{ runner.os }}-android-runtime-
@@ -138,7 +136,7 @@ jobs:
       with:
         path: |
           projects/android/PrismaAndroid/.cxx
-        key: ${{ runner.os }}-android-runtime-release-${{ hashFiles('src/runtime/android/**', 'src/engine/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
+        key: ${{ runner.os }}-android-runtime-release-${{ hashFiles('src/runtime/android/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
         restore-keys: |
           ${{ runner.os }}-android-runtime-release-
           ${{ runner.os }}-android-runtime-
