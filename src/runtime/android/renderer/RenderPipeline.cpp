@@ -2,6 +2,7 @@
 #include "RenderPass.h"
 #include "OpaquePass.h"
 #include "BackgroundPass.h"
+#include "UIPass.h"
 #include "../AndroidOut.h"
 #include <stdexcept>
 
@@ -44,6 +45,10 @@ void RenderPipeline::setCurrentFrame(uint32_t currentFrame) {
         if (backgroundPass) {
             backgroundPass->setCurrentFrame(currentFrame);
         }
+        auto* uiPass = dynamic_cast<UIPass*>(pass.get());
+        if (uiPass) {
+            uiPass->setCurrentFrame(currentFrame);
+        }
     }
 }
 
@@ -62,6 +67,16 @@ BackgroundPass* RenderPipeline::getBackgroundPass() {
         auto* backgroundPass = dynamic_cast<BackgroundPass*>(pass.get());
         if (backgroundPass) {
             return backgroundPass;
+        }
+    }
+    return nullptr;
+}
+
+UIPass* RenderPipeline::getUIPass() {
+    for (auto& pass : passes_) {
+        auto* uiPass = dynamic_cast<UIPass*>(pass.get());
+        if (uiPass) {
+            return uiPass;
         }
     }
     return nullptr;
