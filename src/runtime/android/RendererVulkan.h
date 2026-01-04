@@ -50,7 +50,7 @@ private:
 
     android_app *app_;
     VulkanContext vulkanContext_;
-    std::unique_ptr<Scene> scene_;
+    std::shared_ptr<Scene> scene_;  // 改为 shared_ptr，从 GameManager 获取，不随 Renderer 销毁
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
     uint32_t currentFrame = 0;

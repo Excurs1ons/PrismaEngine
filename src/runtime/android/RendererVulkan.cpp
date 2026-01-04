@@ -9,6 +9,7 @@
 #include "Scene.h"
 #include "ShaderVulkan.h"
 #include "SkyboxRenderer.h"
+#include "GameManager.h"
 
 #include <algorithm>
 #include <array>
@@ -37,7 +38,8 @@ RendererVulkan::RendererVulkan(android_app *pApp) : app_(pApp) {
 RendererVulkan::~RendererVulkan() {
     vkDeviceWaitIdle(vulkanContext_.device);
 
-    scene_.reset();
+    // 不再销毁 scene_，因为它由 GameManager 管理
+    // scene_.reset();  // 已移除
 
     // 清理ClearColor资源
     if (clearColorData_.pipeline != VK_NULL_HANDLE) {
@@ -369,7 +371,21 @@ void RendererVulkan::init() {
 }
 
 void RendererVulkan::createScene() {
-    scene_ = std::make_unique<Scene>();
+    // 从 GameManager 获取 Scene（如果已存在则复用，窗口重建时状态保留）
+    auto& gameManager = PrismaEngine::GameManager::GetInstance();
+
+    if (!gameManager.IsSceneCreated()) {
+        // 场景不存在，创建新场景
+        aout << "RendererVulkan: Creating new scene in GameManager" << std::endl;
+        gameManager.Initialize(app_);
+        gameManager.CreateScene();
+    } else {
+        aout << "RendererVulkan: Reusing existing scene from GameManager (state preserved)" << std::endl;
+        scene_ = gameManager.GetScene();
+        return;  // 场景已存在，跳过 GameObject 创建
+    }
+
+    scene_ = gameManager.GetScene();
     auto assetManager = app_->activity->assetManager;
 
     // 创建主相机

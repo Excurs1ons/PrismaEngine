@@ -8,6 +8,7 @@
 
 #include "AndroidOut.h"
 #include "Renderer.h"
+#include "GameManager.h"
 
 #include <game-activity/GameActivity.cpp>
 #include <game-text-input/gametextinput.cpp>
@@ -33,6 +34,8 @@ void handle_cmd(android_app *pApp, int32_t cmd) {
             // if you change the class here as a reinterpret_cast is dangerous this in the
             // android_main function and the APP_CMD_TERM_WINDOW handler case.
             pApp->userData = new Renderer(pApp);
+
+            // Scene 由 GameManager 管理，窗口重建时自动复用，无需手动恢复
             break;
         case APP_CMD_WINDOW_RESIZED:
         case APP_CMD_WINDOW_REDRAW_NEEDED:
@@ -50,10 +53,11 @@ void handle_cmd(android_app *pApp, int32_t cmd) {
             //
             // We have to check if userData is assigned just in case this comes in really quickly
             if (pApp->userData) {
-                //
                 auto *pRenderer = reinterpret_cast<Renderer *>(pApp->userData);
                 pApp->userData = nullptr;
                 delete pRenderer;
+                // 注意：Scene 由 GameManager 管理，不随 Renderer 销毁
+                aout << "Renderer destroyed, Scene preserved in GameManager" << std::endl;
             }
             break;
         default:
