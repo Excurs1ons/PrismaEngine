@@ -25,7 +25,7 @@ public:
     void onConfigChanged() override;
     bool Initialize(const DeviceDesc& desc) ;// override;
     void Render();
-
+    void handleInput() override;
     void render() override;
 
 
