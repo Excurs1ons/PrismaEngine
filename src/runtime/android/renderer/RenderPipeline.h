@@ -97,6 +97,12 @@ public:
     BackgroundPass* getBackgroundPass();
 
     /**
+     * 获取 UIPass 指针
+     * @return UIPass 指针，如果不存在则返回 nullptr
+     */
+    class UIPass* getUIPass();
+
+    /**
      * 清理管线中的所有 Pass
      * @param device [Vulkan-Specific] 图形设备
      */
