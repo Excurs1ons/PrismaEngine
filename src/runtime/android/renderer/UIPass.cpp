@@ -3,6 +3,7 @@
 #include "ShaderVulkan.h"
 #include "AndroidOut.h"
 #include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <android/log.h>
 #include <stdexcept>
 #include <cstring>
 
@@ -33,6 +34,12 @@ void UIPass::setPhysicalDevice(VkPhysicalDevice physicalDevice) {
 
 void UIPass::setCurrentFrame(uint32_t currentFrame) {
     currentFrame_ = currentFrame;
+}
+
+void UIPass::setContentOffset(int32_t offsetX, int32_t offsetY) {
+    contentOffsetX_ = offsetX;
+    contentOffsetY_ = offsetY;
+    m_vertexDataDirty = true;  // 偏移改变时需要更新顶点数据
 }
 
 // ============================================================
@@ -378,6 +385,7 @@ void UIPass::record(VkCommandBuffer cmdBuffer) {
     updateVertexBuffer(device_);
 
     // 设置 Viewport 和 Scissor
+    // 整个窗口都是可见的，包括状态栏
     VkViewport viewport{};
     viewport.x = 0.0f;
     viewport.y = 0.0f;

@@ -68,6 +68,9 @@ public:
     /// @brief 设置当前帧索引
     void setCurrentFrame(uint32_t currentFrame);
 
+    /// @brief 设置内容区域偏移（状态栏高度等）
+    void setContentOffset(int32_t offsetX, int32_t offsetY);
+
 private:
     /**
      * 创建 UI 渲染管线
@@ -108,6 +111,10 @@ private:
     uint32_t currentFrame_ = 0;  // 当前帧索引
     VkDevice device_ = VK_NULL_HANDLE;  // Vulkan 设备（用于更新顶点缓冲区）
     VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;  // 物理设备（用于查找内存类型）
+
+    // 内容区域偏移（状态栏、导航栏等）
+    int32_t contentOffsetX_ = 0;
+    int32_t contentOffsetY_ = 0;
 
     // 顶点数据缓存
     std::vector<UIVertex> m_vertexData;
