@@ -87,15 +87,6 @@ if(WIN32)
     )
 endif()
 
-# OpenAL Soft - 音频库
-set(FETCHCONTENT_OPENAL_SOFT_DIR "${FETCHCONTENT_BASE_DIR}/openal-soft")
-FetchContent_Declare(
-    openal-soft
-    GIT_REPOSITORY https://github.com/kcat/openal-soft.git
-    GIT_TAG 1.24.1
-    GIT_SHALLOW TRUE
-)
-
 # stb - 图像加载库 (header-only)
 set(FETCHCONTENT_STB_DIR "${FETCHCONTENT_BASE_DIR}/stb")
 FetchContent_Declare(
@@ -301,41 +292,6 @@ if(WIN32 AND PRISMA_USE_FETCHCONTENT)
     message(STATUS "OpenFBX: 使用 FetchContent")
 endif()
 
-# OpenAL Soft - 当启用 OpenAL 音频时（Native 音频模式下不需要）
-if(PRISMA_ENABLE_AUDIO_OPENAL AND NOT PRISMA_USE_NATIVE_AUDIO)
-    if(PRISMA_USE_FETCHCONTENT)
-        # OpenAL Soft 需要特殊配置
-        set(LIBTYPE SHARED)
-        if(ANDROID OR WIN32)
-            set(LIBTYPE STATIC)
-        endif()
-
-        # 禁用 OpenAL 的测试和示例
-        set(ALSOFT_REQUIRE_OPENSL OFF CACHE BOOL "Require OpenSL" FORCE)
-        set(ALSOFT_REQUIRE_PORTAUDIO OFF CACHE BOOL "Require PortAudio" FORCE)
-        set(ALSOFT_REQUIRE_PULSEAUDIO OFF CACHE BOOL "Require PulseAudio" FORCE)
-        set(ALSOFT_REQUIRE_COREAUDIO OFF CACHE BOOL "Require CoreAudio" FORCE)
-        set(ALSOFT_REQUIRE_OSS OFF CACHE BOOL "Require OSS" FORCE)
-        set(ALSOFT_REQUIRE_SOLARIS OFF CACHE BOOL "Require Solaris" FORCE)
-        set(ALSOFT_REQUIRE_SNDIO OFF CACHE BOOL "Require SndIO" FORCE)
-        set(ALSOFT_REQUIRE_WINMM OFF CACHE BOOL "Require WinMM" FORCE)
-        set(ALSOFT_REQUIRE_DSOUND OFF CACHE BOOL "Require DirectSound" FORCE)
-        set(ALSOFT_REQUIRE_WASAPI OFF CACHE BOOL "Require WASAPI" FORCE)
-        set(ALSOFT_REQUIRE_ALSA OFF CACHE BOOL "Require ALSA" FORCE)
-        set(ALSOFT_REQUIRE_JACK OFF CACHE BOOL "Require JACK" FORCE)
-        set(ALSOFT_UTILS OFF CACHE BOOL "Build utilities" FORCE)
-        set(ALSOFT_EXAMPLES OFF CACHE BOOL "Build examples" FORCE)
-        set(ALSOFT_TESTS OFF CACHE BOOL "Build tests" FORCE)
-        set(ALSOFT_INSTALL OFF CACHE BOOL "Install" FORCE)
-
-        FetchContent_MakeAvailable(openal-soft)
-        message(STATUS "OpenAL Soft: 使用 FetchContent")
-    else()
-        find_package(OpenAL REQUIRED)
-        message(STATUS "OpenAL: 使用系统/vcpkg")
-    endif()
-endif()
-
 message(STATUS "==============================")
 message(STATUS "")
 
@@ -379,20 +335,6 @@ if(PRISMA_USE_FETCHCONTENT)
     if(WIN32 AND TARGET DirectX-Headers)
         if(NOT TARGET Microsoft::DirectX-Headers)
             add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
-        endif()
-    endif()
-
-    # OpenAL
-    if(PRISMA_ENABLE_AUDIO_OPENAL AND NOT PRISMA_USE_NATIVE_AUDIO)
-        # OpenAL Soft 可能创建 OpenAL::OpenAL 或 OpenAL 目标
-        if(TARGET OpenAL::OpenAL)
-            # 已有正确目标
-        elseif(TARGET OpenAL AND NOT TARGET OpenAL::OpenAL)
-            add_library(OpenAL::OpenAL ALIAS OpenAL)
-        elseif(TARGET openal-soft AND NOT TARGET OpenAL::OpenAL)
-            add_library(OpenAL::OpenAL ALIAS openal-soft)
-        elseif(TARGET OpenAL::OpenAL-static AND NOT TARGET OpenAL::OpenAL)
-            add_library(OpenAL::OpenAL ALIAS OpenAL::OpenAL-static)
         endif()
     endif()
 
