@@ -179,8 +179,9 @@ endif()
 
 # ========== 条件依赖 ==========
 
-# SDL3 - 当启用 SDL3 音频或 Vulkan 渲染时
-if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN)
+# SDL3 - 当启用 SDL3 音频或输入，且非 Native 模式时
+# Native 模式下使用平台原生 API，不需要 SDL3
+if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR (PRISMA_ENABLE_RENDER_VULKAN AND NOT PRISMA_USE_NATIVE)) AND NOT PRISMA_USE_NATIVE)
     if(PRISMA_USE_FETCHCONTENT)
         # SDL3 需要特殊配置来构建静态库
         set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as shared library" FORCE)
@@ -300,8 +301,8 @@ if(WIN32 AND PRISMA_USE_FETCHCONTENT)
     message(STATUS "OpenFBX: 使用 FetchContent")
 endif()
 
-# OpenAL Soft - 当启用 OpenAL 音频时
-if(PRISMA_ENABLE_AUDIO_OPENAL)
+# OpenAL Soft - 当启用 OpenAL 音频时（Native 模式下不需要）
+if(PRISMA_ENABLE_AUDIO_OPENAL AND NOT PRISMA_USE_NATIVE)
     if(PRISMA_USE_FETCHCONTENT)
         # OpenAL Soft 需要特殊配置
         set(LIBTYPE SHARED)
@@ -357,7 +358,7 @@ if(PRISMA_USE_FETCHCONTENT)
     endif()
 
     # SDL3
-    if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN)
+    if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN) AND NOT PRISMA_USE_NATIVE)
         # SDL3 在 Android 上可能创建 SDL3-static 目标
         # 为所有常见变体创建别名
         if(TARGET SDL3-static AND NOT TARGET SDL3::SDL3-static)
@@ -382,7 +383,7 @@ if(PRISMA_USE_FETCHCONTENT)
     endif()
 
     # OpenAL
-    if(PRISMA_ENABLE_AUDIO_OPENAL)
+    if(PRISMA_ENABLE_AUDIO_OPENAL AND NOT PRISMA_USE_NATIVE)
         # OpenAL Soft 可能创建 OpenAL::OpenAL 或 OpenAL 目标
         if(TARGET OpenAL::OpenAL)
             # 已有正确目标
