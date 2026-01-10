@@ -51,6 +51,7 @@ private:
     static constexpr uint32_t MAX_KEYS = 256;
     static constexpr uint32_t MAX_BUTTONS = 6;
 
+    int RegisterRawInputDevices(std::array<tagRAWINPUTDEVICE, 2>::pointer data, UINT uint, size_t size);
     // ========== RawInput 初始化 ==========
     bool RegisterRawInputDevices();
     void ProcessRawInput(const RAWINPUT* raw);
