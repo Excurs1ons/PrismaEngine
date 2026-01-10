@@ -92,6 +92,9 @@ void InputDriverWin32::Update() {
     m_textInput.clear();
 }
 
+BOOL InputDriverWin32::RegisterRawInputDevices(std::array<tagRAWINPUTDEVICE, 2>::pointer data, UINT uint, size_t size) {
+    return TRUE;
+}
 bool InputDriverWin32::RegisterRawInputDevices() {
     // 注册 RawInput 设备
     std::array<RAWINPUTDEVICE, 2> devices{};
@@ -108,7 +111,7 @@ bool InputDriverWin32::RegisterRawInputDevices() {
     devices[1].dwFlags = RIDEV_INPUTSINK;
     devices[1].hwndTarget = m_hwnd;
 
-    return RegisterRawInputDevices(devices.data(), static_cast<UINT>(devices.size()), sizeof(RAWINPUTDEVICE)) != 0;
+    return RegisterRawInputDevices(devices.data(), static_cast<UINT>(devices.size()), sizeof(RAWINPUTDEVICE)) != FALSE;
 }
 
 void InputDriverWin32::ProcessRawInput(const RAWINPUT* raw) {
