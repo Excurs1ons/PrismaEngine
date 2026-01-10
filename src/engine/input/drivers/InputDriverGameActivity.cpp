@@ -1,3 +1,4 @@
+#if defined(__ANDROID__) || defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
 #include "InputDriverGameActivity.h"
 #include <algorithm>
 
@@ -370,3 +371,4 @@ void InputDriverGameActivity::SetVibration(uint32_t index, float leftMotor, floa
 }
 
 } // namespace PrismaEngine::Input
+#endif

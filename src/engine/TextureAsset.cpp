@@ -1,3 +1,4 @@
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "TextureAsset.h"
 #include "../runtime/android/Utility.h"
 #include "../runtime/android/VulkanContext.h"
@@ -360,3 +361,4 @@ void TextureAsset::Unload() {
         textureID_ = 0;
     }
 }
+#endif

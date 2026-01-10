@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
+#if defined(__ANDROID__) || defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
 
 #include "core/IInputDriver.h"
 #include <game-activity/GameActivity.h>

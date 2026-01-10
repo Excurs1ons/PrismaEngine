@@ -1,3 +1,4 @@
+#if defined(_WIN32) || (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
 #include "InputDriverWin32.h"
 #include <algorithm>
 
@@ -361,3 +362,4 @@ void InputDriverWin32::SetVibration(uint32_t index, float leftMotor, float right
 }
 
 } // namespace PrismaEngine::Input
+#endif

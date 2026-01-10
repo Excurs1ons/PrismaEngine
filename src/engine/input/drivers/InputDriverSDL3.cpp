@@ -1,3 +1,4 @@
+#if defined(PRISMA_ENABLE_INPUT_SDL3)
 #include "InputDriverSDL3.h"
 #include <algorithm>
 
@@ -298,3 +299,4 @@ void InputDriverSDL3::SetVibration(uint32_t index, float leftMotor, float rightM
 }
 
 } // namespace PrismaEngine::Input
+#endif

@@ -5,7 +5,7 @@
 #include <functional>
 #include <vector>
 #include <memory>
-#include "../math/MathTypes.h"
+#include "math/MathTypes.h"
 
 namespace PrismaEngine {
 namespace Input {
@@ -13,14 +13,14 @@ namespace Input {
 // 按键码定义
 enum class KeyCode : uint32_t {
     // 字母
-    A = 65, B, C, D, E, F, G, H, I, J, K, L, M,
-    N, O, P, Q, R, S, T, U, V, W, X, Y, Z,
+    A = 65, B = 66, C = 67, D = 68, E = 69, F = 70, G = 71, H = 72, I = 73, J = 74, K = 75, L = 76, M = 77,
+    N = 78, O = 79, P = 80, Q = 81, R = 82, S = 83, T = 84, U = 85, V = 86, W = 87, X = 88, Y = 89, Z = 90,
 
     // 数字
-    Num0 = 48, Num1, Num2, Num3, Num4, Num5, Num6, Num7, Num8, Num9,
+    Num0 = 48, Num1 = 49, Num2 = 50, Num3 = 51, Num4 = 52, Num5 = 53, Num6 = 54, Num7 = 55, Num8 = 56, Num9 = 57,
 
     // 功能键
-    F1 = 290, F2, F3, F4, F5, F6, F7, F8, F9, F10, F11, F12,
+    F1 = 290, F2 = 291, F3 = 292, F4 = 293, F5 = 294, F6 = 295, F7 = 296, F8 = 297, F9 = 298, F10 = 299, F11 = 300, F12 = 301,
 
     // 特殊键
     Space = 32,
