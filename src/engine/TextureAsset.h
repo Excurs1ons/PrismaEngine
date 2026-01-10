@@ -1,4 +1,6 @@
 #pragma once
+
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include <memory>
 #include <string>
 #include <vulkan/vulkan.h>
@@ -54,3 +56,4 @@ protected:
     // OpenGL 资源
     GLuint textureID_ = 0;
 };
+#endif

@@ -55,7 +55,7 @@ bool TextureAsset::Load(const std::filesystem::path& path) {
         }
 
         // 加载图像数据
-        if (!LoadImageFromFile(path, m_width, m_height, m_channels, m_data)) {
+        if (!LoadImageFromFile(path, width, height, channels, m_data)) {
             LOG_ERROR("Texture", "Failed to load texture from file: {0}", path.string());
             return false;
         }
@@ -67,7 +67,7 @@ bool TextureAsset::Load(const std::filesystem::path& path) {
         m_metadata.name       = m_name;
 
         m_isLoaded = true;
-        LOG_INFO("Texture", "Successfully loaded texture: {0} ({1}x{2})", m_name, m_width, m_height);
+        LOG_INFO("Texture", "Successfully loaded texture: {0} ({1}x{2})", m_name, width, height);
         return true;
     } catch (const std::exception& e) {
         LOG_ERROR("Texture", "Exception while loading texture: {0}", e.what());
@@ -77,9 +77,9 @@ bool TextureAsset::Load(const std::filesystem::path& path) {
 
 void TextureAsset::Unload() {
     m_data.clear();
-    m_width    = 0;
-    m_height   = 0;
-    m_channels = 0;
+    width    = 0;
+    height   = 0;
+    channels = 0;
     m_isLoaded = false;
     LOG_INFO("Texture", "Unloaded texture: {0}", m_name);
 }
@@ -90,9 +90,9 @@ void TextureAsset::Serialize(OutputArchive& archive) const {
     archive("metadata", m_metadata);
 
     // 序列化纹理属性
-    archive("width", m_width);
-    archive("height", m_height);
-    archive("channels", m_channels);
+    archive("width", width);
+    archive("height", height);
+    archive("channels", channels);
 
     // 序列化纹理数据
     archive.BeginArray(m_data.size());
@@ -112,11 +112,11 @@ void TextureAsset::Deserialize(InputArchive& archive) {
         if (archive.HasNextField("metadata")) {
             m_metadata.Deserialize(archive);
         } else if (archive.HasNextField("width")) {
-            m_width = archive.ReadUInt32();
+            width = archive.ReadUInt32();
         } else if (archive.HasNextField("height")) {
-            m_height = archive.ReadUInt32();
+            height = archive.ReadUInt32();
         } else if (archive.HasNextField("channels")) {
-            m_channels = archive.ReadUInt32();
+            channels = archive.ReadUInt32();
         } else if (archive.HasNextField("data")) {
             size_t dataSize = archive.BeginArray();
             m_data.resize(dataSize);
@@ -139,9 +139,9 @@ bool TextureAsset::DeserializeFromFile(const std::filesystem::path& path, Serial
         auto deserializedAsset = AssetSerializer::DeserializeFromFile<TextureAsset>(path, format);
         if (deserializedAsset) {
             // 复制数据到当前对象
-            m_width    = deserializedAsset->m_width;
-            m_height   = deserializedAsset->m_height;
-            m_channels = deserializedAsset->m_channels;
+            width    = deserializedAsset->width;
+            height   = deserializedAsset->height;
+            channels = deserializedAsset->channels;
             m_data     = std::move(deserializedAsset->m_data);
             m_metadata = deserializedAsset->m_metadata;
             m_path     = path;
@@ -159,9 +159,9 @@ bool TextureAsset::DeserializeFromFile(const std::filesystem::path& path, Serial
 }
 
 void TextureAsset::SetDimensions(uint32_t width, uint32_t height, uint32_t channels) {
-    m_width    = width;
-    m_height   = height;
-    m_channels = channels;
+    width    = width;
+    height   = height;
+    channels = channels;
     m_data.resize(width * height * channels);
 }
 

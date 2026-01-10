@@ -217,27 +217,28 @@ public:
         LOG_INFO("Resource", "在以下位置找到资源: {0}", fullPath->string());
 
         // ✅ 第三阶段：加载资源（耗时操作，无锁）
+        ResourceHandle<T> handle;
         auto resource = std::make_shared<T>(std::forward<Args>(args)...);
         if (!resource->Load(*fullPath)) {
             LOG_WARNING("Resource", "从文件加载失败，尝试使用默认资源: {0}", relative_path);
 
             // 使用 ResourceFallback 创建回退资源
             AssetType resourceType = AssetType::Unknown;
-            if constexpr (std::is_same_v<T, Shader>) resourceType = AssetType::Shader;
-            else if constexpr (std::is_same_v<T, Mesh>) resourceType = AssetType::Mesh;
-            else if constexpr (std::is_same_v<T, Material>) resourceType = AssetType::Material;
+            if constexpr (std::is_same_v<T, Shader>) { resourceType = AssetType::Shader;
+            } else if constexpr (std::is_same_v<T, Mesh>) { resourceType = AssetType::Mesh;
+            } else if constexpr (std::is_same_v<T, Material>) { resourceType = AssetType::Material;
+}
 
             if (resourceType != AssetType::Unknown) {
                 // TODO: 暂时禁用ResourceFallback，等待循环依赖问题解决
                 LOG_WARNING("Resource", "Resource fallback 暂时禁用，资源加载失败: {0}", relative_path);
                 return ResourceHandle<T>();
-            } else {
-                LOG_ERROR("Resource", "资源加载失败且无默认回退: {0}", relative_path);
+            }                 LOG_ERROR("Resource", "资源加载失败且无默认回退: {0}", relative_path);
                 return ResourceHandle<T>();
-            }
-        } else {
-            LOG_INFO("Resource", "从文件加载资源: {0}", fullPath->string());
-        }
+
+        }             LOG_INFO("Resource", "从文件加载资源: {0}", fullPath->string());
+            handle = ResourceHandle<T>(resource);
+
 
         // ✅ 第四阶段：缓存资源（独占锁，仅在插入时）
         {
