@@ -7,6 +7,15 @@
 #include "renderer/RenderPipeline.h"
 #include <memory>
 
+// vk-bootstrap - Vulkan 初始化库
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
+#include <vk_bootstrap.hpp>
+#endif
+
+// VMA - Vulkan Memory Allocator
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
+#include <vk_mem_alloc.h>
+#endif
 
 struct android_app;
 
@@ -26,6 +35,37 @@ public:
     void recreateSwapChain();     // 重建 SwapChain 以适应新的屏幕尺寸
 
 private:
+    // === vk-bootstrap 简化的初始化方法 ===
+    bool createInstanceWithVkBootstrap();
+    bool createDeviceWithVkBootstrap();
+    bool createSwapChainWithVkBootstrap(uint32_t width, uint32_t height);
+    bool createVMAAllocator();
+
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
+    // === VMA 简化的缓冲区创建辅助方法 ===
+    struct BufferWithMemory {
+        VkBuffer buffer = VK_NULL_HANDLE;
+        VmaAllocation allocation = nullptr;
+    };
+
+    bool createBuffer(
+        VkDeviceSize size,
+        VkBufferUsageFlags usage,
+        VmaMemoryUsage vmaUsage,
+        BufferWithMemory& outBuffer);
+
+    bool createStagingBuffer(
+        VkDeviceSize size,
+        const void* data,
+        BufferWithMemory& outBuffer);
+
+    bool createDeviceLocalBuffer(
+        VkDeviceSize size,
+        const void* data,
+        VkBufferUsageFlags usage,
+        BufferWithMemory& outBuffer);
+#endif
+
     // === 初始化方法 ===
     void createScene();
     void createUIComponents();       // 创建 UI 组件
@@ -58,6 +98,20 @@ private:
 
     // 帧时间跟踪
     std::chrono::time_point<std::chrono::high_resolution_clock> lastFrameTime_;
+
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
+    // vk-bootstrap 对象
+    std::unique_ptr<vkb::Instance> vkBootstrapInstance_;
+    vkb::Device vkBootstrapDevice_;
+    vkb::Swapchain vkBootstrapSwapchain_;
+
+    // VMA 分配器
+    VmaAllocator vmaAllocator_ = nullptr;
+
+    // 队列族索引（由 vk-bootstrap 填充）
+    uint32_t graphicsQueueFamily_ = 0;
+    uint32_t presentQueueFamily_ = 0;
+#endif
 
 
 
