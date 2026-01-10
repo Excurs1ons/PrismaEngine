@@ -21,10 +21,10 @@ add_executable(Runtime
 )
 
 # 包含目录
-target_include_directories(Runtime
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/../engine
-)
+#target_include_directories(Runtime
+#    PRIVATE
+#        ${CMAKE_CURRENT_SOURCE_DIR}/../engine
+#)
 # 需要在子目录
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../engine)
 # 链接依赖

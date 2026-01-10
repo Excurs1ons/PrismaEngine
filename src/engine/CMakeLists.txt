@@ -1,9 +1,5 @@
 # 引擎核心库 - 条件编译版本
 
-# ========== Android 平台 vendor 库 ==========
-if(ANDROID)
-    add_subdirectory(vendor/android/game-activity_static)
-endif()
 
 # ========== 库类型配置 ==========
 
@@ -29,43 +25,6 @@ endif()
 
 # 包含graphic子目录的CMakeLists.txt来定义变量
 include(graphic/CMakeLists.txt)
-
-# 收集源文件
-set(ENGINE_SOURCES "")
-set(ENGINE_HEADERS "")
-
-# 添加core目录下的源文件（除了graphic和audio目录）
-file(GLOB_RECURSE CORE_SOURCES
-    "*.cpp"
-)
-list(FILTER CORE_SOURCES EXCLUDE REGEX "graphic/")
-list(FILTER CORE_SOURCES EXCLUDE REGEX "audio/")
-
-
-# 如果未启用SDL3，排除SDL相关文件
-if(NOT PRISMA_ENABLE_AUDIO_SDL3)
-    list(FILTER CORE_SOURCES EXCLUDE REGEX "PlatformSDL")
-    message(STATUS "SDL3 is disabled, excluding PlatformSDL files")
-endif()
-
-file(GLOB_RECURSE CORE_HEADERS
-    "*.h")
-
-list(FILTER CORE_HEADERS EXCLUDE REGEX "graphic/")
-list(FILTER CORE_HEADERS EXCLUDE REGEX "audio/")
-
-# 排除Windows特定头文件
-if(ANDROID)
-    list(FILTER CORE_HEADERS EXCLUDE REGEX "framework.h")
-    list(FILTER CORE_HEADERS EXCLUDE REGEX "targetver.h")
-endif()
-
-# 在非Android平台上排除Android特定文件
-if(NOT ANDROID)
-    list(FILTER CORE_SOURCES EXCLUDE REGEX "Android")
-    list(FILTER CORE_HEADERS EXCLUDE REGEX "Android")
-    message(STATUS "Excluding Android-specific files on non-Android platform")
-endif()
 
 # ========== 渲染设备条件编译 ==========
 # 注意：必须在设置 ENGINE_SOURCES 之前添加，因为 ENGINE_SOURCES 使用 ENGINE_GRAPHIC_SOURCES 的值
@@ -159,39 +118,6 @@ list(APPEND ENGINE_HEADERS
     audio/AudioManager.h
     audio/AudioAPI.h
 )
-
-# XAudio2 (Windows)
-if(PRISMA_ENABLE_AUDIO_XAUDIO2)
-    list(APPEND ENGINE_SOURCES
-        audio/AudioDeviceXAudio2.cpp
-    )
-    list(APPEND ENGINE_HEADERS
-        audio/AudioDeviceXAudio2.h
-    )
-    message(STATUS "Adding XAudio2 audio device")
-endif()
-
-# OpenAL (跨平台)
-if(PRISMA_ENABLE_AUDIO_OPENAL)
-    list(APPEND ENGINE_SOURCES
-        audio/AudioDeviceOpenAL.cpp
-    )
-    list(APPEND ENGINE_HEADERS
-        audio/AudioDeviceOpenAL.h
-    )
-    message(STATUS "Adding OpenAL audio device")
-endif()
-
-# SDL3 Audio (跨平台)
-if(PRISMA_ENABLE_AUDIO_SDL3)
-    list(APPEND ENGINE_SOURCES
-        audio/AudioDeviceSDL3.cpp
-    )
-    list(APPEND ENGINE_HEADERS
-        audio/AudioDeviceSDL3.h
-    )
-    message(STATUS "Adding SDL3 audio device")
-endif()
 
 # ========== 创建引擎库 ==========
 
@@ -476,10 +402,6 @@ if(PRISMA_ENABLE_AUDIO_XAUDIO2)
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_XAUDIO2=1)
 endif()
 
-if(PRISMA_ENABLE_AUDIO_OPENAL)
-    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_OPENAL=1)
-endif()
-
 if(PRISMA_ENABLE_AUDIO_SDL3)
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
 endif()
@@ -496,13 +418,3 @@ endif()
 if(PRISMA_ENABLE_RENDER_VULKAN)
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
 endif()
-
-if(PRISMA_ENABLE_RENDER_METAL)
-    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_METAL=1)
-endif()
-
-# 安装规则
-install(TARGETS Engine
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-)

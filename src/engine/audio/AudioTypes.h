@@ -21,12 +21,13 @@ using AudioVoiceId = uint32_t;
 constexpr AudioVoiceId INVALID_VOICE_ID = 0xFFFFFFFF;
 
 // 音频设备类型
-enum class AudioDeviceType : int {
+enum class AudioDeviceType : char {
     Auto = -1,      // 自动选择
     OpenAL = 0,     // OpenAL (跨平台)
     XAudio2 = 1,    // XAudio2 (Windows)
-    SDL3 = 2,       // SDL3 Audio (跨平台)
-    Null = 3        // 空实现（静音）
+    AAudio = 2,     // AAudio (Android)
+    SDL3 = 3,       // SDL3 Audio (跨平台)
+    Null = 4        // 空实现（静音）
 };
 
 // 设备信息
@@ -58,12 +59,12 @@ struct AudioFormat {
     uint16_t bitsPerSample = 16;      // 位深度 (8, 16, 24, 32)
 
     // 便利方法
-    bool IsMono() const { return channels == 1; }
-    bool IsStereo() const { return channels == 2; }
-    uint32_t GetByteRate() const {
+    [[nodiscard]] bool IsMono() const { return channels == 1; }
+    [[nodiscard]] bool IsStereo() const { return channels == 2; }
+    [[nodiscard]] uint32_t GetByteRate() const {
         return sampleRate * channels * bitsPerSample / 8;
     }
-    uint32_t GetFrameSize() const {
+    [[nodiscard]] uint32_t GetFrameSize() const {
         return channels * bitsPerSample / 8;
     }
 };
@@ -76,16 +77,16 @@ struct AudioClip {
     std::string path;             // 来源路径（用于调试）
 
     // 便利方法
-    size_t GetSampleCount() const {
+    [[nodiscard]] size_t GetSampleCount() const {
         return data.size() / (format.bitsPerSample / 8);
     }
 
-    size_t GetFrameCount() const {
+    [[nodiscard]] size_t GetFrameCount() const {
         return GetSampleCount() / format.channels;
     }
 
-    size_t GetSizeInBytes() const { return data.size(); }
-    bool IsValid() const { return !data.empty(); }
+    [[nodiscard]] size_t GetSizeInBytes() const { return data.size(); }
+    [[nodiscard]] bool IsValid() const { return !data.empty(); }
 };
 
 // 3D音频属性

@@ -351,7 +351,7 @@ bool Platform::IsKeyDown(PrismaEngine::Input::KeyCode key) {
 }
 
 bool Platform::IsMouseButtonDown(PrismaEngine::Input::MouseButton btn) {
-    SHORT state = GetAsyncKeyState(btn);
+    SHORT state = GetAsyncKeyState(static_cast<int>(btn));
     return (state & 0x8000) != 0;
 }
 
