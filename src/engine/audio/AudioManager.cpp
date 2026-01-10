@@ -10,7 +10,7 @@
 #include <AL/alext.h>
 #endif
 
-namespace Engine {
+namespace PrismaEngine {
 namespace Audio {
 
 AudioManager& AudioManager::GetInstance() {

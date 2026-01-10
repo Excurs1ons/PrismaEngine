@@ -1,206 +1,414 @@
-#include "AudioBackendXAudio2.h"
-#include "Helper.h"
-#include "Logger.h"
-#include <iostream>
-#ifdef PlaySound
-#undef PlaySound
-#endif
-namespace PrismaEngine {
-    namespace Audio {
+#include "AudioDeviceXAudio2.h"
+#include "../Logger.h"
 
-        bool AudioBackendXAudio2::Initialize(const AudioFormat& format)
-        {
+namespace PrismaEngine::Audio {
 
-            // 初始化XAudio2
-            HRESULT hr = XAudio2Create(m_XAudio2.GetAddressOf(), 0, XAUDIO2_DEFAULT_PROCESSOR);
-            if (FAILED(hr)) {
-                LOG_FATAL("Audio", "XAudio2无法初始化: {0}", HrToString(hr));
-                return false;
-            }
-            LOG_INFO("Audio", "XAudio2初始化成功");
-            // 创建主声音
-            hr = m_XAudio2->CreateMasteringVoice(&m_MasteringVoice);
-            if (FAILED(hr)) {
-                LOG_FATAL("Audio", "XAudio2无法创建主声音: {0}", HrToString(hr));
-                return false;
-            }
-			LOG_INFO("Audio", "XAudio2主声音创建成功");
-            return true;
+AudioDeviceXAudio2::AudioDeviceXAudio2() = default;
 
-            // 设置波形格式
-            WAVEFORMATEX waveFormat;
-            waveFormat.wFormatTag = WAVE_FORMAT_IEEE_FLOAT;
-            waveFormat.nChannels = CHANNELS;
-            waveFormat.nSamplesPerSec = SAMPLE_RATE;
-            waveFormat.nAvgBytesPerSec = SAMPLE_RATE * CHANNELS * sizeof(float);
-            waveFormat.nBlockAlign = CHANNELS * sizeof(float);
-            waveFormat.wBitsPerSample = 32;
-            waveFormat.cbSize = 0;
+AudioDeviceXAudio2::~AudioDeviceXAudio2() {
+    Shutdown();
+}
 
-            // 创建源声音
-            hr = m_XAudio2->CreateSourceVoice(&sourceVoice, &waveFormat, 0,
-                XAUDIO2_DEFAULT_FREQ_RATIO,
-                this, nullptr, nullptr);
-            if (FAILED(hr)) {
-                LOG_FATAL("Audio", "XAudio2无法创建源声音: {0}", HrToString(hr));
-                return false;
-			}
-            LOG_INFO("Audio", "XAudio2创建源声音成功");
-            // 启动源声音
-            hr = sourceVoice->Start(0);
-            if (FAILED(hr)) {
-                LOG_FATAL("Audio", "XAudio2无法启动源声音");
-                return false;
-            }
-            LOG_INFO("Audio", "XAudio2启动源声音成功");
-            // 启动音频生成线程
-            std::thread audioThread(&AudioBackendXAudio2::AudioGenerationThread, this);
-            audioThread.detach();
+bool AudioDeviceXAudio2::Initialize(const AudioDesc& desc) {
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-            return true;
+    if (m_initialized) {
+        return true;
+    }
 
-        }
+    m_desc = desc;
+    m_initialized = true;
 
-        void AudioBackendXAudio2::Shutdown()
-        {
-            if (m_MasteringVoice) {
-                m_MasteringVoice->DestroyVoice();
-                m_MasteringVoice = nullptr;
-            }
-            m_XAudio2.Reset();
-        }
+    LOG_INFO("Audio", "XAudio2 device initialized (minimal implementation)");
+    return true;
+}
 
-        uint32_t AudioBackendXAudio2::PlaySoundOnce(const AudioClip& source, float volume, float pitch, bool loop)
-        {
+void AudioDeviceXAudio2::Shutdown() {
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-            // 打开WAV文件
-            std::ifstream file(source.path, std::ios::binary);
-            if (!file.is_open()) {
-                LOG_ERROR("Audio", "无法打开音频文件: {0}", source.path);
-                return false;
-            }
+    if (!m_initialized) {
+        return;
+    }
 
-            // 读取WAV文件头
-            WAVHeader header;
-            file.read(reinterpret_cast<char*>(&header), sizeof(WAVHeader));
+    StopAll();
+    ReleaseAll();
 
-            // 检查文件格式
-            if (strncmp(header.riff, "RIFF", 4) != 0 || strncmp(header.wave, "WAVE", 4) != 0) {
-                std::cerr << "Invalid WAV file format: " << source.path << std::endl;
-                return false;
-            }
+    m_initialized = false;
+}
 
-            // 读取音频数据
-            std::vector<char> audioData(header.dataSize);
-            file.read(audioData.data(), header.dataSize);
-            file.close();
+bool AudioDeviceXAudio2::IsInitialized() const {
+    return m_initialized;
+}
 
-            // 创建音频源声音
-            WAVEFORMATEX waveFormat = { 0 };
-            waveFormat.wFormatTag = header.format;
-            waveFormat.nChannels = header.channels;
-            waveFormat.nSamplesPerSec = header.sampleRate;
-            waveFormat.nAvgBytesPerSec = header.byteRate;
-            waveFormat.nBlockAlign = header.blockAlign;
-            waveFormat.wBitsPerSample = header.bitsPerSample;
-            waveFormat.cbSize = 0;
+void AudioDeviceXAudio2::Update(float deltaTime) {
+    (void)deltaTime;
+}
 
-            // 创建音频缓冲区
-            XAUDIO2_BUFFER buffer = { 0 };
-            buffer.AudioBytes = header.dataSize;
-            buffer.pAudioData = reinterpret_cast<const BYTE*>(audioData.data());
-            buffer.Flags = XAUDIO2_END_OF_STREAM;
+DeviceInfo AudioDeviceXAudio2::GetDeviceInfo() const {
+    DeviceInfo info;
+    info.name = "XAudio2";
+    info.description = "Windows XAudio2 Audio Device";
+    return info;
+}
 
-            // 创建源声音
-            IXAudio2SourceVoice* sourceVoice = nullptr;
-            HRESULT hr = m_XAudio2->CreateSourceVoice(&sourceVoice, &waveFormat);
-            if (FAILED(hr)) {
-                LOG_ERROR("XAudio2", "创建音频源失败");
-                return false;
-            }
+std::vector<DeviceInfo> AudioDeviceXAudio2::GetAvailableDevices() const {
+    return {GetDeviceInfo()};
+}
 
-            // 提交音频缓冲区
-            hr = sourceVoice->SubmitSourceBuffer(&buffer);
-            if (FAILED(hr)) {
-                LOG_ERROR("XAudio2", "提交音频缓冲区失败");
-                sourceVoice->DestroyVoice();
-                return false;
-            }
+bool AudioDeviceXAudio2::SetDevice(const std::string& deviceName) {
+    return deviceName == "XAudio2";
+}
 
-            // 开始播放
-            hr = sourceVoice->Start(0);
-            if (FAILED(hr)) {
-                std::cerr << "开始播放失败" << std::endl;
-                sourceVoice->DestroyVoice();
-                return false;
-            }
+AudioDeviceType AudioDeviceXAudio2::GetDeviceType() const {
+    return AudioDeviceType::XAudio2;
+}
 
-            // 等待播放完成（实际项目中可能需要异步处理）
-            XAUDIO2_VOICE_STATE state;
-            do {
-                sourceVoice->GetState(&state);
-                Sleep(10);
-            } while (state.BuffersQueued > 0);
+AudioVoiceId AudioDeviceXAudio2::PlayClip(const AudioClip& clip, const PlayDesc& desc) {
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-            // 清理资源
-            sourceVoice->DestroyVoice();
+    if (!m_initialized) {
+        return INVALID_VOICE_ID;
+    }
 
-            return 0;
-        }
+    Voice* voice = AllocateVoice();
+    if (!voice) {
+        return INVALID_VOICE_ID;
+    }
 
-        void AudioBackendXAudio2::StopSound(uint32_t instanceId)
-        {
-        }
+    AudioVoiceId voiceId = m_nextVoiceId++;
+    voice->isActive = true;
+    voice->isLooping = desc.loop;
+    voice->volume = desc.volume;
+    voice->pitch = desc.pitch;
+    voice->duration = clip.duration;
+    voice->audioData = clip.data;
 
-        void AudioBackendXAudio2::PauseSound(uint32_t instanceId)
-        {
-        }
+    m_activeVoices[voiceId] = voice;
+    m_stats.activeVoiceCount = static_cast<int>(m_activeVoices.size());
 
-        void AudioBackendXAudio2::ResumeSound(uint32_t instanceId)
-        {
-        }
+    TriggerEvent(AudioEventType::VoiceStarted, voiceId);
 
-        void AudioBackendXAudio2::SetVolume(uint32_t instanceId, float volume)
-        {
-        }
+    return voiceId;
+}
 
-        void AudioBackendXAudio2::SetPitch(uint32_t instanceId, float pitch)
-        {
-        }
+void AudioDeviceXAudio2::Stop(AudioVoiceId voiceId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
 
-        void AudioBackendXAudio2::SetMasterVolume(float volume)
-        {
-        }
-
-        bool AudioBackendXAudio2::IsPlaying(uint32_t instanceId)
-        {
-            return false;
-        }
-
-        void AudioBackendXAudio2::Update()
-        {
-        }
-
-        void __stdcall AudioBackendXAudio2::OnVoiceProcessingPassStart(UINT32 BytesRequired)
-        {
-        }
-        void __stdcall AudioBackendXAudio2::OnVoiceProcessingPassEnd()
-        {
-        }
-        void __stdcall AudioBackendXAudio2::OnStreamEnd()
-        {
-        }
-        void __stdcall AudioBackendXAudio2::OnBufferStart(void* pBufferContext)
-        {
-        }
-        void __stdcall AudioBackendXAudio2::OnBufferEnd(void* pBufferContext)
-        {
-        }
-        void __stdcall AudioBackendXAudio2::OnLoopEnd(void* pBufferContext)
-        {
-        }
-        void __stdcall AudioBackendXAudio2::OnVoiceError(void* pBufferContext, HRESULT Error)
-        {
-        }
+    auto it = m_activeVoices.find(voiceId);
+    if (it != m_activeVoices.end()) {
+        Voice* voice = it->second;
+        voice->isActive = false;
+        ReleaseVoice(voice);
+        m_activeVoices.erase(it);
+        m_stats.activeVoiceCount = static_cast<int>(m_activeVoices.size());
     }
 }
+
+void AudioDeviceXAudio2::Pause(AudioVoiceId voiceId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto it = m_activeVoices.find(voiceId);
+    if (it != m_activeVoices.end()) {
+        // TODO: 实现暂停
+        (void)it->second;
+    }
+}
+
+void AudioDeviceXAudio2::Resume(AudioVoiceId voiceId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto it = m_activeVoices.find(voiceId);
+    if (it != m_activeVoices.end()) {
+        // TODO: 实现恢复
+        (void)it->second;
+    }
+}
+
+void AudioDeviceXAudio2::SetVolume(AudioVoiceId voiceId, float volume) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto it = m_activeVoices.find(voiceId);
+    if (it != m_activeVoices.end()) {
+        it->second->volume = volume;
+    }
+}
+
+void AudioDeviceXAudio2::SetPitch(AudioVoiceId voiceId, float pitch) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    auto it = m_activeVoices.find(voiceId);
+    if (it != m_activeVoices.end()) {
+        it->second->pitch = pitch;
+    }
+}
+
+void AudioDeviceXAudio2::SetPlaybackPosition(AudioVoiceId voiceId, float time) {
+    (void)voiceId;
+    (void)time;
+    // TODO: 实现设置播放位置
+}
+
+void AudioDeviceXAudio2::SetVoice3DPosition(AudioVoiceId voiceId, float x, float y, float z) {
+    (void)voiceId;
+    (void)x;
+    (void)y;
+    (void)z;
+    // TODO: 实现 3D 位置
+}
+
+void AudioDeviceXAudio2::SetVoice3DAttributes(AudioVoiceId voiceId, const Audio3DAttributes& attributes) {
+    (void)voiceId;
+    (void)attributes;
+    // TODO: 实现 3D 属性
+}
+
+void AudioDeviceXAudio2::SetListener(const AudioListener& listener) {
+    m_listener = listener;
+}
+
+void AudioDeviceXAudio2::SetDistanceModel(DistanceModel model) {
+    (void)model;
+    // TODO: 实现距离模型
+}
+
+void AudioDeviceXAudio2::SetMasterVolume(float volume) {
+    m_masterVolume = volume;
+}
+
+float AudioDeviceXAudio2::GetMasterVolume() const {
+    return m_masterVolume;
+}
+
+bool AudioDeviceXAudio2::IsPlaying(AudioVoiceId voiceId) {
+    auto it = m_activeVoices.find(voiceId);
+    return it != m_activeVoices.end() && it->second->isActive;
+}
+
+bool AudioDeviceXAudio2::IsPaused(AudioVoiceId voiceId) {
+    (void)voiceId;
+    return false;
+}
+
+bool AudioDeviceXAudio2::IsStopped(AudioVoiceId voiceId) {
+    auto it = m_activeVoices.find(voiceId);
+    return it == m_activeVoices.end() || !it->second->isActive;
+}
+
+float AudioDeviceXAudio2::GetPlaybackPosition(AudioVoiceId voiceId) {
+    (void)voiceId;
+    return 0.0f;
+}
+
+float AudioDeviceXAudio2::GetDuration(AudioVoiceId voiceId) {
+    auto it = m_activeVoices.find(voiceId);
+    if (it != m_activeVoices.end()) {
+        return it->second->duration;
+    }
+    return 0.0f;
+}
+
+uint32_t AudioDeviceXAudio2::GetPlayingVoiceCount() const {
+    return static_cast<uint32_t>(m_activeVoices.size());
+}
+
+void AudioDeviceXAudio2::SetEventCallback(AudioEventCallback callback) {
+    m_eventCallback = callback;
+}
+
+void AudioDeviceXAudio2::RemoveEventCallback() {
+    m_eventCallback = nullptr;
+}
+
+AudioStats AudioDeviceXAudio2::GetStats() const {
+    return m_stats;
+}
+
+void AudioDeviceXAudio2::ResetStats() {
+    m_stats = AudioStats{};
+}
+
+void AudioDeviceXAudio2::BeginProfile() {
+    // TODO: 实现性能分析
+}
+
+std::string AudioDeviceXAudio2::EndProfile() {
+    return "";
+}
+
+std::string AudioDeviceXAudio2::GenerateDebugReport() {
+    return "XAudio2 Debug Report (minimal implementation)";
+}
+
+// IXAudio2VoiceCallback 实现
+void __stdcall AudioDeviceXAudio2::OnVoiceProcessingPassStart(UINT32 BytesRequired) {
+    (void)BytesRequired;
+}
+
+void __stdcall AudioDeviceXAudio2::OnVoiceProcessingPassEnd() {
+}
+
+void __stdcall AudioDeviceXAudio2::OnStreamEnd() {
+}
+
+void __stdcall AudioDeviceXAudio2::OnBufferStart(void* pBufferContext) {
+    (void)pBufferContext;
+}
+
+void __stdcall AudioDeviceXAudio2::OnBufferEnd(void* pBufferContext) {
+    (void)pBufferContext;
+}
+
+void __stdcall AudioDeviceXAudio2::OnLoopEnd(void* pBufferContext) {
+    (void)pBufferContext;
+}
+
+void __stdcall AudioDeviceXAudio2::OnVoiceError(void* pBufferContext, HRESULT Error) {
+    (void)pBufferContext;
+    (void)Error;
+}
+
+// 私有方法实现
+
+bool AudioDeviceXAudio2::InitializeXAudio2() {
+    return true;
+}
+
+bool AudioDeviceXAudio2::CreateMasteringVoice() {
+    return true;
+}
+
+bool AudioDeviceXAudio2::Initialize3DAudio() {
+    return true;
+}
+
+void AudioDeviceXAudio2::ReleaseAll() {
+    m_activeVoices.clear();
+    m_availableVoices.clear();
+}
+
+AudioDeviceXAudio2::Voice* AudioDeviceXAudio2::AllocateVoice() {
+    if (!m_availableVoices.empty()) {
+        Voice* voice = m_availableVoices.back();
+        m_availableVoices.pop_back();
+        return voice;
+    }
+
+    // 从池中分配
+    for (auto& voice : m_voicePool) {
+        if (!voice.isActive) {
+            return &voice;
+        }
+    }
+
+    return nullptr;
+}
+
+void AudioDeviceXAudio2::ReleaseVoice(Voice* voice) {
+    if (voice) {
+        voice->isActive = false;
+        m_availableVoices.push_back(voice);
+    }
+}
+
+AudioDeviceXAudio2::Voice* AudioDeviceXAudio2::FindVoice(AudioVoiceId voiceId) {
+    auto it = m_activeVoices.find(voiceId);
+    if (it != m_activeVoices.end()) {
+        return it->second;
+    }
+    return nullptr;
+}
+
+bool AudioDeviceXAudio2::CreateWaveFormat(const AudioFormat& format, WAVEFORMATEX& waveFormat) {
+    (void)format;
+    (void)waveFormat;
+    return true;
+}
+
+bool AudioDeviceXAudio2::SubmitBuffer(Voice* voice, bool forceStart) {
+    (void)voice;
+    (void)forceStart;
+    return true;
+}
+
+void AudioDeviceXAudio2::Update3DAudio() {
+}
+
+void AudioDeviceXAudio2::Apply3DToVoice(Voice* voice) {
+    (void)voice;
+}
+
+bool AudioDeviceXAudio2::CheckHResult(HRESULT hr, const std::string& operation) {
+    (void)hr;
+    (void)operation;
+    return true;
+}
+
+void AudioDeviceXAudio2::TriggerEvent(AudioEventType type, AudioVoiceId voiceId, const std::string& message) {
+    if (m_eventCallback) {
+        AudioEvent event;
+        event.type = type;
+        event.voiceId = voiceId;
+        event.message = message;
+        m_eventCallback(event);
+    }
+}
+
+AudioVoiceId AudioDeviceXAudio2::Play(const AudioClip& clip, const PlayDesc& desc) {
+    return PlayClip(clip, desc);
+}
+
+void AudioDeviceXAudio2::StopAll() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+
+    for (auto& [voiceId, voice] : m_activeVoices) {
+        (void)voiceId;
+        voice->isActive = false;
+    }
+
+    m_activeVoices.clear();
+    m_stats.activeVoiceCount = 0;
+}
+
+void AudioDeviceXAudio2::PauseAll() {
+}
+
+void AudioDeviceXAudio2::ResumeAll() {
+}
+
+void AudioDeviceXAudio2::SetVoice3DPosition(AudioVoiceId voiceId, const float position[3]) {
+    (void)voiceId;
+    (void)position;
+}
+
+void AudioDeviceXAudio2::SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) {
+    (void)voiceId;
+    (void)velocity;
+}
+
+void AudioDeviceXAudio2::SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) {
+    (void)voiceId;
+    (void)direction;
+}
+
+void AudioDeviceXAudio2::SetDopplerFactor(float factor) {
+    (void)factor;
+}
+
+void AudioDeviceXAudio2::SetSpeedOfSound(float speed) {
+    m_speedOfSound = speed;
+}
+
+VoiceState AudioDeviceXAudio2::GetVoiceState(AudioVoiceId voiceId) {
+    auto it = m_activeVoices.find(voiceId);
+    if (it == m_activeVoices.end()) {
+        return VoiceState::Stopped;
+    }
+
+    if (it->second->isActive) {
+        return VoiceState::Playing;
+    }
+
+    return VoiceState::Stopped;
+}
+
+} // namespace PrismaEngine::Audio

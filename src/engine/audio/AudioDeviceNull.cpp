@@ -4,7 +4,7 @@
 #include <cstring>
 #include <cmath>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 AudioDeviceNull::AudioDeviceNull() {
     LOG_INFO("Audio", "创建空音频设备");

@@ -10,6 +10,9 @@
 #include <functional>
 #include <chrono>
 
+// 使用新系统的 AudioFormat 定义
+#include "core/IAudioDriver.h"
+
 namespace PrismaEngine::Audio {
 
 // 前置声明
@@ -30,44 +33,8 @@ enum class AudioDeviceType : char {
     Null = 4        // 空实现（静音）
 };
 
-// 设备信息
-struct DeviceInfo {
-    std::string name;           // 设备名称
-    std::string version;        // 驱动版本
-    std::string extensions;     // 支持的扩展
-    uint32_t maxVoices;         // 最大并发音源数
-    uint32_t sampleRate;        // 采样率
-    uint16_t channels;          // 声道数
-    bool supports3D;           // 是否支持3D音频
-    bool supportsEffects;      // 是否支持音效
-};
-
-// 音频格式
-struct AudioFormat {
-    enum class Codec {
-        Unknown,
-        PCM,        // 原始PCM数据
-        Vorbis,     // Ogg Vorbis
-        MP3,        // MPEG-1/2 Audio Layer III
-        WAV,        // WAV容器
-        FLAC        // Free Lossless Audio Codec
-    };
-
-    Codec codec = Codec::PCM;
-    uint32_t sampleRate = 44100;      // 采样率 (Hz)
-    uint16_t channels = 2;            // 声道数 (1=mono, 2=stereo)
-    uint16_t bitsPerSample = 16;      // 位深度 (8, 16, 24, 32)
-
-    // 便利方法
-    [[nodiscard]] bool IsMono() const { return channels == 1; }
-    [[nodiscard]] bool IsStereo() const { return channels == 2; }
-    [[nodiscard]] uint32_t GetByteRate() const {
-        return sampleRate * channels * bitsPerSample / 8;
-    }
-    [[nodiscard]] uint32_t GetFrameSize() const {
-        return channels * bitsPerSample / 8;
-    }
-};
+// DeviceInfo 已在 IAudioDevice.h 中定义（新系统）
+// AudioFormat 已在 core/IAudioDriver.h 中定义（新系统）
 
 // 音频剪辑 - 统一的音频数据容器
 struct AudioClip {
