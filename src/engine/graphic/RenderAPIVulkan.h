@@ -116,20 +116,11 @@ private:
         }
     };
 
-    // === Vulkan 初始化辅助方法 ===
+    // === Vulkan 初始化辅助方法（使用 vk-bootstrap 简化）===
 
-#if defined(__ANDROID__) || defined(ANDROID)
-    // Android 平台使用手动初始化
-    bool CreateInstance(const std::vector<const char*>& requiredExtensions);
-    bool PickPhysicalDevice(const VkSurfaceKHR surface);
-    bool CreateLogicalDevice();
-    bool CreateSwapChain(uint32_t width, uint32_t height, bool vsync);
-#else
-    // 非Android平台使用 vk-bootstrap 简化初始化
     bool CreateInstanceWithVkBootstrap();
     bool CreateDeviceWithVkBootstrap();
     bool CreateSwapChainWithVkBootstrap(uint32_t width, uint32_t height, bool vsync);
-#endif
 
     bool CreateImageViews();
     bool CreateRenderPass();
@@ -137,10 +128,6 @@ private:
     bool CreateCommandPool();
     bool CreateSyncObjects();
     bool CreateVMAAllocator();
-
-    QueueFamilyIndices FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) const;
-    bool IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) const;
-    uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
     // === Vulkan 核心对象 ===
 
@@ -162,13 +149,10 @@ private:
     uint32_t m_computeQueueFamily = 0;
     uint32_t m_transferQueueFamily = 0;
 
-#if !defined(__ANDROID__) && !defined(ANDROID)
-    // vk-bootstrap 对象（非Android平台）
+    // vk-bootstrap 对象（所有平台）
     std::unique_ptr<vkb::Instance> m_vkBootstrapInstance;
-    std::unique_ptr<vkb::PhysicalDeviceSelector> m_physicalDeviceSelector;
     vkb::Device m_vkBootstrapDevice;
     vkb::Swapchain m_vkBootstrapSwapchain;
-#endif
 
     // VMA 分配器
     VmaAllocator m_vmaAllocator = nullptr;
