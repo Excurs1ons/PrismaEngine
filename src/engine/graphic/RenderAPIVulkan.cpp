@@ -33,62 +33,16 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         return true;
     }
 
-    LOG_INFO("VulkanRenderDevice", "Initializing Vulkan render device...");
+    LOG_INFO("VulkanRenderDevice", "Initializing Vulkan render device with vk-bootstrap...");
 
-#if defined(__ANDROID__) || defined(ANDROID)
-    // Android 平台使用手动初始化
-    LOG_INFO("VulkanRenderDevice", "Using manual initialization for Android");
-
-    // 1. 创建 Vulkan 实例
-    std::vector<const char*> extensions = {
-        "VK_KHR_surface",
-        "VK_KHR_android_surface",
-    };
-
-    if (!CreateInstance(extensions)) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create Vulkan instance");
-        return false;
-    }
-
-    // 2. 创建 surface
-    VkAndroidSurfaceCreateInfoKHR surfaceInfo = {};
-    surfaceInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-    surfaceInfo.window = static_cast<ANativeWindow*>(desc.windowHandle);
-
-    if (vkCreateAndroidSurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface) != VK_SUCCESS) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create Android surface");
-        return false;
-    }
-
-    // 3. 选择物理设备
-    if (!PickPhysicalDevice(m_surface)) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to pick physical device");
-        return false;
-    }
-
-    // 4. 创建逻辑设备
-    if (!CreateLogicalDevice()) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create logical device");
-        return false;
-    }
-
-    // 5. 创建交换链
-    if (!CreateSwapChain(desc.width, desc.height, desc.vsync)) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create swap chain");
-        return false;
-    }
-#else
-    // 非 Android 平台使用 vk-bootstrap 简化初始化
-    LOG_INFO("VulkanRenderDevice", "Using vk-bootstrap for initialization");
-
-    // 1. 创建 Vulkan 实例
+    // 1. 创建 Vulkan 实例（使用 vk-bootstrap）
     if (!CreateInstanceWithVkBootstrap()) {
         LOG_ERROR("VulkanRenderDevice", "Failed to create Vulkan instance");
         return false;
     }
 
     // 2. 创建 surface
-#ifdef _WIN32
+#if defined(_WIN32)
     VkWin32SurfaceCreateInfoKHR surfaceInfo = {};
     surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     surfaceInfo.hwnd = static_cast<HWND>(desc.windowHandle);
@@ -98,24 +52,32 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         LOG_ERROR("VulkanRenderDevice", "Failed to create Win32 surface");
         return false;
     }
+#elif defined(__ANDROID__)
+    VkAndroidSurfaceCreateInfoKHR surfaceInfo = {};
+    surfaceInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
+    surfaceInfo.window = static_cast<ANativeWindow*>(desc.windowHandle);
+
+    if (vkCreateAndroidSurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface) != VK_SUCCESS) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create Android surface");
+        return false;
+    }
 #elif defined(__linux__)
     // Linux 平台 - 需要 SDL3 或其他方式创建 surface
     LOG_WARNING("VulkanRenderDevice", "Linux surface creation needs SDL3 integration");
     return false;
 #endif
 
-    // 3. 创建逻辑设备（包含物理设备选择）
+    // 3. 创建逻辑设备（包含物理设备选择，使用 vk-bootstrap）
     if (!CreateDeviceWithVkBootstrap()) {
         LOG_ERROR("VulkanRenderDevice", "Failed to create logical device");
         return false;
     }
 
-    // 4. 创建交换链
+    // 4. 创建交换链（使用 vk-bootstrap）
     if (!CreateSwapChainWithVkBootstrap(desc.width, desc.height, desc.vsync)) {
         LOG_ERROR("VulkanRenderDevice", "Failed to create swap chain");
         return false;
     }
-#endif
 
     // 6. 创建渲染通道
     if (!CreateRenderPass()) {
@@ -455,249 +417,6 @@ void VulkanRenderDevice::SetDebugMarker(const std::string& name) {
 // Vulkan 初始化辅助方法
 // ============================================================================
 
-bool VulkanRenderDevice::CreateInstance(const std::vector<const char*>& requiredExtensions) {
-    // 获取支持的扩展
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, availableExtensions.data());
-
-    LOG_INFO("VulkanRenderDevice", "Available extensions:");
-    for (const auto& ext : availableExtensions) {
-        LOG_INFO("VulkanRenderDevice", "  - {0}", ext.extensionName);
-    }
-
-    // 验证所需扩展
-    for (const auto& requiredExt : requiredExtensions) {
-        bool found = false;
-        for (const auto& availableExt : availableExtensions) {
-            if (std::strcmp(requiredExt, availableExt.extensionName) == 0) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            LOG_ERROR("VulkanRenderDevice", "Required extension not found: {0}", requiredExt);
-            return false;
-        }
-    }
-
-    // 创建应用信息
-    VkApplicationInfo appInfo = {};
-    appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    appInfo.pApplicationName = "Prisma Engine";
-    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.pEngineName = "Prisma Engine";
-    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-    appInfo.apiVersion = VK_API_VERSION_1_2;
-
-    // 创建实例信息
-    VkInstanceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = &appInfo;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(requiredExtensions.size());
-    createInfo.ppEnabledExtensionNames = requiredExtensions.data();
-
-    // 启用验证层（调试时）
-#ifdef _DEBUG
-    const char* validationLayers[] = {"VK_LAYER_KHRONOS_validation"};
-    createInfo.enabledLayerCount = 1;
-    createInfo.ppEnabledLayerNames = validationLayers;
-#endif
-
-    // 创建实例
-    VkResult result = vkCreateInstance(&createInfo, nullptr, &m_instance);
-    if (result != VK_SUCCESS) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create Vulkan instance: {0}", static_cast<int>(result));
-        return false;
-    }
-
-    LOG_INFO("VulkanRenderDevice", "Vulkan instance created successfully");
-    return true;
-}
-
-bool VulkanRenderDevice::PickPhysicalDevice(const VkSurfaceKHR surface) {
-    uint32_t deviceCount = 0;
-    vkEnumeratePhysicalDevices(m_instance, &deviceCount, nullptr);
-
-    if (deviceCount == 0) {
-        LOG_ERROR("VulkanRenderDevice", "No physical devices found");
-        return false;
-    }
-
-    std::vector<VkPhysicalDevice> devices(deviceCount);
-    vkEnumeratePhysicalDevices(m_instance, &deviceCount, devices.data());
-
-    // 寻找合适的设备
-    for (const auto& device : devices) {
-        if (IsDeviceSuitable(device, surface)) {
-            m_physicalDevice = device;
-
-            // 获取设备名称
-            VkPhysicalDeviceProperties properties;
-            vkGetPhysicalDeviceProperties(device, &properties);
-            m_deviceName = properties.deviceName;
-
-            LOG_INFO("VulkanRenderDevice", "Selected physical device: {0}", m_deviceName);
-            return true;
-        }
-    }
-
-    LOG_ERROR("VulkanRenderDevice", "No suitable physical device found");
-    return false;
-}
-
-bool VulkanRenderDevice::CreateLogicalDevice() {
-    QueueFamilyIndices indices = FindQueueFamilies(m_physicalDevice, m_surface);
-
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {
-        indices.graphicsFamily.value(),
-        indices.presentFamily.value()
-    };
-
-    float queuePriority = 1.0f;
-    for (uint32_t queueFamily : uniqueQueueFamilies) {
-        VkDeviceQueueCreateInfo queueCreateInfo = {};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queueCreateInfo.queueFamilyIndex = queueFamily;
-        queueCreateInfo.queueCount = 1;
-        queueCreateInfo.pQueuePriorities = &queuePriority;
-        queueCreateInfos.push_back(queueCreateInfo);
-    }
-
-    // 设备特性
-    VkPhysicalDeviceFeatures deviceFeatures = {};
-
-    // 启用所需扩展
-    std::vector<const char*> deviceExtensions = {
-        VK_KHR_SWAPCHAIN_EXTENSION_NAME
-    };
-
-    VkDeviceCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
-    createInfo.pEnabledFeatures = &deviceFeatures;
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
-    createInfo.ppEnabledExtensionNames = deviceExtensions.data();
-
-    VkResult result = vkCreateDevice(m_physicalDevice, &createInfo, nullptr, &m_device);
-    if (result != VK_SUCCESS) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create logical device");
-        return false;
-    }
-
-    vkGetDeviceQueue(m_device, indices.graphicsFamily.value(), 0, &m_graphicsQueue);
-    vkGetDeviceQueue(m_device, indices.presentFamily.value(), 0, &m_presentQueue);
-
-    m_graphicsQueueFamily = indices.graphicsFamily.value();
-    m_presentQueueFamily = indices.presentFamily.value();
-
-    LOG_INFO("VulkanRenderDevice", "Logical device created successfully");
-    return true;
-}
-
-bool VulkanRenderDevice::CreateSwapChain(uint32_t width, uint32_t height, bool vsync) {
-    // 获取交换链支持详情
-    VkSurfaceCapabilitiesKHR capabilities;
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_surface, &capabilities);
-
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, nullptr);
-    std::vector<VkSurfaceFormatKHR> formats(formatCount);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, formats.data());
-
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface, &presentModeCount, nullptr);
-    std::vector<VkPresentModeKHR> presentModes(presentModeCount);
-    vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface, &presentModeCount, presentModes.data());
-
-    // 选择格式
-    VkSurfaceFormatKHR surfaceFormat = formats[0];
-    for (const auto& format : formats) {
-        if (format.format == VK_FORMAT_B8G8R8A8_SRGB &&
-            format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            surfaceFormat = format;
-            break;
-        }
-    }
-
-    // 选择呈现模式
-    VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR; // vsync 默认开启
-    if (!vsync) {
-        for (const auto& mode : presentModes) {
-            if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
-                presentMode = mode;
-                break;
-            }
-            if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-                presentMode = mode;
-            }
-        }
-    }
-
-    // 选择分辨率
-    VkExtent2D extent = capabilities.currentExtent;
-    if (capabilities.currentExtent.width == UINT32_MAX) {
-        extent.width = std::clamp(width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        extent.height = std::clamp(height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-    }
-
-    // 图像数量
-    uint32_t imageCount = capabilities.minImageCount + 1;
-    if (capabilities.maxImageCount > 0 && imageCount > capabilities.maxImageCount) {
-        imageCount = capabilities.maxImageCount;
-    }
-
-    // 创建交换链
-    VkSwapchainCreateInfoKHR createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = m_surface;
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = surfaceFormat.format;
-    createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    createInfo.imageExtent = extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-    QueueFamilyIndices indices = FindQueueFamilies(m_physicalDevice, m_surface);
-    uint32_t queueFamilyIndices[] = {indices.graphicsFamily.value(), indices.presentFamily.value()};
-
-    if (indices.graphicsFamily != indices.presentFamily) {
-        createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        createInfo.queueFamilyIndexCount = 2;
-        createInfo.pQueueFamilyIndices = queueFamilyIndices;
-    } else {
-        createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    }
-
-    createInfo.preTransform = capabilities.currentTransform;
-    createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = presentMode;
-    createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
-
-    VkResult result = vkCreateSwapchainKHR(m_device, &createInfo, nullptr, &m_swapChain);
-    if (result != VK_SUCCESS) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create swap chain");
-        return false;
-    }
-
-    m_swapChainImageFormat = surfaceFormat.format;
-    m_swapChainExtent = extent;
-
-    // 获取交换链图像
-    vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, nullptr);
-    m_swapChainImages.resize(imageCount);
-    vkGetSwapchainImagesKHR(m_device, m_swapChain, &imageCount, m_swapChainImages.data());
-
-    LOG_INFO("VulkanRenderDevice", "Swap chain created: {0}x{1}, format: {2}",
-             extent.width, extent.height, (int)surfaceFormat.format);
-
-    return true;
-}
-
 bool VulkanRenderDevice::CreateImageViews() {
     m_swapChainImageViews.resize(m_swapChainImages.size());
 
@@ -804,12 +523,10 @@ bool VulkanRenderDevice::CreateFramebuffers() {
 }
 
 bool VulkanRenderDevice::CreateCommandPool() {
-    QueueFamilyIndices queueFamilyIndices = FindQueueFamilies(m_physicalDevice, m_surface);
-
     VkCommandPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
     poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
+    poolInfo.queueFamilyIndex = m_graphicsQueueFamily;
 
     VkResult result = vkCreateCommandPool(m_device, &poolInfo, nullptr, &m_commandPool);
     if (result != VK_SUCCESS) {
@@ -847,88 +564,6 @@ bool VulkanRenderDevice::CreateSyncObjects() {
     return true;
 }
 
-VulkanRenderDevice::QueueFamilyIndices VulkanRenderDevice::FindQueueFamilies(
-    VkPhysicalDevice device, VkSurfaceKHR surface) const {
-
-    QueueFamilyIndices indices;
-
-    uint32_t queueFamilyCount = 0;
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
-
-    std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-    vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
-
-    int i = 0;
-    for (const auto& queueFamily : queueFamilies) {
-        if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            indices.graphicsFamily = i;
-        }
-
-        VkBool32 presentSupport = false;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-        if (presentSupport) {
-            indices.presentFamily = i;
-        }
-
-        if (indices.IsComplete()) {
-            break;
-        }
-
-        i++;
-    }
-
-    return indices;
-}
-
-bool VulkanRenderDevice::IsDeviceSuitable(VkPhysicalDevice device, VkSurfaceKHR surface) const {
-    QueueFamilyIndices indices = FindQueueFamilies(device, surface);
-    if (!indices.IsComplete()) {
-        return false;
-    }
-
-    // 检查扩展支持
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> availableExtensions(extensionCount);
-    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
-
-    std::set<std::string> requiredExtensions = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-    for (const auto& extension : availableExtensions) {
-        requiredExtensions.erase(extension.extensionName);
-    }
-
-    if (!requiredExtensions.empty()) {
-        return false;
-    }
-
-    // 检查交换链支持
-    bool swapChainAdequate = false;
-    if (surface != VK_NULL_HANDLE) {
-        uint32_t formatCount;
-        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
-        uint32_t presentModeCount;
-        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
-        swapChainAdequate = formatCount != 0 && presentModeCount != 0;
-    }
-
-    return swapChainAdequate;
-}
-
-uint32_t VulkanRenderDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const {
-    VkPhysicalDeviceMemoryProperties memProperties;
-    vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProperties);
-
-    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) &&
-            (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    LOG_ERROR("VulkanRenderDevice", "Failed to find suitable memory type");
-    return UINT32_MAX;
-}
-
 // ============================================================================
 // VMA 分配器管理
 // ============================================================================
@@ -959,10 +594,8 @@ bool VulkanRenderDevice::CreateVMAAllocator() {
 }
 
 // ============================================================================
-// vk-bootstrap 简化初始化方法 (非 Android 平台)
+// vk-bootstrap 简化初始化方法 (所有平台)
 // ============================================================================
-
-#if !defined(__ANDROID__) && !defined(ANDROID)
 
 bool VulkanRenderDevice::CreateInstanceWithVkBootstrap() {
     vkb::InstanceBuilder builder;
@@ -974,9 +607,11 @@ bool VulkanRenderDevice::CreateInstanceWithVkBootstrap() {
            .set_app_version(1, 0, 0)
            .set_engine_version(1, 0, 0);
 
-    // 添加所需扩展
-#ifdef _WIN32
+    // 添加平台特定扩展
+#if defined(_WIN32)
     builder.enable_extension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(__ANDROID__)
+    builder.enable_extension(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(__linux__)
     builder.enable_extension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
     builder.enable_extension(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
@@ -1133,7 +768,5 @@ bool VulkanRenderDevice::CreateSwapChainWithVkBootstrap(uint32_t width, uint32_t
              m_swapChainExtent.width, m_swapChainExtent.height);
     return true;
 }
-
-#endif // !defined(__ANDROID__) && !defined(ANDROID)
 
 } // namespace PrismaEngine::Graphic
