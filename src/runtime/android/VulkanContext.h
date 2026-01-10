@@ -1,10 +1,9 @@
-//
-// Created by jasonngu on 2025/12/22.
-//
 
+#pragma once
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #ifndef MY_APPLICATION_VULKANCONTEXT_H
 #define MY_APPLICATION_VULKANCONTEXT_H
-#pragma once
+
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include <vector>
@@ -97,4 +96,5 @@ public:
     VkCommandBuffer beginSingleTimeCommands();
     void endSingleTimeCommands(VkCommandBuffer commandBuffer);
 };
-#endif //MY_APPLICATION_VULKANCONTEXT_H
+#endif
+#endif

@@ -14,8 +14,8 @@ public:
     // IResource接口实现
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
-    bool IsLoaded() const override { return m_isLoaded; }
-    AssetType GetType() const override { return AssetType::Texture; }
+    [[nodiscard]] bool IsLoaded() const override { return m_isLoaded; }
+    [[nodiscard]] AssetType GetType() const override { return AssetType::Texture; }
 
     // Serializable接口实现
     void Serialize(Serialization::OutputArchive& archive) const override;
@@ -27,22 +27,22 @@ public:
                         Serialization::SerializationFormat format = Serialization::SerializationFormat::JSON) override;
 
     // Asset特定方法
-    std::string GetAssetType() const override { return "Texture"; }
-    std::string GetAssetVersion() const override { return "1.0.0"; }
+    [[nodiscard]] std::string GetAssetType() const override { return "Texture"; }
+    [[nodiscard]] std::string GetAssetVersion() const override { return "1.0.0"; }
 
     // 纹理属性
-    uint32_t GetWidth() const { return m_width; }
-    uint32_t GetHeight() const { return m_height; }
-    uint32_t GetChannels() const { return m_channels; }
-    const std::vector<uint8_t>& GetData() const { return m_data; }
+    [[nodiscard]] uint32_t GetWidth() const { return width; }
+    [[nodiscard]] uint32_t GetHeight() const { return height; }
+    [[nodiscard]] uint32_t GetChannels() const { return channels; }
+    [[nodiscard]] const std::vector<uint8_t>& GetData() const { return m_data; }
 
     void SetDimensions(uint32_t width, uint32_t height, uint32_t channels);
     void SetData(const std::vector<uint8_t>& data);
 
 private:
-    uint32_t m_width    = 0;
-    uint32_t m_height   = 0;
-    uint32_t m_channels = 0;
+    uint32_t width    = 0;
+    uint32_t height   = 0;
+    uint32_t channels = 0;
     std::vector<uint8_t> m_data;
     bool m_isLoaded = false;
 };

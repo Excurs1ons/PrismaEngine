@@ -1,3 +1,6 @@
+#pragma once
+
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #ifndef MY_APPLICATION_CUBEMAPTEXTUREASSET_H
 #define MY_APPLICATION_CUBEMAPTEXTUREASSET_H
 
@@ -38,4 +41,5 @@ private:
     CubemapTextureAsset(VulkanContext* context);
 };
 
-#endif //MY_APPLICATION_CUBEMAPTEXTUREASSET_H
+#endif
+#endif

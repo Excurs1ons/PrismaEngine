@@ -1,3 +1,4 @@
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "CubemapTextureAsset.h"
 #include "../runtime/android/VulkanContext.h"
 #include "AndroidOut.h"
@@ -269,3 +270,4 @@ std::shared_ptr<CubemapTextureAsset> CubemapTextureAsset::loadFromAssets(
     aout << "Cubemap loaded successfully: " << faceSize << "x" << faceSize << std::endl;
     return cubemap;
 }
+#endif

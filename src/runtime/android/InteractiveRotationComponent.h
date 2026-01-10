@@ -167,50 +167,62 @@ private:
         int touchCount = input.GetTouchCount();
 
         if (touchCount > 0) {
-            const Input::Touch* touch = input.GetTouch(0);
-            if (touch) {
-                // 检查是否是新触摸
-                if (touch->phase == Input::TouchPhase::Began && !isDragging_) {
-                    // aout << "Touch Began! Starting drag" << std::endl;
-                    isDragging_ = true;
-                    // 不要清零速度，保持之前可能的惯性
-                    lastTouchPosition_ = Vector2(touch->positionX, touch->positionY);
-                }
-                // 检查是否正在拖拽
-                else if (isDragging_ && (touch->phase == Input::TouchPhase::Moved ||
-                                        touch->phase == Input::TouchPhase::Stationary)) {
-                    Vector2 currentPosition(touch->positionX, touch->positionY);
+            // 如果有活跃的触摸ID，只处理该触摸点
+            if (activeTouchId_ >= 0) {
+                const Input::Touch* touch = input.GetTouchById(activeTouchId_);
+                if (touch) {
+                    // 检查是否正在拖拽
+                    if (touch->phase == Input::TouchPhase::Moved ||
+                        touch->phase == Input::TouchPhase::Stationary) {
+                        Vector2 currentPosition(touch->positionX, touch->positionY);
 
-                    // 计算帧间位移（每帧都更新 lastTouchPosition_ 确保 delta 是帧间的）
-                    Vector2 delta = currentPosition - lastTouchPosition_;
-                    lastTouchPosition_ = currentPosition;  // 每帧更新，确保 delta 代表帧间位移
+                        // 计算帧间位移（每帧都更新 lastTouchPosition_ 确保 delta 是帧间的）
+                        Vector2 delta = currentPosition - lastTouchPosition_;
+                        lastTouchPosition_ = currentPosition;  // 每帧更新，确保 delta 代表帧间位移
 
-                    // 只有真正移动时才应用加速度
-                    if (glm::length(delta) > 0.001f) {
-                        // aout << "Moving! delta=(" << delta.x << ", " << delta.y << ")" << std::endl;
+                        // 只有真正移动时才应用加速度
+                        if (glm::length(delta) > 0.001f) {
+                            // 屏幕空间滑动映射到物体旋转（基于摄像机视角）
+                            // 屏幕X轴左右滑动 → 绕摄像机Y轴旋转（水平自转）
+                            // 屏幕Y轴上下滑动 → 绕摄像机X轴旋转（上下翻转）
+                            float accelX = delta.y * touchSensitivity_;  // 屏幕Y → 绕摄像机X轴
+                            float accelY = delta.x * touchSensitivity_;  // 屏幕X → 绕摄像机Y轴
 
-                        // 屏幕空间滑动映射到物体旋转（基于摄像机视角）
-                        // 屏幕X轴左右滑动 → 绕摄像机Y轴旋转（水平自转）
-                        // 屏幕Y轴上下滑动 → 绕摄像机X轴旋转（上下翻转）
-                        float accelX = delta.y * touchSensitivity_;  // 屏幕Y → 绕摄像机X轴
-                        float accelY = delta.x * touchSensitivity_;  // 屏幕X → 绕摄像机Y轴
-
-                        // 加速度叠加到当前速度
-                        velocity_.x += accelX;
-                        velocity_.y += accelY;
+                            // 加速度叠加到当前速度
+                            velocity_.x += accelX;
+                            velocity_.y += accelY;
+                        }
                     }
-                }
-                // 触摸结束
-                else if (touch->phase == Input::TouchPhase::Ended ||
-                         touch->phase == Input::TouchPhase::Cancelled) {
-                    // aout << "Touch Ended/Cancelled! Keeping velocity=(" << velocity_.x << ", " << velocity_.y << ")" << std::endl;
+                    // 触摸结束
+                    else if (touch->phase == Input::TouchPhase::Ended ||
+                             touch->phase == Input::TouchPhase::Cancelled) {
+                        isDragging_ = false;
+                        activeTouchId_ = -1;  // 重置活跃触摸ID
+                        // 不清零速度，让它继续惯性旋转
+                    }
+                } else {
+                    // 活跃触摸点不存在（可能已取消），重置状态
                     isDragging_ = false;
-                    // 不清零速度，让它继续惯性旋转
+                    activeTouchId_ = -1;
+                }
+            }
+            // 没有活跃触摸时，检查是否有新的触摸开始
+            else {
+                for (int i = 0; i < touchCount; ++i) {
+                    const Input::Touch* touch = input.GetTouch(i);
+                    if (touch && touch->phase == Input::TouchPhase::Began) {
+                        isDragging_ = true;
+                        activeTouchId_ = touch->fingerId;
+                        // 不要清零速度，保持之前可能的惯性
+                        lastTouchPosition_ = Vector2(touch->positionX, touch->positionY);
+                        break;  // 只响应第一个新触摸
+                    }
                 }
             }
         } else {
             // 没有触摸时，速度会自然衰减
             isDragging_ = false;
+            activeTouchId_ = -1;
         }
     }
 
@@ -224,6 +236,7 @@ private:
 
     // 运行时状态
     bool isDragging_ = false;
+    int activeTouchId_ = -1;  // 当前活跃触摸的手指ID（-1表示无）
     Vector2 lastTouchPosition_{0, 0};
     Vector3 velocity_{0, 0, 0};  // 当前旋转速度（用于惯性）
     Vector3 initialRotation_{0, 0, 0};

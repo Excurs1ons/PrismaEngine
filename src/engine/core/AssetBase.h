@@ -47,7 +47,7 @@ public:
     T* Get() const { return m_resource.get(); }
     T* operator->() const { return Get(); }
     T& operator*() const { return *Get(); }
-    bool IsValid() const { return m_resource != nullptr && m_resource->IsLoaded(); }
+    [[nodiscard]] bool IsValid() const { return m_resource != nullptr && m_resource->IsLoaded(); }
     explicit operator bool() const { return IsValid(); }
 
 private:
