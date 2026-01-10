@@ -1,6 +1,6 @@
 #pragma once
 
-#if defined(_WIN32) && (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
+#if defined(_WIN32) || (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
 
 #include "core/IInputDriver.h"
 #include <windows.h>
