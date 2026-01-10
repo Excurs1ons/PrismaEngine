@@ -6,7 +6,20 @@
 #include "interfaces/IFence.h"
 #include "interfaces/IResourceFactory.h"
 #include "interfaces/ISwapChain.h"
+
+// Vulkan 头文件
 #include <vulkan/vulkan.h>
+
+// vk-bootstrap - Vulkan 初始化库
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
+#include <vk_bootstrap.hpp>
+#endif
+
+// VMA - Vulkan Memory Allocator
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
+#include <vk_mem_alloc.h>
+#endif
+
 #include <optional>
 #include <vector>
 #include <memory>
