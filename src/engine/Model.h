@@ -2,13 +2,18 @@
 #define ANDROIDGLINVESTIGATIONS_MODEL_H
 
 #include "Mesh.h"
+
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "TextureAsset.h"
+#else
+#include "resource/TextureAsset.h"
+#endif
+
 #include "graphic/interfaces/RenderTypes.h"
 #include "math/MathTypes.h"
 #include <vector>
 
 using namespace PrismaEngine;
-
 
 typedef uint16_t Index;
 
