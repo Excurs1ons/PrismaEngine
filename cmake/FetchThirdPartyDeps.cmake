@@ -56,6 +56,24 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
+# VMA (Vulkan Memory Allocator) - Vulkan内存分配库
+set(FETCHCONTENT_VMA_DIR "${FETCHCONTENT_BASE_DIR}/vma")
+FetchContent_Declare(
+    vma
+    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+    GIT_TAG v3.1.0
+    GIT_SHALLOW TRUE
+)
+
+# vk-bootstrap - Vulkan初始化库
+set(FETCHCONTENT_VK_BOOTSTRAP_DIR "${FETCHCONTENT_BASE_DIR}/vk-bootstrap")
+FetchContent_Declare(
+    vk-bootstrap
+    GIT_REPOSITORY https://github.com/charles-lunarge/vk-bootstrap.git
+    GIT_TAG v0.9
+    GIT_SHALLOW TRUE
+)
+
 # DirectX-Headers (Windows) - DirectX 12 头文件
 if(WIN32)
     set(FETCHCONTENT_DIRECTX_HEADERS_DIR "${FETCHCONTENT_BASE_DIR}/directx-headers")
@@ -203,6 +221,14 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     elseif(PRISMA_USE_FETCHCONTENT)
         FetchContent_MakeAvailable(Vulkan-Headers)
         message(STATUS "Vulkan-Headers: 使用 FetchContent")
+
+        # VMA 需要 Vulkan-Headers
+        FetchContent_MakeAvailable(vma)
+        message(STATUS "VMA: 使用 FetchContent")
+
+        # vk-bootstrap 需要 Vulkan-Headers
+        FetchContent_MakeAvailable(vk-bootstrap)
+        message(STATUS "vk-bootstrap: 使用 FetchContent")
     else()
         find_package(Vulkan CONFIG REQUIRED)
         message(STATUS "Vulkan: 使用系统/vcpkg")
