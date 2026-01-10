@@ -35,18 +35,14 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
 
     LOG_INFO("VulkanRenderDevice", "Initializing Vulkan render device...");
 
+#if defined(__ANDROID__) || defined(ANDROID)
+    // Android 平台使用手动初始化
+    LOG_INFO("VulkanRenderDevice", "Using manual initialization for Android");
+
     // 1. 创建 Vulkan 实例
     std::vector<const char*> extensions = {
         "VK_KHR_surface",
-#ifdef _WIN32
-        "VK_KHR_win32_surface",
-#elif defined(__ANDROID__)
         "VK_KHR_android_surface",
-#else
-        "VK_KHR_xlib_surface",
-        "VK_KHR_xcb_surface",
-        "VK_KHR_wayland_surface",
-#endif
     };
 
     if (!CreateInstance(extensions)) {
@@ -54,18 +50,7 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         return false;
     }
 
-    // 2. 创建 surface (从 windowHandle)
-#ifdef _WIN32
-    VkWin32SurfaceCreateInfoKHR surfaceInfo = {};
-    surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surfaceInfo.hwnd = static_cast<HWND>(desc.windowHandle);
-    surfaceInfo.hinstance = GetModuleHandle(nullptr);
-
-    if (vkCreateWin32SurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface) != VK_SUCCESS) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create Win32 surface");
-        return false;
-    }
-#elif defined(__ANDROID__)
+    // 2. 创建 surface
     VkAndroidSurfaceCreateInfoKHR surfaceInfo = {};
     surfaceInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
     surfaceInfo.window = static_cast<ANativeWindow*>(desc.windowHandle);
@@ -74,11 +59,6 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         LOG_ERROR("VulkanRenderDevice", "Failed to create Android surface");
         return false;
     }
-#else
-    // SDL3 surface 创建需要特殊处理
-    LOG_WARNING("VulkanRenderDevice", "SDL3 surface creation not implemented");
-    return false;
-#endif
 
     // 3. 选择物理设备
     if (!PickPhysicalDevice(m_surface)) {
@@ -97,6 +77,45 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         LOG_ERROR("VulkanRenderDevice", "Failed to create swap chain");
         return false;
     }
+#else
+    // 非 Android 平台使用 vk-bootstrap 简化初始化
+    LOG_INFO("VulkanRenderDevice", "Using vk-bootstrap for initialization");
+
+    // 1. 创建 Vulkan 实例
+    if (!CreateInstanceWithVkBootstrap()) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create Vulkan instance");
+        return false;
+    }
+
+    // 2. 创建 surface
+#ifdef _WIN32
+    VkWin32SurfaceCreateInfoKHR surfaceInfo = {};
+    surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    surfaceInfo.hwnd = static_cast<HWND>(desc.windowHandle);
+    surfaceInfo.hinstance = GetModuleHandle(nullptr);
+
+    if (vkCreateWin32SurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface) != VK_SUCCESS) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create Win32 surface");
+        return false;
+    }
+#elif defined(__linux__)
+    // Linux 平台 - 需要 SDL3 或其他方式创建 surface
+    LOG_WARNING("VulkanRenderDevice", "Linux surface creation needs SDL3 integration");
+    return false;
+#endif
+
+    // 3. 创建逻辑设备（包含物理设备选择）
+    if (!CreateDeviceWithVkBootstrap()) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create logical device");
+        return false;
+    }
+
+    // 4. 创建交换链
+    if (!CreateSwapChainWithVkBootstrap(desc.width, desc.height, desc.vsync)) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create swap chain");
+        return false;
+    }
+#endif
 
     // 6. 创建渲染通道
     if (!CreateRenderPass()) {
@@ -122,7 +141,13 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         return false;
     }
 
-    // 10. 创建资源工厂
+    // 10. 创建 VMA 分配器
+    if (!CreateVMAAllocator()) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create VMA allocator");
+        return false;
+    }
+
+    // 11. 创建资源工厂
     // m_resourceFactory = std::make_unique<VulkanResourceFactory>(this);
 
     m_initialized = true;
@@ -140,6 +165,12 @@ void VulkanRenderDevice::Shutdown() {
     // 等待设备空闲
     if (m_device != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(m_device);
+    }
+
+    // 清理 VMA 分配器
+    if (m_vmaAllocator != nullptr) {
+        vmaDestroyAllocator(m_vmaAllocator);
+        m_vmaAllocator = nullptr;
     }
 
     // 清理同步对象
@@ -897,5 +928,212 @@ uint32_t VulkanRenderDevice::FindMemoryType(uint32_t typeFilter, VkMemoryPropert
     LOG_ERROR("VulkanRenderDevice", "Failed to find suitable memory type");
     return UINT32_MAX;
 }
+
+// ============================================================================
+// VMA 分配器管理
+// ============================================================================
+
+bool VulkanRenderDevice::CreateVMAAllocator() {
+    VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+    allocatorInfo.physicalDevice = m_physicalDevice;
+    allocatorInfo.device = m_device;
+    allocatorInfo.instance = m_instance;
+
+#if VMA_STATIC_VULKAN_FUNCTIONS == 0
+    // VMA 需要动态加载 Vulkan 函数
+    VmaVulkanFunctions vulkanFunctions = {};
+    vulkanFunctions.vkGetInstanceProcAddr = vkGetInstanceProcAddr;
+    vulkanFunctions.vkGetDeviceProcAddr = vkGetDeviceProcAddr;
+    allocatorInfo.pVulkanFunctions = &vulkanFunctions;
+#endif
+
+    VkResult result = vmaCreateAllocator(&allocatorInfo, &m_vmaAllocator);
+    if (result != VK_SUCCESS) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create VMA allocator: {0}", static_cast<int>(result));
+        return false;
+    }
+
+    LOG_INFO("VulkanRenderDevice", "VMA allocator created successfully");
+    return true;
+}
+
+// ============================================================================
+// vk-bootstrap 简化初始化方法 (非 Android 平台)
+// ============================================================================
+
+#if !defined(__ANDROID__) && !defined(ANDROID)
+
+bool VulkanRenderDevice::CreateInstanceWithVkBootstrap() {
+    vkb::InstanceBuilder builder;
+
+    // 设置应用信息
+    builder.set_app_name("Prisma Engine")
+           .set_engine_name("Prisma Engine")
+           .require_api_version(1, 2, 0)
+           .set_app_version(1, 0, 0)
+           .set_engine_version(1, 0, 0);
+
+    // 添加所需扩展
+#ifdef _WIN32
+    builder.enable_extension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif defined(__linux__)
+    builder.enable_extension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+    builder.enable_extension(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
+    builder.enable_extension(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+#endif
+
+    // 调试模式下启用验证层
+#ifdef _DEBUG
+    builder.request_validation_layers();
+    builder.set_debug_callback([](VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                  VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                  void* pUserData) -> VkBool32 {
+        auto severity = vkb::to_string_message_severity(messageSeverity);
+        auto type = vkb::to_string_message_type(messageType);
+        LOG_DEBUG("VulkanValidation", "[{0}] {1}: {2}", severity, type, pCallbackData->pMessage);
+        return VK_FALSE;
+    });
+#endif
+
+    // 创建实例
+    auto instanceResult = builder.build();
+    if (!instanceResult) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create Vulkan instance with vk-bootstrap: {0}",
+                  instanceResult.error().message());
+        return false;
+    }
+
+    m_vkBootstrapInstance = std::make_unique<vkb::Instance>(instanceResult.value());
+    m_instance = m_vkBootstrapInstance->instance;
+
+    LOG_INFO("VulkanRenderDevice", "Vulkan instance created with vk-bootstrap");
+    return true;
+}
+
+bool VulkanRenderDevice::CreateDeviceWithVkBootstrap() {
+    if (!m_vkBootstrapInstance) {
+        LOG_ERROR("VulkanRenderDevice", "Vk-bootstrap instance not initialized");
+        return false;
+    }
+
+    // 选择物理设备
+    vkb::PhysicalDeviceSelector physDeviceSelector(*m_vkBootstrapInstance);
+    physDeviceSelector.set_surface(m_surface);
+    physDeviceSelector.set_minimum_version(1, 2);
+
+    // 优先选择独立显卡
+    physDeviceSelector.prefer_gpu_device_type(vkb::PreferredDeviceType::discrete);
+
+    auto physDeviceResult = physDeviceSelector.select();
+    if (!physDeviceResult) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to select physical device: {0}",
+                  physDeviceResult.error().message());
+        return false;
+    }
+
+    vkb::PhysicalDevice physicalDevice = physDeviceResult.value();
+    m_physicalDevice = physicalDevice.physical_device;
+
+    // 创建逻辑设备
+    vkb::DeviceBuilder deviceBuilder(physicalDevice);
+
+    auto deviceResult = deviceBuilder.build();
+    if (!deviceResult) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create logical device: {0}",
+                  deviceResult.error().message());
+        return false;
+    }
+
+    m_vkBootstrapDevice = deviceResult.value();
+    m_device = m_vkBootstrapDevice.device;
+
+    // 获取队列
+    auto graphicsQueueResult = m_vkBootstrapDevice.get_queue(vkb::QueueType::graphics);
+    if (graphicsQueueResult) {
+        m_graphicsQueue = graphicsQueueResult.value();
+    }
+
+    auto presentQueueResult = m_vkBootstrapDevice.get_queue(vkb::QueueType::present);
+    if (presentQueueResult) {
+        m_presentQueue = presentQueueResult.value();
+    }
+
+    auto computeQueueResult = m_vkBootstrapDevice.get_queue(vkb::QueueType::compute);
+    if (computeQueueResult) {
+        m_computeQueue = computeQueueResult.value();
+    }
+
+    auto transferQueueResult = m_vkBootstrapDevice.get_queue(vkb::QueueType::transfer);
+    if (transferQueueResult) {
+        m_transferQueue = transferQueueResult.value();
+    }
+
+    // 获取队列族索引
+    m_graphicsQueueFamily = m_vkBootstrapDevice.get_queue_index(vkb::QueueType::graphics).value();
+    m_presentQueueFamily = m_vkBootstrapDevice.get_queue_index(vkb::QueueType::present).value();
+
+    auto computeQueueIndex = m_vkBootstrapDevice.get_queue_index(vkb::QueueType::compute);
+    if (computeQueueIndex.has_value()) {
+        m_computeQueueFamily = computeQueueIndex.value();
+    }
+
+    auto transferQueueIndex = m_vkBootstrapDevice.get_queue_index(vkb::QueueType::transfer);
+    if (transferQueueIndex.has_value()) {
+        m_transferQueueFamily = transferQueueIndex.value();
+    }
+
+    // 获取设备名称
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(m_physicalDevice, &properties);
+    m_deviceName = properties.deviceName;
+
+    LOG_INFO("VulkanRenderDevice", "Logical device created with vk-bootstrap: {0}", m_deviceName);
+    return true;
+}
+
+bool VulkanRenderDevice::CreateSwapChainWithVkBootstrap(uint32_t width, uint32_t height, bool vsync) {
+    if (!m_vkBootstrapDevice) {
+        LOG_ERROR("VulkanRenderDevice", "Vk-bootstrap device not initialized");
+        return false;
+    }
+
+    vkb::SwapchainBuilder swapchainBuilder(m_vkBootstrapDevice);
+    swapchainBuilder.set_desired_extent({width, height});
+
+    if (vsync) {
+        swapchainBuilder.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR);
+    } else {
+        swapchainBuilder.set_desired_present_mode({VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR});
+    }
+
+    // 设置默认图像格式
+    swapchainBuilder.set_desired_format({VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
+
+    auto swapchainResult = swapchainBuilder.build();
+    if (!swapchainResult) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create swap chain: {0}",
+                  swapchainResult.error().message());
+        return false;
+    }
+
+    m_vkBootstrapSwapchain = swapchainResult.value();
+    m_swapChain = m_vkBootstrapSwapchain.swapchain;
+    m_swapChainImageFormat = m_vkBootstrapSwapchain.image_format;
+    m_swapChainExtent = m_vkBootstrapSwapchain.extent;
+
+    // 获取交换链图像
+    auto imagesResult = m_vkBootstrapSwapchain.get_images();
+    if (imagesResult) {
+        m_swapChainImages = imagesResult.value();
+    }
+
+    LOG_INFO("VulkanRenderDevice", "Swap chain created with vk-bootstrap: {0}x{1}",
+             m_swapChainExtent.width, m_swapChainExtent.height);
+    return true;
+}
+
+#endif // !defined(__ANDROID__) && !defined(ANDROID)
 
 } // namespace PrismaEngine::Graphic
