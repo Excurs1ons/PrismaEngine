@@ -66,14 +66,38 @@ set(CORE_SOURCES
     # ECS 系统
     core/AssetManager.cpp
     core/ECS.cpp
-    # 音频系统
-    audio/AudioAPI.cpp
-    audio/AudioBackendSDL3.cpp
-    audio/AudioDevice.cpp
-    audio/AudioDeviceNull.cpp
-    audio/AudioDeviceSDL3.cpp
-    audio/AudioManager.cpp
-    audio/AudioSystem.cpp
+    # 音频系统（暂时全部禁用，需要重写以匹配新系统）
+    # audio/AudioAPI.cpp
+    # audio/AudioDevice.cpp
+    # audio/AudioDeviceNull.cpp
+    # audio/AudioManager.cpp
+)
+
+# ========== 条件编译音频后端（新系统） ==========
+# SDL3 音频后端
+if(PRISMA_ENABLE_AUDIO_SDL3)
+    list(APPEND CORE_SOURCES
+        audio/AudioDeviceSDL3.cpp
+    )
+endif()
+
+# XAudio2 音频后端（暂时禁用，需要修复接口）
+# if(PRISMA_ENABLE_AUDIO_XAUDIO2)
+#     list(APPEND CORE_SOURCES
+#         audio/AudioDeviceXAudio2.cpp
+#         audio/drivers/AudioDriverXAudio2.cpp
+#     )
+# endif()
+
+# OpenAL 音频后端
+if(PRISMA_ENABLE_AUDIO_OPENAL)
+    list(APPEND CORE_SOURCES
+        audio/AudioDeviceOpenAL.cpp
+    )
+endif()
+
+# ========== 基础源文件（继续）==========
+list(APPEND CORE_SOURCES
     # 输入系统
     input/InputDevice.cpp
     input/InputManager.cpp
@@ -95,7 +119,6 @@ if(WIN32)
         platform/Application.cpp
         platform/ApplicationWindows.cpp
         platform/WindowsUtils.cpp
-        audio/AudioDeviceXAudio2.cpp
     )
 endif()
 
@@ -155,11 +178,10 @@ set(CORE_HEADERS
     # ECS 系统
     core/AssetManager.h
     core/ECS.h
-    # 音频系统
+    # 音频系统（新系统）
     audio/AudioAPI.h
     audio/AudioDevice.h
     audio/AudioManager.h
-    audio/AudioSystem.h
     audio/AudioTypes.h
     audio/IAudioDevice.h
     # 输入系统
