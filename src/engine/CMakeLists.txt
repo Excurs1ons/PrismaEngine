@@ -26,6 +26,177 @@ endif()
 # 包含graphic子目录的CMakeLists.txt来定义变量
 include(graphic/CMakeLists.txt)
 
+# ========== 收集核心源文件 (所有平台共用) ==========
+# 核心基础文件
+set(CORE_SOURCES
+    CommandLineParser.cpp
+    Common.cpp
+    Engine.cpp
+    JobSystem.cpp
+    Logger.cpp
+    LogScope.cpp
+    Object.cpp
+    PhysicsSystem.cpp
+    Platform.cpp
+    PlatformSDL.cpp
+    ResourceManagerNew.cpp
+    Scene.cpp
+    SceneManager.cpp
+    Serializable.cpp
+    ThreadManager.cpp
+    WorkerThread.cpp
+    # 场景对象
+    Camera.cpp
+    CameraController.cpp
+    GameObject.cpp
+    ScriptComponent.cpp
+    Transform.cpp
+    # 资源
+    CubemapTextureAsset.cpp
+    TextureAsset.cpp
+    # 音效合成器
+    SoundSynthesizer.cpp
+    # 示例/测试
+    TriangleExample.cpp
+    # 预编译头
+    pch.cpp
+    # 脚本系统
+    scripting/MonoRuntime.cpp
+    scripting/ScriptSystem.cpp
+    # ECS 系统
+    core/AssetManager.cpp
+    core/ECS.cpp
+    # 音频系统
+    audio/AudioAPI.cpp
+    audio/AudioBackendSDL3.cpp
+    audio/AudioDevice.cpp
+    audio/AudioDeviceNull.cpp
+    audio/AudioDeviceSDL3.cpp
+    audio/AudioManager.cpp
+    audio/AudioSystem.cpp
+    # 输入系统
+    input/InputDevice.cpp
+    input/InputManager.cpp
+    InputManager.cpp
+    # 资源系统
+    resource/Asset.cpp
+    resource/AssetSerializer.cpp
+    resource/MeshAsset.cpp
+    resource/ResourceFallback.cpp
+    resource/ResourceFallbackImpl.cpp
+    resource/TextureAsset.cpp
+)
+
+# ========== 平台特定源文件 (条件编译) ==========
+# Windows 平台
+if(WIN32)
+    list(APPEND CORE_SOURCES
+        PlatformWindows.cpp
+        platform/Application.cpp
+        platform/ApplicationWindows.cpp
+        platform/WindowsUtils.cpp
+        audio/AudioDeviceXAudio2.cpp
+    )
+endif()
+
+# Linux 平台
+if(LINUX)
+    list(APPEND CORE_SOURCES
+        PlatformLinux.cpp
+        platform/ApplicationLinux.cpp
+    )
+endif()
+
+# Android 平台
+if(ANDROID)
+    list(APPEND CORE_SOURCES
+        PlatformAndroid.cpp
+        AndroidLogger.cpp
+        AndroidOut.cpp
+    )
+endif()
+
+# ========== 收集核心头文件 ==========
+set(CORE_HEADERS
+    CommandLineParser.h
+    Common.h
+    Engine.h
+    JobSystem.h
+    Logger.h
+    LogScope.h
+    Object.h
+    PhysicsSystem.h
+    Platform.h
+    ResourceManagerNew.h
+    Scene.h
+    SceneManager.h
+    Serializable.h
+    ThreadManager.h
+    WorkerThread.h
+    # 场景对象
+    Camera.h
+    CameraController.h
+    GameObject.h
+    ScriptComponent.h
+    Transform.h
+    # 资源
+    CubemapTextureAsset.h
+    TextureAsset.h
+    # 音效合成器
+    SoundSynthesizer.h
+    # 示例/测试
+    TriangleExample.h
+    # 预编译头
+    pch.h
+    packing/Pipeline.h
+    # 脚本系统
+    scripting/MonoRuntime.h
+    scripting/ScriptSystem.h
+    # ECS 系统
+    core/AssetManager.h
+    core/ECS.h
+    # 音频系统
+    audio/AudioAPI.h
+    audio/AudioDevice.h
+    audio/AudioManager.h
+    audio/AudioSystem.h
+    audio/AudioTypes.h
+    audio/IAudioDevice.h
+    # 输入系统
+    input/InputDevice.h
+    input/InputManager.h
+    # 资源系统
+    resource/Asset.h
+    resource/AssetSerializer.h
+    resource/MeshAsset.h
+    resource/ResourceFallback.h
+    resource/TextureAsset.h
+)
+
+# 平台特定头文件
+if(WIN32)
+    list(APPEND CORE_HEADERS
+        platform/Application.h
+        platform/WindowsUtils.h
+    )
+endif()
+
+# Debug 模式下添加编辑器相关
+if(PRISMA_ENABLE_IMGUI_DEBUG)
+    list(APPEND CORE_SOURCES
+        DebugOverlay.cpp
+        EditorApplication.cpp
+    )
+    list(APPEND CORE_HEADERS
+        DebugOverlay.h
+        Build.h
+        EditorApplication.h
+    )
+endif()
+
+message(STATUS "Collected ${CORE_SOURCES} core source files")
+message(STATUS "Collected ${CORE_HEADERS} core header files")
+
 # ========== 渲染设备条件编译 ==========
 # 注意：必须在设置 ENGINE_SOURCES 之前添加，因为 ENGINE_SOURCES 使用 ENGINE_GRAPHIC_SOURCES 的值
 
