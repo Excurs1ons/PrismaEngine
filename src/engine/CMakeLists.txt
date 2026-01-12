@@ -1,22 +1,5 @@
 # 引擎核心库 - 条件编译版本
 
-
-# ========== 库类型配置 ==========
-
-option(PRISMA_ENGINE_BUILD_SHARED "Build engine as shared library (DLL/so)" OFF)
-
-# 设置库类型变量
-if(PRISMA_ENGINE_BUILD_SHARED)
-    set(PRISMA_ENGINE_TYPE SHARED)
-    set(PRISMA_ENGINE_LIBRARY_TYPE SHARED)
-    message(STATUS "Engine: Building as SHARED library")
-else()
-    set(PRISMA_ENGINE_TYPE STATIC)
-    set(PRISMA_ENGINE_LIBRARY_TYPE STATIC)
-    message(STATUS "Engine: Building as STATIC library")
-endif()
-
-
 # Windows平台定义 - 必须在任何include之前
 if(WIN32)
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
@@ -307,7 +290,7 @@ list(APPEND ENGINE_HEADERS
 
 # ========== 创建引擎库 ==========
 
-add_library(Engine ${PRISMA_ENGINE_TYPE}
+add_library(Engine STATIC
     ${ENGINE_SOURCES}
     ${ENGINE_HEADERS}
     pch.h
