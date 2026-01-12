@@ -17,8 +17,7 @@
         "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_ENABLE_RENDER_DX12": "ON",
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "ON",
-        "PRISMA_ENABLE_RENDER_VULKAN": "OFF",
-        "PRISMA_ENABLE_AUDIO_OPENAL": "OFF"
+        "PRISMA_ENABLE_RENDER_VULKAN": "OFF"
       },
       "condition": {
         "type": "equals",
@@ -38,7 +37,6 @@
         "PRISMA_ENABLE_RENDER_DX12": "OFF",
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "OFF",
         "PRISMA_ENABLE_RENDER_VULKAN": "ON",
-        "PRISMA_ENABLE_AUDIO_OPENAL": "ON",
         "CMAKE_FIND_PACKAGE_PREFER_CONFIG": "OFF",
         "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
         "ANDROID_NDK": "$env{ANDROID_NDK_HOME}/",
