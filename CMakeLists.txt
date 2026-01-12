@@ -58,13 +58,13 @@ message(STATUS "")
 
 # ========== 安装配置 ==========
 
-include(cmake/InstallConfig.cmake)
+#include(cmake/InstallConfig.cmake)
 
 # ========== 项目目标和资源复制 ==========
 
 # 此模块必须在所有子目录添加后调用
-include(cmake/ProjectTargets.cmake)
+# include(cmake/ProjectTargets.cmake)
 
 # ========== 打包配置 ==========
 
-include(cmake/PackagingConfig.cmake)
+# include(cmake/PackagingConfig.cmake)
