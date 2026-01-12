@@ -12,7 +12,17 @@ option(PRISMA_USE_NATIVE_INPUT "Use platform native input APIs only (no third-pa
 # Native 应用模式：仅使用平台 SDK 原生应用 API，不依赖第三方库
 option(PRISMA_USE_NATIVE_APP "Use platform SDK native app APIs only (no third-party app dependencies)" ON)
 # ========== 平台默认配置 ==========
+# ========== 应用程序默认配置 ==========
+set(PRISMA_ENABLE_APP_NATIVE_DEFAULT OFF)
+set(PRISMA_ENABLE_APP_SDL3_DEFAULT OFF)
 
+if(PRISMA_USE_NATIVE_APP)
+    # Native 模式：使用平台 SDK 原生应用 API
+    set(PRISMA_ENABLE_APP_NATIVE_DEFAULT ON)
+else()
+    # 跨平台模式：使用 SDL3 创建程序入口
+    set(PRISMA_ENABLE_APP_SDL3_DEFAULT ON)
+endif()
 # ========== 音频设备默认配置 ==========
 set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
 set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT OFF)
