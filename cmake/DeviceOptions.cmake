@@ -10,7 +10,7 @@ option(PRISMA_USE_NATIVE_AUDIO "Use platform native audio APIs only (no third-pa
 option(PRISMA_USE_NATIVE_INPUT "Use platform native input APIs only (no third-party input dependencies)" ON)
 
 # Native 应用模式：仅使用平台 SDK 原生应用 API，不依赖第三方库
-option(PRISMA_USE_NATIVE_APP "Use platform SDK native app APIs only (no third-party app dependencies)" ON)
+option(PRISMA_USE_NATIVE_APP "Use platform SDK native app APIs only (no third-party app dependencies)" OFF)
 # ========== 平台默认配置 ==========
 # ========== 应用程序默认配置 ==========
 set(PRISMA_ENABLE_APP_NATIVE_DEFAULT OFF)
@@ -352,10 +352,23 @@ message(STATUS "Native Audio: ${PRISMA_USE_NATIVE_AUDIO}")
 message(STATUS "Native Input: ${PRISMA_USE_NATIVE_INPUT}")
 
 message(STATUS "")
+
+message(STATUS "Application Configuration:")
+if(PRISMA_USE_NATIVE_APP)
+    message(STATUS "  Native")
+else()
+    message(STATUS "  Cross-Platform")
+endif()
+
+message(STATUS "")
 message(STATUS "Audio Devices:")
-foreach(AUDIO ${PRISMA_AUDIO_LIST})
-    message(STATUS "  ${AUDIO}")
-endforeach()
+if(PRISMA_AUDIO_LIST)
+    foreach(INPUT ${PRISMA_AUDIO_LIST})
+        message(STATUS "  ${INPUT}")
+    endforeach()
+else()
+    message(STATUS "  (none)")
+endif()
 
 message(STATUS "")
 message(STATUS "Input Devices:")
