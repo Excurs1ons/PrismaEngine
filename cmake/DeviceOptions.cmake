@@ -4,76 +4,54 @@
 # ========== Native 模式选项 ==========
 
 # Native 音频模式：仅使用平台 SDK 原生音频 API，不依赖第三方库
-option(PRISMA_USE_NATIVE_AUDIO "Use platform native audio APIs only (no third-party audio dependencies)" OFF)
+option(PRISMA_USE_NATIVE_AUDIO "Use platform native audio APIs only (no third-party audio dependencies)" ON)
 
 # Native 输入模式：仅使用平台 SDK 原生输入 API，不依赖第三方库
-option(PRISMA_USE_NATIVE_INPUT "Use platform native input APIs only (no third-party input dependencies)" OFF)
+option(PRISMA_USE_NATIVE_INPUT "Use platform native input APIs only (no third-party input dependencies)" ON)
 
+# Native 应用模式：仅使用平台 SDK 原生应用 API，不依赖第三方库
+option(PRISMA_USE_NATIVE_APP "Use platform SDK native app APIs only (no third-party app dependencies)" ON)
 # ========== 平台默认配置 ==========
 
 # ========== 音频设备默认配置 ==========
+set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
+set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT OFF)
+set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT OFF)
 
 if(PRISMA_USE_NATIVE_AUDIO)
     # Native 音频模式：使用平台 SDK 原生音频 API
     if(WIN32)
         set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT ON)
-        set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_COREAUDIO_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_ALSA_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT OFF)
     elseif(ANDROID)
         set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT ON)
-        set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_COREAUDIO_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_ALSA_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT OFF)
     elseif(APPLE)
-        set(PRISMA_ENABLE_AUDIO_COREAUDIO_DEFAULT ON)
-        set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_ALSA_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT OFF)
+        message(FATAL_ERROR "APPLE is not supported yet.")
     else()
-        # Linux Native: ALSA
-        set(PRISMA_ENABLE_AUDIO_ALSA_DEFAULT ON)
-        set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_COREAUDIO_DEFAULT OFF)
-        set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT OFF)
+        message(FATAL_ERROR "Linux is not supported yet.")
     endif()
 else()
     # 跨平台模式：使用 SDL3
     set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT ON)
-    set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
-    set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT OFF)
-    set(PRISMA_ENABLE_AUDIO_COREAUDIO_DEFAULT OFF)
-    set(PRISMA_ENABLE_AUDIO_ALSA_DEFAULT OFF)
 endif()
 
 # ========== 输入设备默认配置 ==========
 set(PRISMA_ENABLE_INPUT_GAMEACTIVITY_DEFAULT OFF)
-set(PRISMA_ENABLE_INPUT_RAWINPUT_DEFAULT OFF)
-set(PRISMA_ENABLE_INPUT_WIN32_DEFAULT OFF)
 set(PRISMA_ENABLE_INPUT_XINPUT_DEFAULT OFF)
-set(PRISMA_ENABLE_INPUT_COCOA_DEFAULT OFF)
-set(PRISMA_ENABLE_INPUT_EVDEV_DEFAULT OFF)
 set(PRISMA_ENABLE_INPUT_SDL3_DEFAULT OFF)
 
 if(PRISMA_USE_NATIVE_INPUT)
     # Native 输入模式：使用平台 SDK 原生输入 API
     if(WIN32)
-        set(PRISMA_ENABLE_INPUT_RAWINPUT_DEFAULT ON)
+        set(PRISMA_ENABLE_INPUT_XINPUT_DEFAULT ON)
     elseif(ANDROID)
         set(PRISMA_ENABLE_INPUT_GAMEACTIVITY_DEFAULT ON)
     elseif(APPLE)
-        set(PRISMA_ENABLE_INPUT_COCOA_DEFAULT ON)
+        message(FATAL_ERROR "APPLE is not supported yet.")
     else()
-        # Linux Native: evdev
-        set(PRISMA_ENABLE_INPUT_EVDEV_DEFAULT ON)
+        message(FATAL_ERROR "Linux is not supported yet.")
     endif()
 else()
-    # 兼容模式：使用跨平台第三方库 (默认不启用任何输入，由子项目配置)
-    message(STATUS "No input api configured.")
+    set(PRISMA_ENABLE_INPUT_SDL3_DEFAULT ON)
 endif()
 
 # ========== 渲染设备默认配置 (不受 Native 模式影响) ==========
@@ -87,10 +65,9 @@ if(WIN32)
 elseif(ANDROID)
     set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
 elseif(APPLE)
-    set(PRISMA_ENABLE_RENDER_METAL_DEFAULT ON)
+    message(FATAL_ERROR "APPLE is not supported yet.")
 else()
-    # Linux/其他平台默认使用 Vulkan
-    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
+    message(FATAL_ERROR "Linux is not supported yet.")
 endif()
 
 # ========== 音频设备选项 ==========
@@ -101,32 +78,16 @@ option(PRISMA_ENABLE_AUDIO_XAUDIO2 "Enable XAudio2 (Windows native)" ${PRISMA_EN
 # Android 原生
 option(PRISMA_ENABLE_AUDIO_AAUDIO "Enable AAudio (Android native, API 26+)" ${PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT})
 
-# Apple 原生
-option(PRISMA_ENABLE_AUDIO_COREAUDIO "Enable CoreAudio (Apple native)" ${PRISMA_ENABLE_AUDIO_COREAUDIO_DEFAULT})
-
-# Linux 原生
-option(PRISMA_ENABLE_AUDIO_ALSA "Enable ALSA (Linux native)" ${PRISMA_ENABLE_AUDIO_ALSA_DEFAULT})
-option(PRISMA_ENABLE_AUDIO_PULSEAUDIO "Enable PulseAudio (Linux native)" OFF)
-
 # 跨平台
 option(PRISMA_ENABLE_AUDIO_SDL3 "Enable SDL3 Audio (cross-platform)" ${PRISMA_ENABLE_AUDIO_SDL3_DEFAULT})
 
 # ========== 输入设备选项 ==========
 
 # Windows 原生
-option(PRISMA_ENABLE_INPUT_RAWINPUT "Enable RawInput (Windows native)" ${PRISMA_ENABLE_INPUT_RAWINPUT_DEFAULT})
-option(PRISMA_ENABLE_INPUT_WIN32 "Enable Win32 Input (Windows native)" ${PRISMA_ENABLE_INPUT_WIN32_DEFAULT})
 option(PRISMA_ENABLE_INPUT_XINPUT "Enable XInput (Windows gamepad)" ${PRISMA_ENABLE_INPUT_XINPUT_DEFAULT})
 
 # Android 原生
 option(PRISMA_ENABLE_INPUT_GAMEACTIVITY "Enable GameActivity (Android native)" ${PRISMA_ENABLE_INPUT_GAMEACTIVITY_DEFAULT})
-
-# Apple 原生
-option(PRISMA_ENABLE_INPUT_COCOA "Enable Cocoa Input (Apple native)" ${PRISMA_ENABLE_INPUT_COCOA_DEFAULT})
-
-# Linux 原生
-option(PRISMA_ENABLE_INPUT_EVDEV "Enable evdev (Linux native)" ${PRISMA_ENABLE_INPUT_EVDEV_DEFAULT})
-option(PRISMA_ENABLE_INPUT_LIBINPUT "Enable libinput (Linux native)" OFF)
 
 # 跨平台第三方库
 option(PRISMA_ENABLE_INPUT_SDL3 "Enable SDL3 Input (cross-platform)" ${PRISMA_ENABLE_INPUT_SDL3_DEFAULT})
@@ -140,20 +101,14 @@ option(PRISMA_ENABLE_RENDER_D3D11 "Enable DirectX11 (Windows native)" OFF)
 # Android 原生 (Vulkan 在 GPU 驱动层)
 option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan (cross-platform, Android native)" ${PRISMA_ENABLE_RENDER_VULKAN_DEFAULT})
 
-# Apple 原生
-option(PRISMA_ENABLE_RENDER_METAL "Enable Metal (Apple native)" ${PRISMA_ENABLE_RENDER_METAL_DEFAULT})
-
 # Linux 原生
 option(PRISMA_ENABLE_RENDER_OPENGL "Enable OpenGL (Linux native)" ${PRISMA_ENABLE_RENDER_OPENGL_DEFAULT})
-option(PRISMA_ENABLE_RENDER_DRM "Enable DRM/KMS (Linux native, headless)" OFF)
 
 # 跨平台
 option(PRISMA_ENABLE_RENDER_WEBGPU "Enable WebGPU (Web)" OFF)
 
 # ========== 数学库选项 ==========
-
 option(PRISMA_USE_DIRECTXMATH "Use DirectXMath on Windows (Windows only)" OFF)
-option(PRISMA_FORCE_GLM "Force use GLM on all platforms" OFF)
 
 # ========== 功能选项 ==========
 
@@ -183,10 +138,8 @@ if(NOT WIN32)
         message(WARNING "XAudio2 is only supported on Windows. Disabling...")
         set(PRISMA_ENABLE_AUDIO_XAUDIO2 OFF CACHE BOOL "" FORCE)
     endif()
-    if(PRISMA_ENABLE_INPUT_RAWINPUT OR PRISMA_ENABLE_INPUT_WIN32 OR PRISMA_ENABLE_INPUT_XINPUT)
+    if(PRISMA_ENABLE_INPUT_XINPUT)
         message(WARNING "Windows input APIs are only supported on Windows. Disabling...")
-        set(PRISMA_ENABLE_INPUT_RAWINPUT OFF CACHE BOOL "" FORCE)
-        set(PRISMA_ENABLE_INPUT_WIN32 OFF CACHE BOOL "" FORCE)
         set(PRISMA_ENABLE_INPUT_XINPUT OFF CACHE BOOL "" FORCE)
     endif()
     if(PRISMA_ENABLE_RENDER_DX12 OR PRISMA_ENABLE_RENDER_D3D11)
@@ -210,36 +163,10 @@ endif()
 
 # Apple 平台检查
 if(NOT APPLE)
-    if(PRISMA_ENABLE_AUDIO_COREAUDIO)
-        message(WARNING "CoreAudio is only supported on Apple platforms. Disabling...")
-        set(PRISMA_ENABLE_AUDIO_COREAUDIO OFF CACHE BOOL "" FORCE)
-    endif()
-    if(PRISMA_ENABLE_INPUT_COCOA)
-        message(WARNING "Cocoa input is only supported on Apple platforms. Disabling...")
-        set(PRISMA_ENABLE_INPUT_COCOA OFF CACHE BOOL "" FORCE)
-    endif()
-    if(PRISMA_ENABLE_RENDER_METAL)
-        message(WARNING "Metal is only supported on Apple platforms. Disabling...")
-        set(PRISMA_ENABLE_RENDER_METAL OFF CACHE BOOL "" FORCE)
-    endif()
 endif()
 
 # Linux 平台检查
 if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    if(PRISMA_ENABLE_AUDIO_ALSA OR PRISMA_ENABLE_AUDIO_PULSEAUDIO)
-        message(WARNING "Linux audio APIs are only supported on Linux. Disabling...")
-        set(PRISMA_ENABLE_AUDIO_ALSA OFF CACHE BOOL "" FORCE)
-        set(PRISMA_ENABLE_AUDIO_PULSEAUDIO OFF CACHE BOOL "" FORCE)
-    endif()
-    if(PRISMA_ENABLE_INPUT_EVDEV OR PRISMA_ENABLE_INPUT_LIBINPUT)
-        message(WARNING "Linux input APIs are only supported on Linux. Disabling...")
-        set(PRISMA_ENABLE_INPUT_EVDEV OFF CACHE BOOL "" FORCE)
-        set(PRISMA_ENABLE_INPUT_LIBINPUT OFF CACHE BOOL "" FORCE)
-    endif()
-    if(PRISMA_ENABLE_RENDER_DRM)
-        message(WARNING "DRM/KMS is only supported on Linux. Disabling...")
-        set(PRISMA_ENABLE_RENDER_DRM OFF CACHE BOOL "" FORCE)
-    endif()
 endif()
 
 # ========== 至少一个设备检查 ==========
@@ -254,18 +181,6 @@ if(PRISMA_ENABLE_AUDIO_AAUDIO)
     set(HAS_AUDIO_DEVICE ON)
     list(APPEND PRISMA_AUDIO_LIST "AAudio")
 endif()
-if(PRISMA_ENABLE_AUDIO_COREAUDIO)
-    set(HAS_AUDIO_DEVICE ON)
-    list(APPEND PRISMA_AUDIO_LIST "CoreAudio")
-endif()
-if(PRISMA_ENABLE_AUDIO_ALSA)
-    set(HAS_AUDIO_DEVICE ON)
-    list(APPEND PRISMA_AUDIO_LIST "ALSA")
-endif()
-if(PRISMA_ENABLE_AUDIO_PULSEAUDIO)
-    set(HAS_AUDIO_DEVICE ON)
-    list(APPEND PRISMA_AUDIO_LIST "PulseAudio")
-endif()
 if(PRISMA_ENABLE_AUDIO_SDL3)
     set(HAS_AUDIO_DEVICE ON)
     list(APPEND PRISMA_AUDIO_LIST "SDL3")
@@ -277,34 +192,19 @@ endif()
 
 set(HAS_INPUT_DEVICE OFF)
 set(PRISMA_INPUT_LIST "")
-if(WIN32 AND (PRISMA_ENABLE_INPUT_RAWINPUT OR PRISMA_ENABLE_INPUT_WIN32 OR PRISMA_ENABLE_INPUT_XINPUT))
+
+if(PRISMA_ENABLE_INPUT_XINPUT)
     set(HAS_INPUT_DEVICE ON)
-    if(PRISMA_ENABLE_INPUT_RAWINPUT)
-        list(APPEND PRISMA_INPUT_LIST "RawInput")
-    endif()
-    if(PRISMA_ENABLE_INPUT_WIN32)
-        list(APPEND PRISMA_INPUT_LIST "Win32")
-    endif()
-    if(PRISMA_ENABLE_INPUT_XINPUT)
-        list(APPEND PRISMA_INPUT_LIST "XInput")
-    endif()
-elseif(ANDROID AND PRISMA_ENABLE_INPUT_GAMEACTIVITY)
+    list(APPEND PRISMA_INPUT_LIST "XInput")
+elseif(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
     set(HAS_INPUT_DEVICE ON)
     list(APPEND PRISMA_INPUT_LIST "GameActivity")
-elseif(APPLE AND PRISMA_ENABLE_INPUT_COCOA)
-    set(HAS_INPUT_DEVICE ON)
-    list(APPEND PRISMA_INPUT_LIST "Cocoa")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND (PRISMA_ENABLE_INPUT_EVDEV OR PRISMA_ENABLE_INPUT_LIBINPUT))
-    set(HAS_INPUT_DEVICE ON)
-    if(PRISMA_ENABLE_INPUT_EVDEV)
-        list(APPEND PRISMA_INPUT_LIST "evdev")
-    endif()
-    if(PRISMA_ENABLE_INPUT_LIBINPUT)
-        list(APPEND PRISMA_INPUT_LIST "libinput")
-    endif()
 elseif(PRISMA_ENABLE_INPUT_SDL3)
     set(HAS_INPUT_DEVICE ON)
     list(APPEND PRISMA_INPUT_LIST "SDL3")
+else()
+    set(HAS_INPUT_DEVICE OFF)
+    message(FATAL_ERROR "At least one input device must be enabled!")
 endif()
 
 # 注意：输入设备不是必须的，某些平台可能不需要
@@ -314,33 +214,20 @@ set(PRISMA_RENDER_LIST "")
 if(PRISMA_ENABLE_RENDER_DX12)
     set(HAS_RENDER_DEVICE ON)
     list(APPEND PRISMA_RENDER_LIST "DirectX12")
-endif()
-if(PRISMA_ENABLE_RENDER_D3D11)
+elseif(PRISMA_ENABLE_RENDER_D3D11)
     set(HAS_RENDER_DEVICE ON)
     list(APPEND PRISMA_RENDER_LIST "DirectX11")
-endif()
-if(PRISMA_ENABLE_RENDER_VULKAN)
+elseif(PRISMA_ENABLE_RENDER_VULKAN)
     set(HAS_RENDER_DEVICE ON)
     list(APPEND PRISMA_RENDER_LIST "Vulkan")
-endif()
-if(PRISMA_ENABLE_RENDER_METAL)
-    set(HAS_RENDER_DEVICE ON)
-    list(APPEND PRISMA_RENDER_LIST "Metal")
-endif()
-if(PRISMA_ENABLE_RENDER_OPENGL)
+elseif(PRISMA_ENABLE_RENDER_OPENGL)
     set(HAS_RENDER_DEVICE ON)
     list(APPEND PRISMA_RENDER_LIST "OpenGL")
-endif()
-if(PRISMA_ENABLE_RENDER_DRM)
-    set(HAS_RENDER_DEVICE ON)
-    list(APPEND PRISMA_RENDER_LIST "DRM/KMS")
-endif()
-if(PRISMA_ENABLE_RENDER_WEBGPU)
+elseif(PRISMA_ENABLE_RENDER_WEBGPU)
     set(HAS_RENDER_DEVICE ON)
     list(APPEND PRISMA_RENDER_LIST "WebGPU")
-endif()
-
-if(NOT HAS_RENDER_DEVICE)
+else ()
+    set(HAS_RENDER_DEVICE OFF)
     message(FATAL_ERROR "At least one render device must be enabled!")
 endif()
 
@@ -415,9 +302,6 @@ if(PRISMA_ENABLE_RENDER_METAL)
 endif()
 if(PRISMA_ENABLE_RENDER_OPENGL)
     add_definitions(-DPRISMA_ENABLE_RENDER_OPENGL=1)
-endif()
-if(PRISMA_ENABLE_RENDER_DRM)
-    add_definitions(-DPRISMA_ENABLE_RENDER_DRM=1)
 endif()
 if(PRISMA_ENABLE_RENDER_WEBGPU)
     add_definitions(-DPRISMA_ENABLE_RENDER_WEBGPU=1)
