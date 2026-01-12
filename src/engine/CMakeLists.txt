@@ -89,13 +89,6 @@ endif()
 #     )
 # endif()
 
-# OpenAL 音频后端
-if(PRISMA_ENABLE_AUDIO_OPENAL)
-    list(APPEND CORE_SOURCES
-        audio/AudioDeviceOpenAL.cpp
-    )
-endif()
-
 # ========== 基础源文件（继续）==========
 list(APPEND CORE_SOURCES
     # 输入系统
@@ -374,38 +367,6 @@ if(PRISMA_ENABLE_AUDIO_XAUDIO2)
     endif()
 endif()
 
-if(PRISMA_ENABLE_AUDIO_OPENAL)
-    # OpenAL 由 FetchContent.cmake 管理
-    # 尝试所有可能的 OpenAL 目标名称
-    get_cmake_property(_TARGETS TARGETS)
-    message(STATUS "Available targets containing 'OpenAL' or 'openal':")
-    foreach(_TARGET ${_TARGETS})
-        if(_TARGET MATCHES "[Oo]pen[Aa][Ll]")
-            message(STATUS "  - ${_TARGET}")
-        endif()
-    endforeach()
-
-    if(TARGET OpenAL::OpenAL)
-        target_link_libraries(Engine PUBLIC OpenAL::OpenAL)
-        message(STATUS "Linking OpenAL::OpenAL")
-    elseif(TARGET OpenAL)
-        target_link_libraries(Engine PUBLIC OpenAL)
-        message(STATUS "Linking OpenAL")
-    elseif(TARGET openal-soft)
-        target_link_libraries(Engine PUBLIC openal-soft)
-        message(STATUS "Linking openal-soft")
-    else()
-        # 回退到传统的 find_package
-        find_package(OpenAL QUIET)
-        if(OpenAL_FOUND)
-            target_include_directories(Engine PUBLIC ${OpenAL_INCLUDE_DIRS})
-            target_link_libraries(Engine PUBLIC ${OpenAL_LIBRARIES})
-            message(STATUS "Linking OpenAL via find_package")
-        else()
-            message(WARNING "OpenAL not found, but device is enabled")
-        endif()
-    endif()
-endif()
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
     # SDL3 由 FetchContent.cmake 管理
@@ -547,6 +508,12 @@ endif()
 
 # 根据选项选择数学库
 if(WIN32 AND PRISMA_USE_DIRECTXMATH AND NOT PRISMA_FORCE_GLM)
+    # DirectX-Headers (PRIVATE - 内部使用)
+    if(TARGET Microsoft::DirectX-Headers)
+        target_link_libraries(Engine PRIVATE Microsoft::DirectX-Headers)
+    elseif(TARGET DirectX-Headers)
+        target_link_libraries(Engine PRIVATE DirectX-Headers)
+    endif()
     # Windows平台使用DirectXMath
     target_compile_definitions(Engine PUBLIC
         PRISMA_USE_DIRECTXMATH
@@ -589,22 +556,14 @@ elseif(DEFINED stb_SOURCE_DIR)
     target_include_directories(Engine PRIVATE ${stb_SOURCE_DIR})
 endif()
 
-# Windows 平台额外依赖
-if(WIN32 AND NOT ANDROID)
-    # DirectX-Headers (PRIVATE - 内部使用)
-    if(TARGET Microsoft::DirectX-Headers)
-        target_link_libraries(Engine PRIVATE Microsoft::DirectX-Headers)
-    elseif(TARGET DirectX-Headers)
-        target_link_libraries(Engine PRIVATE DirectX-Headers)
-    endif()
-
+if(DEBUG)
     # ImGui - 编辑器 UI 框架 (PUBLIC - Editor 需要使用)
     if(TARGET imgui::imgui)
         target_link_libraries(Engine PUBLIC imgui::imgui)
     elseif(TARGET imgui)
         target_link_libraries(Engine PUBLIC imgui)
     endif()
-endif()
+endif ()
 
 # 根据启用的设备定义宏
 target_compile_definitions(Engine PUBLIC
