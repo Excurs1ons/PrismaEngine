@@ -279,13 +279,21 @@ endif()
 if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
     FetchContent_MakeAvailable(imgui)
 
-    # 创建 ImGui::imgui 目标 (兼容 vcpkg)
-    if(NOT TARGET imgui::imgui)
-        add_library(imgui INTERFACE)
-        target_include_directories(imgui INTERFACE
+    # 创建 ImGui 静态库（需要编译源文件）
+    if(NOT TARGET imgui AND NOT TARGET imgui::imgui)
+        add_library(imgui STATIC
+            ${imgui_SOURCE_DIR}/imgui.cpp
+            ${imgui_SOURCE_DIR}/imgui_draw.cpp
+            ${imgui_SOURCE_DIR}/imgui_tables.cpp
+            ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+        )
+        target_include_directories(imgui PUBLIC
             ${imgui_SOURCE_DIR}
             ${imgui_SOURCE_DIR}/backends
         )
+        add_library(imgui::imgui ALIAS imgui)
+    elseif(NOT TARGET imgui::imgui AND TARGET imgui)
+        # 如果已存在 imgui 目标但没有别名，创建别名
         add_library(imgui::imgui ALIAS imgui)
     endif()
 
@@ -383,5 +391,62 @@ if(ANDROID)
 
     if(NOT TARGET nlohmann_json::nlohmann_json)
         FetchContent_MakeAvailable(nlohmann_json)
+    endif()
+endif()
+
+# ========== 超分辨率依赖 / Upscaler Dependencies ==========
+
+# FSR 3.1 - AMD FidelityFX SDK
+if(PRISMA_ENABLE_UPSCALER_FSR)
+    set(FETCHCONTENT_FIDELITYFX_SDK_DIR "${FETCHCONTENT_BASE_DIR}/FidelityFX-SDK")
+    FetchContent_Declare(
+        FidelityFX-SDK
+        GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git
+        GIT_TAG v1.1.0  # FSR 3.1.6
+        GIT_SHALLOW TRUE
+    )
+
+    # 配置 FidelityFX SDK - 必需的选项
+    # 注意：这些变量必须在 FetchContent_MakeAvailable 之前设置
+    set(BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+    set(FFX_BUILD_SDK OFF CACHE BOOL "Build SDK" FORCE)
+    set(FFX_BUILD_SAMPLES OFF CACHE BOOL "Build samples" FORCE)
+    set(FFX_BUILD_TESTS OFF CACHE BOOL "Build tests" FORCE)
+    set(FFX_BUILD_DOCUMENTATION OFF CACHE BOOL "Build documentation" FORCE)
+
+    # FidelityFX 依赖选项
+    set(FFX_FETCH_CONTENT OFF CACHE BOOL "Use FetchContent for dependencies" FORCE)
+
+    # 配置外部依赖路径（使用项目已有的依赖）
+    if(TARGET glm)
+        set(FFX_SDK_DEPENDENCIES_GLMSHARED ON CACHE BOOL "" FORCE)
+    endif()
+
+    FetchContent_MakeAvailable(FidelityFX-SDK)
+    message(STATUS "FidelityFX SDK: 使用 FetchContent")
+endif()
+
+# DLSS 4/4.5 - NVIDIA Streamline SDK
+if(PRISMA_ENABLE_UPSCALER_DLSS)
+    # 检查平台支持
+    if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        set(FETCHCONTENT_STREAMLINE_DIR "${FETCHCONTENT_BASE_DIR}/Streamline")
+        FetchContent_Declare(
+            Streamline
+            GIT_REPOSITORY https://github.com/NVIDIA-RTX/Streamline.git
+            GIT_TAG v2.9.0
+            GIT_SHALLOW TRUE
+        )
+
+        # 配置 Streamline
+        set(SL_BUILD_SAMPLES OFF CACHE BOOL "Build samples" FORCE)
+        set(SL_BUILD_TESTS OFF CACHE BOOL "Build tests" FORCE)
+        set(SL_BUILD_DOCUMENTATION OFF CACHE BOOL "Build documentation" FORCE)
+
+        FetchContent_MakeAvailable(Streamline)
+        message(STATUS "NVIDIA Streamline: 使用 FetchContent")
+    else()
+        message(WARNING "DLSS is only supported on Windows and Linux. Disabling...")
+        set(PRISMA_ENABLE_UPSCALER_DLSS OFF CACHE BOOL "" FORCE)
     endif()
 endif()

@@ -27,6 +27,11 @@ class SkyboxPass;
 class TransparentPass;
 class CompositionPass;
 
+// 前置声明：超分辨率 Pass
+#if defined(PRISMA_ENABLE_UPSCALER_FSR) || defined(PRISMA_ENABLE_UPSCALER_DLSS) || defined(PRISMA_ENABLE_UPSCALER_TSR)
+class UpscalerPass;
+#endif
+
 /// @brief 延迟渲染管线实现
 /// 管理和执行延迟渲染的所有 Pass
 /// 顺序：GeometryPass → SkyboxPass → LightingPass → TransparentPass → CompositionPass
@@ -95,6 +100,17 @@ public:
     /// @brief 获取合成 Pass
     CompositionPass* GetCompositionPass() const { return m_compositionPass.get(); }
 
+    // === 超分辨率 Pass ===
+
+#if defined(PRISMA_ENABLE_UPSCALER_FSR) || defined(PRISMA_ENABLE_UPSCALER_DLSS) || defined(PRISMA_ENABLE_UPSCALER_TSR)
+    /// @brief 设置超分辨率 Pass
+    /// @param upscalerPass 超分辨率 Pass
+    void SetUpscalerPass(UpscalerPass* upscalerPass);
+
+    /// @brief 获取超分辨率 Pass
+    UpscalerPass* GetUpscalerPass() const { return m_upscalerPass; }
+#endif
+
     // === 光照设置 ===
 
     /// @brief 添加光源
@@ -152,6 +168,11 @@ private:
     std::shared_ptr<LightingPass> m_lightingPass;
     std::shared_ptr<TransparentPass> m_transparentPass;
     std::shared_ptr<CompositionPass> m_compositionPass;
+
+#if defined(PRISMA_ENABLE_UPSCALER_FSR) || defined(PRISMA_ENABLE_UPSCALER_DLSS) || defined(PRISMA_ENABLE_UPSCALER_TSR)
+    // 超分辨率 Pass（可选）
+    UpscalerPass* m_upscalerPass = nullptr;
+#endif
 
     // 相机接口
     PrismaEngine::Graphic::ICamera* m_camera;
