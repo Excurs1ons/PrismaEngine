@@ -8,6 +8,16 @@
     #include "adapters/FSR/UpscalerFSR.h"
 #endif
 
+// DLSS 适配器
+#if defined(PRISMA_ENABLE_UPSCALER_DLSS)
+    #include "adapters/DLSS/UpscalerDLSS.h"
+#endif
+
+// TSR 适配器
+#if defined(PRISMA_ENABLE_UPSCALER_TSR)
+    #include "adapters/TSR/UpscalerTSR.h"
+#endif
+
 namespace PrismaEngine::Graphic {
 
 // ========== UpscalerManager Implementation ==========
@@ -131,13 +141,15 @@ void UpscalerManager::CreateAvailableUpscalers(IRenderDevice* device) {
 #endif
 
 #if defined(PRISMA_ENABLE_UPSCALER_DLSS)
-    // TODO: 创建 DLSS 超分辨率器
-    // m_upscalers[UpscalerTechnology::DLSS] = std::make_unique<UpscalerDLSS>();
+    auto dlssUpscaler = std::make_unique<UpscalerDLSS>();
+    // 注意：不在这里初始化，初始化在 CreateUpscaler 中进行
+    m_upscalers[UpscalerTechnology::DLSS] = std::move(dlssUpscaler);
 #endif
 
 #if defined(PRISMA_ENABLE_UPSCALER_TSR)
-    // TODO: 创建 TSR 超分辨率器
-    // m_upscalers[UpscalerTechnology::TSR] = std::make_unique<UpscalerTSR>();
+    auto tsrUpscaler = std::make_unique<UpscalerTSR>();
+    // 注意：不在这里初始化，初始化在 CreateUpscaler 中进行
+    m_upscalers[UpscalerTechnology::TSR] = std::move(tsrUpscaler);
 #endif
 }
 
