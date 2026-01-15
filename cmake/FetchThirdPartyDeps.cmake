@@ -213,31 +213,44 @@ endif()
 
 # DirectX-Headers (Windows only) - 当启用 DX12 渲染或编辑器时
 if(WIN32 AND (PRISMA_ENABLE_RENDER_DX12 OR PRISMA_BUILD_EDITOR))
-    # DirectX-Headers 是纯头文件库，需要手动处理
-    FetchContent_GetProperties(directx-headers)
+    # 使用 FetchContent_MakeAvailable 统一处理
+    # DirectX-Headers 的 CMakeLists.txt 会创建正确的目标
+    FetchContent_MakeAvailable(DirectX-Headers)
 
-    if(NOT directx-headers_POPULATED)
-        # 使用 FetchContent_Declare 声明的内容下载
-        FetchContent_Populate(directx-headers QUIET
-            GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
-            GIT_TAG v1.614.1
-            GIT_SHALLOW TRUE
-        )
-
-        # 创建 INTERFACE 目标
-        if(NOT TARGET DirectX-Headers)
-            add_library(DirectX-Headers INTERFACE)
-            target_include_directories(DirectX-Headers INTERFACE
-                ${directx-headers_SOURCE_DIR}/include
-            )
-        endif()
-        if(NOT TARGET Microsoft::DirectX-Headers)
-            add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
-        endif()
-
-        message(STATUS "DirectX-Headers: 使用 FetchContent")
+    # 确保别名存在
+    if(TARGET DirectX-Headers AND NOT TARGET Microsoft::DirectX-Headers)
+        add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
     endif()
 
+    message(STATUS "DirectX-Headers: 使用 FetchContent")
+
+    # 调试信息：检查源码目录
+    if(DEFINED DirectX-Headers_SOURCE_DIR)
+        message(STATUS "  DirectX-Headers_SOURCE_DIR: ${DirectX-Headers_SOURCE_DIR}")
+        message(STATUS "  Include 目录: ${DirectX-Headers_SOURCE_DIR}/include")
+        message(STATUS "  DirectX 头文件路径: ${DirectX-Headers_SOURCE_DIR}/include/directx")
+        # 检查目录是否存在
+        if(EXISTS "${DirectX-Headers_SOURCE_DIR}/include/directx/d3dx12.h")
+            message(STATUS "  ✓ d3dx12.h 存在")
+        else()
+            message(WARNING "  ✗ d3dx12.h 不存在!")
+        endif()
+    endif()
+
+    # 调试信息：检查目标属性
+    if(TARGET DirectX-Headers)
+        message(STATUS "  DirectX-Headers 目标已创建")
+        get_target_property(DX_INCLUDE_DIRS DirectX-Headers INCLUDE_DIRECTORIES)
+        message(STATUS "  DirectX-Headers INCLUDE_DIRECTORIES: ${DX_INCLUDE_DIRS}")
+    else()
+        message(WARNING "  DirectX-Headers 目标未创建!")
+    endif()
+
+    if(TARGET Microsoft::DirectX-Headers)
+        message(STATUS "  Microsoft::DirectX-Headers 别名已创建")
+    else()
+        message(WARNING "  Microsoft::DirectX-Headers 别名未创建!")
+    endif()
 endif()
 
 # ImGui - Debug 模式或编辑器需要
@@ -322,14 +335,6 @@ if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR PRISMA_ENABLE_RENDER
         add_library(SDL3::SDL3-shared ALIAS SDL3_shared)
     endif()
 
-
-    # DirectX-Headers
-    if(WIN32 AND TARGET DirectX-Headers)
-        if(NOT TARGET Microsoft::DirectX-Headers)
-            add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
-        endif()
-    endif()
-
     # 为了解决 install(EXPORT) 的问题，我们需要将 FetchContent
     # 获取的依赖标记为 INTERFACE，这样它们不会出现在导出集中
     # 但仍然可以被链接
@@ -352,6 +357,12 @@ if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR PRISMA_ENABLE_RENDER
     if(TARGET imgui AND NOT TARGET imgui::imgui)
         # 已经在上面创建了 imgui INTERFACE 目标
     endif()
+endif()
+
+# DirectX-Headers - 确保别名存在（如果 FetchContent_MakeAvailable 没有创建）
+if(WIN32 AND TARGET DirectX-Headers AND NOT TARGET Microsoft::DirectX-Headers)
+    add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
+    message(STATUS "创建 Microsoft::DirectX-Headers 别名")
 endif()
 
 # ========== Android平台特殊处理 ==========
