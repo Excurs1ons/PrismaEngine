@@ -15,18 +15,23 @@ struct SkyboxUniformBufferObject {
     alignas(16) Matrix4 view;
     alignas(16) Matrix4 proj;
 };
+
+// 前向声明 VmaAllocation（Vulkan Memory Allocator）
+struct VmaAllocation_T;
+typedef VmaAllocation_T* VmaAllocation;
+
 // Skybox渲染数据
 struct SkyboxRenderData {
     VkBuffer vertexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
+    // vertexBufferMemory 已移除 - VMA 通过 allocation 管理
     VkBuffer indexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory indexBufferMemory = VK_NULL_HANDLE;
+    // indexBufferMemory 已移除 - VMA 通过 allocation 管理
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
     std::vector<VkDescriptorSet> descriptorSets;
     std::vector<VkBuffer> uniformBuffers;
-    std::vector<VkDeviceMemory> uniformBuffersMemory;
+    std::vector<VkDeviceMemory> uniformBuffersMemory;  // Skybox 使用传统 Vulkan 内存管理
     std::vector<void*> uniformBuffersMapped;
     bool hasTexture = false;  // 是否有有效的cubemap纹理
 };
@@ -36,7 +41,7 @@ struct ClearColorData {
     VkPipeline pipeline = VK_NULL_HANDLE;
     VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
     VkBuffer vertexBuffer = VK_NULL_HANDLE;
-    VkDeviceMemory vertexBufferMemory = VK_NULL_HANDLE;
+    // vertexBufferMemory 已移除 - VMA 通过 allocation 管理
 };
 
 
