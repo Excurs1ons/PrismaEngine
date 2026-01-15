@@ -270,6 +270,12 @@ if(NOT PRISMA_IS_DEBUG_BUILD)
     endforeach()
 endif()
 
+# Debug 构建自动启用 ImGui（所有平台）
+if(PRISMA_IS_DEBUG_BUILD AND NOT DEFINED PRISMA_ENABLE_IMGUI_DEBUG)
+    set(PRISMA_ENABLE_IMGUI_DEBUG ON CACHE BOOL "Enable ImGui debug overlay" FORCE)
+    message(STATUS "自动启用 PRISMA_ENABLE_IMGUI_DEBUG (Debug 构建)")
+endif()
+
 if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
     FetchContent_MakeAvailable(imgui)
 
