@@ -25,7 +25,8 @@ MotionVectorPass::~MotionVectorPass() {
 }
 
 void MotionVectorPass::SetRenderTarget(IRenderTarget* renderTarget) {
-    m_motionVectorOutput = renderTarget;
+    // 将 IRenderTarget* 转换为 ITextureRenderTarget*
+    m_motionVectorOutput = dynamic_cast<ITextureRenderTarget*>(renderTarget);
 }
 
 void MotionVectorPass::SetDepthStencil(IDepthStencil* depthStencil) {
