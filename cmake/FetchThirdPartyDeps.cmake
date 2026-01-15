@@ -396,13 +396,16 @@ endif()
 
 # ========== 超分辨率依赖 / Upscaler Dependencies ==========
 
-# FSR 3.1 - AMD FidelityFX SDK
+# FSR SDK 2.1.0 - AMD FidelityFX SDK
+# 最新版本: v2.1.0 (包含 FSR Redstone) - 2025年12月
+# GitHub: https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
+# 包含 FSR Redstone ML 神经渲染技术
 if(PRISMA_ENABLE_UPSCALER_FSR)
     set(FETCHCONTENT_FIDELITYFX_SDK_DIR "${FETCHCONTENT_BASE_DIR}/FidelityFX-SDK")
     FetchContent_Declare(
         FidelityFX-SDK
         GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git
-        GIT_TAG v1.1.0  # FSR 3.1.6
+        GIT_TAG v2.1.0  # FSR SDK 2.1.0 (最新版本，包含 FSR Redstone)
         GIT_SHALLOW TRUE
     )
 
@@ -426,7 +429,11 @@ if(PRISMA_ENABLE_UPSCALER_FSR)
     message(STATUS "FidelityFX SDK: 使用 FetchContent")
 endif()
 
-# DLSS 4/4.5 - NVIDIA Streamline SDK
+# DLSS 4.5 - NVIDIA Streamline SDK
+# 最新版本: v2.9.0 - 2025年8月
+# 支持 DLSS 4.5, Multi-Frame Generation, Ray Reconstruction
+# GitHub: https://github.com/NVIDIA-RTX/Streamline
+# 文档: https://developer.nvidia.com/rtx/streamline
 if(PRISMA_ENABLE_UPSCALER_DLSS)
     # 检查平台支持
     if(WIN32 OR CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -434,7 +441,7 @@ if(PRISMA_ENABLE_UPSCALER_DLSS)
         FetchContent_Declare(
             Streamline
             GIT_REPOSITORY https://github.com/NVIDIA-RTX/Streamline.git
-            GIT_TAG v2.9.0
+            GIT_TAG v2.9.0  # 最新版本 (2025年8月)
             GIT_SHALLOW TRUE
         )
 

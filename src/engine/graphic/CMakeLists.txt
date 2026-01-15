@@ -180,14 +180,26 @@ endif()
 
 # DLSS 实现
 if(PRISMA_ENABLE_UPSCALER_DLSS)
-    # TODO: 添加 DLSS 源文件
-    message(STATUS "  Upscaler: DLSS enabled (sources to be added)")
+    list(APPEND UPSCALER_CORE_SOURCES
+        graphic/upscaler/adapters/DLSS/UpscalerDLSS.cpp
+        graphic/upscaler/adapters/DLSS/DLSSResources.cpp
+    )
+    list(APPEND UPSCALER_CORE_HEADERS
+        graphic/upscaler/adapters/DLSS/UpscalerDLSS.h
+        graphic/upscaler/adapters/DLSS/DLSSResources.h
+    )
+    message(STATUS "  Upscaler: DLSS enabled")
 endif()
 
 # TSR 实现
 if(PRISMA_ENABLE_UPSCALER_TSR)
-    # TODO: 添加 TSR 源文件
-    message(STATUS "  Upscaler: TSR enabled (sources to be added)")
+    list(APPEND UPSCALER_CORE_SOURCES
+        graphic/upscaler/adapters/TSR/UpscalerTSR.cpp
+    )
+    list(APPEND UPSCALER_CORE_HEADERS
+        graphic/upscaler/adapters/TSR/UpscalerTSR.h
+    )
+    message(STATUS "  Upscaler: TSR enabled")
 endif()
 
 # 添加到引擎图形库
