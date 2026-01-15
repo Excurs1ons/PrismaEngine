@@ -17,11 +17,20 @@
 #include <thread>
 
 // ============================================================================
+// 常量定义
+// ============================================================================
+namespace {
+    // Windows 动态库文件名
+    constexpr const char* EDITOR_LIB = "PrismaEditor.dll";
+    constexpr const char* GAME_LIB = "PrismaGame.dll";
+}
+
+// ============================================================================
 // 应用程序入口点
 // ============================================================================
 int main(int argc, char* argv[]) {
 
-#ifdef _WIN32
+#if defined(_WIN32) || defined(_WIN64)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
@@ -100,16 +109,16 @@ int main(int argc, char* argv[]) {
         LOG_FATAL("Logger", "日志系统初始化失败，正在退出...");
         return -1;
     }
-    std::string lib_name;
 
+    // 根据命令行参数选择要加载的库
+    const char* lib_name;
     if (cmdParser.IsOptionSet("editor")) {
         LOG_INFO("Runtime", "尝试启动编辑器");
-        lib_name = "PrismaEditor.dll";
-    }
-    else {
+        lib_name = EDITOR_LIB;
+    } else {
         // 默认启动游戏模式（如果没有指定--editor参数）
         LOG_INFO("Runtime", "默认启动游戏模式");
-        lib_name = "PrismaGame.dll";
+        lib_name = GAME_LIB;
     }
 
     // 设置资源路径
