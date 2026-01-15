@@ -70,7 +70,7 @@ set(VULKAN_HEADERS
 set(ENGINE_GRAPHIC_SOURCES
     ${PIPELINE_FORWARD_SOURCES}
     ${PIPELINE_DEFERRED_SOURCES}
-    ${UI_SOURCES}
+    # ${UI_SOURCES}  # 暂时禁用：UIPass.cpp 实现被注释掉了
     ${LOGICAL_SOURCES}
     graphic/pipelines/SkyboxRenderPass.cpp
     graphic/GeometryRenderPass.cpp
@@ -96,7 +96,7 @@ set(ENGINE_GRAPHIC_SOURCES
 set(ENGINE_GRAPHIC_HEADERS
     ${PIPELINE_FORWARD_HEADERS}
     ${PIPELINE_DEFERRED_HEADERS}
-    ${UI_HEADERS}
+    # ${UI_HEADERS}  # 暂时禁用：UIPass.cpp 实现被注释掉了
     ${LOGICAL_HEADERS}
     graphic/pipelines/SkyboxRenderPass.h
     graphic/GeometryRenderPass.h
@@ -140,3 +140,56 @@ set(ENGINE_GRAPHIC_HEADERS
 
 # Android 平台渲染器保留在 PrismaAndroid 子模块中
 # 不在这里重复编译
+
+# ========== 超分辨率模块 / Upscaler Module ==========
+
+# 超分辨率核心文件（总是需要）
+set(UPSCALER_CORE_SOURCES
+    graphic/upscaler/UpscalerManager.cpp
+    graphic/upscaler/UpscalerPass.cpp
+)
+
+set(UPSCALER_CORE_HEADERS
+    graphic/upscaler/UpscalerManager.h
+    graphic/upscaler/UpscalerPass.h
+    graphic/interfaces/IUpscaler.h
+)
+
+# 运动矢量 Pass（如果启用）
+if(PRISMA_ENABLE_UPSCALER_MOTION_VECTORS)
+    list(APPEND UPSCALER_CORE_SOURCES
+        graphic/upscaler/MotionVectorPass.cpp
+    )
+    list(APPEND UPSCALER_CORE_HEADERS
+        graphic/upscaler/MotionVectorPass.h
+    )
+endif()
+
+# FSR 实现
+if(PRISMA_ENABLE_UPSCALER_FSR)
+    list(APPEND UPSCALER_CORE_SOURCES
+        graphic/upscaler/adapters/FSR/UpscalerFSR.cpp
+        graphic/upscaler/adapters/FSR/FSRResources.cpp
+    )
+    list(APPEND UPSCALER_CORE_HEADERS
+        graphic/upscaler/adapters/FSR/UpscalerFSR.h
+        graphic/upscaler/adapters/FSR/FSRResources.h
+    )
+    message(STATUS "  Upscaler: FSR enabled")
+endif()
+
+# DLSS 实现
+if(PRISMA_ENABLE_UPSCALER_DLSS)
+    # TODO: 添加 DLSS 源文件
+    message(STATUS "  Upscaler: DLSS enabled (sources to be added)")
+endif()
+
+# TSR 实现
+if(PRISMA_ENABLE_UPSCALER_TSR)
+    # TODO: 添加 TSR 源文件
+    message(STATUS "  Upscaler: TSR enabled (sources to be added)")
+endif()
+
+# 添加到引擎图形库
+list(APPEND ENGINE_GRAPHIC_SOURCES ${UPSCALER_CORE_SOURCES})
+list(APPEND ENGINE_GRAPHIC_HEADERS ${UPSCALER_CORE_HEADERS})
