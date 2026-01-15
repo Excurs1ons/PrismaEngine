@@ -93,7 +93,7 @@ IUpscaler* UpscalerManager::GetUpscaler(UpscalerTechnology technology) const {
 }
 
 UpscalerTechnology UpscalerManager::GetDefaultTechnology() {
-#if defined(PRISMA_PLATFORM_WINDOWS)
+#if defined(_WIN32) || defined(_WIN64)
     // Windows: 优先 DLSS，然后 FSR
 #if defined(PRISMA_ENABLE_UPSCALER_DLSS)
     return UpscalerTechnology::DLSS;
@@ -102,7 +102,7 @@ UpscalerTechnology UpscalerManager::GetDefaultTechnology() {
 #else
     return UpscalerTechnology::TSR;
 #endif
-#elif defined(PRISMA_PLATFORM_ANDROID)
+#elif defined(__ANDROID__)
     // Android: FSR 或 TSR（DLSS 不支持）
 #if defined(PRISMA_ENABLE_UPSCALER_FSR)
     return UpscalerTechnology::FSR;
