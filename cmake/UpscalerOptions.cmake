@@ -66,7 +66,7 @@ if(PRISMA_ENABLE_UPSCALER_TSR)
 endif()
 
 if(NOT HAS_UPSCALER)
-    message(WARNING "No upscaler enabled. Consider enabling at least one (FSR recommended).")
+    message(STATUS "No upscaler enabled. Consider enabling at least one (FSR recommended).")
 endif()
 
 # ========== 设置预处理器定义 / Set Preprocessor Definitions ==========
