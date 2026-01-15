@@ -26,6 +26,9 @@ include(cmake/OutputDirectories.cmake)
 # 设备选项配置 (需要在 FetchContent 之前)
 include(cmake/DeviceOptions.cmake)
 
+# 超分辨率选项配置 (需要在 FetchContent 之前)
+include(cmake/UpscalerOptions.cmake)
+
 # ========== 依赖管理配置 ==========
 
 option(PRISMA_USE_FETCHCONTENT "使用 CMake FetchContent 管理依赖" ON)
