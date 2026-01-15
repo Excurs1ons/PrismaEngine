@@ -56,16 +56,16 @@ public:
     // === 输入资源设置 ===
 
     /// @brief 设置颜色输入（来自 CompositionPass）
-    void SetColorInput(IRenderTarget* colorTarget) { m_colorInput = colorTarget; }
+    void SetColorInput(ITextureRenderTarget* colorTarget) { m_colorInput = colorTarget; }
 
     /// @brief 设置深度输入
-    void SetDepthInput(IDepthStencil* depth) { m_depthInput = depth; }
+    void SetDepthInput(ITextureRenderTarget* depth) { m_depthInput = depth; }
 
     /// @brief 设置运动矢量输入
-    void SetMotionVectorInput(IRenderTarget* motionVectors) { m_motionVectors = motionVectors; }
+    void SetMotionVectorInput(ITextureRenderTarget* motionVectors) { m_motionVectors = motionVectors; }
 
     /// @brief 设置法线输入（optional）
-    void SetNormalInput(IRenderTarget* normal) { m_normalInput = normal; }
+    void SetNormalInput(ITextureRenderTarget* normal) { m_normalInput = normal; }
 
     // === 输出配置 ===
 
@@ -109,10 +109,10 @@ private:
     UpscalerQuality m_quality = UpscalerQuality::Quality;
 
     // 输入资源
-    IRenderTarget* m_colorInput = nullptr;
-    IDepthStencil* m_depthInput = nullptr;
-    IRenderTarget* m_motionVectors = nullptr;
-    IRenderTarget* m_normalInput = nullptr;
+    ITextureRenderTarget* m_colorInput = nullptr;
+    ITextureRenderTarget* m_depthInput = nullptr;
+    ITextureRenderTarget* m_motionVectors = nullptr;
+    ITextureRenderTarget* m_normalInput = nullptr;
 
     // 输出资源
     IRenderTarget* m_outputTarget = nullptr;

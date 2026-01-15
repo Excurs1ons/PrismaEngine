@@ -1,7 +1,6 @@
 #include "UpscalerPass.h"
 #include "UpscalerManager.h"
 #include "interfaces/IRenderTarget.h"
-#include "interfaces/IDepthStencil.h"
 #include <cstring>
 
 namespace PrismaEngine::Graphic {
@@ -81,10 +80,10 @@ void UpscalerPass::Execute(const PassExecutionContext& context) {
 
     // 准备输入描述
     UpscalerInputDesc inputDesc;
-    inputDesc.colorTexture = m_colorInput;  // IRenderTarget 继承自 ITexture
-    inputDesc.depthTexture = m_depthInput;
-    inputDesc.motionVectorTexture = m_motionVectors;
-    inputDesc.normalTexture = m_normalInput;
+    inputDesc.colorTexture = m_colorInput ? m_colorInput->GetTexture() : nullptr;
+    inputDesc.depthTexture = m_depthInput ? m_depthInput->GetTexture() : nullptr;
+    inputDesc.motionVectorTexture = m_motionVectors ? m_motionVectors->GetTexture() : nullptr;
+    inputDesc.normalTexture = m_normalInput ? m_normalInput->GetTexture() : nullptr;
     inputDesc.jitterX = m_jitterX;
     inputDesc.jitterY = m_jitterY;
     inputDesc.deltaTime = context.sceneData->time.deltaTime;

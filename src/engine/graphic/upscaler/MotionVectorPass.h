@@ -50,7 +50,7 @@ public:
     // === 输出 ===
 
     /// @brief 获取运动矢量渲染目标
-    IRenderTarget* GetMotionVectorOutput() const { return m_motionVectorOutput; }
+    ITextureRenderTarget* GetMotionVectorOutput() const { return m_motionVectorOutput; }
 
     // === 相机信息 ===
 
@@ -65,7 +65,7 @@ private:
     bool CreateShaders();
 
     // 资源
-    IRenderTarget* m_motionVectorOutput = nullptr;
+    ITextureRenderTarget* m_motionVectorOutput = nullptr;
     IDepthStencil* m_currentDepth = nullptr;
     IDepthStencil* m_previousDepth = nullptr;
     IGBuffer* m_gBuffer = nullptr;
