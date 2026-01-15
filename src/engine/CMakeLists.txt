@@ -459,6 +459,24 @@ if(PRISMA_ENABLE_RENDER_OPENGL)
     endif()
 endif()
 
+# DirectX12 (Windows) - 需要 DirectX-Headers
+if(PRISMA_ENABLE_RENDER_DX12)
+    if(WIN32)
+        # 链接 DirectX-Headers
+        if(TARGET Microsoft::DirectX-Headers)
+            target_link_libraries(Engine PUBLIC Microsoft::DirectX-Headers)
+            message(STATUS "链接 Microsoft::DirectX-Headers (DX12 渲染设备)")
+        elseif(TARGET DirectX-Headers)
+            target_link_libraries(Engine PUBLIC DirectX-Headers)
+            message(STATUS "链接 DirectX-Headers (DX12 渲染设备)")
+        else()
+            message(FATAL_ERROR "DirectX-Headers 目标未找到! DX12 渲染设备需要 DirectX-Headers")
+        endif()
+    else()
+        message(FATAL_ERROR "DirectX12 仅支持 Windows 平台")
+    endif()
+endif()
+
 # ========== 设置包含目录 ==========
 
 target_include_directories(Engine
@@ -494,8 +512,18 @@ if(WIN32 AND PRISMA_USE_DIRECTXMATH AND NOT PRISMA_FORCE_GLM)
     # DirectX-Headers (PRIVATE - 内部使用)
     if(TARGET Microsoft::DirectX-Headers)
         target_link_libraries(Engine PRIVATE Microsoft::DirectX-Headers)
+        message(STATUS "链接 Microsoft::DirectX-Headers 到 Engine")
+        # 调试信息
+        get_target_property(DX_HEADERS_INCLUDE Microsoft::DirectX-Headers INTERFACE_INCLUDE_DIRECTORIES)
+        message(STATUS "  Microsoft::DirectX-Headers INTERFACE_INCLUDE_DIRECTORIES: ${DX_HEADERS_INCLUDE}")
     elseif(TARGET DirectX-Headers)
         target_link_libraries(Engine PRIVATE DirectX-Headers)
+        message(STATUS "链接 DirectX-Headers 到 Engine")
+        # 调试信息
+        get_target_property(DX_HEADERS_INCLUDE DirectX-Headers INTERFACE_INCLUDE_DIRECTORIES)
+        message(STATUS "  DirectX-Headers INTERFACE_INCLUDE_DIRECTORIES: ${DX_HEADERS_INCLUDE}")
+    else()
+        message(WARNING "DirectX-Headers 目标未找到!")
     endif()
     # Windows平台使用DirectXMath
     target_compile_definitions(Engine PUBLIC
