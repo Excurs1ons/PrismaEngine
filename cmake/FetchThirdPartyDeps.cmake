@@ -129,88 +129,67 @@ message(STATUS "")
 message(STATUS "=== FetchContent 依赖管理 ===")
 
 # GLM (总是需要)
-if(PRISMA_USE_FETCHCONTENT)
-    # 禁用 GLM 的测试和示例
-    set(GLM_BUILD_TESTS OFF CACHE BOOL "Build GLM tests" FORCE)
-    set(GLM_BUILD_EXAMPLES OFF CACHE BOOL "Build GLM examples" FORCE)
+# 禁用 GLM 的测试和示例
+set(GLM_BUILD_TESTS OFF CACHE BOOL "Build GLM tests" FORCE)
+set(GLM_BUILD_EXAMPLES OFF CACHE BOOL "Build GLM examples" FORCE)
 
-    FetchContent_MakeAvailable(glm)
-    message(STATUS "GLM: 使用 FetchContent")
-else()
-    find_package(glm CONFIG REQUIRED)
-    message(STATUS "GLM: 使用系统/vcpkg")
-endif()
+FetchContent_MakeAvailable(glm)
+message(STATUS "GLM: 使用 FetchContent")
+
 
 # nlohmann_json (总是需要)
-if(PRISMA_USE_FETCHCONTENT)
-    FetchContent_MakeAvailable(nlohmann_json)
-    message(STATUS "nlohmann_json: 使用 FetchContent")
-else()
-    find_package(nlohmann_json CONFIG REQUIRED)
-    message(STATUS "nlohmann_json: 使用系统/vcpkg")
-endif()
+
+FetchContent_MakeAvailable(nlohmann_json)
+message(STATUS "nlohmann_json: 使用 FetchContent")
+
 
 # stb (总是需要)
-if(PRISMA_USE_FETCHCONTENT)
-    FetchContent_MakeAvailable(stb)
-    # 创建 stb 接口库 (header-only)
-    if(NOT TARGET stb)
-        add_library(stb INTERFACE IMPORTED GLOBAL)
-        set_target_properties(stb PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${stb_SOURCE_DIR}"
-        )
-    endif()
-    message(STATUS "stb: 使用 FetchContent")
-else()
-    # stb 通常是 header-only，从系统查找
-    message(STATUS "stb: 使用系统/vcpkg")
+
+FetchContent_MakeAvailable(stb)
+# 创建 stb 接口库 (header-only)
+if(NOT TARGET stb)
+    add_library(stb INTERFACE IMPORTED GLOBAL)
+    set_target_properties(stb PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${stb_SOURCE_DIR}"
+    )
 endif()
+message(STATUS "stb: 使用 FetchContent")
+
 
 # Tweeny (总是需要 - UI 动画)
-if(PRISMA_USE_FETCHCONTENT)
-    FetchContent_MakeAvailable(tweeny)
-    # 创建 tweeny 接口库 (header-only)
-    # 注意：FetchContent_MakeAvailable 可能已创建目标，需要检查
-    if(NOT TARGET tweeny AND NOT TARGET tweeny::tweeny)
-        add_library(tweeny INTERFACE IMPORTED GLOBAL)
-        set_target_properties(tweeny PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${tweeny_SOURCE_DIR}"
-        )
-        add_library(tweeny::tweeny ALIAS tweeny)
-    elseif(NOT TARGET tweeny::tweeny AND TARGET tweeny)
-        # 如果 tweeny 目标存在但没有别名，创建别名
-        add_library(tweeny::tweeny ALIAS tweeny)
-    endif()
-    message(STATUS "Tweeny: 使用 FetchContent")
-else()
-    message(STATUS "Tweeny: 使用系统/vcpkg (如果可用)")
+FetchContent_MakeAvailable(tweeny)
+# 创建 tweeny 接口库 (header-only)
+# 注意：FetchContent_MakeAvailable 可能已创建目标，需要检查
+if(NOT TARGET tweeny AND NOT TARGET tweeny::tweeny)
+    add_library(tweeny INTERFACE IMPORTED GLOBAL)
+    set_target_properties(tweeny PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${tweeny_SOURCE_DIR}"
+    )
+    add_library(tweeny::tweeny ALIAS tweeny)
+elseif(NOT TARGET tweeny::tweeny AND TARGET tweeny)
+    # 如果 tweeny 目标存在但没有别名，创建别名
+    add_library(tweeny::tweeny ALIAS tweeny)
 endif()
+message(STATUS "Tweeny: 使用 FetchContent")
+
 
 # ========== 条件依赖 ==========
 
 # SDL3 - 当启用 SDL3 音频或输入，且非 Native 模式时
 # Native 模式下使用平台原生 API，不需要 SDL3
 if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN) AND NOT PRISMA_USE_NATIVE_AUDIO AND NOT PRISMA_USE_NATIVE_INPUT)
-    if(PRISMA_USE_FETCHCONTENT)
         # SDL3 需要特殊配置来构建静态库
         set(SDL_SHARED OFF CACHE BOOL "Build SDL3 as shared library" FORCE)
         set(SDL_STATIC ON CACHE BOOL "Build SDL3 as static library" FORCE)
         set(SDL_TEST_LIBRARY OFF CACHE BOOL "Build SDL3 test library" FORCE)
-
         # 禁用 SDL3 的测试和示例
         set(SDL_TESTS OFF CACHE BOOL "Build SDL3 tests" FORCE)
         set(SDL_EXAMPLES OFF CACHE BOOL "Build SDL3 examples" FORCE)
         set(SDL_INSTALL_TESTS OFF CACHE BOOL "Install SDL3 tests" FORCE)
-
         # 禁用 SDL3 的预编译头（Android NDK 构建时可能有问题）
         set(SDL_PCH OFF CACHE BOOL "Build SDL3 with PCH" FORCE)
-
         FetchContent_MakeAvailable(SDL3)
         message(STATUS "SDL3: 使用 FetchContent")
-    else()
-        find_package(SDL3 CONFIG REQUIRED)
-        message(STATUS "SDL3: 使用系统/vcpkg")
-    endif()
 endif()
 
 # Vulkan-Headers - 当启用 Vulkan 渲染时
@@ -218,7 +197,7 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
         # Android 平台使用 NDK 自带的 Vulkan，不需要额外下载
         message(STATUS "Vulkan: 使用 Android NDK 的 Vulkan")
-    elseif(PRISMA_USE_FETCHCONTENT)
+    else()
         FetchContent_MakeAvailable(Vulkan-Headers)
         message(STATUS "Vulkan-Headers: 使用 FetchContent")
 
@@ -229,43 +208,36 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
         # vk-bootstrap 需要 Vulkan-Headers
         FetchContent_MakeAvailable(vk-bootstrap)
         message(STATUS "vk-bootstrap: 使用 FetchContent")
-    else()
-        find_package(Vulkan CONFIG REQUIRED)
-        message(STATUS "Vulkan: 使用系统/vcpkg")
     endif()
 endif()
 
 # DirectX-Headers (Windows only) - 当启用 DX12 渲染或编辑器时
 if(WIN32 AND (PRISMA_ENABLE_RENDER_DX12 OR PRISMA_BUILD_EDITOR))
-    if(PRISMA_USE_FETCHCONTENT)
-        # DirectX-Headers 是纯头文件库，需要手动处理
-        FetchContent_GetProperties(directx-headers)
+    # DirectX-Headers 是纯头文件库，需要手动处理
+    FetchContent_GetProperties(directx-headers)
 
-        if(NOT directx-headers_POPULATED)
-            # 使用 FetchContent_Declare 声明的内容下载
-            FetchContent_Populate(directx-headers QUIET
-                GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
-                GIT_TAG v1.614.1
-                GIT_SHALLOW TRUE
+    if(NOT directx-headers_POPULATED)
+        # 使用 FetchContent_Declare 声明的内容下载
+        FetchContent_Populate(directx-headers QUIET
+            GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
+            GIT_TAG v1.614.1
+            GIT_SHALLOW TRUE
+        )
+
+        # 创建 INTERFACE 目标
+        if(NOT TARGET DirectX-Headers)
+            add_library(DirectX-Headers INTERFACE)
+            target_include_directories(DirectX-Headers INTERFACE
+                ${directx-headers_SOURCE_DIR}/include
             )
-
-            # 创建 INTERFACE 目标
-            if(NOT TARGET DirectX-Headers)
-                add_library(DirectX-Headers INTERFACE)
-                target_include_directories(DirectX-Headers INTERFACE
-                    ${directx-headers_SOURCE_DIR}/include
-                )
-            endif()
-            if(NOT TARGET Microsoft::DirectX-Headers)
-                add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
-            endif()
-
-            message(STATUS "DirectX-Headers: 使用 FetchContent")
         endif()
-    else()
-        find_package(directx-headers CONFIG REQUIRED)
-        message(STATUS "DirectX-Headers: 使用系统/vcpkg")
+        if(NOT TARGET Microsoft::DirectX-Headers)
+            add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
+        endif()
+
+        message(STATUS "DirectX-Headers: 使用 FetchContent")
     endif()
+
 endif()
 
 # ImGui - Debug 模式或编辑器需要
@@ -285,33 +257,28 @@ if(NOT PRISMA_IS_DEBUG_BUILD)
     endforeach()
 endif()
 
-if(WIN32 AND (PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG))
-    if(PRISMA_USE_FETCHCONTENT)
-        FetchContent_MakeAvailable(imgui)
+if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
+    FetchContent_MakeAvailable(imgui)
 
-        # 创建 ImGui::imgui 目标 (兼容 vcpkg)
-        if(NOT TARGET imgui::imgui)
-            add_library(imgui INTERFACE)
-            target_include_directories(imgui INTERFACE
-                ${imgui_SOURCE_DIR}
-                ${imgui_SOURCE_DIR}/backends
-            )
-            add_library(imgui::imgui ALIAS imgui)
-        endif()
+    # 创建 ImGui::imgui 目标 (兼容 vcpkg)
+    if(NOT TARGET imgui::imgui)
+        add_library(imgui INTERFACE)
+        target_include_directories(imgui INTERFACE
+            ${imgui_SOURCE_DIR}
+            ${imgui_SOURCE_DIR}/backends
+        )
+        add_library(imgui::imgui ALIAS imgui)
+    endif()
 
-        if(PRISMA_IS_DEBUG_BUILD AND PRISMA_ENABLE_IMGUI_DEBUG)
-            message(STATUS "ImGui: 使用 FetchContent (Debug 模式调试工具)")
-        else()
-            message(STATUS "ImGui: 使用 FetchContent (编辑器)")
-        endif()
+    if(PRISMA_IS_DEBUG_BUILD AND PRISMA_ENABLE_IMGUI_DEBUG)
+        message(STATUS "ImGui: 使用 FetchContent (Debug 模式调试工具)")
     else()
-        find_package(imgui CONFIG REQUIRED)
-        message(STATUS "ImGui: 使用系统/vcpkg")
+        message(STATUS "ImGui: 使用 FetchContent (编辑器)")
     endif()
 endif()
 
 # OpenFBX (Windows only)
-if(WIN32 AND PRISMA_USE_FETCHCONTENT)
+if(PRISMA_BUILD_EDITOR)
     # 禁用 OpenFBX 的安装规则（避免安装阶段的错误）
     set(OPENFBX_INSTALL OFF CACHE BOOL "OpenFBX install" FORCE)
     FetchContent_MakeAvailable(openfbx)
@@ -324,38 +291,37 @@ message(STATUS "")
 # ========== 别名创建 (统一接口) ==========
 
 # 为 FetchContent 的库创建与 vcpkg 兼容的别名
-if(PRISMA_USE_FETCHCONTENT)
-    # GLM
-    if(TARGET glm::glm-header-only)
-        # 已有正确目标
-    elseif(TARGET glm)
-        add_library(glm::glm-header-only ALIAS glm)
+# GLM
+if(TARGET glm::glm-header-only)
+    # 已有正确目标
+elseif(TARGET glm)
+    add_library(glm::glm-header-only ALIAS glm)
+endif()
+
+# nlohmann_json
+if(TARGET nlohmann_json::nlohmann_json)
+    # 已有正确目标
+elseif(TARGET nlohmann_json)
+    add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
+endif()
+
+# SDL3
+if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN) AND NOT PRISMA_USE_NATIVE_AUDIO AND NOT PRISMA_USE_NATIVE_INPUT)
+    # SDL3 在 Android 上可能创建 SDL3-static 目标
+    # 为所有常见变体创建别名
+    if(TARGET SDL3-static AND NOT TARGET SDL3::SDL3-static)
+        add_library(SDL3::SDL3-static ALIAS SDL3-static)
+    endif()
+    if(TARGET SDL3_static AND NOT TARGET SDL3::SDL3-static)
+        add_library(SDL3::SDL3-static ALIAS SDL3_static)
+    endif()
+    if(TARGET SDL3-shared AND NOT TARGET SDL3::SDL3-shared)
+        add_library(SDL3::SDL3-shared ALIAS SDL3-shared)
+    endif()
+    if(TARGET SDL3_shared AND NOT TARGET SDL3::SDL3-shared)
+        add_library(SDL3::SDL3-shared ALIAS SDL3_shared)
     endif()
 
-    # nlohmann_json
-    if(TARGET nlohmann_json::nlohmann_json)
-        # 已有正确目标
-    elseif(TARGET nlohmann_json)
-        add_library(nlohmann_json::nlohmann_json ALIAS nlohmann_json)
-    endif()
-
-    # SDL3
-    if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN) AND NOT PRISMA_USE_NATIVE_AUDIO AND NOT PRISMA_USE_NATIVE_INPUT)
-        # SDL3 在 Android 上可能创建 SDL3-static 目标
-        # 为所有常见变体创建别名
-        if(TARGET SDL3-static AND NOT TARGET SDL3::SDL3-static)
-            add_library(SDL3::SDL3-static ALIAS SDL3-static)
-        endif()
-        if(TARGET SDL3_static AND NOT TARGET SDL3::SDL3-static)
-            add_library(SDL3::SDL3-static ALIAS SDL3_static)
-        endif()
-        if(TARGET SDL3-shared AND NOT TARGET SDL3::SDL3-shared)
-            add_library(SDL3::SDL3-shared ALIAS SDL3-shared)
-        endif()
-        if(TARGET SDL3_shared AND NOT TARGET SDL3::SDL3-shared)
-            add_library(SDL3::SDL3-shared ALIAS SDL3_shared)
-        endif()
-    endif()
 
     # DirectX-Headers
     if(WIN32 AND TARGET DirectX-Headers)
@@ -393,17 +359,12 @@ endif()
 if(ANDROID)
     # Android平台优先使用系统NDK中的库
     # Vulkan是系统库，不需要额外下载
-
     # 如果需要，可以使用 FetchContent 获取 GLM 和 nlohmann_json
     if(NOT TARGET glm::glm-header-only)
-        if(PRISMA_USE_FETCHCONTENT)
-            FetchContent_MakeAvailable(glm)
-        endif()
+        FetchContent_MakeAvailable(glm)
     endif()
 
     if(NOT TARGET nlohmann_json::nlohmann_json)
-        if(PRISMA_USE_FETCHCONTENT)
-            FetchContent_MakeAvailable(nlohmann_json)
-        endif()
+        FetchContent_MakeAvailable(nlohmann_json)
     endif()
 endif()
