@@ -45,7 +45,7 @@ void UpscalerPass::SetViewport(uint32_t width, uint32_t height) {
     m_displayHeight = height;
 
     // 根据质量模式计算渲染分辨率
-    if (m_upscaler) {
+    if (m_upscaler && m_upscaler->IsInitialized()) {
         uint32_t renderWidth, renderHeight;
         m_upscaler->GetRecommendedRenderResolution(
             m_quality,
@@ -121,6 +121,11 @@ bool UpscalerPass::SetUpscaler(UpscalerTechnology technology) {
         return false;
     }
 
+    // 释放旧超分器资源
+    if (m_upscaler && m_upscaler->IsInitialized()) {
+        m_upscaler->ReleaseResources();
+    }
+
     // 获取超分辨率器
     IUpscaler* upscaler = manager.GetUpscaler(technology);
     if (!upscaler) {
@@ -139,6 +144,9 @@ bool UpscalerPass::SetUpscaler(UpscalerTechnology technology) {
     if (!upscaler->Initialize(desc)) {
         return false;
     }
+
+    // 重置历史
+    upscaler->ResetHistory();
 
     m_upscaler = upscaler;
     m_currentTechnology = technology;
