@@ -52,6 +52,12 @@ public:
     // 检查渲染资源是否已设置
     bool IsRenderingSetup() const { return renderingSetup_; }
 
+    // 设置渲染资源状态
+    void SetRenderingSetup(bool setup) { renderingSetup_ = setup; }
+
+    // 设置场景（供外部设置 Scene）
+    void SetScene(const std::shared_ptr<Scene>& scene) { scene_ = scene; }
+
     // 获取 AssetManager
     AAssetManager* GetAssetManager() { return assetManager_; }
 

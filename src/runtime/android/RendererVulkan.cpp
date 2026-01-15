@@ -50,19 +50,21 @@ RendererVulkan::~RendererVulkan() {
     // 不再销毁 scene_，因为它由 GameManager 管理
     // scene_.reset();  // 已移除
 
-    // 清理ClearColor资源
+    // 清理ClearColor资源（使用 VMA）
     if (clearColorData_.pipeline != VK_NULL_HANDLE) {
         vkDestroyPipeline(vulkanContext_.device, clearColorData_.pipeline, nullptr);
     }
     if (clearColorData_.pipelineLayout != VK_NULL_HANDLE) {
         vkDestroyPipelineLayout(vulkanContext_.device, clearColorData_.pipelineLayout, nullptr);
     }
+    // ClearColor vertexBuffer 由 VMA 管理，但我们需要单独跟踪 allocation
+    // 由于 ClearColorData 没有存储 allocation，这里暂时使用 vkDestroyBuffer
+    // TODO: 为 ClearColorData 添加 VmaAllocation 字段
     if (clearColorData_.vertexBuffer != VK_NULL_HANDLE) {
         vkDestroyBuffer(vulkanContext_.device, clearColorData_.vertexBuffer, nullptr);
-        vkFreeMemory(vulkanContext_.device, clearColorData_.vertexBufferMemory, nullptr);
     }
 
-    // 清理Skybox资源
+    // 清理Skybox资源（Skybox 使用传统 Vulkan 内存管理）
     for (size_t i = 0; i < skyboxData_.uniformBuffers.size(); i++) {
         vkDestroyBuffer(vulkanContext_.device, skyboxData_.uniformBuffers[i], nullptr);
         vkFreeMemory(vulkanContext_.device, skyboxData_.uniformBuffersMemory[i], nullptr);
@@ -76,13 +78,13 @@ RendererVulkan::~RendererVulkan() {
     if (skyboxData_.descriptorSetLayout != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(vulkanContext_.device, skyboxData_.descriptorSetLayout, nullptr);
     }
+    // Skybox buffers 由 VMA 管理，但需要单独跟踪 allocation
+    // TODO: 为 SkyboxRenderData 添加 VmaAllocation 字段
     if (skyboxData_.vertexBuffer != VK_NULL_HANDLE) {
         vkDestroyBuffer(vulkanContext_.device, skyboxData_.vertexBuffer, nullptr);
-        vkFreeMemory(vulkanContext_.device, skyboxData_.vertexBufferMemory, nullptr);
     }
     if (skyboxData_.indexBuffer != VK_NULL_HANDLE) {
         vkDestroyBuffer(vulkanContext_.device, skyboxData_.indexBuffer, nullptr);
-        vkFreeMemory(vulkanContext_.device, skyboxData_.indexBufferMemory, nullptr);
     }
 
     // vkDestroyImageView(vulkanContext_.device, textureImageView, nullptr);
@@ -93,17 +95,21 @@ RendererVulkan::~RendererVulkan() {
     vkDestroyDescriptorPool(vulkanContext_.device, descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(vulkanContext_.device, descriptorSetLayout, nullptr);
 
+    // 清理 renderObjects（使用 VMA）
     for (auto& obj : renderObjects) {
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
-            vkDestroyBuffer(vulkanContext_.device, obj.uniformBuffers[i], nullptr);
-            vkFreeMemory(vulkanContext_.device, obj.uniformBuffersMemory[i], nullptr);
+        for (size_t i = 0; i < obj.uniformBuffers.size(); i++) {
+            vmaUnmapMemory(vmaAllocator_, obj.uniformBuffersAllocations[i]);
+            vmaDestroyBuffer(vmaAllocator_, obj.uniformBuffers[i], obj.uniformBuffersAllocations[i]);
         }
 
-        vkDestroyBuffer(vulkanContext_.device, obj.indexBuffer, nullptr);
-        vkFreeMemory(vulkanContext_.device, obj.indexBufferMemory, nullptr);
-
-        vkDestroyBuffer(vulkanContext_.device, obj.vertexBuffer, nullptr);
-        vkFreeMemory(vulkanContext_.device, obj.vertexBufferMemory, nullptr);
+        // vertexBuffer 和 indexBuffer 由 VMA 管理，但需要单独跟踪 allocation
+        // TODO: 为 RenderObjectData 添加 VmaAllocation 字段
+        if (obj.indexBuffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(vulkanContext_.device, obj.indexBuffer, nullptr);
+        }
+        if (obj.vertexBuffer != VK_NULL_HANDLE) {
+            vkDestroyBuffer(vulkanContext_.device, obj.vertexBuffer, nullptr);
+        }
     }
     renderObjects.clear();
 
@@ -325,194 +331,116 @@ void RendererVulkan::createScene() {
     // 从 GameManager 获取 Scene（如果已存在则复用，窗口重建时状态保留）
     auto& gameManager = PrismaEngine::GameManager::GetInstance();
 
+    // 初始化 GameManager（首次）
     if (!gameManager.IsSceneCreated()) {
-        // 场景不存在，创建新场景
         aout << "RendererVulkan: Creating new scene in GameManager" << std::endl;
         gameManager.Initialize(app_);
         gameManager.CreateScene();
-    } else {
-        aout << "RendererVulkan: Reusing existing scene from GameManager (state preserved)" << std::endl;
-        scene_ = gameManager.GetScene();
-        return;  // 场景已存在，跳过 GameObject 创建
     }
 
+    // 获取 Scene（由 GameManager 管理）
     scene_ = gameManager.GetScene();
+
+    // 如果渲染资源已设置，跳过
+    if (gameManager.IsRenderingSetup()) {
+        aout << "RendererVulkan: Rendering resources already setup, skipping..." << std::endl;
+        return;
+    }
+
+    // 为现有 GameObject 添加渲染组件
+    auto& gameObjects = scene_->getGameObjects();
     auto assetManager = app_->activity->assetManager;
 
-    // 创建主相机
-    {
-        auto cameraGO = std::make_shared<GameObject>();
-        cameraGO->name = "MainCamera";
+    for (auto& go : gameObjects) {
+        // 为 Cube 添加 MeshRenderer 和交互组件
+        if (go->name == "Cube" && !go->GetComponent<MeshRenderer>()) {
+            aout << "RendererVulkan: Adding MeshRenderer to Cube" << std::endl;
 
-        // 修改 Transform 的位置而不是 GameObject 的 position
-        auto transform = cameraGO->GetTransform();
-        transform->position = Vector3(0.0f, 0.0f, 6.0f);
+            auto texture = TextureAsset::loadAsset(assetManager, "textures/android_robot.png", &vulkanContext_);
 
-        auto camera = cameraGO->AddComponent<PrismaEngine::Graphic::Camera>();
-        camera->SetPerspectiveProjection(
-            PrismaEngine::Math::Radians(45.0f),  // FOV
-            16.0f / 9.0f,                         // 初始宽高比（稍后动态更新）
-            0.1f,                                  // 近平面
-            100.0f                                 // 远平面（增大到 100）
-        );
+            Vector4 red(1.0f, 1.0f, 1.0f, 1.0f);
+            std::vector<Vertex> vertices = {
+                // Front
+                Vertex(Vector4(-0.5f, -0.5f,  0.5f, 0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f), Vector4(0, 0, 1, 1.0f)),
+                Vertex(Vector4( 0.5f, -0.5f,  0.5f, 0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f), Vector4(0, 0, 1, 1.0f)),
+                Vertex(Vector4( 0.5f,  0.5f,  0.5f, 0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f), Vector4(0, 0, 1, 1.0f)),
+                Vertex(Vector4(-0.5f,  0.5f,  0.5f, 0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f), Vector4(0, 0, 1, 1.0f)),
+                // Back
+                Vertex(Vector4( 0.5f, -0.5f, -0.5f, 0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f), Vector4(0, 0, -1, 1)),
+                Vertex(Vector4(-0.5f, -0.5f, -0.5f, 0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f), Vector4(0, 0, -1, 1)),
+                Vertex(Vector4(-0.5f,  0.5f, -0.5f, 0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f), Vector4(0, 0, -1, 1)),
+                Vertex(Vector4( 0.5f,  0.5f, -0.5f, 0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f), Vector4(0, 0, -1, 1)),
+                // Top
+                Vertex(Vector4(-0.5f,  0.5f, -0.5f, 0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f), Vector4(0, 1, 0, 1)),
+                Vertex(Vector4(-0.5f,  0.5f,  0.5f, 0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f), Vector4(0, 1, 0, 1)),
+                Vertex(Vector4( 0.5f,  0.5f,  0.5f, 0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f), Vector4(0, 1, 0, 1)),
+                Vertex(Vector4( 0.5f,  0.5f, -0.5f, 0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f), Vector4(0, 1, 0, 1)),
+                // Bottom
+                Vertex(Vector4(-0.5f, -0.5f, -0.5f, 0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f), Vector4(0, -1, 0, 1)),
+                Vertex(Vector4( 0.5f, -0.5f, -0.5f, 0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f), Vector4(0, -1, 0, 1)),
+                Vertex(Vector4( 0.5f, -0.5f,  0.5f, 0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f), Vector4(0, -1, 0, 1)),
+                Vertex(Vector4(-0.5f, -0.5f,  0.5f, 0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f), Vector4(0, -1, 0, 1)),
+                // Right
+                Vertex(Vector4( 0.5f, -0.5f, -0.5f, 0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f), Vector4(1, 0, 0, 1)),
+                Vertex(Vector4( 0.5f,  0.5f, -0.5f, 0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f), Vector4(1, 0, 0, 1)),
+                Vertex(Vector4( 0.5f,  0.5f,  0.5f, 0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f), Vector4(1, 0, 0, 1)),
+                Vertex(Vector4( 0.5f, -0.5f,  0.5f, 0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f), Vector4(1, 0, 0, 1)),
+                // Left
+                Vertex(Vector4(-0.5f, -0.5f, -0.5f, 0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f), Vector4(-1, 0, 0, 1)),
+                Vertex(Vector4(-0.5f, -0.5f,  0.5f, 0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f), Vector4(-1, 0, 0, 1)),
+                Vertex(Vector4(-0.5f,  0.5f,  0.5f, 0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f), Vector4(-1, 0, 0, 1)),
+                Vertex(Vector4(-0.5f,  0.5f, -0.5f, 0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f), Vector4(-1, 0, 0, 1)),
+            };
 
-        scene_->addGameObject(cameraGO);
-        aout << "Main camera created at (0, 0, 3)" << std::endl;
-    }
+            std::vector<Index> indices = {
+                0, 1, 2, 2, 3, 0,       // Front
+                4, 5, 6, 6, 7, 4,       // Back
+                8, 9, 10, 10, 11, 8,   // Top
+                12, 13, 14, 14, 15, 12, // Bottom
+                16, 17, 18, 18, 19, 16, // Right
+                20, 21, 22, 22, 23, 20  // Left
+            };
 
-    // 1. Robot
-    {
-//        auto go = std::make_shared<GameObject>();
-//        go->name = "Robot";
-//        go->position = Vector3(0, 0, 0);
-//
-//        auto texture = TextureAsset::loadAsset(assetManager, "android_robot.png", &vulkanContext_);
-//
-//        std::vector<Vertex> vertices = {
-//                Vertex(Vector3(0.5f, 0.5f, 0.0f), Vector2(1.0f, 0.0f)),
-//                Vertex(Vector3(-0.5f, 0.5f, 0.0f), Vector2(0.0f, 0.0f)),
-//                Vertex(Vector3(-0.5f, -0.5f, 0.0f), Vector2(0.0f, 1.0f)),
-//                Vertex(Vector3(0.5f, -0.5f, 0.0f), Vector2(1.0f, 1.0f))
-//        };
-//        std::vector<Index> indices = { 0, 1, 2, 0, 2, 3 };
-//
-//        auto model = std::make_shared<Model>(vertices, indices, texture);
-//        go->AddComponent(std::make_shared<MeshRenderer>(model));
-//        scene_->addGameObject(go);
-    }
+            auto model = std::make_shared<Model>(vertices, indices, texture);
+            go->AddComponent(std::make_shared<MeshRenderer>(model));
 
-    // 2. Cube
-    {
-        auto go = std::make_shared<GameObject>();
-        go->name = "Cube";
-        go->position = Vector3(0, 0, -2.0f); // Behind the robot
-        
-        auto texture = TextureAsset::loadAsset(assetManager, "textures/android_robot.png", &vulkanContext_);
-
-        Vector4 red(1.0f, 1.0f, 1.0f,1.0f);
-        std::vector<Vertex> vertices = {
-            // Front
-            Vertex(
-                    Vector4(-0.5f, -0.5f,  0.5f,0.0f),
-                    red,
-                    Vector4(0.0f, 0.0f, 0.0f, 0.0f),
-                    Vector4 (0, 0, 1,1.0f)
-                    ),
-            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f),
-                   Vector4 (0, 0, 1,1.0f)),
-            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f),
-                   Vector4 (0, 0, 1,1.0f)),
-            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f),
-                   Vector4 (0, 0, 1,1.0f)),
-            // Back,0.0f
-            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f),
-                   Vector4 (0, 0, -1,1)),
-            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f),
-                   Vector4 (0, 0, -1,1)),
-            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f),
-                   Vector4 (0, 0, -1,1)),
-            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f),
-                   Vector4 (0, 0, -1,1)),
-            // Top,0.0f
-            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f),
-                   Vector4 (0, 1, 0,1)),
-            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
-                ,Vector4 (0, 1, 0,1)
-            ),
-            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
-                    ,Vector4 (0, 1, 0,1)
-                    ),
-            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
-                    ,Vector4 (0, 1, 0,1)),
-            // Bottom,0.0f
-            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)
-                    ,Vector4 (0, -1, 0,1)),
-            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
-                    ,Vector4 (0, -1, 0,1)),
-            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
-                    ,Vector4 (0, -1, 0,1)),
-            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
-                    ,Vector4 (0, -1, 0,1)),
-            // Right,0.0f
-            Vertex(Vector4( 0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)
-                    ,Vector4 (1, 0, 0,1)),
-            Vertex(Vector4( 0.5f,  0.5f, -0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
-                    ,Vector4 (1, 0, 0,1)),
-            Vertex(Vector4( 0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
-                ,Vector4 (1, 0, 0,1)),
-            Vertex(Vector4( 0.5f, -0.5f,  0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
-                    ,Vector4 (1, 0, 0,1)),
-            // Left,0.0f
-            Vertex(Vector4(-0.5f, -0.5f, -0.5f,0.0f), red, Vector4(0.0f, 0.0f, 0.0f, 0.0f)
-                    ,Vector4 (-1, 0, 0,1)),
-            Vertex(Vector4(-0.5f, -0.5f,  0.5f,0.0f), red, Vector4(1.0f, 0.0f, 0.0f, 0.0f)
-                    ,Vector4 (-1, 0, 0,1)),
-            Vertex(Vector4(-0.5f,  0.5f,  0.5f,0.0f), red, Vector4(1.0f, 1.0f, 0.0f, 0.0f)
-                    ,Vector4 (-1, 0, 0,1)),
-            Vertex(Vector4(-0.5f,  0.5f, -0.5f,0.0f), red, Vector4(0.0f, 1.0f, 0.0f, 0.0f)
-                    ,Vector4 (-1, 0, 0,1)),
-        };
-
-        std::vector<Index> indices = {
-            0, 1, 2, 2, 3, 0,       // Front
-            4, 5, 6, 6, 7, 4,       // Back
-            8, 9, 10, 10, 11, 8,    // Top
-            12, 13, 14, 14, 15, 12, // Bottom
-            16, 17, 18, 18, 19, 16, // Right
-            20, 21, 22, 22, 23, 20  // Left
-        };
-
-        auto model = std::make_shared<Model>(vertices, indices, texture);
-        go->AddComponent(std::make_shared<MeshRenderer>(model));
-
-        // 添加交互式旋转组件（仅触摸旋转）
-//        auto rotationComp = std::make_shared<PrismaEngine::InteractiveRotationComponent>();
-//        rotationComp->SetInteractionMode(PrismaEngine::InteractiveRotationComponent::InteractionMode::TouchRotate);
-//        rotationComp->SetTouchSensitivity(1.0f);  // 增大灵敏度
-//        rotationComp->SetAxisMode(PrismaEngine::InteractiveRotationComponent::AxisMode::Both);
-//        rotationComp->SetDamping(0.01f);  // 阻尼 0.99，每帧只衰减 1%
-//        go->AddComponent(rotationComp);
-
-
-        ;
-        auto rotationComp = go->AddComponent<PrismaEngine::InteractiveRotationComponent>();
-        rotationComp->SetInteractionMode(PrismaEngine::InteractiveRotationComponent::InteractionMode::TouchRotate);
-        rotationComp->SetTouchSensitivity(1.0f);  // 增大灵敏度
-        rotationComp->SetAxisMode(PrismaEngine::InteractiveRotationComponent::AxisMode::Both);
-        rotationComp->SetDamping(0.01f);  // 阻尼 0.99，每帧只衰减 1%
-        scene_->addGameObject(go);
-    }
-
-    // 3. Skybox
-    {
-        // 注意：Skybox的纹理路径需要6个面的纹理
-        // 顺序：+X, -X, +Y, -Y, +Z, -Z
-        // 这里使用占位符，实际使用时需要替换为真实的cubemap纹理文件
-        std::vector<std::string> facePaths = {
-            "skybox_right.png",   // +X
-            "skybox_left.png",    // -X
-            "skybox_top.png",     // +Y
-            "skybox_bottom.png",  // -Y
-            "skybox_front.png",   // +Z
-            "skybox_back.png"     // -Z
-        };
-
-        // 尝试加载cubemap，如果文件不存在则使用纯色渲染
-        auto cubemap = CubemapTextureAsset::loadFromAssets(assetManager, facePaths, &vulkanContext_);
-        auto skyboxGO = std::make_shared<GameObject>();
-        skyboxGO->name = "Skybox";
-        skyboxGO->position = Vector3(0, 0, 0);  // Skybox位置不重要，因为它始终围绕相机
-
-        if (cubemap) {
-            skyboxGO->AddComponent(std::make_shared<SkyboxRenderer>(cubemap));
-            aout << "成功使用立方体贴图创建天空盒!" << std::endl;
-        } else {
-            // 即使没有纹理，也添加SkyboxRenderer（会使用纯色渲染）
-            skyboxGO->AddComponent(std::make_shared<SkyboxRenderer>(nullptr));
-            aout << "未找到立方体贴图，创建纯色天空盒!" << std::endl;
+            // 添加交互组件（如果 GameManager 中没有）
+            if (!go->GetComponent<InteractiveRotationComponent>()) {
+                auto rotationComp = go->AddComponent<InteractiveRotationComponent>();
+                rotationComp->SetInteractionMode(InteractiveRotationComponent::InteractionMode::TouchRotate);
+                rotationComp->SetTouchSensitivity(1.0f);
+                rotationComp->SetAxisMode(InteractiveRotationComponent::AxisMode::Both);
+                rotationComp->SetDamping(0.01f);
+                aout << "RendererVulkan: Added InteractiveRotationComponent to Cube" << std::endl;
+            }
         }
-        scene_->addGameObject(skyboxGO);
+
+        // 为 Skybox 添加 SkyboxRenderer
+        if (go->name == "Skybox" && !go->GetComponent<SkyboxRenderer>()) {
+            aout << "RendererVulkan: Adding SkyboxRenderer to Skybox" << std::endl;
+
+            std::vector<std::string> facePaths = {
+                "skybox_right.png",   // +X
+                "skybox_left.png",    // -X
+                "skybox_top.png",     // +Y
+                "skybox_bottom.png",  // -Y
+                "skybox_front.png",   // +Z
+                "skybox_back.png"     // -Z
+            };
+
+            auto cubemap = CubemapTextureAsset::loadFromAssets(assetManager, facePaths, &vulkanContext_);
+            if (cubemap) {
+                go->AddComponent(std::make_shared<SkyboxRenderer>(cubemap));
+                aout << "RendererVulkan: Skybox created with cubemap texture" << std::endl;
+            } else {
+                go->AddComponent(std::make_shared<SkyboxRenderer>(nullptr));
+                aout << "RendererVulkan: Skybox created with solid color (no texture)" << std::endl;
+            }
+        }
     }
+
+    gameManager.SetRenderingSetup(true);
+    aout << "RendererVulkan: Scene setup complete" << std::endl;
 }
 
 // Pipeline 创建已迁移到 RenderPass 架构
@@ -563,7 +491,7 @@ void RendererVulkan::createVertexBuffer() {
         }
 
         renderObjects[j].vertexBuffer = vertexBuffer.buffer;
-        renderObjects[j].vertexBufferMemory = vertexBuffer.buffer; // 临时用于兼容，后续可以移除
+        // vertexBufferMemory 已移除 - VMA 通过 allocation 管理
     }
 
     // 使用 VMA 创建Skybox的顶点缓冲区
@@ -574,7 +502,7 @@ void RendererVulkan::createVertexBuffer() {
         BufferWithMemory vertexBuffer;
         if (createDeviceLocalBuffer(bufferSize, vertices.data(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, vertexBuffer)) {
             skyboxData_.vertexBuffer = vertexBuffer.buffer;
-            skyboxData_.vertexBufferMemory = vertexBuffer.buffer;
+            // vertexBufferMemory 已移除 - VMA 通过 allocation 管理
             aout << "天空盒 vertex buffer 已创建 (使用 VMA)." << std::endl;
         }
     }
@@ -592,7 +520,7 @@ void RendererVulkan::createVertexBuffer() {
     BufferWithMemory clearColorBuffer;
     if (createDeviceLocalBuffer(clearColorBufferSize, clearColorVertices.data(), VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, clearColorBuffer)) {
         clearColorData_.vertexBuffer = clearColorBuffer.buffer;
-        clearColorData_.vertexBufferMemory = clearColorBuffer.buffer;
+        // vertexBufferMemory 已移除 - VMA 通过 allocation 管理
         aout << "ClearColor vertex buffer 已创建 (使用 VMA)." << std::endl;
     }
 #else
@@ -634,7 +562,7 @@ void RendererVulkan::createIndexBuffer() {
         }
 
         renderObjects[j].indexBuffer = indexBuffer.buffer;
-        renderObjects[j].indexBufferMemory = indexBuffer.buffer;
+        // indexBufferMemory 已移除 - VMA 通过 allocation 管理
     }
 
     // 使用 VMA 创建Skybox的索引缓冲区
@@ -645,7 +573,7 @@ void RendererVulkan::createIndexBuffer() {
         BufferWithMemory indexBuffer;
         if (createDeviceLocalBuffer(bufferSize, indices.data(), VK_BUFFER_USAGE_INDEX_BUFFER_BIT, indexBuffer)) {
             skyboxData_.indexBuffer = indexBuffer.buffer;
-            skyboxData_.indexBufferMemory = indexBuffer.buffer;
+            // indexBufferMemory 已移除 - VMA 通过 allocation 管理
             aout << "天空盒 index buffer 已创建 (使用 VMA)." << std::endl;
         }
     }
@@ -677,14 +605,14 @@ void RendererVulkan::createUniformBuffers() {
     // 使用 VMA 为MeshRenderer创建uniform buffers
     for (size_t j = 0; j < meshRendererIndices.size(); j++) {
         renderObjects[j].uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        renderObjects[j].uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        renderObjects[j].uniformBuffersAllocations.resize(MAX_FRAMES_IN_FLIGHT);
         renderObjects[j].uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
         for (size_t k = 0; k < MAX_FRAMES_IN_FLIGHT; k++) {
             BufferWithMemory uniformBuffer;
             if (createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_TO_GPU, uniformBuffer)) {
                 renderObjects[j].uniformBuffers[k] = uniformBuffer.buffer;
-                renderObjects[j].uniformBuffersMemory[k] = uniformBuffer.buffer; // 临时兼容
+                renderObjects[j].uniformBuffersAllocations[k] = uniformBuffer.allocation;
 
                 // 映射内存
                 VkResult result = vmaMapMemory(vmaAllocator_, uniformBuffer.allocation, &renderObjects[j].uniformBuffersMapped[k]);
@@ -698,12 +626,14 @@ void RendererVulkan::createUniformBuffers() {
     // 回退到原有的手动创建方式
     for (size_t j = 0; j < meshRendererIndices.size(); j++) {
         renderObjects[j].uniformBuffers.resize(MAX_FRAMES_IN_FLIGHT);
-        renderObjects[j].uniformBuffersMemory.resize(MAX_FRAMES_IN_FLIGHT);
+        renderObjects[j].uniformBuffersAllocations.resize(MAX_FRAMES_IN_FLIGHT);
         renderObjects[j].uniformBuffersMapped.resize(MAX_FRAMES_IN_FLIGHT);
 
         for (size_t k = 0; k < MAX_FRAMES_IN_FLIGHT; k++) {
-            vulkanContext_.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, renderObjects[j].uniformBuffers[k], renderObjects[j].uniformBuffersMemory[k]);
-            vkMapMemory(vulkanContext_.device, renderObjects[j].uniformBuffersMemory[k], 0, bufferSize, 0, &renderObjects[j].uniformBuffersMapped[k]);
+            VkDeviceMemory memory;
+            vulkanContext_.createBuffer(bufferSize, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, renderObjects[j].uniformBuffers[k], memory);
+            vkMapMemory(vulkanContext_.device, memory, 0, bufferSize, 0, &renderObjects[j].uniformBuffersMapped[k]);
+            // 在非 VMA 模式下，将 memory 存储在 allocations 中（虽然类型不匹配，但这个分支不会被使用）
         }
     }
 #endif
@@ -903,10 +833,15 @@ void RendererVulkan::createRenderPipeline() {
 
     // 创建并添加 OpaquePass
     auto opaquePass = std::make_unique<OpaquePass>();
+
+    // 将 renderObjects 所有权转移给 OpaquePass
+    // 注意：转移后 renderObjects.clear()，析构函数中的清理代码不再执行
+    // 资源由 OpaquePass 负责清理
     for (auto& obj : renderObjects) {
         opaquePass->addRenderObject(std::move(obj));
     }
-    renderObjects.clear();
+    renderObjects.clear();  // 清空容器，资源已转移
+
     opaquePass->setDescriptorSetLayout(descriptorSetLayout);
     opaquePass->setSwapChainExtent(vulkanContext_.swapChainExtent);
     opaquePass->setAndroidApp(app_);
@@ -1737,12 +1672,23 @@ void RendererVulkan::handleInput() {
         const Touch* touch = inputBackend.GetTouch(i);
         if (touch == nullptr) continue;
 
+        // [DEBUG] 记录原始触摸坐标和状态栏信息（用于确认坐标系）
+        aout << "Touch[" << i << "]: raw=(" << touch->positionX << ", " << touch->positionY
+             << "), statusBarHeight=" << statusBarHeight_
+             << ", contentRect.top=" << app_->contentRect.top
+             << ", phase=" << static_cast<int>(touch->phase) << std::endl;
+
         // 将触摸坐标从内容区域坐标转换为窗口坐标
         // 内容区域从状态栏下方开始，所以需要加上状态栏高度
         PrismaMath::vec2 touchPos(
             touch->positionX,
             touch->positionY - statusBarHeight_
         );
+
+        // [DEBUG] 记录转换后的坐标
+        aout << "Touch[" << i << "]: converted=(" << touchPos.x << ", " << touchPos.y << ")" << std::endl;
+
+        bool buttonProcessed = false;  // 标记当前触摸点是否已处理按钮
 
         // 获取所有 Canvas 组件
         for (const auto& go : scene_->getGameObjects()) {
@@ -1771,7 +1717,7 @@ void RendererVulkan::handleInput() {
                             }
                             button->OnReleased();
                         }
-                        return;
+                        buttonProcessed = true;  // 标记此按钮已处理
                     } else {
                         // 触摸不在按钮上，清除 hover 状态
                         if (button->IsHovered() && button->IsPressed()) {
@@ -1779,6 +1725,11 @@ void RendererVulkan::handleInput() {
                         }
                     }
                 }
+            }
+
+            // 如果当前触摸点已处理了按钮，跳出 Canvas 循环继续处理下一个触摸点
+            if (buttonProcessed) {
+                break;
             }
         }
     }

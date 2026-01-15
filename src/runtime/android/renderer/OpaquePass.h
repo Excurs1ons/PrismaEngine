@@ -17,14 +17,26 @@ struct Scene;
 
 // === 数据结构定义（暂时保留，后续会移动到各 Pass 中） ===
 
+// 前向声明 VmaAllocation（Vulkan Memory Allocator）
+struct VmaAllocation_T;
+typedef VmaAllocation_T* VmaAllocation;
+
+/**
+ * @brief 渲染对象资源数据
+ *
+ * 使用 VMA (Vulkan Memory Allocator) 管理内存：
+ * - vertexBuffer/indexBuffer: 由 VMA 管理的缓冲区
+ * - uniformBuffers: CPU 到 GPU 的 uniform 缓冲区
+ * - uniformBuffersAllocations: VMA 内存分配句柄（用于映射和释放）
+ */
 struct RenderObjectData {
-    VkBuffer vertexBuffer;
-    VkDeviceMemory vertexBufferMemory;
-    VkBuffer indexBuffer;
-    VkDeviceMemory indexBufferMemory;
+    VkBuffer vertexBuffer = VK_NULL_HANDLE;
+    // vertexBufferMemory 已移除 - VMA 通过 allocation 管理
+    VkBuffer indexBuffer = VK_NULL_HANDLE;
+    // indexBufferMemory 已移除 - VMA 通过 allocation 管理
 
     std::vector<VkBuffer> uniformBuffers;
-    std::vector<VkDeviceMemory> uniformBuffersMemory;
+    std::vector<VmaAllocation> uniformBuffersAllocations;  // VMA 分配句柄
     std::vector<void*> uniformBuffersMapped;
     std::vector<VkDescriptorSet> descriptorSets;
 };
