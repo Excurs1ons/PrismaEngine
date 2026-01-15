@@ -17,7 +17,10 @@
         "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_ENABLE_RENDER_DX12": "ON",
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "ON",
-        "PRISMA_ENABLE_RENDER_VULKAN": "OFF"
+        "PRISMA_ENABLE_RENDER_VULKAN": "OFF",
+        "PRISMA_ENABLE_UPSCALER_FSR": "OFF",
+        "PRISMA_ENABLE_UPSCALER_DLSS": "OFF",
+        "PRISMA_ENABLE_UPSCALER_TSR": "OFF"
       },
       "condition": {
         "type": "equals",

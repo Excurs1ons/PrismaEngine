@@ -221,27 +221,6 @@ bool UpscalerTSR::OnResize(uint32_t newWidth, uint32_t newHeight) {
     return SetDisplayResolution(newWidth, newHeight);
 }
 
-void UpscalerTSR::ReleaseResources() {
-    // TODO: 释放资源
-    // if (m_historyColor) { m_historyColor->Release(); m_historyColor = nullptr; }
-    // if (m_historyDepth) { m_historyDepth->Release(); m_historyDepth = nullptr; }
-    // if (m_constantBuffer) { m_constantBuffer->Release(); m_constantBuffer = nullptr; }
-}
-
-std::string UpscalerTSR::GetDebugInfo() const {
-    std::string info = "TSR Upscaler:\n";
-    info += "  Initialized: " + std::string(m_initialized ? "Yes" : "No") + "\n";
-    info += "  Render Resolution: " + std::to_string(m_renderWidth) + "x" +
-            std::to_string(m_renderHeight) + "\n";
-    info += "  Display Resolution: " + std::to_string(m_displayWidth) + "x" +
-            std::to_string(m_displayHeight) + "\n";
-    info += "  Quality Mode: " + UpscalerHelper::GetQualityName(m_quality) + "\n";
-    info += "  Temporal Stability: " + std::to_string(m_temporalStability) + "\n";
-    info += "  Sharpness: " + std::to_string(m_sharpness) + "\n";
-    info += "  Frame Index: " + std::to_string(m_frameIndex) + "\n";
-    return info;
-}
-
 void UpscalerTSR::ResetHistory() {
     m_needReset = true;
     m_frameIndex = 0;
@@ -258,7 +237,7 @@ bool UpscalerTSR::CreateResources() {
     // texDesc.allowShaderResource = true;
     // texDesc.allowUnorderedAccess = true;
     //
-    // m_historyColor = m_device->CreateTexture(texDesc);
+    // m_historyColor = std::unique_ptr<ITexture>(m_device->CreateTexture(texDesc));
     // if (!m_historyColor) return false;
     //
     // 创建常量缓冲区
@@ -267,14 +246,17 @@ bool UpscalerTSR::CreateResources() {
     // bufferDesc.size = sizeof(TSRConstants);
     // bufferDesc.usage = BufferUsage::Dynamic;
     //
-    // m_constantBuffer = m_device->CreateBuffer(bufferDesc);
+    // m_constantBuffer = std::unique_ptr<IBuffer>(m_device->CreateBuffer(bufferDesc));
 
     // 占位符：暂时返回 true
     return true;
 }
 
 void UpscalerTSR::ReleaseResources() {
-    // 在上面的 ReleaseResources() 方法中实现
+    // 智能指针自动释放资源
+    m_constantBuffer.reset();
+    m_historyColor.reset();
+    m_historyDepth.reset();
 }
 
 bool UpscalerTSR::CreateShaders() {

@@ -74,10 +74,10 @@ private:
     // 渲染设备
     IRenderDevice* m_device = nullptr;
 
-    // GPU 资源
-    IBuffer* m_constantBuffer = nullptr;
-    ITexture* m_historyColor = nullptr;      // 历史颜色
-    ITexture* m_historyDepth = nullptr;      // 历史深度
+    // GPU 资源（使用智能指针管理）
+    std::unique_ptr<IBuffer> m_constantBuffer;
+    std::unique_ptr<ITexture> m_historyColor;     // 历史颜色
+    std::unique_ptr<ITexture> m_historyDepth;     // 历史深度
 
     // 配置
     UpscalerQuality m_quality = UpscalerQuality::Quality;

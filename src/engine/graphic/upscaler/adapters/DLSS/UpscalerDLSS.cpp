@@ -118,9 +118,14 @@ bool UpscalerDLSS::Upscale(IDeviceContext* context,
         return false;
     }
 
-    // 验证输入（DLSS 需要曝光）
-    if (!input.colorTexture || !input.depthTexture ||
-        !input.motionVectorTexture || !input.exposureTexture) {
+    // 验证必需输入
+    if (!input.colorTexture || !input.depthTexture || !input.motionVectorTexture) {
+        return false;
+    }
+
+    // DLSS 需要曝光纹理（根据 GetInfo() 中的 requiresExposure=true）
+    if (!input.exposureTexture) {
+        // TODO: 可以在这里生成默认曝光
         return false;
     }
 
