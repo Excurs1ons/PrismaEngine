@@ -567,14 +567,18 @@ elseif(DEFINED stb_SOURCE_DIR)
     target_include_directories(Engine PRIVATE ${stb_SOURCE_DIR})
 endif()
 
-if(DEBUG)
-    # ImGui - 编辑器 UI 框架 (PUBLIC - Editor 需要使用)
+# ImGui - 当启用 ImGui debug 或编辑器时链接
+if(PRISMA_ENABLE_IMGUI_DEBUG OR PRISMA_BUILD_EDITOR)
     if(TARGET imgui::imgui)
         target_link_libraries(Engine PUBLIC imgui::imgui)
+        message(STATUS "链接 imgui::imgui 到 Engine")
     elseif(TARGET imgui)
         target_link_libraries(Engine PUBLIC imgui)
+        message(STATUS "链接 imgui 到 Engine")
+    else()
+        message(WARNING "ImGui 目标未找到!")
     endif()
-endif ()
+endif()
 
 # 根据启用的设备定义宏
 target_compile_definitions(Engine PUBLIC
