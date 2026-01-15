@@ -1,7 +1,5 @@
 # 运行时可执行程序
-if(NOT PRISMA_USE_NATIVE_APP)
-    message(STATUS "已启用跨平台应用程序 (SDL3)")
-elseif (ANDROID)
+if(ANDROID)
     # 源文件
     set(RUNTIME_SOURCES android/AndroidRuntime.cpp)
 elseif (WIN32)
