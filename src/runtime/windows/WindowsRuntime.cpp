@@ -143,7 +143,58 @@ int main(int argc, char* argv[]) {
     setenv("PRISMA_ASSETS_PATH", assetsPath.c_str(), 1);
 #endif
 
-    // 动态加载 Engine DLL
+    int exit_code = 0;  // 提前声明，避免作用域问题
+
+#ifdef PRISMA_STATIC_LINKED_GAME
+    // 静态链接模式 - 直接调用函数
+    // 声明静态链接的函数
+    extern "C" {
+        bool Game_Initialize();
+        bool Editor_Initialize();
+        int Game_Run();
+        int Editor_Run();
+        void Game_Shutdown();
+        void Editor_Shutdown();
+    }
+
+    LOG_INFO("Runtime", "静态链接模式 - 直接调用 {0} 模块",
+             cmdParser.IsOptionSet("editor") ? "Editor" : "Game");
+
+    bool (*initialize)();
+    int (*run)();
+    void (*shutdown)();
+
+    if (cmdParser.IsOptionSet("editor")) {
+        // 如果 Editor 继承 Game，则使用 Game 的实现
+        initialize = Game_Initialize;
+        run = Game_Run;
+        shutdown = Game_Shutdown;
+        LOG_INFO("Runtime", "Editor 模式 - 使用 Game 实现");
+    } else {
+        initialize = Game_Initialize;
+        run = Game_Run;
+        shutdown = Game_Shutdown;
+        LOG_INFO("Runtime", "Game 模式");
+    }
+
+    if (!initialize()) {
+        LOG_FATAL("Runtime", "应用程序初始化失败，正在退出...");
+        return -1;
+    }
+    LOG_INFO("Runtime", "{0} 初始化成功",
+             cmdParser.IsOptionSet("editor") ? "Editor" : "Game");
+
+    exit_code = run();
+    LOG_INFO("Runtime", "{0} 运行完成，退出码: {1}",
+             cmdParser.IsOptionSet("editor") ? "Editor" : "Game", exit_code);
+
+    shutdown();
+    LOG_INFO("Runtime", "{0} 已关闭",
+             cmdParser.IsOptionSet("editor") ? "Editor" : "Game");
+#else
+    // 动态库模式 - 动态加载 DLL
+    LOG_INFO("Runtime", "动态库模式 - 加载 {0}", lib_name);
+
     DynamicLoader game_loader;
     try {
         game_loader.Load(lib_name);
@@ -166,11 +217,12 @@ int main(int argc, char* argv[]) {
     }
     LOG_INFO("Runtime", "{0} 初始化成功", lib_name);
 
-    int exit_code = run();
+    exit_code = run();
     LOG_INFO("Runtime", "{0} 运行完成，退出码: {1}", lib_name, exit_code);
 
     shutdown();
     LOG_INFO("Runtime", "{0} 已关闭", lib_name);
+#endif
 
     Logger::GetInstance().Flush();  // 确保日志被写出
     return exit_code;
