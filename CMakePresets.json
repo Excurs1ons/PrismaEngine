@@ -56,7 +56,8 @@
       "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {
@@ -68,7 +69,8 @@
       "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
     },
     {
@@ -80,7 +82,8 @@
       "architecture": "Win32",
       "toolset": "host=x64",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {
@@ -92,7 +95,8 @@
       "architecture": "Win32",
       "toolset": "host=x64",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
     },
     {

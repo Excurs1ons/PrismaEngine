@@ -290,13 +290,28 @@ list(APPEND ENGINE_HEADERS
 
 # ========== 创建引擎库 ==========
 
-add_library(Engine STATIC
-    ${ENGINE_SOURCES}
-    ${ENGINE_HEADERS}
-    pch.h
-    pch.cpp
-    packing/Pipeline.h
-)
+# 根据 PRISMA_BUILD_SHARED_LIBS 选项选择库类型
+if(PRISMA_BUILD_SHARED_LIBS)
+    add_library(Engine SHARED
+        ${ENGINE_SOURCES}
+        ${ENGINE_HEADERS}
+        pch.h
+        pch.cpp
+        packing/Pipeline.h
+    )
+    message(STATUS "Engine: 构建为动态库 (SHARED)")
+    target_compile_definitions(Engine PRIVATE ENGINE_BUILD_SHARED=1)
+else()
+    add_library(Engine STATIC
+        ${ENGINE_SOURCES}
+        ${ENGINE_HEADERS}
+        pch.h
+        pch.cpp
+        packing/Pipeline.h
+    )
+    message(STATUS "Engine: 构建为静态库 (STATIC)")
+    target_compile_definitions(Engine PRIVATE ENGINE_BUILD_STATIC=1)
+endif()
 
 # Android 平台添加 game-activity 源文件
 if(ANDROID)
