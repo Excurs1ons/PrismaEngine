@@ -28,9 +28,20 @@ add_executable(Runtime
 # 需要在子目录
 # add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../engine)
 # 链接依赖
-target_link_libraries(Runtime 
+target_link_libraries(Runtime
     PRIVATE Engine
 )
+
+# 根据 PRISMA_BUILD_SHARED_LIBS 决定是否静态链接 Game
+if(PRISMA_BUILD_SHARED_LIBS)
+    # 动态库模式: 不链接 Game，运行时动态加载
+    message(STATUS "Runtime: 动态库模式 - 运行时动态加载Game")
+else()
+    # 静态库模式: 静态链接 Game (和 Editor)
+    target_link_libraries(Runtime PRIVATE Game)
+    target_compile_definitions(Runtime PRIVATE PRISMA_STATIC_LINKED_GAME=1)
+    message(STATUS "Runtime: 静态库模式 - 静态链接Game")
+endif()
 
 # 编译选项
 target_compile_options(Runtime PRIVATE 

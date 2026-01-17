@@ -15,10 +15,35 @@ public:
 };
 
 
-// 添加导出函数实现
+// 导出函数声明 - 支持动态库和静态库两种模式
 extern "C" {
-    __declspec(dllexport) bool Initialize();
-    __declspec(dllexport) int Run();
-    __declspec(dllexport) void Shutdown();
+#ifdef GAME_BUILD_SHARED
+    // 动态库模式 - 导出标准函数名
+    #if defined(_WIN32) || defined(_WIN64)
+        __declspec(dllexport)
+    #else
+        __attribute__((visibility("default")))
+    #endif
+    bool Initialize();
+
+    #if defined(_WIN32) || defined(_WIN64)
+        __declspec(dllexport)
+    #else
+        __attribute__((visibility("default")))
+    #endif
+    int Run();
+
+    #if defined(_WIN32) || defined(_WIN64)
+        __declspec(dllexport)
+    #else
+        __attribute__((visibility("default")))
+    #endif
+    void Shutdown();
+#else
+    // 静态库模式 - 使用 Game_ 前缀
+    bool Game_Initialize();
+    int Game_Run();
+    void Game_Shutdown();
+#endif
 }
 #endif //GAME_H

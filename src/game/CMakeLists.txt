@@ -12,11 +12,22 @@ set(GAME_HEADERS
     Game.h
 )
 
-# 创建动态库
-add_library(Game SHARED
-    ${GAME_SOURCES}
-    ${GAME_HEADERS}
-)
+# 根据 PRISMA_BUILD_SHARED_LIBS 选项选择库类型
+if(PRISMA_BUILD_SHARED_LIBS)
+    add_library(Game SHARED
+        ${GAME_SOURCES}
+        ${GAME_HEADERS}
+    )
+    message(STATUS "Game: 构建为动态库 (SHARED)")
+    target_compile_definitions(Game PRIVATE GAME_BUILD_SHARED=1)
+else()
+    add_library(Game STATIC
+        ${GAME_SOURCES}
+        ${GAME_HEADERS}
+    )
+    message(STATUS "Game: 构建为静态库 (STATIC)")
+    target_compile_definitions(Game PRIVATE GAME_BUILD_STATIC=1)
+endif()
 
 # 包含目录
 target_include_directories(Game
@@ -37,12 +48,14 @@ elseif(TARGET DirectX-Headers)
 endif()
 
 # Windows 系统库
-target_link_libraries(Game
-    PRIVATE
-    d3d12
-    dxgi
-    d3dcompiler
-)
+if(WIN32)
+    target_link_libraries(Game
+        PRIVATE
+        d3d12
+        dxgi
+        d3dcompiler
+    )
+endif()
 
 # 编译选项
 target_compile_options(Game PRIVATE 
@@ -54,9 +67,9 @@ if(MSVC)
     target_precompile_headers(Game PRIVATE pch.h)
 endif()
 
-# 编译定义
+# 编译定义 (GAME_EXPORTS 已由条件编译处理)
 target_compile_definitions(Game
-    PRIVATE GAME_EXPORTS _UNICODE UNICODE
+    PRIVATE _UNICODE UNICODE
 )
 
 # 设置输出名称

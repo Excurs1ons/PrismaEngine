@@ -1,5 +1,7 @@
 //
-// Created by JasonGu on 26-1-1.
+// Android Runtime
+// Android 使用 native_app_glue 框架，应用结构与其他平台不同
+// 静态/动态链接的区分在 Android 上意义不大，因为 Android 本身就是动态加载 native 库
 //
 
 #if defined(__ANDROID__) || defined(ANDROID)
@@ -15,6 +17,11 @@
 
 // #include "AndroidLogger.h"
 // #include "Logger.h"
+
+// 注意：Android 平台的 Runtime 使用 native_app_glue 框架
+// 静态/动态链接的区分在 CMakeLists.txt 中处理
+// 此文件的入口点由 Android 系统通过 JNI 调用
+
 extern "C" {
 
 #include <game-activity/native_app_glue/android_native_app_glue.c>

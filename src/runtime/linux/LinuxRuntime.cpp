@@ -1,23 +1,28 @@
 //
-// Created by JasonGu on 26-1-1.
+// Linux Runtime
 //
-#pragma once
 #if defined(__linux__) || defined(__LINUX__) || defined(LINUX)
+
+#include "../../engine/Common.h"
+#include "../../engine/DynamicLoader.h"
+#include "Platform.h"
+#include <chrono>
+#include <iostream>
+#include <thread>
+
+// 函数指针类型定义
+using InitializeFunc = bool (*)();
+using RunFunc = int (*)();
+using ShutdownFunc = void (*)();
 
 // ============================================================================
 // 应用程序入口点
 // ============================================================================
 int main(int argc, char* argv[]) {
-
-#ifdef _WIN32
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-#endif
     // 初始化命令行参数解析器
     CommandLineParser cmdParser;
 
     // 添加运行时特定的命令行选项
-#if defined(_WIN32) || defined(_WIN64)
     cmdParser.AddOption("fullscreen", "f", "以全屏模式启动", false);
     cmdParser.AddOption("width", "", "设置窗口宽度", true);
     cmdParser.AddOption("height", "", "设置窗口高度", true);
@@ -27,17 +32,15 @@ int main(int argc, char* argv[]) {
     cmdParser.AddOption("log-file", "", "设置日志文件路径", true);
     cmdParser.AddOption("log-size", "", "设置日志文件大小", true);
     cmdParser.AddOption("log-count", "", "设置日志文件数量", true);
-
     cmdParser.AddOption("editor", "", "尝试启动编辑器", false);
     cmdParser.AddOption("game", "", "尝试启动游戏", false);
     cmdParser.AddOption("test-render", "t", "运行新渲染系统测试", false);
 
     // 添加动作选项示例
     cmdParser.AddActionOption("version", "V", "显示版本信息", false, [](const std::string&) {
-        std::cout << "YAGE Runtime 版本 1.0.0" << '\n';
-        return true;  // 执行后退出
+        std::cout << "Prisma Runtime 版本 1.0.0" << '\n';
+        return true;
     });
-#endif
 
     // 解析命令行参数
     auto parseResult = cmdParser.Parse(argc, argv);
@@ -45,13 +48,11 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     if (parseResult == CommandLineParser::ParseResult::ActionRequested) {
-        return 0;  // 显示帮助或执行动作后正常退出
+        return 0;
     }
 
     // 根据命令行参数配置日志
     LogConfig logConfig = LogConfig();
-    // 如果是调试状态，禁用ANSI颜色代码
-    // logConfig.enableColors = !isRunningInDebugger();
 #ifdef _DEBUG
     logConfig.enableCallStack = true;
 #endif
@@ -67,7 +68,6 @@ int main(int argc, char* argv[]) {
     if (cmdParser.IsOptionSet("log-count")) {
         logConfig.maxFileCount = std::stoull(cmdParser.GetOptionValue("log-count"));
     }
-
 
     // 根据命令行参数设置日志级别
     if (cmdParser.IsOptionSet("log-level")) {
@@ -85,19 +85,18 @@ int main(int argc, char* argv[]) {
         }
     }
     if (!Logger::GetInstance().Initialize(logConfig)) {
-        LOG_FATAL("Logger", "日志系统初始化失败，正在退出...");
+        LOG_FATAL("Runtime", "日志系统初始化失败，正在退出...");
         return -1;
     }
-    std::string lib_name;
 
+    // Linux 动态库文件名 (.so)
+    const char* lib_name;
     if (cmdParser.IsOptionSet("editor")) {
         LOG_INFO("Runtime", "尝试启动编辑器");
-        lib_name = "PrismaEditor.dll";
-    }
-    else {
-        // 默认启动游戏模式（如果没有指定--editor参数）
+        lib_name = "libPrismaEditor.so";
+    } else {
         LOG_INFO("Runtime", "默认启动游戏模式");
-        lib_name = "PrismaGame.dll";
+        lib_name = "libPrismaGame.so";
     }
 
     // 设置资源路径
@@ -106,28 +105,47 @@ int main(int argc, char* argv[]) {
         assetsPath = cmdParser.GetOptionValue("assets-path");
         LOG_INFO("Runtime", "使用指定的资源路径: {0}", assetsPath);
     } else if (cmdParser.IsOptionSet("project-path")) {
-        // 如果指定了项目路径，资源路径应该是项目路径下的 assets
         assetsPath = cmdParser.GetOptionValue("project-path") + "/assets";
         LOG_INFO("Runtime", "使用项目路径下的资源目录: {0}", assetsPath);
     } else {
-        // 默认路径：当前目录下的 Assets
         assetsPath = "./Assets";
         LOG_INFO("Runtime", "使用默认资源路径: {0}", assetsPath);
     }
 
-    // 设置环境变量，让 ResourceManager 能找到资源
-#ifdef _WIN32
-    SetEnvironmentVariableA("PRISMA_ASSETS_PATH", assetsPath.c_str());
-#else
+    // 设置环境变量
     setenv("PRISMA_ASSETS_PATH", assetsPath.c_str(), 1);
-#endif
 
-    // 动态加载 Engine DLL
+    int exit_code = 0;  // 提前声明，避免作用域问题
+
+#ifdef PRISMA_STATIC_LINKED_GAME
+    // 静态链接模式 - 直接调用函数
+    extern "C" {
+        bool Game_Initialize();
+        int Game_Run();
+        void Game_Shutdown();
+    }
+
+    LOG_INFO("Runtime", "静态链接模式 - 直接调用 Game 模块");
+
+    if (!Game_Initialize()) {
+        LOG_FATAL("Runtime", "应用程序初始化失败，正在退出...");
+        return -1;
+    }
+    LOG_INFO("Runtime", "Game 初始化成功");
+
+    exit_code = Game_Run();
+    LOG_INFO("Runtime", "Game 运行完成，退出码: {0}", exit_code);
+
+    Game_Shutdown();
+    LOG_INFO("Runtime", "Game 已关闭");
+#else
+    // 动态库模式 - 使用 dlopen 加载 .so
+    LOG_INFO("Runtime", "动态库模式 - 加载 {0}", lib_name);
+
     DynamicLoader game_loader;
     try {
         game_loader.Load(lib_name);
-        LOG_INFO("Runtime", "成功加载 {0}",lib_name);
-
+        LOG_INFO("Runtime", "成功加载 {0}", lib_name);
     } catch (const std::exception& e) {
         LOG_FATAL("Runtime", "无法加载 {0}: {1}", lib_name, e.what());
         return -1;
@@ -145,13 +163,14 @@ int main(int argc, char* argv[]) {
     }
     LOG_INFO("Runtime", "{0} 初始化成功", lib_name);
 
-    int exit_code = run();
+    exit_code = run();
     LOG_INFO("Runtime", "{0} 运行完成，退出码: {1}", lib_name, exit_code);
 
     shutdown();
     LOG_INFO("Runtime", "{0} 已关闭", lib_name);
+#endif
 
-    Logger::GetInstance().Flush();  // 确保日志被写出
+    Logger::GetInstance().Flush();
     return exit_code;
 }
 

@@ -27,16 +27,48 @@ void Game::Shutdown() {
 // Platform->Engine->Application->Game|Editor
 
 // 添加导出函数实现
+// 动态库模式使用 Initialize/Run/Shutdown，静态库模式使用 Game_ 前缀
 extern "C" {
-    __declspec(dllexport) bool Initialize() {
+#ifdef GAME_BUILD_SHARED
+    // 动态库模式 - 导出标准函数名
+    #if defined(_WIN32) || defined(_WIN64)
+        __declspec(dllexport)
+    #else
+        __attribute__((visibility("default")))
+    #endif
+    bool Initialize() {
         return Game::GetInstance().Initialize();
     }
 
-    __declspec(dllexport) int Run() {
+    #if defined(_WIN32) || defined(_WIN64)
+        __declspec(dllexport)
+    #else
+        __attribute__((visibility("default")))
+    #endif
+    int Run() {
         return Game::GetInstance().Run();
     }
 
-    __declspec(dllexport) void Shutdown() {
+    #if defined(_WIN32) || defined(_WIN64)
+        __declspec(dllexport)
+    #else
+        __attribute__((visibility("default")))
+    #endif
+    void Shutdown() {
         Game::GetInstance().Shutdown();
     }
+#else
+    // 静态库模式 - 使用 Game_ 前缀避免符号冲突
+    bool Game_Initialize() {
+        return Game::GetInstance().Initialize();
+    }
+
+    int Game_Run() {
+        return Game::GetInstance().Run();
+    }
+
+    void Game_Shutdown() {
+        Game::GetInstance().Shutdown();
+    }
+#endif
 }
