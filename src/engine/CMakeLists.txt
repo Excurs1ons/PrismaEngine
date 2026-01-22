@@ -85,6 +85,12 @@ list(APPEND CORE_SOURCES
     resource/ResourceFallback.cpp
     resource/ResourceFallbackImpl.cpp
     resource/TextureAsset.cpp
+    # 瓦片地图系统
+    tilemap/TilemapAsset.cpp
+    tilemap/format/TileDataDecoder.cpp
+    tilemap/format/TmxParser.cpp
+    tilemap/format/TsxParser.cpp
+    tilemap/renderer/TilemapRenderer.cpp
 )
 
 # ========== 平台特定源文件 (条件编译) ==========
@@ -169,6 +175,24 @@ set(CORE_HEADERS
     resource/MeshAsset.h
     resource/ResourceFallback.h
     resource/TextureAsset.h
+    resource/TilemapAsset.h
+    # 瓦片地图系统
+    tilemap/TilemapAsset.h
+    tilemap/core/Types.h
+    tilemap/core/Tile.h
+    tilemap/core/Tileset.h
+    tilemap/core/TileLayer.h
+    tilemap/core/ObjectLayer.h
+    tilemap/core/ImageLayer.h
+    tilemap/core/GroupLayer.h
+    tilemap/core/Map.h
+    tilemap/format/TmxParser.h
+    tilemap/format/TsxParser.h
+    tilemap/format/TileDataDecoder.h
+    tilemap/renderer/TilemapRenderer.h
+    tilemap/renderer/TileGeometryBuilder.h
+    tilemap/renderer/TileChunk.h
+    tilemap/renderer/AnimatedTileManager.h
 )
 
 # 平台特定头文件
@@ -505,6 +529,7 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/input>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tilemap>
 )
 
 # Android平台依赖路径配置
@@ -593,6 +618,35 @@ if(PRISMA_ENABLE_IMGUI_DEBUG OR PRISMA_BUILD_EDITOR)
     else()
         message(WARNING "ImGui 目标未找到!")
     endif()
+endif()
+
+# 瓦片地图系统依赖
+# tinyxml2 - XML 解析 (TMX 格式)
+if(TARGET tinyxml2::tinyxml2)
+    target_link_libraries(Engine PUBLIC tinyxml2::tinyxml2)
+    message(STATUS "链接 tinyxml2::tinyxml2 到 Engine")
+elseif(TARGET tinyxml2)
+    target_link_libraries(Engine PUBLIC tinyxml2)
+    message(STATUS "链接 tinyxml2 到 Engine")
+elseif(TARGET tinyxml2static)
+    target_link_libraries(Engine PUBLIC tinyxml2static)
+    message(STATUS "链接 tinyxml2static 到 Engine")
+else()
+    message(WARNING "tinyxml2 目标未找到!")
+endif()
+
+# Zstandard - 压缩库 (Base64+zstd 格式)
+if(TARGET libzstd_shared)
+    target_link_libraries(Engine PUBLIC libzstd_shared)
+    message(STATUS "链接 libzstd_shared 到 Engine")
+elseif(TARGET zstd::libzstd_shared)
+    target_link_libraries(Engine PUBLIC zstd::libzstd_shared)
+    message(STATUS "链接 zstd::libzstd_shared 到 Engine")
+elseif(TARGET zstd)
+    target_link_libraries(Engine PUBLIC zstd)
+    message(STATUS "链接 zstd 到 Engine")
+else()
+    message(WARNING "zstd 目标未找到!")
 endif()
 
 # 根据启用的设备定义宏
