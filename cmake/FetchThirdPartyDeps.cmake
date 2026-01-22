@@ -123,6 +123,24 @@ FetchContent_Declare(
     GIT_SHALLOW TRUE
 )
 
+# tinyxml2 - XML解析库 (用于 TMX 地图格式)
+set(FETCHCONTENT_TINYXML2_DIR "${FETCHCONTENT_BASE_DIR}/tinyxml2")
+FetchContent_Declare(
+    tinyxml2
+    GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
+    GIT_TAG 10.0.0
+    GIT_SHALLOW TRUE
+)
+
+# Zstandard - 压缩库 (用于 TMX Base64+zstd 格式)
+set(FETCHCONTENT_ZSTD_DIR "${FETCHCONTENT_BASE_DIR}/zstd")
+FetchContent_Declare(
+    zstd
+    GIT_REPOSITORY https://github.com/facebook/zstd.git
+    GIT_TAG v1.5.6
+    GIT_SHALLOW TRUE
+)
+
 # ========== 基础库 (总是需要) ==========
 
 message(STATUS "")
@@ -171,6 +189,22 @@ elseif(NOT TARGET tweeny::tweeny AND TARGET tweeny)
     add_library(tweeny::tweeny ALIAS tweeny)
 endif()
 message(STATUS "Tweeny: 使用 FetchContent")
+
+
+# tinyxml2 (总是需要 - TMX 地图格式)
+set(BUILD_TESTS OFF CACHE BOOL "Build tinyxml2 tests" FORCE)
+FetchContent_MakeAvailable(tinyxml2)
+message(STATUS "tinyxml2: 使用 FetchContent")
+
+
+# Zstandard (总是需要 - TMX 压缩格式)
+set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "Build zstd programs" FORCE)
+set(ZSTD_BUILD_CONTRIB OFF CACHE BOOL "Build zstd contrib" FORCE)
+set(ZSTD_BUILD_TESTS OFF CACHE BOOL "Build zstd tests" FORCE)
+set(ZSTD_BUILD_STATIC ON CACHE BOOL "Build static zstd library" FORCE)
+set(ZSTD_BUILD_SHARED OFF CACHE BOOL "Build shared zstd library" FORCE)
+FetchContent_MakeAvailable(zstd)
+message(STATUS "Zstandard: 使用 FetchContent")
 
 
 # ========== 条件依赖 ==========

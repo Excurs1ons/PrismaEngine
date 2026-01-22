@@ -6,7 +6,7 @@ namespace PrismaEngine {
 // ============================================================================
 // 资源类型枚举
 // ============================================================================
-enum class AssetType { Unknown, Shader, Texture, Mesh, Model, Audio, Material, Config, Animation, Scene, Script };
+enum class AssetType { Unknown, Shader, Texture, Mesh, Model, Audio, Material, Config, Animation, Scene, Script, Tilemap };
 
 // 前向声明
 class AssetManager;
