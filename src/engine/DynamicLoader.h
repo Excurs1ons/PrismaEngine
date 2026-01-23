@@ -30,7 +30,7 @@ public:
     bool Load(const std::string& libraryPath) {
 #ifdef _WIN32
         m_handle = LoadLibraryA(libraryPath.c_str());
-        if (!m_handle) {
+        if (m_handle == nullptr) {
             DWORD error = GetLastError();
             LOG_ERROR("DynamicLoader", "无法加载动态库: {0},错误码: {1}", libraryPath.c_str(), error);
             throw std::runtime_error("Failed to load library: " + libraryPath + ", error code: " + std::to_string(error));
