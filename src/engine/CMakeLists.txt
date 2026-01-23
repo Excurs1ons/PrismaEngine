@@ -49,6 +49,11 @@ set(CORE_SOURCES
     # ECS 系统
     core/AssetManager.cpp
     core/ECS.cpp
+    # UI 系统
+    ui/UIComponent.cpp
+    ui/UIInputManager.cpp
+    ui/2d/ButtonComponent.cpp
+    ui/2d/CanvasComponent.cpp
     # 音频系统（暂时全部禁用，需要重写以匹配新系统）
     # audio/AudioAPI.cpp
     # audio/AudioDevice.cpp
@@ -160,6 +165,11 @@ set(CORE_HEADERS
     # ECS 系统
     core/AssetManager.h
     core/ECS.h
+    # UI 系统
+    ui/UIComponent.h
+    ui/UIInputManager.h
+    ui/2d/ButtonComponent.h
+    ui/2d/CanvasComponent.h
     # 音频系统（新系统）
     audio/AudioAPI.h
     audio/AudioDevice.h
