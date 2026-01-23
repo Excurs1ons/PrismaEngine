@@ -38,7 +38,7 @@ FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG ${PRISMA_DEP_NLOHMANN_JSON_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # SDL3 - 窗口/输入/音频抽象
@@ -47,7 +47,7 @@ FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
     GIT_TAG ${PRISMA_DEP_SDL3_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # Vulkan-Headers - Vulkan头文件
@@ -56,7 +56,7 @@ FetchContent_Declare(
     Vulkan-Headers
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
     GIT_TAG ${PRISMA_DEP_VULKAN_HEADERS_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # VMA (Vulkan Memory Allocator) - Vulkan内存分配库
@@ -65,7 +65,7 @@ FetchContent_Declare(
     vma
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
     GIT_TAG ${PRISMA_DEP_VMA_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # vk-bootstrap - Vulkan初始化库
@@ -74,7 +74,7 @@ FetchContent_Declare(
     vk-bootstrap
     GIT_REPOSITORY https://github.com/charles-lunarge/vk-bootstrap.git
     GIT_TAG ${PRISMA_DEP_VK_BOOTSTRAP_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # DirectX-Headers (Windows) - DirectX 12 头文件
@@ -84,7 +84,7 @@ if(WIN32)
         DirectX-Headers
         GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
         GIT_TAG ${PRISMA_DEP_DIRECTX_HEADERS_VERSION}
-        GIT_SHALLOW TRUE
+        GIT_SHALLOW FALSE
     )
 endif()
 
@@ -94,7 +94,7 @@ FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG ${PRISMA_DEP_IMGUI_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # OpenFBX - FBX模型加载
@@ -104,7 +104,7 @@ if(WIN32)
         openfbx
         GIT_REPOSITORY https://github.com/nem0/OpenFBX.git
         GIT_TAG ${PRISMA_DEP_OPENFBX_VERSION}
-        GIT_SHALLOW TRUE
+        GIT_SHALLOW FALSE
     )
 endif()
 
@@ -114,7 +114,7 @@ FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG ${PRISMA_DEP_STB_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # Tweeny - 补间动画库 (header-only, 用于 UI 动画)
@@ -123,7 +123,7 @@ FetchContent_Declare(
     tweeny
     GIT_REPOSITORY https://github.com/mobius3/tweeny.git
     GIT_TAG ${PRISMA_DEP_TWEENY_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # tinyxml2 - XML解析库 (用于 TMX 地图格式)
@@ -132,7 +132,7 @@ FetchContent_Declare(
     tinyxml2
     GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
     GIT_TAG ${PRISMA_DEP_TINYXML2_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # Zstandard - 压缩库 (用于 TMX Base64+zstd 格式)
@@ -141,7 +141,7 @@ FetchContent_Declare(
     zstd
     GIT_REPOSITORY https://github.com/facebook/zstd.git
     GIT_TAG ${PRISMA_DEP_ZSTD_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW FALSE
 )
 
 # ========== 基础库 (总是需要) ==========
@@ -207,20 +207,21 @@ message(STATUS "stb: 使用 FetchContent")
 
 
 # Tweeny (总是需要 - UI 动画)
-FetchContent_MakeAvailable(tweeny)
-# 创建 tweeny 接口库 (header-only)
-# 注意：FetchContent_MakeAvailable 可能已创建目标，需要检查
-if(NOT TARGET tweeny AND NOT TARGET tweeny::tweeny)
-    add_library(tweeny INTERFACE IMPORTED GLOBAL)
-    set_target_properties(tweeny PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${tweeny_SOURCE_DIR}"
-    )
-    add_library(tweeny::tweeny ALIAS tweeny)
-elseif(NOT TARGET tweeny::tweeny AND TARGET tweeny)
-    # 如果 tweeny 目标存在但没有别名，创建别名
-    add_library(tweeny::tweeny ALIAS tweeny)
-endif()
-message(STATUS "Tweeny: 使用 FetchContent")
+# 暂时禁用 - CMake 版本兼容性问题
+# FetchContent_MakeAvailable(tweeny)
+# # 创建 tweeny 接口库 (header-only)
+# # 注意：FetchContent_MakeAvailable 可能已创建目标，需要检查
+# if(NOT TARGET tweeny AND NOT TARGET tweeny::tweeny)
+#     add_library(tweeny INTERFACE IMPORTED GLOBAL)
+#     set_target_properties(tweeny PROPERTIES
+#         INTERFACE_INCLUDE_DIRECTORIES "${tweeny_SOURCE_DIR}"
+#     )
+#     add_library(tweeny::tweeny ALIAS tweeny)
+# elseif(NOT TARGET tweeny::tweeny AND TARGET tweeny)
+#     # 如果 tweeny 目标存在但没有别名，创建别名
+#     add_library(tweeny::tweeny ALIAS tweeny)
+# endif()
+message(STATUS "Tweeny: 暂时禁用 (CMake 版本兼容性问题)")
 
 
 # tinyxml2 (总是需要 - TMX 地图格式)
@@ -472,7 +473,7 @@ if(PRISMA_ENABLE_UPSCALER_FSR)
         FidelityFX-SDK
         GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git
         GIT_TAG ${PRISMA_DEP_FIDELITYFX_SDK_VERSION}
-        GIT_SHALLOW TRUE
+        GIT_SHALLOW FALSE
     )
 
     # 配置 FidelityFX SDK - 必需的选项
@@ -508,7 +509,7 @@ if(PRISMA_ENABLE_UPSCALER_DLSS)
             Streamline
             GIT_REPOSITORY https://github.com/NVIDIA-RTX/Streamline.git
             GIT_TAG ${PRISMA_DEP_STREAMLINE_VERSION}
-            GIT_SHALLOW TRUE
+            GIT_SHALLOW FALSE
         )
 
         # 配置 Streamline
