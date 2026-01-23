@@ -14,12 +14,16 @@ param(
 
     [switch]$Clean,
 
-    [switch]$Quiet,
+    [switch]$Q,
 
-    [switch]$Verbose,
+    [switch]$V,
 
     [switch]$Help
 )
+
+# Aliases for compatibility
+$Quiet = $Q
+$Verbose = $V
 
 $ErrorActionPreference = "Stop"
 
@@ -62,14 +66,14 @@ function Show-Help {
     Write-Host "Options:" -ForegroundColor Yellow
     Write-Host "  -Preset <preset>    Build preset to use"
     Write-Host "  -Clean              Clean build directory before building"
-    Write-Host "  -Quiet, -Q          Reduce output (only show errors and progress)"
-    Write-Host "  -Verbose, -V        Show full build output"
+    Write-Host "  -Q                  Quiet mode (only show errors and progress)"
+    Write-Host "  -V                  Verbose mode (show full build output)"
     Write-Host "  -Help               Show this help message"
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
     Write-Host "  .\build-windows.ps1 windows-x64-debug"
     Write-Host "  .\build-windows.ps1 windows-x64-release -Clean"
-    Write-Host "  .\build-windows.ps1 windows-x64-debug -Quiet"
+    Write-Host "  .\build-windows.ps1 windows-x64-debug -Q"
     Write-Host ""
 }
 
