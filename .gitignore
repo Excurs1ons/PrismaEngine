@@ -338,7 +338,6 @@ clion-*.txt
 local.properties
 
 /nul
-/CLAUDE.md
 /.claude/settings.local.json
 /vcpkg/*
 

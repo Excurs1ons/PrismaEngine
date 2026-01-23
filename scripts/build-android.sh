@@ -1,249 +1,136 @@
 #!/bin/bash
+# Prisma Engine Android Build Script (CMake Preset-based)
+# Usage: ./build-android.sh [preset] [clean]
+#
+# Available presets:
+#   - android-arm64-v8a-debug (default)
+#   - android-arm64-v8a-release
+
 set -e
 
-# 颜色输出
+# Color output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# 配置参数
-ANDROID_PLATFORM=${ANDROID_PLATFORM:-"24"}
-BUILD_TYPE=${BUILD_TYPE:-"Release"}
-ANDROID_STL=${ANDROID_STL:-"c++_shared"}
+# Default preset
+PRESET="${1:-android-arm64-v8a-debug}"
+CLEAN_BUILD="${2:-}"
 
-# 支持的ABI列表
-ABIS=("arm64-v8a" "armeabi-v7a")
-DEFAULT_ABIS=("arm64-v8a")
-
-# 函数：打印带颜色的消息
-print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+function print_header() {
+    echo ""
+    echo -e "${CYAN}====================================${NC}"
+    echo -e "${CYAN}$1${NC}"
+    echo -e "${CYAN}====================================${NC}"
 }
 
-print_warn() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# 函数：检查环境
-check_environment() {
-    print_info "检查构建环境..."
-
+function check_environment() {
+    # Check Android NDK
     if [ -z "$ANDROID_NDK_HOME" ]; then
-        if [ -n "$ANDROID_HOME" ]; then
-            # 尝试从ANDROID_HOME推导NDK路径
-            NDK_CANDIDATES=$(find "$ANDROID_HOME/ndk" -maxdepth 1 -type d 2>/dev/null | sort -V | tail -1)
-            if [ -n "$NDK_CANDIDATES" ]; then
-                export ANDROID_NDK_HOME="$NDK_CANDIDATES"
-                print_info "从ANDROID_HOME找到NDK: $ANDROID_NDK_HOME"
-            else
-                print_error "未找到NDK，请设置ANDROID_NDK_HOME或ANDROID_HOME环境变量"
-                exit 1
-            fi
-        else
-            print_error "请设置ANDROID_NDK_HOME或ANDROID_HOME环境变量"
-            exit 1
-        fi
-    fi
-
-    if [ ! -d "$ANDROID_NDK_HOME" ]; then
-        print_error "NDK路径不存在: $ANDROID_NDK_HOME"
+        echo -e "${RED}ERROR: ANDROID_NDK_HOME environment variable not set${NC}"
+        echo "Please set ANDROID_NDK_HOME to your Android NDK path"
+        echo ""
+        echo "Example:"
+        echo "  export ANDROID_NDK_HOME=/path/to/android-ndk"
+        echo ""
+        echo "If you have ANDROID_HOME set, NDK is usually at:"
+        echo "  \$ANDROID_HOME/ndk/<version>"
         exit 1
     fi
 
-    # 检查CMake
+    # Check CMake
     if ! command -v cmake &> /dev/null; then
-        print_error "未找到CMake，请安装CMake 3.31+"
+        echo -e "${RED}ERROR: CMake not found${NC}"
+        echo "Please install CMake"
         exit 1
     fi
 
-    # 检查Ninja
+    # Check Ninja
     if ! command -v ninja &> /dev/null; then
-        print_warn "未找到Ninja，将使用默认生成器"
-    fi
-
-    print_info "环境检查完成"
-    print_info "  NDK路径: $ANDROID_NDK_HOME"
-    print_info "  CMake版本: $(cmake --version | head -n1)"
-    print_info "  构建类型: $BUILD_TYPE"
-    print_info "  Android平台: $ANDROID_PLATFORM"
-}
-
-# 函数：构建单个ABI
-build_abi() {
-    local abi=$1
-    print_info "开始构建 $abi..."
-
-    # 创建构建目录
-    local build_dir="build-android/$abi"
-    mkdir -p "$build_dir"
-
-    # 配置CMake
-    cd "$build_dir"
-
-    local cmake_args=(
-        -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake"
-        -DANDROID_ABI="$abi"
-        -DANDROID_PLATFORM="$ANDROID_PLATFORM"
-        -DANDROID_STL="$ANDROID_STL"
-        -DCMAKE_BUILD_TYPE="$BUILD_TYPE"
-        -DCMAKE_INSTALL_PREFIX="../install/$abi"
-        -G "Ninja"
-    )
-
-    # 如果vcpkg已配置，添加工具链
-    if [ -n "$VCPKG_ROOT" ] && [ -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]; then
-        cmake_args+=(-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake")
-        cmake_args+=(-DVCPKG_TARGET_TRIPLET="$abi-android")
-    fi
-
-    print_info "配置CMake..."
-    cmake "${cmake_args[@]}" ../../android
-
-    # 构建
-    print_info "开始编译..."
-    local build_log_file="../build/build-$abi.log"
-    if command -v ninja &> /dev/null; then
-        ninja -v 2>&1 | tee "$build_log_file"
-        build_exit_code=${PIPESTATUS[0]}
-    else
-        make -j$(nproc) 2>&1 | tee "$build_log_file"
-        build_exit_code=${PIPESTATUS[0]}
-    fi
-
-    # 检查构建结果
-    if [ $build_exit_code -ne 0 ]; then
-        cd ../..
-        print_error "$abi 编译失败"
-        print_error "完整日志已保存到: $build_log_file"
-        print_error "请查看日志文件获取详细错误信息"
+        echo -e "${RED}ERROR: Ninja not found${NC}"
+        echo "Please install Ninja: sudo apt install ninja-build"
         exit 1
     fi
-
-    # 安装
-    print_info "安装到输出目录..."
-    if command -v ninja &> /dev/null; then
-        ninja install
-    else
-        make install
-    fi
-
-    cd ../..
-    print_info "$abi 构建完成"
 }
 
-# 函数：显示帮助信息
-show_help() {
-    echo "用法: $0 [选项]"
+function clean_build() {
     echo ""
-    echo "选项:"
-    echo "  -h, --help              显示此帮助信息"
-    echo "  -a, --abi ABI           指定ABI架构 (可选，默认: arm64-v8a)"
-    echo "  -t, --type TYPE         构建类型 (Debug|Release, 默认: Release)"
-    echo "  -p, --platform PLATFORM Android平台版本 (默认: 24)"
-    echo "  --all                   构建所有支持的ABI"
-    echo "  --clean                 清理构建目录"
-    echo ""
-    echo "环境变量:"
-    echo "  ANDROID_NDK_HOME        Android NDK路径"
-    echo "  ANDROID_HOME            Android SDK路径"
-    echo "  VCPKG_ROOT              vcpkg根目录 (可选)"
-    echo ""
-    echo "支持的ABI: ${ABIS[*]}"
-    echo ""
-    echo "注意: 已移除x86和x86_64架构，因为ARM架构在Android设备中占主导地位"
+    echo -e "${YELLOW}Cleaning build directory...${NC}"
+    BUILD_DIR="build/${PRESET}"
+    if [ -d "$BUILD_DIR" ]; then
+        rm -rf "$BUILD_DIR"
+        echo -e "Removed: ${BUILD_DIR}"
+    fi
 }
 
-# 主函数
-main() {
-    # 解析命令行参数
-    local build_abis=()
-    local clean_build=false
+# Script main
+print_header "Prisma Engine Android Build Script"
+echo -e "${GREEN}Preset: ${PRESET}${NC}"
+echo -e "${GREEN}Android NDK: ${ANDROID_NDK_HOME}${NC}"
 
-    while [[ $# -gt 0 ]]; do
-        case $1 in
-            -h|--help)
-                show_help
-                exit 0
-                ;;
-            -a|--abi)
-                build_abis=("$2")
-                shift 2
-                ;;
-            -t|--type)
-                BUILD_TYPE="$2"
-                shift 2
-                ;;
-            -p|--platform)
-                ANDROID_PLATFORM="$2"
-                shift 2
-                ;;
-            --all)
-                build_abis=("${ABIS[@]}")
-                shift
-                ;;
-            --clean)
-                clean_build=true
-                shift
-                ;;
-            *)
-                print_error "未知参数: $1"
-                show_help
-                exit 1
-                ;;
-        esac
-    done
+# Check environment
+check_environment
 
-    # 如果没有指定ABI，使用默认ABI
-    if [ ${#build_abis[@]} -eq 0 ]; then
-        build_abis=("${DEFAULT_ABIS[@]}")
-    fi
+# Clean build directory if requested
+if [ "$CLEAN_BUILD" = "clean" ]; then
+    clean_build
+fi
 
-    # 检查ABI是否有效
-    for abi in "${build_abis[@]}"; do
-        if [[ ! " ${ABIS[@]} " =~ " ${abi} " ]]; then
-            print_error "不支持的ABI: $abi"
-            print_info "支持的ABI: ${ABIS[*]}"
-            exit 1
-        fi
-    done
+# Map preset to build type and ABI
+case "$PRESET" in
+    android-arm64-v8a-debug)
+        BUILD_TYPE="Debug"
+        ANDROID_ABI="arm64-v8a"
+        ;;
+    android-arm64-v8a-release)
+        BUILD_TYPE="Release"
+        ANDROID_ABI="arm64-v8a"
+        ;;
+    *)
+        echo -e "${RED}ERROR: Unknown preset: ${PRESET}${NC}"
+        echo "Available presets:"
+        echo "  - android-arm64-v8a-debug (default)"
+        echo "  - android-arm64-v8a-release"
+        exit 1
+        ;;
+esac
 
-    # 清理构建目录
-    if [ "$clean_build" = true ]; then
-        print_info "清理构建目录..."
-        rm -rf build-android
-    fi
+BUILD_DIR="build/${PRESET}"
 
-    # 检查环境
-    check_environment
+# Configure using preset-style arguments
+echo ""
+echo -e "${YELLOW}[1/2] Configuring Android ${BUILD_TYPE} build (${ANDROID_ABI})${NC}"
+cmake -B "$BUILD_DIR" \
+    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+    -DCMAKE_SYSTEM_NAME="Android" \
+    -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake" \
+    -DANDROID_NDK="$ANDROID_NDK_HOME/" \
+    -DANDROID_PLATFORM="android-24" \
+    -DANDROID_ABI="$ANDROID_ABI" \
+    -DCMAKE_ANDROID_STL_TYPE="c++_shared" \
+    -DPRISMA_USE_FETCHCONTENT=ON \
+    -DPRISMA_ENABLE_RENDER_VULKAN=ON \
+    -DPRISMA_ENABLE_RENDER_DX12=OFF \
+    -DPRISMA_ENABLE_AUDIO_SDL3=ON \
+    -G Ninja
 
-    # 构建指定的ABI
-    local start_time=$(date +%s)
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ERROR: CMake configuration failed${NC}"
+    exit 1
+fi
 
-    for abi in "${build_abis[@]}"; do
-        build_abi "$abi"
-    done
+# Build
+echo ""
+echo -e "${YELLOW}[2/2] Building ${BUILD_TYPE}${NC}"
+cmake --build "$BUILD_DIR" -j$(nproc)
 
-    local end_time=$(date +%s)
-    local duration=$((end_time - start_time))
+if [ $? -ne 0 ]; then
+    echo -e "${RED}ERROR: Build failed${NC}"
+    exit 1
+fi
 
-    print_info "构建完成！"
-    print_info "总耗时: ${duration}秒"
-
-    # 显示输出文件
-    print_info "输出文件:"
-    for abi in "${build_abis[@]}"; do
-        local lib_path="build-android/install/$abi/lib/libEngine.so"
-        if [ -f "$lib_path" ]; then
-            local size=$(du -h "$lib_path" | cut -f1)
-            print_info "  $abi: $lib_path ($size)"
-        fi
-    done
-}
-
-# 执行主函数
-main "$@"
+print_header "Build completed successfully!"
+echo -e "${GREEN}Output directory: ${BUILD_DIR}${NC}"
+echo ""
