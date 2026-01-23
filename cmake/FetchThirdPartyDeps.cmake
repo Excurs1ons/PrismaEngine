@@ -5,6 +5,9 @@
 # 让 CMake 自动查找内置模块，避免 CMAKE_ROOT 路径问题
 include(FetchContent)
 
+# 包含版本锁定配置
+include(${CMAKE_CURRENT_LIST_DIR}/DependencyVersions.cmake OPTIONAL)
+
 # ========== 选项配置 ==========
 
 option(PRISMA_USE_FETCHCONTENT "使用 FetchContent 下载依赖 (否则使用系统/已安装库)" ON)
@@ -25,7 +28,7 @@ set(FETCHCONTENT_GLM_DIR "${FETCHCONTENT_BASE_DIR}/glm")
 FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
-    GIT_TAG 1.0.2
+    GIT_TAG ${PRISMA_DEP_GLM_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -34,7 +37,7 @@ set(FETCHCONTENT_NLOHMANN_JSON_DIR "${FETCHCONTENT_BASE_DIR}/nlohmann_json")
 FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.12.0
+    GIT_TAG ${PRISMA_DEP_NLOHMANN_JSON_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -43,7 +46,7 @@ set(FETCHCONTENT_SDL3_DIR "${FETCHCONTENT_BASE_DIR}/sdl3")
 FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
-    GIT_TAG release-3.2.28
+    GIT_TAG ${PRISMA_DEP_SDL3_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -52,7 +55,7 @@ set(FETCHCONTENT_VULKAN_HEADERS_DIR "${FETCHCONTENT_BASE_DIR}/vulkan-headers")
 FetchContent_Declare(
     Vulkan-Headers
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
-    GIT_TAG v1.4.328
+    GIT_TAG ${PRISMA_DEP_VULKAN_HEADERS_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -61,7 +64,7 @@ set(FETCHCONTENT_VMA_DIR "${FETCHCONTENT_BASE_DIR}/vma")
 FetchContent_Declare(
     vma
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-    GIT_TAG v3.1.0
+    GIT_TAG ${PRISMA_DEP_VMA_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -70,7 +73,7 @@ set(FETCHCONTENT_VK_BOOTSTRAP_DIR "${FETCHCONTENT_BASE_DIR}/vk-bootstrap")
 FetchContent_Declare(
     vk-bootstrap
     GIT_REPOSITORY https://github.com/charles-lunarge/vk-bootstrap.git
-    GIT_TAG v0.9
+    GIT_TAG ${PRISMA_DEP_VK_BOOTSTRAP_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -80,7 +83,7 @@ if(WIN32)
     FetchContent_Declare(
         DirectX-Headers
         GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
-        GIT_TAG v1.614.1
+        GIT_TAG ${PRISMA_DEP_DIRECTX_HEADERS_VERSION}
         GIT_SHALLOW TRUE
     )
 endif()
@@ -90,7 +93,7 @@ set(FETCHCONTENT_IMGUI_DIR "${FETCHCONTENT_BASE_DIR}/imgui")
 FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
-    GIT_TAG docking
+    GIT_TAG ${PRISMA_DEP_IMGUI_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -100,7 +103,7 @@ if(WIN32)
     FetchContent_Declare(
         openfbx
         GIT_REPOSITORY https://github.com/nem0/OpenFBX.git
-        GIT_TAG master
+        GIT_TAG ${PRISMA_DEP_OPENFBX_VERSION}
         GIT_SHALLOW TRUE
     )
 endif()
@@ -110,7 +113,7 @@ set(FETCHCONTENT_STB_DIR "${FETCHCONTENT_BASE_DIR}/stb")
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
-    GIT_TAG master
+    GIT_TAG ${PRISMA_DEP_STB_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -119,7 +122,7 @@ set(FETCHCONTENT_TWEENY_DIR "${FETCHCONTENT_BASE_DIR}/tweeny")
 FetchContent_Declare(
     tweeny
     GIT_REPOSITORY https://github.com/mobius3/tweeny.git
-    GIT_TAG master
+    GIT_TAG ${PRISMA_DEP_TWEENY_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -128,7 +131,7 @@ set(FETCHCONTENT_TINYXML2_DIR "${FETCHCONTENT_BASE_DIR}/tinyxml2")
 FetchContent_Declare(
     tinyxml2
     GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
-    GIT_TAG 10.0.0
+    GIT_TAG ${PRISMA_DEP_TINYXML2_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -137,7 +140,7 @@ set(FETCHCONTENT_ZSTD_DIR "${FETCHCONTENT_BASE_DIR}/zstd")
 FetchContent_Declare(
     zstd
     GIT_REPOSITORY https://github.com/facebook/zstd.git
-    GIT_TAG v1.5.6
+    GIT_TAG ${PRISMA_DEP_ZSTD_VERSION}
     GIT_SHALLOW TRUE
 )
 
@@ -145,6 +148,35 @@ FetchContent_Declare(
 
 message(STATUS "")
 message(STATUS "=== FetchContent 依赖管理 ===")
+message(STATUS "")
+message(STATUS "依赖版本锁定 / Dependency Versions:")
+message(STATUS "  GLM:              ${PRISMA_DEP_GLM_VERSION}")
+message(STATUS "  nlohmann_json:    ${PRISMA_DEP_NLOHMANN_JSON_VERSION}")
+message(STATUS "  stb:              ${PRISMA_DEP_STB_VERSION}")
+message(STATUS "  tinyxml2:         ${PRISMA_DEP_TINYXML2_VERSION}")
+message(STATUS "  zstd:             ${PRISMA_DEP_ZSTD_VERSION}")
+message(STATUS "  Tweeny:           ${PRISMA_DEP_TWEENY_VERSION}")
+message(STATUS "  SDL3:             ${PRISMA_DEP_SDL3_VERSION}")
+message(STATUS "  Vulkan-Headers:   ${PRISMA_DEP_VULKAN_HEADERS_VERSION}")
+message(STATUS "  VMA:              ${PRISMA_DEP_VMA_VERSION}")
+message(STATUS "  vk-bootstrap:     ${PRISMA_DEP_VK_BOOTSTRAP_VERSION}")
+if(WIN32)
+    message(STATUS "  DirectX-Headers:  ${PRISMA_DEP_DIRECTX_HEADERS_VERSION}")
+    message(STATUS "  ImGui:            ${PRISMA_DEP_IMGUI_VERSION}")
+    message(STATUS "  OpenFBX:          ${PRISMA_DEP_OPENFBX_VERSION}")
+endif()
+message(STATUS "")
+message(STATUS "更新策略 / Update Strategy:")
+if(PRISMA_FETCHCONTENT_UPDATE)
+    message(STATUS "  允许更新依赖 / Updates: ENABLED")
+    message(WARNING "  警告: 依赖版本可能会发生变化!")
+else()
+    message(STATUS "  锁定当前版本 / Updates: DISABLED (FETCHCONTENT_UPDATES_DISCONNECTED=ON)")
+endif()
+message(STATUS "")
+message(STATUS "最后验证 / Last Verified: ${PRISMA_DEP_LAST_VERIFIED}")
+message(STATUS "==============================")
+message(STATUS "")
 
 # GLM (总是需要)
 # 禁用 GLM 的测试和示例
@@ -439,7 +471,7 @@ if(PRISMA_ENABLE_UPSCALER_FSR)
     FetchContent_Declare(
         FidelityFX-SDK
         GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git
-        GIT_TAG v2.1.0  # FSR SDK 2.1.0 (最新版本，包含 FSR Redstone)
+        GIT_TAG ${PRISMA_DEP_FIDELITYFX_SDK_VERSION}
         GIT_SHALLOW TRUE
     )
 
@@ -475,7 +507,7 @@ if(PRISMA_ENABLE_UPSCALER_DLSS)
         FetchContent_Declare(
             Streamline
             GIT_REPOSITORY https://github.com/NVIDIA-RTX/Streamline.git
-            GIT_TAG v2.9.0  # 最新版本 (2025年8月)
+            GIT_TAG ${PRISMA_DEP_STREAMLINE_VERSION}
             GIT_SHALLOW TRUE
         )
 
