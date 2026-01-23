@@ -36,7 +36,7 @@ enum class CollisionShapeType {
 struct CollisionShape {
     CollisionShapeType type;
     // 形状数据
-    std::vector<std::pair<int, int>> points;  // 相对坐标
+    std::vector<std::pair<float, float>> points;  // 相对坐标 (浮点数)
 };
 
 // ============================================================================

@@ -242,7 +242,7 @@ std::vector<CollisionShape> TmxParser::ParseCollisionShapes(void* tileElement) {
             float y = objElem->FloatAttribute("y", 0.0f);
             float w = objElem->FloatAttribute("width", 0.0f);
             float h = objElem->FloatAttribute("height", 0.0f);
-            shape.points = {{0, 0}, {static_cast<int>(w), 0}, {static_cast<int>(w), static_cast<int>(h)}, {0, static_cast<int>(h)}};
+            shape.points = {{0.0f, 0.0f}, {w, 0.0f}, {w, h}, {0.0f, h}};
         }
 
         shapes.push_back(shape);
@@ -766,7 +766,7 @@ std::unique_ptr<Layer> TmxParser::ParseLayer(
 
                 auto subLayer = ParseLayer(subLayerElem, basePath, map);
                 if (subLayer) {
-                    groupLayer->groupData.layers.push_back(std::move(subLayer));
+                    groupLayer->layers.push_back(std::move(subLayer));
                 }
             }
 

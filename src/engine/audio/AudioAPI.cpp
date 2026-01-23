@@ -44,14 +44,20 @@ std::unique_ptr<IAudioDevice> AudioAPI::CreateDevice(AudioDeviceType deviceType,
     }
 
     switch (deviceType) {
+#if defined(PRISMA_ENABLE_AUDIO_OPENAL)
         case AudioDeviceType::OpenAL:
             return CreateOpenALDevice(desc);
+#endif
 
+#if defined(PRISMA_ENABLE_AUDIO_SDL3)
         case AudioDeviceType::SDL3:
             return CreateSDL3Device(desc);
+#endif
 
+#if defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
         case AudioDeviceType::XAudio2:
             return CreateXAudio2Device(desc);
+#endif
 
         case AudioDeviceType::Null:
             return CreateNullDevice(desc);
@@ -104,14 +110,25 @@ std::vector<AudioDeviceType> AudioAPI::GetSupportedDevices() {
     // 根据平台添加支持的设备
     switch (platform) {
         case Platform::Windows:
+#if defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
             devices.push_back(AudioDeviceType::XAudio2);
+#endif
+#if defined(PRISMA_ENABLE_AUDIO_OPENAL)
             devices.push_back(AudioDeviceType::OpenAL);
+#endif
+#if defined(PRISMA_ENABLE_AUDIO_SDL3)
             devices.push_back(AudioDeviceType::SDL3);
+#endif
             break;
 
         case Platform::Linux:
         case Platform::Android:
+#if defined(PRISMA_ENABLE_AUDIO_OPENAL)
             devices.push_back(AudioDeviceType::OpenAL);
+#endif
+#if defined(PRISMA_ENABLE_AUDIO_SDL3)
+            devices.push_back(AudioDeviceType::SDL3);
+#endif
             devices.push_back(AudioDeviceType::SDL3);
             break;
 
@@ -144,21 +161,43 @@ AudioDeviceType AudioAPI::GetRecommendedDevice() {
 
     switch (platform) {
         case Platform::Windows:
+#if defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
             // Windows首选XAudio2，性能最好
             return AudioDeviceType::XAudio2;
+#elif defined(PRISMA_ENABLE_AUDIO_SDL3)
+            return AudioDeviceType::SDL3;
+#else
+            return AudioDeviceType::Null;
+#endif
 
         case Platform::Linux:
         case Platform::Android:
+#if defined(PRISMA_ENABLE_AUDIO_OPENAL)
             // Linux/Android首选OpenAL，功能最全
             return AudioDeviceType::OpenAL;
+#elif defined(PRISMA_ENABLE_AUDIO_SDL3)
+            return AudioDeviceType::SDL3;
+#else
+            return AudioDeviceType::Null;
+#endif
 
         case Platform::macOS:
         case Platform::iOS:
+#if defined(PRISMA_ENABLE_AUDIO_OPENAL)
             // macOS/iOS使用OpenAL（Core Audio通过OpenAL暴露）
             return AudioDeviceType::OpenAL;
+#elif defined(PRISMA_ENABLE_AUDIO_SDL3)
+            return AudioDeviceType::SDL3;
+#else
+            return AudioDeviceType::Null;
+#endif
 
         default:
+#if defined(PRISMA_ENABLE_AUDIO_SDL3)
             return AudioDeviceType::SDL3; // SDL3作为通用备选
+#else
+            return AudioDeviceType::Null;
+#endif
     }
 }
 
@@ -166,6 +205,7 @@ AudioDeviceType AudioAPI::GetRecommendedDevice() {
 
 std::string AudioAPI::GetDeviceVersion(AudioDeviceType deviceType) {
     switch (deviceType) {
+#if defined(PRISMA_ENABLE_AUDIO_OPENAL)
         case AudioDeviceType::OpenAL:
             // 查询OpenAL版本
             if (IsDeviceSupported(AudioDeviceType::OpenAL)) {
@@ -175,24 +215,43 @@ std::string AudioAPI::GetDeviceVersion(AudioDeviceType deviceType) {
                     return info.version;
                 }
             }
-            return "";
+            break;
+#endif
 
-        case AudioDeviceType::XAudio2:
-            return "2.9";
-
+#if defined(PRISMA_ENABLE_AUDIO_SDL3)
         case AudioDeviceType::SDL3:
-#ifdef PRISMA_ENABLE_AUDIO_SDL3
-            return SDL_GetRevision();
-#else
-            return "3.0";
+            // 查询SDL3版本
+            if (IsDeviceSupported(AudioDeviceType::SDL3)) {
+                auto device = CreateSDL3Device({});
+                if (device) {
+                    auto info = device->GetDeviceInfo();
+                    return info.version;
+                }
+            }
+            break;
+#endif
+
+#if defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
+        case AudioDeviceType::XAudio2:
+            // XAudio2 版本信息
+            if (IsDeviceSupported(AudioDeviceType::XAudio2)) {
+                auto device = CreateXAudio2Device({});
+                if (device) {
+                    auto info = device->GetDeviceInfo();
+                    return info.version;
+                }
+            }
+            break;
 #endif
 
         case AudioDeviceType::Null:
-            return "1.0";
+            return "1.0 (Null)";
 
         default:
-            return "";
+            return "Unknown";
     }
+
+    return "Unknown";
 }
 
 // ========== 调试 ==========

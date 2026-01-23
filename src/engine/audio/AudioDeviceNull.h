@@ -59,8 +59,8 @@ public:
     uint32_t GetPlayingVoiceCount() const override;
 
     // 设备信息
-    DeviceInfo GetDeviceInfo() const override;
-    std::vector<DeviceInfo> GetAvailableDevices() const override;
+    IAudioDevice::DeviceInfo GetDeviceInfo() const override;
+    std::vector<IAudioDevice::DeviceInfo> GetAvailableDevices() const override;
     bool SetDevice(const std::string& deviceName) override;
     AudioDeviceType GetDeviceType() const override;
 
@@ -81,8 +81,8 @@ public:
     void Update(float deltaTime) override;
 
 private:
-    // 内部状态
-    struct VoiceState {
+    // 内部 Voice 状态
+    struct InternalVoiceState {
         AudioVoiceId id;
         bool playing;
         bool paused;
@@ -100,7 +100,7 @@ private:
     AudioVoiceId GenerateVoiceId();
 
     // 查找Voice
-    VoiceState* FindVoice(AudioVoiceId voiceId);
+    InternalVoiceState* FindVoice(AudioVoiceId voiceId);
 
     // 成员变量
     bool m_initialized = false;
@@ -113,7 +113,7 @@ private:
     AudioEventCallback m_eventCallback;
 
     // Voice管理
-    std::unordered_map<AudioVoiceId, VoiceState> m_voices;
+    std::unordered_map<AudioVoiceId, InternalVoiceState> m_voices;
     AudioVoiceId m_nextVoiceId = 1;
 
     // 线程安全

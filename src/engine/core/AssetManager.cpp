@@ -48,4 +48,20 @@ void AssetManager::CreateDefaultAssets() {
     LOG_INFO("Resource", "默认资产创建完成");
 }
 
-}  // namespace Engine
+void AssetManager::CreateDefaultMeshes(const std::filesystem::path& meshes_dir) {
+    // TODO: 实现默认网格创建
+}
+
+void AssetManager::CreateDefaultShaders(const std::filesystem::path& shaders_dir) {
+    // TODO: 实现默认着色器创建
+}
+
+void AssetManager::CreateDefaultTextures(const std::filesystem::path& textures_dir) {
+    // TODO: 实现默认纹理创建
+}
+
+void AssetManager::CreateDefaultMaterials(const std::filesystem::path& materials_dir) {
+    // TODO: 实现默认材质创建
+}
+
+}  // namespace PrismaEngine
