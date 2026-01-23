@@ -1,10 +1,16 @@
 #!/bin/bash
 # Prisma Engine Android Build Script (CMake Preset-based)
-# Usage: ./build-android.sh [preset] [clean]
+# Usage: ./build-android.sh [preset] [options...]
 #
 # Available presets:
 #   - android-arm64-v8a-debug (default)
 #   - android-arm64-v8a-release
+#
+# Options:
+#   --quiet, -q            Reduce output (only show errors and progress)
+#   --verbose, -v          Show full build output
+#   --clean                Clean build directory before building
+#   --help                 Show this help message
 
 set -e
 
@@ -15,15 +21,81 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Default preset
+# Default values
 PRESET="${1:-android-arm64-v8a-debug}"
-CLEAN_BUILD="${2:-}"
+CLEAN_BUILD=false
+QUIET_MODE=false
+VERBOSE_MODE=false
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --quiet|-q)
+            QUIET_MODE=true
+            shift
+            ;;
+        --verbose|-v)
+            VERBOSE_MODE=true
+            shift
+            ;;
+        --clean)
+            CLEAN_BUILD=true
+            shift
+            ;;
+        --help|-h)
+            echo "Usage: ./build-android.sh [preset] [options...]"
+            echo ""
+            echo "Presets:"
+            echo "  android-arm64-v8a-debug   (default)"
+            echo "  android-arm64-v8a-release"
+            echo ""
+            echo "Options:"
+            echo "  --quiet, -q            Reduce output (only show errors and progress)"
+            echo "  --verbose, -v          Show full build output"
+            echo "  --clean                Clean build directory before building"
+            echo "  --help                 Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  ./build-android.sh android-arm64-v8a-debug"
+            echo "  ./build-android.sh android-arm64-v8a-release --quiet"
+            echo "  ./build-android.sh android-arm64-v8a-debug --clean"
+            echo ""
+            exit 0
+            ;;
+        *)
+            # If it's not a known option, treat it as preset
+            PRESET="$1"
+            shift
+            ;;
+    esac
+done
+
+# Set CMake output mode
+if [ "$QUIET_MODE" = true ]; then
+    CMAKE_LOG_LEVEL="--log-level=ERROR"
+    CMAKE_OUTPUT_MODE="--output-mode=errors-only"
+elif [ "$VERBOSE_MODE" = true ]; then
+    CMAKE_LOG_LEVEL="--log-level=VERBOSE"
+    CMAKE_OUTPUT_MODE="--verbose"
+else
+    CMAKE_LOG_LEVEL="--log-level=STATUS"
+    CMAKE_OUTPUT_MODE=""
+fi
 
 function print_header() {
-    echo ""
-    echo -e "${CYAN}====================================${NC}"
-    echo -e "${CYAN}$1${NC}"
-    echo -e "${CYAN}====================================${NC}"
+    if [ "$QUIET_MODE" = false ]; then
+        echo ""
+        echo -e "${CYAN}====================================${NC}"
+        echo -e "${CYAN}$1${NC}"
+        echo -e "${CYAN}====================================${NC}"
+    fi
+}
+
+function print_step() {
+    if [ "$QUIET_MODE" = false ]; then
+        echo ""
+        echo -e "${YELLOW}$1${NC}"
+    fi
 }
 
 function check_environment() {
@@ -56,25 +128,31 @@ function check_environment() {
 }
 
 function clean_build() {
-    echo ""
-    echo -e "${YELLOW}Cleaning build directory...${NC}"
+    if [ "$QUIET_MODE" = false ]; then
+        echo ""
+        echo -e "${YELLOW}Cleaning build directory...${NC}"
+    fi
     BUILD_DIR="build/${PRESET}"
     if [ -d "$BUILD_DIR" ]; then
         rm -rf "$BUILD_DIR"
-        echo -e "Removed: ${BUILD_DIR}"
+        if [ "$QUIET_MODE" = false ]; then
+            echo -e "Removed: ${BUILD_DIR}"
+        fi
     fi
 }
 
 # Script main
 print_header "Prisma Engine Android Build Script"
-echo -e "${GREEN}Preset: ${PRESET}${NC}"
-echo -e "${GREEN}Android NDK: ${ANDROID_NDK_HOME}${NC}"
+if [ "$QUIET_MODE" = false ]; then
+    echo -e "${GREEN}Preset: ${PRESET}${NC}"
+    echo -e "${GREEN}Android NDK: ${ANDROID_NDK_HOME}${NC}"
+fi
 
 # Check environment
 check_environment
 
 # Clean build directory if requested
-if [ "$CLEAN_BUILD" = "clean" ]; then
+if [ "$CLEAN_BUILD" = true ]; then
     clean_build
 fi
 
@@ -100,8 +178,7 @@ esac
 BUILD_DIR="build/${PRESET}"
 
 # Configure using preset-style arguments
-echo ""
-echo -e "${YELLOW}[1/2] Configuring Android ${BUILD_TYPE} build (${ANDROID_ABI})${NC}"
+print_step "[1/2] Configuring Android ${BUILD_TYPE} build (${ANDROID_ABI})"
 cmake -B "$BUILD_DIR" \
     -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
     -DCMAKE_SYSTEM_NAME="Android" \
@@ -114,7 +191,8 @@ cmake -B "$BUILD_DIR" \
     -DPRISMA_ENABLE_RENDER_VULKAN=ON \
     -DPRISMA_ENABLE_RENDER_DX12=OFF \
     -DPRISMA_ENABLE_AUDIO_SDL3=ON \
-    -G Ninja
+    -G Ninja \
+    $CMAKE_LOG_LEVEL
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: CMake configuration failed${NC}"
@@ -122,15 +200,19 @@ if [ $? -ne 0 ]; then
 fi
 
 # Build
-echo ""
-echo -e "${YELLOW}[2/2] Building ${BUILD_TYPE}${NC}"
-cmake --build "$BUILD_DIR" -j$(nproc)
+print_step "[2/2] Building ${BUILD_TYPE}"
+cmake --build "$BUILD_DIR" -j$(nproc) $CMAKE_OUTPUT_MODE
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: Build failed${NC}"
     exit 1
 fi
 
-print_header "Build completed successfully!"
-echo -e "${GREEN}Output directory: ${BUILD_DIR}${NC}"
-echo ""
+# Success message
+if [ "$QUIET_MODE" = true ]; then
+    echo -e "${GREEN}Build completed: ${BUILD_DIR}${NC}"
+else
+    print_header "Build completed successfully!"
+    echo -e "${GREEN}Output directory: ${BUILD_DIR}${NC}"
+    echo ""
+fi
