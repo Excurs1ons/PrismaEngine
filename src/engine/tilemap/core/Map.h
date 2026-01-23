@@ -39,19 +39,11 @@ public:
     // 自定义属性
     PropertyMap properties;
 
-    // 转换方法
-    TileLayer* AsTileLayer() {
-        return GetType() == LayerType::TileLayer ? static_cast<TileLayer*>(this) : nullptr;
-    }
-    ObjectLayer* AsObjectLayer() {
-        return GetType() == LayerType::ObjectLayer ? static_cast<ObjectLayer*>(this) : nullptr;
-    }
-    ImageLayer* AsImageLayer() {
-        return GetType() == LayerType::ImageLayer ? static_cast<ImageLayer*>(this) : nullptr;
-    }
-    GroupLayer* AsGroupLayer() {
-        return GetType() == LayerType::GroupLayer ? static_cast<GroupLayer*>(this) : nullptr;
-    }
+    // 转换方法 - 返回数据指针类型
+    virtual TileLayer* AsTileLayer() { return nullptr; }
+    virtual ObjectLayer* AsObjectLayer() { return nullptr; }
+    virtual ImageLayer* AsImageLayer() { return nullptr; }
+    virtual GroupLayer* AsGroupLayer() { return nullptr; }
 };
 
 // ============================================================================
@@ -63,7 +55,7 @@ public:
     TileLayer tileData;
 
     LayerType GetType() const override { return LayerType::TileLayer; }
-    TileLayerImpl* AsTileLayer() { return this; }
+    TileLayer* AsTileLayer() override { return &tileData; }
 };
 
 class ObjectLayerImpl : public Layer {
@@ -71,7 +63,7 @@ public:
     ObjectLayer objectData;
 
     LayerType GetType() const override { return LayerType::ObjectLayer; }
-    ObjectLayerImpl* AsObjectLayer() { return this; }
+    ObjectLayer* AsObjectLayer() override { return &objectData; }
 };
 
 class ImageLayerImpl : public Layer {
@@ -79,7 +71,7 @@ public:
     ImageLayer imageData;
 
     LayerType GetType() const override { return LayerType::ImageLayer; }
-    ImageLayerImpl* AsImageLayer() { return this; }
+    ImageLayer* AsImageLayer() override { return &imageData; }
 };
 
 class GroupLayerImpl : public Layer {
@@ -87,7 +79,7 @@ public:
     GroupLayer groupData;
 
     LayerType GetType() const override { return LayerType::GroupLayer; }
-    GroupLayerImpl* AsGroupLayer() { return this; }
+    GroupLayer* AsGroupLayer() override { return &groupData; }
 };
 
 // ============================================================================
@@ -217,8 +209,8 @@ struct TileMap {
 private:
     static void CollectTileLayers(std::vector<TileLayer*>& result, const std::vector<std::unique_ptr<Layer>>& layers) {
         for (const auto& layer : layers) {
-            if (layer->GetType() == LayerType::TileLayer) {
-                result.push_back(static_cast<TileLayerImpl*>(layer.get())->AsTileLayer());
+            if (auto* tileLayer = layer->AsTileLayer()) {
+                result.push_back(tileLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
                 // TODO: 递归
             }
@@ -227,8 +219,8 @@ private:
 
     static void CollectObjectLayers(std::vector<ObjectLayer*>& result, const std::vector<std::unique_ptr<Layer>>& layers) {
         for (const auto& layer : layers) {
-            if (layer->GetType() == LayerType::ObjectLayer) {
-                result.push_back(static_cast<ObjectLayerImpl*>(layer.get())->AsObjectLayer());
+            if (auto* objectLayer = layer->AsObjectLayer()) {
+                result.push_back(objectLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
                 // TODO: 递归
             }
@@ -237,8 +229,8 @@ private:
 
     static void CollectImageLayers(std::vector<ImageLayer*>& result, const std::vector<std::unique_ptr<Layer>>& layers) {
         for (const auto& layer : layers) {
-            if (layer->GetType() == LayerType::ImageLayer) {
-                result.push_back(static_cast<ImageLayerImpl*>(layer.get())->AsImageLayer());
+            if (auto* imageLayer = layer->AsImageLayer()) {
+                result.push_back(imageLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
                 // TODO: 递归
             }

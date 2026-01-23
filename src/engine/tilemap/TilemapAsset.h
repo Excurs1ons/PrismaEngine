@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../core/Map.h"
+#include "core/Map.h"
 #include "../resource/Asset.h"
 #include <filesystem>
 #include <memory>

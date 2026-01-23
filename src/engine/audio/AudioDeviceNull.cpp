@@ -32,7 +32,6 @@ bool AudioDeviceNull::Initialize(const AudioDesc& desc) {
 
     // 重置统计
     m_stats = AudioStats{};
-    m_stats.maxVoices = desc.maxVoices;
     m_stats.activeVoices = 0;
 
     m_initialized = true;
@@ -68,7 +67,7 @@ AudioVoiceId AudioDeviceNull::PlayClip(const AudioClip& clip, const PlayDesc& de
     }
 
     AudioVoiceId voiceId = GenerateVoiceId();
-    VoiceState voice;
+    InternalVoiceState voice;
     voice.id = voiceId;
     voice.playing = true;
     voice.paused = false;
@@ -385,23 +384,22 @@ uint32_t AudioDeviceNull::GetPlayingVoiceCount() const {
     return m_stats.activeVoices;
 }
 
-DeviceInfo AudioDeviceNull::GetDeviceInfo() const {
+IAudioDevice::DeviceInfo AudioDeviceNull::GetDeviceInfo() const {
     std::lock_guard<std::mutex> lock(m_mutex);
 
-    DeviceInfo info;
+    IAudioDevice::DeviceInfo info;
     info.name = "Null Audio Device";
+    info.driver = "Null Driver";
     info.version = "1.0";
-    info.extensions = "None";
+    info.isDefault = true;
     info.maxVoices = 1024;
-    info.sampleRate = 44100;
-    info.channels = 2;
     info.supports3D = false;
     info.supportsEffects = false;
 
     return info;
 }
 
-std::vector<DeviceInfo> AudioDeviceNull::GetAvailableDevices() const {
+std::vector<IAudioDevice::DeviceInfo> AudioDeviceNull::GetAvailableDevices() const {
     return { GetDeviceInfo() };
 }
 
@@ -513,7 +511,7 @@ AudioVoiceId AudioDeviceNull::GenerateVoiceId() {
     return id;
 }
 
-AudioDeviceNull::VoiceState* AudioDeviceNull::FindVoice(AudioVoiceId voiceId) {
+AudioDeviceNull::InternalVoiceState* AudioDeviceNull::FindVoice(AudioVoiceId voiceId) {
     auto it = m_voices.find(voiceId);
     return (it != m_voices.end()) ? &it->second : nullptr;
 }

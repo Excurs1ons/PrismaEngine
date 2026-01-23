@@ -57,7 +57,7 @@ set(CORE_SOURCES
     # 音频系统（暂时全部禁用，需要重写以匹配新系统）
     # audio/AudioAPI.cpp
     # audio/AudioDevice.cpp
-    # audio/AudioDeviceNull.cpp
+    audio/AudioDeviceNull.cpp
     # audio/AudioManager.cpp
 )
 
@@ -106,6 +106,7 @@ if(WIN32)
         platform/Application.cpp
         platform/ApplicationWindows.cpp
         platform/WindowsUtils.cpp
+        input/drivers/InputDriverWin32.cpp
     )
 endif()
 
@@ -399,6 +400,12 @@ if(PRISMA_ENABLE_AUDIO_XAUDIO2)
     endif()
 endif()
 
+# XInput 游戏手柄支持 (Windows)
+if(WIN32)
+    target_link_libraries(Engine PUBLIC xinput9_1_0.lib)
+    message(STATUS "添加 XInput 库链接")
+endif()
+
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
     # SDL3 由 FetchContent.cmake 管理
@@ -517,10 +524,19 @@ if(PRISMA_ENABLE_RENDER_DX12)
             message(STATUS "链接 Microsoft::DirectX-Headers (DX12 渲染设备)")
         elseif(TARGET DirectX-Headers)
             target_link_libraries(Engine PUBLIC DirectX-Headers)
-            message(STATUS "链接 DirectX-Headers (DX12 渲染设备)")
+            message(STATUS "链接 DirectX-Headers (DX12 渄染设备)")
         else()
             message(FATAL_ERROR "DirectX-Headers 目标未找到! DX12 渲染设备需要 DirectX-Headers")
         endif()
+
+        # 添加 DirectX 12 运行时库链接
+        target_link_libraries(Engine PUBLIC
+            d3d12.lib
+            d3dcompiler.lib
+            dxgi.lib
+            dxguid.lib
+        )
+        message(STATUS "添加 DirectX 12 运行时库链接")
     else()
         message(FATAL_ERROR "DirectX12 仅支持 Windows 平台")
     endif()
@@ -666,9 +682,10 @@ target_compile_definitions(Engine PUBLIC
 )
 
 # 定义音频后端启用宏（用于 AudioAPI.cpp 中的条件编译）
-if(PRISMA_ENABLE_AUDIO_XAUDIO2)
-    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_XAUDIO2=1)
-endif()
+# XAudio2 暂时禁用，需要修复接口
+# if(PRISMA_ENABLE_AUDIO_XAUDIO2)
+#     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_XAUDIO2=1)
+# endif()
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)

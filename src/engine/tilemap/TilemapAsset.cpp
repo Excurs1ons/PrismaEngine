@@ -52,21 +52,21 @@ void TilemapAsset::Unload() {
 
 void TilemapAsset::Serialize(OutputArchive& archive) const {
     // 序列化基本信息
-    archive.Serialize("name", m_name);
-    archive.Serialize("path", m_path.string());
+    archive("name", m_name);
+    archive("path", m_path.string());
 
     if (m_map) {
-        archive.Serialize("version", m_map->version);
-        archive.Serialize("orientation", static_cast<int>(m_map->orientation));
-        archive.Serialize("renderOrder", static_cast<int>(m_map->renderOrder));
-        archive.Serialize("width", m_map->width);
-        archive.Serialize("height", m_map->height);
-        archive.Serialize("tileWidth", m_map->tileWidth);
-        archive.Serialize("tileHeight", m_map->tileHeight);
-        archive.Serialize("infinite", m_map->infinite);
+        archive("version", m_map->version);
+        archive("orientation", static_cast<int>(m_map->orientation));
+        archive("renderOrder", static_cast<int>(m_map->renderOrder));
+        archive("width", m_map->width);
+        archive("height", m_map->height);
+        archive("tileWidth", m_map->tileWidth);
+        archive("tileHeight", m_map->tileHeight);
+        archive("infinite", m_map->infinite);
 
         // 序列化图块集数量
-        archive.Serialize("tilesetCount", static_cast<int>(m_map->tilesets.size()));
+        archive("tilesetCount", static_cast<int>(m_map->tilesets.size()));
 
         // TODO: 序列化完整地图数据
     }
@@ -78,28 +78,28 @@ void TilemapAsset::Serialize(OutputArchive& archive) const {
 
 void TilemapAsset::Deserialize(InputArchive& archive) {
     // 反序列化基本信息
-    archive.Deserialize("name", m_name);
+    archive("name", m_name);
     std::string pathStr;
-    archive.Deserialize("path", pathStr);
+    archive("path", pathStr);
     m_path = pathStr;
 
     // 创建空地图
     m_map = std::make_unique<TileMap>();
 
-    archive.Deserialize("version", m_map->version);
+    archive("version", m_map->version);
     int orientationValue = 0;
-    archive.Deserialize("orientation", orientationValue);
+    archive("orientation", orientationValue);
     m_map->orientation = static_cast<Orientation>(orientationValue);
 
     int renderOrderValue = 0;
-    archive.Deserialize("renderOrder", renderOrderValue);
+    archive("renderOrder", renderOrderValue);
     m_map->renderOrder = static_cast<RenderOrder>(renderOrderValue);
 
-    archive.Deserialize("width", m_map->width);
-    archive.Deserialize("height", m_map->height);
-    archive.Deserialize("tileWidth", m_map->tileWidth);
-    archive.Deserialize("tileHeight", m_map->tileHeight);
-    archive.Deserialize("infinite", m_map->infinite);
+    archive("width", m_map->width);
+    archive("height", m_map->height);
+    archive("tileWidth", m_map->tileWidth);
+    archive("tileHeight", m_map->tileHeight);
+    archive("infinite", m_map->infinite);
 
     // TODO: 反序列化完整地图数据
 
