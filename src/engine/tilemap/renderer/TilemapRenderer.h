@@ -202,7 +202,7 @@ private:
     std::unordered_map<const Tileset*, int> m_tilesetToTextureIndex;
 
     // 几何体数据
-    std::vector<float> m_vertices;
+    std::vector<TileVertex> m_vertices;
     std::vector<uint32_t> m_indices;
     std::shared_ptr<Graphic::IBuffer> m_vertexBuffer;
     std::shared_ptr<Graphic::IBuffer> m_indexBuffer;
@@ -212,7 +212,7 @@ private:
     // 分块渲染数据
     static constexpr int MAX_CHUNKS = 256;
     struct Chunk {
-        std::vector<float> vertices;
+        std::vector<TileVertex> vertices;
         std::vector<uint32_t> indices;
         std::shared_ptr<Graphic::IBuffer> vertexBuffer;
         std::shared_ptr<Graphic::IBuffer> indexBuffer;

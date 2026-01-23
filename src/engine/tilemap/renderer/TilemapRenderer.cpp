@@ -290,8 +290,8 @@ void TilemapRenderer::BuildLayerGeometry(
             int localId = static_cast<int>(pureGid) - tileset->firstGid;
 
             // 获取 UV 坐标
-            float u0, v0, u1, v1;
-            GetTileUV(tileset, localId, u0, v0, u1, v1);
+            float u0, texV0, u1, texV1;
+            GetTileUV(tileset, localId, u0, texV0, u1, texV1);
 
             // 计算世界位置
             float worldX, worldY;
@@ -310,15 +310,15 @@ void TilemapRenderer::BuildLayerGeometry(
 
             if (flipD) {
                 // 对角翻转 (旋转)
-                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? v1 : v0, textureIndex, r, g, b, a);
-                v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? v1 : v0, textureIndex, r, g, b, a);
+                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
             } else {
-                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? v1 : v0, textureIndex, r, g, b, a);
-                v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? v1 : v0, textureIndex, r, g, b, a);
+                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
             }
 
             vertices.insert(vertices.end(), {v0, v1, v2, v3});
@@ -402,8 +402,8 @@ void TilemapRenderer::BuildChunkGeometry(int chunkX, int chunkY) {
 
                 int localId = static_cast<int>(pureGid) - tileset->firstGid;
 
-                float u0, v0, u1, v1;
-                GetTileUV(tileset, localId, u0, v0, u1, v1);
+                float u0, texV0, u1, texV1;
+                GetTileUV(tileset, localId, u0, texV0, u1, texV1);
 
                 float worldX = static_cast<float>(x * tileWidth);
                 float worldY = static_cast<float>(y * tileHeight);
@@ -415,26 +415,22 @@ void TilemapRenderer::BuildChunkGeometry(int chunkX, int chunkY) {
                 bool flipV = GIDHelper::IsVerticallyFlipped(gid);
                 bool flipD = GIDHelper::IsDiagonallyFlipped(gid);
 
+                // 添加 4 个顶点 (两个三角形)
                 TileVertex v0, v1, v2, v3;
 
                 if (flipD) {
-                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? v1 : v0, textureIndex, r, g, b, a);
-                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? v1 : v0, textureIndex, r, g, b, a);
+                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
                 } else {
-                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? v1 : v0, textureIndex, r, g, b, a);
-                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? v0 : v1, textureIndex, r, g, b, a);
-                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? v1 : v0, textureIndex, r, g, b, a);
+                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
+                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
                 }
 
-                chunk.vertices.insert(chunk.vertices.end(), {
-                    v0.x, v0.y, v0.u, v0.v, v0.texIndex, v0.r, v0.g, v0.b, v0.a,
-                    v1.x, v1.y, v1.u, v1.v, v1.texIndex, v1.r, v1.g, v1.b, v1.a,
-                    v2.x, v2.y, v2.u, v2.v, v2.texIndex, v2.r, v2.g, v2.b, v2.a,
-                    v3.x, v3.y, v3.u, v3.v, v3.texIndex, v3.r, v3.g, v3.b, v3.a
-                });
+                chunk.vertices.insert(chunk.vertices.end(), {v0, v1, v2, v3});
 
                 uint32_t i0 = vertexOffset + 0;
                 uint32_t i1 = vertexOffset + 1;
