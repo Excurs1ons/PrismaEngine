@@ -1,3 +1,4 @@
+# 这个cmake文件没有任何作用 只是用来让clion识别项目 支持构建
 cmake_minimum_required(VERSION 3.31)
 
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "")
@@ -13,6 +14,9 @@ project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
 #set(ENV{HTTPS_PROXY} "http://127.0.0.1:7897")
 
 # ========== 包含配置模块 ==========
+
+# 工具函数
+include(cmake/Utils.cmake)
 
 # 编译器和编译选项配置
 include(cmake/CompilerOptions.cmake)
@@ -33,11 +37,9 @@ include(cmake/UpscalerOptions.cmake)
 
 option(PRISMA_USE_FETCHCONTENT "使用 CMake FetchContent 管理依赖" ON)
 
-if(PRISMA_USE_FETCHCONTENT)
-    include(cmake/FetchThirdPartyDeps.cmake)
-else()
-    message(STATUS "使用系统/已安装的库")
-endif()
+
+include(cmake/FetchThirdPartyDeps.cmake)
+
 
 # ========== 添加子模块 ==========
 
@@ -46,7 +48,7 @@ message(STATUS "=== Adding Subdirectories ===")
 
 # 核心模块
 add_subdirectory(src/engine)
-add_subdirectory(src/runtime)
+# Game 模块
 add_subdirectory(src/game)
 
 # 条件添加 Editor
@@ -55,6 +57,9 @@ if(PRISMA_BUILD_EDITOR)
 else()
     message(STATUS "Skipping Editor (PRISMA_BUILD_EDITOR=OFF)")
 endif()
+
+# 运行时模块 (最后添加，以便能检测到 Game/Editor 目标)
+add_subdirectory(src/runtime)
 
 message(STATUS "==============================")
 message(STATUS "")
