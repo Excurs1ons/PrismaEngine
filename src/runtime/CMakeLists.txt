@@ -58,6 +58,29 @@ set_target_properties(Runtime PROPERTIES
     OUTPUT_NAME "PrismaRuntime"
 )
 
+# ========== 自动复制 DLL 配置 ==========
+# 使用 cmake/Utils.cmake 中定义的 copy_dlls_to_target 函数
+# 将指定的 DLL 复制到可执行文件生成目录 (bin/Debug 或 bin/Release)
+
+# 如果你有特定的 DLL 需要拷贝，请写在这里：
+if(WIN32)
+    set(DLLS_TO_COPY "")
+
+    # 检查 Game 目标是否存在
+    if(TARGET Game)
+        list(APPEND DLLS_TO_COPY $<TARGET_FILE:Game>)
+    endif()
+
+    # 检查 Editor 目标是否存在
+    if(TARGET Editor)
+        list(APPEND DLLS_TO_COPY $<TARGET_FILE:Editor>)
+    endif()
+
+    if(DLLS_TO_COPY)
+        copy_dlls_to_target(Runtime ${DLLS_TO_COPY})
+    endif()
+endif()
+
 # 安装规则
 #install(TARGETS Runtime
 #    RUNTIME DESTINATION bin
