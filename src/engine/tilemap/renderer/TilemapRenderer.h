@@ -4,7 +4,7 @@
 #include "../TilemapAsset.h"
 #include "../../Component.h"
 #include "../../graphic/RenderComponent.h"
-#include "../../graphic/RenderTypes.h"
+#include "../../graphic/interfaces/RenderTypes.h"
 #include <memory>
 #include <vector>
 #include <unordered_map>

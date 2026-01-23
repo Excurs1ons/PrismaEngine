@@ -26,7 +26,7 @@ set(PRISMA_DEP_NLOHMANN_JSON_VERSION "v3.12.0")
 # stb - 图像加载库 (header-only)
 # GitHub: https://github.com/nothings/stb
 # 锁定到具体 commit 而非 master 分支
-set(PRISMA_DEP_STB_VERSION "af1a5bc352164740c1cc1354942b1c6b72eacb8a")  # 2024-01-15
+set(PRISMA_DEP_STB_VERSION "f1c79c02822848a9bed4315b12c8c8f3761e1296")  # 2024-01-15
 
 # tinyxml2 - XML解析库 (用于 TMX 地图格式)
 # GitHub: https://github.com/leethomason/tinyxml2
@@ -38,8 +38,8 @@ set(PRISMA_DEP_ZSTD_VERSION "v1.5.6")
 
 # Tweeny - 补间动画库 (header-only, 用于 UI 动画)
 # GitHub: https://github.com/mobius3/tweeny
-# 锁定到具体 commit 而非 master 分支
-set(PRISMA_DEP_TWEENY_VERSION "3.2.0")
+# 锁定到具体 tag
+set(PRISMA_DEP_TWEENY_VERSION "v3.2.0")
 
 # -------------------------------------------------------------------------------
 # 平台抽象 / Platform Abstraction
@@ -75,8 +75,8 @@ set(PRISMA_DEP_DIRECTX_HEADERS_VERSION "v1.614.1")
 
 # ImGui - UI框架 (docking分支)
 # GitHub: https://github.com/ocornut/imgui
-# 使用 docking 分支的最新 commit
-set(PRISMA_DEP_IMGUI_VERSION "docking")  # docking 分支相对稳定
+# 锁定到具体 commit
+set(PRISMA_DEP_IMGUI_VERSION "2a08c87b8cd363792fcda4d308ac423859ab66ae")  # docking 分支
 
 # OpenFBX - FBX模型加载 (Windows only)
 # GitHub: https://github.com/nem0/OpenFBX

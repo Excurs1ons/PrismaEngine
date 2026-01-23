@@ -1,47 +1,39 @@
 @echo off
-REM Prisma Engine Windows Build Script
-REM Usage: build-windows.bat [preset] [options...]
-REM   preset: windows-x64-debug (default), windows-x64-release, windows-x86-debug, windows-x86-release
-REM   options:
-REM     clean     - Clean build directory before building
-REM     quiet     - Reduce output (only show errors and important messages)
-REM     verbose   - Show full build output
-
 setlocal enabledelayedexpansion
 
-REM Default preset
-set PRESET=windows-x64-debug
-set CLEAN_BUILD=0
-set QUIET_MODE=0
-set VERBOSE_MODE=0
+REM Default values
+set "PRESET=windows-x64-debug"
+set "CLEAN_BUILD=0"
+set "QUIET_MODE=0"
+set "VERBOSE_MODE=0"
 
-REM Parse arguments
-:parse_args
-if "%~1"=="" goto :args_done
-if "%~1"=="clean" (
-    set CLEAN_BUILD=1
+REM Parse all arguments
+:parse_loop
+if "%~1"=="" goto :parse_done
+if /i "%~1"=="clean" (
+    set "CLEAN_BUILD=1"
     shift
-    goto :parse_args
+    goto :parse_loop
 )
 if "%~1"=="--quiet" (
-    set QUIET_MODE=1
+    set "QUIET_MODE=1"
     shift
-    goto :parse_args
+    goto :parse_loop
 )
 if "%~1"=="-q" (
-    set QUIET_MODE=1
+    set "QUIET_MODE=1"
     shift
-    goto :parse_args
+    goto :parse_loop
 )
 if "%~1"=="--verbose" (
-    set VERBOSE_MODE=1
+    set "VERBOSE_MODE=1"
     shift
-    goto :parse_args
+    goto :parse_loop
 )
 if "%~1"=="-v" (
-    set VERBOSE_MODE=1
+    set "VERBOSE_MODE=1"
     shift
-    goto :parse_args
+    goto :parse_loop
 )
 if "%~1"=="--help" (
     echo Usage: build-windows.bat [preset] [options...]
@@ -53,38 +45,38 @@ if "%~1"=="--help" (
     echo   windows-x86-release
     echo.
     echo Options:
-    echo   clean, --clean         Clean build directory before building
-    echo   --quiet, -q            Reduce output (only show errors and progress)
-    echo   --verbose, -v          Show full build output
-    echo   --help                 Show this help message
+    echo   clean                  Clean build directory before building
+    echo   --quiet, -q            Quiet mode ^(only show errors^)
+    echo   --verbose, -v          Verbose mode
+    echo   --help                 Show this help
     echo.
     echo Examples:
     echo   build-windows.bat windows-x64-debug
     echo   build-windows.bat windows-x64-release clean
-    echo   build-windows.bat windows-x64-debug --quiet
+    echo   build-windows.bat windows-x64-debug -q
     echo.
     exit /b 0
 )
-REM If it's not a known option, treat it as preset
-set PRESET=%~1
+REM Treat as preset name
+set "PRESET=%~1"
 shift
-goto :parse_args
+goto :parse_loop
 
-:args_done
+:parse_done
 
-REM Set output level based on mode
+REM Set CMake options
 if %QUIET_MODE%==1 (
-    set "OUTPUT_LEVEL=--quiet"
-    set "CMAKE_QUIET=--log-level=ERROR"
+    set "CMAKE_LOG_LEVEL=--log-level=ERROR"
+    set "MSBUILD_VERBOSITY=/v:minimal"
 ) else if %VERBOSE_MODE%==1 (
-    set "OUTPUT_LEVEL=--verbose"
-    set "CMAKE_QUIET=--log-level=VERBOSE"
+    set "CMAKE_LOG_LEVEL=--log-level=VERBOSE"
+    set "MSBUILD_VERBOSITY=/v:detailed"
 ) else (
-    set "OUTPUT_LEVEL="
-    set "CMAKE_QUIET=--log-level=STATUS"
+    set "CMAKE_LOG_LEVEL=--log-level=STATUS"
+    set "MSBUILD_VERBOSITY=/v:normal"
 )
 
-REM Only show header if not quiet
+REM Show header only if not quiet
 if %QUIET_MODE%==0 (
     echo ====================================
     echo Prisma Engine Windows Build Script
@@ -93,25 +85,23 @@ if %QUIET_MODE%==0 (
     echo.
 )
 
-REM Check if CMake is available
+REM Check CMake
 where cmake >nul 2>nul
 if errorlevel 1 (
     echo ERROR: CMake not found in PATH
-    echo Please install CMake and add it to your PATH
     exit /b 1
 )
+echo CMake found, proceeding with build...
 
-REM Clean build directory if requested
+REM Clean if requested
 if %CLEAN_BUILD%==1 (
     if %QUIET_MODE%==0 echo Cleaning build directory...
-    if exist build\%PRESET% (
-        rmdir /s /q build\%PRESET% 2>nul
-    )
+    if exist "build\%PRESET%" rmdir /s /q "build\%PRESET%" 2>nul
 )
 
 REM Configure
 if %QUIET_MODE%==0 echo [1/2] Configuring with preset: %PRESET%
-cmake --preset %PRESET% %CMAKE_QUIET%
+cmake --preset %PRESET% %CMAKE_LOG_LEVEL%
 if errorlevel 1 (
     echo ERROR: CMake configuration failed
     exit /b 1
@@ -119,19 +109,15 @@ if errorlevel 1 (
 
 REM Build
 if %QUIET_MODE%==0 echo [2/2] Building with preset: %PRESET%
-if %QUIET_MODE%==1 (
-    cmake --build --preset %PRESET% --output-mode=errors-only
-) else if %VERBOSE_MODE%==1 (
-    cmake --build --preset %PRESET% --verbose
-) else (
-    cmake --build --preset %PRESET%
-)
+echo Executing: cmake --build --preset %PRESET% -- %MSBUILD_VERBOSITY%
+cmake --build --preset %PRESET% -- %MSBUILD_VERBOSITY%
 if errorlevel 1 (
     echo ERROR: Build failed
     exit /b 1
 )
+echo Build command completed successfully.
 
-REM Success message
+REM Success
 if %QUIET_MODE%==0 (
     echo.
     echo ====================================
