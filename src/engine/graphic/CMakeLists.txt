@@ -70,7 +70,7 @@ set(VULKAN_HEADERS
 set(ENGINE_GRAPHIC_SOURCES
     ${PIPELINE_FORWARD_SOURCES}
     ${PIPELINE_DEFERRED_SOURCES}
-    # ${UI_SOURCES}  # 暂时禁用：UIPass.cpp 实现被注释掉了
+    ${UI_SOURCES}
     ${LOGICAL_SOURCES}
     graphic/pipelines/SkyboxRenderPass.cpp
     graphic/GeometryRenderPass.cpp
@@ -96,7 +96,7 @@ set(ENGINE_GRAPHIC_SOURCES
 set(ENGINE_GRAPHIC_HEADERS
     ${PIPELINE_FORWARD_HEADERS}
     ${PIPELINE_DEFERRED_HEADERS}
-    # ${UI_HEADERS}  # 暂时禁用：UIPass.cpp 实现被注释掉了
+    ${UI_HEADERS}
     ${LOGICAL_HEADERS}
     graphic/pipelines/SkyboxRenderPass.h
     graphic/GeometryRenderPass.h

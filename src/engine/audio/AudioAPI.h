@@ -11,7 +11,9 @@ namespace PrismaEngine::Audio {
 // 前置声明设备类
 class AudioDeviceOpenAL;
 class AudioDeviceSDL3;
+#if defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
 class AudioDeviceXAudio2;
+#endif
 class AudioDeviceNull;
 
 /// @brief 音频 API
