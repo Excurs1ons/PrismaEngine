@@ -30,8 +30,8 @@ struct ShaderDesc : public ResourceDesc {
     uint64_t compileTimestamp = 0;
     uint64_t compileHash = 0;
     ShaderCompileOptions compileOptions;
-    const std::vector<std::string> &dependencies;
-    const std::vector<std::string> &includes;
+    std::vector<std::string> dependencies;  // 改为值类型
+    std::vector<std::string> includes;      // 改为值类型
 };
 
 /// @brief 管线描述
