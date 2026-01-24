@@ -188,6 +188,8 @@ message(STATUS "GLM: 使用 FetchContent")
 
 
 # nlohmann_json (总是需要)
+# 禁用 natvis 文件以避免 CMake 构建错误
+set(NLOHMANN_ADD_NATVIS FALSE CACHE BOOL "Disable nlohmann_json natvis" FORCE)
 
 FetchContent_MakeAvailable(nlohmann_json)
 message(STATUS "nlohmann_json: 使用 FetchContent")

@@ -5,6 +5,7 @@
 // 移除了对Asset.h的循环引用
 #include "MetaData.h"
 #include "resource/Archive.h"
+#include "graphic/interfaces/RenderTypes.h"  // 需要 BoundingBox 完整定义
 
 namespace PrismaEngine {
 
@@ -69,6 +70,66 @@ template <> inline void OutputArchive::SerializeValue(const std::string& key, co
     EndObject();
 }
 #endif  // defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_PLATFORM_ANDROID)
+
+// GLM 类型序列化（无平台限制）
+template <> inline void OutputArchive::SerializeValue(const std::string& key, const glm::vec4& value) {
+    BeginObject(1);
+    SetCurrent(key);
+    BeginArray(4);
+    WriteFloat(value.x);
+    WriteFloat(value.y);
+    WriteFloat(value.z);
+    WriteFloat(value.w);
+    EndArray();
+    EndObject();
+}
+
+template <> inline void OutputArchive::SerializeValue(const std::string& key, const glm::vec3& value) {
+    BeginObject(1);
+    SetCurrent(key);
+    BeginArray(3);
+    WriteFloat(value.x);
+    WriteFloat(value.y);
+    WriteFloat(value.z);
+    EndArray();
+    EndObject();
+}
+
+template <> inline void OutputArchive::SerializeValue(const std::string& key, const glm::vec2& value) {
+    BeginObject(1);
+    SetCurrent(key);
+    BeginArray(2);
+    WriteFloat(value.x);
+    WriteFloat(value.y);
+    EndArray();
+    EndObject();
+}
+
+// PrismaEngine::Graphic::BoundingBox 序列化
+template <> inline void OutputArchive::SerializeValue(const std::string& key, const PrismaEngine::Graphic::BoundingBox& value) {
+    BeginObject(1);
+    SetCurrent(key);
+    BeginObject(2);
+
+    // Min bounds
+    SetCurrent("minBounds");
+    BeginArray(3);
+    WriteFloat(value.minBounds.x);
+    WriteFloat(value.minBounds.y);
+    WriteFloat(value.minBounds.z);
+    EndArray();
+
+    // Max bounds
+    SetCurrent("maxBounds");
+    BeginArray(3);
+    WriteFloat(value.maxBounds.x);
+    WriteFloat(value.maxBounds.y);
+    WriteFloat(value.maxBounds.z);
+    EndArray();
+
+    EndObject();
+    EndObject();
+}
 
 template <> inline void OutputArchive::SerializeValue(const std::string& key, const Metadata& value) {
     BeginObject(1);
@@ -136,6 +197,74 @@ template <> inline void InputArchive::DeserializeValue(const std::string& key, D
 }
 #endif  // defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_PLATFORM_ANDROID)
 
+// GLM 类型反序列化（无平台限制）
+template <> inline void InputArchive::DeserializeValue(const std::string& key, glm::vec4& value) {
+    BeginObject();
+    EnterField(key);
+    BeginArray();
+    value.x = ReadFloat();
+    value.y = ReadFloat();
+    value.z = ReadFloat();
+    value.w = ReadFloat();
+    EndArray();
+    EndObject();
+}
+
+template <> inline void InputArchive::DeserializeValue(const std::string& key, glm::vec3& value) {
+    BeginObject();
+    EnterField(key);
+    size_t size = BeginArray();
+    if (size >= 3) {
+        value.x = ReadFloat();
+        value.y = ReadFloat();
+        value.z = ReadFloat();
+    }
+    EndArray();
+    EndObject();
+}
+
+template <> inline void InputArchive::DeserializeValue(const std::string& key, glm::vec2& value) {
+    BeginObject();
+    EnterField(key);
+    size_t size = BeginArray();
+    if (size >= 2) {
+        value.x = ReadFloat();
+        value.y = ReadFloat();
+    }
+    EndArray();
+    EndObject();
+}
+
+// PrismaEngine::Graphic::BoundingBox 反序列化
+template <> inline void InputArchive::DeserializeValue(const std::string& key, PrismaEngine::Graphic::BoundingBox& value) {
+    BeginObject();
+    EnterField(key);
+    size_t fieldCount = BeginObject();
+
+    for (size_t i = 0; i < fieldCount; ++i) {
+        if (HasNextField("minBounds")) {
+            size_t size = BeginArray();
+            if (size >= 3) {
+                value.minBounds.x = ReadFloat();
+                value.minBounds.y = ReadFloat();
+                value.minBounds.z = ReadFloat();
+            }
+            EndArray();
+        } else if (HasNextField("maxBounds")) {
+            size_t size = BeginArray();
+            if (size >= 3) {
+                value.maxBounds.x = ReadFloat();
+                value.maxBounds.y = ReadFloat();
+                value.maxBounds.z = ReadFloat();
+            }
+            EndArray();
+        }
+    }
+
+    EndObject();
+    EndObject();
+}
+
 template <> inline void InputArchive::DeserializeValue(const std::string& key, Metadata& value) {
     BeginObject();
     EnterField(key);
@@ -143,4 +272,4 @@ template <> inline void InputArchive::DeserializeValue(const std::string& key, M
     EndObject();
 }
 }  // namespace Serialization
-}  // namespace Engine
+}  // namespace PrismaEngine

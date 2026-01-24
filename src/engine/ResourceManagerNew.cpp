@@ -809,4 +809,103 @@ void ResourceManager::CheckFileModifications() {
     m_statsDirty = false;
 }
 
+std::shared_ptr<IShader> ResourceManager::LoadShaderSync(const std::string& filename,
+                                                        const std::string& entryPoint,
+                                                        const std::string& target,
+                                                        const std::vector<std::string>& defines) {
+    // 创建着色器描述 - 使用静态空 vector 传递给引用成员
+    static std::vector<std::string> s_emptyDependencies;
+    static std::vector<std::string> s_emptyIncludes;
+
+    ShaderDesc desc;
+    desc.type = ShaderType::Unknown;  // 默认值
+    desc.language = ShaderLanguage::HLSL;  // 默认值
+    desc.entryPoint = entryPoint;
+    desc.source = "";  // 空源码
+    desc.filename = filename;
+    desc.defines = defines;
+    desc.target = target;
+    desc.compileTimestamp = 0;
+    desc.compileHash = 0;
+    // 注意: dependencies 和 includes 是引用成员，不能赋值
+    // 它们会在 CreateShader 中通过其他方式处理
+
+    // 根据 target 确定着色器类型
+    if (target.find("vs_") != std::string::npos || target.find("vert") != std::string::npos) {
+        desc.type = ShaderType::Vertex;
+    } else if (target.find("ps_") != std::string::npos || target.find("frag") != std::string::npos) {
+        desc.type = ShaderType::Pixel;
+    } else if (target.find("gs_") != std::string::npos || target.find("geom") != std::string::npos) {
+        desc.type = ShaderType::Geometry;
+    } else if (target.find("cs_") != std::string::npos || target.find("comp") != std::string::npos) {
+        desc.type = ShaderType::Compute;
+    } else {
+        desc.type = ShaderType::Unknown;
+    }
+
+    // 根据文件扩展名确定着色器语言
+    if (filename.ends_with(".hlsl") || filename.ends_with(".hlsli")) {
+        desc.language = ShaderLanguage::HLSL;
+    } else if (filename.ends_with(".vert") || filename.ends_with(".frag") ||
+               filename.ends_with(".glsl")) {
+        desc.language = ShaderLanguage::GLSL;
+    } else {
+        desc.language = ShaderLanguage::HLSL;  // 默认 HLSL
+    }
+
+    // 添加宏定义
+    desc.defines = defines;
+
+    // 读取着色器源码
+    std::vector<uint8_t> sourceCode;
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    if (!file.is_open()) {
+        LOG_ERROR("Resource", "无法打开着色器文件: {0}", filename);
+        return nullptr;
+    }
+
+    size_t fileSize = static_cast<size_t>(file.tellg());
+    file.seekg(0);
+    sourceCode.resize(fileSize);
+    file.read(reinterpret_cast<char*>(sourceCode.data()), fileSize);
+    file.close();
+
+    // 编译着色器
+    std::vector<uint8_t> bytecode;
+    ShaderReflection reflection;
+    std::string errors;
+
+    bool success = false;
+    if (desc.language == ShaderLanguage::HLSL) {
+        success = CompileHLSLShader(desc, bytecode, reflection, errors);
+    } else if (desc.language == ShaderLanguage::GLSL) {
+        success = CompileGLSLShader(desc, bytecode, reflection, errors);
+    }
+
+    if (!success) {
+        LOG_ERROR("Resource", "着色器编译失败: {0}", errors);
+        return nullptr;
+    }
+
+    // 创建着色器对象
+    auto factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("Resource", "无法获取资源工厂");
+        return nullptr;
+    }
+
+    auto shaderUnique = factory->CreateShaderImpl(desc, bytecode, reflection);
+    std::shared_ptr<IShader> shader;
+    if (shaderUnique) {
+        shader = std::move(shaderUnique);
+    }
+
+    if (!shader) {
+        LOG_ERROR("Resource", "创建着色器对象失败");
+        return nullptr;
+    }
+
+    return shader;
+}
+
 } // namespace PrismaEngine::Graphic
