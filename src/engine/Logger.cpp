@@ -14,6 +14,7 @@
 #elif defined (__ANDROID__) || (ANDROID)
 #include <android/log.h>
 #endif
+
 bool Logger::IsInitialized() const {
     return initialized;
 }

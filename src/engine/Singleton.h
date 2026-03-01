@@ -4,7 +4,7 @@
 
 /// @brief 单例模板类
 template<typename T>
-class ENGINE_API Singleton {
+class Singleton {
 public:
     Singleton(const Singleton&) = delete;
     Singleton& operator=(const Singleton&) = delete;
@@ -20,7 +20,7 @@ protected:
 };
 
 template <typename T>
-class ENGINE_API SharedSingleton {
+class SharedSingleton {
 public:
     SharedSingleton(const SharedSingleton&)      = delete;
     SharedSingleton& operator=(const SharedSingleton&) = delete;

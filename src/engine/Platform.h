@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "IPlatformLogger.h"
 #include "KeyCode.h"
 #include <string>
@@ -88,79 +89,79 @@ public:
     // ------------------------------------------------------------
     // 平台生命周期管理
     // ------------------------------------------------------------
-    static bool Initialize();
-    static void Shutdown();
-    static bool IsInitialized();
+    ENGINE_API static bool Initialize();
+    ENGINE_API static void Shutdown();
+    ENGINE_API static bool IsInitialized();
 
     // ------------------------------------------------------------
     // 窗口管理
     // ------------------------------------------------------------
-    static WindowHandle CreateWindow(const WindowProps& desc);
-    static void DestroyWindow(WindowHandle window);
-    static void GetWindowSize(WindowHandle window, int& outW, int& outH);
-    static void SetWindowTitle(WindowHandle window, const char* title);
-    static void PumpEvents();
-    static bool ShouldClose(WindowHandle window);
-    static WindowHandle GetCurrentWindow();
+    ENGINE_API static WindowHandle CreateWindow(const WindowProps& desc);
+    ENGINE_API static void DestroyWindow(WindowHandle window);
+    ENGINE_API static void GetWindowSize(WindowHandle window, int& outW, int& outH);
+    ENGINE_API static void SetWindowTitle(WindowHandle window, const char* title);
+    ENGINE_API static void PumpEvents();
+    ENGINE_API static bool ShouldClose(WindowHandle window);
+    ENGINE_API static WindowHandle GetCurrentWindow();
 
 #if defined(_WIN32)
-    static bool SetWindowIcon(const std::string& path);
+    ENGINE_API static bool SetWindowIcon(const std::string& path);
 #endif
 
     // ------------------------------------------------------------
     // 时间管理
     // ------------------------------------------------------------
-    static uint64_t GetTimeMicroseconds();
-    static double GetTimeSeconds();
+    ENGINE_API static uint64_t GetTimeMicroseconds();
+    ENGINE_API static double GetTimeSeconds();
 
     // ------------------------------------------------------------
     // 输入管理（需要 KeyCode 支持）
     // ------------------------------------------------------------
 #if defined(PRISMA_HAS_KEYCODE) || defined(_WIN32) || defined(__ANDROID__)
-    static bool IsKeyDown(PrismaEngine::Input::KeyCode key);
-    static bool IsMouseButtonDown(PrismaEngine::Input::MouseButton btn);
-    static void GetMousePosition(float& x, float& y);
-    static void SetMousePosition(float x, float y);
-    static void SetMouseLock(bool locked);
+    ENGINE_API static bool IsKeyDown(PrismaEngine::Input::KeyCode key);
+    ENGINE_API static bool IsMouseButtonDown(PrismaEngine::Input::MouseButton btn);
+    ENGINE_API static void GetMousePosition(float& x, float& y);
+    ENGINE_API static void SetMousePosition(float x, float y);
+    ENGINE_API static void SetMouseLock(bool locked);
 #endif
 
     // ------------------------------------------------------------
     // 文件系统
     // ------------------------------------------------------------
-    static bool FileExists(const char* path);
-    static size_t FileSize(const char* path);
-    static size_t ReadFile(const char* path, void* dst, size_t maxBytes);
-    static const char* GetExecutablePath();
-    static const char* GetPersistentPath();
-    static const char* GetTemporaryPath();
+    ENGINE_API static bool FileExists(const char* path);
+    ENGINE_API static size_t FileSize(const char* path);
+    ENGINE_API static size_t ReadFile(const char* path, void* dst, size_t maxBytes);
+    ENGINE_API static const char* GetExecutablePath();
+    ENGINE_API static const char* GetPersistentPath();
+    ENGINE_API static const char* GetTemporaryPath();
 
     // ------------------------------------------------------------
     // 线程和同步
     // ------------------------------------------------------------
-    static PlatformThreadHandle CreateThread(ThreadFunc entry, void* userData);
-    static void JoinThread(PlatformThreadHandle thread);
-    static PlatformMutexHandle CreateMutex();
-    static void DestroyMutex(PlatformMutexHandle mtx);
-    static void LockMutex(PlatformMutexHandle mtx);
-    static void UnlockMutex(PlatformMutexHandle mtx);
-    static void SleepMilliseconds(uint32_t ms);
+    ENGINE_API static PlatformThreadHandle CreateThread(ThreadFunc entry, void* userData);
+    ENGINE_API static void JoinThread(PlatformThreadHandle thread);
+    ENGINE_API static PlatformMutexHandle CreateMutex();
+    ENGINE_API static void DestroyMutex(PlatformMutexHandle mtx);
+    ENGINE_API static void LockMutex(PlatformMutexHandle mtx);
+    ENGINE_API static void UnlockMutex(PlatformMutexHandle mtx);
+    ENGINE_API static void SleepMilliseconds(uint32_t ms);
 
     // ------------------------------------------------------------
     // Vulkan 支持
     // ------------------------------------------------------------
-    static std::vector<const char*> GetVulkanInstanceExtensions();
-    static bool CreateVulkanSurface(void* instance, WindowHandle windowHandle, void** outSurface);
+    ENGINE_API static std::vector<const char*> GetVulkanInstanceExtensions();
+    ENGINE_API static bool CreateVulkanSurface(void* instance, WindowHandle windowHandle, void** outSurface);
 
     // ------------------------------------------------------------
     // IPlatformLogger 接口实现
     // ------------------------------------------------------------
-    static void LogToConsole(LogLevel level, const char* tag, const char* message);
-    static const char* GetLogDirectoryPath();
+    ENGINE_API static void LogToConsole(LogLevel level, const char* tag, const char* message);
+    ENGINE_API static const char* GetLogDirectoryPath();
 
     // ------------------------------------------------------------
     // SDL 特定功能
     // ------------------------------------------------------------
-    static void SetEventCallback(EventCallback callback);
+    ENGINE_API static void SetEventCallback(EventCallback callback);
 };
 
 } // namespace Engine
