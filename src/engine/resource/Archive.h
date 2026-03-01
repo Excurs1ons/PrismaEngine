@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <filesystem>
+#include "Export.h"
 
 namespace PrismaEngine {
     namespace Serialization {
@@ -42,19 +43,19 @@ namespace PrismaEngine {
         
         // 特化声明
         template<>
-        void InputArchive::DeserializeValue<bool>(const std::string& key, bool& value);
+        ENGINE_API void InputArchive::DeserializeValue<bool>(const std::string& key, bool& value);
         template<>
-        void InputArchive::DeserializeValue<int32_t>(const std::string& key, int32_t& value);
+        ENGINE_API void InputArchive::DeserializeValue<int32_t>(const std::string& key, int32_t& value);
         template<>
-        void InputArchive::DeserializeValue<uint32_t>(const std::string& key, uint32_t& value);
+        ENGINE_API void InputArchive::DeserializeValue<uint32_t>(const std::string& key, uint32_t& value);
         template<>
-        void InputArchive::DeserializeValue<float>(const std::string& key, float& value);
+        ENGINE_API void InputArchive::DeserializeValue<float>(const std::string& key, float& value);
         template<>
-        void InputArchive::DeserializeValue<double>(const std::string& key, double& value);
+        ENGINE_API void InputArchive::DeserializeValue<double>(const std::string& key, double& value);
         template<>
-        void InputArchive::DeserializeValue<std::string>(const std::string& key, std::string& value);
+        ENGINE_API void InputArchive::DeserializeValue<std::string>(const std::string& key, std::string& value);
         template<>
-        void InputArchive::DeserializeValue<std::filesystem::path>(const std::string& key, std::filesystem::path& value);
+        ENGINE_API void InputArchive::DeserializeValue<std::filesystem::path>(const std::string& key, std::filesystem::path& value);
 
         // 序列化接口
         class OutputArchive {
@@ -91,18 +92,18 @@ namespace PrismaEngine {
         
         // 特化声明
         template<>
-        void OutputArchive::SerializeValue<bool>(const std::string& key, const bool& value);
+        ENGINE_API void OutputArchive::SerializeValue<bool>(const std::string& key, const bool& value);
         template<>
-        void OutputArchive::SerializeValue<int32_t>(const std::string& key, const int32_t& value);
+        ENGINE_API void OutputArchive::SerializeValue<int32_t>(const std::string& key, const int32_t& value);
         template<>
-        void OutputArchive::SerializeValue<uint32_t>(const std::string& key, const uint32_t& value);
+        ENGINE_API void OutputArchive::SerializeValue<uint32_t>(const std::string& key, const uint32_t& value);
         template<>
-        void OutputArchive::SerializeValue<float>(const std::string& key, const float& value);
+        ENGINE_API void OutputArchive::SerializeValue<float>(const std::string& key, const float& value);
         template<>
-        void OutputArchive::SerializeValue<double>(const std::string& key, const double& value);
+        ENGINE_API void OutputArchive::SerializeValue<double>(const std::string& key, const double& value);
         template<>
-        void OutputArchive::SerializeValue<std::string>(const std::string& key, const std::string& value);
+        ENGINE_API void OutputArchive::SerializeValue<std::string>(const std::string& key, const std::string& value);
         template<>
-        void OutputArchive::SerializeValue<std::filesystem::path>(const std::string& key, const std::filesystem::path& value);
+        ENGINE_API void OutputArchive::SerializeValue<std::filesystem::path>(const std::string& key, const std::filesystem::path& value);
     }
 }
