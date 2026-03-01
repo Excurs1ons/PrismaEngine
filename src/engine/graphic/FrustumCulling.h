@@ -5,6 +5,7 @@
 #include <vector>
 #include <array>
 #include <functional>
+#include <cmath>
 
 namespace PrismaEngine {
     namespace Graphic {
