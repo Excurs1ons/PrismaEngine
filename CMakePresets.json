@@ -100,6 +100,36 @@
       }
     },
     {
+      "name": "windows-editor-debug",
+      "displayName": "Windows Editor Debug",
+      "inherits": "windows-base",
+      "description": "Debug build for Windows Editor using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-editor-debug",
+      "architecture": "x64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_SHARED_LIBS": "ON",
+        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+      }
+    },
+    {
+      "name": "windows-editor-release",
+      "displayName": "Windows Editor Release",
+      "inherits": "windows-base",
+      "description": "Release build for Windows Editor using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/windows-editor-release",
+      "architecture": "x64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF",
+        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+      }
+    },
+    {
       "name": "android-arm64-v8a-release",
       "displayName": "Android arm64-v8a Release",
       "inherits": "android-base",
@@ -140,6 +170,14 @@
     {
       "name": "windows-x86-release",
       "configurePreset": "windows-x86-release"
+    },
+    {
+      "name": "windows-editor-debug",
+      "configurePreset": "windows-editor-debug"
+    },
+    {
+      "name": "windows-editor-release",
+      "configurePreset": "windows-editor-release"
     },
     {
       "name": "android-arm64-v8a-debug",
