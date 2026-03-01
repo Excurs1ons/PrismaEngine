@@ -1,7 +1,7 @@
 #pragma once
-#include "Singleton.h"
 #include "LogScope.h"
 #include "LogEntry.h"
+#include "Export.h"
 #include <chrono>
 #include <cstddef>
 #include <fstream>
@@ -60,22 +60,32 @@ constexpr bool CheckFormattable() {
     return (StringType<Args> && ...);
 }
 
-class Logger:public Singleton<Logger>
+class Logger
 {
-	//友元声明：允许Singleton访问私有构造函数
-    friend class Singleton<Logger>;
 public:
-    ~Logger();
+    // 获取单例实例（在DLL内部创建）- 内联定义避免DLL导出问题
+    static Logger& GetInstance() {
+        static Logger instance;
+        return instance;
+    }
+
+    // 禁止拷贝和移动
+    Logger(const Logger&) = delete;
+    Logger& operator=(const Logger&) = delete;
+    Logger(Logger&&) = delete;
+    Logger& operator=(Logger&&) = delete;
+
+    ENGINE_API ~Logger();
 
     // 初始化和关闭
-    bool Initialize(const LogConfig& config = LogConfig());
+    ENGINE_API bool Initialize(const LogConfig& config = LogConfig());
     bool IsInitialized() const;
     void Shutdown();
 
     // 设置平台日志接口（必须在 Platform 初始化后调用）
     void SetPlatformLogger(PrismaEngine::IPlatformLogger* platformLogger);
 
-    void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
+    ENGINE_API void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
 
     // 设置配置
     void SetMinLevel(LogLevel level) { config_.minLevel = level; }
@@ -209,6 +219,9 @@ public:
     CallStackOutput GetCallStackOutputForLevel(LogLevel level);
 
 private:
+    // 私有构造函数（单例模式）
+    Logger() = default;
+
     bool initialized = false;
 
     // 平台日志接口（由外部设置）

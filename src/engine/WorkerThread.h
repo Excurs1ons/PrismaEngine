@@ -1,4 +1,5 @@
 #pragma once
+#include "Export.h"
 #include <thread>
 #include <atomic>
 #include <functional>
@@ -6,20 +7,20 @@
 class WorkerThread
 {
 public:
-    WorkerThread();
-    ~WorkerThread();
+    ENGINE_API WorkerThread();
+    ENGINE_API ~WorkerThread();
 
     // 启动线程
-    void Start();
+    ENGINE_API void Start();
 
     // 停止线程
-    void Stop();
+    ENGINE_API void Stop();
 
     // 等待线程完成
-    void Join();
+    ENGINE_API void Join();
 
     // 设置任务函数
-    void SetTask(std::function<void()> task);
+    ENGINE_API void SetTask(std::function<void()> task);
 
     // 检查是否运行中
     bool IsRunning() const { return m_running.load(); }
