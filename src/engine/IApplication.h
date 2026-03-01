@@ -5,7 +5,7 @@
 namespace PrismaEngine {
 
 template<typename T>
-class ENGINE_API IApplication :public Singleton<T> {
+class IApplication : public Singleton<T> {
 public:
     friend class Singleton<T>;
     ~IApplication() override = default;
@@ -24,7 +24,7 @@ public:
 
 protected:
     // 提供设置运行状态的保护方法
-    virtual void SetRunning(bool running) {
+    ENGINE_API virtual void SetRunning(bool running) {
         isRunning = running;
     }
 

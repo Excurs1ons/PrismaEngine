@@ -1,6 +1,7 @@
 #pragma once
 
 #include "../ManagerBase.h"
+#include "../Export.h"
 #include "pipelines/forward/ForwardPipeline.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceManager.h"
@@ -41,37 +42,37 @@ public:
     /// @brief 初始化渲染系统
     /// @param desc 渲染系统描述
     /// @return 是否初始化成功
-    bool Initialize(const RenderSystemDesc& desc);
+    ENGINE_API bool Initialize(const RenderSystemDesc& desc);
 
     /// @brief 初始化渲染系统（实现基类纯虚函数）
     /// @return 是否初始化成功
-    bool Initialize() override;
+    ENGINE_API bool Initialize() override;
 
     /// @brief 关闭渲染系统
-    void Shutdown() override;
+    ENGINE_API void Shutdown() override;
 
     /// @brief 析构函数
-    ~RenderSystem();
+    ENGINE_API ~RenderSystem();
 
     /// @brief 更新（每帧调用）
     /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    ENGINE_API void Update(float deltaTime) override;
 
     // === 帧控制 ===
 
     /// @brief 开始帧渲染
-    void BeginFrame();
+    ENGINE_API void BeginFrame();
 
     /// @brief 结束帧渲染
-    void EndFrame();
+    ENGINE_API void EndFrame();
 
     /// @brief 呈现（交换缓冲区）
-    void Present();
+    ENGINE_API void Present();
 
     /// @brief 调整渲染目标大小
     /// @param width 新宽度
     /// @param height 新高度
-    void Resize(uint32_t width, uint32_t height);
+    ENGINE_API void Resize(uint32_t width, uint32_t height);
 
     // === 设备和资源访问 ===
 
@@ -87,7 +88,7 @@ public:
 
     /// @brief 设置主渲染流程
     /// @param pipeline 渲染流程
-    void SetMainPipeline(std::shared_ptr<IPipeline> pipeline);
+    ENGINE_API void SetMainPipeline(std::shared_ptr<IPipeline> pipeline);
 
     /// @brief 获取主渲染流程
     /// @return 渲染流程指针
@@ -97,7 +98,7 @@ public:
 
     /// @brief GUI渲染回调
     using GuiRenderCallback = std::function<void(void*)>;
-    void SetGuiRenderCallback(GuiRenderCallback callback);
+    ENGINE_API void SetGuiRenderCallback(GuiRenderCallback callback);
 
     // === 统计和调试 ===
 
@@ -114,10 +115,10 @@ public:
 
     /// @brief 获取渲染统计
     /// @return 统计信息
-    RenderStats GetRenderStats() const;
+    ENGINE_API RenderStats GetRenderStats() const;
 
     /// @brief 重置统计信息
-    void ResetStats();
+    ENGINE_API void ResetStats();
 
     // === 兼容性接口 ===
 
