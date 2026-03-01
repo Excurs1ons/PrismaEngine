@@ -1,16 +1,14 @@
-# Prisma Engine Windows Build Script (PowerShell)
-# Usage: .\build-windows.ps1 [-Preset] <preset> [-Clean] [-Quiet] [-Verbose]
+# Prisma Engine Editor Build Script (PowerShell)
+# Usage: .\build-editor.ps1 [-Preset] <preset> [-Clean] [-Quiet] [-Verbose]
 #
 # Available presets:
-#   - windows-x64-debug (default)
-#   - windows-x64-release
-#   - windows-x86-debug
-#   - windows-x86-release
+#   - windows-editor-debug (default)
+#   - windows-editor-release
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet("windows-x64-debug", "windows-x64-release", "windows-x86-debug", "windows-x86-release")]
-    [string]$Preset = "windows-x64-debug",
+    [ValidateSet("windows-editor-debug", "windows-editor-release")]
+    [string]$Preset = "windows-editor-debug",
 
     [switch]$Clean,
 
@@ -55,13 +53,11 @@ function Test-CMake {
 }
 
 function Show-Help {
-    Write-Host "Usage: .\build-windows.ps1 [-Preset] <preset> [options]" -ForegroundColor Cyan
+    Write-Host "Usage: .\build-editor.ps1 [-Preset] <preset> [options]" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Presets:" -ForegroundColor Yellow
-    Write-Host "  windows-x64-debug      (default)"
-    Write-Host "  windows-x64-release"
-    Write-Host "  windows-x86-debug"
-    Write-Host "  windows-x86-release"
+    Write-Host "  windows-editor-debug      (default)"
+    Write-Host "  windows-editor-release"
     Write-Host ""
     Write-Host "Options:" -ForegroundColor Yellow
     Write-Host "  -Preset <preset>    Build preset to use"
@@ -71,9 +67,9 @@ function Show-Help {
     Write-Host "  -Help               Show this help message"
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
-    Write-Host "  .\build-windows.ps1 windows-x64-debug"
-    Write-Host "  .\build-windows.ps1 windows-x64-release -Clean"
-    Write-Host "  .\build-windows.ps1 windows-x64-debug -Q"
+    Write-Host "  .\build-editor.ps1 windows-editor-debug"
+    Write-Host "  .\build-editor.ps1 windows-editor-release -Clean"
+    Write-Host "  .\build-editor.ps1 windows-editor-debug -Q"
     Write-Host ""
 }
 
@@ -95,7 +91,7 @@ if ($Quiet) {
 }
 
 # Script main
-Write-Header "Prisma Engine Windows Build Script"
+Write-Header "Prisma Engine Editor Build Script"
 if (-not $Quiet) {
     Write-Host "Preset: $Preset" -ForegroundColor Green
 }
@@ -143,10 +139,11 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # Success message
+$absBuildPath = Convert-Path "build\$Preset"
 if ($Quiet) {
-    Write-Host "Build completed: build\$Preset" -ForegroundColor Green
+    Write-Host "Build completed: $absBuildPath" -ForegroundColor Green
 } else {
     Write-Header "Build completed successfully!"
-    Write-Host "Output directory: build\$Preset" -ForegroundColor Green
+    Write-Host "Output directory: $absBuildPath" -ForegroundColor Green
     Write-Host ""
 }
