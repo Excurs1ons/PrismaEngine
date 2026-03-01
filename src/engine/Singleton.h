@@ -1,9 +1,10 @@
 #pragma once
 #include <memory>
+#include "Export.h"
 
 /// @brief 单例模板类
 template<typename T>
-class Singleton {
+class ENGINE_API Singleton {
 public:
     Singleton(const Singleton&) = delete;
     Singleton& operator=(const Singleton&) = delete;
@@ -19,7 +20,7 @@ protected:
 };
 
 template <typename T>
-class SharedSingleton {
+class ENGINE_API SharedSingleton {
 public:
     SharedSingleton(const SharedSingleton&)      = delete;
     SharedSingleton& operator=(const SharedSingleton&) = delete;

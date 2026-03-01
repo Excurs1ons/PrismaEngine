@@ -16,6 +16,7 @@
 
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
+#include <SDL3/SDL.h> // 包含 SDL 头文件以使用 SDL_Event
 
 using namespace PrismaEngine;
 
