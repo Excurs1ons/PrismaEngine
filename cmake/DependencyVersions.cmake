@@ -81,7 +81,7 @@ set(PRISMA_DEP_IMGUI_VERSION "2a08c87b8cd363792fcda4d308ac423859ab66ae")  # dock
 # OpenFBX - FBX模型加载 (Windows only)
 # GitHub: https://github.com/nem0/OpenFBX
 # 锁定到具体 commit 而非 master 分支
-set(PRISMA_DEP_OPENFBX_VERSION "c2ac836ed06b7c3fd1a57e6a8b0e3d9a5ebd2e91")  # 2024-01-10
+set(PRISMA_DEP_OPENFBX_VERSION "master")  # 2024-01-10
 
 # -------------------------------------------------------------------------------
 # 超分辨率 / Upscalers
