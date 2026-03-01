@@ -13,6 +13,7 @@ include(${CMAKE_CURRENT_LIST_DIR}/DependencyVersions.cmake OPTIONAL)
 option(PRISMA_USE_FETCHCONTENT "使用 FetchContent 下载依赖 (否则使用系统/已安装库)" ON)
 option(PRISMA_FETCHCONTENT_UPDATE "更新 FetchContent 依赖 (DISCARD_ON更新)" OFF)
 option(PRISMA_FETCHCONTENT_QUIET "安静模式 (减少输出)" ON)
+option(PRISMA_FETCHCONTENT_SHALLOW "使用浅克隆下载依赖 (加快下载速度)" ON)
 
 # 更新策略
 if(PRISMA_FETCHCONTENT_UPDATE)
@@ -29,7 +30,7 @@ FetchContent_Declare(
     glm
     GIT_REPOSITORY https://github.com/g-truc/glm.git
     GIT_TAG ${PRISMA_DEP_GLM_VERSION}
-    GIT_SHALLOW TRUE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # nlohmann/json - JSON库
@@ -38,7 +39,7 @@ FetchContent_Declare(
     nlohmann_json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG ${PRISMA_DEP_NLOHMANN_JSON_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # SDL3 - 窗口/输入/音频抽象
@@ -47,7 +48,7 @@ FetchContent_Declare(
     SDL3
     GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
     GIT_TAG ${PRISMA_DEP_SDL3_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # Vulkan-Headers - Vulkan头文件
@@ -56,7 +57,7 @@ FetchContent_Declare(
     Vulkan-Headers
     GIT_REPOSITORY https://github.com/KhronosGroup/Vulkan-Headers.git
     GIT_TAG ${PRISMA_DEP_VULKAN_HEADERS_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # VMA (Vulkan Memory Allocator) - Vulkan内存分配库
@@ -65,7 +66,7 @@ FetchContent_Declare(
     vma
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
     GIT_TAG ${PRISMA_DEP_VMA_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # vk-bootstrap - Vulkan初始化库
@@ -74,7 +75,7 @@ FetchContent_Declare(
     vk-bootstrap
     GIT_REPOSITORY https://github.com/charles-lunarge/vk-bootstrap.git
     GIT_TAG ${PRISMA_DEP_VK_BOOTSTRAP_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # DirectX-Headers (Windows) - DirectX 12 头文件
@@ -84,7 +85,7 @@ if(WIN32)
         DirectX-Headers
         GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
         GIT_TAG ${PRISMA_DEP_DIRECTX_HEADERS_VERSION}
-        GIT_SHALLOW FALSE
+        GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
     )
 endif()
 
@@ -94,7 +95,7 @@ FetchContent_Declare(
     imgui
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG ${PRISMA_DEP_IMGUI_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # OpenFBX - FBX模型加载
@@ -104,7 +105,7 @@ if(WIN32)
         openfbx
         GIT_REPOSITORY https://github.com/nem0/OpenFBX.git
         GIT_TAG ${PRISMA_DEP_OPENFBX_VERSION}
-        GIT_SHALLOW FALSE
+        GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
     )
 endif()
 
@@ -114,7 +115,7 @@ FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
     GIT_TAG ${PRISMA_DEP_STB_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # Tweeny - 补间动画库 (header-only, 用于 UI 动画)
@@ -123,7 +124,7 @@ FetchContent_Declare(
     tweeny
     GIT_REPOSITORY https://github.com/mobius3/tweeny.git
     GIT_TAG ${PRISMA_DEP_TWEENY_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # tinyxml2 - XML解析库 (用于 TMX 地图格式)
@@ -132,7 +133,7 @@ FetchContent_Declare(
     tinyxml2
     GIT_REPOSITORY https://github.com/leethomason/tinyxml2.git
     GIT_TAG ${PRISMA_DEP_TINYXML2_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # Zstandard - 压缩库 (用于 TMX Base64+zstd 格式)
@@ -141,7 +142,7 @@ FetchContent_Declare(
     zstd
     GIT_REPOSITORY https://github.com/facebook/zstd.git
     GIT_TAG ${PRISMA_DEP_ZSTD_VERSION}
-    GIT_SHALLOW FALSE
+    GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
 # ========== 基础库 (总是需要) ==========
@@ -409,13 +410,13 @@ if((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3 OR PRISMA_ENABLE_RENDER
         add_library(SDL3::SDL3-static ALIAS SDL3-static)
     endif()
     if(TARGET SDL3_static AND NOT TARGET SDL3::SDL3-static)
-        add_library(SDL3::SDL3-static ALIAS SDL3_static)
+        add_library(SDL3::SDL3-static ALIAS SDL3-static)
     endif()
     if(TARGET SDL3-shared AND NOT TARGET SDL3::SDL3-shared)
         add_library(SDL3::SDL3-shared ALIAS SDL3-shared)
     endif()
     if(TARGET SDL3_shared AND NOT TARGET SDL3::SDL3-shared)
-        add_library(SDL3::SDL3-shared ALIAS SDL3_shared)
+        add_library(SDL3::SDL3-shared ALIAS SDL3-shared)
     endif()
 
     # 为了解决 install(EXPORT) 的问题，我们需要将 FetchContent
@@ -475,7 +476,7 @@ if(PRISMA_ENABLE_UPSCALER_FSR)
         FidelityFX-SDK
         GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK.git
         GIT_TAG ${PRISMA_DEP_FIDELITYFX_SDK_VERSION}
-        GIT_SHALLOW FALSE
+        GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
     )
 
     # 配置 FidelityFX SDK - 必需的选项
@@ -511,7 +512,7 @@ if(PRISMA_ENABLE_UPSCALER_DLSS)
             Streamline
             GIT_REPOSITORY https://github.com/NVIDIA-RTX/Streamline.git
             GIT_TAG ${PRISMA_DEP_STREAMLINE_VERSION}
-            GIT_SHALLOW FALSE
+            GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
         )
 
         # 配置 Streamline
