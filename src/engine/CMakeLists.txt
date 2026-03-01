@@ -337,6 +337,15 @@ if(PRISMA_BUILD_SHARED_LIBS)
     )
     message(STATUS "Engine: 构建为动态库 (SHARED)")
     target_compile_definitions(Engine PRIVATE ENGINE_BUILD_SHARED=1)
+
+    # 设置导入库的输出目录
+    if(MSVC)
+        set_target_properties(Engine PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lib/Debug
+            ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib/Release
+        )
+    endif()
 else()
     add_library(Engine STATIC
         ${ENGINE_SOURCES}
@@ -347,6 +356,15 @@ else()
     )
     message(STATUS "Engine: 构建为静态库 (STATIC)")
     target_compile_definitions(Engine PRIVATE ENGINE_BUILD_STATIC=1)
+
+    # 设置静态库的输出目录
+    if(MSVC)
+        set_target_properties(Engine PROPERTIES
+            ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib
+            ARCHIVE_OUTPUT_DIRECTORY_DEBUG ${CMAKE_BINARY_DIR}/lib/Debug
+            ARCHIVE_OUTPUT_DIRECTORY_RELEASE ${CMAKE_BINARY_DIR}/lib/Release
+        )
+    endif()
 endif()
 
 # Android 平台添加 game-activity 源文件

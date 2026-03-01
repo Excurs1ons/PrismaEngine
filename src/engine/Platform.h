@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <functional>
 
 // 条件包含平台特定头文件
 #ifdef _WIN32
@@ -26,7 +27,6 @@
             #define PRISMA_HAS_SDL 1
         #endif
     #endif
-    #include <functional>
 #endif
 // Android 平台前向声明
 #ifdef __ANDROID__
@@ -83,9 +83,7 @@ public:
     static WindowHandle s_currentWindow;
 
 
-#if !defined(_WIN32) && !defined(__ANDROID__)
     using EventCallback = std::function<bool(const void*)>;
-#endif
 
     // ------------------------------------------------------------
     // 平台生命周期管理
@@ -162,9 +160,7 @@ public:
     // ------------------------------------------------------------
     // SDL 特定功能
     // ------------------------------------------------------------
-#if !defined(_WIN32) && !defined(__ANDROID__)
     static void SetEventCallback(EventCallback callback);
-#endif
 };
 
 } // namespace Engine

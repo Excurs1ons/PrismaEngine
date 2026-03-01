@@ -5,6 +5,13 @@
 #include "Platform.h"  // 包含WindowHandle定义
 #include "ProjectSettingsWindow.h"
 
+// Editor 也是一个动态库，需要导出符号
+#ifdef EDITOR_EXPORTS
+    #define EDITOR_API __declspec(dllexport)
+#else
+    #define EDITOR_API __declspec(dllimport)
+#endif
+
 class Editor : public PrismaEngine::IApplication<Editor>
 {
 public:
@@ -29,8 +36,8 @@ private:
 
 extern "C" {
     // 导出其他函数供动态加载使用
-    ENGINE_API bool Initialize();
-    ENGINE_API int Run();
-    ENGINE_API void Shutdown();
-    ENGINE_API void Update();
+    EDITOR_API bool Initialize();
+    EDITOR_API int Run();
+    EDITOR_API void Shutdown();
+    EDITOR_API void Update();
 }

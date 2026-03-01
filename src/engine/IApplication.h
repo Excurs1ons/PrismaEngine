@@ -1,10 +1,11 @@
 #pragma once
 #include "Singleton.h"
+#include "Export.h"
 
 namespace PrismaEngine {
 
 template<typename T>
-class IApplication :public Singleton<T> {
+class ENGINE_API IApplication :public Singleton<T> {
 public:
     friend class Singleton<T>;
     ~IApplication() override = default;
