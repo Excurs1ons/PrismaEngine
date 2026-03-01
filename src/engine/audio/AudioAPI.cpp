@@ -320,10 +320,12 @@ std::unique_ptr<IAudioDevice> AudioAPI::CreateSDL3Device(const AudioDesc& desc) 
 
 #ifdef PRISMA_ENABLE_AUDIO_XAUDIO2
 std::unique_ptr<IAudioDevice> AudioAPI::CreateXAudio2Device(const AudioDesc& desc) {
-    auto device = std::make_unique<AudioDeviceXAudio2>();
-    if (device->Initialize(desc)) {
-        return device;
-    }
+    // 暂时禁用 XAudio2，因为实现文件未编译
+    // auto device = std::make_unique<AudioDeviceXAudio2>();
+    // if (device->Initialize(desc)) {
+    //     return device;
+    // }
+    LOG_ERROR("Audio", "XAudio2 后端已禁用，请使用 SDL3 或 Null 后端");
     return nullptr;
 }
 #endif
