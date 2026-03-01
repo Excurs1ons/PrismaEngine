@@ -64,7 +64,15 @@ jobs:
 
     - name: Set NDK path
       if: matrix.platform == 'android'
-      run: echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk-bundle" >> $GITHUB_ENV
+      run: |
+        # Find the actual NDK directory (modern NDK uses versioned paths)
+        NDK_PATH=$(find $ANDROID_HOME/ndk -maxdepth 1 -type d | grep -E "[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
+        if [ -z "$NDK_PATH" ]; then
+          # Fallback to ndk-bundle for older setups
+          NDK_PATH="$ANDROID_HOME/ndk-bundle"
+        fi
+        echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+        echo "Found NDK at: $NDK_PATH"
 
     - name: Setup Ninja
       if: matrix.platform == 'android'
