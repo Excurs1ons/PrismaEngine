@@ -98,6 +98,17 @@ FetchContent_Declare(
     GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
 
+# libdeflate - 快速 DEFLATE/zlib/gzip 库 (OpenFBX 依赖)
+if(WIN32)
+    set(FETCHCONTENT_LIBDEFLATE_DIR "${FETCHCONTENT_BASE_DIR}/libdeflate")
+    FetchContent_Declare(
+        libdeflate
+        GIT_REPOSITORY https://github.com/ebiggers/libdeflate.git
+        GIT_TAG ${PRISMA_DEP_LIBDEFLATE_VERSION}
+        GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
+    )
+endif()
+
 # OpenFBX - FBX模型加载
 if(WIN32)
     set(FETCHCONTENT_OPENFBX_DIR "${FETCHCONTENT_BASE_DIR}/openfbx")
@@ -164,6 +175,7 @@ message(STATUS "  vk-bootstrap:     ${PRISMA_DEP_VK_BOOTSTRAP_VERSION}")
 if(WIN32)
     message(STATUS "  DirectX-Headers:  ${PRISMA_DEP_DIRECTX_HEADERS_VERSION}")
     message(STATUS "  ImGui:            ${PRISMA_DEP_IMGUI_VERSION}")
+    message(STATUS "  libdeflate:       ${PRISMA_DEP_LIBDEFLATE_VERSION}")
     message(STATUS "  OpenFBX:          ${PRISMA_DEP_OPENFBX_VERSION}")
 endif()
 message(STATUS "")
@@ -376,8 +388,27 @@ endif()
 
 # OpenFBX (Windows only)
 if(PRISMA_BUILD_EDITOR)
+    # 显式添加 libdeflate 依赖
+    set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "Build shared library" FORCE)
+    set(LIBDEFLATE_BUILD_STATIC_LIB ON CACHE BOOL "Build static library" FORCE)
+    set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "Build gzip program" FORCE)
+    set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "Build tests" FORCE)
+
+    FetchContent_MakeAvailable(libdeflate)
+    message(STATUS "libdeflate: 使用 FetchContent")
+
     # 禁用 OpenFBX 的安装规则（避免安装阶段的错误）
     set(OPENFBX_INSTALL OFF CACHE BOOL "OpenFBX install" FORCE)
+    set(OFBX_INSTALL OFF CACHE BOOL "OpenFBX install" FORCE)
+
+    # 禁用 OpenFBX 的示例和测试
+    set(OPENFBX_BUILD_EXAMPLES OFF CACHE BOOL "Build OpenFBX examples" FORCE)
+    set(OPENFBX_BUILD_TESTS OFF CACHE BOOL "Build OpenFBX tests" FORCE)
+
+    # 启用 OpenFBX 的 libdeflate 支持
+    set(OPENFBX_USE_LIBDEFLATE ON CACHE BOOL "Use libdeflate" FORCE)
+    set(OFBX_USE_LIBDEFLATE ON CACHE BOOL "Use libdeflate" FORCE)
+
     FetchContent_MakeAvailable(openfbx)
     message(STATUS "OpenFBX: 使用 FetchContent")
 endif()

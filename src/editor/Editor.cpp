@@ -125,6 +125,26 @@ bool Editor::InitializeImGui()
     return true;
 }
 
+void Editor::DrawMainMenu() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Exit")) {
+                // Handle exit
+            }
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("Project Settings")) {
+                m_showProjectSettings = true;
+            }
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMainMenuBar();
+    }
+}
+
 int Editor::Run()
 {
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
@@ -144,6 +164,12 @@ int Editor::Run()
         ImGui::NewFrame();
 
         // 构建 UI
+        DrawMainMenu();
+
+        if (m_showProjectSettings) {
+            m_projectSettingsWindow.Draw(&m_showProjectSettings);
+        }
+
         ShowDemo();
         ImGui::ShowDemoWindow();
 

@@ -3,7 +3,7 @@
 #include "IApplication.h"
 #include "Singleton.h"
 #include "Platform.h"  // 包含WindowHandle定义
-
+#include "ProjectSettingsWindow.h"
 
 class Editor : public PrismaEngine::IApplication<Editor>
 {
@@ -17,9 +17,14 @@ public:
 
 private:
 	bool InitializeImGui();
+    void DrawMainMenu();
 
 	// 窗口句柄
 	WindowHandle m_window = nullptr;
+
+    // Editor Windows
+    ProjectSettingsWindow m_projectSettingsWindow;
+    bool m_showProjectSettings = false;
 };
 
 extern "C" {

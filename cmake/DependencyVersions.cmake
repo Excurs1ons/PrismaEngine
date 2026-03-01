@@ -36,6 +36,10 @@ set(PRISMA_DEP_TINYXML2_VERSION "10.0.0")
 # GitHub: https://github.com/facebook/zstd
 set(PRISMA_DEP_ZSTD_VERSION "v1.5.6")
 
+# libdeflate - 快速 DEFLATE/zlib/gzip 库 (OpenFBX 依赖)
+# GitHub: https://github.com/ebiggers/libdeflate
+set(PRISMA_DEP_LIBDEFLATE_VERSION "v1.19")
+
 # Tweeny - 补间动画库 (header-only, 用于 UI 动画)
 # GitHub: https://github.com/mobius3/tweeny
 # 锁定到具体 tag

@@ -48,13 +48,13 @@ message(STATUS "=== Adding Subdirectories ===")
 
 # 核心模块
 add_subdirectory(src/engine)
-# Game 模块
-add_subdirectory(src/game)
 
 # 条件添加 Editor
 if(PRISMA_BUILD_EDITOR)
     add_subdirectory(src/editor)
 else()
+    # Game 模块 (Editor 模式下不需要 Game)
+    add_subdirectory(src/game)
     message(STATUS "Skipping Editor (PRISMA_BUILD_EDITOR=OFF)")
 endif()
 
