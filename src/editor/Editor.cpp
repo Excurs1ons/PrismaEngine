@@ -9,7 +9,7 @@
 #endif
 
 #include "SceneManager.h"
-#include "ResourceManager.h"
+#include "ResourceManagerNew.h"
 #include "Mesh.h"
 #include "nlohmann/json.hpp"
 #include <vector>
