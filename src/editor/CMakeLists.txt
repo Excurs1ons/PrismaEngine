@@ -3,10 +3,12 @@
 # 源文件
 set(EDITOR_SOURCES
         Editor.cpp
+        ProjectSettingsWindow.cpp
 )
 
 set(EDITOR_HEADERS
         Editor.h
+        ProjectSettingsWindow.h
 )
 
 # 创建动态库

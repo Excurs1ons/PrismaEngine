@@ -166,6 +166,7 @@ set(CORE_HEADERS
     # ECS 系统
     core/AssetManager.h
     core/ECS.h
+    core/ProjectSettings.h
     # UI 系统
     ui/UIComponent.h
     ui/UIInputManager.h
@@ -662,7 +663,13 @@ else()
 endif()
 
 # Zstandard - 压缩库 (Base64+zstd 格式)
-if(TARGET libzstd_shared)
+if(TARGET libzstd_static)
+    target_link_libraries(Engine PUBLIC libzstd_static)
+    message(STATUS "链接 libzstd_static 到 Engine")
+elseif(TARGET zstd::libzstd_static)
+    target_link_libraries(Engine PUBLIC zstd::libzstd_static)
+    message(STATUS "链接 zstd::libzstd_static 到 Engine")
+elseif(TARGET libzstd_shared)
     target_link_libraries(Engine PUBLIC libzstd_shared)
     message(STATUS "链接 libzstd_shared 到 Engine")
 elseif(TARGET zstd::libzstd_shared)
