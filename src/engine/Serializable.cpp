@@ -1,4 +1,5 @@
 #include "Serializable.h"
+#include "Export.h"
 #include <filesystem>
 
 namespace PrismaEngine {
