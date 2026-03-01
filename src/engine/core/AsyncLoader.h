@@ -11,6 +11,7 @@
 #include <future>
 #include <unordered_map>
 #include <string>
+#include <exception>
 
 namespace PrismaEngine {
     namespace Core {
