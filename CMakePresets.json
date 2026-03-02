@@ -48,6 +48,30 @@
       }
     },
     {
+      "name": "linux-base",
+      "hidden": true,
+      "description": "Base Linux configuration (使用 FetchContent 管理依赖)",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "PRISMA_USE_FETCHCONTENT": "ON",
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_ENABLE_RENDER_VULKAN": "ON",
+        "PRISMA_ENABLE_RENDER_OPENGL": "OFF",
+        "PRISMA_ENABLE_AUDIO_SDL3": "ON",
+        "PRISMA_ENABLE_INPUT_SDL3": "ON",
+        "PRISMA_USE_NATIVE_AUDIO": "OFF",
+        "PRISMA_USE_NATIVE_INPUT": "OFF",
+        "PRISMA_ENABLE_UPSCALER_FSR": "OFF",
+        "PRISMA_ENABLE_UPSCALER_DLSS": "OFF",
+        "PRISMA_ENABLE_UPSCALER_TSR": "OFF"
+      }
+    },
+    {
       "name": "windows-x64-debug",
       "displayName": "Windows x64 Debug",
       "inherits": "windows-base",
@@ -152,6 +176,76 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "ANDROID_ABI": "arm64-v8a"
       }
+    },
+    {
+      "name": "linux-x64-debug",
+      "displayName": "Linux x64 Debug",
+      "inherits": "linux-base",
+      "description": "Debug build for Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/linux-x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "linux-x64-release",
+      "displayName": "Linux x64 Release",
+      "inherits": "linux-base",
+      "description": "Release build for Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/linux-x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "linux-arm64-debug",
+      "displayName": "Linux ARM64 Debug",
+      "inherits": "linux-base",
+      "description": "Debug build for Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/linux-arm64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "linux-arm64-release",
+      "displayName": "Linux ARM64 Release",
+      "inherits": "linux-base",
+      "description": "Release build for Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/linux-arm64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "linux-editor-debug",
+      "displayName": "Linux Editor Debug",
+      "inherits": "linux-base",
+      "description": "Debug build for Linux Editor using Ninja",
+      "binaryDir": "${sourceDir}/build/linux-editor-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "linux-editor-release",
+      "displayName": "Linux Editor Release",
+      "inherits": "linux-base",
+      "description": "Release build for Linux Editor using Ninja",
+      "binaryDir": "${sourceDir}/build/linux-editor-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -186,6 +280,30 @@
     {
       "name": "android-arm64-v8a-release",
       "configurePreset": "android-arm64-v8a-release"
+    },
+    {
+      "name": "linux-x64-debug",
+      "configurePreset": "linux-x64-debug"
+    },
+    {
+      "name": "linux-x64-release",
+      "configurePreset": "linux-x64-release"
+    },
+    {
+      "name": "linux-arm64-debug",
+      "configurePreset": "linux-arm64-debug"
+    },
+    {
+      "name": "linux-arm64-release",
+      "configurePreset": "linux-arm64-release"
+    },
+    {
+      "name": "linux-editor-debug",
+      "configurePreset": "linux-editor-debug"
+    },
+    {
+      "name": "linux-editor-release",
+      "configurePreset": "linux-editor-release"
     }
   ]
 }

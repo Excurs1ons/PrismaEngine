@@ -1,0 +1,247 @@
+#!/bin/bash
+# PrismaEngine 统一构建脚本
+# 自动检测平台和架构，支持所有平台
+#
+# 用法: prisma-build [preset] [options...]
+#
+# 预设 (自动检测平台):
+#   debug, release              # 默认配置
+#   editor-debug, editor-release # 编辑器构建
+#   android-arm64, android-armv7 # Android 构建
+#
+# 选项:
+#   --clean, -c          清理构建目录
+#   --quiet, -q          静默模式
+#   --verbose, -v        详细输出
+#   --jobs, -j <N>       并行任务数
+#   --help, -h           显示帮助
+#
+# 示例:
+#   prisma-build                    # 默认构建
+#   prisma-build debug --clean      # 清理后构建
+#   prisma-build release            # Release 构建
+
+set -e
+
+# 获取脚本目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="$SCRIPT_DIR/../lib"
+
+# 加载核心库
+source "$LIB_DIR/platform-detect.sh"
+source "$LIB_DIR/cmake-utils.sh"
+
+# 默认值
+BUILD_TYPE="debug"
+CLEAN_BUILD=false
+QUIET_MODE=false
+VERBOSE_MODE=false
+PARALLEL_JOBS="4"
+PRESET=""
+SHOW_HELP=false
+
+# 显示帮助信息
+function show_help() {
+    print_header "PrismaEngine Build Script"
+    echo ""
+    echo "用法: $0 [preset] [options...]"
+    echo ""
+    echo -e "${PRISMA_COLOR_CYAN}预设 (自动检测平台):${PRISMA_COLOR_NC}"
+    echo "  debug                      Debug 构建 (默认)"
+    echo "  release                    Release 构建"
+    echo "  editor-debug               编辑器 Debug 构建"
+    echo "  editor-release             编辑器 Release 构建"
+    echo ""
+    echo -e "${PRISMA_COLOR_CYAN}选项:${PRISMA_COLOR_NC}"
+    echo "  --clean, -c                清理构建目录"
+    echo "  --quiet, -q                静默模式 (减少输出)"
+    echo "  --verbose, -v              详细输出"
+    echo "  --jobs, -j <N>             并行任务数 (默认: 4)"
+    echo "  --help, -h                 显示此帮助"
+    echo ""
+    echo -e "${PRISMA_COLOR_CYAN}示例:${PRISMA_COLOR_NC}"
+    echo "  $0                         # 自动检测并构建"
+    echo "  $0 debug                   # 构建 Debug"
+    echo "  $0 release --clean         # 清理后构建 Release"
+    echo "  $0 --jobs 8                # 使用 8 个并行任务"
+    echo ""
+}
+
+# 解析参数
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        debug|release)
+            BUILD_TYPE="$1"
+            ;;
+        editor-debug|editor-release)
+            PRESET="$1"
+            BUILD_TYPE="${1#*-}"
+            ;;
+        --clean|-c)
+            CLEAN_BUILD=true
+            ;;
+        --quiet|-q)
+            QUIET_MODE=true
+            ;;
+        --verbose|-v)
+            VERBOSE_MODE=true
+            ;;
+        --jobs|-j)
+            shift
+            PARALLEL_JOBS="$1"
+            # 验证输入是数字
+            if ! [[ "$PARALLEL_JOBS" =~ ^[0-9]+$ ]] || [ "$PARALLEL_JOBS" -lt 1 ]; then
+                print_error "--jobs requires a positive number"
+                exit 1
+            fi
+            ;;
+        --help|-h)
+            SHOW_HELP=true
+            ;;
+        -*)
+            print_error "Unknown option: $1"
+            show_help
+            exit 1
+            ;;
+        *)
+            # 第一个非选项参数就是 preset
+            if [ -z "$PRESET" ]; then
+                PRESET="$1"
+            else
+                print_error "Too many arguments"
+                show_help
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
+
+# 显示帮助并退出
+if [ "$SHOW_HELP" = true ]; then
+    show_help
+    exit 0
+fi
+
+# 检测平台
+detect_platform
+
+# 检查 CMake
+if ! check_cmake; then
+    exit 1
+fi
+
+# 如果没有指定 preset，使用默认值
+if [ -z "$PRESET" ]; then
+    PRESET=$(get_default_preset "$BUILD_TYPE")
+fi
+
+# 设置 CMake 输出模式
+if [ "$QUIET_MODE" = true ]; then
+    CMAKE_LOG_LEVEL="--log-level=ERROR"
+    BUILD_OUTPUT_MODE="--output-mode=errors-only"
+elif [ "$VERBOSE_MODE" = true ]; then
+    CMAKE_LOG_LEVEL="--log-level=VERBOSE"
+    BUILD_OUTPUT_MODE="--verbose"
+else
+    CMAKE_LOG_LEVEL="--log-level=STATUS"
+    BUILD_OUTPUT_MODE=""
+fi
+
+# 打印配置信息
+if [ "$QUIET_MODE" = false ]; then
+    print_header "PrismaEngine Build Script"
+    print_info "Platform: $PRISMA_PLATFORM ($PRISMA_ARCH)"
+    print_info "Build Type: $BUILD_TYPE"
+    print_info "Preset: $PRESET"
+    print_info "Parallel Jobs: $PARALLEL_JOBS"
+fi
+
+# 清理构建目录
+if [ "$CLEAN_BUILD" = true ]; then
+    if [ "$QUIET_MODE" = false ]; then
+        print_step "清理构建目录"
+    fi
+
+    BUILD_DIR=$(get_build_dir "$PRESET")
+    if [ -d "$BUILD_DIR" ]; then
+        rm -rf "$BUILD_DIR"
+        if [ "$QUIET_MODE" = false ]; then
+            print_success "已删除: $BUILD_DIR"
+        fi
+    fi
+fi
+
+# 配置阶段
+print_step "[1/2] 配置项目: $PRESET"
+
+if cmake_preset_exists "$PRESET"; then
+    # 使用 CMake 预设
+    if ! cmake_configure_preset "$PRESET" $CMAKE_LOG_LEVEL; then
+        print_error "CMake 配置失败"
+        exit 1
+    fi
+else
+    # 回退到手动配置
+    BUILD_DIR="build/$PRESET"
+    print_warning "预设 '$PRESET' 不存在，使用手动配置"
+
+    local cmake_args="-DCMAKE_BUILD_TYPE=$BUILD_TYPE"
+
+    # 根据平台设置选项
+    case "$PRISMA_PLATFORM" in
+        linux|darwin)
+            cmake_args="$cmake_args -DPRISMA_ENABLE_RENDER_VULKAN=ON"
+            cmake_args="$cmake_args -DPRISMA_ENABLE_AUDIO_SDL3=ON"
+            cmake_args="$cmake_args -DPRISMA_ENABLE_INPUT_SDL3=ON"
+            cmake_args="$cmake_args -DPRISMA_USE_FETCHCONTENT=ON"
+            ;;
+        windows)
+            cmake_args="$cmake_args -DPRISMA_ENABLE_RENDER_DX12=ON"
+            cmake_args="$cmake_args -DPRISMA_USE_FETCHCONTENT=ON"
+            ;;
+    esac
+
+    if ! cmake_configure_manual "$BUILD_DIR" $cmake_args $CMAKE_LOG_LEVEL; then
+        print_error "CMake 配置失败"
+        exit 1
+    fi
+fi
+
+# 构建阶段
+print_step "[2/2] 构建项目 ($BUILD_TYPE)"
+
+if cmake_preset_exists "$PRESET"; then
+    # 使用 CMake 预设构建
+    if ! cmake_build_preset "$PRESET" -j"$PARALLEL_JOBS" $BUILD_OUTPUT_MODE; then
+        print_error "构建失败"
+        exit 1
+    fi
+else
+    # 手动构建
+    BUILD_DIR="build/$PRESET"
+    if ! cmake_build_manual "$BUILD_DIR" -j"$PARALLEL_JOBS" $BUILD_OUTPUT_MODE; then
+        print_error "构建失败"
+        exit 1
+    fi
+fi
+
+# 成功消息
+if [ "$QUIET_MODE" = true ]; then
+    print_success "构建完成: build/$PRESET"
+else
+    print_header "构建完成！"
+    print_success "输出目录: build/$PRESET"
+    echo ""
+    print_info "运行游戏或编辑器:"
+    if [ "$BUILD_TYPE" = "debug" ]; then
+        if [[ "$PRESET" == *"editor"* ]]; then
+            echo "  ./build/$PRESET/bin/PrismaEditor"
+        else
+            echo "  ./build/$PRESET/bin/PrismaRuntime"
+        fi
+    else
+        echo "  ./build/$PRESET/bin/PrismaRuntime"
+    fi
+    echo ""
+fi
