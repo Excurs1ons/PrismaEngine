@@ -1,9 +1,11 @@
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "TextureAsset.h"
+#ifdef __ANDROID__
 #include "../runtime/android/Utility.h"
 #include "../runtime/android/VulkanContext.h"
 #include "AndroidOut.h"
 #include <android/imagedecoder.h>
+#endif
 #include <array>
 #include <mutex>
 #include <vector>
@@ -220,6 +222,7 @@ std::shared_ptr<TextureAsset> TextureAsset::getOrCreateWhiteFallback(VulkanConte
 }
 
 // 主要加载函数
+#ifdef __ANDROID__
 std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
         AAssetManager* assetManager,
         const std::string& assetPath,
@@ -228,6 +231,16 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
     // 1. 加载图像数据（这部分与 OpenGL 相同）
     auto pAndroidRobotPng = AAssetManager_open(
             assetManager, assetPath.c_str(), AASSET_MODE_BUFFER);
+#else
+std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
+        const std::string& assetPath,
+        VulkanContext* vulkanContext) {
+
+    // TODO: 非 Android 平台实现
+    // 使用 STB 图像加载库
+    LOG_ERROR("TextureAsset", "loadAsset not implemented for non-Android platforms yet");
+    return nullptr;
+#endif
 
     AImageDecoder* pAndroidDecoder = nullptr;
     auto result = AImageDecoder_createFromAAsset(pAndroidRobotPng, &pAndroidDecoder);

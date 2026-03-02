@@ -2,6 +2,7 @@
 #include "FSRResources.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/ITexture.h"
+#include "../../UpscalerManager.h"
 #include <cstring>
 #include <cmath>
 

@@ -29,30 +29,36 @@ install(DIRECTORY assets/
 #     PATTERN ".DS_Store" EXCLUDE
 # )
 
-# ========== 可选: CMake 包配置文件 ==========
-# 如果需要外部项目使用引擎，取消下面的注释
+# ========== CMake 包配置文件 ==========
+# 用于外部项目使用引擎
 
-# include(CMakePackageConfigHelpers)
-# configure_package_config_file(
-#     "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PrismaEngineConfig.cmake.in"
-#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
-#     INSTALL_DESTINATION lib/cmake/PrismaEngine
-# )
-#
-# write_basic_package_version_file(
-#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
-#     VERSION ${PROJECT_VERSION}
-#     COMPATIBILITY SameMajorVersion
-# )
-#
-# install(FILES
-#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
-#     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
-#     DESTINATION lib/cmake/PrismaEngine
-# )
-#
-# install(EXPORT PrismaEngineTargets
-#     FILE PrismaEngineTargets.cmake
-#     NAMESPACE PrismaEngine::
-#     DESTINATION lib/cmake/PrismaEngine
-# )
+include(CMakePackageConfigHelpers)
+
+# 配置包文件
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/PrismaEngineConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
+    INSTALL_DESTINATION lib/cmake/PrismaEngine
+)
+
+# 写入版本文件
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+# 安装配置文件
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
+    DESTINATION lib/cmake/PrismaEngine
+)
+
+# 安装导出目标
+install(EXPORT PrismaEngineTargets
+    FILE PrismaEngineTargets.cmake
+    NAMESPACE PrismaEngine::
+    DESTINATION lib/cmake/PrismaEngine
+)
+

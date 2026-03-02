@@ -4,6 +4,7 @@
 #include <memory>
 #include <functional>
 #include <unordered_map>
+#include <atomic>
 
 namespace PrismaEngine::Input {
 

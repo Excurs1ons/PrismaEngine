@@ -9,7 +9,13 @@
 #if defined(__ANDROID__) || defined(ANDROID)
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_android.h>
+#endif
 
+// VMA 实现必须在某个 .cpp 文件中定义一次
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+#undef VMA_IMPLEMENTATION
 #endif
 namespace PrismaEngine::Graphic {
 
@@ -613,9 +619,10 @@ bool VulkanRenderDevice::CreateInstanceWithVkBootstrap() {
 #elif defined(__ANDROID__)
     builder.enable_extension(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
 #elif defined(__linux__)
-    builder.enable_extension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-    builder.enable_extension(VK_KHR_XCB_SURFACE_EXTENSION_NAME);
-    builder.enable_extension(VK_KHR_WAYLAND_SURFACE_EXTENSION_NAME);
+    // Linux 上使用字符串字面量避免宏未定义问题
+    builder.enable_extension("VK_KHR_xlib_surface");
+    builder.enable_extension("VK_KHR_xcb_surface");
+    builder.enable_extension("VK_KHR_wayland_surface");
 #endif
 
     // 调试模式下启用验证层
@@ -735,12 +742,13 @@ bool VulkanRenderDevice::CreateSwapChainWithVkBootstrap(uint32_t width, uint32_t
     }
 
     vkb::SwapchainBuilder swapchainBuilder(m_vkBootstrapDevice);
-    swapchainBuilder.set_desired_extent({width, height});
+    swapchainBuilder.set_desired_extent(width, height);
 
     if (vsync) {
         swapchainBuilder.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR);
     } else {
-        swapchainBuilder.set_desired_present_mode({VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR});
+        // 使用 MAILBOX 模式（低延迟）
+        swapchainBuilder.set_desired_present_mode(VK_PRESENT_MODE_MAILBOX_KHR);
     }
 
     // 设置默认图像格式

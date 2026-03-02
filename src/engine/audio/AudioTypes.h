@@ -24,7 +24,7 @@ using AudioVoiceId = uint32_t;
 constexpr AudioVoiceId INVALID_VOICE_ID = 0xFFFFFFFF;
 
 // 音频设备类型
-enum class AudioDeviceType : char {
+enum class AudioDeviceType : int {
     Auto = -1,      // 自动选择
     OpenAL = 0,     // OpenAL (跨平台)
     XAudio2 = 1,    // XAudio2 (Windows)
