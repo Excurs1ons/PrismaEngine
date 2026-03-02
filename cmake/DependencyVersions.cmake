@@ -66,8 +66,8 @@ set(PRISMA_DEP_VULKAN_HEADERS_VERSION "v1.4.328")
 set(PRISMA_DEP_VMA_VERSION "v3.1.0")
 
 # vk-bootstrap - Vulkan初始化库
-# GitHub: https://github.com/charles-lunarge/vk-bootstrap
-set(PRISMA_DEP_VK_BOOTSTRAP_VERSION "v0.9")
+# GitHub: https://github.com/charles-lunarg/vk-bootstrap
+set(PRISMA_DEP_VK_BOOTSTRAP_VERSION "v1.4.343")
 
 # DirectX-Headers (Windows) - DirectX 12 头文件
 # GitHub: https://github.com/microsoft/DirectX-Headers
@@ -79,8 +79,8 @@ set(PRISMA_DEP_DIRECTX_HEADERS_VERSION "v1.614.1")
 
 # ImGui - UI框架 (docking分支)
 # GitHub: https://github.com/ocornut/imgui
-# 锁定到具体 commit
-set(PRISMA_DEP_IMGUI_VERSION "2a08c87b8cd363792fcda4d308ac423859ab66ae")  # docking 分支
+# 使用分支名而不是 commit SHA
+set(PRISMA_DEP_IMGUI_VERSION "docking")
 
 # OpenFBX - FBX模型加载 (Windows only)
 # GitHub: https://github.com/nem0/OpenFBX

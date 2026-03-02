@@ -1,14 +1,160 @@
+# PrismaEngine CMake 配置文件
+# 此文件由 CMake install() 命令生成
+# 版本: @PROJECT_VERSION@
+
 @PACKAGE_INIT@
 
+# 设置变量
+set_and_check(PRISMAENGINE_INCLUDE_DIR "${PACKAGE_PREFIX_DIR}/include")
+set_and_check(PRISMAENGINE_CMAKE_DIR "${PACKAGE_PREFIX_DIR}/cmake")
+set_and_check(PRISMAENGINE_LIB_DIR "${PACKAGE_PREFIX_DIR}/lib")
+
+# 检查组件
+set(PRISMAENGINE_FOUND TRUE)
+set(PRISMAENGINE_HAS_GRAPHIC TRUE)
+set(PRISMAENGINE_HAS_AUDIO TRUE)
+set(PRISMAENGINE_HAS_INPUT TRUE)
+set(PRISMAENGINE_HAS_EDITOR TRUE)
+
+# 包含 CMake 模块
 include(CMakeFindDependencyMacro)
 
 # 查找依赖项
-find_dependency(SDL3 CONFIG)
-find_dependency(Vulkan)
-find_dependency(nlohmann_json CONFIG)
-find_dependency(imgui CONFIG)
+# 注意：这些依赖可能已经由系统包管理器安装
+# 或者可能需要通过 FetchContent 获取
+
+# 查找 Vulkan (如果启用)
+if(PRISMAENGINE_ENABLE_RENDER_VULKAN AND NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
+    find_dependency(Vulkan)
+endif()
+
+# 查找 SDL3
+if(NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
+    if(TARGET SDL3::SDL3-static)
+        set(SDL3_FOUND TRUE)
+    elseif(TARGET SDL3::SDL3-shared)
+        set(SDL3_FOUND TRUE)
+    else()
+        find_dependency(SDL3 CONFIG)
+    endif()
+endif()
+
+# 查找 nlohmann_json
+if(NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
+    find_dependency(nlohmann_json CONFIG)
+endif()
+
+# 查找 ImGui
+if(NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
+    find_dependency(imgui CONFIG)
+endif()
 
 # 包含目标
 include("${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
 
+# 检查所有请求的组件
 check_required_components(PrismaEngine)
+
+# 设置版本变量
+set(PRISMAENGINE_VERSION "@PROJECT_VERSION@")
+set(PRISMAENGINE_VERSION_MAJOR @PROJECT_VERSION_MAJOR@)
+set(PRISMAENGINE_VERSION_MINOR @PROJECT_VERSION_MINOR@)
+set(PRISMAENGINE_VERSION_PATCH @PROJECT_VERSION_PATCH@)
+
+# 设置别名（用于兼容性）
+if(NOT TARGET PrismaEngine::Engine AND TARGET Engine)
+    add_library(PrismaEngine::Engine ALIAS Engine)
+endif()
+
+if(NOT TARGET PrismaEngine::Editor AND TARGET Editor)
+    add_library(PrismaEngine::Editor ALIAS Editor)
+endif()
+
+# 宏：创建 PrismaEngine 应用程序
+function(prisma_create_app APP_NAME)
+    cmake_parse_arguments(ARG
+        ""
+        "FOLDER"
+        "SOURCES;LIBRARIES"
+        ${ARGN}
+    )
+
+    # 创建可执行文件
+    add_executable(${APP_NAME})
+
+    # 设置源文件
+    if(ARG_SOURCES)
+        target_sources(${APP_NAME} PRIVATE ${ARG_SOURCES})
+    endif()
+
+    # 设置 C++ 标准
+    set_target_properties(${APP_NAME} PROPERTIES
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+    )
+
+    # 链接 PrismaEngine
+    target_link_libraries(${APP_NAME} PRIVATE Engine)
+
+    # 链接额外库
+    if(ARG_LIBRARIES)
+        target_link_libraries(${APP_NAME} PRIVATE ${ARG_LIBRARIES})
+    endif()
+
+    # 包含目录
+    target_include_directories(${APP_NAME} PRIVATE
+        ${PRISMAENGINE_INCLUDE_DIR}
+    )
+
+    # 设置输出文件夹
+    if(ARG_FOLDER)
+        set_target_properties(${APP_NAME} PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY ${ARG_FOLDER}
+        )
+    endif()
+
+    # 平台特定设置
+    if(WIN32)
+        # Windows: 将 DLL 复制到输出目录
+        add_custom_command(TARGET ${APP_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_FILE:Engine>
+                $<TARGET_FILE_DIR:${APP_NAME}>
+            COMMENT "Copying Engine DLL to output directory"
+        )
+    endif()
+endfunction()
+
+# 宏：创建 PrismaEngine 编辑器扩展
+function(prisma_create_editor_extension EXTENSION_NAME)
+    cmake_parse_arguments(ARG
+        ""
+        ""
+        "SOURCES"
+        ${ARGN}
+    )
+
+    # 创建动态库
+    add_library(${EXTENSION_NAME} SHARED ${ARG_SOURCES})
+
+    # 设置 C++ 标准
+    set_target_properties(${EXTENSION_NAME} PROPERTIES
+        CXX_STANDARD 20
+        CXX_STANDARD_REQUIRED ON
+        CXX_EXTENSIONS OFF
+    )
+
+    # 链接 Editor
+    target_link_libraries(${EXTENSION_NAME} PRIVATE Editor)
+
+    # 包含目录
+    target_include_directories(${EXTENSION_NAME} PRIVATE
+        ${PRISMAENGINE_INCLUDE_DIR}
+    )
+
+    # 导出符号
+    target_compile_definitions(${EXTENSION_NAME} PRIVATE
+        EDITOR_EXTENSION_EXPORTS=1
+    )
+endfunction()

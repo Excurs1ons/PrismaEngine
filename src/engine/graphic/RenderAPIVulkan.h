@@ -12,7 +12,7 @@
 
 // vk-bootstrap - Vulkan 初始化库
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
-#include <vk_bootstrap.hpp>
+#include <VkBootstrap.h>
 #endif
 
 // VMA - Vulkan Memory Allocator

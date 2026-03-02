@@ -6,10 +6,21 @@
 #include "ProjectSettingsWindow.h"
 
 // Editor 也是一个动态库，需要导出符号
-#ifdef EDITOR_EXPORTS
-    #define EDITOR_API __declspec(dllexport)
+#if defined(_WIN32) || defined(_MSC_VER)
+    #ifdef EDITOR_EXPORTS
+        #define EDITOR_API __declspec(dllexport)
+    #else
+        #define EDITOR_API __declspec(dllimport)
+    #endif
+// Linux/Unix 平台使用 GCC/Clang 属性
+#elif defined(__GNUC__) || defined(__clang__)
+    #ifdef EDITOR_EXPORTS
+        #define EDITOR_API __attribute__((visibility("default")))
+    #else
+        #define EDITOR_API
+    #endif
 #else
-    #define EDITOR_API __declspec(dllimport)
+    #define EDITOR_API
 #endif
 
 class Editor : public PrismaEngine::IApplication<Editor>

@@ -1,6 +1,7 @@
 #pragma once
 #include <map>
 #include <cmath>
+#include <cstdint>
 #include <vector>
 
 // 数学常量定义

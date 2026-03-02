@@ -73,7 +73,7 @@ FetchContent_Declare(
 set(FETCHCONTENT_VK_BOOTSTRAP_DIR "${FETCHCONTENT_BASE_DIR}/vk-bootstrap")
 FetchContent_Declare(
     vk-bootstrap
-    GIT_REPOSITORY https://github.com/charles-lunarge/vk-bootstrap.git
+    GIT_REPOSITORY https://github.com/charles-lunarg/vk-bootstrap.git
     GIT_TAG ${PRISMA_DEP_VK_BOOTSTRAP_VERSION}
     GIT_SHALLOW ${PRISMA_FETCHCONTENT_SHALLOW}
 )
@@ -268,6 +268,9 @@ if(PRISMA_BUILD_EDITOR OR ((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3
         set(SDL_TESTS OFF CACHE BOOL "Build SDL3 tests" FORCE)
         set(SDL_EXAMPLES OFF CACHE BOOL "Build SDL3 examples" FORCE)
         set(SDL_INSTALL_TESTS OFF CACHE BOOL "Install SDL3 tests" FORCE)
+        set(SDL_TESTS_LIBRARY OFF CACHE BOOL "Build SDL3 test library" FORCE)
+        set(SDL_DISABLE_TESTS ON CACHE BOOL "Disable SDL3 tests" FORCE)
+        set(SDL_DISABLE_EXAMPLES ON CACHE BOOL "Disable SDL3 examples" FORCE)
         # 禁用 SDL3 的预编译头（Android NDK 构建时可能有问题）
         set(SDL_PCH OFF CACHE BOOL "Build SDL3 with PCH" FORCE)
 
@@ -295,7 +298,19 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
 
         # vk-bootstrap 需要 Vulkan-Headers
         FetchContent_MakeAvailable(vk-bootstrap)
-        message(STATUS "vk-bootstrap: 使用 FetchContent")
+        # 确保 vk-bootstrap 使用 PIC 编译（用于共享库）
+        set_target_properties(vk-bootstrap PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        message(STATUS "vk-bootstrap: 使用 FetchContent + PIC")
+
+        # 确保 tinyxml2 使用 PIC 编译（处理真实目标而非别名）
+        if(TARGET tinyxml2_static)
+            set_target_properties(tinyxml2_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+        elseif(TARGET tinyxml2)
+            get_target_property(tinyxml2_type tinyxml2 TYPE)
+            if(NOT "${tinyxml2_type}" STREQUAL "ALIAS")
+                set_target_properties(tinyxml2 PROPERTIES POSITION_INDEPENDENT_CODE ON)
+            endif()
+        endif()
     endif()
 endif()
 
@@ -393,7 +408,7 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
 endif()
 
 # OpenFBX (Windows only)
-if(PRISMA_BUILD_EDITOR)
+if(WIN32 AND PRISMA_BUILD_EDITOR)
     # 显式添加 libdeflate 依赖
     set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "Build shared library" FORCE)
     set(LIBDEFLATE_BUILD_STATIC_LIB ON CACHE BOOL "Build static library" FORCE)

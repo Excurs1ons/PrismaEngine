@@ -25,12 +25,20 @@
 #include <thread>
 #include <vulkan/vulkan.h>
 
-namespace Engine {
+namespace PrismaEngine {
+
+// ------------------------------------------------------------
+// Platform 类静态成员变量定义
+// ------------------------------------------------------------
+bool Platform::s_initialized = false;
+bool Platform::s_shouldClose = false;
+WindowHandle Platform::s_currentWindow = nullptr;
 
 // ------------------------------------------------------------
 // SDL 平台静态变量
 // ------------------------------------------------------------
 static bool s_sdlInitialized = false;
+static Platform::EventCallback s_eventCallback = nullptr;
 
 // ------------------------------------------------------------
 // 平台生命周期管理
@@ -79,7 +87,7 @@ void Platform::SetEventCallback(EventCallback callback) {
 // ------------------------------------------------------------
 WindowHandle Platform::CreateWindow(const WindowProps& desc) {
     Uint32 flags = SDL_WINDOW_RESIZABLE;
-    if (desc.FullScreenMode == FullScreenMode::FullScreen) {
+    if (desc.fullScreenMode == FullScreenMode::FullScreen) {
         flags |= SDL_WINDOW_FULLSCREEN;
     }
 
@@ -144,6 +152,10 @@ void Platform::PumpEvents() {
 bool Platform::ShouldClose(WindowHandle window) {
     (void)window;
     return s_shouldClose;
+}
+
+WindowHandle Platform::GetCurrentWindow() {
+    return s_currentWindow;
 }
 
 // ------------------------------------------------------------
@@ -380,7 +392,7 @@ bool Platform::CreateVulkanSurface(void* instance, WindowHandle windowHandle, vo
 // ------------------------------------------------------------
 // IPlatformLogger 接口实现
 // ------------------------------------------------------------
-void Platform::LogToConsole(PlatformLogLevel level, const char* tag, const char* message) {
+void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
     (void)level;
     (void)tag;
     std::cout << message << std::endl;
@@ -404,7 +416,7 @@ const char* Platform::GetLogDirectoryPath() {
     return logPath;
 }
 
-} // namespace Engine
+} // namespace PrismaEngine
 
 #endif // PRISMA_SDL_AVAILABLE
 

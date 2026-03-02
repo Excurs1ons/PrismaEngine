@@ -5,6 +5,7 @@
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/IResourceManager.h"
 #include <atomic>
+#include <condition_variable>
 #include <filesystem>
 #include <functional>
 #include <queue>

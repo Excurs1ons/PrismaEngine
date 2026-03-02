@@ -6,17 +6,26 @@
 #include <vulkan/vulkan.h>
 #include <GLES3/gl3.h>
 #include <glm/glm.hpp>
+#ifdef __ANDROID__
 #include <android/asset_manager.h>
+#endif
 
 class VulkanContext; // 前向声明
 
 class TextureAsset {
 public:
-    // 使用 Vulkan 上下文创建
+#ifdef __ANDROID__
+    // Android: 使用 Vulkan 上下文创建
     static std::shared_ptr<TextureAsset> loadAsset(
             AAssetManager* assetManager,
             const std::string& assetPath,
             VulkanContext* vulkanContext = nullptr);
+#else
+    // 非Android平台: 使用文件路径
+    static std::shared_ptr<TextureAsset> loadAsset(
+            const std::string& assetPath,
+            VulkanContext* vulkanContext = nullptr);
+#endif
 
     // 创建白色 1x1 fallback 纹理（类似 Unity 的默认白色纹理）
     // 当材质没有纹理时使用此纹理作为 fallback

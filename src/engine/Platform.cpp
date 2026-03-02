@@ -36,53 +36,20 @@ float Time::GetTime() {
 namespace PrismaEngine {
 
 // ------------------------------------------------------------
-// 静态变量定义
+// 静态变量定义和平台生命周期管理
 // ------------------------------------------------------------
-#if !defined(_WIN32) && !defined(__ANDROID__)
-static bool s_initialized = false;
-static bool s_shouldClose = false;
-static WindowHandle s_currentWindow = nullptr;
-static Platform::EventCallback s_eventCallback = nullptr;
+// 注意：非 Windows/Android 平台使用 PlatformSDL.cpp 中的实现
+// 这里只保留 Windows 平台的实现
 
-// ------------------------------------------------------------
-// 平台生命周期管理
-// ------------------------------------------------------------
-bool Platform::Initialize() {
-    if (s_initialized) {
-        return true;
-    }
-
-    s_initialized = true;
-    s_shouldClose = false;
-    return true;
-}
-
-void Platform::Shutdown() {
-    if (!s_initialized) {
-        return;
-    }
-
-    s_initialized = false;
-    s_currentWindow = nullptr;
-}
-
-bool Platform::IsInitialized() {
-    return s_initialized;
-}
-
-// ------------------------------------------------------------
-// 窗口管理
-// ------------------------------------------------------------
-WindowHandle Platform::GetCurrentWindow() {
-    return s_currentWindow;
-}
-
-#endif // !defined(_WIN32) && !defined(__ANDROID__)
+#if defined(_WIN32) || defined(__ANDROID__)
+// 这些平台的实现在其他文件中
+#endif
 
 // ------------------------------------------------------------
 // 时间管理（通用实现，平台可覆盖）
 // ------------------------------------------------------------
-#if !defined(_WIN32) && !defined(__ANDROID__)
+// Linux 使用 PlatformSDL.cpp 中的实现
+#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(PRISMA_HAS_SDL)
 uint64_t Platform::GetTimeMicroseconds() {
     auto now = std::chrono::high_resolution_clock::now();
     auto duration = now.time_since_epoch();
@@ -104,7 +71,8 @@ void Platform::SleepMilliseconds(uint32_t ms) {
 // ------------------------------------------------------------
 // 文件系统（通用实现）
 // ------------------------------------------------------------
-#if !defined(_WIN32) && !defined(__ANDROID__)
+// Linux 使用 PlatformSDL.cpp 中的实现
+#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(PRISMA_HAS_SDL)
     // Linux/其他平台的通用实现
     #include <sys/stat.h>
     #include <unistd.h>
@@ -227,7 +195,7 @@ void Platform::SleepMilliseconds(uint32_t ms) {
     // ------------------------------------------------------------
     // IPlatformLogger 接口实现（通用）
     // ------------------------------------------------------------
-    void Platform::LogToConsole(PlatformLogLevel level, const char* tag, const char* message) {
+    void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
         (void)level;
         (void)tag;
         std::cout << message << std::endl;
@@ -255,6 +223,9 @@ void Platform::SleepMilliseconds(uint32_t ms) {
 // ------------------------------------------------------------
 // Vulkan 支持（默认空实现）
 // ------------------------------------------------------------
+// Linux 使用 PlatformSDL.cpp 中的实现
+#if !defined(PRISMA_HAS_SDL)
+
 std::vector<const char*> Platform::GetVulkanInstanceExtensions() {
     return {};
 }
@@ -265,5 +236,7 @@ bool Platform::CreateVulkanSurface(void* instance, WindowHandle windowHandle, vo
     (void)outSurface;
     return false;
 }
+
+#endif // !defined(PRISMA_HAS_SDL)
 
 } // namespace Engine

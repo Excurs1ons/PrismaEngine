@@ -5,7 +5,7 @@
 #include <cmath>
 #include <chrono>
 
-namespace Engine::Audio {
+namespace PrismaEngine::Audio {
 
 // ========== SDL3工厂函数 ==========
 
@@ -743,4 +743,34 @@ void AudioDeviceSDL3::TriggerEvent(AudioEventType type, AudioVoiceId voiceId, co
     }
 }
 
-} // namespace Engine::Audio
+// ========== 缺失的接口实现 ==========
+
+bool AudioDeviceSDL3::SetDevice(const std::string& deviceName) {
+    // SDL3 不支持多设备，返回 false
+    (void)deviceName;
+    return false;
+}
+
+AudioDeviceType AudioDeviceSDL3::GetDeviceType() const {
+    return AudioDeviceType::SDL3;
+}
+
+AudioVoiceId AudioDeviceSDL3::PlayClip(const AudioClip& clip, const PlayDesc& desc) {
+    return Play(clip, desc);
+}
+
+void AudioDeviceSDL3::BeginProfile() {
+    // TODO: 实现性能分析开始
+}
+
+std::string AudioDeviceSDL3::EndProfile() {
+    // TODO: 实现性能分析结束
+    return "";
+}
+
+std::string AudioDeviceSDL3::GenerateDebugReport() {
+    // TODO: 生成调试报告
+    return "SDL3 Audio Device Debug Report";
+}
+
+} // namespace PrismaEngine::Audio

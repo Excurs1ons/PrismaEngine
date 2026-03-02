@@ -67,7 +67,7 @@ public:
 
 private:
     bool CreateResources();
-    void ReleaseResources();
+    void ReleaseResourcesImpl();
     bool CreateShaders();
     void ReleaseShaders();
 
