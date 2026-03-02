@@ -8,6 +8,7 @@ endif()
 
 # 包含graphic子目录的CMakeLists.txt来定义变量
 include(graphic/CMakeLists.txt)
+include(physics/CMakeLists.txt)
 
 # ========== 收集核心源文件 (所有平台共用) ==========
 # 核心基础文件
@@ -45,6 +46,7 @@ set(CORE_SOURCES
     # ECS 系统
     core/AssetManager.cpp
     core/ECS.cpp
+    core/AsyncLoader.cpp
     # UI 系统
     ui/UIComponent.cpp
     ui/UIInputManager.cpp
