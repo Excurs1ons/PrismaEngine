@@ -11,8 +11,11 @@
 
 class VulkanContext;
 
+#ifdef __ANDROID__
+#include <android/asset_manager.h>
+
 /**
- * @brief Cubemap纹理资源类
+ * @brief Cubemap纹理资源类 (Android 特定)
  *
  * 继承自TextureAsset，用于加载和管理立方体贴图（Cubemap）纹理，主要用于Skybox渲染。
  * 支持6个面的纹理加载（+X, -X, +Y, -Y, +Z, -Z）
@@ -41,5 +44,6 @@ private:
     CubemapTextureAsset(VulkanContext* context);
 };
 
+#endif // __ANDROID__
 #endif
 #endif

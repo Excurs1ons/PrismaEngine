@@ -1,5 +1,6 @@
 #include "UIInputManager.h"
 #include "2d/ButtonComponent.h"
+#include <algorithm>
 
 namespace PrismaEngine {
 

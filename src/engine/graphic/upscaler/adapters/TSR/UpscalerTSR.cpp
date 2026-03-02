@@ -2,6 +2,7 @@
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/ITexture.h"
 #include "interfaces/IBuffer.h"
+#include "../../UpscalerManager.h"
 #include <cstring>
 #include <cmath>
 
@@ -224,6 +225,11 @@ bool UpscalerTSR::OnResize(uint32_t newWidth, uint32_t newHeight) {
 void UpscalerTSR::ResetHistory() {
     m_needReset = true;
     m_frameIndex = 0;
+}
+
+std::string UpscalerTSR::GetDebugInfo() const {
+    // TODO: 实现详细的调试信息
+    return "TSR Upscaler Debug Info";
 }
 
 bool UpscalerTSR::CreateResources() {

@@ -57,7 +57,7 @@ struct WindowProps {
     uint32_t Width;
     uint32_t Height;
     bool Resizable                = false;
-    FullScreenMode FullScreenMode = FullScreenMode::Window;
+    FullScreenMode fullScreenMode = FullScreenMode::Window;
     WindowShowState ShowState     = WindowShowState::Default;
 
     WindowProps(std::string t = "Engine", uint32_t w = 1280, uint32_t h = 720)
@@ -117,7 +117,7 @@ public:
     // ------------------------------------------------------------
     // 输入管理（需要 KeyCode 支持）
     // ------------------------------------------------------------
-#if defined(PRISMA_HAS_KEYCODE) || defined(_WIN32) || defined(__ANDROID__)
+#if defined(PRISMA_HAS_KEYCODE) || defined(_WIN32) || defined(__ANDROID__) || defined(PRISMA_HAS_SDL)
     ENGINE_API static bool IsKeyDown(PrismaEngine::Input::KeyCode key);
     ENGINE_API static bool IsMouseButtonDown(PrismaEngine::Input::MouseButton btn);
     ENGINE_API static void GetMousePosition(float& x, float& y);

@@ -1,4 +1,5 @@
 #include "CanvasComponent.h"
+#include <algorithm>
 
 namespace PrismaEngine {
 

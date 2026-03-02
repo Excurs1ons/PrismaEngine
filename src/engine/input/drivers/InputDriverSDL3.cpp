@@ -129,16 +129,25 @@ void InputDriverSDL3::ProcessEvent(const SDL_Event& event) {
 }
 
 void InputDriverSDL3::UpdateGamepads() {
+    // SDL3 新 API: 使用 SDL_GetGamepads 获取所有连接的手柄 ID
+    SDL_JoystickID gamepadIds[MAX_GAMEPADS];
+    int gamepadCount = SDL_GetGamepads(gamepadIds, MAX_GAMEPADS);
+
+    if (gamepadCount < 0) {
+        // 错误处理
+        return;
+    }
+
     // 更新所有连接的手柄
-    for (int i = 0; i < SDL_GetNumGamepads(); ++i) {
-        SDL_Gamepad* gamepad = SDL_GetGamepad(i);
+    for (int i = 0; i < gamepadCount && i < MAX_GAMEPADS; ++i) {
+        SDL_Gamepad* gamepad = SDL_OpenGamepad(gamepadIds[i]);
         if (!gamepad) {
             continue;
         }
 
-        SDL_JoystickID instanceId = SDL_GetGamepadInstanceID(gamepad);
         GamepadState& state = m_gamepadStates[i];
         state.connected = true;
+        m_gamepadIds[i] = gamepadIds[i]; // 保存 ID 用于振动功能
 
         // 按钮
         auto UpdateButton = [&](SDL_GamepadButton sdlBtn, GamepadButton btn) {
@@ -151,10 +160,11 @@ void InputDriverSDL3::UpdateGamepads() {
             state.buttons[idx].justReleased = !pressed && state.buttons[idx].pressed;
         };
 
-        UpdateButton(SDL_GAMEPAD_BUTTON_A, GamepadButton::A);
-        UpdateButton(SDL_GAMEPAD_BUTTON_B, GamepadButton::B);
-        UpdateButton(SDL_GAMEPAD_BUTTON_X, GamepadButton::X);
-        UpdateButton(SDL_GAMEPAD_BUTTON_Y, GamepadButton::Y);
+        // SDL3 新按钮命名
+        UpdateButton(SDL_GAMEPAD_BUTTON_SOUTH, GamepadButton::A);
+        UpdateButton(SDL_GAMEPAD_BUTTON_EAST, GamepadButton::B);
+        UpdateButton(SDL_GAMEPAD_BUTTON_WEST, GamepadButton::X);
+        UpdateButton(SDL_GAMEPAD_BUTTON_NORTH, GamepadButton::Y);
         UpdateButton(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, GamepadButton::LeftShoulder);
         UpdateButton(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER, GamepadButton::RightShoulder);
         UpdateButton(SDL_GAMEPAD_BUTTON_BACK, GamepadButton::Back);
@@ -253,19 +263,24 @@ void InputDriverSDL3::SetMousePosition(int x, int y) {
 }
 
 void InputDriverSDL3::StartTextInput() {
-    SDL_StartTextInput();
+    // SDL3 新 API: 需要传入窗口指针，nullptr 表示当前窗口
+    SDL_StartTextInput(nullptr);
     m_textInputEnabled = true;
 }
 
 void InputDriverSDL3::StopTextInput() {
-    SDL_StopTextInput();
+    // SDL3 新 API: 需要传入窗口指针，nullptr 表示当前窗口
+    SDL_StopTextInput(nullptr);
     m_textInputEnabled = false;
 }
 
 // ========== 手柄查询 ==========
 
 uint32_t InputDriverSDL3::GetGamepadCount() const {
-    return SDL_GetNumGamepads();
+    // SDL3 新 API: 使用 SDL_GetGamepads 获取手柄数量
+    SDL_JoystickID gamepadIds[MAX_GAMEPADS];
+    int count = SDL_GetGamepads(gamepadIds, MAX_GAMEPADS);
+    return (count > 0) ? static_cast<uint32_t>(count) : 0;
 }
 
 bool InputDriverSDL3::IsGamepadConnected(uint32_t index) const {
@@ -289,12 +304,11 @@ void InputDriverSDL3::SetVibration(uint32_t index, float leftMotor, float rightM
     }
 
     SDL_JoystickID instanceId = m_gamepadIds[index];
-    SDL_Joystick* joystick = SDL_OpenJoystick(instanceId);
-    if (joystick) {
-        Uint16 low = static_cast<Uint16>(leftMotor * 65535.0f);
-        Uint16 high = static_cast<Uint16>(rightMotor * 65535.0f);
-        SDL_SetJoystickVibration(joystick, low, high, duration);
-        SDL_CloseJoystick(joystick);
+    SDL_Gamepad* gamepad = SDL_OpenGamepad(instanceId);
+    if (gamepad) {
+        // SDL3 新 API: 使用 SDL_RumbleGamepad
+        SDL_RumbleGamepad(gamepad, leftMotor, rightMotor, duration);
+        SDL_CloseGamepad(gamepad);
     }
 }
 

@@ -13,6 +13,7 @@
 #include <thread>
 #include <type_traits>
 #include <vector>
+#include <condition_variable>
 
 // 前置声明，避免循环依赖
 namespace PrismaEngine {

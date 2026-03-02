@@ -7,6 +7,8 @@
 #   - linux-x64-release - Vulkan backend
 #   - linux-x64-debug-opengl - OpenGL backend
 #   - linux-x64-release-opengl - OpenGL backend
+#   - linux-arm64-debug - ARM64 Vulkan backend
+#   - linux-arm64-release - ARM64 Vulkan backend
 #
 # Options:
 #   --quiet, -q            Reduce output (only show errors and progress)
@@ -53,6 +55,8 @@ while [[ $# -gt 0 ]]; do
             echo "  linux-x64-release         (Vulkan)"
             echo "  linux-x64-debug-opengl    (OpenGL)"
             echo "  linux-x64-release-opengl  (OpenGL)"
+            echo "  linux-arm64-debug         (ARM64, Vulkan)"
+            echo "  linux-arm64-release       (ARM64, Vulkan)"
             echo ""
             echo "Options:"
             echo "  --quiet, -q            Reduce output (only show errors and progress)"
@@ -63,7 +67,7 @@ while [[ $# -gt 0 ]]; do
             echo "Examples:"
             echo "  ./build-linux.sh linux-x64-debug"
             echo "  ./build-linux.sh linux-x64-release --quiet"
-            echo "  ./build-linux.sh linux-x64-debug --clean"
+            echo "  ./build-linux.sh linux-arm64-debug --clean"
             echo ""
             exit 0
             ;;
@@ -161,6 +165,16 @@ case "$PRESET" in
         RENDER_BACKEND="OpenGL"
         BUILD_DIR="build/linux-x64-release-opengl"
         ;;
+    linux-arm64-debug)
+        BUILD_TYPE="Debug"
+        RENDER_BACKEND="Vulkan"
+        BUILD_DIR="build/linux-arm64-debug"
+        ;;
+    linux-arm64-release)
+        BUILD_TYPE="Release"
+        RENDER_BACKEND="Vulkan"
+        BUILD_DIR="build/linux-arm64-release"
+        ;;
     *)
         echo -e "${RED}ERROR: Unknown preset: ${PRESET}${NC}"
         echo "Available presets:"
@@ -168,6 +182,8 @@ case "$PRESET" in
         echo "  - linux-x64-release"
         echo "  - linux-x64-debug-opengl"
         echo "  - linux-x64-release-opengl"
+        echo "  - linux-arm64-debug"
+        echo "  - linux-arm64-release"
         exit 1
         ;;
 esac

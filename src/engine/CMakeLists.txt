@@ -21,7 +21,6 @@ set(CORE_SOURCES
     Object.cpp
     PhysicsSystem.cpp
     Platform.cpp
-    PlatformSDL.cpp
     ResourceManagerNew.cpp
     Scene.cpp
     SceneManager.cpp
@@ -34,9 +33,6 @@ set(CORE_SOURCES
     GameObject.cpp
     ScriptComponent.cpp
     Transform.cpp
-    # 资源
-    CubemapTextureAsset.cpp
-    TextureAsset.cpp
     # 音效合成器
     SoundSynthesizer.cpp
     # 示例/测试
@@ -82,7 +78,6 @@ list(APPEND CORE_SOURCES
     # 输入系统
     input/InputDevice.cpp
     input/InputManager.cpp
-    InputManager.cpp
     # 资源系统
     resource/Asset.cpp
     resource/AssetSerializer.cpp
@@ -102,6 +97,7 @@ list(APPEND CORE_SOURCES
 # Windows 平台
 if(WIN32)
     list(APPEND CORE_SOURCES
+        Platform.cpp
         PlatformWindows.cpp
         platform/Application.cpp
         platform/ApplicationWindows.cpp
@@ -110,11 +106,11 @@ if(WIN32)
     )
 endif()
 
-# Linux 平台
+# Linux 平台 - 使用 PlatformSDL.cpp
 if(LINUX)
     list(APPEND CORE_SOURCES
-        PlatformLinux.cpp
-        platform/ApplicationLinux.cpp
+        PlatformSDL.cpp
+        input/drivers/InputDriverSDL3.cpp
     )
 endif()
 
@@ -124,6 +120,9 @@ if(ANDROID)
         PlatformAndroid.cpp
         AndroidLogger.cpp
         AndroidOut.cpp
+        # Android 特定资源
+        CubemapTextureAsset.cpp
+        TextureAsset.cpp
     )
 endif()
 
@@ -412,6 +411,16 @@ endif()
 
 # ========== 依赖项配置 ==========
 
+# Linux 平台系统库
+if(UNIX AND NOT APPLE AND NOT ANDROID)
+    target_link_libraries(Engine PUBLIC
+        pthread
+        dl
+        rt
+    )
+    message(STATUS "Linking Linux system libraries (pthread, dl, rt)")
+endif()
+
 # 音频设备依赖
 if(PRISMA_ENABLE_AUDIO_XAUDIO2)
     if(WIN32)
@@ -465,6 +474,56 @@ endif()
 
 # 渲染设备依赖
 if(PRISMA_ENABLE_RENDER_VULKAN)
+    # Linux/Unix 平台: 直接链接系统 Vulkan 库
+    if(UNIX AND NOT APPLE AND NOT ANDROID)
+        # 首先尝试 find_package
+        find_package(Vulkan QUIET)
+        if(Vulkan_FOUND)
+            target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
+            target_link_libraries(Engine PUBLIC ${Vulkan_LIBRARIES})
+            message(STATUS "Linking Vulkan library: ${Vulkan_LIBRARIES}")
+        else()
+            # 回退到直接链接系统库
+            target_link_libraries(Engine PUBLIC vulkan)
+            message(STATUS "Linking system vulkan library")
+        endif()
+
+        # 手动创建 VMA 目标（如果不存在）
+        if(NOT TARGET VulkanMemoryAllocator AND NOT TARGET GPUOpen::VulkanMemoryAllocator)
+            if(DEFINED vma_SOURCE_DIR)
+                add_library(VulkanMemoryAllocator INTERFACE)
+                add_library(GPUOpen::VulkanMemoryAllocator ALIAS VulkanMemoryAllocator)
+                target_include_directories(VulkanMemoryAllocator INTERFACE ${vma_SOURCE_DIR}/include)
+                message(STATUS "Created VulkanMemoryAllocator INTERFACE target")
+            endif()
+        endif()
+
+        # 链接 VMA (Vulkan Memory Allocator)
+        if(TARGET GPUOpen::VulkanMemoryAllocator)
+            target_link_libraries(Engine PUBLIC GPUOpen::VulkanMemoryAllocator)
+            message(STATUS "Linking GPUOpen::VulkanMemoryAllocator")
+        elseif(TARGET VulkanMemoryAllocator)
+            target_link_libraries(Engine PUBLIC VulkanMemoryAllocator)
+            message(STATUS "Linking VulkanMemoryAllocator")
+        elseif(TARGET vma)
+            target_link_libraries(Engine PUBLIC vma)
+            message(STATUS "Linking vma")
+        else()
+            message(WARNING "VMA target not found. Tried: GPUOpen::VulkanMemoryAllocator, VulkanMemoryAllocator, vma")
+        endif()
+
+        # 链接 vk-bootstrap
+        if(TARGET vk-bootstrap::vk-bootstrap)
+            target_link_libraries(Engine PUBLIC vk-bootstrap::vk-bootstrap)
+            message(STATUS "Linking vk-bootstrap::vk-bootstrap")
+        elseif(TARGET vk-bootstrap)
+            target_link_libraries(Engine PUBLIC vk-bootstrap)
+            message(STATUS "Linking vk-bootstrap")
+        else()
+            message(WARNING "vk-bootstrap target not found. Tried: vk-bootstrap::vk-bootstrap, vk-bootstrap")
+        endif()
+    endif()
+
     if(ANDROID)
         # Android 平台 Vulkan 是系统库
         target_link_libraries(Engine PUBLIC vulkan)
@@ -484,7 +543,22 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
                 target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
                 target_link_libraries(Engine PUBLIC ${Vulkan_LIBRARIES})
             else()
-                message(WARNING "Vulkan headers not found, but backend is enabled")
+                # Linux: 尝试直接链接 vulkan 库
+                if(UNIX AND NOT APPLE)
+                    # 首先尝试 find_package
+                    find_package(Vulkan QUIET)
+                    if(Vulkan_FOUND)
+                        target_include_directories(Engine PUBLIC ${Vulkan_INCLUDE_DIRS})
+                        target_link_libraries(Engine PUBLIC ${Vulkan_LIBRARIES})
+                        message(STATUS "Linking Vulkan library: ${Vulkan_LIBRARIES}")
+                    else()
+                        # 回退到直接链接系统库
+                        target_link_libraries(Engine PUBLIC vulkan)
+                        message(STATUS "Linking system vulkan library")
+                    endif()
+                else()
+                    message(WARNING "Vulkan headers not found, but backend is enabled")
+                endif()
             endif()
         endif()
 
