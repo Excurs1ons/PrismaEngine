@@ -84,6 +84,7 @@ set(ENGINE_GRAPHIC_SOURCES
     # graphic/ScriptableRenderPipeline.cpp  # 已删除：使用 LogicalPipeline 替代
     graphic/Shader.cpp
     graphic/stb_impl.cpp
+    graphic/TextureAtlas.cpp
     # New interface files
     graphic/interfaces/RenderTypes.cpp
     graphic/interfaces/IPipelineState.cpp
@@ -111,6 +112,7 @@ set(ENGINE_GRAPHIC_HEADERS
     # graphic/ScriptableRenderPipeline.h  # 已删除：使用 LogicalPipeline 替代
     graphic/ICamera.h
     graphic/Shader.h
+    graphic/TextureAtlas.h
     # New interface headers
     graphic/interfaces/RenderTypes.h
     graphic/interfaces/Interfaces.h
