@@ -41,17 +41,19 @@ if(PRISMA_BUILD_EDITOR AND TARGET Editor)
 
     # Linux 编辑器配置
     if(LINUX)
-        # Linux 桌面文件
-        install(FILES
-            resources/linux/prismaeditor.desktop
-            DESTINATION share/applications
-        )
+        # Linux 桌面文件 (仅在启用 install 时生效)
+        if(PRISMA_ENABLE_INSTALL)
+            install(FILES
+                resources/linux/prismaeditor.desktop
+                DESTINATION share/applications
+            )
 
-        # Linux 图标
-        install(FILES
-            resources/linux/icons/prismaeditor.png
-            DESTINATION share/icons/hicolor/256x256/apps
-        )
+            # Linux 图标
+            install(FILES
+                resources/linux/icons/prismaeditor.png
+                DESTINATION share/icons/hicolor/256x256/apps
+            )
+        endif()
     endif()
 
     # ========== 编辑器测试支持 ==========

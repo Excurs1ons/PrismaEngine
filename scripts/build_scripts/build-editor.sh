@@ -3,10 +3,10 @@
 # Usage: ./build-editor.sh [preset] [options...]
 #
 # Available presets:
-#   - linux-arm64-debug (default)
-#   - linux-arm64-release
-#   - linux-x64-debug
-#   - linux-x64-release
+#   - editor-linux-arm64-debug (default on ARM64)
+#   - editor-linux-arm64-release
+#   - editor-linux-x64-debug (default on x64)
+#   - editor-linux-x64-release
 
 set -e
 
@@ -50,10 +50,10 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: ./build-editor.sh [preset] [options...]"
             echo ""
             echo "Presets:"
-            echo "  linux-arm64-debug      (default on ARM64)"
-            echo "  linux-arm64-release"
-            echo "  linux-x64-debug       (default on x64)"
-            echo "  linux-x64-release"
+            echo "  editor-linux-arm64-debug      (default on ARM64)"
+            echo "  editor-linux-arm64-release"
+            echo "  editor-linux-x64-debug       (default on x64)"
+            echo "  editor-linux-x64-release"
             echo ""
             echo "Options:"
             echo "  --quiet, -q            Reduce output"
@@ -63,12 +63,12 @@ while [[ $# -gt 0 ]]; do
             echo "  --help, -h             Show this help message"
             echo ""
             echo "Examples:"
-            echo "  ./build-editor.sh linux-arm64-debug"
-            echo "  ./build-editor.sh linux-arm64-release --clean"
-            echo "  ./build-editor.sh --quiet linux-arm64-debug"
-            echo "  ./build-editor.sh -q linux-x64-debug"
-            echo "  ./build-editor.sh --jobs 2 linux-arm64-debug"
-            echo "  ./build-editor.sh -j 2 linux-arm64-debug"
+            echo "  ./build-editor.sh editor-linux-arm64-debug"
+            echo "  ./build-editor.sh editor-linux-arm64-release --clean"
+            echo "  ./build-editor.sh --quiet editor-linux-arm64-debug"
+            echo "  ./build-editor.sh -q editor-linux-x64-debug"
+            echo "  ./build-editor.sh --jobs 2 editor-linux-arm64-debug"
+            echo "  ./build-editor.sh -j 2 editor-linux-arm64-debug"
             echo ""
             exit 0
             ;;
@@ -93,9 +93,9 @@ done
 # 如果没有指定 preset，使用默认值
 if [ -z "$PRESET" ]; then
     if [ "$ARCH" = "aarch64" ]; then
-        PRESET="linux-arm64-debug"
+        PRESET="editor-linux-arm64-debug"
     else
-        PRESET="linux-x64-debug"
+        PRESET="editor-linux-x64-debug"
     fi
 fi
 
@@ -151,29 +151,29 @@ function clean_build() {
 
 function get_preset_config() {
     case "$PRESET" in
-        linux-arm64-debug)
+        editor-linux-arm64-debug)
             BUILD_TYPE="Debug"
             BUILD_SHARED="ON"
             ;;
-        linux-arm64-release)
+        editor-linux-arm64-release)
             BUILD_TYPE="Release"
             BUILD_SHARED="OFF"
             ;;
-        linux-x64-debug)
+        editor-linux-x64-debug)
             BUILD_TYPE="Debug"
             BUILD_SHARED="ON"
             ;;
-        linux-x64-release)
+        editor-linux-x64-release)
             BUILD_TYPE="Release"
             BUILD_SHARED="OFF"
             ;;
         *)
             echo -e "${RED}ERROR: Unknown preset: ${PRESET}${NC}"
             echo "Available presets:"
-            echo "  - linux-arm64-debug"
-            echo "  - linux-arm64-release"
-            echo "  - linux-x64-debug"
-            echo "  - linux-x64-release"
+            echo "  - editor-linux-arm64-debug"
+            echo "  - editor-linux-arm64-release"
+            echo "  - editor-linux-x64-debug"
+            echo "  - editor-linux-x64-release"
             exit 1
             ;;
     esac
@@ -199,18 +199,8 @@ if [ "$CLEAN_BUILD" = true ]; then
 fi
 
 # Configure
-print_step "[1/2] Configuring ${PRESET}"
-cmake -B "build/${PRESET}" \
-    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-    -DPRISMA_BUILD_EDITOR=ON \
-    -DPRISMA_ENABLE_RENDER_VULKAN=ON \
-    -DPRISMA_ENABLE_RENDER_OPENGL=OFF \
-    -DPRISMA_ENABLE_AUDIO_SDL3=ON \
-    -DPRISMA_ENABLE_INPUT_SDL3=ON \
-    -DPRISMA_USE_NATIVE_AUDIO=OFF \
-    -DPRISMA_USE_NATIVE_INPUT=OFF \
-    -DPRISMA_BUILD_SHARED_LIBS="$BUILD_SHARED" \
-    $CMAKE_LOG_LEVEL
+print_step "[1/2] Configuring with preset: ${PRESET}"
+cmake --preset "$PRESET" $CMAKE_LOG_LEVEL
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: CMake configuration failed${NC}"
@@ -218,8 +208,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # Build
-print_step "[2/2] Building ${BUILD_TYPE} (using ${PARALLEL_JOBS} parallel jobs)"
-cmake --build "build/${PRESET}" -j${PARALLEL_JOBS} $BUILD_QUIET_FLAG
+print_step "[2/2] Building with preset: ${PRESET}"
+cmake --build --preset "$PRESET" -j${PARALLEL_JOBS} $BUILD_QUIET_FLAG
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: Build failed${NC}"

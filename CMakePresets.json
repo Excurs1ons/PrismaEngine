@@ -304,6 +304,28 @@
       }
     },
     {
+      "name": "editor-linux-arm64-debug",
+      "displayName": "Editor Linux ARM64 Debug",
+      "inherits": "linux-editor-base",
+      "description": "Debug build for Editor on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/editor-linux-arm64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "editor-linux-arm64-release",
+      "displayName": "Editor Linux ARM64 Release",
+      "inherits": "linux-editor-base",
+      "description": "Release build for Editor on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/editor-linux-arm64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
       "name": "runtime-linux-x64-debug",
       "displayName": "Runtime Linux x64 Debug",
       "inherits": "linux-base",
@@ -392,6 +414,14 @@
     {
       "name": "editor-linux-x64-release",
       "configurePreset": "editor-linux-x64-release"
+    },
+    {
+      "name": "editor-linux-arm64-debug",
+      "configurePreset": "editor-linux-arm64-debug"
+    },
+    {
+      "name": "editor-linux-arm64-release",
+      "configurePreset": "editor-linux-arm64-release"
     },
     {
       "name": "runtime-linux-x64-debug",
