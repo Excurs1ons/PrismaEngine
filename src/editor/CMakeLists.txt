@@ -157,12 +157,14 @@ set_target_properties(Editor PROPERTIES
     OUTPUT_NAME "PrismaEditor"
 )
 
-# 安装规则
-install(TARGETS Editor
-    LIBRARY DESTINATION lib
-    ARCHIVE DESTINATION lib
-    RUNTIME DESTINATION bin
-)
+# 安装规则 (仅在启用 install 时生效)
+if(PRISMA_ENABLE_INSTALL)
+    install(TARGETS Editor
+        LIBRARY DESTINATION lib
+        ARCHIVE DESTINATION lib
+        RUNTIME DESTINATION bin
+    )
+endif()
 
 # ========== 编辑器可执行文件 ==========
 
@@ -189,7 +191,9 @@ set_target_properties(PrismaEditor PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin
 )
 
-# 安装规则
-install(TARGETS PrismaEditor
-    RUNTIME DESTINATION bin
-)
+# 安装规则 (仅在启用 install 时生效)
+if(PRISMA_ENABLE_INSTALL)
+    install(TARGETS PrismaEditor
+        RUNTIME DESTINATION bin
+    )
+endif()

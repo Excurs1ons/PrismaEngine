@@ -74,20 +74,22 @@ if(PRISMA_BUILD_EDITOR)
         "resources/common"
     )
 
-    # 安装编辑器资源
-    install(DIRECTORY ${PRISMA_EDITOR_RESOURCES}
-        DESTINATION .
-        USE_SOURCE_PERMISSIONS
-        PATTERN ".git" EXCLUDE
-    )
+    # 安装编辑器资源 (仅在启用 install 时生效)
+    if(PRISMA_ENABLE_INSTALL)
+        install(DIRECTORY ${PRISMA_EDITOR_RESOURCES}
+            DESTINATION .
+            USE_SOURCE_PERMISSIONS
+            PATTERN ".git" EXCLUDE
+        )
 
-    # 安装编辑器着色器
-    install(DIRECTORY resources/editor/shaders/
-        DESTINATION shaders/editor
-        FILES_MATCHING
-        PATTERN "*.hlsl"
-        PATTERN "*.glsl"
-    )
+        # 安装编辑器着色器
+        install(DIRECTORY resources/editor/shaders/
+            DESTINATION shaders/editor
+            FILES_MATCHING
+            PATTERN "*.hlsl"
+            PATTERN "*.glsl"
+        )
+    endif()
 
     # 编辑器插件系统
     option(PRISMA_EDITOR_ENABLE_PLUGINS "启用编辑器插件系统" ON)
@@ -98,13 +100,15 @@ if(PRISMA_BUILD_EDITOR)
         # 插件目录
         set(PRISMA_EDITOR_PLUGIN_DIR "plugins" CACHE STRING "编辑器插件目录")
 
-        # 安装插件 API 头文件
-        install(FILES
-            src/editor/api/EditorPlugin.h
-            src/editor/api/EditorPanel.h
-            src/editor/api/EditorWindow.h
-            DESTINATION include/PrismaEngine/editor/api
-        )
+        # 安装插件 API 头文件 (仅在启用 install 时生效)
+        if(PRISMA_ENABLE_INSTALL)
+            install(FILES
+                src/editor/api/EditorPlugin.h
+                src/editor/api/EditorPanel.h
+                src/editor/api/EditorWindow.h
+                DESTINATION include/PrismaEngine/editor/api
+            )
+        endif()
     endif()
 
 else()

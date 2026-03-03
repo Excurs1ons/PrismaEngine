@@ -1,6 +1,16 @@
 # InstallConfig.cmake
 # 安装规则配置
 
+# ========== Install 功能控制 ==========
+
+# 添加选项控制是否启用 install 功能
+option(PRISMA_ENABLE_INSTALL "启用 CMake install 功能 (用于 SDK 打包)" OFF)
+
+# 如果禁用 install，直接返回
+if(NOT PRISMA_ENABLE_INSTALL)
+    return()
+endif()
+
 # ========== Engine 库安装 ==========
 
 if(PRISMA_BUILD_ENGINE AND TARGET Engine)

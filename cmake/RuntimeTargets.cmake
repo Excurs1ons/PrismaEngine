@@ -83,17 +83,19 @@ endif()
 
 # Linux 运行时配置
 if(LINUX AND PRISMA_BUILD_RUNTIME)
-    # Linux 桌面文件
-    install(FILES
-        resources/linux/prismaruntime.desktop
-        DESTINATION share/applications
-    )
+    # Linux 桌面文件 (仅在启用 install 时生效)
+    if(PRISMA_ENABLE_INSTALL)
+        install(FILES
+            resources/linux/prismaruntime.desktop
+            DESTINATION share/applications
+        )
 
-    # Linux 图标
-    install(FILES
-        resources/linux/icons/prismaruntime.png
-        DESTINATION share/icons/hicolor/256x256/apps
-    )
+        # Linux 图标
+        install(FILES
+            resources/linux/icons/prismaruntime.png
+            DESTINATION share/icons/hicolor/256x256/apps
+        )
+    endif()
 
     # Linux AppImage 配置（可选）
     option(PRISMA_RUNTIME_BUILD_APPIMAGE "构建 Linux AppImage" OFF)
