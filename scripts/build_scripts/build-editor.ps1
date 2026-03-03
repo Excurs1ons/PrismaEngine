@@ -2,13 +2,13 @@
 # Usage: .\build-editor.ps1 [-Preset] <preset> [-Clean] [-Quiet] [-Verbose]
 #
 # Available presets:
-#   - windows-editor-debug (default)
-#   - windows-editor-release
+#   - editor-windows-x64-debug (default)
+#   - editor-windows-x64-release
 
 param(
     [Parameter(Position=0)]
-    [ValidateSet("windows-editor-debug", "windows-editor-release")]
-    [string]$Preset = "windows-editor-debug",
+    [ValidateSet("editor-windows-x64-debug", "editor-windows-x64-release")]
+    [string]$Preset = "editor-windows-x64-debug",
 
     [switch]$Clean,
 
@@ -56,8 +56,8 @@ function Show-Help {
     Write-Host "Usage: .\build-editor.ps1 [-Preset] <preset> [options]" -ForegroundColor Cyan
     Write-Host ""
     Write-Host "Presets:" -ForegroundColor Yellow
-    Write-Host "  windows-editor-debug      (default)"
-    Write-Host "  windows-editor-release"
+    Write-Host "  editor-windows-x64-debug      (default)"
+    Write-Host "  editor-windows-x64-release"
     Write-Host ""
     Write-Host "Options:" -ForegroundColor Yellow
     Write-Host "  -Preset <preset>    Build preset to use"
@@ -67,9 +67,9 @@ function Show-Help {
     Write-Host "  -Help               Show this help message"
     Write-Host ""
     Write-Host "Examples:" -ForegroundColor Yellow
-    Write-Host "  .\build-editor.ps1 windows-editor-debug"
-    Write-Host "  .\build-editor.ps1 windows-editor-release -Clean"
-    Write-Host "  .\build-editor.ps1 windows-editor-debug -Q"
+    Write-Host "  .\build-editor.ps1 editor-windows-x64-debug"
+    Write-Host "  .\build-editor.ps1 editor-windows-x64-release -Clean"
+    Write-Host "  .\build-editor.ps1 editor-windows-x64-debug -Q"
     Write-Host ""
 }
 
