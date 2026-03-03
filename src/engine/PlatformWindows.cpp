@@ -23,6 +23,7 @@ static HWND s_hwnd = nullptr;
 bool Platform::s_initialized = false;
 bool Platform::s_shouldClose = false;
 WindowHandle Platform::s_currentWindow = nullptr;
+Platform::EventCallback Platform::s_eventCallback = nullptr;
 
 // ------------------------------------------------------------
 // Windows 窗口过程
@@ -56,6 +57,13 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
         default:
             return DefWindowProcA(hwnd, msg, wParam, lParam);
     }
+}
+
+// ------------------------------------------------------------
+// 事件回调
+// ------------------------------------------------------------
+void Platform::SetEventCallback(EventCallback callback) {
+    s_eventCallback = callback;
 }
 
 // ------------------------------------------------------------
