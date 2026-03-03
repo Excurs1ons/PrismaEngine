@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 
 REM Default values
-set "PRESET=windows-x64-debug"
+set "PRESET=engine-windows-x64-debug"
 set "CLEAN_BUILD=0"
 set "QUIET_MODE=0"
 set "VERBOSE_MODE=0"
@@ -38,11 +38,21 @@ if "%~1"=="-v" (
 if "%~1"=="--help" (
     echo Usage: build-windows.bat [preset] [options...]
     echo.
-    echo Presets:
-    echo   windows-x64-debug      ^(default^)
-    echo   windows-x64-release
-    echo   windows-x86-debug
-    echo   windows-x86-release
+    echo Preset Format: {target}-{platform}-{arch}-{build_type}
+    echo.
+    echo Available Presets:
+    echo.
+    echo Engine Presets:
+    echo   engine-windows-x64-debug      ^(default^)
+    echo   engine-windows-x64-release
+    echo.
+    echo Editor Presets:
+    echo   editor-windows-x64-debug
+    echo   editor-windows-x64-release
+    echo.
+    echo Runtime Presets:
+    echo   runtime-windows-x64-debug
+    echo   runtime-windows-x64-release
     echo.
     echo Options:
     echo   clean                  Clean build directory before building
@@ -51,9 +61,9 @@ if "%~1"=="--help" (
     echo   --help                 Show this help
     echo.
     echo Examples:
-    echo   build-windows.bat windows-x64-debug
-    echo   build-windows.bat windows-x64-release clean
-    echo   build-windows.bat windows-x64-debug -q
+    echo   build-windows.bat engine-windows-x64-debug
+    echo   build-windows.bat editor-windows-x64-debug clean
+    echo   build-windows.bat engine-windows-x64-release -q
     echo.
     exit /b 0
 )

@@ -2,13 +2,17 @@
 # Prisma Engine Linux Build Script
 # Usage: ./build-linux.sh [preset] [options...]
 #
+# New Preset Format: {target}-{platform}-{arch}-{build_type}
+#
 # Available presets:
-#   - linux-x64-debug (default) - Vulkan backend
-#   - linux-x64-release - Vulkan backend
-#   - linux-x64-debug-opengl - OpenGL backend
-#   - linux-x64-release-opengl - OpenGL backend
-#   - linux-arm64-debug - ARM64 Vulkan backend
-#   - linux-arm64-release - ARM64 Vulkan backend
+#   - engine-linux-x64-debug (default)
+#   - engine-linux-x64-release
+#   - engine-linux-arm64-debug
+#   - engine-linux-arm64-release
+#   - editor-linux-x64-debug
+#   - editor-linux-x64-release
+#   - runtime-linux-x64-debug
+#   - runtime-linux-x64-release
 #
 # Options:
 #   --quiet, -q            Reduce output (only show errors and progress)
@@ -26,7 +30,7 @@ CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Default values
-PRESET="${1:-linux-x64-debug}"
+PRESET="${1:-engine-linux-x64-debug}"
 CLEAN_BUILD=false
 QUIET_MODE=false
 VERBOSE_MODE=false
@@ -50,13 +54,23 @@ while [[ $# -gt 0 ]]; do
         --help|-h)
             echo "Usage: ./build-linux.sh [preset] [options...]"
             echo ""
-            echo "Presets:"
-            echo "  linux-x64-debug           (default, Vulkan)"
-            echo "  linux-x64-release         (Vulkan)"
-            echo "  linux-x64-debug-opengl    (OpenGL)"
-            echo "  linux-x64-release-opengl  (OpenGL)"
-            echo "  linux-arm64-debug         (ARM64, Vulkan)"
-            echo "  linux-arm64-release       (ARM64, Vulkan)"
+            echo "Preset Format: {target}-{platform}-{arch}-{build_type}"
+            echo ""
+            echo "Available Presets:"
+            echo ""
+            echo "Engine Presets:"
+            echo "  engine-linux-x64-debug           (default)"
+            echo "  engine-linux-x64-release"
+            echo "  engine-linux-arm64-debug"
+            echo "  engine-linux-arm64-release"
+            echo ""
+            echo "Editor Presets:"
+            echo "  editor-linux-x64-debug"
+            echo "  editor-linux-x64-release"
+            echo ""
+            echo "Runtime Presets:"
+            echo "  runtime-linux-x64-debug"
+            echo "  runtime-linux-x64-release"
             echo ""
             echo "Options:"
             echo "  --quiet, -q            Reduce output (only show errors and progress)"
@@ -65,9 +79,9 @@ while [[ $# -gt 0 ]]; do
             echo "  --help                 Show this help message"
             echo ""
             echo "Examples:"
-            echo "  ./build-linux.sh linux-x64-debug"
-            echo "  ./build-linux.sh linux-x64-release --quiet"
-            echo "  ./build-linux.sh linux-arm64-debug --clean"
+            echo "  ./build-linux.sh engine-linux-x64-debug"
+            echo "  ./build-linux.sh editor-linux-x64-debug --quiet"
+            echo "  ./build-linux.sh engine-linux-arm64-debug --clean"
             echo ""
             exit 0
             ;;
@@ -129,6 +143,26 @@ function clean_build() {
     fi
 }
 
+# Map preset to build directory and configure preset
+case "$PRESET" in
+    engine-linux-x64-debug|engine-linux-x64-release|engine-linux-arm64-debug|engine-linux-arm64-release|editor-linux-x64-debug|editor-linux-x64-release|runtime-linux-x64-debug|runtime-linux-x64-release)
+        BUILD_DIR="build/${PRESET}"
+        ;;
+    *)
+        echo -e "${RED}ERROR: Unknown preset: ${PRESET}${NC}"
+        echo "Available presets:"
+        echo "  - engine-linux-x64-debug (default)"
+        echo "  - engine-linux-x64-release"
+        echo "  - engine-linux-arm64-debug"
+        echo "  - engine-linux-arm64-release"
+        echo "  - editor-linux-x64-debug"
+        echo "  - editor-linux-x64-release"
+        echo "  - runtime-linux-x64-debug"
+        echo "  - runtime-linux-x64-release"
+        exit 1
+        ;;
+esac
+
 # Script main
 print_header "Prisma Engine Linux Build Script"
 if [ "$QUIET_MODE" = false ]; then
@@ -143,61 +177,9 @@ if [ "$CLEAN_BUILD" = true ]; then
     clean_build
 fi
 
-# Map preset to actual build directory
-case "$PRESET" in
-    linux-x64-debug)
-        BUILD_TYPE="Debug"
-        RENDER_BACKEND="Vulkan"
-        BUILD_DIR="build/linux-x64-debug"
-        ;;
-    linux-x64-release)
-        BUILD_TYPE="Release"
-        RENDER_BACKEND="Vulkan"
-        BUILD_DIR="build/linux-x64-release"
-        ;;
-    linux-x64-debug-opengl)
-        BUILD_TYPE="Debug"
-        RENDER_BACKEND="OpenGL"
-        BUILD_DIR="build/linux-x64-debug-opengl"
-        ;;
-    linux-x64-release-opengl)
-        BUILD_TYPE="Release"
-        RENDER_BACKEND="OpenGL"
-        BUILD_DIR="build/linux-x64-release-opengl"
-        ;;
-    linux-arm64-debug)
-        BUILD_TYPE="Debug"
-        RENDER_BACKEND="Vulkan"
-        BUILD_DIR="build/linux-arm64-debug"
-        ;;
-    linux-arm64-release)
-        BUILD_TYPE="Release"
-        RENDER_BACKEND="Vulkan"
-        BUILD_DIR="build/linux-arm64-release"
-        ;;
-    *)
-        echo -e "${RED}ERROR: Unknown preset: ${PRESET}${NC}"
-        echo "Available presets:"
-        echo "  - linux-x64-debug (default)"
-        echo "  - linux-x64-release"
-        echo "  - linux-x64-debug-opengl"
-        echo "  - linux-x64-release-opengl"
-        echo "  - linux-arm64-debug"
-        echo "  - linux-arm64-release"
-        exit 1
-        ;;
-esac
-
 # Configure
-print_step "[1/2] Configuring Linux ${BUILD_TYPE} build (${RENDER_BACKEND})"
-cmake -B "$BUILD_DIR" \
-    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-    -DPRISMA_ENABLE_RENDER_VULKAN="$([ "$RENDER_BACKEND" = "Vulkan" ] && echo "ON" || echo "OFF")" \
-    -DPRISMA_ENABLE_RENDER_OPENGL="$([ "$RENDER_BACKEND" = "OpenGL" ] && echo "ON" || echo "OFF")" \
-    -DPRISMA_ENABLE_AUDIO_SDL3=ON \
-    -DPRISMA_ENABLE_INPUT_SDL3=ON \
-    -DPRISMA_USE_FETCHCONTENT=ON \
-    $CMAKE_LOG_LEVEL
+print_step "[1/2] Configuring with preset: ${PRESET}"
+cmake --preset "$PRESET" $CMAKE_LOG_LEVEL
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: CMake configuration failed${NC}"
@@ -205,8 +187,8 @@ if [ $? -ne 0 ]; then
 fi
 
 # Build
-print_step "[2/2] Building ${BUILD_TYPE}"
-cmake --build "$BUILD_DIR" -j$(nproc) $CMAKE_OUTPUT_MODE
+print_step "[2/2] Building with preset: ${PRESET}"
+cmake --build --preset "$PRESET" $CMAKE_OUTPUT_MODE
 
 if [ $? -ne 0 ]; then
     echo -e "${RED}ERROR: Build failed${NC}"

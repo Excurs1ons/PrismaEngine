@@ -98,6 +98,16 @@ echo   VCPKG_ROOT              vcpkg根目录 (可选)
 echo.
 echo 支持的ABI: %ABIS%
 echo.
+echo 新的 CMake Preset 格式: {target}-{platform}-{arch}-{build_type}
+echo.
+echo 推荐使用 CMake Preset 方式构建:
+echo   cmake --preset engine-android-arm64-debug
+echo   cmake --build --preset engine-android-arm64-debug
+echo.
+echo 或使用统一构建脚本:
+echo   build.bat engine-android-arm64-debug
+echo   build.bat runtime-android-arm64-debug
+echo.
 echo 注意: 已移除x86和x86_64架构，因为ARM架构在Android设备中占主导地位
 echo.
 echo 如果遇到NDK未找到的错误，请参考上面的设置指南

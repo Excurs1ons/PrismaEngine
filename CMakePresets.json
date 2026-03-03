@@ -29,6 +29,25 @@
       }
     },
     {
+      "name": "windows-engine-base",
+      "hidden": true,
+      "inherits": "windows-base",
+      "description": "Base Windows Engine configuration",
+      "cacheVariables": {
+        "PRISMA_BUILD_EDITOR": "OFF"
+      }
+    },
+    {
+      "name": "windows-editor-base",
+      "hidden": true,
+      "inherits": "windows-base",
+      "description": "Base Windows Editor configuration",
+      "cacheVariables": {
+        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+      }
+    },
+    {
       "name": "android-base",
       "hidden": true,
       "description": "Base Android configuration (使用 FetchContent 管理依赖)",
@@ -72,11 +91,30 @@
       }
     },
     {
-      "name": "windows-x64-debug",
-      "displayName": "Windows x64 Debug",
-      "inherits": "windows-base",
-      "description": "Debug build for Windows x64 using Visual Studio 2022",
-      "binaryDir": "${sourceDir}/build/windows-x64-debug",
+      "name": "linux-engine-base",
+      "hidden": true,
+      "inherits": "linux-base",
+      "description": "Base Linux Engine configuration",
+      "cacheVariables": {
+        "PRISMA_BUILD_EDITOR": "OFF"
+      }
+    },
+    {
+      "name": "linux-editor-base",
+      "hidden": true,
+      "inherits": "linux-base",
+      "description": "Base Linux Editor configuration",
+      "cacheVariables": {
+        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+      }
+    },
+    {
+      "name": "engine-windows-x64-debug",
+      "displayName": "Engine Windows x64 Debug",
+      "inherits": "windows-engine-base",
+      "description": "Debug build for Engine on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/engine-windows-x64-debug",
       "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
@@ -85,11 +123,11 @@
       }
     },
     {
-      "name": "windows-x64-release",
-      "displayName": "Windows x64 Release",
-      "inherits": "windows-base",
-      "description": "Release build for Windows x64 using Visual Studio 2022",
-      "binaryDir": "${sourceDir}/build/windows-x64-release",
+      "name": "engine-windows-x64-release",
+      "displayName": "Engine Windows x64 Release",
+      "inherits": "windows-engine-base",
+      "description": "Release build for Engine on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/engine-windows-x64-release",
       "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
@@ -98,12 +136,12 @@
       }
     },
     {
-      "name": "windows-x86-debug",
-      "displayName": "Windows x86 Debug",
-      "inherits": "windows-base",
-      "description": "Debug build for Windows x86 using Visual Studio 2022",
-      "binaryDir": "${sourceDir}/build/windows-x86-debug",
-      "architecture": "Win32",
+      "name": "editor-windows-x64-debug",
+      "displayName": "Editor Windows x64 Debug",
+      "inherits": "windows-editor-base",
+      "description": "Debug build for Editor on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/editor-windows-x64-debug",
+      "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -111,12 +149,12 @@
       }
     },
     {
-      "name": "windows-x86-release",
-      "displayName": "Windows x86 Release",
-      "inherits": "windows-base",
-      "description": "Release build for Windows x86 using Visual Studio 2022",
-      "binaryDir": "${sourceDir}/build/windows-x86-release",
-      "architecture": "Win32",
+      "name": "editor-windows-x64-release",
+      "displayName": "Editor Windows x64 Release",
+      "inherits": "windows-editor-base",
+      "description": "Release build for Editor on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/editor-windows-x64-release",
+      "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
@@ -124,41 +162,51 @@
       }
     },
     {
-      "name": "windows-editor-debug",
-      "displayName": "Windows Editor Debug",
+      "name": "runtime-windows-x64-debug",
+      "displayName": "Runtime Windows x64 Debug",
       "inherits": "windows-base",
-      "description": "Debug build for Windows Editor using Visual Studio 2022",
-      "binaryDir": "${sourceDir}/build/windows-editor-debug",
+      "description": "Debug build for Runtime on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/runtime-windows-x64-debug",
       "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "PRISMA_BUILD_SHARED_LIBS": "ON",
-        "PRISMA_BUILD_EDITOR": "ON",
-        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {
-      "name": "windows-editor-release",
-      "displayName": "Windows Editor Release",
+      "name": "runtime-windows-x64-release",
+      "displayName": "Runtime Windows x64 Release",
       "inherits": "windows-base",
-      "description": "Release build for Windows Editor using Visual Studio 2022",
-      "binaryDir": "${sourceDir}/build/windows-editor-release",
+      "description": "Release build for Runtime on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/runtime-windows-x64-release",
       "architecture": "x64",
       "toolset": "host=x64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PRISMA_BUILD_SHARED_LIBS": "OFF",
-        "PRISMA_BUILD_EDITOR": "ON",
-        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
     },
     {
-      "name": "android-arm64-v8a-release",
-      "displayName": "Android arm64-v8a Release",
+      "name": "engine-android-arm64-debug",
+      "displayName": "Engine Android arm64 Debug",
       "inherits": "android-base",
-      "description": "Release build for Android arm64-v8a using Ninja",
-      "binaryDir": "${sourceDir}/build/android-arm64-v8a-release",
+      "description": "Debug build for Engine on Android arm64-v8a using Ninja",
+      "binaryDir": "${sourceDir}/build/engine-android-arm64-debug",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ANDROID_ABI": "arm64-v8a"
+      }
+    },
+    {
+      "name": "engine-android-arm64-release",
+      "displayName": "Engine Android arm64 Release",
+      "inherits": "android-base",
+      "description": "Release build for Engine on Android arm64-v8a using Ninja",
+      "binaryDir": "${sourceDir}/build/engine-android-arm64-release",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
@@ -166,11 +214,11 @@
       }
     },
     {
-      "name": "android-arm64-v8a-debug",
-      "displayName": "Android arm64-v8a Debug",
+      "name": "runtime-android-arm64-debug",
+      "displayName": "Runtime Android arm64 Debug",
       "inherits": "android-base",
-      "description": "Debug build for Android arm64-v8a using Ninja",
-      "binaryDir": "${sourceDir}/build/android-arm64-v8a-debug",
+      "description": "Debug build for Runtime on Android arm64-v8a using Ninja",
+      "binaryDir": "${sourceDir}/build/runtime-android-arm64-debug",
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -178,132 +226,180 @@
       }
     },
     {
-      "name": "linux-x64-debug",
-      "displayName": "Linux x64 Debug",
-      "inherits": "linux-base",
-      "description": "Debug build for Linux x64 using Ninja",
-      "binaryDir": "${sourceDir}/build/linux-x64-debug",
+      "name": "runtime-android-arm64-release",
+      "displayName": "Runtime Android arm64 Release",
+      "inherits": "android-base",
+      "description": "Release build for Runtime on Android arm64-v8a using Ninja",
+      "binaryDir": "${sourceDir}/build/runtime-android-arm64-release",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "ANDROID_ABI": "arm64-v8a"
+      }
+    },
+    {
+      "name": "engine-linux-x64-debug",
+      "displayName": "Engine Linux x64 Debug",
+      "inherits": "linux-engine-base",
+      "description": "Debug build for Engine on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/engine-linux-x64-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {
-      "name": "linux-x64-release",
-      "displayName": "Linux x64 Release",
-      "inherits": "linux-base",
-      "description": "Release build for Linux x64 using Ninja",
-      "binaryDir": "${sourceDir}/build/linux-x64-release",
+      "name": "engine-linux-x64-release",
+      "displayName": "Engine Linux x64 Release",
+      "inherits": "linux-engine-base",
+      "description": "Release build for Engine on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/engine-linux-x64-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
     },
     {
-      "name": "linux-arm64-debug",
-      "displayName": "Linux ARM64 Debug",
-      "inherits": "linux-base",
-      "description": "Debug build for Linux ARM64 using Ninja",
-      "binaryDir": "${sourceDir}/build/linux-arm64-debug",
+      "name": "engine-linux-arm64-debug",
+      "displayName": "Engine Linux ARM64 Debug",
+      "inherits": "linux-engine-base",
+      "description": "Debug build for Engine on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/engine-linux-arm64-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {
-      "name": "linux-arm64-release",
-      "displayName": "Linux ARM64 Release",
-      "inherits": "linux-base",
-      "description": "Release build for Linux ARM64 using Ninja",
-      "binaryDir": "${sourceDir}/build/linux-arm64-release",
+      "name": "engine-linux-arm64-release",
+      "displayName": "Engine Linux ARM64 Release",
+      "inherits": "linux-engine-base",
+      "description": "Release build for Engine on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/engine-linux-arm64-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
     },
     {
-      "name": "linux-editor-debug",
-      "displayName": "Linux Editor Debug",
-      "inherits": "linux-base",
-      "description": "Debug build for Linux Editor using Ninja",
-      "binaryDir": "${sourceDir}/build/linux-editor-debug",
+      "name": "editor-linux-x64-debug",
+      "displayName": "Editor Linux x64 Debug",
+      "inherits": "linux-editor-base",
+      "description": "Debug build for Editor on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/editor-linux-x64-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "PRISMA_BUILD_EDITOR": "ON",
-        "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
         "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {
-      "name": "linux-editor-release",
-      "displayName": "Linux Editor Release",
-      "inherits": "linux-base",
-      "description": "Release build for Linux Editor using Ninja",
-      "binaryDir": "${sourceDir}/build/linux-editor-release",
+      "name": "editor-linux-x64-release",
+      "displayName": "Editor Linux x64 Release",
+      "inherits": "linux-editor-base",
+      "description": "Release build for Editor on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/editor-linux-x64-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PRISMA_BUILD_EDITOR": "ON",
-        "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "runtime-linux-x64-debug",
+      "displayName": "Runtime Linux x64 Debug",
+      "inherits": "linux-base",
+      "description": "Debug build for Runtime on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/runtime-linux-x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
+      "name": "runtime-linux-x64-release",
+      "displayName": "Runtime Linux x64 Release",
+      "inherits": "linux-base",
+      "description": "Release build for Runtime on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/runtime-linux-x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
     }
   ],
   "buildPresets": [
     {
-      "name": "windows-x64-debug",
-      "configurePreset": "windows-x64-debug"
+      "name": "engine-windows-x64-debug",
+      "configurePreset": "engine-windows-x64-debug"
     },
     {
-      "name": "windows-x64-release",
-      "configurePreset": "windows-x64-release"
+      "name": "engine-windows-x64-release",
+      "configurePreset": "engine-windows-x64-release"
     },
     {
-      "name": "windows-x86-debug",
-      "configurePreset": "windows-x86-debug"
+      "name": "editor-windows-x64-debug",
+      "configurePreset": "editor-windows-x64-debug"
     },
     {
-      "name": "windows-x86-release",
-      "configurePreset": "windows-x86-release"
+      "name": "editor-windows-x64-release",
+      "configurePreset": "editor-windows-x64-release"
     },
     {
-      "name": "windows-editor-debug",
-      "configurePreset": "windows-editor-debug"
+      "name": "runtime-windows-x64-debug",
+      "configurePreset": "runtime-windows-x64-debug"
     },
     {
-      "name": "windows-editor-release",
-      "configurePreset": "windows-editor-release"
+      "name": "runtime-windows-x64-release",
+      "configurePreset": "runtime-windows-x64-release"
     },
     {
-      "name": "android-arm64-v8a-debug",
-      "configurePreset": "android-arm64-v8a-debug"
+      "name": "engine-android-arm64-debug",
+      "configurePreset": "engine-android-arm64-debug"
     },
     {
-      "name": "android-arm64-v8a-release",
-      "configurePreset": "android-arm64-v8a-release"
+      "name": "engine-android-arm64-release",
+      "configurePreset": "engine-android-arm64-release"
     },
     {
-      "name": "linux-x64-debug",
-      "configurePreset": "linux-x64-debug"
+      "name": "runtime-android-arm64-debug",
+      "configurePreset": "runtime-android-arm64-debug"
     },
     {
-      "name": "linux-x64-release",
-      "configurePreset": "linux-x64-release"
+      "name": "runtime-android-arm64-release",
+      "configurePreset": "runtime-android-arm64-release"
     },
     {
-      "name": "linux-arm64-debug",
-      "configurePreset": "linux-arm64-debug"
+      "name": "engine-linux-x64-debug",
+      "configurePreset": "engine-linux-x64-debug"
     },
     {
-      "name": "linux-arm64-release",
-      "configurePreset": "linux-arm64-release"
+      "name": "engine-linux-x64-release",
+      "configurePreset": "engine-linux-x64-release"
     },
     {
-      "name": "linux-editor-debug",
-      "configurePreset": "linux-editor-debug"
+      "name": "engine-linux-arm64-debug",
+      "configurePreset": "engine-linux-arm64-debug"
     },
     {
-      "name": "linux-editor-release",
-      "configurePreset": "linux-editor-release"
+      "name": "engine-linux-arm64-release",
+      "configurePreset": "engine-linux-arm64-release"
+    },
+    {
+      "name": "editor-linux-x64-debug",
+      "configurePreset": "editor-linux-x64-debug"
+    },
+    {
+      "name": "editor-linux-x64-release",
+      "configurePreset": "editor-linux-x64-release"
+    },
+    {
+      "name": "runtime-linux-x64-debug",
+      "configurePreset": "runtime-linux-x64-debug"
+    },
+    {
+      "name": "runtime-linux-x64-release",
+      "configurePreset": "runtime-linux-x64-release"
     }
   ]
 }
