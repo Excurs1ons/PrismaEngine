@@ -437,6 +437,15 @@ namespace PrismaEngine {
             };
 
             /**
+             * @brief ChunkPos 哈希函数
+             */
+            struct HashChunkPos {
+                size_t operator()(const ChunkPos& pos) const noexcept {
+                    return static_cast<size_t>(pos.x) * 31 + static_cast<size_t>(pos.z);
+                }
+            };
+
+            /**
              * @brief 区块数据
              */
             struct ChunkData {
