@@ -1,11 +1,33 @@
-# 这个cmake文件没有任何作用 只是用来让clion识别项目 支持构建
+# PrismaEngine 主 CMake 配置文件
+# 此文件定义四个独立可构建目标：Engine、Runtime、Editor、SDK
+#
+# 支持的构建目标：
+#   - Engine:      引擎核心库 (静态/动态库)
+#   - Runtime:     运行时可执行文件
+#   - Editor:      编辑器可执行文件 (可选)
+#   - SDK:         SDK 打包目标
+#
+# 使用方法：
+#   # 构建所有目标
+#   cmake --build build
+#
+#   # 单独构建 Engine
+#   cmake --build build --target Engine
+#
+#   # 打包 SDK
+#   cmake --build build --target sdk-package
+
 cmake_minimum_required(VERSION 3.31)
 
 set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "")
 
 # ========== 项目声明 ==========
 
-project(PRISMA VERSION 1.0.0 LANGUAGES CXX)
+project(PRISMA
+    VERSION 1.0.0
+    DESCRIPTION "PrismaEngine - 现代跨平台游戏引擎"
+    LANGUAGES CXX
+)
 
 # ========== 注释: 代理配置 ==========
 # 本地开发时如果需要代理，请通过环境变量 HTTP_PROXY 和 HTTPS_PROXY 设置
@@ -41,38 +63,104 @@ option(PRISMA_USE_FETCHCONTENT "使用 CMake FetchContent 管理依赖" ON)
 include(cmake/FetchThirdPartyDeps.cmake)
 
 
+# ========== 包含目标配置模块 ==========
+
+message(STATUS "")
+message(STATUS "=== Loading Target Configuration ===")
+
+# 加载引擎目标配置
+include(cmake/EngineTargets.cmake)
+
+# 加载运行时目标配置
+include(cmake/RuntimeTargets.cmake)
+
+# 加载编辑器目标配置 (如果启用)
+if(PRISMA_BUILD_EDITOR)
+    include(cmake/EditorTargets.cmake)
+endif()
+
+# 加载 SDK 配置 (如果启用)
+if(PRISMA_BUILD_SDK)
+    include(cmake/SDKConfig.cmake)
+endif()
+
+message(STATUS "====================================")
+message(STATUS "")
+
 # ========== 添加子模块 ==========
 
 message(STATUS "")
 message(STATUS "=== Adding Subdirectories ===")
 
-# 核心模块
-add_subdirectory(src/engine)
+# 核心引擎模块 (如果启用)
+if(PRISMA_BUILD_ENGINE)
+    add_subdirectory(src/engine)
+    message(STATUS "已添加引擎模块")
+else()
+    message(STATUS "跳过引擎模块 (PRISMA_BUILD_ENGINE=OFF)")
+endif()
 
-# 条件添加 Editor
+# 编辑器模块 (如果启用)
 if(PRISMA_BUILD_EDITOR)
     add_subdirectory(src/editor)
+    message(STATUS "已添加编辑器模块")
 else()
     # Game 模块 (Editor 模式下不需要 Game)
-    add_subdirectory(src/game)
-    message(STATUS "Skipping Editor (PRISMA_BUILD_EDITOR=OFF)")
+    if(EXISTS ${CMAKE_SOURCE_DIR}/src/game/CMakeLists.txt)
+        add_subdirectory(src/game)
+        message(STATUS "已添加 Game 模块")
+    endif()
 endif()
 
 # 运行时模块 (最后添加，以便能检测到 Game/Editor 目标)
-add_subdirectory(src/runtime)
+if(PRISMA_BUILD_RUNTIME)
+    add_subdirectory(src/runtime)
+    message(STATUS "已添加运行时模块")
+else()
+    message(STATUS "跳过运行时模块 (PRISMA_BUILD_RUNTIME=OFF)")
+endif()
 
 message(STATUS "==============================")
 message(STATUS "")
 
 # ========== 安装配置 ==========
 
-#include(cmake/InstallConfig.cmake)
+include(cmake/InstallConfig.cmake)
 
 # ========== 项目目标和资源复制 ==========
 
-# 此模块必须在所有子目录添加后调用
-# include(cmake/ProjectTargets.cmake)
+# 此模块必须在所有子目录添加后调用，因为它依赖于 Engine/Editor/Runtime/Game 目标
+include(cmake/ProjectTargets.cmake)
 
 # ========== 打包配置 ==========
 
-# include(cmake/PackagingConfig.cmake)
+# 只在构建 SDK 时启用打包
+if(PRISMA_BUILD_SDK)
+    include(cmake/PackagingConfig.cmake)
+endif()
+
+# ========== 总结构建配置 ==========
+
+message(STATUS "")
+message(STATUS "=== Build Configuration Summary ===")
+message(STATUS "  PrismaEngine Version: ${PROJECT_VERSION}")
+message(STATUS "  Build Engine:    ${PRISMA_BUILD_ENGINE}")
+message(STATUS "  Build Runtime:   ${PRISMA_BUILD_RUNTIME}")
+message(STATUS "  Build Editor:    ${PRISMA_BUILD_EDITOR}")
+message(STATUS "  Build SDK:       ${PRISMA_BUILD_SDK}")
+message(STATUS "  Shared Library:  ${PRISMA_BUILD_SHARED_LIBS}")
+message(STATUS "")
+message(STATUS "  Render Backends:")
+message(STATUS "    DirectX 12:    ${PRISMA_ENABLE_RENDER_DX12}")
+message(STATUS "    Vulkan:        ${PRISMA_ENABLE_RENDER_VULKAN}")
+message(STATUS "    OpenGL:        ${PRISMA_ENABLE_RENDER_OPENGL}")
+message(STATUS "")
+message(STATUS "  Audio Backends:")
+message(STATUS "    SDL3:          ${PRISMA_ENABLE_AUDIO_SDL3}")
+message(STATUS "    XAudio2:       ${PRISMA_ENABLE_AUDIO_XAUDIO2}")
+message(STATUS "")
+message(STATUS "  Platform: ${CMAKE_SYSTEM_NAME}")
+message(STATUS "  Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")
+message(STATUS "  Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "=====================================")
+message(STATUS "")
