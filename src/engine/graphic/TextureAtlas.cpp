@@ -5,6 +5,7 @@
 #include "../Logger.h"
 #include <algorithm>
 #include <stack>
+#include <unordered_set>
 
 namespace PrismaEngine {
     namespace Graphic {
@@ -164,19 +165,22 @@ namespace PrismaEngine {
 
                 bool addTexture(const std::string& texturePath, const std::string& name) override {
                     // 加载纹理
-                    Resource::TextureAsset asset;
+                    PrismaEngine::TextureAsset asset;
                     if (!asset.Load(texturePath)) {
                         LOG_ERROR("TextureAtlas", "加载纹理失败: {}", texturePath);
                         return false;
                     }
 
                     // 存储源纹理数据
-                    m_sourceTextures[name] = SourceTexture(
-                        asset.GetData(),
-                        asset.GetWidth(),
-                        asset.GetHeight(),
-                        asset.GetChannels(),
-                        name
+                    m_sourceTextures.emplace(
+                        name,
+                        SourceTexture(
+                            asset.GetData(),
+                            asset.GetWidth(),
+                            asset.GetHeight(),
+                            asset.GetChannels(),
+                            name
+                        )
                     );
 
                     m_needsRebuild = true;
@@ -421,15 +425,15 @@ namespace PrismaEngine {
             private:
                 static const std::vector<BlockTexture> getDefaultBlocks() {
                     return {
-                        {"grass_block_top", "grass_block_top", "dirt", "grass_side", "grass_side", "grass_side", "grass_side"},
-                        {"dirt", "dirt"},
-                        {"stone", "stone"},
-                        {"cobblestone", "cobblestone"},
-                        {"oak_log", "oak_log_top", "oak_log_top", "oak_log", "oak_log", "oak_log", "oak_log"},
-                        {"oak_leaves", "oak_leaves"},
-                        {"oak_planks", "oak_planks"},
-                        {"crafting_table_top", "crafting_table_top", "crafting_table_bottom", "crafting_table_side", "crafting_table_side", "crafting_table_front", "crafting_table_side"},
-                        {"furnace_top", "furnace_top", "furnace_bottom", "furnace_side", "furnace_front", "furnace_side", "furnace_side"},
+                        BlockTexture("grass_block_top", "grass_block_top", "dirt", "grass_side", "grass_side", "grass_side", "grass_side"),
+                        BlockTexture("dirt"),
+                        BlockTexture("stone"),
+                        BlockTexture("cobblestone"),
+                        BlockTexture("oak_log", "oak_log_top", "oak_log_top", "oak_log", "oak_log", "oak_log", "oak_log"),
+                        BlockTexture("oak_leaves"),
+                        BlockTexture("oak_planks"),
+                        BlockTexture("crafting_table_top", "crafting_table_top", "crafting_table_bottom", "crafting_table_side", "crafting_table_side", "crafting_table_front", "crafting_table_side"),
+                        BlockTexture("furnace_top", "furnace_top", "furnace_bottom", "furnace_side", "furnace_front", "furnace_side", "furnace_side"),
                     };
                 }
 
@@ -465,12 +469,12 @@ namespace PrismaEngine {
                 bool addSourceTexture(const std::vector<uint8_t>& imageData,
                                      uint32_t width, uint32_t height,
                                      const std::string& name) override {
-                    m_sourceTextures[name] = SourceTexture(imageData, width, height, 4, name);
+                    m_sourceTextures.emplace(name, SourceTexture(imageData, width, height, 4, name));
                     return true;
                 }
 
                 bool addSourceTexture(const std::string& filePath, const std::string& name) override {
-                    Resource::TextureAsset asset;
+                    PrismaEngine::TextureAsset asset;
                     if (!asset.Load(filePath)) {
                         LOG_ERROR("TextureAtlasBuilder", "加载纹理失败: {}", filePath);
                         return false;
@@ -576,7 +580,7 @@ namespace PrismaEngine {
             };
         }
 
-        std::unique_ptr<TextureAtlasBuilder> TextureAtlasBuilderFactory::create(PackingAlgorithm algorithm) {
+        std::unique_ptr<TextureAtlasBuilder> TextureAtlasBuilderFactory::create(TextureAtlasBuilder::PackingAlgorithm algorithm) {
             return std::unique_ptr<TextureAtlasBuilder>(new TextureAtlasBuilderImpl(algorithm));
         }
 

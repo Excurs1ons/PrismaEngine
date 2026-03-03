@@ -194,6 +194,9 @@ namespace PrismaEngine {
                 std::string west;          // 西方纹理
                 std::string east;          // 东方纹理
 
+                // 默认构造
+                BlockTexture() = default;
+
                 // 默认构造：所有面使用相同纹理
                 BlockTexture(const std::string& textureName)
                     : name(textureName)
@@ -302,6 +305,8 @@ namespace PrismaEngine {
                 std::string errorMessage;
             };
 
+            virtual ~TextureAtlasBuilder() = default;
+
             /**
              * @brief 设置打包算法
              */
@@ -351,7 +356,7 @@ namespace PrismaEngine {
              * @brief 创建纹理图集构建器
              */
             static std::unique_ptr<TextureAtlasBuilder> create(
-                PackingAlgorithm algorithm = PackingAlgorithm::SKYLINE
+                TextureAtlasBuilder::PackingAlgorithm algorithm = TextureAtlasBuilder::PackingAlgorithm::SKYLINE
             );
         };
 

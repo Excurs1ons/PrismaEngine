@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "AsyncLoader.h"
 #include "Logger.h"
+#include <glm/glm.hpp>
 #include <algorithm>
 #include <unordered_set>
 #include <thread>
@@ -97,8 +98,11 @@ namespace PrismaEngine {
 
                     while (!m_completedTasks.empty() && processed < maxCallbacks) {
                         // 任务已完成，可以被游戏逻辑处理
-                        m_completedTasks.pop();
-                        ++processed;
+                        auto it = m_completedTasks.begin();
+                        if (it != m_completedTasks.end()) {
+                            m_completedTasks.erase(it);
+                            ++processed;
+                        }
                     }
 
                     return processed;
@@ -238,14 +242,14 @@ namespace PrismaEngine {
 
                 std::vector<std::thread> m_threads;
                 std::queue<std::unique_ptr<AsyncTask>> m_taskQueue;
-                std::mutex m_queueMutex;
+                mutable std::mutex m_queueMutex;
                 std::condition_variable m_condition;
                 std::atomic<bool> m_shutdown{false};
                 std::atomic<bool> m_paused{false};
                 std::atomic<bool> m_waitForTasks{true};
 
                 std::unordered_map<uint64_t, std::unique_ptr<AsyncTask>> m_completedTasks;
-                std::mutex m_completedMutex;
+                mutable std::mutex m_completedMutex;
             };
         }
 
@@ -406,18 +410,18 @@ namespace PrismaEngine {
                 int32_t m_seed;
                 ChunkCallback m_completionCallback;
 
-                std::unordered_set<ChunkPos, HashChunkPos> m_pendingChunks;
-                std::mutex m_pendingMutex;
-
-                std::atomic<size_t> m_completedCount{0};
-                std::atomic<size_t> m_totalQueued{0};
-                std::mutex m_statsMutex;
-
                 struct HashChunkPos {
                     size_t operator()(const ChunkPos& pos) const {
                         return static_cast<size_t>(pos.x) * 31 + static_cast<size_t>(pos.z);
                     }
                 };
+
+                std::unordered_set<ChunkPos, HashChunkPos> m_pendingChunks;
+                mutable std::mutex m_pendingMutex;
+
+                std::atomic<size_t> m_completedCount{0};
+                std::atomic<size_t> m_totalQueued{0};
+                mutable std::mutex m_statsMutex;
             };
         }
 
@@ -573,50 +577,50 @@ namespace PrismaEngine {
 
                     // 前面
                     addFace(mesh,
-                           {fx, fy, fz + CUBE_SIZE},
-                           {fx + CUBE_SIZE, fy, fz + CUBE_SIZE},
-                           {fx + CUBE_SIZE, fy + CUBE_SIZE, fz + CUBE_SIZE},
-                           {fx, fy + CUBE_SIZE, fz + CUBE_SIZE},
+                           glm::vec3(fx, fy, fz + CUBE_SIZE),
+                           glm::vec3(fx + CUBE_SIZE, fy, fz + CUBE_SIZE),
+                           glm::vec3(fx + CUBE_SIZE, fy + CUBE_SIZE, fz + CUBE_SIZE),
+                           glm::vec3(fx, fy + CUBE_SIZE, fz + CUBE_SIZE),
                            0.0f, 0.0f, 1.0f);  // normal
 
                     // 后面
                     addFace(mesh,
-                           {fx + CUBE_SIZE, fy, fz},
-                           {fx, fy, fz},
-                           {fx, fy + CUBE_SIZE, fz},
-                           {fx + CUBE_SIZE, fy + CUBE_SIZE, fz},
+                           glm::vec3(fx + CUBE_SIZE, fy, fz),
+                           glm::vec3(fx, fy, fz),
+                           glm::vec3(fx, fy + CUBE_SIZE, fz),
+                           glm::vec3(fx + CUBE_SIZE, fy + CUBE_SIZE, fz),
                            0.0f, 0.0f, -1.0f);  // normal
 
                     // 左面
                     addFace(mesh,
-                           {fx, fy, fz},
-                           {fx, fy, fz + CUBE_SIZE},
-                           {fx, fy + CUBE_SIZE, fz + CUBE_SIZE},
-                           {fx, fy + CUBE_SIZE, fz},
+                           glm::vec3(fx, fy, fz),
+                           glm::vec3(fx, fy, fz + CUBE_SIZE),
+                           glm::vec3(fx, fy + CUBE_SIZE, fz + CUBE_SIZE),
+                           glm::vec3(fx, fy + CUBE_SIZE, fz),
                            -1.0f, 0.0f, 0.0f);  // normal
 
                     // 右面
                     addFace(mesh,
-                           {fx + CUBE_SIZE, fy, fz + CUBE_SIZE},
-                           {fx + CUBE_SIZE, fy, fz},
-                           {fx + CUBE_SIZE, fy + CUBE_SIZE, fz},
-                           {fx + CUBE_SIZE, fy + CUBE_SIZE, fz + CUBE_SIZE},
+                           glm::vec3(fx + CUBE_SIZE, fy, fz + CUBE_SIZE),
+                           glm::vec3(fx + CUBE_SIZE, fy, fz),
+                           glm::vec3(fx + CUBE_SIZE, fy + CUBE_SIZE, fz),
+                           glm::vec3(fx + CUBE_SIZE, fy + CUBE_SIZE, fz + CUBE_SIZE),
                            1.0f, 0.0f, 0.0f);  // normal
 
                     // 上面
                     addFace(mesh,
-                           {fx, fy + CUBE_SIZE, fz + CUBE_SIZE},
-                           {fx + CUBE_SIZE, fy + CUBE_SIZE, fz + CUBE_SIZE},
-                           {fx + CUBE_SIZE, fy + CUBE_SIZE, fz},
-                           {fx, fy + CUBE_SIZE, fz},
+                           glm::vec3(fx, fy + CUBE_SIZE, fz + CUBE_SIZE),
+                           glm::vec3(fx + CUBE_SIZE, fy + CUBE_SIZE, fz + CUBE_SIZE),
+                           glm::vec3(fx + CUBE_SIZE, fy + CUBE_SIZE, fz),
+                           glm::vec3(fx, fy + CUBE_SIZE, fz),
                            0.0f, 1.0f, 0.0f);  // normal
 
                     // 下面
                     addFace(mesh,
-                           {fx, fy, fz},
-                           {fx + CUBE_SIZE, fy, fz},
-                           {fx + CUBE_SIZE, fy, fz + CUBE_SIZE},
-                           {fx, fy, fz + CUBE_SIZE},
+                           glm::vec3(fx, fy, fz),
+                           glm::vec3(fx + CUBE_SIZE, fy, fz),
+                           glm::vec3(fx + CUBE_SIZE, fy, fz + CUBE_SIZE),
+                           glm::vec3(fx, fy, fz + CUBE_SIZE),
                            0.0f, -1.0f, 0.0f);  // normal
                 }
 
@@ -682,18 +686,18 @@ namespace PrismaEngine {
                 MeshCallback m_completionCallback;
                 MeshOptimizationOptions m_optimizationOptions;
 
-                std::unordered_set<ChunkGenerationSystem::ChunkPos, HashChunkPos> m_pendingMeshes;
-                std::mutex m_pendingMutex;
-
-                std::atomic<size_t> m_completedCount{0};
-                std::atomic<size_t> m_totalQueued{0};
-                std::mutex m_statsMutex;
-
                 struct HashChunkPos {
                     size_t operator()(const ChunkGenerationSystem::ChunkPos& pos) const {
                         return static_cast<size_t>(pos.x) * 31 + static_cast<size_t>(pos.z);
                     }
                 };
+
+                std::unordered_set<ChunkGenerationSystem::ChunkPos, HashChunkPos> m_pendingMeshes;
+                mutable std::mutex m_pendingMutex;
+
+                std::atomic<size_t> m_completedCount{0};
+                std::atomic<size_t> m_totalQueued{0};
+                mutable std::mutex m_statsMutex;
             };
         }
 
