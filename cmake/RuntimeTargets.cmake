@@ -48,20 +48,6 @@ if(PRISMA_BUILD_RUNTIME)
         "resources/runtime"
     )
 
-    # 运行时安装配置
-    install(TARGETS Runtime
-        RUNTIME DESTINATION bin
-        LIBRARY DESTINATION lib
-        ARCHIVE DESTINATION lib
-    )
-
-    # 安装运行时资源
-    install(DIRECTORY ${PRISMA_RUNTIME_RESOURCES}
-        DESTINATION .
-        USE_SOURCE_PERMISSIONS
-        PATTERN ".git" EXCLUDE
-    )
-
 else()
     message(STATUS "Runtime: 构建已禁用")
 endif()
@@ -85,13 +71,14 @@ if(WIN32 AND PRISMA_BUILD_RUNTIME)
     set_property(CACHE PRISMA_RUNTIME_WINDOWS_SUBSYSTEM PROPERTY STRINGS "CONSOLE" "WINDOWS")
 
     if(PRISMA_RUNTIME_WINDOWS_SUBSYSTEM STREQUAL "WINDOWS")
-        target_link_options(Runtime PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+        # target_link_options 将在 src/runtime/CMakeLists.txt 中设置
+        set(PRISMA_RUNTIME_WINDOWS_SUBSYSTEM_CONFIG "WINDOWS")
+    else()
+        set(PRISMA_RUNTIME_WINDOWS_SUBSYSTEM_CONFIG "CONSOLE")
     endif()
 
-    # DPI 感知
-    target_compile_definitions(Runtime PRIVATE
-        DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2=1
-    )
+    # DPI 感知 - 将在 src/runtime/CMakeLists.txt 中设置
+    set(PRISMA_RUNTIME_DPI_AWARENESS ON)
 endif()
 
 # Linux 运行时配置

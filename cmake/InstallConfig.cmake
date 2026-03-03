@@ -1,6 +1,81 @@
 # InstallConfig.cmake
 # 安装规则配置
 
+# ========== Engine 库安装 ==========
+
+if(PRISMA_BUILD_ENGINE AND TARGET Engine)
+    # 安装引擎库
+    install(TARGETS Engine
+        EXPORT PrismaEngineTargets
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
+        INCLUDES DESTINATION include
+    )
+
+    # 安装公共头文件
+    install(DIRECTORY src/engine/
+        DESTINATION include/PrismaEngine
+        FILES_MATCHING
+        PATTERN "*.h"
+        PATTERN "*/adapters/*" EXCLUDE
+        PATTERN "*/drivers/*" EXCLUDE
+        PATTERN "*/platform/*" EXCLUDE
+        PATTERN "*.cpp" EXCLUDE
+    )
+
+    # 安装 ECS 核心头文件
+    install(DIRECTORY src/engine/core/
+        DESTINATION include/PrismaEngine/core
+        FILES_MATCHING PATTERN "*.h"
+    )
+
+    # 安装物理系统头文件
+    install(FILES
+        src/engine/physics/CollisionSystem.h
+        src/engine/physics/FrustumCulling.h
+        DESTINATION include/PrismaEngine/physics
+    )
+
+    # 安装渲染接口
+    install(DIRECTORY src/engine/graphic/interfaces/
+        DESTINATION include/PrismaEngine/graphic/interfaces
+        FILES_MATCHING PATTERN "*.h"
+    )
+
+    # 安装纹理系统头文件
+    install(FILES
+        src/engine/graphic/TextureAtlas.h
+        src/engine/graphic/FrustumCulling.h
+        DESTINATION include/PrismaEngine/graphic
+    )
+
+    # 安装输入系统头文件
+    install(FILES
+        src/engine/input/InputManager.h
+        src/engine/input/InputDevice.h
+        src/engine/input/EnhancedInputManager.h
+        DESTINATION include/PrismaEngine/input
+    )
+
+    # 安装音频系统头文件
+    install(FILES
+        src/engine/audio/AudioManager.h
+        src/engine/audio/IAudioDevice.h
+        src/engine/audio/AudioAPI.h
+        DESTINATION include/PrismaEngine/audio
+    )
+endif()
+
+# ========== Runtime 可执行文件安装 ==========
+
+if(PRISMA_BUILD_RUNTIME AND TARGET Runtime)
+    # 安装运行时可执行文件
+    install(TARGETS Runtime
+        RUNTIME DESTINATION bin
+    )
+endif()
+
 # ========== 目录安装 ==========
 
 # 安装 projects 目录
