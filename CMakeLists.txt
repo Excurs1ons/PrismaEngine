@@ -104,6 +104,8 @@ endif()
 if(PRISMA_BUILD_EDITOR)
     add_subdirectory(src/editor)
     message(STATUS "已添加编辑器模块")
+    # 应用编辑器目标后配置（必须在 add_subdirectory 之后）
+    include(cmake/EditorPostTargets.cmake)
 else()
     # Game 模块 (Editor 模式下不需要 Game)
     if(EXISTS ${CMAKE_SOURCE_DIR}/src/game/CMakeLists.txt)

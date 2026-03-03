@@ -20,20 +20,42 @@ REM Check preset and route to appropriate script
 if "%PRESET%"=="" (
     echo Usage: build.bat [preset] [clean]
     echo.
-    echo Windows Presets:
-    echo   windows-x64-debug      ^(default^)
-    echo   windows-x64-release
-    echo   windows-x86-debug
-    echo   windows-x86-release
+    echo New Preset Format: {target}-{platform}-{arch}-{build_type}
     echo.
-    echo Android Presets:
-    echo   android-arm64-v8a-debug
-    echo   android-arm64-v8a-release
+    echo Windows Engine Presets:
+    echo   engine-windows-x64-debug      ^(default^)
+    echo   engine-windows-x64-release
+    echo.
+    echo Windows Editor Presets:
+    echo   editor-windows-x64-debug
+    echo   editor-windows-x64-release
+    echo.
+    echo Windows Runtime Presets:
+    echo   runtime-windows-x64-debug
+    echo   runtime-windows-x64-release
+    echo.
+    echo Linux Engine Presets:
+    echo   engine-linux-x64-debug
+    echo   engine-linux-x64-release
+    echo   engine-linux-arm64-debug
+    echo   engine-linux-arm64-release
+    echo.
+    echo Linux Editor Presets:
+    echo   editor-linux-x64-debug
+    echo   editor-linux-x64-release
+    echo.
+    echo Android Engine Presets:
+    echo   engine-android-arm64-debug
+    echo   engine-android-arm64-release
+    echo.
+    echo Android Runtime Presets:
+    echo   runtime-android-arm64-debug
+    echo   runtime-android-arm64-release
     echo.
     echo Examples:
-    echo   build.bat windows-x64-debug
-    echo   build.bat windows-x64-release clean
-    echo   build.bat android-arm64-v8a-debug
+    echo   build.bat engine-windows-x64-debug
+    echo   build.bat editor-windows-x64-debug clean
+    echo   build.bat engine-android-arm64-debug
     echo.
     goto :eof
 )
