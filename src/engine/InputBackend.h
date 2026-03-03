@@ -1,5 +1,5 @@
 #pragma once
-#include "KeyCode.h"
+#include "input/InputManager.h"
 namespace PrismaEngine {
     namespace Input {
 

@@ -356,7 +356,7 @@ else()
         packing/Pipeline.h
     )
     message(STATUS "Engine: 构建为静态库 (STATIC)")
-    target_compile_definitions(Engine PRIVATE ENGINE_BUILD_STATIC=1)
+    target_compile_definitions(Engine PUBLIC ENGINE_BUILD_STATIC=1)
 
     # 设置静态库的输出目录
     if(MSVC)

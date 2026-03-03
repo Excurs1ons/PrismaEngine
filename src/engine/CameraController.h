@@ -1,7 +1,6 @@
 #pragma once
 #include "Component.h"
-#include "KeyCode.h"
-#include "InputManager.h"
+#include "input/InputManager.h"  // KeyCode 定义在此文件中
 
 #include "Camera.h"
 

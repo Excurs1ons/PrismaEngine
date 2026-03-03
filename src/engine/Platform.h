@@ -2,7 +2,7 @@
 
 #include "Export.h"
 #include "IPlatformLogger.h"
-#include "KeyCode.h"
+#include "input/InputManager.h"
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -83,8 +83,8 @@ public:
     static bool s_shouldClose;
     static WindowHandle s_currentWindow;
 
-
     using EventCallback = std::function<bool(const void*)>;
+    static EventCallback s_eventCallback;
 
     // ------------------------------------------------------------
     // 平台生命周期管理

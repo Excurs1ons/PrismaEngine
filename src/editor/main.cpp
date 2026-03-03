@@ -54,8 +54,9 @@ int main(int argc, char* argv[]) {
     if (runMode == EditorRunMode::CLI || runMode == EditorRunMode::Batch) {
         // 用户明确要求命令行模式
         LOG_INFO("Main", "使用命令行模式（用户指定）");
-        cliEditor = std::make_unique<CommandLineEditor>();
-        cliEditor->SetArguments(args);
+        auto cliEditorPtr = std::make_unique<CommandLineEditor>();
+        cliEditorPtr->SetArguments(args);
+        cliEditor = std::move(cliEditorPtr);
         editor = cliEditor.get();
     } else if (runMode == EditorRunMode::Server) {
         // 服务器模式（暂未实现）
@@ -71,8 +72,9 @@ int main(int argc, char* argv[]) {
         } else {
             // 无显示支持，自动切换到 CLI 模式
             LOG_INFO("Main", "未检测到显示系统，自动切换到命令行模式");
-            cliEditor = std::make_unique<CommandLineEditor>();
-            cliEditor->SetArguments(args);
+            auto cliEditorPtr = std::make_unique<CommandLineEditor>();
+            cliEditorPtr->SetArguments(args);
+            cliEditor = std::move(cliEditorPtr);
             editor = cliEditor.get();
         }
     }

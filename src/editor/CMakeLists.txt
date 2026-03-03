@@ -39,6 +39,11 @@ target_link_libraries(Editor
     PRIVATE Engine
 )
 
+# Engine 作为静态库链接时，需要定义 ENGINE_BUILD_STATIC
+if(NOT PRISMA_BUILD_SHARED_LIBS)
+    target_compile_definitions(Editor PRIVATE ENGINE_BUILD_STATIC=1)
+endif()
+
 # ========== 平台特定依赖配置 ==========
 
 # Windows 平台

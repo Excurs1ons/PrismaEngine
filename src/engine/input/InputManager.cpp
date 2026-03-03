@@ -1,4 +1,4 @@
-#include "InputManager.h"
+#include "input/InputManager.h"
 #include "Logger.h"
 #include <algorithm>
 #include <fstream>

@@ -48,7 +48,7 @@ private:
     int CommandExport(const std::vector<std::string>& args);
     int CommandImport(const std::vector<std::string>& args);
     int CommandPackage(const std::vector<std::string>& args);
-    int CommandInfo(const std::vector<std::string>& args);
+    int CommandShowInfo(const std::vector<std::string>& args);
     int CommandValidate(const std::vector<std::string>& args);
     int CommandRun(const std::vector<std::string>& args);
 
