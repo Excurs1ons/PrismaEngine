@@ -37,7 +37,7 @@ public:
 
 protected:
     // 提供设置运行状态的保护方法
-    ENGINE_API virtual void SetRunning(bool running) {
+    virtual void SetRunning(bool running) {
         isRunning = running;
     }
 

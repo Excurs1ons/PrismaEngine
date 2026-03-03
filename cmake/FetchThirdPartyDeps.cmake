@@ -384,16 +384,56 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
 
     # 创建 ImGui 静态库（需要编译源文件）
     if(NOT TARGET imgui AND NOT TARGET imgui::imgui)
-        add_library(imgui STATIC
+        # 核心 ImGui 文件
+        set(IMGUI_CORE_SOURCES
             ${imgui_SOURCE_DIR}/imgui.cpp
             ${imgui_SOURCE_DIR}/imgui_draw.cpp
             ${imgui_SOURCE_DIR}/imgui_tables.cpp
             ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+            ${imgui_SOURCE_DIR}/imgui_demo.cpp  # 演示窗口
         )
+
+        # 根据平台添加后端
+        if(WIN32)
+            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
+        endif()
+
+        # SDL3 后端（跨平台）
+        set(USE_SDL3_BACKEND OFF)
+        if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+            set(USE_SDL3_BACKEND ON)
+        endif()
+
+        add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
         target_include_directories(imgui PUBLIC
             ${imgui_SOURCE_DIR}
             ${imgui_SOURCE_DIR}/backends
         )
+
+        # 链接 SDL3 依赖（如果使用 SDL3 后端）
+        if(USE_SDL3_BACKEND)
+            if(TARGET SDL3::SDL3-static)
+                target_link_libraries(imgui PRIVATE SDL3::SDL3-static)
+                target_include_directories(imgui PRIVATE $<TARGET_PROPERTY:SDL3::SDL3-static,INTERFACE_INCLUDE_DIRECTORIES>)
+            elseif(TARGET SDL3-static)
+                target_link_libraries(imgui PRIVATE SDL3-static)
+                target_include_directories(imgui PRIVATE $<TARGET_PROPERTY:SDL3-static,INTERFACE_INCLUDE_DIRECTORIES>)
+            elseif(TARGET SDL3::SDL3-shared)
+                target_link_libraries(imgui PRIVATE SDL3::SDL3-shared)
+                target_include_directories(imgui PRIVATE $<TARGET_PROPERTY:SDL3::SDL3-shared,INTERFACE_INCLUDE_DIRECTORIES>)
+            elseif(TARGET SDL3_shared)
+                target_link_libraries(imgui PRIVATE SDL3_shared)
+                target_include_directories(imgui PRIVATE $<TARGET_PROPERTY:SDL3_shared,INTERFACE_INCLUDE_DIRECTORIES>)
+            elseif(TARGET SDL3::SDL3)
+                target_link_libraries(imgui PRIVATE SDL3::SDL3)
+                target_include_directories(imgui PRIVATE $<TARGET_PROPERTY:SDL3::SDL3,INTERFACE_INCLUDE_DIRECTORIES>)
+            elseif(TARGET SDL3)
+                target_link_libraries(imgui PRIVATE SDL3)
+                target_include_directories(imgui PRIVATE $<TARGET_PROPERTY:SDL3,INTERFACE_INCLUDE_DIRECTORIES>)
+            endif()
+        endif()
+
         add_library(imgui::imgui ALIAS imgui)
     elseif(NOT TARGET imgui::imgui AND TARGET imgui)
         # 如果已存在 imgui 目标但没有别名，创建别名

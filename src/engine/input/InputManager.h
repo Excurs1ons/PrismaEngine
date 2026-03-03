@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 #include "math/MathTypes.h"
+#include "../Export.h"
 
 namespace PrismaEngine {
 namespace Input {
@@ -31,6 +32,10 @@ enum class KeyCode : uint32_t {
     Escape = 256,
 
     // 方向键
+    ArrowLeft = 263,
+    ArrowRight = 262,
+    ArrowUp = 265,
+    ArrowDown = 264,
     Left = 263,
     Right = 262,
     Up = 265,
@@ -41,12 +46,17 @@ enum class KeyCode : uint32_t {
     RightShift = 344,
     LeftCtrl = 341,
     RightCtrl = 345,
+    LeftControl = 341,   // 别名，与 LeftCtrl 相同，用于向后兼容
+    RightControl = 345,  // 别名，与 RightCtrl 相同，用于向后兼容
     LeftAlt = 342,
     RightAlt = 346,
+    CapsLock = 280,      // Caps Lock 键
 
     // 其他
     Minus = 45,
     Equals = 61,
+    Equal = 61,        // 别名，与 Equals 相同，用于向后兼容
+    Grave = 96,        // 反引号 ` 键
     LeftBracket = 91,
     RightBracket = 93,
     Backslash = 92,
@@ -161,7 +171,7 @@ struct GamepadState {
 };
 
 // 输入管理器
-class InputManager {
+class ENGINE_API InputManager {
 public:
     static InputManager& GetInstance();
 

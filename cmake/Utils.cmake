@@ -13,10 +13,11 @@ function(copy_dlls_to_target TARGET_NAME)
             get_filename_component(DLL_NAME ${DLL_PATH} NAME)
 
             # 添加构建后命令
+            # 注意：DLL_PATH 可能是生成器表达式，需要正确处理
             add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
                 COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${DLL_PATH}"
-                $<TARGET_FILE_DIR:${TARGET_NAME}>/${DLL_NAME}
+                $<TARGET_FILE_DIR:${TARGET_NAME}>
                 COMMENT "Copying ${DLL_NAME} to output directory..."
             )
         endforeach()

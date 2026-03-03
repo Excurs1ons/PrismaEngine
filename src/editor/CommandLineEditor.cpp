@@ -69,7 +69,7 @@ void CommandLineEditor::Shutdown() {
 void CommandLineEditor::RegisterCommand(const std::string& name,
                                         const std::string& description,
                                         CommandHandler handler) {
-    CommandInfo info;
+    CommandLineEditor::CommandInfo info;
     info.description = description;
     info.handler = handler;
     m_commands[name] = info;
@@ -81,7 +81,7 @@ void CommandLineEditor::RegisterBuiltinCommands() {
     RegisterCommand("export", "导出资源/场景", [this](const auto& args) { return CommandExport(args); });
     RegisterCommand("import", "导入资源", [this](const auto& args) { return CommandImport(args); });
     RegisterCommand("package", "打包项目", [this](const auto& args) { return CommandPackage(args); });
-    RegisterCommand("info", "显示项目信息", [this](const auto& args) { return CommandInfo(args); });
+    RegisterCommand("info", "显示项目信息", [this](const auto& args) { return CommandShowInfo(args); });
     RegisterCommand("validate", "验证项目配置", [this](const auto& args) { return CommandValidate(args); });
     RegisterCommand("run", "运行项目", [this](const auto& args) { return CommandRun(args); });
 }
@@ -253,7 +253,7 @@ int CommandLineEditor::CommandPackage(const std::vector<std::string>& args) {
     return 0;
 }
 
-int CommandLineEditor::CommandInfo(const std::vector<std::string>& args) {
+int CommandLineEditor::CommandShowInfo(const std::vector<std::string>& args) {
     LOG_INFO("Info", "显示项目信息");
 
     fs::path projectPath = m_args.projectPath;
