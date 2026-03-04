@@ -1,0 +1,155 @@
+name: Build Runtime
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/runtime/**'
+      - 'src/game/**'
+      - 'src/engine/**'
+      - 'projects/android/PrismaAndroid/**'
+      - '.github/workflows/build-runtime.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/runtime/**'
+      - 'src/game/**'
+      - 'src/engine/**'
+      - 'projects/android/PrismaAndroid/**'
+      - '.github/workflows/build-runtime.yml'
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: 'Platform to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - windows
+        - android
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+        - Debug
+        - Release
+
+env:
+  CMAKE_VERSION: '3.31.0'
+  ANDROID_NDK_VERSION: 27.0.12077973
+
+jobs:
+  # ========== Windows Runtime ==========
+  build-windows-runtime:
+    name: Windows Runtime
+    runs-on: windows-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows'
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/windows-x64-${{ github.event.inputs.build_type || 'Debug' }}
+        key: ${{ runner.os }}-runtime-${{ github.event.inputs.build_type || 'Debug' }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+
+    - name: Configure
+      run: cmake --preset windows-x64-${{ github.event.inputs.build_type || 'Debug' }}
+
+    - name: Build Runtime
+      run: cmake --build build/windows-x64-${{ github.event.inputs.build_type || 'Debug' }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Runtime --parallel
+
+    - name: Build Game
+      run: cmake --build build/windows-x64-${{ github.event.inputs.build_type || 'Debug' }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Game --parallel
+
+    - name: Package
+      run: |
+        mkdir -p package-x64-${{ github.event.inputs.build_type || 'Debug' }}
+        copy build\windows-x64-${{ github.event.inputs.build_type || 'Debug' }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\Runtime.exe package-x64-${{ github.event.inputs.build_type || 'Debug' }}\
+        copy build\windows-x64-${{ github.event.inputs.build_type || 'Debug' }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\*.dll package-x64-${{ github.event.inputs.build_type || 'Debug' }}\ 2>nul || echo No DLLs
+        xcopy assets package-x64-${{ github.event.inputs.build_type || 'Debug' }}\assets /E /I /Y 2>nul || echo No assets
+        xcopy projects package-x64-${{ github.event.inputs.build_type || 'Debug' }}\projects /E /I /Y 2>nul || echo No projects
+        cd package-x64-${{ github.event.inputs.build_type || 'Debug' }}
+        7z a ../PrismaGame-x64-${{ github.event.inputs.build_type || 'Debug' }}.zip *
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaGame-x64-${{ github.event.inputs.build_type || 'Debug' }}
+        path: PrismaGame-x64-${{ github.event.inputs.build_type || 'Debug' }}.zip
+        retention-days: 30
+
+  # ========== Android Runtime ==========
+  build-android-runtime:
+    name: Android Runtime
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'android'
+    defaults:
+      run:
+        working-directory: projects/android/PrismaAndroid
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Android NDK
+      uses: android-actions/setup-android@v3
+
+    - name: Set NDK path
+      run: |
+        NDK_PATH=$(find $ANDROID_HOME/ndk -maxdepth 1 -type d | grep -E "[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
+        if [ -z "$NDK_PATH" ]; then
+          NDK_PATH="$ANDROID_HOME/ndk-bundle"
+        fi
+        echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
+        echo "Found NDK at: $NDK_PATH"
+
+    - name: Setup Ninja
+      run: sudo apt-get install -y ninja-build
+
+    - name: Cache Gradle
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: gradle-android-${{ hashFiles('projects/android/PrismaAndroid/**/*.gradle*') }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: projects/android/PrismaAndroid/.cxx
+        key: ${{ runner.os }}-android-runtime-${{ github.event.inputs.build_type || 'debug' }}-${{ hashFiles('src/runtime/android/**', 'src/engine/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
+
+    - name: Grant execute permission
+      run: chmod +x ./gradlew
+
+    - name: Build APK
+      run: ./gradlew assemble${{ github.event.inputs.build_type || 'Debug' }} --build-cache --parallel
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-runtime-${{ tolower(github.event.inputs.build_type || 'debug') }}
+        path: projects/android/PrismaAndroid/app/build/outputs/apk/${{ tolower(github.event.inputs.build_type || 'debug') }}/*.apk
+        retention-days: 30
+        if-no-files-found: ignore
