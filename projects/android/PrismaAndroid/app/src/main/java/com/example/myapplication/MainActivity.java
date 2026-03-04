@@ -129,7 +129,7 @@ public class MainActivity extends GameActivity {
 
     private native void nativeOnPause();
 
-    private native void native void nativeOnStop();
+    private native void nativeOnStop();
 
     private native void nativeOnKeyDown(int keyCode);
 
