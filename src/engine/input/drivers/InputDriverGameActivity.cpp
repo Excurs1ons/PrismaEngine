@@ -1,4 +1,8 @@
-#if defined(__ANDROID__) || defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
+#if defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
+#if __has_include(<game-activity/GameActivity.h>)
+
+#include "InputDriverGameActivity.h"
+#include <algorithm>
 #include "InputDriverGameActivity.h"
 #include <algorithm>
 
@@ -371,4 +375,6 @@ void InputDriverGameActivity::SetVibration(uint32_t index, float leftMotor, floa
 }
 
 } // namespace PrismaEngine::Input
-#endif
+
+#endif // __has_include(<game-activity/GameActivity.h>)
+#endif // __ANDROID__ && PRISMA_ENABLE_INPUT_GAMEACTIVITY

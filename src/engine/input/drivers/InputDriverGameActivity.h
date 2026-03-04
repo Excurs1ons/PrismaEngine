@@ -1,6 +1,11 @@
 #pragma once
 
-#if defined(__ANDROID__) || defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
+// GameActivity 输入驱动只在 Android Runtime 中可用
+// Engine SDK 构建时不包含 game-activity 依赖
+#if defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
+
+// 检查 game-activity 头文件是否可用
+#if __has_include(<game-activity/GameActivity.h>)
 
 #include "core/IInputDriver.h"
 #include <game-activity/GameActivity.h>
@@ -115,4 +120,5 @@ inline IInputDriver* CreateGameActivityInputDriver() {
 
 } // namespace PrismaEngine::Input
 
+#endif // __has_include(<game-activity/GameActivity.h>)
 #endif // __ANDROID__ && PRISMA_ENABLE_INPUT_GAMEACTIVITY
