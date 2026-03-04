@@ -4,7 +4,7 @@
 #include <memory>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <game-activity.h>
+#include <game-activity/GameActivity.h>
 namespace PrismaEngine {
 
 class UIComponent;
