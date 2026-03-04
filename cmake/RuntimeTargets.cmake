@@ -132,10 +132,12 @@ if(ANDROID AND PRISMA_BUILD_RUNTIME)
         "android.permission.WRITE_EXTERNAL_STORAGE"
     )
 
-    # Android 特定编译定义
-    target_compile_definitions(Runtime PRIVATE
-        PRISMA_ANDROID_PLATFORM=1
-    )
+    # Android 特定编译定义（仅当 Runtime 目标存在时）
+    if(TARGET Runtime)
+        target_compile_definitions(Runtime PRIVATE
+            PRISMA_ANDROID_PLATFORM=1
+        )
+    endif()
 endif()
 
 # ========== 运行时测试支持 ==========
