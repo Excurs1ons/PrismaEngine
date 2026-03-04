@@ -132,6 +132,15 @@ find_package(game-activity REQUIRED CONFIG)
 target_include_directories(myapplication PRIVATE ${game-activity_INCLUDE_DIRS})
 message(STATUS "game-activity include dirs: ${game-activity_INCLUDE_DIRS}")
 
+# 添加 vk-bootstrap include 目录（如果使用 FetchContent）
+if(TARGET vk-bootstrap)
+    get_target_property(VK_BOOTSTRAP_SOURCE_DIR vk-bootstrap SOURCE_DIR)
+    if(VK_BOOTSTRAP_SOURCE_DIR)
+        target_include_directories(myapplication PRIVATE ${VK_BOOTSTRAP_SOURCE_DIR})
+        message(STATUS "vk-bootstrap include dir: ${VK_BOOTSTRAP_SOURCE_DIR}")
+    endif()
+endif()
+
 # 查找 Vulkan 库
 find_library(vulkan-lib vulkan)
 
