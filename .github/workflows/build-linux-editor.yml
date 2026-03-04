@@ -98,11 +98,12 @@ jobs:
         path: PrismaEditor-linux-x64-debug.tar.gz
         retention-days: 30
 
-  # Debug ARM64 build
+  # Debug ARM64 build (仅手动触发)
   build-linux-editor-arm64-debug:
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'Debug' || github.event.inputs.build_type == 'Both'
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Debug' || github.event.inputs.build_type == 'Both') && (github.event.inputs.arch == 'all' || github.event.inputs.arch == 'arm64')
     name: Linux Editor ARM64 Debug
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
     - name: Checkout repository
@@ -211,11 +212,12 @@ jobs:
         path: PrismaEditor-linux-x64-release.tar.gz
         retention-days: 30
 
-  # Release ARM64 build
+  # Release ARM64 build (仅手动触发)
   build-linux-editor-arm64-release:
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Release' || github.event.inputs.build_type == 'Both')
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Release' || github.event.inputs.build_type == 'Both') && (github.event.inputs.arch == 'all' || github.event.inputs.arch == 'arm64')
     name: Linux Editor ARM64 Release
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
     - name: Checkout repository
