@@ -31,7 +31,7 @@ static GameTextInput *g_textInput = nullptr;
 
 // ========== Native Window 处理 ==========
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnSurfaceCreated(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnSurfaceCreated(
     JNIEnv *env,
     jobject thiz,
     jobject surface) {
@@ -49,7 +49,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnSurfaceCreated(
     }
 }
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnSurfaceChanged(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnSurfaceChanged(
     JNIEnv *env,
     jobject thiz,
     jobject surface,
@@ -67,7 +67,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnSurfaceChanged(
     }
 }
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnSurfaceDestroyed(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnSurfaceDestroyed(
     JNIEnv *env,
     jobject thiz) {
 
@@ -85,14 +85,14 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnSurfaceDestroyed(
 
 // ========== 生命周期处理 ==========
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnStart(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnStart(
     JNIEnv *env,
     jobject thiz) {
 
     LOGI("Application started");
 }
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnResume(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnResume(
     JNIEnv *env,
     jobject thiz) {
 
@@ -103,7 +103,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnResume(
     }
 }
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnPause(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnPause(
     JNIEnv *env,
     jobject thiz) {
 
@@ -114,7 +114,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnPause(
     }
 }
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnStop(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnStop(
     JNIEnv *env,
     jobject thiz) {
 
@@ -132,7 +132,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnStop(
 
 // ========== 输入处理 ==========
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnKeyDown(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnKeyDown(
     JNIEnv *env,
     jobject thiz,
     int keyCode) {
@@ -142,7 +142,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnKeyDown(
     }
 }
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnKeyUp(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnKeyUp(
     JNIEnv *env,
     jobject thiz,
     int keyCode) {
@@ -154,7 +154,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnKeyUp(
 
 // ========== 触摸输入 ==========
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeOnTouch(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeOnTouch(
     JNIEnv *env,
     jobject thiz,
     jint action,
@@ -168,7 +168,7 @@ extern "C" void Java_com_example_prismaengine_Renderer_nativeOnTouch(
 
 // ========== 文本输入 ==========
 
-extern "C" void Java_com_example_prismaengine_Renderer_nativeSetTextInput(
+extern "C" void Java_com_example_myapplication_MainActivity_nativeSetTextInput(
     JNIEnv *env,
     jobject thiz,
     jboolean show) {
