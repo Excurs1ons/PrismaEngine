@@ -396,7 +396,7 @@ endif()
 # ========== 导出符号配置 ==========
 
 # 动态库需要导出宏，静态库不需要
-if(PRISMA_ENGINE_BUILD_SHARED)
+if(PRISMA_BUILD_SHARED_LIBS)
     if(WIN32)
         # Windows DLL 导出/导入宏
         target_compile_definitions(Engine PRIVATE
@@ -404,9 +404,10 @@ if(PRISMA_ENGINE_BUILD_SHARED)
             ENGINE_EXPORTS=1
         )
     else()
-        # Linux/Unix 共享库
+        # Linux/Unix 共享库也需要定义 ENGINE_EXPORTS 以正确导出符号
         target_compile_definitions(Engine PRIVATE
             ENGINE_BUILD_SHARED=1
+            ENGINE_EXPORTS=1
         )
     endif()
 else()
