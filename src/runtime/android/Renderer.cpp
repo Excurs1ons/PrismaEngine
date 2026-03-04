@@ -4,6 +4,7 @@
 #include "RendererVulkan.h"
 #include "AndroidInputBackend.h"
 #include <game-activity/GameActivity.h>
+#include <android/asset_manager.h>
 #include <chrono>
 
 Renderer::Renderer(ANativeWindow *window) : window_(window) {
@@ -89,5 +90,17 @@ void Renderer::onKeyUp(int keyCode) {
 void Renderer::onTouchEvent(int action, float x, float y) {
     if (impl_) {
         impl_->onTouchEvent(action, x, y);
+    }
+}
+
+void Renderer::setAssetManager(void *assetManager) {
+    if (impl_) {
+        impl_->setAssetManager(static_cast<AAssetManager*>(assetManager));
+    }
+}
+
+void Renderer::setContentRect(int32_t left, int32_t top, int32_t right, int32_t bottom) {
+    if (impl_) {
+        impl_->setContentRect(left, top, right, bottom);
     }
 }
