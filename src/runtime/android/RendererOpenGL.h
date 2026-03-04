@@ -54,6 +54,15 @@ private:
 
     std::unique_ptr<ShaderOpenGL> shader_;
     std::vector<Model> models_;
+
+    // Asset manager for loading resources
+    struct AAssetManager;
+    AAssetManager *assetManager_ = nullptr;
+
+public:
+    void setAssetManager(AAssetManager *assetManager) {
+        assetManager_ = assetManager;
+    }
 };
 
 #endif //MY_APPLICATION_RENDEREROPENGL_H

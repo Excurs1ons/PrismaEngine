@@ -154,9 +154,9 @@ void RendererVulkan::init() {
     // 初始化帧时间
     lastFrameTime_ = std::chrono::high_resolution_clock::now();
 
-    // 初始化输入系统
-    auto& inputBackend = PrismaEngine::Input::AndroidInputBackend::GetInstance();
-    inputBackend.Initialize(app_);
+    // 初始化输入系统（如果使用 ANativeWindow，不需要传递 android_app）
+    // auto& inputBackend = PrismaEngine::Input::AndroidInputBackend::GetInstance();
+    // inputBackend.Initialize(nullptr);  // 暂时禁用，因为不再有 android_app
 
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
     // 1. 创建 Vulkan 实例（使用 vk-bootstrap）
@@ -168,7 +168,7 @@ void RendererVulkan::init() {
     // 2. 创建 Surface
     VkAndroidSurfaceCreateInfoKHR surfaceCreateInfo{};
     surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.window = app_->window;
+    surfaceCreateInfo.window = window_;
     if (vkCreateAndroidSurfaceKHR(vulkanContext_.instance, &surfaceCreateInfo, nullptr, &vulkanContext_.surface) != VK_SUCCESS) {
         aout << "Failed to create Android surface" << std::endl;
         return;
@@ -181,8 +181,8 @@ void RendererVulkan::init() {
     }
 
     // 4. 创建交换链（使用 vk-bootstrap）
-    int32_t windowWidth = ANativeWindow_getWidth(app_->window);
-    int32_t windowHeight = ANativeWindow_getHeight(app_->window);
+    int32_t windowWidth = ANativeWindow_getWidth(window_);
+    int32_t windowHeight = ANativeWindow_getHeight(window_);
     if (!createSwapChainWithVkBootstrap(windowWidth, windowHeight)) {
         aout << "Failed to create swap chain" << std::endl;
         return;
@@ -349,7 +349,7 @@ void RendererVulkan::createScene() {
 
     // 为现有 GameObject 添加渲染组件
     auto& gameObjects = scene_->getGameObjects();
-    auto assetManager = app_->activity->assetManager;
+    auto assetManager = assetManager_;
 
     for (auto& go : gameObjects) {
         // 为 Cube 添加 MeshRenderer 和交互组件
@@ -858,12 +858,12 @@ void RendererVulkan::createRenderPipeline() {
         }
     }
     uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
-    uiPass->setAndroidApp(app_);
+    // uiPass->setAndroidApp(app_);  // 已废弃：不再使用 android_app
     uiPass->setPhysicalDevice(vulkanContext_.physicalDevice);
 
     // 获取内容区域偏移（状态栏高度等）
-    // app_->contentRect 包含内容区域相对于窗口的偏移
-    uiPass->setContentOffset(app_->contentRect.left, app_->contentRect.top);
+    // contentRect_ 包含内容区域相对于窗口的偏移
+    uiPass->setContentOffset(contentRect_.left, contentRect_.top);
 
     renderPipeline_->addPass(std::move(uiPass));
 
@@ -1239,8 +1239,8 @@ void RendererVulkan::recreateSwapChain() {
         &capabilities);
 
 
-    int32_t windowWidth = ANativeWindow_getWidth(app_->window);
-    int32_t windowHeight = ANativeWindow_getHeight(app_->window);
+    int32_t windowWidth = ANativeWindow_getWidth(window_);
+    int32_t windowHeight = ANativeWindow_getHeight(window_);
 
     // 如果 Vulkan 返回的分辨率和 Window 的分辨率不一致，说明 Surface 还没准备好
     // 我们强制使用 Window 的分辨率（前提是 capabilities 允许）
@@ -1420,8 +1420,8 @@ void RendererVulkan::recreateSwapChain() {
             uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
 
             // 获取内容区域偏移（状态栏高度等）
-            // app_->contentRect 包含内容区域相对于窗口的偏移
-            uiPass->setContentOffset(app_->contentRect.left, app_->contentRect.top);
+            // contentRect_ 包含内容区域相对于窗口的偏移
+            uiPass->setContentOffset(contentRect_.left, contentRect_.top);
         }
         // 重新初始化所有 Pass（重建 Pipeline 和 PipelineLayout）
         renderPipeline_->initialize(vulkanContext_.device, vulkanContext_.renderPass);
@@ -1453,13 +1453,13 @@ void RendererVulkan::createUIComponents() {
     using namespace PrismaEngine;
 
     // 获取实际窗口尺寸
-    int32_t windowWidth = ANativeWindow_getWidth(app_->window);
-    int32_t windowHeight = ANativeWindow_getHeight(app_->window);
+    int32_t windowWidth = ANativeWindow_getWidth(window_);
+    int32_t windowHeight = ANativeWindow_getHeight(window_);
     aout << "Window size: " << windowWidth << "x" << windowHeight << std::endl;
     aout << "SwapChain size: " << vulkanContext_.swapChainExtent.width << "x" << vulkanContext_.swapChainExtent.height << std::endl;
 
     // 获取内容区域（排除状态栏）
-    int32_t statusBarHeight = app_->contentRect.top;
+    int32_t statusBarHeight = contentRect_.top;
     aout << "Status bar height: " << statusBarHeight << std::endl;
 
     // 获取实际屏幕尺寸
@@ -1533,64 +1533,16 @@ void RendererVulkan::createUIComponents() {
 
 
 void RendererVulkan::onConfigChanged() {
-    // 更新状态栏高度（contentRect 会在 APP_CMD_CONTENT_RECT_CHANGED 时更新）
-    statusBarHeight_ = app_->contentRect.top;
+    // 更新状态栏高度（contentRect_ 由外部通过 setContentRect 设置）
+    statusBarHeight_ = contentRect_.top;
     aout << "contentRect"
-    << "top:" << app_->contentRect.top
-    << "bottom:" << app_->contentRect.bottom
-    << "left:" << app_->contentRect.left
-    << "right:" << app_->contentRect.right
+    << " top:" << contentRect_.top
+    << " bottom:" << contentRect_.bottom
+    << " left:" << contentRect_.left
+    << " right:" << contentRect_.right
     << std::endl;
-    // 如果 contentRect.top 为 0，尝试通过 JNI 获取真实的状态栏高度
-    if (statusBarHeight_ == 0 && app_->activity->env) {
-        JNIEnv* env = app_->activity->env;
-        JavaVM* vm = app_->activity->vm;
-        JavaVMAttachArgs attachArgs = {JNI_VERSION_1_6, "NativeThread", nullptr};
-        jint attachResult = vm->AttachCurrentThread(&env, &attachArgs);
-        if (attachResult == JNI_OK) {
-            // 获取 WindowManager
-            jobject windowManager = nullptr;
-            jclass activityClass = env->GetObjectClass(app_->activity->javaGameActivity);
-            if (activityClass) {
-                jmethodID getWindowManagerMethod = env->GetMethodID(activityClass, "getWindowManager", "()Landroid/view/WindowManager;");
-                if (getWindowManagerMethod) {
-                    jobject wm = env->CallObjectMethod(app_->activity->javaGameActivity, getWindowManagerMethod);
-                    if (wm) {
-                        // 获取 DisplayMetrics
-                        jclass windowManagerClass = env->FindClass("android/view/WindowManager");
-                        if (windowManagerClass) {
-                            jmethodID getDefaultDisplayMethod = env->GetMethodID(windowManagerClass, "getDefaultDisplay", "()Landroid/view/Display;");
-                            if (getDefaultDisplayMethod) {
-                                jobject display = env->CallObjectMethod(wm, getDefaultDisplayMethod);
-                                if (display) {
-                                    jclass displayClass = env->GetObjectClass(display);
-                                    jmethodID getMetricsMethod = env->GetMethodID(displayClass, "getMetrics", "(Landroid/util/DisplayMetrics;)V");
-                                    if (getMetricsMethod) {
-                                        jclass metricsClass = env->FindClass("android/util/DisplayMetrics");
-                                        jmethodID metricsInit = env->GetMethodID(metricsClass, "<init>", "()V");
-                                        jobject metrics = env->NewObject(metricsClass, metricsInit);
-                                        env->CallVoidMethod(display, getMetricsMethod, metrics);
 
-                                        // 获取 statusBarHeight
-                                        jfieldID densityDpiField = env->GetFieldID(metricsClass, "densityDpi", "I");
-                                        jint densityDpi = env->GetIntField(metrics, densityDpiField);
-
-                                        // 状态栏高度通常是 24dp
-                                        statusBarHeight_ = (24 * densityDpi) / 160;
-
-                                        env->DeleteLocalRef(metrics);
-                                    }
-                                    env->DeleteLocalRef(displayClass);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            vm->DetachCurrentThread();
-        }
-        aout << "Status bar height (JNI): " << statusBarHeight_ << std::endl;
-    }
+    // TODO: 如果需要通过 JNI 获取状态栏高度，可以在 Java 端获取后通过 setContentRect 传入
 
     // 检测屏幕旋转，当 transform 变化时重建 SwapChain
     VkSurfaceCapabilitiesKHR capabilities;
@@ -1675,7 +1627,7 @@ void RendererVulkan::handleInput() {
         // [DEBUG] 记录原始触摸坐标和状态栏信息（用于确认坐标系）
         aout << "Touch[" << i << "]: raw=(" << touch->positionX << ", " << touch->positionY
              << "), statusBarHeight=" << statusBarHeight_
-             << ", contentRect.top=" << app_->contentRect.top
+             << ", contentRect.top=" << contentRect_.top
              << ", phase=" << static_cast<int>(touch->phase) << std::endl;
 
         // 将触摸坐标从内容区域坐标转换为窗口坐标
