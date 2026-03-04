@@ -51,17 +51,9 @@ jobs:
     - name: Build Engine
       run: cmake --build build/engine-linux-x64-debug --parallel 2
 
-  ci-linux-arm64:
-    name: Linux ARM64 CI
-    runs-on: ubuntu-latest
+  # ARM64 CI 已禁用 - 交叉编译环境不支持
+  # 如需测试 ARM64，请使用 build-linux-engine.yml 手动触发
 
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        submodules: false
-
-    - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
