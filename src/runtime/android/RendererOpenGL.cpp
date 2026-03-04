@@ -298,16 +298,14 @@ void RendererOpenGL::createModels() {
     //
     // Note: there is no texture management in this sample, so if you reuse an image be careful not
     // to load it repeatedly. Since you get a shared_ptr you can safely reuse it in many models.
-    std::shared_ptr<TextureAsset> spAndroidRobotTexture = nullptr;
     if (assetManager_ != nullptr) {
-        spAndroidRobotTexture = TextureAsset::loadAsset(assetManager_, "android_robot.png");
+        auto spAndroidRobotTexture = TextureAsset::loadAsset(assetManager_, "android_robot.png");
+        // Create a model and put it in the back of the render list.
+        models_.emplace_back(vertices, indices, spAndroidRobotTexture);
     } else {
-        // 如果没有 AssetManager，创建一个简单的白色纹理
-        spAndroidRobotTexture = std::make_shared<TextureAsset>();
+        // 如果没有 AssetManager，跳过纹理加载（示例代码）
+        aout << "Warning: No AssetManager provided, skipping texture loading" << std::endl;
     }
-
-    // Create a model and put it in the back of the render list.
-    models_.emplace_back(vertices, indices, spAndroidRobotTexture);
 }
 
 std::string RendererOpenGL::GetName() const {
