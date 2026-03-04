@@ -30,7 +30,7 @@ jobs:
       run: cmake --preset engine-windows-x64-debug
 
     - name: Build Engine
-      run: cmake --build build/engine-windows-x64-debug --config Debug --target PrismaEngine --parallel 4
+      run: cmake --build build/engine-windows-x64-debug --config Debug --target Engine --parallel 4
 
   ci-android:
     name: Android CI
