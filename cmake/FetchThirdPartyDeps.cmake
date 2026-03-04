@@ -398,11 +398,13 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
             list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
         endif()
 
-        # SDL3 后端（跨平台）
+        # SDL3 后端（跨平台，仅在 SDL3 可用时）
         set(USE_SDL3_BACKEND OFF)
-        if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-            set(USE_SDL3_BACKEND ON)
+        if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN OR PRISMA_ENABLE_RENDER_OPENGL)
+            if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+                list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+                set(USE_SDL3_BACKEND ON)
+            endif()
         endif()
 
         add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
