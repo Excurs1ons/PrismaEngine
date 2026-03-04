@@ -59,6 +59,8 @@
         "PRISMA_ENABLE_RENDER_DX12": "OFF",
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "OFF",
         "PRISMA_ENABLE_RENDER_VULKAN": "ON",
+        "PRISMA_USE_NATIVE_INPUT": "OFF",
+        "PRISMA_USE_NATIVE_AUDIO": "OFF",
         "CMAKE_FIND_PACKAGE_PREFER_CONFIG": "OFF",
         "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
         "ANDROID_NDK": "$env{ANDROID_NDK_HOME}/",
