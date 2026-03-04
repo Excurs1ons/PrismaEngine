@@ -6,25 +6,32 @@
 # ========== Prisma 聚合目标 ==========
 
 # 创建一个聚合目标，确保 CLion 能正确识别项目
-if(PRISMA_BUILD_EDITOR)
-    add_custom_target(Prisma ALL
-        DEPENDS Engine Editor Runtime Game
-    )
-else()
-    add_custom_target(Prisma ALL
-        DEPENDS Engine Runtime Game
-    )
+set(PRISMA_DEPENDENCIES Engine)
+if(TARGET Editor)
+    list(APPEND PRISMA_DEPENDENCIES Editor)
 endif()
+if(TARGET Runtime)
+    list(APPEND PRISMA_DEPENDENCIES Runtime)
+endif()
+if(TARGET Game)
+    list(APPEND PRISMA_DEPENDENCIES Game)
+endif()
+
+add_custom_target(Prisma ALL
+    DEPENDS ${PRISMA_DEPENDENCIES}
+)
 
 # ========== 资源复制目标 ==========
 
-# 为 Runtime 复制资源
-add_custom_target(copy-runtime-resources ALL
-    COMMAND ${CMAKE_COMMAND} -E echo "Copying resources to runtime directories..."
-    COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Runtime>/Assets
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Runtime>/Assets
-    COMMENT "Copying resources to runtime directories"
-)
+# 为 Runtime 复制资源（仅当 Runtime 目标存在时）
+if(TARGET Runtime)
+    add_custom_target(copy-runtime-resources ALL
+        COMMAND ${CMAKE_COMMAND} -E echo "Copying resources to runtime directories..."
+        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Runtime>/Assets
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Runtime>/Assets
+        COMMENT "Copying resources to runtime directories"
+    )
+endif()
 
 # 为 Editor 复制资源（如果 Editor 被构建）
 if(PRISMA_BUILD_EDITOR)
@@ -38,7 +45,9 @@ if(PRISMA_BUILD_EDITOR)
 endif()
 
 # 确保在构建后复制资源
-add_dependencies(copy-runtime-resources Prisma)
+if(TARGET copy-runtime-resources)
+    add_dependencies(copy-runtime-resources Prisma)
+endif()
 
 # ========== 清理目标 ==========
 
