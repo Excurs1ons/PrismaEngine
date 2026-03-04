@@ -15,7 +15,7 @@
 #include <array>
 #include <chrono>
 #include <cstring>
-#include <game-activity/game-activity.h>
+#include <game-activity.h>
 #include <set>
 #include <vector>
 #include <math.h>
