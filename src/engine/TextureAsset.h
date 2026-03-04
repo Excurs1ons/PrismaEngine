@@ -46,7 +46,9 @@ public:
     VkFormat getFormat() const { return format_; }
 
     // 获取 OpenGL 资源句柄
+#ifdef PRISMA_ENABLE_RENDER_OPENGL
     GLuint getTextureID() const { return textureID_; }
+#endif
 
     void Unload();
 protected:
@@ -62,7 +64,9 @@ protected:
     VkFormat format_ = VK_FORMAT_R8G8B8A8_SRGB;
     uint32_t mipLevels_ = 1;
 
+#ifdef PRISMA_ENABLE_RENDER_OPENGL
     // OpenGL 资源
     GLuint textureID_ = 0;
+#endif
 };
 #endif
