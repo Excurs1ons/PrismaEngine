@@ -128,6 +128,10 @@ add_library(myapplication SHARED
 # 查找 game-activity 包
 find_package(game-activity REQUIRED CONFIG)
 
+# 添加 game-activity include 目录
+target_include_directories(myapplication PRIVATE ${game-activity_INCLUDE_DIRS})
+message(STATUS "game-activity include dirs: ${game-activity_INCLUDE_DIRS}")
+
 # 查找 Vulkan 库
 find_library(vulkan-lib vulkan)
 
