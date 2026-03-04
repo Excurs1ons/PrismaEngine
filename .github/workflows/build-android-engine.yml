@@ -97,7 +97,7 @@ jobs:
         cmake -B build/engine-android-${{ matrix.abi }}-debug \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
-          -DANDROID_PLATFORM=24 \
+          -DANDROID_PLATFORM=30 \
           -DANDROID_STL=c++_shared \
           -DCMAKE_BUILD_TYPE=Debug \
           -DPRISMA_BUILD_EDITOR=OFF \
@@ -173,7 +173,7 @@ jobs:
         cmake -B build/engine-android-${{ matrix.abi }}-release \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
-          -DANDROID_PLATFORM=24 \
+          -DANDROID_PLATFORM=30 \
           -DANDROID_STL=c++_shared \
           -DCMAKE_BUILD_TYPE=Release \
           -DPRISMA_BUILD_EDITOR=OFF \
