@@ -9,7 +9,7 @@
 
 // vk-bootstrap - Vulkan 初始化库
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
-#include <vk_bootstrap.hpp>
+#include <vk_bootstrap.h>
 #endif
 
 // VMA - Vulkan Memory Allocator
@@ -17,18 +17,30 @@
 #include <vk_mem_alloc.h>
 #endif
 
-struct android_app;
+struct ANativeWindow;
 
 
 class RendererVulkan : public RendererAPI {
 public:
-    RendererVulkan(android_app *pApp);
+    RendererVulkan(ANativeWindow *window);
     virtual ~RendererVulkan();
 
     void init() override;
     void render() override;
     void onConfigChanged() override;  // 处理屏幕旋转
     void handleInput() override;     // 处理输入（包括 UI 交互）
+
+    // Native window 生命周期
+    void onNativeWindowCreated(ANativeWindow *window) override;
+    void onNativeWindowChanged(ANativeWindow *window) override;
+    void onNativeWindowDestroyed() override;
+    void onResume() override;
+    void onPause() override;
+
+    // 输入处理
+    void onKeyDown(int keyCode) override;
+    void onKeyUp(int keyCode) override;
+    void onTouchEvent(int action, float x, float y) override;
 
     // SwapChain 重建相关函数（处理屏幕旋转）
     void cleanupSwapChain();      // 清理旧的 SwapChain 相关资源

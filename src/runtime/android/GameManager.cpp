@@ -22,10 +22,24 @@ void GameManager::Initialize(android_app* pApp) {
         return;
     }
 
-    assetManager_ = pApp->activity->assetManager;
+    if (pApp != nullptr && pApp->activity != nullptr) {
+        assetManager_ = pApp->activity->assetManager;
+    }
     initialized_ = true;
 
     aout << "GameManager: Initialized" << std::endl;
+}
+
+// 新的初始化方法 - 接受 AAssetManager*
+void GameManager::InitializeWithAssetManager(AAssetManager* assetManager) {
+    if (initialized_) {
+        return;
+    }
+
+    assetManager_ = assetManager;
+    initialized_ = true;
+
+    aout << "GameManager: Initialized with AssetManager" << std::endl;
 }
 
 void GameManager::CreateScene() {
