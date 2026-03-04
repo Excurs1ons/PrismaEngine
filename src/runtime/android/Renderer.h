@@ -72,6 +72,16 @@ public:
      */
     void onTouchEvent(int action, float x, float y);
 
+    /*!
+     * Set the asset manager for loading resources
+     */
+    void setAssetManager(void *assetManager);
+
+    /*!
+     * Set the content rect (for handling status bar, notches, etc.)
+     */
+    void setContentRect(int32_t left, int32_t top, int32_t right, int32_t bottom);
+
 private:
     ANativeWindow *window_;
     std::unique_ptr<RendererAPI> impl_;

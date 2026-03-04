@@ -3,6 +3,7 @@
 #include <GLES3/gl3.h>
 #include <algorithm>
 #include <android/imagedecoder.h>
+#include <android/asset_manager.h>
 #include <game-activity/GameActivity.h>
 #include <iterator>
 #include <memory>
@@ -211,7 +212,7 @@ void RendererOpenGL::init() {
     // create the proper window surface
     EGLint format;
     eglGetConfigAttrib(display, config, EGL_NATIVE_VISUAL_ID, &format);
-    EGLSurface surface = eglCreateWindowSurface(display, config, app_->window, nullptr);
+    EGLSurface surface = eglCreateWindowSurface(display, config, window_, nullptr);
 
     // Create a GLES 3 context
     EGLint contextAttribs[] = {EGL_CONTEXT_CLIENT_VERSION, 3, EGL_NONE};
@@ -297,8 +298,13 @@ void RendererOpenGL::createModels() {
     //
     // Note: there is no texture management in this sample, so if you reuse an image be careful not
     // to load it repeatedly. Since you get a shared_ptr you can safely reuse it in many models.
-    auto assetManager = app_->activity->assetManager;
-    auto spAndroidRobotTexture = TextureAsset::loadAsset(assetManager, "android_robot.png");
+    std::shared_ptr<TextureAsset> spAndroidRobotTexture = nullptr;
+    if (assetManager_ != nullptr) {
+        spAndroidRobotTexture = TextureAsset::loadAsset(assetManager_, "android_robot.png");
+    } else {
+        // 如果没有 AssetManager，创建一个简单的白色纹理
+        spAndroidRobotTexture = std::make_shared<TextureAsset>();
+    }
 
     // Create a model and put it in the back of the render list.
     models_.emplace_back(vertices, indices, spAndroidRobotTexture);

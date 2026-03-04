@@ -42,6 +42,18 @@ public:
     void onKeyUp(int keyCode) override;
     void onTouchEvent(int action, float x, float y) override;
 
+    // 设置资源管理器和内容区域（从 Java 端调用）
+    void setAssetManager(AAssetManager *assetManager) {
+        assetManager_ = assetManager;
+    }
+
+    void setContentRect(int32_t left, int32_t top, int32_t right, int32_t bottom) {
+        contentRect_.left = left;
+        contentRect_.top = top;
+        contentRect_.right = right;
+        contentRect_.bottom = bottom;
+    }
+
     // SwapChain 重建相关函数（处理屏幕旋转）
     void cleanupSwapChain();      // 清理旧的 SwapChain 相关资源
     void recreateSwapChain();     // 重建 SwapChain 以适应新的屏幕尺寸
@@ -101,7 +113,20 @@ private:
     void updateUniformBuffer(uint32_t currentImage);
     void recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
 
-    android_app *app_;
+    // Native window 和 asset manager
+    ANativeWindow *window_ = nullptr;
+    struct AAssetManager;
+    AAssetManager *assetManager_ = nullptr;
+
+    // Content rect（用于处理刘海屏、状态栏等）
+    struct ContentRect {
+        int32_t left = 0;
+        int32_t top = 0;
+        int32_t right = 0;
+        int32_t bottom = 0;
+    };
+    ContentRect contentRect_;
+
     VulkanContext vulkanContext_;
     std::shared_ptr<Scene> scene_;  // 改为 shared_ptr，从 GameManager 获取，不随 Renderer 销毁
 
