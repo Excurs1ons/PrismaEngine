@@ -5,9 +5,9 @@
 #include "math/MathTypes.h"
 #include <memory>
 #include <vector>
-#include <game-activity/GameActivity.h>
 
 // 前向声明
+struct AAssetManager;
 struct VulkanContext;
 
 namespace PrismaEngine {
@@ -30,6 +30,9 @@ public:
 
     // 初始化游戏（只调用一次）
     void Initialize(android_app* pApp);
+
+    // 新 API 初始化方法
+    void InitializeWithAssetManager(AAssetManager* assetManager);
 
     // 创建场景（仅首次调用时创建，包含 GameObject 但不包含渲染资源）
     void CreateScene();
