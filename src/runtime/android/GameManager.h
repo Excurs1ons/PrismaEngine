@@ -5,7 +5,7 @@
 #include "math/MathTypes.h"
 #include <memory>
 #include <vector>
-#include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <game-activity/game-activity.h>
 
 // 前向声明
 struct VulkanContext;

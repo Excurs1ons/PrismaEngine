@@ -24,7 +24,7 @@
 
 extern "C" {
 
-#include <game-activity/native_app_glue/android_native_app_glue.c>
+// game-activity 库通过 CMake 链接，无需手动包含实现文件
 
 /*!
  * Handles commands sent to this Android application
@@ -109,7 +109,7 @@ void android_main(struct android_app *pApp) {
 
     // Set input event filters (set it to NULL if the app wants to process all inputs).
     // Note that for key inputs, this example uses the default default_key_filter()
-    // implemented in android_native_app_glue.c.
+    // provided by game-activity library.
     android_app_set_motion_event_filter(pApp, motion_event_filter_func);
 
     // This sets up a typical game/event loop. It will run until the app is destroyed.

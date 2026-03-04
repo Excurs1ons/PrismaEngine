@@ -2,7 +2,7 @@
 #include "../ShaderVulkan.h"
 #include "../SkyboxRenderer.h"
 #include "../AndroidOut.h"
-#include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <game-activity/game-activity.h>
 #include <array>
 #include <stdexcept>
 #include <cstring>

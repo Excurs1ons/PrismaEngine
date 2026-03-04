@@ -2,7 +2,7 @@
 #include "UIComponent.h"
 #include "ShaderVulkan.h"
 #include "AndroidOut.h"
-#include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <game-activity/game-activity.h>
 #include <android/log.h>
 #include <stdexcept>
 #include <cstring>
