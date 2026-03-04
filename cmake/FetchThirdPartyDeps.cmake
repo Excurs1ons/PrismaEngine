@@ -400,7 +400,9 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
 
         # SDL3 后端（跨平台，仅在 SDL3 可用时）
         set(USE_SDL3_BACKEND OFF)
-        if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_RENDER_VULKAN OR PRISMA_ENABLE_RENDER_OPENGL)
+        # 只在 SDL3 音频启用或 SDL3 目标存在时编译 SDL3 backend
+        # Vulkan/OpenGL 渲染不需要 SDL3（它们使用原生平台 API）
+        if(PRISMA_ENABLE_AUDIO_SDL3)
             if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
                 list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
                 set(USE_SDL3_BACKEND ON)
