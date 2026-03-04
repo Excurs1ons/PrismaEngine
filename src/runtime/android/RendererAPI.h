@@ -1,6 +1,8 @@
 #ifndef MY_APPLICATION_RENDERERAPI_H
 #define MY_APPLICATION_RENDERERAPI_H
 
+#include <cstdint>
+
 struct ANativeWindow;
 struct AAssetManager;
 

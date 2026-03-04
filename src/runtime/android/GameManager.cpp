@@ -9,6 +9,7 @@
 
 // Vulkan 前向声明
 #include <vulkan/vulkan.h>
+#include <android/native_window.h>
 
 namespace PrismaEngine {
 
@@ -17,14 +18,12 @@ GameManager& GameManager::GetInstance() {
     return instance;
 }
 
-void GameManager::Initialize(android_app* pApp) {
+void GameManager::Initialize(ANativeWindow* window, AAssetManager* assetManager) {
     if (initialized_) {
         return;
     }
 
-    if (pApp != nullptr && pApp->activity != nullptr) {
-        assetManager_ = pApp->activity->assetManager;
-    }
+    assetManager_ = assetManager;
     initialized_ = true;
 
     aout << "GameManager: Initialized" << std::endl;
