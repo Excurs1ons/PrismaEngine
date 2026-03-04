@@ -8,6 +8,7 @@
 #include <jni.h>
 #include <android/log.h>
 #include <android/native_window.h>
+#include <android/asset_manager.h>
 
 #include "AndroidOut.h"
 #include "Renderer.h"
@@ -15,7 +16,8 @@
 
 // 新的 game-activity API 头文件
 #include <game-activity/GameActivity.h>
-#include <game-text-input/gametextinput.h>
+// 注意：game-text-input 可能不可用，暂时注释掉
+// #include <game-text-input/gametextinput.h>
 
 // 日志宏
 #define LOG_TAG "PrismaEngine"
@@ -25,9 +27,6 @@
 // 全局窗口和渲染器
 static ANativeWindow *g_nativeWindow = nullptr;
 static Renderer *g_renderer = nullptr;
-
-// 输入管理
-static GameTextInput *g_textInput = nullptr;
 
 // ========== Native Window 处理 ==========
 
@@ -163,24 +162,6 @@ extern "C" void Java_com_example_myapplication_MainActivity_nativeOnTouch(
 
     if (g_renderer != nullptr) {
         g_renderer->onTouchEvent(action, x, y);
-    }
-}
-
-// ========== 文本输入 ==========
-
-extern "C" void Java_com_example_myapplication_MainActivity_nativeSetTextInput(
-    JNIEnv *env,
-    jobject thiz,
-    jboolean show) {
-
-    if (g_textInput == nullptr) {
-        g_textInput = GameTextInput_getTextInput();
-    }
-
-    if (show) {
-        GameTextInput_showSoftInput(g_textInput, 0);
-    } else {
-        GameTextInput_hideSoftInput(g_textInput);
     }
 }
 

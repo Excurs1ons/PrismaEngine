@@ -9,6 +9,7 @@
 // 前向声明
 struct AAssetManager;
 struct VulkanContext;
+struct ANativeWindow;
 
 namespace PrismaEngine {
 
@@ -28,10 +29,10 @@ class GameManager {
 public:
     static GameManager& GetInstance();
 
-    // 初始化游戏（只调用一次）
-    void Initialize(android_app* pApp);
+    // 初始化游戏（只调用一次）- 使用 ANativeWindow 和 AssetManager
+    void Initialize(ANativeWindow* window, AAssetManager* assetManager);
 
-    // 新 API 初始化方法
+    // 兼容旧 API
     void InitializeWithAssetManager(AAssetManager* assetManager);
 
     // 创建场景（仅首次调用时创建，包含 GameObject 但不包含渲染资源）
