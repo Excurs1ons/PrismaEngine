@@ -1,28 +1,18 @@
-name: Build Runtime
+name: Build Windows Runtime
 
 on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'src/runtime/**'
-      - 'src/game/**'
-      - '.github/workflows/build-runtime.yml'
+      - 'src/runtime/windows/**'
+      - '.github/workflows/build-windows-runtime.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'src/runtime/**'
-      - 'src/game/**'
-      - '.github/workflows/build-runtime.yml'
+      - 'src/runtime/windows/**'
+      - '.github/workflows/build-windows-runtime.yml'
   workflow_dispatch:
     inputs:
-      platform:
-        description: 'Platform to build'
-        required: true
-        default: 'windows'
-        type: choice
-        options:
-        - windows
-        - linux
       build_type:
         description: 'Build type'
         required: true
@@ -36,11 +26,9 @@ env:
   CMAKE_VERSION: '3.31.0'
 
 jobs:
-  # ========== Windows Runtime ==========
   build-windows-runtime:
     name: Windows Runtime
     runs-on: windows-latest
-    if: github.event.inputs.platform == 'windows'
 
     env:
       BUILD_TYPE: ${{ github.event.inputs.build_type || 'debug' }}
@@ -88,10 +76,3 @@ jobs:
         name: PrismaGame-x64-${{ env.BUILD_TYPE }}
         path: PrismaGame-x64-${{ env.BUILD_TYPE }}.zip
         retention-days: 30
-
-  # ========== Linux Runtime (可选，未来添加) ==========
-  # build-linux-runtime:
-  #   name: Linux Runtime
-  #   runs-on: ubuntu-latest
-  #   if: github.event.inputs.platform == 'linux'
-  #   ...
