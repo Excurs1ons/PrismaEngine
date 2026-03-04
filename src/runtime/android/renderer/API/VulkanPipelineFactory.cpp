@@ -1,7 +1,7 @@
 #include "VulkanPipelineFactory.h"
 #include "../../ShaderVulkan.h"
 #include "../../AndroidOut.h"
-#include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <game-activity/game-activity.h>
 #include <stdexcept>
 
 #if RENDER_API_VULKAN
