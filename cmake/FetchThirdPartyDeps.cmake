@@ -286,30 +286,30 @@ endif()
 # Vulkan-Headers - 当启用 Vulkan 渲染时
 if(PRISMA_ENABLE_RENDER_VULKAN)
     if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
-        # Android 平台使用 NDK 自带的 Vulkan，不需要额外下载
-        message(STATUS "Vulkan: 使用 Android NDK 的 Vulkan")
+        # Android 平台使用 NDK 自带的 Vulkan-Headers
+        message(STATUS "Vulkan-Headers: 使用 Android NDK 的 Vulkan")
     else()
         FetchContent_MakeAvailable(Vulkan-Headers)
         message(STATUS "Vulkan-Headers: 使用 FetchContent")
+    endif()
 
-        # VMA 需要 Vulkan-Headers
-        FetchContent_MakeAvailable(vma)
-        message(STATUS "VMA: 使用 FetchContent")
+    # VMA (Vulkan Memory Allocator) - 所有平台都需要
+    FetchContent_MakeAvailable(vma)
+    message(STATUS "VMA: 使用 FetchContent")
 
-        # vk-bootstrap 需要 Vulkan-Headers
-        FetchContent_MakeAvailable(vk-bootstrap)
-        # 确保 vk-bootstrap 使用 PIC 编译（用于共享库）
-        set_target_properties(vk-bootstrap PROPERTIES POSITION_INDEPENDENT_CODE ON)
-        message(STATUS "vk-bootstrap: 使用 FetchContent + PIC")
+    # vk-bootstrap - 所有平台都需要
+    FetchContent_MakeAvailable(vk-bootstrap)
+    # 确保 vk-bootstrap 使用 PIC 编译（用于共享库）
+    set_target_properties(vk-bootstrap PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    message(STATUS "vk-bootstrap: 使用 FetchContent + PIC")
 
-        # 确保 tinyxml2 使用 PIC 编译（处理真实目标而非别名）
-        if(TARGET tinyxml2_static)
-            set_target_properties(tinyxml2_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
-        elseif(TARGET tinyxml2)
-            get_target_property(tinyxml2_type tinyxml2 TYPE)
-            if(NOT "${tinyxml2_type}" STREQUAL "ALIAS")
-                set_target_properties(tinyxml2 PROPERTIES POSITION_INDEPENDENT_CODE ON)
-            endif()
+    # 确保 tinyxml2 使用 PIC 编译（处理真实目标而非别名）
+    if(TARGET tinyxml2_static)
+        set_target_properties(tinyxml2_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    elseif(TARGET tinyxml2)
+        get_target_property(tinyxml2_type tinyxml2 TYPE)
+        if(NOT "${tinyxml2_type}" STREQUAL "ALIAS")
+            set_target_properties(tinyxml2 PROPERTIES POSITION_INDEPENDENT_CODE ON)
         endif()
     endif()
 endif()
