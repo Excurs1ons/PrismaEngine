@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <filesystem>
-#include "Export.h"
+#include "../Export.h"
 
 namespace PrismaEngine {
     namespace Serialization {
