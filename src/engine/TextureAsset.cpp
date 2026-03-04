@@ -338,7 +338,9 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
                 texture->mipLevels_);
 
         texture->sampler_ = createTextureSampler(vulkanContext, texture->mipLevels_);
-    } else {
+    }
+#ifdef PRISMA_ENABLE_RENDER_OPENGL
+    else {
         // OpenGL 纹理创建
         glGenTextures(1, &texture->textureID_);
         glBindTexture(GL_TEXTURE_2D, texture->textureID_);
@@ -352,6 +354,7 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
                      upAndroidImageData->data());
         glGenerateMipmap(GL_TEXTURE_2D);
     }
+#endif
 
     return texture;
 }
@@ -369,9 +372,11 @@ void TextureAsset::Unload() {
         vkDestroyImage(context_->device, image_, nullptr);
         vkFreeMemory(context_->device, imageMemory_, nullptr);
     }
+#ifdef PRISMA_ENABLE_RENDER_OPENGL
     if (textureID_ != 0) {
         glDeleteTextures(1, &textureID_);
         textureID_ = 0;
     }
+#endif
 }
 #endif
