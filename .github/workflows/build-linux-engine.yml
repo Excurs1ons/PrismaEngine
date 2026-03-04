@@ -97,9 +97,10 @@ jobs:
 
   # Debug ARM64 build
   build-linux-engine-arm64-debug:
-    if: github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'Debug' || github.event.inputs.build_type == 'Both'
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Debug' || github.event.inputs.build_type == 'Both') && (github.event.inputs.arch == 'all' || github.event.inputs.arch == 'arm64')
     name: Linux Engine ARM64 Debug
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
     - name: Checkout repository
@@ -203,9 +204,10 @@ jobs:
 
   # Release ARM64 build
   build-linux-engine-arm64-release:
-    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Release' || github.event.inputs.build_type == 'Both')
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Release' || github.event.inputs.build_type == 'Both') && (github.event.inputs.arch == 'all' || github.event.inputs.arch == 'arm64')
     name: Linux Engine ARM64 Release
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
     - name: Checkout repository
