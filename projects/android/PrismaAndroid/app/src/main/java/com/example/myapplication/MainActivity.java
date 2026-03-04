@@ -1,8 +1,10 @@
 package com.example.myapplication;
 
+import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.Choreographer;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -15,6 +17,9 @@ public class MainActivity extends GameActivity {
     static {
         System.loadLibrary("myapplication");
     }
+
+    // Native window 引用
+    private long nativeWindowPtr;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,6 +36,52 @@ public class MainActivity extends GameActivity {
             hideSystemUi();
         }
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        nativeOnResume();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        nativeOnPause();
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        nativeOnStop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // nativeOnStop(); // 已在 onStop 中调用
+    }
+
+    // ========== Surface 回调 ==========
+
+    @Override
+    public void onSurfaceHolderCreated(android.view.SurfaceHolder surfaceHolder) {
+        Log.d(TAG, "Surface created");
+        nativeOnSurfaceCreated(surfaceHolder.getSurface());
+    }
+
+    @Override
+    public void onSurfaceHolderChanged(android.view.SurfaceHolder surfaceHolder, int format, int width, int height) {
+        Log.d(TAG, "Surface changed: " + width + "x" + height);
+        nativeOnSurfaceChanged(surfaceHolder.getSurface(), width, height);
+    }
+
+    @Override
+    public void onSurfaceHolderDestroyed(android.view.SurfaceHolder surfaceHolder) {
+        Log.d(TAG, "Surface destroyed");
+        nativeOnSurfaceDestroyed();
+    }
+
+    // ========== 配置方法 ==========
 
     private void configureDisplayCutout() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -63,4 +114,26 @@ public class MainActivity extends GameActivity {
                     | View.SYSTEM_UI_FLAG_FULLSCREEN);
         }
     }
+
+    // ========== Native 方法声明 ==========
+
+    private native void nativeOnSurfaceCreated(Object surface);
+
+    private native void nativeOnSurfaceChanged(Object surface, int width, int height);
+
+    private native void nativeOnSurfaceDestroyed();
+
+    private native void nativeOnStart();
+
+    private native void nativeOnResume();
+
+    private native void nativeOnPause();
+
+    private native void native void nativeOnStop();
+
+    private native void nativeOnKeyDown(int keyCode);
+
+    private native void nativeOnKeyUp(int keyCode);
+
+    private native void nativeOnTouch(int action, float x, float y);
 }
