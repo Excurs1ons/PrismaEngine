@@ -62,6 +62,11 @@ jobs:
     - name: Setup Ninja
       run: sudo apt-get install -y ninja-build
 
+    - name: Install SDL3 dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libwayland-dev libxkbcommon-dev libdrm-dev
+
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
@@ -162,6 +167,11 @@ jobs:
 
     - name: Setup Ninja
       run: sudo apt-get install -y ninja-build
+
+    - name: Install SDL3 dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libwayland-dev libxkbcommon-dev libdrm-dev
 
     - name: Cache CMake build
       uses: actions/cache@v4

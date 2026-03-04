@@ -40,6 +40,11 @@ jobs:
     - name: Setup Ninja
       run: sudo apt-get install -y ninja-build
 
+    - name: Install SDL3 dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libwayland-dev libxkbcommon-dev libdrm-dev
+
     - name: Configure
       run: cmake --preset engine-linux-x64-debug
 
