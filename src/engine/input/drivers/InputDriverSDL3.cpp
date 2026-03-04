@@ -130,11 +130,11 @@ void InputDriverSDL3::ProcessEvent(const SDL_Event& event) {
 
 void InputDriverSDL3::UpdateGamepads() {
     // SDL3 新 API: 使用 SDL_GetGamepads 获取所有连接的手柄 ID
-    SDL_JoystickID gamepadIds[MAX_GAMEPADS];
-    int gamepadCount = SDL_GetGamepads(gamepadIds, MAX_GAMEPADS);
+    int gamepadCount = 0;
+    SDL_JoystickID* gamepadIds = SDL_GetGamepads(&gamepadCount);
 
-    if (gamepadCount < 0) {
-        // 错误处理
+    if (!gamepadIds || gamepadCount <= 0) {
+        if (gamepadIds) SDL_free(gamepadIds);
         return;
     }
 
@@ -186,6 +186,8 @@ void InputDriverSDL3::UpdateGamepads() {
 
         SDL_CloseGamepad(gamepad);
     }
+
+    SDL_free(gamepadIds);
 }
 
 KeyCode InputDriverSDL3::MapSDLKey(SDL_Keycode sdlKey) const {
@@ -278,8 +280,9 @@ void InputDriverSDL3::StopTextInput() {
 
 uint32_t InputDriverSDL3::GetGamepadCount() const {
     // SDL3 新 API: 使用 SDL_GetGamepads 获取手柄数量
-    SDL_JoystickID gamepadIds[MAX_GAMEPADS];
-    int count = SDL_GetGamepads(gamepadIds, MAX_GAMEPADS);
+    int count = 0;
+    SDL_JoystickID* gamepadIds = SDL_GetGamepads(&count);
+    SDL_free(gamepadIds);
     return (count > 0) ? static_cast<uint32_t>(count) : 0;
 }
 
