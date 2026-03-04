@@ -62,23 +62,23 @@ jobs:
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
-        path: ./build/windows-x64-${{ github.event.inputs.build_type || 'Debug' }}
-        key: ${{ runner.os }}-runtime-${{ github.event.inputs.build_type || 'Debug' }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        path: ./build/runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}
+        key: ${{ runner.os }}-runtime-${{ tolower(github.event.inputs.build_type || 'Debug') }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Configure
-      run: cmake --preset windows-x64-${{ github.event.inputs.build_type || 'Debug' }}
+      run: cmake --preset runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}
 
     - name: Build Runtime
-      run: cmake --build build/windows-x64-${{ github.event.inputs.build_type || 'Debug' }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Runtime --parallel
+      run: cmake --build build/runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Runtime --parallel
 
     - name: Build Game
-      run: cmake --build build/windows-x64-${{ github.event.inputs.build_type || 'Debug' }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Game --parallel
+      run: cmake --build build/runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Game --parallel
 
     - name: Package
       run: |
         mkdir -p package-x64-${{ github.event.inputs.build_type || 'Debug' }}
-        copy build\windows-x64-${{ github.event.inputs.build_type || 'Debug' }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\Runtime.exe package-x64-${{ github.event.inputs.build_type || 'Debug' }}\
-        copy build\windows-x64-${{ github.event.inputs.build_type || 'Debug' }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\*.dll package-x64-${{ github.event.inputs.build_type || 'Debug' }}\ 2>nul || echo No DLLs
+        copy build\runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\Runtime.exe package-x64-${{ github.event.inputs.build_type || 'Debug' }}\
+        copy build\runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\*.dll package-x64-${{ github.event.inputs.build_type || 'Debug' }}\ 2>nul || echo No DLLs
         xcopy assets package-x64-${{ github.event.inputs.build_type || 'Debug' }}\assets /E /I /Y 2>nul || echo No assets
         xcopy projects package-x64-${{ github.event.inputs.build_type || 'Debug' }}\projects /E /I /Y 2>nul || echo No projects
         cd package-x64-${{ github.event.inputs.build_type || 'Debug' }}
