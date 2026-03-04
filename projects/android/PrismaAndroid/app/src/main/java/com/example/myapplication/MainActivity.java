@@ -1,25 +1,21 @@
 package com.example.myapplication;
 
-import android.content.Intent;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Choreographer;
+import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import com.google.androidgamesdk.GameActivity;
 
-public class MainActivity extends GameActivity {
+public class MainActivity extends GameActivity implements SurfaceHolder.Callback {
     private static final String TAG = "MainActivity";
 
     static {
         System.loadLibrary("myapplication");
     }
-
-    // Native window 引用
-    private long nativeWindowPtr;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +23,9 @@ public class MainActivity extends GameActivity {
 
         // 配置刘海显示模式 - 允许内容延伸到刘海区域
         configureDisplayCutout();
+
+        // 注册 Surface 回调
+        getSurfaceHolder().addCallback(this);
     }
 
     @Override
@@ -58,25 +57,26 @@ public class MainActivity extends GameActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // nativeOnStop(); // 已在 onStop 中调用
+        // 移除 Surface 回调
+        getSurfaceHolder().removeCallback(this);
     }
 
-    // ========== Surface 回调 ==========
+    // ========== SurfaceHolder.Callback 实现 ==========
 
     @Override
-    public void onSurfaceHolderCreated(android.view.SurfaceHolder surfaceHolder) {
+    public void surfaceCreated(SurfaceHolder holder) {
         Log.d(TAG, "Surface created");
-        nativeOnSurfaceCreated(surfaceHolder.getSurface());
+        nativeOnSurfaceCreated(holder.getSurface());
     }
 
     @Override
-    public void onSurfaceHolderChanged(android.view.SurfaceHolder surfaceHolder, int format, int width, int height) {
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         Log.d(TAG, "Surface changed: " + width + "x" + height);
-        nativeOnSurfaceChanged(surfaceHolder.getSurface(), width, height);
+        nativeOnSurfaceChanged(holder.getSurface(), width, height);
     }
 
     @Override
-    public void onSurfaceHolderDestroyed(android.view.SurfaceHolder surfaceHolder) {
+    public void surfaceDestroyed(SurfaceHolder holder) {
         Log.d(TAG, "Surface destroyed");
         nativeOnSurfaceDestroyed();
     }
