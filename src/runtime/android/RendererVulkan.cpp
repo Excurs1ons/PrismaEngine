@@ -23,7 +23,7 @@
 
 // vk-bootstrap 和 VMA
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
-#include <vk_bootstrap.hpp>
+#include <vk_bootstrap.h>
 #include <vk_mem_alloc.h>
 #endif
 
@@ -40,8 +40,8 @@ struct UniformBufferObject {
 };
 
 
-RendererVulkan::RendererVulkan(android_app *pApp) : app_(pApp) {
-    init();
+RendererVulkan::RendererVulkan(ANativeWindow *window) : window_(window) {
+    // 初始化将在 onNativeWindowCreated 中进行
 }
 
 RendererVulkan::~RendererVulkan() {
