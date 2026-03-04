@@ -123,7 +123,10 @@ jobs:
 
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
-      run: cmake --preset ${{ matrix.preset }}
+      run: |
+        # 清理旧的 FetchContent 缓存以确保获取最新依赖
+        rm -rf build/${{ matrix.preset }}/_deps
+        cmake --preset ${{ matrix.preset }}
 
     - name: Build Engine (Android)
       if: matrix.platform == 'android'
@@ -259,7 +262,10 @@ jobs:
 
     - name: Configure CMake (Android)
       if: matrix.platform == 'android'
-      run: cmake --preset ${{ matrix.preset }}
+      run: |
+        # 清理旧的 FetchContent 缓存以确保获取最新依赖
+        rm -rf build/${{ matrix.preset }}/_deps
+        cmake --preset ${{ matrix.preset }}
 
     - name: Build Engine (Android)
       if: matrix.platform == 'android'
