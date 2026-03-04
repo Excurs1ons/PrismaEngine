@@ -1,0 +1,85 @@
+name: CI Linux
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/ci-linux.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/ci-linux.yml'
+
+env:
+  CMAKE_VERSION: '3.31.0'
+
+jobs:
+  ci-linux-x64:
+    name: Linux x64 CI
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Ninja
+      run: sudo apt-get install -y ninja-build
+
+    - name: Configure
+      run: cmake --preset engine-linux-x64-debug
+
+    - name: Build Engine
+      run: cmake --build build/engine-linux-x64-debug --parallel 2
+
+  ci-linux-arm64:
+    name: Linux ARM64 CI
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Ninja
+      run: sudo apt-get install -y ninja-build
+
+    - name: Setup cross-compilation
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y g++-aarch64-linux-gnu
+
+    - name: Configure
+      run: |
+        cmake -B build/engine-linux-arm64-ci \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_TOOLCHAIN_FILE=cmake/arm64-linux-toolchain.cmake \
+          -DPRISMA_BUILD_EDITOR=OFF \
+          -DPRISMA_ENABLE_RENDER_VULKAN=ON \
+          -DPRISMA_ENABLE_RENDER_OPENGL=OFF \
+          -DPRISMA_USE_FETCHCONTENT=ON \
+          -G Ninja
+
+    - name: Build Engine
+      run: cmake --build build/engine-linux-arm64-ci --target Engine --parallel 2
+      continue-on-error: true
