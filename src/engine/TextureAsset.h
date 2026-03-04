@@ -4,9 +4,9 @@
 #include <memory>
 #include <string>
 #include <vulkan/vulkan.h>
-#include <GLES3/gl3.h>
 #include <glm/glm.hpp>
 #ifdef __ANDROID__
+#include <GLES3/gl3.h>
 #include <android/asset_manager.h>
 #endif
 
