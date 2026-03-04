@@ -1,7 +1,7 @@
 /*
-    Editor也相当于Game，但有自己的特殊逻辑
-    Game为Runtime执行游戏逻辑
-    Editor为Runtime执行编辑器逻辑
+    Runtime 始终动态加载 Game/Editor
+    Game 为游戏逻辑模块
+    Editor 为编辑器逻辑模块
 */
 #if defined(_WIN32) || defined(_WIN64)
 #include <Windows.h>
@@ -25,19 +25,10 @@ namespace {
     constexpr const char* GAME_LIB = "PrismaGame.dll";
 }
 
-// ============================================================================
-// 静态链接模式的外部函数声明
-// ============================================================================
-#ifdef PRISMA_STATIC_LINKED_GAME
-extern "C" {
-    bool Game_Initialize();
-    bool Editor_Initialize();
-    int Game_Run();
-    int Editor_Run();
-    void Game_Shutdown();
-    void Editor_Shutdown();
-}
-#endif
+// 函数指针类型定义
+using InitializeFunc = bool (*)();
+using RunFunc = int (*)();
+using ShutdownFunc = void (*)();
 
 // ============================================================================
 // 应用程序入口点
@@ -157,45 +148,8 @@ int main(int argc, char* argv[]) {
     setenv("PRISMA_ASSETS_PATH", assetsPath.c_str(), 1);
 #endif
 
-    int exit_code = 0;  // 提前声明，避免作用域问题
+    int exit_code = 0;
 
-#ifdef PRISMA_STATIC_LINKED_GAME
-    // 静态链接模式 - 直接调用函数
-    LOG_INFO("Runtime", "静态链接模式 - 直接调用 {0} 模块",
-             cmdParser.IsOptionSet("editor") ? "Editor" : "Game");
-
-    bool (*initialize)();
-    int (*run)();
-    void (*shutdown)();
-
-    if (cmdParser.IsOptionSet("editor")) {
-        // 如果 Editor 继承 Game，则使用 Game 的实现
-        initialize = Game_Initialize;
-        run = Game_Run;
-        shutdown = Game_Shutdown;
-        LOG_INFO("Runtime", "Editor 模式 - 使用 Game 实现");
-    } else {
-        initialize = Game_Initialize;
-        run = Game_Run;
-        shutdown = Game_Shutdown;
-        LOG_INFO("Runtime", "Game 模式");
-    }
-
-    if (!initialize()) {
-        LOG_FATAL("Runtime", "应用程序初始化失败，正在退出...");
-        return -1;
-    }
-    LOG_INFO("Runtime", "{0} 初始化成功",
-             cmdParser.IsOptionSet("editor") ? "Editor" : "Game");
-
-    exit_code = run();
-    LOG_INFO("Runtime", "{0} 运行完成，退出码: {1}",
-             cmdParser.IsOptionSet("editor") ? "Editor" : "Game", exit_code);
-
-    shutdown();
-    LOG_INFO("Runtime", "{0} 已关闭",
-             cmdParser.IsOptionSet("editor") ? "Editor" : "Game");
-#else
     // 动态库模式 - 动态加载 DLL
     LOG_INFO("Runtime", "动态库模式 - 加载 {0}", lib_name);
 
@@ -226,7 +180,6 @@ int main(int argc, char* argv[]) {
 
     shutdown();
     LOG_INFO("Runtime", "{0} 已关闭", lib_name);
-#endif
 
     Logger::GetInstance().Flush();  // 确保日志被写出
     return exit_code;
