@@ -9,7 +9,7 @@
 
 // vk-bootstrap - Vulkan 初始化库
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
-#include <vk_bootstrap/vk_bootstrap.h>
+#include <vk_bootstrap.h>
 #endif
 
 // VMA - Vulkan Memory Allocator
