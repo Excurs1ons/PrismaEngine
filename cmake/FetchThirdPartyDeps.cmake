@@ -303,6 +303,23 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     set_target_properties(vk-bootstrap PROPERTIES POSITION_INDEPENDENT_CODE ON)
     message(STATUS "vk-bootstrap: 使用 FetchContent + PIC")
 
+    # 获取 vk-bootstrap 源目录并设置为全局变量
+    get_target_property(vk_bootstrap_TYPE vk-bootstrap TYPE)
+    if("${vk_bootstrap_TYPE}" STREQUAL "ALIAS")
+        # 如果是别名，获取实际目标的源目录
+        get_target_property(vk_bootstrap_ALIAS_TARGET vk-bootstrap ALIASED_TARGET)
+        if(vk_bootstrap_ALIAS_TARGET)
+            get_target_property(vk_bootstrap_SOURCE_DIR ${vk_bootstrap_ALIAS_TARGET} SOURCE_DIR)
+        endif()
+    else()
+        get_target_property(vk_bootstrap_SOURCE_DIR vk-bootstrap SOURCE_DIR)
+    endif()
+    if(vk_bootstrap_SOURCE_DIR)
+        message(STATUS "vk-bootstrap source dir: ${vk_bootstrap_SOURCE_DIR}")
+        # 设置全局变量供 Engine 使用
+        set(vk_bootstrap_INCLUDE_DIR ${vk_bootstrap_SOURCE_DIR} CACHE PATH "vk-bootstrap include directory" FORCE)
+    endif()
+
     # 确保 tinyxml2 使用 PIC 编译（处理真实目标而非别名）
     if(TARGET tinyxml2_static)
         set_target_properties(tinyxml2_static PROPERTIES POSITION_INDEPENDENT_CODE ON)
