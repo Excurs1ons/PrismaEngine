@@ -1,7 +1,7 @@
 #pragma once
 #include "math/MathTypes.h"
 #include "InputBackend.h"
-#include <game-activity/native_app_glue/android_native_app_glue.h>
+#include <game-activity/game-activity.h>
 #include <unordered_map>
 #include <memory>
 
