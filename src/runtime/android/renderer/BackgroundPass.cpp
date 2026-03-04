@@ -2,7 +2,7 @@
 #include "../ShaderVulkan.h"
 #include "../SkyboxRenderer.h"
 #include "../AndroidOut.h"
-#include <game-activity.h>
+#include <game-activity/GameActivity.h>
 #include <array>
 #include <stdexcept>
 #include <cstring>

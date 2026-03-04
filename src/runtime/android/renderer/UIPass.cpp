@@ -2,7 +2,7 @@
 #include "UIComponent.h"
 #include "ShaderVulkan.h"
 #include "AndroidOut.h"
-#include <game-activity.h>
+#include <game-activity/GameActivity.h>
 #include <android/log.h>
 #include <stdexcept>
 #include <cstring>

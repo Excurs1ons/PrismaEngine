@@ -5,7 +5,7 @@
 #include "math/MathTypes.h"
 #include <memory>
 #include <vector>
-#include <game-activity.h>
+#include <game-activity/GameActivity.h>
 
 // 前向声明
 struct VulkanContext;
