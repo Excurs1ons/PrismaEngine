@@ -1,11 +1,17 @@
 #include "InputDevice.h"
 
-// 平台驱动
+// 平台驱动 - 使用独立的 #if 以支持多个驱动
 #if defined(_WIN32) && (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
     #include "drivers/InputDriverWin32.h"
-#elif defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
-    #include "drivers/InputDriverGameActivity.h"
-#elif defined(PRISMA_ENABLE_INPUT_SDL3)
+#endif
+
+#if defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
+    #if __has_include(<game-activity/GameActivity.h>)
+        #include "drivers/InputDriverGameActivity.h"
+    #endif
+#endif
+
+#if defined(PRISMA_ENABLE_INPUT_SDL3)
     #include "drivers/InputDriverSDL3.h"
 #endif
 
@@ -70,9 +76,11 @@ std::unique_ptr<IInputDriver> InputDevice::CreateDriver(InputDriverType type) {
     #endif
 
     #if defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
-        if (type == InputDriverType::Auto || type == InputDriverType::GameActivity) {
-            return std::unique_ptr<IInputDriver>(CreateGameActivityInputDriver());
-        }
+        #if __has_include(<game-activity/GameActivity.h>)
+            if (type == InputDriverType::Auto || type == InputDriverType::GameActivity) {
+                return std::unique_ptr<IInputDriver>(CreateGameActivityInputDriver());
+            }
+        #endif
     #endif
 
     #if defined(PRISMA_ENABLE_INPUT_SDL3)
