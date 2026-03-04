@@ -1,6 +1,7 @@
 #if defined(PRISMA_ENABLE_INPUT_SDL3)
 #include "InputDriverSDL3.h"
 #include <algorithm>
+#include <unordered_map>
 
 namespace PrismaEngine::Input {
 
@@ -79,10 +80,12 @@ void InputDriverSDL3::ProcessEvent(const SDL_Event& event) {
             if (key != KeyCode::Unknown) {
                 m_keyStates[static_cast<int>(key)] = down;
             }
+            break;
+        }
 
-            // 文本输入
-            if (down && m_textInputEnabled && event.key.text) {
-                m_textInput += event.key.text;
+        case SDL_EVENT_TEXT_INPUT: {
+            if (m_textInputEnabled && event.text.text) {
+                m_textInput += event.text.text;
             }
             break;
         }
