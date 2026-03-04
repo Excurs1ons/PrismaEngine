@@ -7,33 +7,43 @@
 #include <EGL/egl.h>
 #include <memory>
 #include <vector>
-//#include "graphic/RenderAPI.h"
 #include "Platform.h"
 #include "graphic/interfaces/RenderTypes.h"
 using namespace PrismaEngine::Graphic;
-struct android_app;
 
-class RendererOpenGL :public RendererAPI// , public PrismaEngine::Graphic::IRenderDevice
-        {
+struct ANativeWindow;
+
+class RendererOpenGL :public RendererAPI {
 public:
-    RendererOpenGL(android_app *pApp);
-    RendererOpenGL(WindowHandle *pApp);
+    RendererOpenGL(ANativeWindow *window);
     ~RendererOpenGL() override;
 
-    [[nodiscard]] std::string GetName() const;// override;
+    [[nodiscard]] std::string GetName() const;
     void init() override;
     void onConfigChanged() override;
-    bool Initialize(const DeviceDesc& desc) ;// override;
-    void Render();
-    void handleInput() override;
     void render() override;
+    void handleInput() override;
 
+    // Native window 生命周期
+    void onNativeWindowCreated(ANativeWindow *window) override;
+    void onNativeWindowChanged(ANativeWindow *window) override;
+    void onNativeWindowDestroyed() override;
+    void onResume() override;
+    void onPause() override;
+
+    // 输入处理
+    void onKeyDown(int keyCode) override;
+    void onKeyUp(int keyCode) override;
+    void onTouchEvent(int action, float x, float y) override;
+
+    bool Initialize(const DeviceDesc& desc);
+    void Render();
 
 private:
     void updateRenderArea();
     void createModels();
 
-    android_app *app_;
+    ANativeWindow *window_;
     EGLDisplay display_;
     EGLSurface surface_;
     EGLContext context_;
