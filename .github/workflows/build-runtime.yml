@@ -31,11 +31,11 @@ on:
       build_type:
         description: 'Build type'
         required: true
-        default: 'Debug'
+        default: 'debug'
         type: choice
         options:
-        - Debug
-        - Release
+        - debug
+        - release
 
 env:
   CMAKE_VERSION: '3.31.0'
@@ -47,6 +47,9 @@ jobs:
     name: Windows Runtime
     runs-on: windows-latest
     if: github.event_name != 'workflow_dispatch' || github.event.inputs.platform == 'all' || github.event.inputs.platform == 'windows'
+
+    env:
+      BUILD_TYPE: ${{ github.event.inputs.build_type || 'debug' }}
 
     steps:
     - name: Checkout
@@ -62,33 +65,34 @@ jobs:
     - name: Cache CMake build
       uses: actions/cache@v4
       with:
-        path: ./build/runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}
-        key: ${{ runner.os }}-runtime-${{ tolower(github.event.inputs.build_type || 'Debug') }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        path: ./build/runtime-windows-x64-${{ env.BUILD_TYPE }}
+        key: ${{ runner.os }}-runtime-${{ env.BUILD_TYPE }}-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Configure
-      run: cmake --preset runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}
+      run: cmake --preset runtime-windows-x64-${{ env.BUILD_TYPE }}
 
     - name: Build Runtime
-      run: cmake --build build/runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Runtime --parallel
+      run: cmake --build build/runtime-windows-x64-${{ env.BUILD_TYPE }} --config ${{ env.BUILD_TYPE == 'debug' && 'Debug' || 'Release' }} --target Runtime --parallel
 
     - name: Build Game
-      run: cmake --build build/runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }} --config ${{ github.event.inputs.build_type || 'Debug' }} --target Game --parallel
+      run: cmake --build build/runtime-windows-x64-${{ env.BUILD_TYPE }} --config ${{ env.BUILD_TYPE == 'debug' && 'Debug' || 'Release' }} --target Game --parallel
 
     - name: Package
       run: |
-        mkdir -p package-x64-${{ github.event.inputs.build_type || 'Debug' }}
-        copy build\runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\Runtime.exe package-x64-${{ github.event.inputs.build_type || 'Debug' }}\
-        copy build\runtime-windows-x64-${{ tolower(github.event.inputs.build_type || 'Debug') }}\bin\${{ github.event.inputs.build_type || 'Debug' }}\*.dll package-x64-${{ github.event.inputs.build_type || 'Debug' }}\ 2>nul || echo No DLLs
-        xcopy assets package-x64-${{ github.event.inputs.build_type || 'Debug' }}\assets /E /I /Y 2>nul || echo No assets
-        xcopy projects package-x64-${{ github.event.inputs.build_type || 'Debug' }}\projects /E /I /Y 2>nul || echo No projects
-        cd package-x64-${{ github.event.inputs.build_type || 'Debug' }}
-        7z a ../PrismaGame-x64-${{ github.event.inputs.build_type || 'Debug' }}.zip *
+        mkdir -p package-x64-${{ env.BUILD_TYPE }}
+        $cfg = "${{ env.BUILD_TYPE == 'debug' && 'Debug' || 'Release' }}"
+        copy "build\runtime-windows-x64-${{ env.BUILD_TYPE }}\bin\$cfg\Runtime.exe" "package-x64-${{ env.BUILD_TYPE }}\"
+        copy "build\runtime-windows-x64-${{ env.BUILD_TYPE }}\bin\$cfg\*.dll" "package-x64-${{ env.BUILD_TYPE }}\" 2>$null || echo No DLLs
+        xcopy assets "package-x64-${{ env.BUILD_TYPE }}\assets" /E /I /Y 2>$null || echo No assets
+        xcopy projects "package-x64-${{ env.BUILD_TYPE }}\projects" /E /I /Y 2>$null || echo No projects
+        cd package-x64-${{ env.BUILD_TYPE }}
+        7z a ../PrismaGame-x64-${{ env.BUILD_TYPE }}.zip *
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: PrismaGame-x64-${{ github.event.inputs.build_type || 'Debug' }}
-        path: PrismaGame-x64-${{ github.event.inputs.build_type || 'Debug' }}.zip
+        name: PrismaGame-x64-${{ env.BUILD_TYPE }}
+        path: PrismaGame-x64-${{ env.BUILD_TYPE }}.zip
         retention-days: 30
 
   # ========== Android Runtime ==========
@@ -99,6 +103,9 @@ jobs:
     defaults:
       run:
         working-directory: projects/android/PrismaAndroid
+
+    env:
+      BUILD_TYPE: ${{ github.event.inputs.build_type || 'debug' }}
 
     steps:
     - name: Checkout
@@ -138,18 +145,21 @@ jobs:
       uses: actions/cache@v4
       with:
         path: projects/android/PrismaAndroid/.cxx
-        key: ${{ runner.os }}-android-runtime-${{ github.event.inputs.build_type || 'debug' }}-${{ hashFiles('src/runtime/android/**', 'src/engine/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
+        key: ${{ runner.os }}-android-runtime-${{ env.BUILD_TYPE }}-${{ hashFiles('src/runtime/android/**', 'src/engine/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
 
     - name: Grant execute permission
       run: chmod +x ./gradlew
 
     - name: Build APK
-      run: ./gradlew assemble${{ github.event.inputs.build_type || 'Debug' }} --build-cache --parallel
+      run: |
+        # capitalize first letter for Gradle task
+        gradle_task=$(echo "${{ env.BUILD_TYPE }}" | sed 's/./\u&/')
+        ./gradlew assemble${gradle_task} --build-cache --parallel
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: android-runtime-${{ tolower(github.event.inputs.build_type || 'debug') }}
-        path: projects/android/PrismaAndroid/app/build/outputs/apk/${{ tolower(github.event.inputs.build_type || 'debug') }}/*.apk
+        name: android-runtime-${{ env.BUILD_TYPE }}
+        path: projects/android/PrismaAndroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/*.apk
         retention-days: 30
         if-no-files-found: ignore
