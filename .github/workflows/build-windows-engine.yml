@@ -1,0 +1,130 @@
+name: Build Windows Engine
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/engine/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/build-windows-engine.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/engine/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/build-windows-engine.yml'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+        - Debug
+        - Release
+        - Both
+
+env:
+  CMAKE_VERSION: '3.31.0'
+
+jobs:
+  # Debug build
+  build-windows-engine-debug:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'Debug' || github.event.inputs.build_type == 'Both'
+    name: Windows Engine Debug
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/engine-windows-x64-debug
+        key: ${{ runner.os }}-engine-win64-debug-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-engine-win64-debug-
+          ${{ runner.os }}-engine-
+
+    - name: Configure CMake
+      run: cmake --preset engine-windows-x64-debug
+
+    - name: Build Engine
+      run: cmake --build build/engine-windows-x64-debug --config Debug --parallel
+
+    - name: Package
+      run: |
+        mkdir -p package-win64-debug/lib/Debug
+        mkdir -p package-win64-debug/include
+        copy build\engine-windows-x64-debug\lib\Debug\PrismaEngine.lib package-win64-debug\lib\Debug\
+        xcopy src\engine\*.h package-win64-debug\include /E /I /Y 2>nul || echo No headers
+        cd package-win64-debug
+        7z a ..\PrismaEngine-win64-debug.zip *
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEngine-win64-debug
+        path: PrismaEngine-win64-debug.zip
+        retention-days: 30
+
+  # Release build
+  build-windows-engine-release:
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Release' || github.event.inputs.build_type == 'Both')
+    name: Windows Engine Release
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/engine-windows-x64-release
+        key: ${{ runner.os }}-engine-win64-rel-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-engine-win64-rel-
+          ${{ runner.os }}-engine-
+
+    - name: Configure CMake
+      run: cmake --preset engine-windows-x64-release
+
+    - name: Build Engine
+      run: cmake --build build/engine-windows-x64-release --config Release --parallel
+
+    - name: Package
+      run: |
+        mkdir -p package-win64-release/lib/Release
+        mkdir -p package-win64-release/include
+        copy build\engine-windows-x64-release\lib\Release\PrismaEngine.lib package-win64-release\lib\Release\
+        xcopy src\engine\*.h package-win64-release\include /E /I /Y 2>nul || echo No headers
+        cd package-win64-release
+        7z a ..\PrismaEngine-win64-release.zip *
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEngine-win64-release
+        path: PrismaEngine-win64-release.zip
+        retention-days: 30

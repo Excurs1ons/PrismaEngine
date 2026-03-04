@@ -1,0 +1,271 @@
+name: Build Linux Editor
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/editor/**'
+      - 'src/engine/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/build-linux-editor.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'src/editor/**'
+      - 'src/engine/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/build-linux-editor.yml'
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'Debug'
+        type: choice
+        options:
+        - Debug
+        - Release
+        - Both
+      arch:
+        description: 'Architecture to build'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+        - all
+        - x64
+        - arm64
+
+env:
+  CMAKE_VERSION: '3.31.0'
+
+jobs:
+  # Debug x64 build
+  build-linux-editor-x64-debug:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'Debug' || github.event.inputs.build_type == 'Both'
+    name: Linux Editor x64 Debug
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Ninja
+      run: sudo apt-get install -y ninja-build
+
+    - name: Install SDL3 dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libwayland-dev libxkbcommon-dev libdrm-dev
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/editor-linux-x64-debug
+        key: ${{ runner.os }}-editor-linux-x64-debug-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-editor-linux-x64-debug-
+          ${{ runner.os }}-editor-linux-
+
+    - name: Configure CMake
+      run: cmake --preset editor-linux-x64-debug
+
+    - name: Build Editor
+      run: cmake --build build/editor-linux-x64-debug --target PrismaEditor --parallel 2
+
+    - name: Package
+      run: |
+        mkdir -p package-x64-debug
+        cp build/editor-linux-x64-debug/bin/PrismaEditor package-x64-debug/
+        cp build/editor-linux-x64-debug/bin/*.so* package-x64-debug/ 2>/dev/null || echo No shared libs
+        tar czf PrismaEditor-linux-x64-debug.tar.gz -C package-x64-debug .
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEditor-linux-x64-debug
+        path: PrismaEditor-linux-x64-debug.tar.gz
+        retention-days: 30
+
+  # Debug ARM64 build
+  build-linux-editor-arm64-debug:
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.build_type == 'Debug' || github.event.inputs.build_type == 'Both'
+    name: Linux Editor ARM64 Debug
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Ninja and cross-compiler
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build g++-aarch64-linux-gnu
+
+    - name: Install SDL3 dependencies (arm64)
+      run: |
+        sudo apt-get install -y libx11-dev:arm64 libxrandr-dev:arm64 libxinerama-dev:arm64 libxcursor-dev:arm64 libxi-dev:arm64
+      continue-on-error: true
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/editor-linux-arm64-debug
+        key: ${{ runner.os }}-editor-linux-arm64-debug-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-editor-linux-arm64-debug-
+          ${{ runner.os }}-editor-linux-
+
+    - name: Configure CMake
+      run: cmake --preset editor-linux-arm64-debug
+
+    - name: Build Editor
+      run: cmake --build build/editor-linux-arm64-debug --target PrismaEditor --parallel 2
+      continue-on-error: true
+
+    - name: Package
+      if: success()
+      run: |
+        mkdir -p package-arm64-debug
+        cp build/editor-linux-arm64-debug/bin/PrismaEditor package-arm64-debug/
+        cp build/editor-linux-arm64-debug/bin/*.so* package-arm64-debug/ 2>/dev/null || echo No shared libs
+        tar czf PrismaEditor-linux-arm64-debug.tar.gz -C package-arm64-debug .
+
+    - name: Upload artifacts
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEditor-linux-arm64-debug
+        path: PrismaEditor-linux-arm64-debug.tar.gz
+        retention-days: 30
+
+  # Release x64 build
+  build-linux-editor-x64-release:
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Release' || github.event.inputs.build_type == 'Both')
+    name: Linux Editor x64 Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Ninja
+      run: sudo apt-get install -y ninja-build
+
+    - name: Install SDL3 dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libwayland-dev libxkbcommon-dev libdrm-dev
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/editor-linux-x64-release
+        key: ${{ runner.os }}-editor-linux-x64-rel-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-editor-linux-x64-rel-
+          ${{ runner.os }}-editor-linux-rel-
+
+    - name: Configure CMake
+      run: cmake --preset editor-linux-x64-release
+
+    - name: Build Editor
+      run: cmake --build build/editor-linux-x64-release --target PrismaEditor --parallel 2
+
+    - name: Package
+      run: |
+        mkdir -p package-x64-release
+        cp build/editor-linux-x64-release/bin/PrismaEditor package-x64-release/
+        cp build/editor-linux-x64-release/bin/*.so* package-x64-release/ 2>/dev/null || echo No shared libs
+        tar czf PrismaEditor-linux-x64-release.tar.gz -C package-x64-release .
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEditor-linux-x64-release
+        path: PrismaEditor-linux-x64-release.tar.gz
+        retention-days: 30
+
+  # Release ARM64 build
+  build-linux-editor-arm64-release:
+    if: github.event_name == 'workflow_dispatch' && (github.event.inputs.build_type == 'Release' || github.event.inputs.build_type == 'Both')
+    name: Linux Editor ARM64 Release
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Setup Ninja and cross-compiler
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y ninja-build g++-aarch64-linux-gnu
+
+    - name: Install SDL3 dependencies (arm64)
+      run: |
+        sudo apt-get install -y libx11-dev:arm64 libxrandr-dev:arm64 libxinerama-dev:arm64 libxcursor-dev:arm64 libxi-dev:arm64
+      continue-on-error: true
+
+    - name: Cache CMake build
+      uses: actions/cache@v4
+      with:
+        path: ./build/editor-linux-arm64-release
+        key: ${{ runner.os }}-editor-linux-arm64-rel-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        restore-keys: |
+          ${{ runner.os }}-editor-linux-arm64-rel-
+          ${{ runner.os }}-editor-linux-rel-
+
+    - name: Configure CMake
+      run: cmake --preset editor-linux-arm64-release
+
+    - name: Build Editor
+      run: cmake --build build/editor-linux-arm64-release --target PrismaEditor --parallel 2
+      continue-on-error: true
+
+    - name: Package
+      if: success()
+      run: |
+        mkdir -p package-arm64-release
+        cp build/editor-linux-arm64-release/bin/PrismaEditor package-arm64-release/
+        cp build/editor-linux-arm64-release/bin/*.so* package-arm64-release/ 2>/dev/null || echo No shared libs
+        tar czf PrismaEditor-linux-arm64-release.tar.gz -C package-arm64-release .
+
+    - name: Upload artifacts
+      if: success()
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEditor-linux-arm64-release
+        path: PrismaEditor-linux-arm64-release.tar.gz
+        retention-days: 30
