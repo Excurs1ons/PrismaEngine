@@ -64,7 +64,7 @@
         "CMAKE_FIND_PACKAGE_PREFER_CONFIG": "OFF",
         "CMAKE_TOOLCHAIN_FILE": "$env{ANDROID_NDK_HOME}/build/cmake/android.toolchain.cmake",
         "ANDROID_NDK": "$env{ANDROID_NDK_HOME}/",
-        "ANDROID_PLATFORM": "android-24",
+        "ANDROID_PLATFORM": "android-30",
         "CMAKE_ANDROID_STL_TYPE": "c++_shared"
       }
     },
