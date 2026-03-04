@@ -7,8 +7,9 @@
 
 #include <jni.h>
 #include <android/log.h>
-#include <android/native_window.h>
+#include <android/native_window_jni.h>
 #include <android/asset_manager.h>
+#include <android/asset_manager_jni.h>
 
 #include "AndroidOut.h"
 #include "Renderer.h"
@@ -18,6 +19,12 @@
 #include <game-activity/GameActivity.h>
 // 注意：game-text-input 可能不可用，暂时注释掉
 // #include <game-text-input/gametextinput.h>
+
+// JNI Surface 转换函数
+extern "C" {
+// 声明 ANativeWindow_fromSurface 函数（来自 libandroid）
+ANativeWindow* ANativeWindow_fromSurface(JNIEnv* env, jobject surface);
+}
 
 // 日志宏
 #define LOG_TAG "PrismaEngine"

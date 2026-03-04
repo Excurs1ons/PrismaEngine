@@ -12,6 +12,7 @@
 using namespace PrismaEngine::Graphic;
 
 struct ANativeWindow;
+struct AAssetManager;
 
 class RendererOpenGL :public RendererAPI {
 public:
@@ -56,7 +57,6 @@ private:
     std::vector<Model> models_;
 
     // Asset manager for loading resources
-    struct AAssetManager;
     AAssetManager *assetManager_ = nullptr;
 
 public:
