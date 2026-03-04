@@ -102,12 +102,17 @@ using int16 = signed short;
 using int32 = int;
 using int64 = long long;
 
-// 单位转换常量
-constexpr float PI = 3.14159265358979323846f;
-constexpr float TWO_PI = 2.0f * PI;
-constexpr float HALF_PI = PI * 0.5f;
-constexpr float DEG_TO_RAD = PI / 180.0f;
-constexpr float RAD_TO_DEG = 180.0f / PI;
+// 单位转换常量 - 放入命名空间避免与 GLM 等库冲突
+namespace PrismaEngine::Constants {
+    constexpr float PI = 3.14159265358979323846f;
+    constexpr float TWO_PI = 2.0f * PI;
+    constexpr float HALF_PI = PI * 0.5f;
+    constexpr float DEG_TO_RAD = PI / 180.0f;
+    constexpr float RAD_TO_DEG = 180.0f / PI;
+}
+
+// 导入到当前命名空间
+using namespace PrismaEngine::Constants;
 
 // 常用的数学函数
 template<typename T>
