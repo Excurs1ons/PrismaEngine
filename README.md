@@ -9,13 +9,20 @@
 
 ## CI/CD Status
 
-| Workflow | Description | Trigger |
-|----------|-------------|---------|
-| [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci.yml?branch=main&label=CI)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci.yml) | 快速编译检查 | Push / PR |
-| [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-engine.yml?branch=main&label=Engine)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-engine.yml) | Engine SDK 构建 | Push / Manual |
-| [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-editor.yml?branch=main&label=Editor)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-editor.yml) | Editor 构建 | Push / Manual |
-| [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-runtime.yml?branch=main&label=Runtime)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-runtime.yml) | Runtime 构建 (Win/Android) | Push / Manual |
-| [![Release](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/release.yml?branch=main&label=Release)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/release.yml) | 发布版本 | Tag (`v*.*.*`) |
+| Target | Platform | Status | Trigger |
+|--------|----------|--------|---------|
+| **CI** | Windows | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-windows.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml) | Push / PR |
+| **CI** | Android | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-android.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml) | Push / PR |
+| **CI** | Linux | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-linux.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml) | Push / PR |
+| **Engine** | Windows | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-engine.yml) | Push / Manual |
+| **Engine** | Android | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-engine.yml) | Push / Manual |
+| **Engine** | Linux | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-engine.yml) | Push / Manual |
+| **Editor** | Windows | [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-editor.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-editor.yml) | Push / Manual |
+| **Editor** | Linux | [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-editor.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-editor.yml) | Push / Manual |
+| **Runtime** | Windows | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-runtime.yml) | Push / Manual |
+| **Runtime** | Android | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-runtime.yml) | Push / Manual |
+| **Runtime** | Linux | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-runtime.yml) | Push / Manual |
+| **Release** | All | [![Release](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/release.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/release.yml) | Tag (`v*.*.*`) |
 
 [![Vulkan Backend](https://img.shields.io/badge/Vulkan%20Backend-Implemented-success.svg)](docs/VulkanIntegration.md)
 [![RenderGraph](https://img.shields.io/badge/RenderGraph-In%20Progress-orange.svg)](docs/RenderGraph_Migration_Plan.md)
