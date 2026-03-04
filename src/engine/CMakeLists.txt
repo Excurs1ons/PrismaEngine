@@ -564,8 +564,6 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
 
     # ========== Android 特定配置 ==========
     if(ANDROID)
-
-    if(ANDROID)
         # Android 平台 Vulkan 是系统库
         target_link_libraries(Engine PUBLIC vulkan)
         # Android 平台需要 game-activity_static
