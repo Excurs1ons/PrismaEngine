@@ -15,8 +15,13 @@
 #include <vector>
 
 #include <imgui.h>
-#include <imgui_impl_sdl3.h>
-#include <SDL3/SDL.h> // 包含 SDL 头文件以使用 SDL_Event
+// ImGui platform bindings - 根据渲染后端条件编译
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+    #include <imgui_impl_win32.h>
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
+    #include <imgui_impl_sdl3.h>
+    #include <SDL3/SDL.h>
+#endif
 
 using namespace PrismaEngine;
 
@@ -97,7 +102,13 @@ bool Editor::InitializeImGui()
     // 2. 初始化平台/渲染器后端
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
     renderSystem->Initialize();
-    // 初始化 SDL3
+
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+    // DirectX 12 backend
+    ImGui_ImplWin32_Init(GetModuleHandleA(NULL));
+    ImGui_ImplWin32_NewFrame();
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
+    // SDL3 backend (Vulkan/OpenGL)
     if (!ImGui_ImplSDL3_InitForOther((SDL_Window*)m_window)) {
         LOG_ERROR("Editor", "ImGui SDL3 初始化失败");
         return false;
@@ -114,6 +125,7 @@ bool Editor::InitializeImGui()
 
         return false;
     });
+#endif
 
     // 注册渲染回调
     // 对于非Vulkan后端，使用通用的渲染回调
@@ -161,7 +173,11 @@ int Editor::Run()
         renderSystem->BeginFrame();
 
         // ImGui 新帧
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+        ImGui_ImplWin32_NewFrame();
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
         ImGui_ImplSDL3_NewFrame();
+#endif
         ImGui::NewFrame();
 
         // 构建 UI
@@ -189,7 +205,11 @@ void Editor::Shutdown()
     LOG_INFO("Editor", "正在关闭编辑器");
 
     // 清理 ImGui
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+    ImGui_ImplWin32_Shutdown();
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
     ImGui_ImplSDL3_Shutdown();
+#endif
     ImGui::DestroyContext();
 
     // 清理渲染系统
