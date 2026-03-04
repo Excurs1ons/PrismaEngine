@@ -115,30 +115,8 @@ int main(int argc, char* argv[]) {
     // 设置环境变量
     setenv("PRISMA_ASSETS_PATH", assetsPath.c_str(), 1);
 
-    int exit_code = 0;  // 提前声明，避免作用域问题
+    int exit_code = 0;
 
-#ifdef PRISMA_STATIC_LINKED_GAME
-    // 静态链接模式 - 直接调用函数
-    extern "C" {
-        bool Game_Initialize();
-        int Game_Run();
-        void Game_Shutdown();
-    }
-
-    LOG_INFO("Runtime", "静态链接模式 - 直接调用 Game 模块");
-
-    if (!Game_Initialize()) {
-        LOG_FATAL("Runtime", "应用程序初始化失败，正在退出...");
-        return -1;
-    }
-    LOG_INFO("Runtime", "Game 初始化成功");
-
-    exit_code = Game_Run();
-    LOG_INFO("Runtime", "Game 运行完成，退出码: {0}", exit_code);
-
-    Game_Shutdown();
-    LOG_INFO("Runtime", "Game 已关闭");
-#else
     // 动态库模式 - 使用 dlopen 加载 .so
     LOG_INFO("Runtime", "动态库模式 - 加载 {0}", lib_name);
 
@@ -168,7 +146,6 @@ int main(int argc, char* argv[]) {
 
     shutdown();
     LOG_INFO("Runtime", "{0} 已关闭", lib_name);
-#endif
 
     Logger::GetInstance().Flush();
     return exit_code;
