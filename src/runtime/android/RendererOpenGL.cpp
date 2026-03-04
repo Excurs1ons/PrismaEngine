@@ -3,7 +3,7 @@
 #include <GLES3/gl3.h>
 #include <algorithm>
 #include <android/imagedecoder.h>
-#include <game-activity/game-activity.h>
+#include <game-activity.h>
 #include <iterator>
 #include <memory>
 #include <sstream>

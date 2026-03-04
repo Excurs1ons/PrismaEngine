@@ -5,7 +5,7 @@
 #include "Scene.h"
 #include "GameObject.h"
 #include "AndroidOut.h"
-#include <game-activity/game-activity.h>
+#include <game-activity.h>
 #include <array>
 #include <stdexcept>
 #include <cstring>

@@ -3,7 +3,7 @@
 #include "AndroidOut.h"
 #include "RendererVulkan.h"
 #include "AndroidInputBackend.h"
-#include <game-activity/game-activity.h>
+#include <game-activity.h>
 #include <chrono>
 
 Renderer::Renderer(android_app *pApp) : app_(pApp) {

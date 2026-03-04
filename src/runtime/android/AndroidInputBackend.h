@@ -1,7 +1,7 @@
 #pragma once
 #include "math/MathTypes.h"
 #include "InputBackend.h"
-#include <game-activity/game-activity.h>
+#include <game-activity.h>
 #include <unordered_map>
 #include <memory>
 
