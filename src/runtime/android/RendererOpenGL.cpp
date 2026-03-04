@@ -88,25 +88,15 @@ static constexpr float kProjectionNearPlane = -1.f;
  */
 static constexpr float kProjectionFarPlane = 1.f;
 
-RendererOpenGL::RendererOpenGL(android_app *pApp) :
-        app_(pApp),
+RendererOpenGL::RendererOpenGL(ANativeWindow *window) :
+        window_(window),
         display_(EGL_NO_DISPLAY),
         surface_(EGL_NO_SURFACE),
         context_(EGL_NO_CONTEXT),
         width_(0),
         height_(0),
         shaderNeedsNewProjectionMatrix_(true) {
-    DeviceDesc deviceDesc = {};
-}
-RendererOpenGL::RendererOpenGL(WindowHandle *windowHandle) :
-        app_(nullptr),
-        display_(EGL_NO_DISPLAY),
-        surface_(EGL_NO_SURFACE),
-        context_(EGL_NO_CONTEXT),
-        width_(0),
-        height_(0),
-        shaderNeedsNewProjectionMatrix_(true) {
-    //Initialize();
+    // 初始化将在 onNativeWindowCreated 中进行
 }
 RendererOpenGL::~RendererOpenGL() {
     if (display_ != EGL_NO_DISPLAY) {
