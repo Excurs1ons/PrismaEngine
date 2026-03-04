@@ -65,7 +65,7 @@ jobs:
       run: |
         mkdir -p package-x64-debug
         # Copy executable
-        copy build\editor-windows-x64-debug\bin\Debug\Editor.exe package-x64-debug\
+        copy build\editor-windows-x64-debug\bin\Debug\PrismaEditor.exe package-x64-debug\
         # Copy required DLLs
         copy build\editor-windows-x64-debug\bin\Debug\*.dll package-x64-debug\ 2>nul || echo No DLLs to copy
         # Copy assets
@@ -118,7 +118,7 @@ jobs:
       run: |
         mkdir -p package-x64-release
         # Copy executable
-        copy build\editor-windows-x64-release\bin\Release\Editor.exe package-x64-release\
+        copy build\editor-windows-x64-release\bin\Release\PrismaEditor.exe package-x64-release\
         # Copy required DLLs
         copy build\editor-windows-x64-release\bin\Release\*.dll package-x64-release\ 2>nul || echo No DLLs to copy
         # Copy assets
