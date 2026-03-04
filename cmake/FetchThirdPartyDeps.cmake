@@ -285,11 +285,11 @@ endif()
 
 # Vulkan-Headers - 当启用 Vulkan 渲染时
 if(PRISMA_ENABLE_RENDER_VULKAN)
+    # 所有平台都获取 Vulkan-Headers（vk-bootstrap 需要 Vulkan::Headers 目标）
+    FetchContent_MakeAvailable(Vulkan-Headers)
     if(ANDROID OR CMAKE_SYSTEM_NAME STREQUAL "Android")
-        # Android 平台使用 NDK 自带的 Vulkan-Headers
-        message(STATUS "Vulkan-Headers: 使用 Android NDK 的 Vulkan")
+        message(STATUS "Vulkan-Headers: 使用 FetchContent (Android)")
     else()
-        FetchContent_MakeAvailable(Vulkan-Headers)
         message(STATUS "Vulkan-Headers: 使用 FetchContent")
     endif()
 
