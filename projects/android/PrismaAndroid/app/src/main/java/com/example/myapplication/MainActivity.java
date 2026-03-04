@@ -10,8 +10,29 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import com.google.androidgamesdk.GameActivity;
 
-public class MainActivity extends GameActivity implements SurfaceHolder.Callback {
+public class MainActivity extends GameActivity {
     private static final String TAG = "MainActivity";
+
+    // Surface 回调
+    private final SurfaceHolder.Callback surfaceCallback = new SurfaceHolder.Callback() {
+        @Override
+        public void surfaceCreated(SurfaceHolder holder) {
+            Log.d(TAG, "Surface created");
+            nativeOnSurfaceCreated(holder.getSurface());
+        }
+
+        @Override
+        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+            Log.d(TAG, "Surface changed: " + width + "x" + height);
+            nativeOnSurfaceChanged(holder.getSurface(), width, height);
+        }
+
+        @Override
+        public void surfaceDestroyed(SurfaceHolder holder) {
+            Log.d(TAG, "Surface destroyed");
+            nativeOnSurfaceDestroyed();
+        }
+    };
 
     static {
         System.loadLibrary("myapplication");
@@ -25,7 +46,7 @@ public class MainActivity extends GameActivity implements SurfaceHolder.Callback
         configureDisplayCutout();
 
         // 注册 Surface 回调
-        getSurfaceHolder().addCallback(this);
+        registerSurfaceHolderCallback(surfaceCallback);
     }
 
     @Override
@@ -58,27 +79,7 @@ public class MainActivity extends GameActivity implements SurfaceHolder.Callback
     protected void onDestroy() {
         super.onDestroy();
         // 移除 Surface 回调
-        getSurfaceHolder().removeCallback(this);
-    }
-
-    // ========== SurfaceHolder.Callback 实现 ==========
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder) {
-        Log.d(TAG, "Surface created");
-        nativeOnSurfaceCreated(holder.getSurface());
-    }
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-        Log.d(TAG, "Surface changed: " + width + "x" + height);
-        nativeOnSurfaceChanged(holder.getSurface(), width, height);
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
-        Log.d(TAG, "Surface destroyed");
-        nativeOnSurfaceDestroyed();
+        unregisterSurfaceHolderCallback(surfaceCallback);
     }
 
     // ========== 配置方法 ==========
