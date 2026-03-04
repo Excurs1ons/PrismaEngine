@@ -26,6 +26,20 @@ namespace {
 }
 
 // ============================================================================
+// 静态链接模式的外部函数声明
+// ============================================================================
+#ifdef PRISMA_STATIC_LINKED_GAME
+extern "C" {
+    bool Game_Initialize();
+    bool Editor_Initialize();
+    int Game_Run();
+    int Editor_Run();
+    void Game_Shutdown();
+    void Editor_Shutdown();
+}
+#endif
+
+// ============================================================================
 // 应用程序入口点
 // ============================================================================
 int main(int argc, char* argv[]) {
@@ -147,16 +161,6 @@ int main(int argc, char* argv[]) {
 
 #ifdef PRISMA_STATIC_LINKED_GAME
     // 静态链接模式 - 直接调用函数
-    // 声明静态链接的函数
-    extern "C" {
-        bool Game_Initialize();
-        bool Editor_Initialize();
-        int Game_Run();
-        int Editor_Run();
-        void Game_Shutdown();
-        void Editor_Shutdown();
-    }
-
     LOG_INFO("Runtime", "静态链接模式 - 直接调用 {0} 模块",
              cmdParser.IsOptionSet("editor") ? "Editor" : "Game");
 

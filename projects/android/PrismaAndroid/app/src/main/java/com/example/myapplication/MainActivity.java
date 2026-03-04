@@ -3,7 +3,6 @@ package com.example.myapplication;
 import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.SurfaceHolder;
 import android.view.View;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
@@ -12,27 +11,6 @@ import com.google.androidgamesdk.GameActivity;
 
 public class MainActivity extends GameActivity {
     private static final String TAG = "MainActivity";
-
-    // Surface 回调
-    private final SurfaceHolder.Callback surfaceCallback = new SurfaceHolder.Callback() {
-        @Override
-        public void surfaceCreated(SurfaceHolder holder) {
-            Log.d(TAG, "Surface created");
-            nativeOnSurfaceCreated(holder.getSurface());
-        }
-
-        @Override
-        public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-            Log.d(TAG, "Surface changed: " + width + "x" + height);
-            nativeOnSurfaceChanged(holder.getSurface(), width, height);
-        }
-
-        @Override
-        public void surfaceDestroyed(SurfaceHolder holder) {
-            Log.d(TAG, "Surface destroyed");
-            nativeOnSurfaceDestroyed();
-        }
-    };
 
     static {
         System.loadLibrary("myapplication");
@@ -44,9 +22,6 @@ public class MainActivity extends GameActivity {
 
         // 配置刘海显示模式 - 允许内容延伸到刘海区域
         configureDisplayCutout();
-
-        // 注册 Surface 回调
-        registerSurfaceHolderCallback(surfaceCallback);
     }
 
     @Override
@@ -78,8 +53,7 @@ public class MainActivity extends GameActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // 移除 Surface 回调
-        unregisterSurfaceHolderCallback(surfaceCallback);
+        nativeOnDestroy();
     }
 
     // ========== 配置方法 ==========
@@ -118,19 +92,13 @@ public class MainActivity extends GameActivity {
 
     // ========== Native 方法声明 ==========
 
-    private native void nativeOnSurfaceCreated(Object surface);
-
-    private native void nativeOnSurfaceChanged(Object surface, int width, int height);
-
-    private native void nativeOnSurfaceDestroyed();
-
-    private native void nativeOnStart();
-
     private native void nativeOnResume();
 
     private native void nativeOnPause();
 
     private native void nativeOnStop();
+
+    private native void nativeOnDestroy();
 
     private native void nativeOnKeyDown(int keyCode);
 
