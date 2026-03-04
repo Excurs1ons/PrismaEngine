@@ -11,14 +11,10 @@ AndroidInputBackend& AndroidInputBackend::GetInstance() {
     return instance;
 }
 
-void AndroidInputBackend::Initialize(android_app* app) {
-    if (app && app->window) {
-        // 获取当前窗口尺寸
-        int32_t width = ANativeWindow_getWidth(app->window);
-        int32_t height = ANativeWindow_getHeight(app->window);
-        SetScreenSize(width, height);
-        aout << "AndroidInputBackend initialized with screen: " << width << "x" << height << std::endl;
-    }
+void AndroidInputBackend::Initialize() {
+    // 初始化不再需要 android_app
+    // 屏幕尺寸将通过 JNI 回调或 Vulkan 上下文获取
+    aout << "AndroidInputBackend initialized" << std::endl;
 }
 
 void AndroidInputBackend::Update() {

@@ -52,8 +52,8 @@ class AndroidInputBackend : public IInputBackend {
 public:
     static AndroidInputBackend& GetInstance();
 
-    // 初始化
-    void Initialize(android_app* app);
+    // 初始化（不再需要 android_app，使用 GameActivity 框架）
+    void Initialize();
 
     // 每帧更新
     void Update();
