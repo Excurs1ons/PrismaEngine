@@ -14,7 +14,7 @@ using namespace PrismaEngine::Graphic;
 struct ANativeWindow;
 struct AAssetManager;
 
-class RendererOpenGL :public RendererAPI {
+class RendererOpenGL : public RendererAPI {
 public:
     RendererOpenGL(ANativeWindow *window);
     ~RendererOpenGL() override;
@@ -40,11 +40,23 @@ public:
     bool Initialize(const DeviceDesc& desc);
     void Render();
 
+    // 设置资源管理器和内容区域（从 Java 端调用）
+    void setAssetManager(AAssetManager *assetManager) override {
+        assetManager_ = assetManager;
+    }
+
+    void setContentRect(int32_t left, int32_t top, int32_t right, int32_t bottom) override {
+        contentRect_.left = left;
+        contentRect_.top = top;
+        contentRect_.right = right;
+        contentRect_.bottom = bottom;
+    }
+
 private:
     void updateRenderArea();
     void createModels();
 
-    ANativeWindow *window_;
+    ANativeWindow *window_ = nullptr;
     EGLDisplay display_;
     EGLSurface surface_;
     EGLContext context_;
@@ -59,10 +71,13 @@ private:
     // Asset manager for loading resources
     AAssetManager *assetManager_ = nullptr;
 
-public:
-    void setAssetManager(AAssetManager *assetManager) {
-        assetManager_ = assetManager;
-    }
+    // Content rect
+    struct ContentRect {
+        int32_t left = 0;
+        int32_t top = 0;
+        int32_t right = 0;
+        int32_t bottom = 0;
+    } contentRect_;
 };
 
 #endif //MY_APPLICATION_RENDEREROPENGL_H
