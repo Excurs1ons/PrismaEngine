@@ -114,6 +114,10 @@ if(LINUX)
         PlatformSDL.cpp
         input/drivers/InputDriverSDL3.cpp
     )
+    # Linux 平台添加 fPIC 编译选项 (当静态库被链接到共享库时需要)
+    target_compile_options(Engine PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-fPIC>
+    )
 endif()
 
 # Android 平台
