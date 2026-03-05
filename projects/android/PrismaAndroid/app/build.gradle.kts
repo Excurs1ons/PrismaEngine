@@ -58,26 +58,24 @@ android {
 // 获取引擎根目录（从 app 向上 6 级到 PrismaEngine 根目录）
 val engineRoot = file("../../..").absoluteFile
 
-// 复制通用引擎资源和 Android runtime 资源
+// 复制 Android runtime 资源
 tasks.register<Copy>("copyEngineRuntimeAssets") {
     description = "复制引擎资源到 assets"
     group = "internal"
 
-    // 复制 common 着色器（GLSL）
-    from("$engineRoot/resources/common/shaders/glsl") {
+    // 复制 Android 着色器
+    from("$engineRoot/resources/android/shaders") {
         into("shaders")
     }
-    // 复制 common 纹理
-    from("$engineRoot/resources/common/textures") {
+    // 复制 Android 纹理
+    from("$engineRoot/resources/android/textures") {
         into("textures")
-    }
-    // 复制 Android 特定资源（图标等）
-    from("$engineRoot/resources/runtime/android") {
-        exclude("shaders")
-        exclude("textures")
     }
 
     into("src/main/assets")
+
+    // 忽略空目录
+    includeEmptyDirs = false
 }
 
 // 在预构建时执行复制
