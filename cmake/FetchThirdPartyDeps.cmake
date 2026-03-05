@@ -322,7 +322,11 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     if(vk_bootstrap_SOURCE_DIR)
         message(STATUS "vk-bootstrap source dir: ${vk_bootstrap_SOURCE_DIR}")
         # 设置全局变量供 Engine 使用
+        # vk-bootstrap 的头文件通常在 src 目录下
         set(vk_bootstrap_INCLUDE_DIR ${vk_bootstrap_SOURCE_DIR} CACHE PATH "vk-bootstrap include directory" FORCE)
+        if(EXISTS "${vk_bootstrap_SOURCE_DIR}/src")
+            set(vk_bootstrap_INCLUDE_DIR "${vk_bootstrap_SOURCE_DIR};${vk_bootstrap_SOURCE_DIR}/src" CACHE PATH "vk-bootstrap include directory" FORCE)
+        endif()
     endif()
 
     # 确保 tinyxml2 使用 PIC 编译（处理真实目标而非别名）
