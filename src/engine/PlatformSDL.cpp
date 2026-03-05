@@ -38,7 +38,7 @@ WindowHandle Platform::s_currentWindow = nullptr;
 // SDL 平台静态变量
 // ------------------------------------------------------------
 static bool s_sdlInitialized = false;
-static Platform::EventCallback s_eventCallback = nullptr;
+Platform::EventCallback Platform::s_eventCallback = nullptr;
 
 // ------------------------------------------------------------
 // 平台生命周期管理
