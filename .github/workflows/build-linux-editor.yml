@@ -74,9 +74,9 @@ jobs:
       with:
         path: ./build/editor-linux-x64-debug
         key: ${{ runner.os }}-editor-linux-x64-debug-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-editor-linux-x64-debug-
-          ${{ runner.os }}-editor-linux-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/editor-linux-x64-debug/_deps/stb
 
     - name: Configure CMake
       run: cmake --preset editor-linux-x64-debug
@@ -132,9 +132,9 @@ jobs:
       with:
         path: ./build/editor-linux-arm64-debug
         key: ${{ runner.os }}-editor-linux-arm64-debug-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-editor-linux-arm64-debug-
-          ${{ runner.os }}-editor-linux-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/editor-linux-arm64-debug/_deps/stb
 
     - name: Configure CMake
       run: cmake --preset editor-linux-arm64-debug
@@ -190,9 +190,9 @@ jobs:
       with:
         path: ./build/editor-linux-x64-release
         key: ${{ runner.os }}-editor-linux-x64-rel-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-editor-linux-x64-rel-
-          ${{ runner.os }}-editor-linux-rel-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/editor-linux-x64-release/_deps/stb
 
     - name: Configure CMake
       run: cmake --preset editor-linux-x64-release
@@ -248,9 +248,9 @@ jobs:
       with:
         path: ./build/editor-linux-arm64-release
         key: ${{ runner.os }}-editor-linux-arm64-rel-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-editor-linux-arm64-rel-
-          ${{ runner.os }}-editor-linux-rel-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/editor-linux-arm64-release/_deps/stb
 
     - name: Configure CMake
       run: cmake --preset editor-linux-arm64-release
