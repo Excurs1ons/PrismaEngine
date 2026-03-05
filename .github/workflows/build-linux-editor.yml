@@ -89,6 +89,7 @@ jobs:
         mkdir -p package-x64-debug
         cp build/editor-linux-x64-debug/bin/PrismaEditor package-x64-debug/
         cp build/editor-linux-x64-debug/bin/*.so* package-x64-debug/ 2>/dev/null || echo No shared libs
+        cp -r assets package-x64-debug/assets 2>/dev/null || echo No assets
         tar czf PrismaEditor-linux-x64-debug.tar.gz -C package-x64-debug .
 
     - name: Upload artifacts
@@ -148,6 +149,7 @@ jobs:
         mkdir -p package-arm64-debug
         cp build/editor-linux-arm64-debug/bin/PrismaEditor package-arm64-debug/
         cp build/editor-linux-arm64-debug/bin/*.so* package-arm64-debug/ 2>/dev/null || echo No shared libs
+        cp -r assets package-arm64-debug/assets 2>/dev/null || echo No assets
         tar czf PrismaEditor-linux-arm64-debug.tar.gz -C package-arm64-debug .
 
     - name: Upload artifacts
@@ -203,6 +205,7 @@ jobs:
         mkdir -p package-x64-release
         cp build/editor-linux-x64-release/bin/PrismaEditor package-x64-release/
         cp build/editor-linux-x64-release/bin/*.so* package-x64-release/ 2>/dev/null || echo No shared libs
+        cp -r assets package-x64-release/assets 2>/dev/null || echo No assets
         tar czf PrismaEditor-linux-x64-release.tar.gz -C package-x64-release .
 
     - name: Upload artifacts
@@ -262,6 +265,7 @@ jobs:
         mkdir -p package-arm64-release
         cp build/editor-linux-arm64-release/bin/PrismaEditor package-arm64-release/
         cp build/editor-linux-arm64-release/bin/*.so* package-arm64-release/ 2>/dev/null || echo No shared libs
+        cp -r assets package-arm64-release/assets 2>/dev/null || echo No assets
         tar czf PrismaEditor-linux-arm64-release.tar.gz -C package-arm64-release .
 
     - name: Upload artifacts
