@@ -54,7 +54,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ./build/engine-windows-x64-debug
-        key: ${{ runner.os }}-engine-win64-debug-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        key: ${{ runner.os }}-engine-win64-debug-${{ hashFiles('src/engine/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
         restore-keys: |
           ${{ runner.os }}-engine-win64-debug-
           ${{ runner.os }}-engine-
@@ -102,7 +102,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ./build/engine-windows-x64-release
-        key: ${{ runner.os }}-engine-win64-rel-${{ hashFiles('src/engine/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        key: ${{ runner.os }}-engine-win64-rel-${{ hashFiles('src/engine/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
         restore-keys: |
           ${{ runner.os }}-engine-win64-rel-
           ${{ runner.os }}-engine-
