@@ -30,9 +30,6 @@
 #include "2d/CanvasComponent.h"
 #include "2d/ButtonComponent.h"
 
-// 日志宏
-#define aout android::base::LogMessage(android::base::DEFAULT, "RendererVulkan")
-
 struct UniformBufferObject {
     alignas(16) Matrix4 model;
     alignas(16) Matrix4 view;
