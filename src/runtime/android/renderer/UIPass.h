@@ -5,6 +5,9 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <game-activity/GameActivity.h>
+
+struct AAssetManager;
+
 namespace PrismaEngine {
 
 class UIComponent;
@@ -59,8 +62,8 @@ public:
     /// @brief 设置 SwapChain 扩展信息（用于 viewport/scissor）
     void setSwapChainExtent(VkExtent2D extent);
 
-    /// @brief 设置 android_app（用于加载着色器）
-    void setAndroidApp(android_app* app);
+    /// @brief 设置 AssetManager（用于加载着色器）
+    void setAssetManager(AAssetManager* assetManager);
 
     /// @brief 设置物理设备（用于查找内存类型）
     void setPhysicalDevice(VkPhysicalDevice physicalDevice);
@@ -107,7 +110,7 @@ private:
 
     // 配置信息
     VkExtent2D swapChainExtent_{};  // SwapChain 扩展
-    android_app* app_ = nullptr;  // android_app（用于加载着色器）
+    AAssetManager* assetManager_ = nullptr;  // AssetManager（用于加载着色器）
     uint32_t currentFrame_ = 0;  // 当前帧索引
     VkDevice device_ = VK_NULL_HANDLE;  // Vulkan 设备（用于更新顶点缓冲区）
     VkPhysicalDevice physicalDevice_ = VK_NULL_HANDLE;  // 物理设备（用于查找内存类型）
