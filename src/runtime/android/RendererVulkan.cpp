@@ -1735,7 +1735,7 @@ bool RendererVulkan::createSwapChainWithVkBootstrap(uint32_t width, uint32_t hei
     }
 
     vkb::SwapchainBuilder swapchainBuilder(vkBootstrapDevice_);
-    swapchainBuilder.set_desired_extent({width, height});
+    swapchainBuilder.set_desired_extent(width, height);
     swapchainBuilder.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR); // VSYNC
     swapchainBuilder.set_desired_format({VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
 
