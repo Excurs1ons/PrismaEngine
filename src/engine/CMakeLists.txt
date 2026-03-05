@@ -558,8 +558,6 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     if(ANDROID)
         # Android 平台 Vulkan 是系统库
         target_link_libraries(Engine PUBLIC vulkan)
-        # Android 平台需要 game-activity_static
-        target_link_libraries(Engine PUBLIC game-activity_static)
     else()
         # Windows 平台: 使用 FetchContent 提供的 Vulkan-Headers
         # 注意: Vulkan-Headers 只提供头文件，运行时需要 Vulkan SDK 或驱动

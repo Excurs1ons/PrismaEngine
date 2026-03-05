@@ -94,9 +94,6 @@ message(STATUS "Runtime source: ${RUNTIME_SOURCE_DIR}")
 
 # 创建 myapplication.so
 add_library(myapplication SHARED
-        # GameActivity JNI 实现（必须在 AndroidRuntime.cpp 之前）
-        ${PRISMA_ENGINE_ROOT}/src/engine/vendor/android/game-activity/include/game-activity/GameActivity.cpp
-
         # Runtime 文件（使用完整路径）
         ${RUNTIME_SOURCE_DIR}/AndroidRuntime.cpp
 
