@@ -279,6 +279,11 @@ if(PRISMA_BUILD_EDITOR OR ((PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_ENABLE_INPUT_SDL3
         set(SDL_DISABLE_UNINSTALL ON CACHE BOOL "Disable SDL3 uninstall" FORCE)
         set(SDL_TESTS_LIBRARY OFF CACHE BOOL "Build SDL3 test library" FORCE)
 
+        # 为 Linux/Android 平台启用 PIC 编译 (当静态库被链接到共享库时需要)
+        if(UNIX AND NOT APPLE)
+            set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "Build with PIC" FORCE)
+        endif()
+
         FetchContent_MakeAvailable(SDL3)
         message(STATUS "SDL3: 使用 FetchContent")
 endif()
