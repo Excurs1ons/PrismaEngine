@@ -23,7 +23,7 @@
 
 // vk-bootstrap 和 VMA
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
-#include <vk_bootstrap.h>
+#include <vk_bootstrap.hpp>
 #include <vk_mem_alloc.h>
 #endif
 
