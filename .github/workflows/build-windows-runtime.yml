@@ -67,7 +67,7 @@ jobs:
       run: |
         mkdir -p package-x64-${{ env.BUILD_TYPE }}
         $cfg = "${{ env.BUILD_TYPE == 'debug' && 'Debug' || 'Release' }}"
-        copy "build\runtime-windows-x64-${{ env.BUILD_TYPE }}\bin\$cfg\Runtime.exe" "package-x64-${{ env.BUILD_TYPE }}\"
+        copy "build\runtime-windows-x64-${{ env.BUILD_TYPE }}\bin\$cfg\PrismaRuntime.exe" "package-x64-${{ env.BUILD_TYPE }}\"
         copy "build\runtime-windows-x64-${{ env.BUILD_TYPE }}\bin\$cfg\*.dll" "package-x64-${{ env.BUILD_TYPE }}\" 2>$null || echo No DLLs
         xcopy assets "package-x64-${{ env.BUILD_TYPE }}\assets" /E /I /Y 2>$null || echo No assets
         xcopy projects "package-x64-${{ env.BUILD_TYPE }}\projects" /E /I /Y 2>$null || echo No projects
