@@ -51,7 +51,8 @@ jobs:
         key: ${{ runner.os }}-runtime-${{ env.BUILD_TYPE }}-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Clean old dependencies cache
-      run: rm -rf build/runtime-windows-x64-${{ env.BUILD_TYPE }}/_deps/stb
+      shell: pwsh
+      run: Remove-Item -Path "build\runtime-windows-x64-${{ env.BUILD_TYPE }}\_deps\stb" -Recurse -Force -ErrorAction SilentlyContinue
 
     - name: Configure
       run: cmake --preset runtime-windows-x64-${{ env.BUILD_TYPE }}

@@ -59,7 +59,8 @@ jobs:
         key: ${{ runner.os }}-editor-win64-debug-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Clean old dependencies cache
-      run: rm -rf build/editor-windows-x64-debug/_deps/stb
+      shell: pwsh
+      run: Remove-Item -Path "build\editor-windows-x64-debug\_deps\stb" -Recurse -Force -ErrorAction SilentlyContinue
 
     - name: Configure CMake
       run: cmake --preset editor-windows-x64-debug
@@ -107,7 +108,8 @@ jobs:
         key: ${{ runner.os }}-editor-win64-rel-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Clean old dependencies cache
-      run: rm -rf build/editor-windows-x64-release/_deps/stb
+      shell: pwsh
+      run: Remove-Item -Path "build\editor-windows-x64-release\_deps\stb" -Recurse -Force -ErrorAction SilentlyContinue
 
     - name: Configure CMake
       run: cmake --preset editor-windows-x64-release
