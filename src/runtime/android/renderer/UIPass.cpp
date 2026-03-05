@@ -24,8 +24,8 @@ void UIPass::setSwapChainExtent(VkExtent2D extent) {
     swapChainExtent_ = extent;
 }
 
-void UIPass::setAndroidApp(android_app* app) {
-    app_ = app;
+void UIPass::setAssetManager(AAssetManager* assetManager) {
+    assetManager_ = assetManager;
 }
 
 void UIPass::setPhysicalDevice(VkPhysicalDevice physicalDevice) {
@@ -79,14 +79,14 @@ void UIPass::cleanup(VkDevice device) {
 // ============================================================
 
 void UIPass::createPipeline(VkDevice device, VkRenderPass renderPass) {
-    if (app_ == nullptr) {
-        throw std::runtime_error("UIPass::createPipeline: android_app not set!");
+    if (assetManager_ == nullptr) {
+        throw std::runtime_error("UIPass::createPipeline: AAssetManager not set!");
     }
 
     // 加载 UI 着色器
     aout << "正在加载 UI shader..." << std::endl;
-    auto vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/ui.vert.spv");
-    auto fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/ui.frag.spv");
+    auto vertShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/ui.vert.spv");
+    auto fragShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/ui.frag.spv");
 
     if (vertShaderCode.empty() || fragShaderCode.empty()) {
         throw std::runtime_error("Failed to load UI shader files!");
@@ -290,7 +290,7 @@ uint32_t UIPass::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags prope
 
 void UIPass::createVertexBuffer(VkDevice device) {
     // 首次创建时分配缓冲区
-    // 实际数据在 record() 时更新
+    // 实际数据 在 record() 时更新
     VkDeviceSize bufferSize = sizeof(UIVertex) * 10000;  // 预分配足够空间
 
     VkBufferCreateInfo bufferInfo{};

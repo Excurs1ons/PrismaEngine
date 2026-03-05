@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 
 // 前向声明
-struct android_app;
+struct AAssetManager;
 
 class MeshRenderer;
 namespace PrismaEngine{
@@ -115,14 +115,15 @@ public:
     void setSwapChainExtent(VkExtent2D extent);
 
     /**
-     * 设置 android_app（用于加载着色器）
+     * 设置 AAssetManager（用于加载着色器）
      */
-    void setAndroidApp(android_app* app);
+    void setAssetManager(AAssetManager* assetManager);
 
     /**
      * 设置 Scene（用于渲染时获取游戏对象）
      */
     void setScene(Scene* scene);
+
 
     /**
      * 更新 Uniform Buffer
@@ -155,9 +156,9 @@ private:
     uint32_t currentFrame_ = 0;  // 当前帧索引
 
     // 配置信息
-    VkExtent2D swapChainExtent_{};  // SwapChain 扩展
-    android_app* app_ = nullptr;    // android_app（用于加载着色器）
-    Scene* scene_ = nullptr;        // Scene（用于渲染时获取游戏对象）
+    VkExtent2D swapChainExtent_{};    // SwapChain 扩展
+    AAssetManager* assetManager_ = nullptr;  // AAssetManager（用于加载着色器）
+    Scene* scene_ = nullptr;          // Scene（用于渲染时获取游戏对象）
 };
 
 #endif //PRISMA_ANDROID_OPAQUE_PASS_H
