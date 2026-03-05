@@ -7,7 +7,7 @@
 #if RENDER_API_VULKAN
 
 std::vector<uint32_t> VulkanPipelineFactory::loadShader(const std::string& path) {
-    return ShaderVulkan::loadShader(app_->activity->assetManager, path.c_str());
+    return ShaderVulkan::loadShader(assetManager_, path.c_str());
 }
 
 VkShaderModule VulkanPipelineFactory::createShaderModule(VkDevice device, const std::vector<uint32_t>& code) {

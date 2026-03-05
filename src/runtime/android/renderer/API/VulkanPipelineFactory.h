@@ -8,6 +8,8 @@
 #include <vulkan/vulkan.h>
 #include <vector>
 
+struct AAssetManager;
+
 /**
  * @brief Vulkan Graphics Pipeline 实现
  */
@@ -41,7 +43,7 @@ private:
  */
 class VulkanPipelineFactory : public PipelineFactory {
 public:
-    explicit VulkanPipelineFactory(android_app* app) : app_(app) {}
+    explicit VulkanPipelineFactory(AAssetManager* assetManager) : assetManager_(assetManager) {}
 
     GraphicsPipeline* createGraphicsPipeline(
         const GraphicsPipelineConfig& config,
@@ -52,7 +54,7 @@ public:
     void destroyPipeline(GraphicsPipeline* pipeline, NativeDevice device) override;
 
 private:
-    android_app* app_;
+    AAssetManager* assetManager_;
 
     // 辅助方法：创建着色器模块
     VkShaderModule createShaderModule(VkDevice device, const std::vector<uint32_t>& code);
