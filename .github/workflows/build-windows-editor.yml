@@ -57,9 +57,9 @@ jobs:
       with:
         path: ./build/editor-windows-x64-debug
         key: ${{ runner.os }}-editor-win64-debug-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-editor-win64-debug-
-          ${{ runner.os }}-editor-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/editor-windows-x64-debug/_deps/stb
 
     - name: Configure CMake
       run: cmake --preset editor-windows-x64-debug
@@ -105,9 +105,9 @@ jobs:
       with:
         path: ./build/editor-windows-x64-release
         key: ${{ runner.os }}-editor-win64-rel-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-editor-win64-rel-
-          ${{ runner.os }}-editor-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/editor-windows-x64-release/_deps/stb
 
     - name: Configure CMake
       run: cmake --preset editor-windows-x64-release

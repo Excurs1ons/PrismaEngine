@@ -66,6 +66,9 @@ jobs:
         path: ./build/runtime-linux-x64-${{ env.BUILD_TYPE }}
         key: ${{ runner.os }}-runtime-linux-${{ env.BUILD_TYPE }}-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
+    - name: Clean old dependencies cache
+      run: rm -rf build/runtime-linux-x64-${{ env.BUILD_TYPE }}/_deps/stb
+
     - name: Configure
       run: cmake --preset runtime-linux-x64-${{ env.BUILD_TYPE }}
 

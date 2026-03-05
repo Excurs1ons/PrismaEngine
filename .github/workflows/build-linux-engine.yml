@@ -72,9 +72,9 @@ jobs:
       with:
         path: ./build/engine-linux-x64-debug
         key: ${{ runner.os }}-engine-linux-x64-debug-${{ hashFiles('src/engine/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-engine-linux-x64-debug-
-          ${{ runner.os }}-engine-linux-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/engine-linux-x64-debug/_deps/stb
 
     - name: Configure CMake
       run: cmake --preset engine-linux-x64-debug
@@ -123,9 +123,6 @@ jobs:
       with:
         path: ./build/engine-linux-arm64-debug
         key: ${{ runner.os }}-engine-linux-arm64-debug-${{ hashFiles('src/engine/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-engine-linux-arm64-debug-
-          ${{ runner.os }}-engine-linux-
 
     - name: Configure CMake
       run: cmake --preset engine-linux-arm64-debug
@@ -179,9 +176,6 @@ jobs:
       with:
         path: ./build/engine-linux-x64-release
         key: ${{ runner.os }}-engine-linux-x64-rel-${{ hashFiles('src/engine/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-engine-linux-x64-rel-
-          ${{ runner.os }}-engine-linux-rel-
 
     - name: Configure CMake
       run: cmake --preset engine-linux-x64-release
@@ -230,9 +224,6 @@ jobs:
       with:
         path: ./build/engine-linux-arm64-release
         key: ${{ runner.os }}-engine-linux-arm64-rel-${{ hashFiles('src/engine/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
-        restore-keys: |
-          ${{ runner.os }}-engine-linux-arm64-rel-
-          ${{ runner.os }}-engine-linux-rel-
 
     - name: Configure CMake
       run: cmake --preset engine-linux-arm64-release

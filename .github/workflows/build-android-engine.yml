@@ -87,13 +87,12 @@ jobs:
       with:
         path: ./build/engine-android-${{ matrix.abi }}-debug
         key: ${{ runner.os }}-engine-android-${{ matrix.abi }}-debug-${{ hashFiles('src/engine/**', 'projects/android/Engine.cmake', 'cmake/**') }}
-        restore-keys: |
-          ${{ runner.os }}-engine-android-${{ matrix.abi }}-debug-
-          ${{ runner.os }}-engine-android-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/engine-android-${{ matrix.abi }}-debug/_deps/stb
 
     - name: Configure CMake
       run: |
-        rm -rf build/engine-android-${{ matrix.abi }}-debug/_deps
         cmake -B build/engine-android-${{ matrix.abi }}-debug \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
@@ -163,13 +162,12 @@ jobs:
       with:
         path: ./build/engine-android-${{ matrix.abi }}-release
         key: ${{ runner.os }}-engine-android-rel-${{ matrix.abi }}-${{ hashFiles('src/engine/**', 'projects/android/Engine.cmake', 'cmake/**') }}
-        restore-keys: |
-          ${{ runner.os }}-engine-android-rel-${{ matrix.abi }}-
-          ${{ runner.os }}-engine-android-rel-
+
+    - name: Clean old dependencies cache
+      run: rm -rf build/engine-android-${{ matrix.abi }}-release/_deps/stb
 
     - name: Configure CMake
       run: |
-        rm -rf build/engine-android-${{ matrix.abi }}-release/_deps
         cmake -B build/engine-android-${{ matrix.abi }}-release \
           -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
           -DANDROID_ABI=${{ matrix.abi }} \
