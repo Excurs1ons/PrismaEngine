@@ -26,7 +26,7 @@ set(PRISMA_DEP_NLOHMANN_JSON_VERSION "v3.12.0")
 # stb - 图像加载库 (header-only)
 # GitHub: https://github.com/nothings/stb
 # 锁定到具体 commit 而非 master 分支
-set(PRISMA_DEP_STB_VERSION "f1c79c02822848a9bed4315b12c8c8f3761e1296")  # 2024-01-15
+set(PRISMA_DEP_STB_VERSION "2fb8c5a3deb2110c89669f8d6f36e5833b556b44")  # 2025-01-24
 
 # tinyxml2 - XML解析库 (用于 TMX 地图格式)
 # GitHub: https://github.com/leethomason/tinyxml2
