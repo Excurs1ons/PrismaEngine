@@ -6,6 +6,7 @@
 #include "VulkanContext.h"
 #include "renderer/RenderPipeline.h"
 #include <memory>
+#include <chrono>
 
 // vk-bootstrap - Vulkan 初始化库
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
@@ -18,6 +19,7 @@
 #endif
 
 struct ANativeWindow;
+struct AAssetManager;
 
 
 class RendererVulkan : public RendererAPI {
@@ -43,11 +45,11 @@ public:
     void onTouchEvent(int action, float x, float y) override;
 
     // 设置资源管理器和内容区域（从 Java 端调用）
-    void setAssetManager(AAssetManager *assetManager) {
+    void setAssetManager(AAssetManager *assetManager) override {
         assetManager_ = assetManager;
     }
 
-    void setContentRect(int32_t left, int32_t top, int32_t right, int32_t bottom) {
+    void setContentRect(int32_t left, int32_t top, int32_t right, int32_t bottom) override {
         contentRect_.left = left;
         contentRect_.top = top;
         contentRect_.right = right;
@@ -115,7 +117,6 @@ private:
 
     // Native window 和 asset manager
     ANativeWindow *window_ = nullptr;
-    struct AAssetManager;
     AAssetManager *assetManager_ = nullptr;
 
     // Content rect（用于处理刘海屏、状态栏等）
