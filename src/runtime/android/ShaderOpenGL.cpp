@@ -140,8 +140,9 @@ void ShaderOpenGL::drawModel(const Model &model) const {
     glEnableVertexAttribArray(uv_);
 
     // Setup the texture
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, model.getTexture().getTextureID());
+    // TODO: Android Runtime texture system needs refactoring to work with new engine architecture
+    // glActiveTexture(GL_TEXTURE0);
+    // glBindTexture(GL_TEXTURE_2D, model.getTexture().getTextureID());
 
     // Draw as indexed triangles
     glDrawElements(GL_TRIANGLES, model.getIndexCount(), GL_UNSIGNED_SHORT, model.getIndexData());
