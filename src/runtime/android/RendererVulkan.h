@@ -9,7 +9,7 @@
 
 // vk-bootstrap - Vulkan 初始化库
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
-#include <VkBootstrap.h>
+#include <vk_bootstrap.h>
 #endif
 
 // VMA - Vulkan Memory Allocator
@@ -18,7 +18,6 @@
 #endif
 
 struct ANativeWindow;
-struct AAssetManager;
 
 
 class RendererVulkan : public RendererAPI {
@@ -116,6 +115,7 @@ private:
 
     // Native window 和 asset manager
     ANativeWindow *window_ = nullptr;
+    struct AAssetManager;
     AAssetManager *assetManager_ = nullptr;
 
     // Content rect（用于处理刘海屏、状态栏等）
