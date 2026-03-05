@@ -7,7 +7,7 @@
 #include "math/MathTypes.h"
 using namespace PrismaEngine;
 // 前向声明
-struct AAssetManager;
+struct android_app;
 class SkyboxRenderer;
 
 // Skybox专用的UBO（不需要model矩阵）
@@ -122,9 +122,9 @@ public:
     void setSwapChainExtent(VkExtent2D extent);
 
     /**
-     * 设置 AAssetManager（用于加载着色器）
+     * 设置 android_app（用于加载着色器）
      */
-    void setAssetManager(AAssetManager* assetManager);
+    void setAndroidApp(android_app* app);
 
     /**
      * 设置当前渲染变换（用于 viewport 计算）
@@ -154,7 +154,7 @@ private:
 
     // 配置信息
     VkExtent2D swapChainExtent_{};           // SwapChain 扩展
-    AAssetManager* assetManager_ = nullptr;             // AAssetManager（用于加载着色器）
+    android_app* app_ = nullptr;             // android_app（用于加载着色器）
     VkSurfaceTransformFlagBitsKHR currentTransform_ = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;  // 当前变换（用于计算宽高比）
 };
 
