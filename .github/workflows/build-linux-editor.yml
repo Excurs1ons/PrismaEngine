@@ -73,7 +73,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ./build/editor-linux-x64-debug
-        key: ${{ runner.os }}-editor-linux-x64-debug-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        key: ${{ runner.os }}-editor-linux-x64-debug-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
         restore-keys: |
           ${{ runner.os }}-editor-linux-x64-debug-
           ${{ runner.os }}-editor-linux-
@@ -131,7 +131,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ./build/editor-linux-arm64-debug
-        key: ${{ runner.os }}-editor-linux-arm64-debug-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        key: ${{ runner.os }}-editor-linux-arm64-debug-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
         restore-keys: |
           ${{ runner.os }}-editor-linux-arm64-debug-
           ${{ runner.os }}-editor-linux-
@@ -189,7 +189,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ./build/editor-linux-x64-release
-        key: ${{ runner.os }}-editor-linux-x64-rel-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        key: ${{ runner.os }}-editor-linux-x64-rel-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
         restore-keys: |
           ${{ runner.os }}-editor-linux-x64-rel-
           ${{ runner.os }}-editor-linux-rel-
@@ -247,7 +247,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ./build/editor-linux-arm64-release
-        key: ${{ runner.os }}-editor-linux-arm64-rel-${{ hashFiles('src/**', 'CMakeLists.txt', 'CMakePresets.json') }}
+        key: ${{ runner.os }}-editor-linux-arm64-rel-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
         restore-keys: |
           ${{ runner.os }}-editor-linux-arm64-rel-
           ${{ runner.os }}-editor-linux-rel-
