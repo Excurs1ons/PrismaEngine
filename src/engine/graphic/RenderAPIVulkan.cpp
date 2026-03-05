@@ -14,6 +14,11 @@
 // VMA 实现必须在某个 .cpp 文件中定义一次
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
 #define VMA_IMPLEMENTATION
+#if defined(ANDROID) || defined(__ANDROID__)
+    // 在 Android 上禁用静态函数导入，以避免链接错误
+    #define VMA_STATIC_VULKAN_FUNCTIONS 0
+    #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#endif
 #include <vk_mem_alloc.h>
 #undef VMA_IMPLEMENTATION
 #endif

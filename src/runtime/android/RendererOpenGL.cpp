@@ -319,3 +319,25 @@ void RendererOpenGL::render() {
 void RendererOpenGL::handleInput() {
 
 }
+
+void RendererOpenGL::onNativeWindowCreated(ANativeWindow *window) {
+    window_ = window;
+    init();
+}
+
+void RendererOpenGL::onNativeWindowChanged(ANativeWindow *window) {
+    window_ = window;
+}
+
+void RendererOpenGL::onNativeWindowDestroyed() {
+    window_ = nullptr;
+}
+
+void RendererOpenGL::onResume() {}
+void RendererOpenGL::onPause() {}
+
+void RendererOpenGL::onKeyDown(int keyCode) { (void)keyCode; }
+void RendererOpenGL::onKeyUp(int keyCode) { (void)keyCode; }
+void RendererOpenGL::onTouchEvent(int action, float x, float y) { 
+    (void)action; (void)x; (void)y; 
+}

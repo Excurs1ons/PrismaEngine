@@ -11,8 +11,8 @@ void BackgroundPass::setSwapChainExtent(VkExtent2D extent) {
     swapChainExtent_ = extent;
 }
 
-void BackgroundPass::setAssetManager(AAssetManager* assetManager) {
-    assetManager_ = assetManager;
+void BackgroundPass::setAndroidApp(android_app* app) {
+    app_ = app;
 }
 
 void BackgroundPass::setCurrentTransform(VkSurfaceTransformFlagBitsKHR transform) {
@@ -21,8 +21,8 @@ void BackgroundPass::setCurrentTransform(VkSurfaceTransformFlagBitsKHR transform
 
 // TODO: 从 RendererVulkan::createSkyboxPipeline() 迁移代码
 void BackgroundPass::createSkyboxPipeline(VkDevice device, VkRenderPass renderPass) {
-    if (!assetManager_) {
-        throw std::runtime_error("BackgroundPass: assetManager not set!");
+    if (!app_) {
+        throw std::runtime_error("BackgroundPass::createSkyboxPipeline: android_app not set!");
     }
 
     if (!skyboxData_.hasTexture) {
@@ -36,8 +36,8 @@ void BackgroundPass::createSkyboxPipeline(VkDevice device, VkRenderPass renderPa
         return;
     }
 
-    auto vertShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/skybox.vert.spv");
-    auto fragShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/skybox.frag.spv");
+    auto vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/skybox.vert.spv");
+    auto fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/skybox.frag.spv");
 
     if (vertShaderCode.empty() || fragShaderCode.empty()) {
         aout << "Failed to load skybox shader files!" << std::endl;
@@ -198,13 +198,13 @@ void BackgroundPass::createSkyboxPipeline(VkDevice device, VkRenderPass renderPa
 
 // 从 RendererVulkan::createClearColorPipeline() 迁移代码
 void BackgroundPass::createClearColorPipeline(VkDevice device, VkRenderPass renderPass) {
-    if (!assetManager_) {
-        throw std::runtime_error("BackgroundPass: assetManager not set!");
+    if (!app_) {
+        throw std::runtime_error("BackgroundPass::createClearColorPipeline: android_app not set!");
     }
 
     // 加载着色器
-    auto vertShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/clearcolor.vert.spv");
-    auto fragShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/clearcolor.frag.spv");
+    auto vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/clearcolor.vert.spv");
+    auto fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/clearcolor.frag.spv");
 
     if (vertShaderCode.empty() || fragShaderCode.empty()) {
         aout << "Failed to load clearcolor shader files!" << std::endl;

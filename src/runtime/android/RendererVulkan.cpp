@@ -23,12 +23,15 @@
 
 // vk-bootstrap 和 VMA
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
-#include <VkBootstrap.h>
+#include <vk_bootstrap.h>
 #include <vk_mem_alloc.h>
 #endif
 
 #include "2d/CanvasComponent.h"
 #include "2d/ButtonComponent.h"
+
+// 日志宏
+#define aout android::base::LogMessage(android::base::DEFAULT, "RendererVulkan")
 
 struct UniformBufferObject {
     alignas(16) Matrix4 model;
@@ -331,7 +334,7 @@ void RendererVulkan::createScene() {
     // 初始化 GameManager（首次）
     if (!gameManager.IsSceneCreated()) {
         aout << "RendererVulkan: Creating new scene in GameManager" << std::endl;
-        gameManager.Initialize(window_, assetManager_);
+        gameManager.Initialize(app_);
         gameManager.CreateScene();
     }
 
@@ -824,6 +827,7 @@ void RendererVulkan::createRenderPipeline() {
     backgroundPass->setSkyboxData(std::move(skyboxData_));
     backgroundPass->setClearColorData(std::move(clearColorData_));
     backgroundPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
+    backgroundPass->setAndroidApp(app_);
     backgroundPass->setCurrentTransform(vulkanContext_.currentTransform);
     renderPipeline_->addPass(std::move(backgroundPass));
 
@@ -840,6 +844,7 @@ void RendererVulkan::createRenderPipeline() {
 
     opaquePass->setDescriptorSetLayout(descriptorSetLayout);
     opaquePass->setSwapChainExtent(vulkanContext_.swapChainExtent);
+    opaquePass->setAndroidApp(app_);
     opaquePass->setScene(scene_.get());
     renderPipeline_->addPass(std::move(opaquePass));
 
@@ -853,7 +858,7 @@ void RendererVulkan::createRenderPipeline() {
         }
     }
     uiPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
-    uiPass->setAssetManager(assetManager_);
+    // uiPass->setAndroidApp(app_);  // 已废弃：不再使用 android_app
     uiPass->setPhysicalDevice(vulkanContext_.physicalDevice);
 
     // 获取内容区域偏移（状态栏高度等）
@@ -1562,6 +1567,124 @@ void RendererVulkan::handleInput() {
 
     auto& inputBackend = AndroidInputBackend::GetInstance();
     inputBackend.Update();
+
+    // 处理 Android 原始输入事件
+    auto *inputBuffer = android_app_swap_input_buffers(app_);
+    if (inputBuffer == nullptr) {
+        return;
+    }
+
+    // 处理触摸事件
+    for (auto i = 0; i < inputBuffer->motionEventsCount; i++) {
+        auto &motionEvent = inputBuffer->motionEvents[i];
+        auto action = motionEvent.action;
+        auto pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK)
+                >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
+        auto &pointer = motionEvent.pointers[pointerIndex];
+        auto x = GameActivityPointerAxes_getX(&pointer);
+        auto y = GameActivityPointerAxes_getY(&pointer);
+
+        switch (action & AMOTION_EVENT_ACTION_MASK) {
+            case AMOTION_EVENT_ACTION_DOWN:
+            case AMOTION_EVENT_ACTION_POINTER_DOWN:
+                inputBackend.OnTouchBegan(pointer.id, x, y);
+                break;
+            case AMOTION_EVENT_ACTION_CANCEL:
+                inputBackend.OnTouchCancelled(pointer.id);
+                break;
+            case AMOTION_EVENT_ACTION_UP:
+            case AMOTION_EVENT_ACTION_POINTER_UP:
+                inputBackend.OnTouchEnded(pointer.id, x, y);
+                break;
+            case AMOTION_EVENT_ACTION_MOVE:
+                for (auto index = 0; index < motionEvent.pointerCount; index++) {
+                    pointer = motionEvent.pointers[index];
+                    x = GameActivityPointerAxes_getX(&pointer);
+                    y = GameActivityPointerAxes_getY(&pointer);
+                    inputBackend.OnTouchMoved(pointer.id, x, y);
+                }
+                break;
+            default:
+                break;
+        }
+    }
+    android_app_clear_motion_events(inputBuffer);
+
+    // 处理键盘事件
+    for (auto i = 0; i < inputBuffer->keyEventsCount; i++) {
+        // 可以在这里添加键盘处理
+    }
+    android_app_clear_key_events(inputBuffer);
+
+    // 处理 UI 输入
+    // 触摸坐标是相对于内容区域的（不包括状态栏），需要转换为渲染坐标系（窗口坐标）
+    // 渲染使用的窗口坐标原点是窗口顶部，触摸坐标原点是内容区域顶部（状态栏下方）
+
+    for (int i = 0; i < inputBackend.GetTouchCount(); i++) {
+        const Touch* touch = inputBackend.GetTouch(i);
+        if (touch == nullptr) continue;
+
+        // [DEBUG] 记录原始触摸坐标和状态栏信息（用于确认坐标系）
+        aout << "Touch[" << i << "]: raw=(" << touch->positionX << ", " << touch->positionY
+             << "), statusBarHeight=" << statusBarHeight_
+             << ", contentRect.top=" << contentRect_.top
+             << ", phase=" << static_cast<int>(touch->phase) << std::endl;
+
+        // 将触摸坐标从内容区域坐标转换为窗口坐标
+        // 内容区域从状态栏下方开始，所以需要加上状态栏高度
+        PrismaMath::vec2 touchPos(
+            touch->positionX,
+            touch->positionY - statusBarHeight_
+        );
+
+        // [DEBUG] 记录转换后的坐标
+        aout << "Touch[" << i << "]: converted=(" << touchPos.x << ", " << touchPos.y << ")" << std::endl;
+
+        bool buttonProcessed = false;  // 标记当前触摸点是否已处理按钮
+
+        // 获取所有 Canvas 组件
+        for (const auto& go : scene_->getGameObjects()) {
+            auto canvas = go->GetComponent<CanvasComponent>();
+            if (!canvas) continue;
+
+            // 检查 Canvas 的所有子组件
+            for (auto* child : canvas->GetChildren()) {
+                if (!child || !child->IsInteractable()) continue;
+
+                auto* button = dynamic_cast<ButtonComponent*>(child);
+                if (button) {
+                    // 检查是否点击
+                    if (child->HitTest(touchPos)) {
+                        // 触摸在按钮上
+                        if (touch->phase == TouchPhase::Began) {
+                            if (!button->IsHovered()) {
+                                button->OnHoverEnter();
+                            }
+                            button->OnPressed();
+                        } else if (touch->phase == TouchPhase::Ended) {
+                            button->OnReleased();
+                        } else if (touch->phase == TouchPhase::Cancelled) {
+                            if (button->IsHovered()) {
+                                button->OnHoverLeave();
+                            }
+                            button->OnReleased();
+                        }
+                        buttonProcessed = true;  // 标记此按钮已处理
+                    } else {
+                        // 触摸不在按钮上，清除 hover 状态
+                        if (button->IsHovered() && button->IsPressed()) {
+                            button->OnHoverLeave();
+                        }
+                    }
+                }
+            }
+
+            // 如果当前触摸点已处理了按钮，跳出 Canvas 循环继续处理下一个触摸点
+            if (buttonProcessed) {
+                break;
+            }
+        }
+    }
 }
 
 // ============================================================================
@@ -1663,7 +1786,7 @@ bool RendererVulkan::createSwapChainWithVkBootstrap(uint32_t width, uint32_t hei
     }
 
     vkb::SwapchainBuilder swapchainBuilder(vkBootstrapDevice_);
-    swapchainBuilder.set_desired_extent(width, height);
+    swapchainBuilder.set_desired_extent({width, height});
     swapchainBuilder.set_desired_present_mode(VK_PRESENT_MODE_FIFO_KHR); // VSYNC
     swapchainBuilder.set_desired_format({VK_FORMAT_B8G8R8A8_SRGB, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR});
 
@@ -1791,3 +1914,25 @@ bool RendererVulkan::createDeviceLocalBuffer(
 }
 
 #endif // PRISMA_ENABLE_RENDER_VULKAN
+
+void RendererVulkan::onNativeWindowCreated(ANativeWindow *window) {
+    window_ = window;
+    init();
+}
+
+void RendererVulkan::onNativeWindowChanged(ANativeWindow *window) {
+    window_ = window;
+}
+
+void RendererVulkan::onNativeWindowDestroyed() {
+    window_ = nullptr;
+}
+
+void RendererVulkan::onResume() {}
+void RendererVulkan::onPause() {}
+
+void RendererVulkan::onKeyDown(int keyCode) { (void)keyCode; }
+void RendererVulkan::onKeyUp(int keyCode) { (void)keyCode; }
+void RendererVulkan::onTouchEvent(int action, float x, float y) { 
+    (void)action; (void)x; (void)y; 
+}
