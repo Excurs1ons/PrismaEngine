@@ -137,6 +137,13 @@ if(TARGET vk-bootstrap)
     get_target_property(VK_BOOTSTRAP_SOURCE_DIR vk-bootstrap SOURCE_DIR)
     if(VK_BOOTSTRAP_SOURCE_DIR)
         target_include_directories(myapplication PRIVATE ${VK_BOOTSTRAP_SOURCE_DIR})
+        # vk-bootstrap 的头文件通常在 src 目录下
+        if(EXISTS "${VK_BOOTSTRAP_SOURCE_DIR}/src")
+            target_include_directories(myapplication PRIVATE ${VK_BOOTSTRAP_SOURCE_DIR}/src)
+        else()
+            # 强制添加 src 目录，因为 FetchContent 期间文件可能还没准备好
+            target_include_directories(myapplication PRIVATE ${VK_BOOTSTRAP_SOURCE_DIR}/src)
+        endif()
         message(STATUS "vk-bootstrap include dir: ${VK_BOOTSTRAP_SOURCE_DIR}")
     endif()
 endif()
