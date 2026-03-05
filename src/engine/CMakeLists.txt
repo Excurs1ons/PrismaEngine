@@ -114,10 +114,6 @@ if(LINUX)
         PlatformSDL.cpp
         input/drivers/InputDriverSDL3.cpp
     )
-    # Linux 平台添加 fPIC 编译选项 (当静态库被链接到共享库时需要)
-    target_compile_options(Engine PRIVATE
-        $<$<CXX_COMPILER_ID:GNU,Clang>:-fPIC>
-    )
 endif()
 
 # Android 平台
@@ -424,6 +420,13 @@ endif()
 # Windows 平台添加 UTF-8 编译支持
 if(WIN32)
     target_compile_options(Engine PUBLIC /utf-8)
+endif()
+
+# Linux 平台添加 fPIC 编译选项 (当静态库被链接到共享库时需要)
+if(LINUX)
+    target_compile_options(Engine PRIVATE
+        $<$<CXX_COMPILER_ID:GNU,Clang>:-fPIC>
+    )
 endif()
 
 # ========== 依赖项配置 ==========
