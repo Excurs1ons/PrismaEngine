@@ -61,10 +61,8 @@ jobs:
 
     - name: Set NDK path
       run: |
-        # 优先使用特定的 NDK 版本
         NDK_PATH="$ANDROID_HOME/ndk/${{ env.ANDROID_NDK_VERSION }}"
         if [ ! -d "$NDK_PATH" ]; then
-          # 如果不存在，尝试查找任何可用版本
           NDK_PATH=$(find $ANDROID_HOME/ndk -maxdepth 1 -type d | grep -E "[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
         fi
         if [ -z "$NDK_PATH" ]; then
@@ -76,33 +74,32 @@ jobs:
     - name: Setup Ninja
       run: sudo apt-get install -y ninja-build
 
-    - name: Cache Gradle
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: gradle-android-${{ hashFiles('projects/android/PrismaAndroid/**/*.gradle*') }}
-
-    - name: Cache CMake build
-      uses: actions/cache@v4
-      with:
-        path: projects/android/PrismaAndroid/.cxx
-        key: ${{ runner.os }}-android-runtime-${{ env.BUILD_TYPE }}-${{ hashFiles('src/**', 'projects/android/PrismaAndroid/**/CMakeLists.txt', 'projects/android/PrismaAndroid/**/build.gradle*') }}
-
     - name: Grant execute permission
       run: chmod +x ./gradlew
 
     - name: Build APK
+      id: build_apk
       run: |
-        # capitalize first letter for Gradle task
         gradle_task=$(echo "${{ env.BUILD_TYPE }}" | sed 's/./\u&/')
-        ./gradlew assemble${gradle_task} --build-cache --parallel
+        # 增加 --info 和 --stacktrace 以获取更多 Gradle 细节
+        ./gradlew assemble${gradle_task} --build-cache --parallel --info --stacktrace
+      continue-on-error: true
+
+    - name: Debug C++ Failure
+      if: steps.build_apk.outcome == 'failure'
+      run: |
+        echo "=== Gradle Build Failed, searching for C++ compiler logs ==="
+        # 查找 CMake/Ninja 生成的详细错误日志并打印
+        find .cxx -name "*.log" -o -name "ninja_log" | xargs -I{} sh -c "echo 'LOG FILE: {}'; cat {}; echo '---'"
+        # 打印生成的构建文件内容（如果有的话）
+        find .cxx -name "build.ninja" -maxdepth 4 | xargs -I{} sh -c "echo 'NINJA FILE: {}'; head -n 50 {}; echo '---'"
+        # 强制退出以标记 Job 失败
+        exit 1
 
     - name: Upload artifacts
+      if: steps.build_apk.outcome == 'success'
       uses: actions/upload-artifact@v4
       with:
         name: android-runtime-${{ env.BUILD_TYPE }}
         path: projects/android/PrismaAndroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/*.apk
         retention-days: 30
-        if-no-files-found: ignore
