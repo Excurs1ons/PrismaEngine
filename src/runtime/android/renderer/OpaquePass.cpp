@@ -5,7 +5,6 @@
 #include "Scene.h"
 #include "GameObject.h"
 #include "AndroidOut.h"
-#include <game-activity/GameActivity.h>
 #include <array>
 #include <stdexcept>
 #include <cstring>
@@ -23,8 +22,8 @@ void OpaquePass::setSwapChainExtent(VkExtent2D extent) {
     swapChainExtent_ = extent;
 }
 
-void OpaquePass::setAndroidApp(android_app* app) {
-    app_ = app;
+void OpaquePass::setAssetManager(AAssetManager* assetManager) {
+    assetManager_ = assetManager;
 }
 
 void OpaquePass::setScene(Scene* scene) {
@@ -36,20 +35,20 @@ void OpaquePass::initialize(VkDevice device, VkRenderPass renderPass) {
 }
 
 void OpaquePass::createPipeline(VkDevice device, VkRenderPass renderPass) {
-    if (!app_) {
-        throw std::runtime_error("OpaquePass::createPipeline: android_app not set!");
+    if (!assetManager_) {
+        throw std::runtime_error("OpaquePass::createPipeline: AAssetManager not set!");
     }
 
     // 使用 lit shader（带 Phong 光照）
     aout << "正在加载 lit shader..." << std::endl;
-    auto vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/lit.vert.spv");
-    auto fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/lit.frag.spv");
+    auto vertShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/lit.vert.spv");
+    auto fragShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/lit.frag.spv");
 
     if (vertShaderCode.empty() || fragShaderCode.empty()) {
         aout << "错误：无法加载 lit shader，尝试使用 unlit shader" << std::endl;
         // Fallback 到 unlit shader
-        vertShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/unlit.vert.spv");
-        fragShaderCode = ShaderVulkan::loadShader(app_->activity->assetManager, "shaders/unlit.frag.spv");
+        vertShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/unlit.vert.spv");
+        fragShaderCode = ShaderVulkan::loadShader(assetManager_, "shaders/unlit.frag.spv");
         if (vertShaderCode.empty() || fragShaderCode.empty()) {
             throw std::runtime_error("Failed to load any shader files!");
         }

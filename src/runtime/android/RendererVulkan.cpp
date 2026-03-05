@@ -331,7 +331,7 @@ void RendererVulkan::createScene() {
     // 初始化 GameManager（首次）
     if (!gameManager.IsSceneCreated()) {
         aout << "RendererVulkan: Creating new scene in GameManager" << std::endl;
-        gameManager.Initialize(app_);
+        gameManager.Initialize(window_, assetManager_);
         gameManager.CreateScene();
     }
 
@@ -824,7 +824,7 @@ void RendererVulkan::createRenderPipeline() {
     backgroundPass->setSkyboxData(std::move(skyboxData_));
     backgroundPass->setClearColorData(std::move(clearColorData_));
     backgroundPass->setSwapChainExtent(vulkanContext_.swapChainExtent);
-    backgroundPass->setAndroidApp(app_);
+    backgroundPass->setAssetManager(assetManager_);
     backgroundPass->setCurrentTransform(vulkanContext_.currentTransform);
     renderPipeline_->addPass(std::move(backgroundPass));
 
@@ -841,7 +841,7 @@ void RendererVulkan::createRenderPipeline() {
 
     opaquePass->setDescriptorSetLayout(descriptorSetLayout);
     opaquePass->setSwapChainExtent(vulkanContext_.swapChainExtent);
-    opaquePass->setAndroidApp(app_);
+    opaquePass->setAssetManager(assetManager_);
     opaquePass->setScene(scene_.get());
     renderPipeline_->addPass(std::move(opaquePass));
 
@@ -1564,54 +1564,6 @@ void RendererVulkan::handleInput() {
 
     auto& inputBackend = AndroidInputBackend::GetInstance();
     inputBackend.Update();
-
-    // 处理 Android 原始输入事件
-    auto *inputBuffer = android_app_swap_input_buffers(app_);
-    if (inputBuffer == nullptr) {
-        return;
-    }
-
-    // 处理触摸事件
-    for (auto i = 0; i < inputBuffer->motionEventsCount; i++) {
-        auto &motionEvent = inputBuffer->motionEvents[i];
-        auto action = motionEvent.action;
-        auto pointerIndex = (action & AMOTION_EVENT_ACTION_POINTER_INDEX_MASK)
-                >> AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT;
-        auto &pointer = motionEvent.pointers[pointerIndex];
-        auto x = GameActivityPointerAxes_getX(&pointer);
-        auto y = GameActivityPointerAxes_getY(&pointer);
-
-        switch (action & AMOTION_EVENT_ACTION_MASK) {
-            case AMOTION_EVENT_ACTION_DOWN:
-            case AMOTION_EVENT_ACTION_POINTER_DOWN:
-                inputBackend.OnTouchBegan(pointer.id, x, y);
-                break;
-            case AMOTION_EVENT_ACTION_CANCEL:
-                inputBackend.OnTouchCancelled(pointer.id);
-                break;
-            case AMOTION_EVENT_ACTION_UP:
-            case AMOTION_EVENT_ACTION_POINTER_UP:
-                inputBackend.OnTouchEnded(pointer.id, x, y);
-                break;
-            case AMOTION_EVENT_ACTION_MOVE:
-                for (auto index = 0; index < motionEvent.pointerCount; index++) {
-                    pointer = motionEvent.pointers[index];
-                    x = GameActivityPointerAxes_getX(&pointer);
-                    y = GameActivityPointerAxes_getY(&pointer);
-                    inputBackend.OnTouchMoved(pointer.id, x, y);
-                }
-                break;
-            default:
-                break;
-        }
-    }
-    android_app_clear_motion_events(inputBuffer);
-
-    // 处理键盘事件
-    for (auto i = 0; i < inputBuffer->keyEventsCount; i++) {
-        // 可以在这里添加键盘处理
-    }
-    android_app_clear_key_events(inputBuffer);
 
     // 处理 UI 输入
     // 触摸坐标是相对于内容区域的（不包括状态栏），需要转换为渲染坐标系（窗口坐标）
