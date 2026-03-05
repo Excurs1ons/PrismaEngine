@@ -89,10 +89,10 @@ jobs:
       if: steps.build_apk.outcome == 'failure'
       run: |
         echo "=== Gradle Build Failed, searching for C++ compiler logs ==="
-        # 查找 CMake/Ninja 生成的详细错误日志并打印
-        find .cxx -name "*.log" -o -name "ninja_log" | xargs -I{} sh -c "echo 'LOG FILE: {}'; cat {}; echo '---'"
+        # 在所有子目录中查找 CMake/Ninja 生成的详细错误日志并打印
+        find . -name "*.log" -o -name "ninja_log" | grep ".cxx" | xargs -I{} sh -c "echo 'LOG FILE: {}'; cat {}; echo '---'"
         # 打印生成的构建文件内容（如果有的话）
-        find .cxx -name "build.ninja" -maxdepth 4 | xargs -I{} sh -c "echo 'NINJA FILE: {}'; head -n 50 {}; echo '---'"
+        find . -name "build.ninja" | grep ".cxx" | head -n 5 | xargs -I{} sh -c "echo 'NINJA FILE: {}'; head -n 50 {}; echo '---'"
         # 强制退出以标记 Job 失败
         exit 1
 
