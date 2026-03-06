@@ -273,7 +273,7 @@ void MeshAsset::AddSubMesh(const SubMesh& subMesh) {
 
     for (const auto& mesh : m_subMeshes) {
         for (const auto& vertex : mesh.vertices) {
-            PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
+            PrismaEngine::Vector3 pos = PrismaEngine::Vector3(vertex.position.x, vertex.position.y, vertex.position.z);
             minVec       = glm::min(minVec, pos);
             maxVec       = glm::max(maxVec, pos);
         }
