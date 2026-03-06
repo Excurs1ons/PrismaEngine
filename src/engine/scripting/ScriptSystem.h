@@ -4,24 +4,34 @@
 #include "MonoRuntime.h"
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 namespace PrismaEngine {
 namespace Scripting {
 
-// 前向声明
-class ScriptComponent;
+// 脚本组件（ECS 数据组件）
+struct ScriptComponent {
+    // 脚本文件路径
+    std::vector<std::string> scriptPaths;
 
-// 脚本系统 - ECS系统，管理所有脚本组件
+    // 脚本实例
+    std::vector<std::shared_ptr<ManagedObject>> scriptInstances;
+
+    // 是否已初始化
+    bool initialized = false;
+
+    // 是否启用
+    bool enabled = true;
+};
+
+// 脚本系统 - 负责处理所有实体的脚本生命周期
 class ScriptSystem : public PrismaEngine::Core::ECS::ISystem {
 public:
-    static constexpr PrismaEngine::Core::ECS::SystemTypeID TYPE_ID = 9;
-
-      PrismaEngine::Core::ECS::SystemTypeID GetTypeID() const override { return TYPE_ID; }
+    ScriptSystem() = default;
+    virtual ~ScriptSystem() = default;
 
     void Initialize() override;
-
     void Update(float deltaTime) override;
-
     void Shutdown() override;
 
     // 加载程序集
@@ -33,66 +43,24 @@ public:
     // 移除脚本
     void RemoveScript(PrismaEngine::Core::ECS::EntityID entity, const std::string& scriptPath);
 
-    // 清除实体的所有脚本
-    void ClearScripts(PrismaEngine::Core::ECS::EntityID entity);
-
     // 热重载
     void ReloadScripts();
 
     // 编译脚本
     bool CompileScripts(const std::string& projectPath);
 
-    // 获取所有活动脚本
-    const std::vector<std::shared_ptr<ScriptComponent>>& GetActiveScripts() const;
-
 private:
-    // 脚本管理
-    struct EntityScripts {
-        PrismaEngine::Core::ECS::EntityID entity;
-        std::vector<std::shared_ptr<ScriptComponent>> scripts;
-    };
-
-    std::vector<EntityScripts> m_entityScripts;
-    std::unordered_map<PrismaEngine::Core::ECS::EntityID, size_t> m_entityIndex;
-
     // 已加载的程序集
     std::vector<std::string> m_loadedAssemblies;
-
-    // 脚本搜索路径
-    std::vector<std::string> m_scriptPaths;
 
     // 初始化标志
     bool m_initialized = false;
 
-    // 获取实体的脚本列表
-    EntityScripts* GetEntityScripts(PrismaEngine::Core::ECS::EntityID entity);
-
-    // 清理已销毁的实体
-    void CleanupDestroyedEntities();
-
     // 处理脚本生命周期
-    void ProcessScriptAwake();
-    void ProcessScriptStart();
-    void ProcessScriptUpdate(float deltaTime);
-    void ProcessScriptDestroy();
-};
-
-// 脚本组件（ECS版本）
-class ScriptComponent : public PrismaEngine::Core::ECS::IComponent {
-public:
-    static constexpr PrismaEngine::Core::ECS::ComponentTypeID TYPE_ID = 9;
-
-    PrismaEngine::Core::ECS::ComponentTypeID GetTypeID() const override { return TYPE_ID; }
-
-    // 脚本文件路径
-    std::vector<std::string> scriptPaths;
-
-    // 脚本实例
-    std::vector<std::shared_ptr<ManagedObject>> scriptInstances;
-
-    // 是否已初始化
-    bool initialized = false;
+    void ProcessScriptAwake(ScriptComponent& script);
+    void ProcessScriptStart(ScriptComponent& script);
+    void ProcessScriptUpdate(ScriptComponent& script, float deltaTime);
 };
 
 } // namespace Scripting
-} // namespace Engine
+} // namespace PrismaEngine
