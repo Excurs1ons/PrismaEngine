@@ -1,0 +1,42 @@
+name: PrismaCraft CI
+
+on:
+  workflow_run:
+    workflows: ["CI Windows"]
+    types: [completed]
+  workflow_dispatch:
+
+jobs:
+  build-prismacraft:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    name: Build PrismaCraft
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false # Already flattened in projects/PrismaCraft
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: '3.31.0'
+
+    - name: Build Engine and Install SDK
+      run: powershell -File scripts/package-sdk.ps1 -Version "0.1.0" -Config "Debug"
+
+    - name: Configure PrismaCraft
+      run: |
+        mkdir projects/PrismaCraft/build
+        cd projects/PrismaCraft/build
+        cmake .. -DPrismaEngine_DIR=$PWD/../../../sdk/out/lib/cmake/PrismaEngine
+
+    - name: Build PrismaCraft
+      run: cmake --build projects/PrismaCraft/build --config Debug --parallel 4
+
+    - name: Upload PrismaCraft Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaCraft-Debug
+        path: projects/PrismaCraft/build/Debug/
