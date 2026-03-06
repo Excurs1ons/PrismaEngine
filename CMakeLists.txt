@@ -113,10 +113,10 @@ else()
         message(STATUS "已添加 Game 模块")
     endif()
     
-    # 外部项目模块 (PrismaCraft 等)
-    if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt)
+    # 外部项目模块 (PrismaCraft 等) - 仅在构建 SDK 时包含
+    if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt AND PRISMA_BUILD_SDK)
         add_subdirectory(projects)
-        message(STATUS "已添加 Projects 模块")
+        message(STATUS "已添加 Projects 模块 (SDK)")
     endif()
 endif()
 
