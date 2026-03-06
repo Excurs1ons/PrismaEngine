@@ -30,15 +30,20 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
       with:
-        submodules: false
+        submodules: recursive
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
-    - name: Configure
-      run: cmake --preset engine-windows-x64-debug
+    - name: Configure and Package SDK
+      run: powershell -File scripts/package-sdk.ps1 -Version "0.1.0" -Config "Debug"
 
-    - name: Build Engine
-      run: cmake --build build/engine-windows-x64-debug --config Debug --target Engine --parallel 4
+    - name: Build PrismaCraft (SDK Integration Test)
+      run: |
+        mkdir projects/PrismaCraft/build
+        cd projects/PrismaCraft/build
+        cmake .. -DPrismaEngine_DIR=$PWD/../../../sdk/out/lib/cmake/PrismaEngine
+        cmake --build . --config Debug --parallel 4
+
