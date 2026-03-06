@@ -77,16 +77,16 @@ void CameraController::HandleKeyboardInput(float deltaTime) {
     // 方向键控制旋转
     float rotationAmount = m_rotationSpeed * deltaTime;
     if (InputManager::GetInstance().IsKeyPressed(KeyCode::ArrowLeft)) {
-        m_camera->Rotate(0.0f, -PrismaEngine::Math::Radians(rotationAmount), 0.0f);  // 左转
+        m_camera->Rotate(0.0f, -glm::radians(rotationAmount), 0.0f);  // 左转
     }
     if (InputManager::GetInstance().IsKeyPressed(KeyCode::ArrowRight)) {
-        m_camera->Rotate(0.0f, PrismaEngine::Math::Radians(rotationAmount), 0.0f);   // 右转
+        m_camera->Rotate(0.0f, glm::radians(rotationAmount), 0.0f);   // 右转
     }
     if (InputManager::GetInstance().IsKeyPressed(KeyCode::ArrowUp)) {
-        m_camera->Rotate(-PrismaEngine::Math::Radians(rotationAmount), 0.0f, 0.0f);  // 上看
+        m_camera->Rotate(-glm::radians(rotationAmount), 0.0f, 0.0f);  // 上看
     }
     if (InputManager::GetInstance().IsKeyPressed(KeyCode::ArrowDown)) {
-        m_camera->Rotate(PrismaEngine::Math::Radians(rotationAmount), 0.0f, 0.0f);   // 下看
+        m_camera->Rotate(glm::radians(rotationAmount), 0.0f, 0.0f);   // 下看
     }
 }
 
@@ -120,7 +120,7 @@ void CameraController::HandleMouseInput(float deltaTime) {
     yOffset *= sensitivity;
 
     if (std::abs(xOffset) > 0.01f || std::abs(yOffset) > 0.01f) {
-        m_camera->Rotate(PrismaEngine::Math::Radians(yOffset), PrismaEngine::Math::Radians(xOffset), 0.0f);
+        m_camera->Rotate(glm::radians(yOffset), glm::radians(xOffset), 0.0f);
     }
 }
 

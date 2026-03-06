@@ -6,7 +6,7 @@ namespace PrismaEngine {
 namespace Graphic {
 
 Camera::Camera()
-    : m_fov(PrismaEngine::Math::PI / 4.0f)
+    : m_fov(PrismaEngine::PI / 4.0f)
     , m_aspectRatio(16.0f / 9.0f)
     , m_nearPlane(0.1f)
     , m_farPlane(1000.0f)
@@ -33,7 +33,7 @@ void Camera::Initialize() {
     // 初始化Transform的旋转（相机默认看向-Z方向）
     if (auto transform = GetOwner()->GetTransform()) {
         // 设置初始旋转为 Identity
-        transform->rotation = PrismaEngine::Math::QuaternionIdentity();
+        transform->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
         MarkViewDirty();
     }
 }
@@ -66,14 +66,14 @@ PrismaMath::mat4 Camera::GetViewMatrix() const {
 
 PrismaMath::mat4 Camera::GetProjectionMatrix() const {
     if (m_isProjectionDirty) {
-        m_projectionMatrix = PrismaEngine::Math::Perspective(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+        m_projectionMatrix = glm::perspectiveRH(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
         m_isProjectionDirty = false;
     }
     return m_projectionMatrix;
 }
 
 PrismaMath::mat4 Camera::GetViewProjectionMatrix() const {
-    return PrismaEngine::Math::Multiply(GetViewMatrix(), GetProjectionMatrix());
+    return GetProjectionMatrix() * GetViewMatrix();
 }
 
 PrismaMath::vec3 Camera::GetPosition() const {
@@ -147,10 +147,10 @@ void Camera::MoveLocal(float forward, float right, float up) {
 void Camera::Rotate(float pitch, float yaw, float roll) {
     if (auto transform = GetOwner()->GetTransform()) {
         // 创建旋转增量（弧度）
-        glm::quat deltaRotation = PrismaEngine::Math::FromEulerAngles(glm::vec3(
-            PrismaEngine::Math::Radians(pitch),
-            PrismaEngine::Math::Radians(yaw),
-            PrismaEngine::Math::Radians(roll)
+        glm::quat deltaRotation = glm::quat(glm::vec3(
+            glm::radians(pitch),
+            glm::radians(yaw),
+            glm::radians(roll)
         ));
 
         // 应用旋转到当前旋转
@@ -165,15 +165,15 @@ void Camera::Rotate(float pitch, float yaw, float roll) {
 void Camera::LookAt(const PrismaMath::vec3& target) {
     if (auto transform = GetOwner()->GetTransform()) {
         PrismaMath::vec3 position = GetPosition();
-        PrismaMath::vec3 direction = PrismaEngine::Math::Normalize(target - position);
+        PrismaMath::vec3 direction = glm::normalize(target - position);
 
         // 创建前向向量（相机看向-Z方向）
         PrismaMath::vec3 forward = -direction;
 
         // 计算上向量
         PrismaMath::vec3 worldUp = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
-        PrismaMath::vec3 right = PrismaEngine::Math::Normalize(PrismaEngine::Math::Cross(worldUp, forward));
-        PrismaMath::vec3 up = PrismaEngine::Math::Cross(forward, right);
+        PrismaMath::vec3 right = glm::normalize(glm::cross(worldUp, forward));
+        PrismaMath::vec3 up = glm::cross(forward, right);
 
         // 创建旋转矩阵
         PrismaMath::mat4 rotationMatrix = PrismaMath::mat4(1.0f);
@@ -209,23 +209,23 @@ void Camera::UpdateViewMatrix() const {
         glm::quat rotation = transform->rotation;
 
         // 创建旋转矩阵
-        PrismaMath::mat4 rotationMatrix = PrismaEngine::Math::QuaternionToMatrix(rotation);
+        PrismaMath::mat4 rotationMatrix = glm::mat4_cast(rotation);
 
         // 相机默认前向是-Z，所以需要额外旋转
         // 注意：这个 180 度旋转可能导致相机朝向错误，暂时禁用
-        // PrismaMath::mat4 cameraFix = PrismaEngine::Math::RotationY(PrismaEngine::Math::PI);
-        // rotationMatrix = PrismaEngine::Math::Multiply(cameraFix, rotationMatrix);
+        // PrismaMath::mat4 cameraFix = glm::rotate(glm::mat4(1.0f), PrismaEngine::PI, glm::vec3(0.0f, 1.0f, 0.0f));
+        // rotationMatrix = cameraFix * rotationMatrix;
 
         // 计算世界坐标系的各轴
-        m_forward = PrismaEngine::Math::Normalize(PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));  // Z轴（前向）
-        m_up = PrismaEngine::Math::Normalize(PrismaMath::vec3(rotationMatrix[1][0], rotationMatrix[1][1], rotationMatrix[1][2]));        // Y轴（上向）
-        m_right = PrismaEngine::Math::Normalize(PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));     // X轴（右向）
+        m_forward = glm::normalize(PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));  // Z轴（前向）
+        m_up = glm::normalize(PrismaMath::vec3(rotationMatrix[1][0], rotationMatrix[1][1], rotationMatrix[1][2]));        // Y轴（上向）
+        m_right = glm::normalize(PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));     // X轴（右向）
 
         // 计算视图矩阵（相机变换的逆矩阵）
         // 视图矩阵 = 旋转矩阵的转置 * 平移矩阵的逆
-        PrismaMath::mat4 translation = PrismaEngine::Math::Translation(-position);
-        m_viewMatrix = PrismaEngine::Math::Transpose(rotationMatrix);
-        m_viewMatrix = PrismaEngine::Math::Multiply(m_viewMatrix, translation);
+        PrismaMath::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
+        m_viewMatrix = glm::transpose(rotationMatrix);
+        m_viewMatrix = m_viewMatrix * translation;
 
         m_isViewDirty = false;
     }

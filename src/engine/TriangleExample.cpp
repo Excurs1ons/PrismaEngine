@@ -295,7 +295,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
 
     // 设置透视投影
     float aspect_ratio = 16.0f / 9.0f;
-    camera->SetPerspectiveProjection(PrismaEngine::Math::PI/4.0f, aspect_ratio, 0.1F, 1000.0f);
+    camera->SetPerspectiveProjection(PrismaEngine::PI/4.0f, aspect_ratio, 0.1F, 1000.0f);
 
     // 设置清除颜色为深蓝色
     //camera->SetClearColor(0.0F, 1.0f, 0.5f, 1.0f);
