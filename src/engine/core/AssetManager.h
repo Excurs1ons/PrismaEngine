@@ -24,21 +24,13 @@
 #endif
 
 namespace PrismaEngine {
-namespace Resource {
-    class AssetFallback;
-}
-}
-
-namespace PrismaEngine {
 // ============================================================================
 // 细粒度锁的资源管理器
 // ============================================================================
 class AssetManager : public ManagerBase<AssetManager> {
-    friend class ISubSystem;
     friend class ManagerBase<AssetManager>;
 public:
     bool Initialize() override { return Initialize(std::filesystem::current_path()); }
-
     void Shutdown() override { UnloadAll(); }
     static constexpr std::string GetName() { return R"(AssetManager)"; }
 
@@ -74,7 +66,6 @@ public:
         return true;
     }
 
-    /// @brief 添加搜索路径
     void AddSearchPath(const std::filesystem::path& path) {
         auto absolute_path = std::filesystem::absolute(path);
         std::error_code ec;
@@ -97,7 +88,6 @@ public:
         }
     }
 
-    /// @brief 查找资源
     std::optional<std::filesystem::path> FindResource(const std::string& relative_path) const {
         std::filesystem::path absolute_path(relative_path);
         if (absolute_path.is_absolute()) {
@@ -118,7 +108,6 @@ public:
         return std::nullopt;
     }
 
-    /// @brief 查找缓存资源（使用哈希 ID 快速查找）
     template <typename T> ResourceHandle<T> GetCachedResource(Core::StringHash::HashType hash) {
         std::shared_lock<std::shared_mutex> read_lock(m_resourcesMutex);
         auto it = m_resources.find(hash);
@@ -131,7 +120,6 @@ public:
         return ResourceHandle<T>();
     }
 
-    /// @brief 加载资源
     template <typename T, typename... Args> ResourceHandle<T> Load(const std::string& relative_path, Args&&... args) {
         if (!IsInitialized()) Initialize(std::filesystem::current_path());
 
@@ -180,7 +168,7 @@ public:
     void UnloadAll() {
         std::unique_lock<std::shared_mutex> lock(m_resourcesMutex);
         for (const auto& resource : m_resources | std::views::values) {
-            resource->Unload();
+            if (resource) resource->Unload();
         }
         m_resources.clear();
         m_pathCache.clear();
@@ -216,7 +204,7 @@ private:
 
     mutable std::shared_mutex m_resourcesMutex;
     std::unordered_map<Core::StringHash::HashType, std::shared_ptr<AssetBase>> m_resources;
-    std::unordered_map<Core::StringHash::HashType, std::string> m_pathCache; // 调试用
+    std::unordered_map<Core::StringHash::HashType, std::string> m_pathCache; 
 };
 
 }  // namespace PrismaEngine

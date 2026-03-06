@@ -10,13 +10,11 @@ namespace PrismaEngine {
 void AssetManager::CreateDefaultAssets() {
     LOG_INFO("Resource", "开始创建默认资产...");
 
-    // 确保资源管理器已初始化
     if (!IsInitialized()) {
         LOG_ERROR("Resource", "资源管理器尚未初始化，无法创建默认资产");
         return;
     }
 
-    // 确保Assets目录存在
     std::filesystem::path assetsDir    = m_projectRoot / "Assets";
     std::filesystem::path meshesDir    = assetsDir / "Models";
     std::filesystem::path shadersDir   = assetsDir / "Shaders";
@@ -33,34 +31,31 @@ void AssetManager::CreateDefaultAssets() {
         return;
     }
 
-    // 创建默认网格
     CreateDefaultMeshes(meshesDir);
-
-    // 创建默认着色器
     CreateDefaultShaders(shadersDir);
-
-    // 创建默认纹理
     CreateDefaultTextures(texturesDir);
-
-    // 创建默认材质
     CreateDefaultMaterials(materialsDir);
 
     LOG_INFO("Resource", "默认资产创建完成");
 }
 
 void AssetManager::CreateDefaultMeshes(const std::filesystem::path& meshes_dir) {
+    (void)meshes_dir;
     // TODO: 实现默认网格创建
 }
 
 void AssetManager::CreateDefaultShaders(const std::filesystem::path& shaders_dir) {
+    (void)shaders_dir;
     // TODO: 实现默认着色器创建
 }
 
 void AssetManager::CreateDefaultTextures(const std::filesystem::path& textures_dir) {
+    (void)textures_dir;
     // TODO: 实现默认纹理创建
 }
 
 void AssetManager::CreateDefaultMaterials(const std::filesystem::path& materials_dir) {
+    (void)materials_dir;
     // TODO: 实现默认材质创建
 }
 
