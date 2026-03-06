@@ -202,6 +202,11 @@ public:
     ~AssetManager() override { Shutdown(); }
 
 private:
+    void CreateDefaultMeshes(const std::filesystem::path& meshes_dir);
+    void CreateDefaultShaders(const std::filesystem::path& shaders_dir);
+    void CreateDefaultTextures(const std::filesystem::path& textures_dir);
+    void CreateDefaultMaterials(const std::filesystem::path& materials_dir);
+
     mutable std::mutex m_configMutex;
     bool m_initialized = false;
     std::filesystem::path m_projectRoot;
@@ -214,4 +219,4 @@ private:
     std::unordered_map<Core::StringHash::HashType, std::string> m_pathCache; // 调试用
 };
 
-}  // namespace Engine
+}  // namespace PrismaEngine
