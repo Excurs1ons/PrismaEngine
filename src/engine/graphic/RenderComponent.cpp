@@ -71,15 +71,11 @@ namespace PrismaEngine {
             // 设置世界矩阵 (寄存器 b1)
             if (auto transform = GetOwner()->GetTransform()) {
                 // 手动构建世界矩阵：位置 * 旋转 * 缩放
-                PrismaEngine::Matrix4x4 translation = PrismaEngine::Math::Translation(
-                        transform->position);
-                PrismaEngine::Matrix4x4 rotationX = PrismaEngine::Math::RotationX(
-                        transform->rotation.x);
-                PrismaEngine::Matrix4x4 rotationY = PrismaEngine::Math::RotationY(
-                        transform->rotation.y);
-                PrismaEngine::Matrix4x4 rotationZ = PrismaEngine::Math::RotationZ(
-                        transform->rotation.z);
-                PrismaEngine::Matrix4x4 scale = PrismaEngine::Math::Scale(transform->scale);
+                PrismaEngine::Matrix4x4 translation = glm::translate(glm::mat4(1.0f), transform->position);
+                PrismaEngine::Matrix4x4 rotationX = glm::rotate(glm::mat4(1.0f), transform->rotation.x, Vector3(1,0,0));
+                PrismaEngine::Matrix4x4 rotationY = glm::rotate(glm::mat4(1.0f), transform->rotation.y, Vector3(0,1,0));
+                PrismaEngine::Matrix4x4 rotationZ = glm::rotate(glm::mat4(1.0f), transform->rotation.z, Vector3(0,0,1));
+                PrismaEngine::Matrix4x4 scale = glm::scale(glm::mat4(1.0f), transform->scale);
 
                 // 组合矩阵：S * R * T
                 PrismaEngine::Matrix4x4 worldMatrix =
