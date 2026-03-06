@@ -38,8 +38,6 @@ using Quaternion = glm::quat;
 // 颜色类型
 using Color = Vector4;
 
-} // namespace PrismaEngine
-
 // 别名，用于向后兼容
 namespace PrismaMath = glm;
 
@@ -130,4 +128,6 @@ inline Quaternion LookRotation(const Vector3& forward, const Vector3& up) {
 }
 
 } // namespace Math
+
 } // namespace PrismaEngine
+

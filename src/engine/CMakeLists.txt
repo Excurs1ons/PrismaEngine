@@ -99,7 +99,6 @@ list(APPEND CORE_SOURCES
 # Windows 平台
 if(WIN32)
     list(APPEND CORE_SOURCES
-        Platform.cpp
         PlatformWindows.cpp
         platform/Application.cpp
         platform/ApplicationWindows.cpp
@@ -109,7 +108,7 @@ if(WIN32)
 endif()
 
 # Linux 平台 - 使用 PlatformSDL.cpp
-if(LINUX)
+if(PRISMA_PLATFORM_LINUX)
     list(APPEND CORE_SOURCES
         PlatformSDL.cpp
         input/drivers/InputDriverSDL3.cpp
