@@ -85,6 +85,7 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Shader.cpp
     graphic/stb_impl.cpp
     graphic/TextureAtlas.cpp
+    graphic/VoxelRenderer.cpp
     # New interface files
     graphic/interfaces/RenderTypes.cpp
     graphic/interfaces/IPipelineState.cpp
@@ -113,6 +114,7 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/ICamera.h
     graphic/Shader.h
     graphic/TextureAtlas.h
+    graphic/VoxelRenderer.h
     # New interface headers
     graphic/interfaces/RenderTypes.h
     graphic/interfaces/Interfaces.h
