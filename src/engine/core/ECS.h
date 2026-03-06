@@ -77,8 +77,9 @@ template<typename T>
 class ComponentPool : public IComponentPool {
 public:
     T* Add(EntityID entity) {
-        if (m_entityToIndex.find(entity) != m_entityToIndex.end()) {
-            return &m_components[m_entityToIndex[entity]];
+        auto it = m_entityToIndex.find(entity);
+        if (it != m_entityToIndex.end()) {
+            return &m_components[it->second];
         }
         size_t index = m_components.size();
         m_entityToIndex[entity] = index;
@@ -101,9 +102,11 @@ public:
         EntityID lastEntity = m_indexToEntity[lastIndex];
 
         // 将最后一个元素移动到删除位置，保持内存连续 (Swap-and-pop)
-        m_components[indexToRemove] = std::move(m_components[lastIndex]);
-        m_entityToIndex[lastEntity] = indexToRemove;
-        m_indexToEntity[indexToRemove] = lastEntity;
+        if (indexToRemove != lastIndex) {
+            m_components[indexToRemove] = std::move(m_components[lastIndex]);
+            m_entityToIndex[lastEntity] = indexToRemove;
+            m_indexToEntity[indexToRemove] = lastEntity;
+        }
 
         m_entityToIndex.erase(entity);
         m_indexToEntity.erase(lastIndex);
@@ -117,6 +120,9 @@ public:
     }
 
     std::vector<T>& GetData() { return m_components; }
+    const std::vector<T>& GetData() const { return m_components; }
+
+    const std::unordered_map<EntityID, size_t>& GetEntityToIndexMap() const { return m_entityToIndex; }
 
 private:
     std::vector<T> m_components; // 连续内存存储对象本身
@@ -129,6 +135,7 @@ class ComponentManager {
 public:
     template<typename T>
     ComponentPool<T>* GetPool() {
+        std::lock_guard<std::mutex> lock(m_mutex);
         ComponentTypeID typeID = ComponentRegistry::GetTypeID<T>();
         if (typeID > m_pools.size()) {
             m_pools.resize(typeID);
@@ -149,7 +156,18 @@ public:
         return GetPool<T>()->Get(entity);
     }
 
+    template<typename T>
+    bool HasComponent(EntityID entity) {
+        return GetPool<T>()->Get(entity) != nullptr;
+    }
+
+    template<typename T>
+    void RemoveComponent(EntityID entity) {
+        GetPool<T>()->Remove(entity);
+    }
+
     void RemoveAllComponents(EntityID entity) {
+        std::lock_guard<std::mutex> lock(m_mutex);
         for (auto& pool : m_pools) {
             if (pool) pool->Remove(entity);
         }
@@ -157,117 +175,133 @@ public:
 
 private:
     std::vector<std::unique_ptr<IComponentPool>> m_pools;
+    std::mutex m_mutex;
 };
 
 // 实体管理器
 class EntityManager {
 public:
-    EntityManager();
+    EntityManager() : m_componentManager(nullptr) {}
 
-    EntityID CreateEntity();
-    void DestroyEntity(EntityID entity);
-    bool IsEntityValid(EntityID entity) const;
+    EntityID CreateEntity() {
+        EntityID id;
+        if (!m_freeEntities.empty()) {
+            id = m_freeEntities.back();
+            m_freeEntities.pop_back();
+        } else {
+            id = m_nextEntity++;
+        }
+        m_aliveEntities.push_back(id);
+        return id;
+    }
+
+    void DestroyEntity(EntityID entity) {
+        auto it = std::find(m_aliveEntities.begin(), m_aliveEntities.end(), entity);
+        if (it != m_aliveEntities.end()) {
+            m_aliveEntities.erase(it);
+            m_freeEntities.push_back(entity);
+            if (m_componentManager) {
+                m_componentManager->RemoveAllComponents(entity);
+            }
+        }
+    }
+
+    bool IsEntityValid(EntityID entity) const {
+        return std::find(m_aliveEntities.begin(), m_aliveEntities.end(), entity) != m_aliveEntities.end();
+    }
 
     const std::vector<EntityID>& GetAliveEntities() const { return m_aliveEntities; }
 
-    // 组件操作
-    template<typename T>
-    T* AddComponent(EntityID entity);
-
-    template<typename T>
-    T* GetComponent(EntityID entity);
-
-    template<typename T>
-    bool HasComponent(EntityID entity);
-
-    template<typename T>
-    void RemoveComponent(EntityID entity);
-
-private:
-    // 实体池管理
-    std::vector<EntityID> m_aliveEntities;
-    std::vector<EntityID> m_freeEntities;
-    EntityID m_nextEntity = 1;
-
-    ComponentManager* m_componentManager;
-
-public:
-    // 用于World类初始化
     void SetComponentManager(ComponentManager* manager) { m_componentManager = manager; }
 
-    // 用于清理操作
     void ClearEntities() {
         m_aliveEntities.clear();
         m_freeEntities.clear();
         m_nextEntity = 1;
     }
+
+private:
+    std::vector<EntityID> m_aliveEntities;
+    std::vector<EntityID> m_freeEntities;
+    EntityID m_nextEntity = 1;
+    ComponentManager* m_componentManager;
 };
 
 // 世界 - 管理所有实体、组件和系统
 class World {
 public:
-    static World& GetInstance();
+    static World& GetInstance() {
+        static World instance;
+        return instance;
+    }
 
-    // 实体管理
-    EntityID CreateEntity();
-    void DestroyEntity(EntityID entity);
-    bool IsEntityValid(EntityID entity) const;
+    EntityID CreateEntity() {
+        return m_entityManager.CreateEntity();
+    }
 
-    // 组件管理
+    void DestroyEntity(EntityID entity) {
+        m_entityManager.DestroyEntity(entity);
+    }
+
+    bool IsEntityValid(EntityID entity) const {
+        return m_entityManager.IsEntityValid(entity);
+    }
+
     template<typename T>
-    T* AddComponent(EntityID entity);
+    T* AddComponent(EntityID entity) {
+        return m_componentManager.AddComponent<T>(entity);
+    }
 
     template<typename T>
-    T* GetComponent(EntityID entity);
+    T* GetComponent(EntityID entity) {
+        return m_componentManager.GetComponent<T>(entity);
+    }
 
     template<typename T>
-    bool HasComponent(EntityID entity);
+    bool HasComponent(EntityID entity) {
+        return m_componentManager.HasComponent<T>(entity);
+    }
 
     template<typename T>
-    void RemoveComponent(EntityID entity);
+    void RemoveComponent(EntityID entity) {
+        m_componentManager.RemoveComponent<T>(entity);
+    }
 
-    // 系统管理
     template<typename T, typename... Args>
-    T* AddSystem(Args&&... args);
+    T* AddSystem(Args&&... args) {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        auto system = std::make_unique<T>(std::forward<Args>(args)...);
+        system->m_world = this;
+        system->Initialize();
+        T* ptr = system.get();
+        m_systems.push_back(std::move(system));
+        return ptr;
+    }
 
-    template<typename T>
-    T* GetSystem();
+    void Update(float deltaTime) {
+        for (auto& system : m_systems) {
+            if (system->enabled) {
+                system->Update(deltaTime);
+            }
+        }
+    }
 
-    template<typename T>
-    void RemoveSystem();
+    void Clear() {
+        m_entityManager.ClearEntities();
+        m_componentManager.RemoveAllComponents(0); // Simplified clear
+        m_systems.clear();
+    }
 
-    // 更新
-    void Update(float deltaTime);
-
-    // 获取实体管理器
     EntityManager& GetEntityManager() { return m_entityManager; }
-
-    // 获取组件管理器
     ComponentManager& GetComponentManager() { return m_componentManager; }
 
-    // 清空世界
-    void Clear();
-
-    // 保存/加载
-    bool SaveToFile(const std::string& filePath);
-    bool LoadFromFile(const std::string& filePath);
-
 private:
-    World();
-    ~World();
+    World() { m_entityManager.SetComponentManager(&m_componentManager); }
+    ~World() = default;
 
-    World(const World&) = delete;
-    World& operator=(const World&) = delete;
-
-    // 管理器
     EntityManager m_entityManager;
     ComponentManager m_componentManager;
-
-    // 系统
     std::vector<std::unique_ptr<ISystem>> m_systems;
-    std::unordered_map<size_t, SystemTypeID> m_systemTypes;
-    SystemTypeID m_nextSystemType = 1;
-
     mutable std::mutex m_mutex;
 };
 
@@ -277,15 +311,9 @@ public:
     Entity() : m_id(INVALID_ENTITY), m_world(nullptr) {}
     Entity(EntityID id, World* world) : m_id(id), m_world(world) {}
 
-    // 实体ID
     EntityID GetID() const { return m_id; }
+    bool IsValid() const { return m_id != INVALID_ENTITY && m_world && m_world->IsEntityValid(m_id); }
 
-    // 有效性
-    bool IsValid() const {
-        return m_id != INVALID_ENTITY && m_world && m_world->IsEntityValid(m_id);
-    }
-
-    // 组件操作
     template<typename T, typename... Args>
     T& AddComponent(Args&&... args) {
         T* component = m_world->AddComponent<T>(m_id);
@@ -296,244 +324,23 @@ public:
     }
 
     template<typename T>
-    T& GetComponent() {
-        return *m_world->GetComponent<T>(m_id);
-    }
+    T* GetComponent() { return m_world->GetComponent<T>(m_id); }
 
     template<typename T>
-    const T& GetComponent() const {
-        return *m_world->GetComponent<T>(m_id);
-    }
+    bool HasComponent() const { return m_world->HasComponent<T>(m_id); }
 
     template<typename T>
-    bool HasComponent() const {
-        return m_world->HasComponent<T>(m_id);
-    }
+    void RemoveComponent() { m_world->RemoveComponent<T>(m_id); }
 
-    template<typename T>
-    void RemoveComponent() {
-        m_world->RemoveComponent<T>(m_id);
-    }
+    void Destroy() { if (m_world) { m_world->DestroyEntity(m_id); m_id = INVALID_ENTITY; } }
 
-    // 销毁实体
-    void Destroy() {
-        if (m_world) {
-            m_world->DestroyEntity(m_id);
-            m_id = INVALID_ENTITY;
-        }
-    }
-
-    // 比较操作
-    bool operator==(const Entity& other) const {
-        return m_id == other.m_id && m_world == other.m_world;
-    }
-
-    bool operator!=(const Entity& other) const {
-        return !(*this == other);
-    }
-
-    // 布尔转换
-    explicit operator bool() const {
-        return IsValid();
-    }
+    explicit operator bool() const { return IsValid(); }
 
 private:
     EntityID m_id;
     World* m_world;
 };
 
-// 组件模板实现
-template<typename T>
-void ComponentManager::RegisterComponent() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    const std::type_info& typeInfo = typeid(T);
-    if (m_componentTypes.find(typeInfo.hash_code()) == m_componentTypes.end()) {
-        m_componentTypes[typeInfo.hash_code()] = m_nextComponentType++;
-        m_componentArrays.emplace_back();
-        LOG_DEBUG("ECS", "注册组件类型: {0}", typeid(T).name());
-    }
-}
-
-template<typename T>
-T* ComponentManager::AddComponent(EntityID entity) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    ComponentTypeID typeID = GetComponentType(typeid(T));
-    if (typeID == INVALID_COMPONENT_TYPE) {
-        RegisterComponent<T>();
-        typeID = GetComponentType(typeid(T));
-    }
-
-    ComponentData& data = m_componentArrays[typeID - 1];
-
-    // 检查实体是否已经有该组件
-    auto it = data.entityToIndex.find(entity);
-    if (it != data.entityToIndex.end()) {
-        return static_cast<T*>(data.components[it->second].get());
-    }
-
-    // 添加新组件
-    auto component = std::make_unique<T>();
-    T* componentPtr = component.get();
-    componentPtr->enabled = true;
-
-    size_t index = data.components.size();
-    data.components.push_back(std::move(component));
-    data.entityToIndex[entity] = index;
-    data.indexToEntity[index] = entity;
-
-    return componentPtr;
-}
-
-template<typename T>
-T* ComponentManager::GetComponent(EntityID entity) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    ComponentTypeID typeID = GetComponentType(typeid(T));
-    if (typeID == INVALID_COMPONENT_TYPE) {
-        return nullptr;
-    }
-
-    const ComponentData& data = m_componentArrays[typeID - 1];
-    auto it = data.entityToIndex.find(entity);
-    if (it == data.entityToIndex.end()) {
-        return nullptr;
-    }
-
-    return static_cast<T*>(data.components[it->second].get());
-}
-
-template<typename T>
-bool ComponentManager::HasComponent(EntityID entity) {
-    return GetComponent<T>(entity) != nullptr;
-}
-
-template<typename T>
-void ComponentManager::RemoveComponent(EntityID entity) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    ComponentTypeID typeID = GetComponentType(typeid(T));
-    if (typeID == INVALID_COMPONENT_TYPE) {
-        return;
-    }
-
-    ComponentData& data = m_componentArrays[typeID - 1];
-    auto it = data.entityToIndex.find(entity);
-    if (it == data.entityToIndex.end()) {
-        return;
-    }
-
-    // 移除组件并更新索引
-    size_t lastIndex = data.components.size() - 1;
-    EntityID lastEntity = data.indexToEntity[lastIndex];
-
-    data.components[it->second] = std::move(data.components[lastIndex]);
-    data.entityToIndex[lastEntity] = it->second;
-    data.indexToEntity[it->second] = lastEntity;
-
-    data.entityToIndex.erase(entity);
-    data.indexToEntity.erase(lastIndex);
-    data.components.pop_back();
-}
-
-template<typename T>
-std::vector<EntityID> ComponentManager::GetEntitiesWithComponent() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    std::vector<EntityID> entities;
-    ComponentTypeID typeID = GetComponentType(typeid(T));
-    if (typeID == INVALID_COMPONENT_TYPE) {
-        return entities;
-    }
-
-    const ComponentData& data = m_componentArrays[typeID - 1];
-    for (const auto& pair : data.entityToIndex) {
-        const auto& component = static_cast<T*>(data.components[pair.second].get());
-        if (component && component->enabled) {
-            entities.push_back(pair.first);
-        }
-    }
-
-    return entities;
-}
-
-// 世界模板实现
-template<typename T>
-T* World::AddComponent(EntityID entity) {
-    return m_componentManager.AddComponent<T>(entity);
-}
-
-template<typename T>
-T* World::GetComponent(EntityID entity) {
-    return m_componentManager.GetComponent<T>(entity);
-}
-
-template<typename T>
-bool World::HasComponent(EntityID entity) {
-    return m_componentManager.HasComponent<T>(entity);
-}
-
-template<typename T>
-void World::RemoveComponent(EntityID entity) {
-    m_componentManager.RemoveComponent<T>(entity);
-}
-
-template<typename T, typename... Args>
-T* World::AddSystem(Args&&... args) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    const std::type_info& typeInfo = typeid(T);
-    auto it = m_systemTypes.find(typeInfo.hash_code());
-    if (it != m_systemTypes.end()) {
-        return dynamic_cast<T*>(m_systems[it->second - 1].get());
-    }
-
-    SystemTypeID typeID = m_nextSystemType++;
-    m_systemTypes[typeInfo.hash_code()] = typeID;
-
-    auto system = std::make_unique<T>(std::forward<Args>(args)...);
-    system->m_world = this;
-    system->Initialize();
-
-    T* systemPtr = system.get();
-    m_systems.push_back(std::move(system));
-
-    LOG_DEBUG("ECS", "添加系统: {0}", typeid(T).name());
-    return systemPtr;
-}
-
-template<typename T>
-T* World::GetSystem() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    const std::type_info& typeInfo = typeid(T);
-    auto it = m_systemTypes.find(typeInfo.hash_code());
-    if (it == m_systemTypes.end()) {
-        return nullptr;
-    }
-
-    return dynamic_cast<T*>(m_systems[it->second - 1].get());
-}
-
-template<typename T>
-void World::RemoveSystem() {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    const std::type_info& typeInfo = typeid(T);
-    auto it = m_systemTypes.find(typeInfo.hash_code());
-    if (it == m_systemTypes.end()) {
-        return;
-    }
-
-    SystemTypeID typeID = it->second;
-    m_systems[typeID - 1].reset();
-    m_systems.erase(m_systems.begin() + (typeID - 1));
-    m_systemTypes.erase(it);
-
-    LOG_DEBUG("ECS", "移除系统: {0}", typeid(T).name());
-}
-
 } // namespace ECS
 } // namespace Core
-} // namespace Engine
+} // namespace PrismaEngine
