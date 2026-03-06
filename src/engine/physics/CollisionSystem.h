@@ -315,33 +315,27 @@ namespace PrismaEngine {
                 tMin = 0.0;
                 tMax = std::numeric_limits<double>::max();
 
-                // 检查每个轴的 slab
-                for (int i = 0; i < 3; i++) {
-                    double rayOrigin = ray.origin[i];
-                    double rayDir = ray.direction[i];
-                    double boxMin = aabb.minX + (i == 1) * (aabb.minY - aabb.minX);
-                    double boxMax = aabb.maxX + (i == 1) * (aabb.maxY - aabb.maxX) + (i == 2) * (aabb.maxZ - aabb.maxX);
-
-                    if (std::abs(rayDir) < 1e-9) {
-                        // 射线与该轴平行
-                        if (rayOrigin < boxMin || rayOrigin > boxMax) {
-                            return false;
-                        }
+                auto checkAxis = [&](double origin, double dir, double minVal, double maxVal) -> bool {
+                    if (std::abs(dir) < 1e-9) {
+                        if (origin < minVal || origin > maxVal) return false;
                     } else {
-                        double t1 = (boxMin - rayOrigin) / rayDir;
-                        double t2 = (boxMax - rayOrigin) / rayDir;
+                        double invDir = 1.0 / dir;
+                        double t1 = (minVal - origin) * invDir;
+                        double t2 = (maxVal - origin) * invDir;
 
-                        // 确保 t1 <= t2
                         if (t1 > t2) std::swap(t1, t2);
 
                         tMin = std::max(tMin, t1);
                         tMax = std::min(tMax, t2);
 
-                        if (tMin > tMax) {
-                            return false;
-                        }
+                        if (tMin > tMax) return false;
                     }
-                }
+                    return true;
+                };
+
+                if (!checkAxis(ray.origin.x, ray.direction.x, aabb.minX, aabb.maxX)) return false;
+                if (!checkAxis(ray.origin.y, ray.direction.y, aabb.minY, aabb.maxY)) return false;
+                if (!checkAxis(ray.origin.z, ray.direction.z, aabb.minZ, aabb.maxZ)) return false;
 
                 return tMin >= 0.0 && tMin <= tMax;
             }
@@ -504,14 +498,18 @@ namespace PrismaEngine {
             static bool sweepAxis(const AABB& moving, const glm::dvec3& movement,
                                   const AABB& stationary, int axis,
                                   double& entryTime, double& exitTime) {
-                double boxMin = moving.minX + (axis == 1) * (moving.minY - moving.minX)
-                                              + (axis == 2) * (moving.minZ - moving.minX);
-                double boxMax = moving.maxX + (axis == 1) * (moving.maxY - moving.maxX)
-                                              + (axis == 2) * (moving.maxZ - moving.maxX);
-                double statMin = stationary.minX + (axis == 1) * (stationary.minY - stationary.minX)
-                                                  + (axis == 2) * (stationary.minZ - stationary.minX);
-                double statMax = stationary.maxX + (axis == 1) * (stationary.maxY - stationary.maxY)
-                                                  + (axis == 2) * (stationary.maxZ - stationary.maxZ);
+                double boxMin, boxMax, statMin, statMax;
+                if (axis == 0) {
+                    boxMin = moving.minX; boxMax = moving.maxX;
+                    statMin = stationary.minX; statMax = stationary.maxX;
+                } else if (axis == 1) {
+                    boxMin = moving.minY; boxMax = moving.maxY;
+                    statMin = stationary.minY; statMax = stationary.maxY;
+                } else {
+                    boxMin = moving.minZ; boxMax = moving.maxZ;
+                    statMin = stationary.minZ; statMax = stationary.maxZ;
+                }
+                
                 double move = movement[axis];
 
                 if (std::abs(move) < 1e-9) {
@@ -520,12 +518,13 @@ namespace PrismaEngine {
                     return boxMin < statMax && boxMax > statMin;
                 }
 
+                double invMove = 1.0 / move;
                 if (move > 0) {
-                    entryTime = (statMin - boxMax) / move;
-                    exitTime = (statMax - boxMin) / move;
+                    entryTime = (statMin - boxMax) * invMove;
+                    exitTime = (statMax - boxMin) * invMove;
                 } else {
-                    entryTime = (statMax - boxMin) / move;
-                    exitTime = (statMin - boxMax) / move;
+                    entryTime = (statMax - boxMin) * invMove;
+                    exitTime = (statMin - boxMax) * invMove;
                 }
 
                 if (entryTime > exitTime || exitTime < 0.0 || entryTime > 1.0) {
