@@ -239,4 +239,4 @@ bool Platform::CreateVulkanSurface(void* instance, WindowHandle windowHandle, vo
 
 #endif // !defined(PRISMA_HAS_SDL)
 
-} // namespace Engine
+} // namespace PrismaEngine

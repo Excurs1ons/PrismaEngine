@@ -6,6 +6,8 @@
 #define HANDLE_H
 #include <optional>
 
+namespace PrismaEngine {
+
 // 基础句柄类型
 class Handle {
 private:
@@ -27,6 +29,8 @@ public:
 struct VertexBufferHandle : public Handle {};
 struct IndexBufferHandle : public Handle {};
 struct TextureHandle : public Handle {};
+
+} // namespace PrismaEngine
 
 
 
