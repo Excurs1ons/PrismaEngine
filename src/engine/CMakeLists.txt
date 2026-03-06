@@ -108,7 +108,7 @@ if(WIN32)
 endif()
 
 # Linux 平台 - 使用 PlatformSDL.cpp
-if(PRISMA_PLATFORM_LINUX)
+if(LINUX)
     list(APPEND CORE_SOURCES
         PlatformSDL.cpp
         input/drivers/InputDriverSDL3.cpp
