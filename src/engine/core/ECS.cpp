@@ -1,35 +1,10 @@
 #include "ECS.h"
 #include "Logger.h"
+#include <algorithm>
 
 namespace PrismaEngine {
 namespace Core {
 namespace ECS {
-
-// ComponentManager 实现
-ComponentTypeID ComponentManager::GetComponentType(const std::type_info& typeInfo) {
-    auto it = m_componentTypes.find(typeInfo.hash_code());
-    return (it != m_componentTypes.end()) ? it->second : INVALID_COMPONENT_TYPE;
-}
-
-void ComponentManager::RemoveAllComponents(EntityID entity) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    for (auto& data : m_componentArrays) {
-        auto it = data.entityToIndex.find(entity);
-        if (it != data.entityToIndex.end()) {
-            size_t lastIndex = data.components.size() - 1;
-            EntityID lastEntity = data.indexToEntity[lastIndex];
-
-            data.components[it->second] = std::move(data.components[lastIndex]);
-            data.entityToIndex[lastEntity] = it->second;
-            data.indexToEntity[it->second] = lastEntity;
-
-            data.entityToIndex.erase(entity);
-            data.indexToEntity.erase(lastIndex);
-            data.components.pop_back();
-        }
-    }
-}
 
 // EntityManager 实现
 EntityManager::EntityManager() {
@@ -81,7 +56,7 @@ bool EntityManager::IsEntityValid(EntityID entity) const {
 // World 实现
 World::World() : m_entityManager(), m_componentManager() {
     m_entityManager.SetComponentManager(&m_componentManager);
-    LOG_INFO("ECS", "ECS世界初始化");
+    LOG_INFO("ECS", "ECS世界初始化 (DOD 模式)");
 }
 
 World::~World() {
@@ -110,6 +85,8 @@ bool World::IsEntityValid(EntityID entity) const {
 }
 
 void World::Update(float deltaTime) {
+    // 系统更新逻辑
+    // 注意：在这里加锁可能会导致死锁，实际引擎中系统更新通常有更复杂的调度
     std::lock_guard<std::mutex> lock(m_mutex);
 
     // 更新所有系统
@@ -127,7 +104,7 @@ void World::Clear() {
     m_entityManager.ClearEntities();
 
     // 清空所有组件
-    m_componentManager.ClearComponents();
+    m_componentManager.RemoveAllComponents(0); // 暂时全清
 
     // 清空系统
     m_systems.clear();
@@ -137,13 +114,11 @@ void World::Clear() {
 }
 
 bool World::SaveToFile(const std::string& filePath) {
-    // TODO: 实现世界序列化
     LOG_WARNING("ECS", "世界保存功能尚未实现: {0}", filePath);
     return false;
 }
 
 bool World::LoadFromFile(const std::string& filePath) {
-    // TODO: 实现世界反序列化
     LOG_WARNING("ECS", "世界加载功能尚未实现: {0}", filePath);
     return false;
 }

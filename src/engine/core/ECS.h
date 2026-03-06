@@ -30,36 +30,28 @@ const ComponentTypeID INVALID_COMPONENT_TYPE = 0;
 using SystemTypeID = uint32_t;
 const SystemTypeID INVALID_SYSTEM_TYPE = 0;
 
-// 组件基类
-class IComponent {
+/**
+ * @brief 组件类型注册表（静态）
+ * 使用模板技术在编译期分配类型 ID，避免虚函数
+ */
+class ComponentRegistry {
 public:
-    virtual ~IComponent() = default;
-
-    // 获取组件类型ID
-    virtual ComponentTypeID GetTypeID() const = 0;
-
-    // 是否启用
-    bool enabled = true;
+    template<typename T>
+    static ComponentTypeID GetTypeID() {
+        static const ComponentTypeID id = m_nextID++;
+        return id;
+    }
+private:
+    static inline ComponentTypeID m_nextID = 1;
 };
 
 // 系统基类
 class ISystem {
 public:
     virtual ~ISystem() = default;
-
-    // 获取系统类型ID
-    virtual SystemTypeID GetTypeID() const = 0;
-
-    // 初始化
     virtual void Initialize() {}
-
-    // 更新
     virtual void Update(float deltaTime) = 0;
-
-    // 销毁
     virtual void Shutdown() {}
-
-    // 是否启用
     bool enabled = true;
 
 protected:
@@ -67,55 +59,104 @@ protected:
     friend class World;
 };
 
+/**
+ * @brief 类型擦除的组件池接口
+ */
+class IComponentPool {
+public:
+    virtual ~IComponentPool() = default;
+    virtual void Remove(EntityID entity) = 0;
+    virtual void Clear() = 0;
+};
+
+/**
+ * @brief 连续内存组件池 (Data-Oriented)
+ * 存储组件对象本身而非指针，保证缓存局部性
+ */
+template<typename T>
+class ComponentPool : public IComponentPool {
+public:
+    T* Add(EntityID entity) {
+        if (m_entityToIndex.find(entity) != m_entityToIndex.end()) {
+            return &m_components[m_entityToIndex[entity]];
+        }
+        size_t index = m_components.size();
+        m_entityToIndex[entity] = index;
+        m_indexToEntity[index] = entity;
+        m_components.emplace_back();
+        return &m_components[index];
+    }
+
+    T* Get(EntityID entity) {
+        auto it = m_entityToIndex.find(entity);
+        return (it != m_entityToIndex.end()) ? &m_components[it->second] : nullptr;
+    }
+
+    void Remove(EntityID entity) override {
+        auto it = m_entityToIndex.find(entity);
+        if (it == m_entityToIndex.end()) return;
+
+        size_t indexToRemove = it->second;
+        size_t lastIndex = m_components.size() - 1;
+        EntityID lastEntity = m_indexToEntity[lastIndex];
+
+        // 将最后一个元素移动到删除位置，保持内存连续 (Swap-and-pop)
+        m_components[indexToRemove] = std::move(m_components[lastIndex]);
+        m_entityToIndex[lastEntity] = indexToRemove;
+        m_indexToEntity[indexToRemove] = lastEntity;
+
+        m_entityToIndex.erase(entity);
+        m_indexToEntity.erase(lastIndex);
+        m_components.pop_back();
+    }
+
+    void Clear() override {
+        m_components.clear();
+        m_entityToIndex.clear();
+        m_indexToEntity.clear();
+    }
+
+    std::vector<T>& GetData() { return m_components; }
+
+private:
+    std::vector<T> m_components; // 连续内存存储对象本身
+    std::unordered_map<EntityID, size_t> m_entityToIndex;
+    std::unordered_map<size_t, EntityID> m_indexToEntity;
+};
+
 // 组件管理器
 class ComponentManager {
 public:
     template<typename T>
-    void RegisterComponent();
-
-    ComponentTypeID GetComponentType(const std::type_info& typeInfo);
-
-    template<typename T>
-    T* AddComponent(EntityID entity);
-
-    template<typename T>
-    T* GetComponent(EntityID entity);
-
-    template<typename T>
-    bool HasComponent(EntityID entity);
+    ComponentPool<T>* GetPool() {
+        ComponentTypeID typeID = ComponentRegistry::GetTypeID<T>();
+        if (typeID > m_pools.size()) {
+            m_pools.resize(typeID);
+        }
+        if (!m_pools[typeID - 1]) {
+            m_pools[typeID - 1] = std::make_unique<ComponentPool<T>>();
+        }
+        return static_cast<ComponentPool<T>*>(m_pools[typeID - 1].get());
+    }
 
     template<typename T>
-    void RemoveComponent(EntityID entity);
-
-    void RemoveAllComponents(EntityID entity);
+    T* AddComponent(EntityID entity) {
+        return GetPool<T>()->Add(entity);
+    }
 
     template<typename T>
-    std::vector<EntityID> GetEntitiesWithComponent();
+    T* GetComponent(EntityID entity) {
+        return GetPool<T>()->Get(entity);
+    }
 
-private:
-    // 组件类型注册
-    std::unordered_map<size_t, ComponentTypeID> m_componentTypes;
-    ComponentTypeID m_nextComponentType = 1;
-
-    // 组件数据
-    struct ComponentData {
-        std::vector<std::unique_ptr<IComponent>> components;
-        std::unordered_map<EntityID, size_t> entityToIndex;
-        std::unordered_map<size_t, EntityID> indexToEntity;
-    };
-
-    std::vector<ComponentData> m_componentArrays;
-    std::mutex m_mutex;
-
-public:
-    // 用于清理操作
-    void ClearComponents() {
-        for (auto& data : m_componentArrays) {
-            data.components.clear();
-            data.entityToIndex.clear();
-            data.indexToEntity.clear();
+    void RemoveAllComponents(EntityID entity) {
+        for (auto& pool : m_pools) {
+            if (pool) pool->Remove(entity);
         }
     }
+
+private:
+    std::vector<std::unique_ptr<IComponentPool>> m_pools;
 };
 
 // 实体管理器
