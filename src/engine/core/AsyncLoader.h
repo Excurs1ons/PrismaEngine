@@ -654,5 +654,34 @@ namespace PrismaEngine {
             virtual void setOptimizationOptions(const MeshOptimizationOptions& options) = 0;
         };
 
+        /**
+         * @brief 异步加载器 (单例)
+         *
+         * 引擎范围内统一的异步任务和资源加载入口
+         */
+        class AsyncLoader {
+        public:
+            static AsyncLoader& GetInstance();
+
+            bool Initialize(size_t threadCount = 0);
+            void Shutdown();
+            void Update(size_t maxCallbacks = 100);
+
+            ThreadPool* getThreadPool() { return m_threadPool.get(); }
+            AsyncResourceLoader* getResourceLoader() { return m_resourceLoader.get(); }
+            ChunkGenerationSystem* getChunkGenerator() { return m_chunkGenerator.get(); }
+            ChunkMeshBuildSystem* getMeshBuilder() { return m_meshBuilder.get(); }
+
+        private:
+            AsyncLoader();
+            ~AsyncLoader();
+
+            std::unique_ptr<ThreadPool> m_threadPool;
+            std::unique_ptr<AsyncResourceLoader> m_resourceLoader;
+            std::unique_ptr<ChunkGenerationSystem> m_chunkGenerator;
+            std::unique_ptr<ChunkMeshBuildSystem> m_meshBuilder;
+        };
+
     } // namespace Core
 } // namespace PrismaEngine
+

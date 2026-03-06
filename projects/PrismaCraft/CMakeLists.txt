@@ -5,14 +5,11 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 1. 查找 PrismaEngine SDK
-# 提示: SDK 已经由 package-sdk.ps1 安装到 sdk/out
 find_package(PrismaEngine REQUIRED)
 
 # 2. 包含路径
-set(PRISMACRAFT_INCLUDE_DIRS
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
+set(PRISMACRAFT_CORE_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(PRISMACRAFT_LOGIC_INCLUDE "${CMAKE_CURRENT_SOURCE_DIR}/src")
 
 # 3. 收集源文件
 file(GLOB_RECURSE PRISMACRAFT_SOURCES
@@ -23,9 +20,11 @@ file(GLOB_RECURSE PRISMACRAFT_SOURCES
 
 # 4. 创建 PrismaCraft 库
 add_library(PrismaCraft STATIC ${PRISMACRAFT_SOURCES})
+add_library(PrismaCraft::PrismaCraft ALIAS PrismaCraft)
 
 target_include_directories(PrismaCraft PUBLIC 
-    ${PRISMACRAFT_INCLUDE_DIRS}
+    $<BUILD_INTERFACE:${PRISMACRAFT_CORE_INCLUDE}>
+    $<BUILD_INTERFACE:${PRISMACRAFT_LOGIC_INCLUDE}>
 )
 
 # 5. 链接引擎
@@ -35,4 +34,4 @@ target_link_libraries(PrismaCraft PRIVATE PrismaEngine::Engine)
 target_compile_definitions(PrismaCraft PRIVATE PRISMACRAFT_EXPORTS)
 
 # 显示配置成功信息
-message(STATUS "PrismaCraft (Flattened) configured using PrismaEngine SDK")
+message(STATUS "PrismaCraft (Integrated) configured using PrismaEngine SDK")

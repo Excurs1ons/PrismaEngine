@@ -112,6 +112,12 @@ else()
         add_subdirectory(src/game)
         message(STATUS "已添加 Game 模块")
     endif()
+    
+    # 外部项目模块 (PrismaCraft 等)
+    if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt)
+        add_subdirectory(projects)
+        message(STATUS "已添加 Projects 模块")
+    endif()
 endif()
 
 # 运行时模块 (最后添加，以便能检测到 Game/Editor 目标)
