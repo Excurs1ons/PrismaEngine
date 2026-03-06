@@ -47,13 +47,13 @@ namespace Core {
 
                 uint64_t submit(std::unique_ptr<AsyncTask> task) override {
                     uint64_t id = task->getId();
+                    auto taskPtr = std::shared_ptr<std::unique_ptr<AsyncTask>>(std::make_shared<std::unique_ptr<AsyncTask>>(std::move(task)));
                     {
                         std::unique_lock<std::mutex> lock(m_queueMutex);
                         if (m_stop) return 0;
                         
-                        m_tasks.emplace([this, t = std::move(task)]() {
-                            t->execute();
-                            // 处理完成后移动到完成列表
+                        m_tasks.emplace([taskPtr]() {
+                            (*taskPtr)->execute();
                         });
                     }
                     m_condition.notify_one();
