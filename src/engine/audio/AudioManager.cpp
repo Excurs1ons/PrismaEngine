@@ -245,7 +245,7 @@ std::shared_ptr<AudioSource> AudioManager::PlayAudio(const std::string& filePath
 }
 
 std::shared_ptr<AudioSource> AudioManager::PlayAudio3D(const std::string& filePath,
-                                                      const DirectX::XMFLOAT3& position,
+                                                      const PrismaEngine::Vector3& position,
                                                       float volume,
                                                       bool loop) {
     auto source = PlayAudio(filePath, volume, loop);
@@ -480,7 +480,7 @@ void AudioSource::SetLoop(bool loop) {
 #endif
 }
 
-void AudioSource::Set3DPosition(const DirectX::XMFLOAT3& position) {
+void AudioSource::Set3DPosition(const PrismaEngine::Vector3& position) {
     m_position = position;
 
 #ifdef ENABLE_OPENAL
@@ -489,7 +489,7 @@ void AudioSource::Set3DPosition(const DirectX::XMFLOAT3& position) {
 #endif
 }
 
-void AudioSource::Set3DVelocity(const DirectX::XMFLOAT3& velocity) {
+void AudioSource::Set3DVelocity(const PrismaEngine::Vector3& velocity) {
     m_velocity = velocity;
 
 #ifdef ENABLE_OPENAL
@@ -516,8 +516,8 @@ void AudioSource::Set3DCone(float innerAngle, float outerAngle, float outerVolum
 
 #ifdef ENABLE_OPENAL
     ALuint sourceId = reinterpret_cast<ALuint>(m_sourceHandle);
-    alSourcef(sourceId, AL_CONE_INNER_ANGLE, DirectX::XMConvertToDegrees(innerAngle));
-    alSourcef(sourceId, AL_CONE_OUTER_ANGLE, DirectX::XMConvertToDegrees(outerAngle));
+    alSourcef(sourceId, AL_CONE_INNER_ANGLE, glm::degrees(innerAngle));
+    alSourcef(sourceId, AL_CONE_OUTER_ANGLE, glm::degrees(outerAngle));
     alSourcef(sourceId, AL_CONE_OUTER_GAIN, outerVolume);
 #endif
 }
@@ -545,15 +545,15 @@ AudioListener::AudioListener() {
     // 默认值已在成员初始化中设置
 }
 
-void AudioListener::SetPosition(const DirectX::XMFLOAT3& position) {
+void AudioListener::SetPosition(const PrismaEngine::Vector3& position) {
     m_position = position;
 }
 
-void AudioListener::SetVelocity(const DirectX::XMFLOAT3& velocity) {
+void AudioListener::SetVelocity(const PrismaEngine::Vector3& velocity) {
     m_velocity = velocity;
 }
 
-void AudioListener::SetOrientation(const DirectX::XMFLOAT3& forward, const DirectX::XMFLOAT3& up) {
+void AudioListener::SetOrientation(const PrismaEngine::Vector3& forward, const PrismaEngine::Vector3& up) {
     m_forward = forward;
     m_up = up;
 }

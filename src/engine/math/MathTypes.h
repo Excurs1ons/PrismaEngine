@@ -38,6 +38,11 @@ using Quaternion = glm::quat;
 // 颜色类型
 using Color = Vector4;
 
+} // namespace PrismaEngine
+
+// 别名，用于向后兼容
+namespace PrismaMath = glm;
+
 // 平面类型
 struct Plane {
     Vector3 normal;
