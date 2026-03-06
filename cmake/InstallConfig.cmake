@@ -34,6 +34,14 @@ if(PRISMA_BUILD_ENGINE AND TARGET Engine)
         PATTERN "*.cpp" EXCLUDE
     )
 
+    # 安装数学和基础头文件
+    install(FILES
+        src/engine/math/MathTypes.h
+        src/engine/Handle.h
+        src/engine/Platform.h
+        DESTINATION include/PrismaEngine
+    )
+
     # 安装 ECS 核心头文件
     install(DIRECTORY src/engine/core/
         DESTINATION include/PrismaEngine/core
@@ -47,15 +55,16 @@ if(PRISMA_BUILD_ENGINE AND TARGET Engine)
         DESTINATION include/PrismaEngine/physics
     )
 
-    # 安装渲染接口
+    # 安装渲染接口和体素渲染器
     install(DIRECTORY src/engine/graphic/interfaces/
         DESTINATION include/PrismaEngine/graphic/interfaces
         FILES_MATCHING PATTERN "*.h"
     )
 
-    # 安装纹理系统头文件
+    # 安装纹理系统和体素渲染器头文件
     install(FILES
         src/engine/graphic/TextureAtlas.h
+        src/engine/graphic/VoxelRenderer.h
         src/engine/graphic/FrustumCulling.h
         DESTINATION include/PrismaEngine/graphic
     )
