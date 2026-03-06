@@ -55,8 +55,15 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
         for (const auto& subMesh : m_subMeshes) {
             for (const auto& vertex : subMesh.vertices) {
                 PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
-                minVec       = glm::min(minVec, pos);
-                maxVec       = glm::max(maxVec, pos);
+                // 替换 glm::min/minVec 用法，改为手动比较每个分量
+                minVec.x = std::min(minVec.x, pos.x);
+                minVec.y = std::min(minVec.y, pos.y);
+                minVec.z = std::min(minVec.z, pos.z);
+                minVec.w = std::min(minVec.w, pos.w);
+                maxVec.x = std::max(maxVec.x, pos.x);
+                maxVec.y = std::max(maxVec.y, pos.y);
+                maxVec.z = std::max(maxVec.z, pos.z);
+                maxVec.w = std::max(maxVec.w, pos.w);
             }
         }
 
@@ -219,8 +226,14 @@ void MeshAsset::Deserialize(InputArchive& archive) {
         for (const auto& subMesh : m_subMeshes) {
             for (const auto& vertex : subMesh.vertices) {
                 PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
-                minVec       = glm::min(minVec, pos);
-                maxVec       = glm::max(maxVec, pos);
+                minVec.x = std::min(minVec.x, pos.x);
+                minVec.y = std::min(minVec.y, pos.y);
+                minVec.z = std::min(minVec.z, pos.z);
+                minVec.w = std::min(minVec.w, pos.w);
+                maxVec.x = std::max(maxVec.x, pos.x);
+                maxVec.y = std::max(maxVec.y, pos.y);
+                maxVec.z = std::max(maxVec.z, pos.z);
+                maxVec.w = std::max(maxVec.w, pos.w);
             }
         }
 
