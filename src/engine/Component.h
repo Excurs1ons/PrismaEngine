@@ -12,7 +12,7 @@ class Component {
 public:
     virtual ~Component() = default;
     virtual void Initialize(){};
-    virtual void Update(float deltaTime) {}
+    virtual void Update(float /*deltaTime*/) {}
     virtual void Shutdown(){};
     void SetOwner(GameObject* gameObject) { this->owner = gameObject; }
     void Owner(GameObject* gameObject){

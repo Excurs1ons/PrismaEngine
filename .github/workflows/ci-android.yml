@@ -30,6 +30,8 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        submodules: false
 
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -38,8 +40,6 @@ jobs:
         key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
         restore-keys: |
           ${{ runner.os }}-deps-
-      with:
-        submodules: false
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0

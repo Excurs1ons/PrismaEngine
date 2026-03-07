@@ -47,7 +47,7 @@ public:
     }
 
 protected:
-    virtual void OnRender(PrismaEngine::Graphic::RenderCommandContext* context) {
+    virtual void OnRender(PrismaEngine::Graphic::RenderCommandContext* /*context*/) {
         // 默认不做任何渲染
     }
 
