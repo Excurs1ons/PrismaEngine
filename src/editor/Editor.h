@@ -7,9 +7,13 @@
 #include "ProjectSettingsWindow.h"
 #include "Singleton.h"
 
-class EDITOR_API Editor : public PrismaEngine::IApplication<Editor> {
+namespace PrismaEngine {
+
+#pragma warning(push)
+#pragma warning(disable: 4251 4275)
+class EDITOR_API Editor : public IApplication<Editor> {
 public:
-    friend class IApplication;
+    friend class IApplication<Editor>;
     Editor();
     ~Editor() override;
     bool Initialize() override;
@@ -27,6 +31,9 @@ private:
     ProjectSettingsWindow m_projectSettingsWindow;
     bool m_showProjectSettings = false;
 };
+#pragma warning(pop)
+
+} // namespace PrismaEngine
 
 extern "C" {
 // 导出其他函数供动态加载使用
