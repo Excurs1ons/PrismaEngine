@@ -101,6 +101,7 @@ public:
     ENGINE_API static void GetWindowSize(WindowHandle window, int& outW, int& outH);
     ENGINE_API static void SetWindowTitle(WindowHandle window, const char* title);
     ENGINE_API static void PumpEvents();
+    ENGINE_API static void Update() { PumpEvents(); }
     ENGINE_API static bool ShouldClose(WindowHandle window);
     ENGINE_API static WindowHandle GetCurrentWindow();
 

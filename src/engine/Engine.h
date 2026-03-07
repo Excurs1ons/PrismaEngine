@@ -1,4 +1,5 @@
 #pragma once
+
 #include "ISubSystem.h"
 #include "Logger.h"
 #include "Singleton.h"
@@ -8,33 +9,38 @@
 #include <vector>
 
 namespace PrismaEngine {
-class EngineCore {
 
+/// @brief 引擎核心类
+class ENGINE_API EngineCore : public Singleton<EngineCore> {
 public:
     EngineCore();
+    virtual ~EngineCore() = default;
+
+    /// @brief 初始化引擎所有子系统
     bool Initialize();
-    bool IsInitialized() const;
-    int MainLoop();
-    void Tick() const;
+
+    /// @brief 启动引擎主循环
+    int Run();
+
+    /// @brief 关闭引擎
     void Shutdown();
-    bool IsRunning() const;
+
+    /// @brief 每一帧的更新逻辑
+    void Update();
+
+    /// @brief 检查引擎是否已初始化
+    bool IsInitialized() const { return m_initialized; }
+
+    /// @brief 检查引擎是否正在运行
+    bool IsRunning() const { return isRunning_; }
+
 private:
+    /// @brief 注册并初始化子系统
+    bool RegisterSystem(ISubSystem* system);
 
-    template <typename T> bool RegisterSystem() {
-        auto system = T::GetInstance();
-        m_systems.push_back(system);
-        // 如果需要初始化
-        bool result = m_systems.back()->Initialize();
-        if (!result) {
-            LOG_ERROR("Engine", "子系统初始化失败: {}", typeid(T).name());
-        }
-        return result;
-    }
-
-    std::vector<std::shared_ptr<ISubSystem>> m_systems;
-
-    // 状态
-    bool isRunning_;
+    std::vector<ISubSystem*> m_systems;
+    bool m_initialized = false;
+    bool isRunning_ = false;
 };
 
-}  // namespace Engine
+} // namespace PrismaEngine
