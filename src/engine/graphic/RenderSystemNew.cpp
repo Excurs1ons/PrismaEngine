@@ -7,6 +7,14 @@
 
 // ImGui
 #include <imgui.h>
+#ifdef PRISMA_ENABLE_RENDER_DX12
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
+#endif
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
+#include <imgui_impl_vulkan.h>
+#include <imgui_impl_sdl3.h>
+#endif
 
 #ifdef PRISMA_ENABLE_RENDER_DX12
 // DirectX12适配器
