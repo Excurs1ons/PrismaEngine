@@ -169,6 +169,7 @@ std::vector<uint32_t> TileDataDecoder::ParseCSV(const std::string& csvData, int 
 // ============================================================================
 
 std::vector<uint32_t> TileDataDecoder::ParseBase64(const std::string& base64Data, int expectedSize) {
+    (void)expectedSize;
     std::vector<uint8_t> decoded = Base64Decode(base64Data);
     std::vector<uint32_t> result;
 
