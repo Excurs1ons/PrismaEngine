@@ -151,7 +151,7 @@ bool Editor::InitializeImGui() {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    // 注意：不启用 ViewportsEnable（可能导致字体图集未构建）
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
     // 加载默认字体
     io.Fonts->AddFontDefault();
@@ -159,6 +159,20 @@ bool Editor::InitializeImGui() {
 
     // 设置样式
     ImGui::StyleColorsDark();
+
+    // 2. 通过 RenderSystem 初始化 ImGui（使用通用接口）
+    auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
+    if (!renderSystem) {
+        LOG_ERROR("Editor", "渲染系统未初始化，无法初始化 ImGui");
+        return false;
+    }
+
+    if (!renderSystem->InitializeImGui()) {
+        LOG_ERROR("Editor", "ImGui 通过 RenderSystem 初始化失败");
+        return false;
+    }
+
+    LOG_INFO("Editor", "ImGui 通过 RenderSystem 初始化完成");
 
     // 2. 初始化平台/渲染器后端
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();

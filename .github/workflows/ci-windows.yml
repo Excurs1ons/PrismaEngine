@@ -35,6 +35,14 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .dependencies
+        key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
       with:
         submodules: recursive
 
@@ -47,4 +55,5 @@ jobs:
       run: |
         cmake --preset engine-windows-x64-debug -DPRISMA_BUILD_SDK=ON
         cmake --build build/engine-windows-x64-debug --config Debug --parallel
+
 

@@ -20,7 +20,7 @@ env:
   CMAKE_VERSION: '3.31.0'
 
 jobs:
-  # 只有在 CI 检查通过或手动触发时才运行
+  # 只有�?CI 检查通过或手动触发时才运�?
   check-success:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
@@ -35,6 +35,14 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .dependencies
+        key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
       with:
         submodules: false
 
@@ -63,3 +71,4 @@ jobs:
       with:
         name: PrismaEngine-win64-debug
         path: PrismaEngine-win64-debug.zip
+
