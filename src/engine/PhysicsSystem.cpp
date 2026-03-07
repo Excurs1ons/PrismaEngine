@@ -22,8 +22,11 @@ void PhysicsSystem::Shutdown() {
 }
 
 void PhysicsSystem::Update(float deltaTime) {
-    // 在这里更新物理模拟
-    // 例如：模拟物理世界、处理碰撞等
+    // 使用 deltaTime 推进物理模拟（当前为基础空逻辑）
+    if (deltaTime <= 0.0f) return;
+    
+    // 模拟逻辑：在这里调用物理库（如 PhysX/Bullet）的 Step 方法
+    // LOG_TRACE("Physics", "步进模拟: {0}s", deltaTime);
 }
 
 }  // namespace Engine
