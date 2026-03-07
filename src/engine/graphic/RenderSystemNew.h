@@ -1,14 +1,14 @@
 #pragma once
 
-#include "../ManagerBase.h"
 #include "../Export.h"
-#include "pipelines/forward/ForwardPipeline.h"
+#include "../ManagerBase.h"
+#include "WorkerThread.h"
+#include "interfaces/IPipeline.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceManager.h"
-#include "interfaces/IPipeline.h"
-#include "WorkerThread.h"
-#include <memory>
+#include "pipelines/forward/ForwardPipeline.h"
 #include <functional>
+#include <memory>
 
 namespace PrismaEngine::Graphic {
 
@@ -19,15 +19,15 @@ class DX12RenderDevice;
 
 /// @brief 渲染系统描述
 struct RenderSystemDesc {
-    RenderAPIType backendType = RenderAPIType::DirectX12;
-    void* windowHandle = nullptr;
-    void* surface = nullptr;
-    uint32_t width = 1600;
-    uint32_t height = 900;
-    bool enableDebug = false;
-    bool enableValidation = false;
+    RenderAPIType backendType  = RenderAPIType::DirectX12;
+    void* windowHandle         = nullptr;
+    void* surface              = nullptr;
+    uint32_t width             = 1600;
+    uint32_t height            = 900;
+    bool enableDebug           = false;
+    bool enableValidation      = false;
     uint32_t maxFramesInFlight = 2;
-    std::string name = "PrismaRenderSystem";
+    std::string name           = "PrismaRenderSystem";
 };
 
 /// @brief 新的渲染系统
@@ -47,6 +47,10 @@ public:
     /// @brief 初始化渲染系统（实现基类纯虚函数）
     /// @return 是否初始化成功
     ENGINE_API bool Initialize() override;
+
+    /// @brief 初始化 ImGui（与渲染后端无关）
+    /// @return 是否初始化成功
+    ENGINE_API bool InitializeImGui();
 
     /// @brief 关闭渲染系统
     ENGINE_API void Shutdown() override;
@@ -95,8 +99,7 @@ public:
     IPipeline* GetMainPipeline() const { return m_mainPipeline.get(); }
 
     // === 回调函数 ===
-
-    /// @brief GUI渲染回调
+    /// @brief GUI渲染回调（接收命令缓冲区）
     using GuiRenderCallback = std::function<void(void*)>;
     ENGINE_API void SetGuiRenderCallback(GuiRenderCallback callback);
 
@@ -104,11 +107,11 @@ public:
 
     /// @brief 获取渲染统计信息
     struct RenderStats {
-        uint32_t frameCount = 0;
-        float frameTime = 0.0f;
-        float fps = 0.0f;
-        uint32_t drawCalls = 0;
-        uint32_t triangles = 0;
+        uint32_t frameCount     = 0;
+        float frameTime         = 0.0f;
+        float fps               = 0.0f;
+        uint32_t drawCalls      = 0;
+        uint32_t triangles      = 0;
         uint64_t gpuMemoryUsage = 0;
         uint64_t cpuMemoryUsage = 0;
     };
@@ -176,4 +179,4 @@ private:
     RenderContext GetRenderContext() const;
 };
 
-} // namespace PrismaEngine::Graphic
+}  // namespace PrismaEngine::Graphic
