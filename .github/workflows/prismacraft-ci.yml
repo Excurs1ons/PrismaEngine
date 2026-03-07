@@ -29,13 +29,16 @@ jobs:
         cmake --build build/engine-windows-x64-debug --config Debug --parallel
 
     - name: Verify PrismaCraft built
+      shell: pwsh
       run: |
-        if (Test-Path "build\engine-windows-x64-debug\projects\PrismaCraft\libPrismaCraft.lib") {
-            Write-Host "PrismaCraft library built successfully!"
+        $libPath = "build\engine-windows-x64-debug\projects\PrismaCraft\PrismaCraft.dll"
+        if (Test-Path $libPath) {
+            Write-Host "PrismaCraft DLL built successfully!"
+            Get-ChildItem "build\engine-windows-x64-debug\projects\PrismaCraft\*.dll"
             Get-ChildItem "build\engine-windows-x64-debug\projects\PrismaCraft\*.lib"
         } else {
-            Write-Host "Warning: PrismaCraft lib not found at expected location"
-            Get-ChildItem "build\engine-windows-x64-debug" -Recurse -Filter "*.lib" | Select-Object FullName
+            Write-Host "Warning: PrismaCraft DLL not found at expected location"
+            Get-ChildItem "build\engine-windows-x64-debug" -Recurse -Filter "PrismaCraft*" | Select-Object FullName
             exit 1
         }
 
