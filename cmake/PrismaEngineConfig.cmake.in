@@ -49,8 +49,17 @@ if(NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
     find_dependency(imgui CONFIG)
 endif()
 
-# 包含目标
-include("${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
+# 包含目标 (如果存在)
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
+    include("${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
+else()
+    # 如果 Targets 文件不存在，手动创建目标
+    if(TARGET Engine)
+        if(NOT TARGET PrismaEngine::Engine)
+            add_library(PrismaEngine::Engine ALIAS Engine)
+        endif()
+    endif()
+endif()
 
 # 检查所有请求的组件
 check_required_components(PrismaEngine)
