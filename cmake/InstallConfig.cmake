@@ -14,9 +14,8 @@ endif()
 # ========== Engine 库安装 ==========
 
 if(PRISMA_BUILD_ENGINE AND TARGET Engine)
-    # 安装引擎库
+    # 安装引擎库 - 不导出依赖，只安装 Engine 本身
     install(TARGETS Engine
-        EXPORT PrismaEngineTargets
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
         RUNTIME DESTINATION bin
@@ -115,16 +114,7 @@ install(DIRECTORY assets/
     PATTERN ".DS_Store" EXCLUDE
 )
 
-# ========== 可选: 安装 resources 目录 ==========
-# 取消下面的注释以启用 resources 目录安装
-# install(DIRECTORY resources/
-#     DESTINATION resources
-#     PATTERN "build" EXCLUDE
-#     PATTERN ".DS_Store" EXCLUDE
-# )
-
-# ========== CMake 包配置文件 ==========
-# 用于外部项目使用引擎
+# ========== CMake 包配置文件 (简化版，不依赖导出) ==========
 
 include(CMakePackageConfigHelpers)
 
@@ -148,11 +138,3 @@ install(FILES
     "${CMAKE_CURRENT_BINARY_DIR}/PrismaEngineConfigVersion.cmake"
     DESTINATION lib/cmake/PrismaEngine
 )
-
-# 安装导出目标
-install(EXPORT PrismaEngineTargets
-    FILE PrismaEngineTargets.cmake
-    NAMESPACE PrismaEngine::
-    DESTINATION lib/cmake/PrismaEngine
-)
-
