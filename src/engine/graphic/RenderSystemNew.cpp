@@ -194,31 +194,35 @@ namespace PrismaEngine
                     if (!m_device) {
                         LOG_ERROR("Render", "DX12设备创建失败");
                         return false;
+                    }
+#else
+                    LOG_ERROR("Render", "DX12后端未启用，请检查CMake配置");
+                    return false;
 #endif
-                }
                     break;
+                }
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
-                    case RenderAPIType::Vulkan: {
-                        // TODO: 实现Vulkan工厂
-                        LOG_ERROR("Render", "Vulkan后端暂未实现");
-                        return false;
+                case RenderAPIType::Vulkan: {
+                    // TODO: 实现Vulkan工厂
+                    LOG_ERROR("Render", "Vulkan后端暂未实现");
+                    return false;
+                }
 #endif
+                default: {
+                    LOG_ERROR("Render", "不支持的渲染后端类型: {0}",
+                              static_cast<int>(desc.backendType));
+                    return false;
+                }
             }
-            default: {
-                LOG_ERROR("Render", "不支持的渲染后端类型: {0}",
-                          static_cast<int>(desc.backendType));
+
+            if (!m_device) {
+                LOG_ERROR("Render", "渲染设备创建失败");
                 return false;
             }
+
+            LOG_INFO("Render", "设备初始化完成");
+            return true;
         }
-
-        if (!m_device) {
-        LOG_ERROR("Render", "渲染设备创建失败");
-        return false;
-    }
-
-    LOG_INFO("Render", "设备初始化完成");
-    return true;
-}
 
 bool RenderSystem::InitializeResourceManager() {
     if (!m_device) {
