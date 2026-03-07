@@ -114,7 +114,7 @@ namespace PrismaEngine {
                 // 二进制格式中对象结束不需要特殊标记
             }
 
-            bool HasNextField(const std::string& expectedField = "") override {
+            bool HasNextField(const std::string& /*expectedField*/ = "") override {
                 // 二进制格式中字段顺序是固定的，不支持动态字段检查
                 return true;
             }

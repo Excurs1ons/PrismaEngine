@@ -15,7 +15,7 @@ public:
     void Shutdown() override;
 
 private:
-    std::unique_ptr<EngineCore> engine;
+    EngineCore* engine = nullptr;
 };
 
 }  // namespace Engine
