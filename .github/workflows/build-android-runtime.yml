@@ -42,6 +42,14 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .dependencies
+        key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
       with:
         submodules: false
 
@@ -89,3 +97,4 @@ jobs:
         path: projects/android/PrismaAndroid/app/build/outputs/apk/${{ env.BUILD_TYPE }}/*.apk
         retention-days: 30
         if-no-files-found: ignore
+

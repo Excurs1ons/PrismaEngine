@@ -6,8 +6,6 @@
 #include "Platform.h"  // 包含WindowHandle定义
 #include "ProjectSettingsWindow.h"
 #include "Singleton.h"
-#include <d3d12.h>
-#include <wrl/client.h>
 
 class EDITOR_API Editor : public PrismaEngine::IApplication<Editor> {
 public:
@@ -24,11 +22,6 @@ private:
 
     // 窗口句柄
     WindowHandle m_window = nullptr;
-
-#if defined(PRISMA_ENABLE_RENDER_DX12)
-    // ImGui DX12 SRV 描述符堆（用于字体纹理）
-    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> m_imguiSrvHeap;
-#endif
 
     // Editor Windows
     ProjectSettingsWindow m_projectSettingsWindow;
