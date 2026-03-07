@@ -419,10 +419,11 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
             ${imgui_SOURCE_DIR}/imgui_demo.cpp  # 演示窗口
         )
 
-        # 根据平台添加后端
-        if(WIN32)
-            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
-        endif()
+    # 根据平台添加后端
+         if(WIN32)
+             list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
+             list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_dx12.cpp)
+         endif()
 
         # SDL3 后端（跨平台，仅在 SDL3 可用时）
         set(USE_SDL3_BACKEND OFF)
