@@ -1,6 +1,7 @@
 #pragma once
 
 #include "RenderTypes.h"
+#include "IResource.h"
 
 
 namespace PrismaEngine::Graphic {
@@ -54,7 +55,7 @@ struct TextureDesc : public ResourceDesc {
 };
 
 /// @brief 纹理抽象接口
-class ITexture {
+class ITexture : public IResource {
 public:
     virtual ~ITexture() = default;
 
