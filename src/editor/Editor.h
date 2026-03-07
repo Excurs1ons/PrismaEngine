@@ -13,14 +13,15 @@ namespace PrismaEngine {
 #pragma warning(disable: 4251 4275)
 class EDITOR_API Editor : public IApplication<Editor> {
 public:
-    friend class IApplication<Editor>;
-    Editor();
-    ~Editor() override;
+    friend class Singleton<Editor>;
     bool Initialize() override;
     int Run() override;
     void Shutdown() override;
 
 private:
+    Editor();
+    ~Editor() override;
+    
     bool InitializeImGui();
     void DrawMainMenu();
 

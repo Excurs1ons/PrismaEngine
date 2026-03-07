@@ -5,6 +5,9 @@
 #include "../core/ECS.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
+// ImGui
+#include <imgui.h>
+
 #ifdef PRISMA_ENABLE_RENDER_DX12
 // DirectX12适配器
 #include "adapters/dx12/DX12Adapters.h"
