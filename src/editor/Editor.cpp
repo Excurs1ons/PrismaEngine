@@ -151,7 +151,7 @@ bool Editor::InitializeImGui() {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    // 注意：不启用 ViewportsEnable（可能导致字体图集未构建）
 
     // 加载默认字体
     io.Fonts->AddFontDefault();
@@ -201,9 +201,6 @@ bool Editor::InitializeImGui() {
         return false;
     }
     LOG_INFO("Editor", "ImGui SRV 描述符堆创建成功: 0x{0:X}", reinterpret_cast<uintptr_t>(m_imguiSrvHeap.Get()));
-
-    // 禁用多视口功能（可能导致 CommandQueue 为 nullptr 的问题）
-    io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
     // 使用旧版 ImGui_ImplDX12_Init API（更稳定）
     if (!ImGui_ImplDX12_Init(d3d12Device,
