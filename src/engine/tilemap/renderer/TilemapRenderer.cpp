@@ -419,15 +419,15 @@ void TilemapRenderer::BuildChunkGeometry(int chunkX, int chunkY) {
                 TileVertex v0, v1, v2, v3;
 
                 if (flipD) {
-                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
-                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
+                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
                 } else {
-                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
-                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                    v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
+                    v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                    v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                    v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
                 }
 
                 chunk.vertices.insert(chunk.vertices.end(), {v0, v1, v2, v3});
