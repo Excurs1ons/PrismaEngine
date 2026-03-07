@@ -46,8 +46,6 @@ Editor::~Editor()
 
 bool Editor::Initialize()
 {
-    LOG_INFO("Editor", "正在初始化编辑器");
-
     // 1. 初始化平台 (SDL)
     if (!Platform::Initialize()) {
         LOG_FATAL("System", "平台初始化失败");
@@ -56,8 +54,6 @@ bool Editor::Initialize()
 
     // 2. 创建窗口
     WindowProps props("SDL3 Editor", 1600, 900);
-    // props.FullScreenMode = FullScreenMode::Window;
-    // props.ShowState = WindowShowState::Maximize;
 
     m_window = Platform::CreateWindow(props);
 
@@ -69,6 +65,10 @@ bool Editor::Initialize()
     // 3. 初始化渲染系统
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
 
+    if (!renderSystem) {
+        LOG_FATAL("Editor", "获取渲染系统实例失败");
+        return false;
+    }
 
     if (!renderSystem->Initialize()) {
         LOG_FATAL("System", "渲染系统初始化失败");

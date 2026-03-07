@@ -79,147 +79,29 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         }
     }
 
+    // 检查是否找到适配器
+    if (!hardware_adapter) {
+        return false;
+    }
+
     // 创建D3D12设备
     hr = D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
     if (FAILED(hr)) {
         return false;
     }
 
-    // 设置调试信息队列
-    if (desc.enableDebug && m_debugController) {
-        ComPtr<ID3D12InfoQueue> infoQueue;
-        if (SUCCEEDED(m_device->QueryInterface(IID_PPV_ARGS(&infoQueue)))) {
-            m_infoQueue = infoQueue;
-
-            // 设置严重性级别
-            D3D12_MESSAGE_SEVERITY severities[] = {
-                D3D12_MESSAGE_SEVERITY_INFO,
-                D3D12_MESSAGE_SEVERITY_WARNING,
-                D3D12_MESSAGE_SEVERITY_ERROR,
-                D3D12_MESSAGE_SEVERITY_CORRUPTION
-            };
-
-            // 过滤某些消息
-            D3D12_MESSAGE_ID denyIds[] = {
-                D3D12_MESSAGE_ID_MAP_INVALID_NULLRANGE,
-                D3D12_MESSAGE_ID_UNMAP_INVALID_NULLRANGE,
-            };
-
-            D3D12_INFO_QUEUE_FILTER filter = {};
-            filter.DenyList.NumSeverities = ARRAYSIZE(severities);
-            filter.DenyList.pSeverityList = severities;
-            filter.DenyList.NumIDs = ARRAYSIZE(denyIds);
-            filter.DenyList.pIDList = denyIds;
-
-            infoQueue->PushStorageFilter(&filter);
-        }
-    }
-
-    // 获取描述符大小
-    m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-
     // 创建命令队列
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-
-    hr = m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
-    if (FAILED(hr)) {
-        return false;
-    }
-
-    // 创建交换链
-    DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-    swapChainDesc.BufferCount = FrameCount;
-    swapChainDesc.Width = m_width;
-    swapChainDesc.Height = m_height;
-    swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-    swapChainDesc.SampleDesc.Count = 1;
-
-    ComPtr<IDXGISwapChain1> swapChain;
-    hr = factory->CreateSwapChainForHwnd(m_commandQueue.Get(), static_cast<HWND>(m_windowHandle),
-                                        &swapChainDesc, nullptr, nullptr, &swapChain);
-    if (FAILED(hr)) {
-        return false;
-    }
-
-    hr = swapChain.As(&m_swapChain);
-    if (FAILED(hr)) {
-        return false;
-    }
-
-    m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-
-    // 创建RTV描述符堆
-    D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-    rtvHeapDesc.NumDescriptors = FrameCount;
-    rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    hr = m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
-    if (FAILED(hr)) {
-        return false;
-    }
-
-    // 创建DSV描述符堆
-    D3D12_DESCRIPTOR_HEAP_DESC dsvHeapDesc = {};
-    dsvHeapDesc.NumDescriptors = 1;
-    dsvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_DSV;
-    dsvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    hr = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap));
-    if (FAILED(hr)) {
-        return false;
-    }
-
-    // 创建渲染目标视图
     {
-        CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-        for (UINT n = 0; n < FrameCount; n++) {
-            hr = m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n]));
-            if (FAILED(hr)) {
-                return false;
-            }
-            m_device->CreateRenderTargetView(m_renderTargets[n].Get(), nullptr, rtvHandle);
-            rtvHandle.Offset(1, m_rtvDescriptorSize);
-        }
-    }
+        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        queueDesc.Priority = D3D12_COMMAND_QUEUE_PRIORITY_NORMAL;
+        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        queueDesc.NodeMask = 0;
 
-    // 创建深度缓冲区
-    {
-        D3D12_DEPTH_STENCIL_VIEW_DESC depthStencilDesc = {};
-        depthStencilDesc.Format = DXGI_FORMAT_D32_FLOAT;
-        depthStencilDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-        depthStencilDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-        D3D12_CLEAR_VALUE depthOptimizedClearValue = {};
-        depthOptimizedClearValue.Format = DXGI_FORMAT_D32_FLOAT;
-        depthOptimizedClearValue.DepthStencil.Depth = 1.0f;
-        depthOptimizedClearValue.DepthStencil.Stencil = 0;
-
-        CD3DX12_RESOURCE_DESC depthTextureDesc = CD3DX12_RESOURCE_DESC::Tex2D(
-            DXGI_FORMAT_D32_FLOAT,
-            m_width,
-            m_height,
-            1,
-            0,
-            1,
-            0,
-            D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
-
-        CD3DX12_HEAP_PROPERTIES heapProps(D3D12_HEAP_TYPE_DEFAULT);
-        hr = m_device->CreateCommittedResource(
-            &heapProps,
-            D3D12_HEAP_FLAG_NONE,
-            &depthTextureDesc,
-            D3D12_RESOURCE_STATE_DEPTH_WRITE,
-            &depthOptimizedClearValue,
-            IID_PPV_ARGS(&m_depthStencil));
+        hr = m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
         if (FAILED(hr)) {
             return false;
         }
-
-        m_device->CreateDepthStencilView(m_depthStencil.Get(), &depthStencilDesc, m_dsvHeap->GetCPUDescriptorHandleForHeapStart());
     }
 
     // 创建命令分配器
@@ -325,6 +207,9 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
     if (FAILED(hr)) {
         return false;
     }
+
+    // 命令列表在创建时是打开的，需要关闭
+    m_commandList->Close();
 
     // 命令列表在创建时是打开的，需要关闭
     m_commandList->Close();
