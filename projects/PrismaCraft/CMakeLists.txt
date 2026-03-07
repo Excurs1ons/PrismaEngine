@@ -31,8 +31,8 @@ file(GLOB_RECURSE PRISMACRAFT_SOURCES
     "include/*.h"
 )
 
-# 4. 创建 PrismaCraft 库
-add_library(PrismaCraft STATIC ${PRISMACRAFT_SOURCES})
+# 4. 创建 PrismaCraft 动态库 (游戏逻辑)
+add_library(PrismaCraft SHARED ${PRISMACRAFT_SOURCES})
 add_library(PrismaCraft::PrismaCraft ALIAS PrismaCraft)
 
 target_include_directories(PrismaCraft PUBLIC 
