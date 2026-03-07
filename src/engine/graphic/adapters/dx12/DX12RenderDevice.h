@@ -4,11 +4,11 @@
 #include "graphic/interfaces/IFence.h"
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/ISwapChain.h"
+#include <d3d12.h>
+#include <directx/d3dx12.h>
+#include <dxgi1_6.h>
 #include <memory>
 #include <vector>
-#include <directx/d3dx12.h>
-#include <d3d12.h>
-#include <dxgi1_6.h>
 #include <wrl/client.h>
 
 using Microsoft::WRL::ComPtr;
@@ -41,7 +41,7 @@ public:
     std::unique_ptr<ICommandBuffer> CreateCommandBuffer(CommandBufferType type) override;
     void SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fence = nullptr) override;
     void SubmitCommandBuffers(const std::vector<ICommandBuffer*>& cmdBuffers,
-                             const std::vector<IFence*>& fences = {}) override;
+                              const std::vector<IFence*>& fences = {}) override;
 
     // 同步操作
     void WaitForIdle() override;
@@ -52,10 +52,8 @@ public:
     IResourceFactory* GetResourceFactory() const override;
 
     // 交换链管理
-    std::unique_ptr<ISwapChain> CreateSwapChain(void* windowHandle,
-                                               uint32_t width,
-                                               uint32_t height,
-                                               bool vsync = true) override;
+    std::unique_ptr<ISwapChain>
+    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync = true) override;
     ISwapChain* GetSwapChain() const override;
 
     // 帧管理
@@ -124,6 +122,15 @@ public:
     /// @brief 获取DXGI交换链
     /// @return DXGI交换链指针
     IDXGISwapChain3* GetDXGISwapChain() const;
+
+    /// @brief 获取 CPU 描述符堆开始处的描述符（用于 ImGui 纹理分配）
+    /// @return CPU 描述符句柄
+    D3D12_CPU_DESCRIPTOR_HANDLE GetCPUDescriptorHandleForHeapStart() const {
+        if (m_rtvHeap) {
+            return m_rtvHeap->GetCPUDescriptorHandleForHeapStart();
+        }
+        return {};
+    }
 
     /// @brief 获取渲染目标
     /// @param bufferIndex 缓冲区索引
@@ -201,9 +208,9 @@ private:
 
     // 同步对象
     ComPtr<ID3D12Fence> m_fence;
-    HANDLE m_fenceEvent = nullptr;
-    uint64_t m_fenceValue = 0;
-    uint32_t m_frameIndex = 0;
+    HANDLE m_fenceEvent              = nullptr;
+    uint64_t m_fenceValue            = 0;
+    uint32_t m_frameIndex            = 0;
     static const uint32_t FrameCount = 2;
 
     // 动态缓冲区（每帧上传用）
@@ -213,12 +220,12 @@ private:
     uint8_t* m_dynamicVBCPUAddress = nullptr;
     uint8_t* m_dynamicIBCPUAddress = nullptr;
     uint8_t* m_dynamicCBCPUAddress = nullptr;
-    uint64_t m_dynamicVBSize = 0;
-    uint64_t m_dynamicIBSize = 0;
-    uint64_t m_dynamicCBSize = 0;
-    uint64_t m_dynamicVBOffset = 0;
-    uint64_t m_dynamicIBOffset = 0;
-    uint64_t m_dynamicCBOffset = 0;
+    uint64_t m_dynamicVBSize       = 0;
+    uint64_t m_dynamicIBSize       = 0;
+    uint64_t m_dynamicCBSize       = 0;
+    uint64_t m_dynamicVBOffset     = 0;
+    uint64_t m_dynamicIBOffset     = 0;
+    uint64_t m_dynamicCBOffset     = 0;
 
     // 视口和裁剪矩形
     D3D12_VIEWPORT m_viewport;
@@ -229,13 +236,13 @@ private:
 
     // 窗口句柄
     void* m_windowHandle = nullptr;
-    uint32_t m_width = 0;
-    uint32_t m_height = 0;
+    uint32_t m_width     = 0;
+    uint32_t m_height    = 0;
 
     // 自定义组件
     std::unique_ptr<DX12ResourceFactory> m_resourceFactory;
     std::unique_ptr<DX12SwapChain> m_swapChainAdapter;
-    bool m_initialized = false;
+    bool m_initialized           = false;
     uint64_t m_currentFenceValue = 1;
 
     // 渲染统计
@@ -251,4 +258,4 @@ private:
     ComPtr<ID3D12CommandSignature> m_dispatchCommandSignature;
 };
 
-} // namespace PrismaEngine::Graphic::DX12
+}  // namespace PrismaEngine::Graphic::DX12
