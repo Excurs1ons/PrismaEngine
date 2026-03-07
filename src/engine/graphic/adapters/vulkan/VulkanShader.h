@@ -9,6 +9,10 @@
 
 namespace PrismaEngine::Graphic::Vulkan {
 
+#ifdef FindResource
+#undef FindResource
+#endif
+
 // 前置声明
 class RenderDeviceVulkan;
 

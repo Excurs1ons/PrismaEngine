@@ -1,6 +1,7 @@
 #pragma once
 
 #include "RenderTypes.h"
+#include "IResource.h"
 #include <memory>
 
 namespace PrismaEngine::Graphic {
@@ -35,7 +36,7 @@ struct BufferViewDesc {
 };
 
 /// @brief 缓冲区抽象接口
-class IBuffer {
+class IBuffer : public IResource {
 public:
     virtual ~IBuffer() = default;
 
