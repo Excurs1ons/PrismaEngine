@@ -25,7 +25,7 @@ public:
     const std::string& GetName() const { return m_name; }
 
     // 允许ResourceFallback访问和修改必要成员
-    void SetName(const std::string& name) { m_name = name; }
+    void SetName(const std::string& newName) { m_name = newName; name = newName; }
     void SetLoaded(bool loaded) { m_isLoaded = loaded; }
 
 protected:
