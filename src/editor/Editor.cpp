@@ -185,11 +185,9 @@ bool Editor::InitializeImGui() {
     LOG_INFO("Editor", "初始化 ImGui DX12 渲染后端");
     ID3D12Device* d3d12Device        = dx12Device->GetD3D12Device();
     ID3D12CommandQueue* commandQueue = dx12Device->GetCommandQueue();
-    ID3D12DescriptorHeap* srvHeap    = dx12Device->GetRTVHeap();
 
     LOG_INFO("Editor", "获取 DX12 设备句柄: 0x{0:X}", reinterpret_cast<uintptr_t>(d3d12Device));
     LOG_INFO("Editor", "获取命令队列: 0x{0:X}", reinterpret_cast<uintptr_t>(commandQueue));
-    LOG_INFO("Editor", "获取 RTV 描述符堆: 0x{0:X}", reinterpret_cast<uintptr_t>(srvHeap));
 
     // 创建 ImGui 专用的 SRV 描述符堆
     D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
@@ -204,32 +202,23 @@ bool Editor::InitializeImGui() {
     }
     LOG_INFO("Editor", "ImGui SRV 描述符堆创建成功: 0x{0:X}", reinterpret_cast<uintptr_t>(m_imguiSrvHeap.Get()));
 
-    // 使用新版 ImGui_ImplDX12_Init API，提供回调函数
-    ImGui_ImplDX12_InitInfo initInfo = {};
-    initInfo.Device                  = d3d12Device;
-    initInfo.CommandQueue            = commandQueue;
-    initInfo.NumFramesInFlight       = 2;
-    initInfo.RTVFormat               = DXGI_FORMAT_R8G8B8A8_UNORM;
-    initInfo.DSVFormat               = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    initInfo.SrvDescriptorHeap       = m_imguiSrvHeap.Get();
+    // 禁用多视口功能（可能导致 CommandQueue 为 nullptr 的问题）
+    io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
 
-    // 回调函数：ImGui 会调用这些函数来获取描述符
-    initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* info,
-                                       D3D12_CPU_DESCRIPTOR_HANDLE* outCpuDesc,
-                                       D3D12_GPU_DESCRIPTOR_HANDLE* outGpuDesc) -> void {
-        ID3D12DescriptorHeap* heap = info->SrvDescriptorHeap;
-
-        *outCpuDesc = heap->GetCPUDescriptorHandleForHeapStart();
-        *outGpuDesc = heap->GetGPUDescriptorHandleForHeapStart();
-    };
-
-    initInfo.SrvDescriptorFreeFn =
-        [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE) -> void {
-        // 不需要释放，描述符由 ImGui 管理
-    };
-
-    if (!ImGui_ImplDX12_Init(&initInfo)) {
+    // 使用旧版 ImGui_ImplDX12_Init API（更稳定）
+    if (!ImGui_ImplDX12_Init(d3d12Device,
+                             2,
+                             DXGI_FORMAT_R8G8B8A8_UNORM,
+                             m_imguiSrvHeap.Get(),
+                             m_imguiSrvHeap.Get()->GetCPUDescriptorHandleForHeapStart(),
+                             m_imguiSrvHeap.Get()->GetGPUDescriptorHandleForHeapStart())) {
         LOG_ERROR("Editor", "ImGui DX12 后端初始化失败");
+        return false;
+    }
+
+    // 显式创建设备对象（确保字体图集被构建）
+    if (!ImGui_ImplDX12_CreateDeviceObjects()) {
+        LOG_ERROR("Editor", "ImGui DX12 设备对象创建失败");
         return false;
     }
 
@@ -335,6 +324,16 @@ int Editor::Run() {
             LOG_INFO("Editor", "第一帧: ImGui Render 调用成功");
         }
 
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+        // 获取 DX12 命令列表并渲染 ImGui
+        ID3D12GraphicsCommandList* commandList = nullptr;
+        // 注意：这里需要从渲染系统获取当前命令列表
+        // ImGui_ImplDX12_RenderDrawData 需要 commandList 参数
+
+        // 暂时使用空的实现，等待渲染系统提供命令列表访问
+        // ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+#endif
+
         // 结束 ImGui 帧
         ImGui::EndFrame();
 
@@ -347,9 +346,6 @@ int Editor::Run() {
         // 结束帧并呈现
         renderSystem->EndFrame();
         renderSystem->Present();
-
-        // 更新平台窗口（用于多视口支持）
-        ImGui::UpdatePlatformWindows();
 
         frameCount++;
     }
