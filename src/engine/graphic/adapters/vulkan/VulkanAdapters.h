@@ -3,6 +3,7 @@
 // Vulkan适配器集合
 // 包含所有Vulkan特定的实现类
 
+#include "../../../Export.h"
 #include "RenderDeviceVulkan.h"
 #include "interfaces/IRenderDevice.h"
 
