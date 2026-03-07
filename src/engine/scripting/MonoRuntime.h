@@ -51,13 +51,15 @@ public:
     ManagedObject() = default;
     virtual ~ManagedObject() = default;
 
-    bool IsValid() const { return m_monoObject != nullptr; }
+    bool IsValid() const { return rawPtr != nullptr; }
 
     // 通用方法调用
     template<typename... Args>
     ManagedObject InvokeMethod(const std::string& methodName, Args&&... args) {
         return ManagedObject(); // 空实现
     }
+
+    void* rawPtr = nullptr;
 
 private:
     MonoDomainPtr* m_domain = nullptr;
