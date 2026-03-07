@@ -16,27 +16,31 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
       with:
-        submodules: false # Already flattened in projects/PrismaCraft
+        submodules: false
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
       with:
         cmake-version: '3.31.0'
 
-    - name: Build Engine and Install SDK
-      run: powershell -File scripts/package-sdk.ps1 -Version "0.1.0" -Config "Debug"
-
-    - name: Configure PrismaCraft
+    - name: Build Engine with SDK (includes PrismaCraft)
       run: |
-        mkdir projects/PrismaCraft/build
-        cd projects/PrismaCraft/build
-        cmake .. -DPrismaEngine_DIR=$PWD/../../../sdk/out/lib/cmake/PrismaEngine
+        cmake --preset engine-windows-x64-debug -DPRISMA_BUILD_SDK=ON
+        cmake --build build/engine-windows-x64-debug --config Debug --parallel
 
-    - name: Build PrismaCraft
-      run: cmake --build projects/PrismaCraft/build --config Debug --parallel 4
+    - name: Verify PrismaCraft built
+      run: |
+        if (Test-Path "build\engine-windows-x64-debug\projects\PrismaCraft\libPrismaCraft.lib") {
+            Write-Host "PrismaCraft library built successfully!"
+            Get-ChildItem "build\engine-windows-x64-debug\projects\PrismaCraft\*.lib"
+        } else {
+            Write-Host "Warning: PrismaCraft lib not found at expected location"
+            Get-ChildItem "build\engine-windows-x64-debug" -Recurse -Filter "*.lib" | Select-Object FullName
+            exit 1
+        }
 
     - name: Upload PrismaCraft Artifact
       uses: actions/upload-artifact@v4
       with:
         name: PrismaCraft-Debug
-        path: projects/PrismaCraft/build/Debug/
+        path: build/engine-windows-x64-debug/projects/PrismaCraft/
