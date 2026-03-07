@@ -323,21 +323,19 @@ int Editor::Run() {
 
 #if defined(PRISMA_ENABLE_RENDER_DX12)
         // 获取 DX12 命令列表并渲染 ImGui
-        ID3D12GraphicsCommandList* commandList = nullptr;
-        // 注意：这里需要从渲染系统获取当前命令列表
-        // ImGui_ImplDX12_RenderDrawData 需要 commandList 参数
-
-        // 暂时使用空的实现，等待渲染系统提供命令列表访问
-        // ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
-#endif
-
-        // 结束 ImGui 帧
-        ImGui::EndFrame();
-
-        if (frameCount == 0) {
-            LOG_INFO("Editor", "第一帧: ImGui EndFrame 调用成功");
-            LOG_INFO("Editor", "第一帧: 字体图集已构建，无断言错误");
-            LOG_INFO("Editor", "编辑器运行正常，ImGui 初始化成功！");
+        auto dx12Device = dynamic_cast<PrismaEngine::Graphic::DX12::DX12RenderDevice*>(renderSystem->GetDevice());
+        if (dx12Device) {
+            ID3D12GraphicsCommandList* commandList = dx12Device->GetCommandList();
+            if (commandList) {
+                ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+                if (frameCount == 0) {
+                    LOG_INFO("Editor", "第一帧: ImGui DX12 渲染完成");
+                }
+            } else {
+                if (frameCount == 0) {
+                    LOG_INFO("Editor", "第一帧: commandList 为 nullptr，无法渲染 ImGui");
+                }
+            }
         }
 
         // 结束帧并呈现
