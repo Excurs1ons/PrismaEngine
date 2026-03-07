@@ -43,25 +43,8 @@ jobs:
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
-    - name: Build Engine with SDK (includes PrismaCraft)
+    - name: Build Engine with SDK (includes PrismaCraft game)
       run: |
-        cmake --preset engine-windows-x64-debug
+        cmake --preset engine-windows-x64-debug -DPRISMA_BUILD_SDK=ON
         cmake --build build/engine-windows-x64-debug --config Debug --parallel
-
-    - name: Build Engine
-      run: |
-        cmake --preset engine-windows-x64-debug
-        cmake --build build/engine-windows-x64-debug --config Debug --parallel
-
-    # SDK packaging disabled due to install export issues
-    # - name: Configure and Package SDK
-    #   run: powershell -File scripts/package-sdk.ps1 -Version "0.1.0" -Config "Debug"
-
-    # PrismaCraft integration test disabled - requires SDK to be installed first
-    # - name: Build PrismaCraft (SDK Integration Test)
-    #   run: |
-    #     mkdir projects/PrismaCraft/build
-    #     cd projects/PrismaCraft/build
-    #     cmake .. -DPrismaEngine_DIR=$PWD/../../../sdk/out/lib/cmake/PrismaEngine
-    #     cmake --build . --config Debug --parallel 4
 
