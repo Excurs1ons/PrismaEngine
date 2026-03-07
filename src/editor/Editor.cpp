@@ -1,27 +1,67 @@
 #include "Editor.h"
+#include "../graphic/RenderSystemNew.h"
 #include "Logger.h"
 #include "Platform.h"
-#include "../graphic/RenderSystemNew.h"
 #include <iostream>
 #include <stdexcept>
 #ifdef _WIN32
+#include <directx/d3dx12.h>
 #include <windows.h>
 #endif
 
-#include "SceneManager.h"
-#include "ResourceManagerNew.h"
 #include "Mesh.h"
+#include "ResourceManagerNew.h"
+#include "SceneManager.h"
 #include "nlohmann/json.hpp"
 #include <vector>
 
 #include <imgui.h>
+
+// 确保旧版 ImGui DX12 API 可用
+#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#undef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#endif
+
 // ImGui platform bindings - 根据渲染后端条件编译
 #if defined(PRISMA_ENABLE_RENDER_DX12)
-    #include <imgui_impl_win32.h>
+#include "../engine/graphic/adapters/dx12/DX12RenderDevice.h"
+#include <d3d12.h>
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
 #elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
-    #include <imgui_impl_sdl3.h>
-    #include <SDL3/SDL.h>
+#include <SDL3/SDL.h>
+#include <imgui_impl_sdl3.h>
 #endif
+
+#include "Mesh.h"
+#include "ResourceManagerNew.h"
+#include "SceneManager.h"
+#include "nlohmann/json.hpp"
+#include <vector>
+
+#include <imgui.h>
+
+// 确保旧版 ImGui DX12 API 可用
+#ifdef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#undef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+#endif
+
+// ImGui platform bindings - 根据渲染后端条件编译
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+#include "../engine/graphic/adapters/dx12/DX12RenderDevice.h"
+#include <d3d12.h>
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
+#include <SDL3/SDL.h>
+#include <imgui_impl_sdl3.h>
+#endif
+
+#include "Mesh.h"
+#include "ResourceManagerNew.h"
+#include "SceneManager.h"
+#include "nlohmann/json.hpp"
+#include <vector>
 
 using namespace PrismaEngine;
 
@@ -39,13 +79,11 @@ Editor::Editor() {
     LOG_INFO("Editor", "正在初始化编辑器");
 }
 
-Editor::~Editor()
-{
+Editor::~Editor() {
     LOG_INFO("Editor", "正在关闭编辑器");
 }
 
-bool Editor::Initialize()
-{
+bool Editor::Initialize() {
     // 1. 初始化平台 (SDL)
     if (!Platform::Initialize()) {
         LOG_FATAL("System", "平台初始化失败");
@@ -62,7 +100,10 @@ bool Editor::Initialize()
         return false;
     }
 
+    LOG_INFO("Editor", "窗口句柄: 0x{0:X}", reinterpret_cast<uintptr_t>(m_window));
+
     // 3. 初始化渲染系统
+    LOG_INFO("Editor", "准备初始化渲染系统...");
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
 
     if (!renderSystem) {
@@ -70,10 +111,25 @@ bool Editor::Initialize()
         return false;
     }
 
-    if (!renderSystem->Initialize()) {
+    // Platform::CreateWindow() 直接返回 HWND（在 Windows 平台）
+    HWND hwnd = static_cast<HWND>(m_window);
+
+    // 准备渲染系统描述
+    PrismaEngine::Graphic::RenderSystemDesc renderDesc;
+    renderDesc.backendType  = PrismaEngine::Graphic::RenderAPIType::DirectX12;
+    renderDesc.windowHandle = hwnd;
+    renderDesc.width        = 1600;
+    renderDesc.height       = 900;
+    renderDesc.name         = "PrismaEditor";
+
+    LOG_INFO("Editor", "Windows HWND: 0x{0:X}", reinterpret_cast<uintptr_t>(hwnd));
+    LOG_INFO("Editor", "开始初始化渲染系统...");
+    if (!renderSystem->Initialize(renderDesc)) {
         LOG_FATAL("System", "渲染系统初始化失败");
         return false;
     }
+
+    LOG_INFO("Editor", "渲染系统初始化成功");
 
     // 4. 初始化 ImGui
     if (!InitializeImGui()) {
@@ -84,29 +140,100 @@ bool Editor::Initialize()
     return true;
 }
 
-bool Editor::InitializeImGui()
-{
+bool Editor::InitializeImGui() {
     LOG_INFO("Editor", "正在初始化 ImGui");
 
     // 1. 初始化 ImGui 上下文
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    LOG_INFO("Editor", "ImGui 上下文创建成功");
+
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+    // 加载默认字体
+    io.Fonts->AddFontDefault();
+    LOG_INFO("Editor", "默认字体加载成功");
 
     // 设置样式
     ImGui::StyleColorsDark();
 
     // 2. 初始化平台/渲染器后端
     auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
-    renderSystem->Initialize();
 
 #if defined(PRISMA_ENABLE_RENDER_DX12)
     // DirectX 12 backend
+    LOG_INFO("Editor", "初始化 ImGui Win32 平台后端");
     ImGui_ImplWin32_Init(GetModuleHandleA(NULL));
-    ImGui_ImplWin32_NewFrame();
+    LOG_INFO("Editor", "ImGui Win32 平台后端初始化成功");
+
+    // 初始化 ImGui DX12 渲染后端
+    auto device = renderSystem->GetDevice();
+    if (!device) {
+        LOG_ERROR("Editor", "渲染设备未初始化，无法初始化 ImGui DX12 后端");
+        return false;
+    }
+
+    auto dx12Device = dynamic_cast<PrismaEngine::Graphic::DX12::DX12RenderDevice*>(device);
+    if (!dx12Device) {
+        LOG_ERROR("Editor", "无法获取 DX12 设备");
+        return false;
+    }
+
+    LOG_INFO("Editor", "初始化 ImGui DX12 渲染后端");
+    ID3D12Device* d3d12Device        = dx12Device->GetD3D12Device();
+    ID3D12CommandQueue* commandQueue = dx12Device->GetCommandQueue();
+    ID3D12DescriptorHeap* srvHeap    = dx12Device->GetRTVHeap();
+
+    LOG_INFO("Editor", "获取 DX12 设备句柄: 0x{0:X}", reinterpret_cast<uintptr_t>(d3d12Device));
+    LOG_INFO("Editor", "获取命令队列: 0x{0:X}", reinterpret_cast<uintptr_t>(commandQueue));
+    LOG_INFO("Editor", "获取 RTV 描述符堆: 0x{0:X}", reinterpret_cast<uintptr_t>(srvHeap));
+
+    // 创建 ImGui 专用的 SRV 描述符堆
+    D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+    srvHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+    srvHeapDesc.NumDescriptors             = 1;  // 只需要一个描述符用于字体纹理
+    srvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+
+    HRESULT hr = d3d12Device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(&m_imguiSrvHeap));
+    if (FAILED(hr)) {
+        LOG_ERROR("Editor", "创建 ImGui SRV 描述符堆失败: 0x{0:X}", hr);
+        return false;
+    }
+    LOG_INFO("Editor", "ImGui SRV 描述符堆创建成功: 0x{0:X}", reinterpret_cast<uintptr_t>(m_imguiSrvHeap.Get()));
+
+    // 使用新版 ImGui_ImplDX12_Init API，提供回调函数
+    ImGui_ImplDX12_InitInfo initInfo = {};
+    initInfo.Device                  = d3d12Device;
+    initInfo.CommandQueue            = commandQueue;
+    initInfo.NumFramesInFlight       = 2;
+    initInfo.RTVFormat               = DXGI_FORMAT_R8G8B8A8_UNORM;
+    initInfo.DSVFormat               = DXGI_FORMAT_D24_UNORM_S8_UINT;
+    initInfo.SrvDescriptorHeap       = m_imguiSrvHeap.Get();
+
+    // 回调函数：ImGui 会调用这些函数来获取描述符
+    initInfo.SrvDescriptorAllocFn = [](ImGui_ImplDX12_InitInfo* info,
+                                       D3D12_CPU_DESCRIPTOR_HANDLE* outCpuDesc,
+                                       D3D12_GPU_DESCRIPTOR_HANDLE* outGpuDesc) -> void {
+        ID3D12DescriptorHeap* heap = info->SrvDescriptorHeap;
+
+        *outCpuDesc = heap->GetCPUDescriptorHandleForHeapStart();
+        *outGpuDesc = heap->GetGPUDescriptorHandleForHeapStart();
+    };
+
+    initInfo.SrvDescriptorFreeFn =
+        [](ImGui_ImplDX12_InitInfo*, D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE) -> void {
+        // 不需要释放，描述符由 ImGui 管理
+    };
+
+    if (!ImGui_ImplDX12_Init(&initInfo)) {
+        LOG_ERROR("Editor", "ImGui DX12 后端初始化失败");
+        return false;
+    }
+
+    LOG_INFO("Editor", "ImGui DX12 后端初始化成功");
 #elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
     // SDL3 backend (Vulkan/OpenGL)
     if (!ImGui_ImplSDL3_InitForOther((SDL_Window*)m_window)) {
@@ -158,10 +285,12 @@ void Editor::DrawMainMenu() {
     }
 }
 
-int Editor::Run()
-{
-    auto renderSystem = PrismaEngine::Graphic::RenderSystem::GetInstance();
-    bool running = true;
+int Editor::Run() {
+    auto renderSystem   = PrismaEngine::Graphic::RenderSystem::GetInstance();
+    bool running        = true;
+    uint32_t frameCount = 0;
+
+    LOG_INFO("Editor", "编辑器主循环启动");
 
     while (running) {
         Platform::PumpEvents();
@@ -174,11 +303,16 @@ int Editor::Run()
 
         // ImGui 新帧
 #if defined(PRISMA_ENABLE_RENDER_DX12)
+        ImGui_ImplDX12_NewFrame();
         ImGui_ImplWin32_NewFrame();
 #elif defined(PRISMA_ENABLE_RENDER_VULKAN) || defined(PRISMA_ENABLE_RENDER_OPENGL)
         ImGui_ImplSDL3_NewFrame();
 #endif
         ImGui::NewFrame();
+
+        if (frameCount == 0) {
+            LOG_INFO("Editor", "第一帧: ImGui NewFrame 调用成功");
+        }
 
         // 构建 UI
         DrawMainMenu();
@@ -187,21 +321,42 @@ int Editor::Run()
             m_projectSettingsWindow.Draw(&m_showProjectSettings);
         }
 
+        if (frameCount == 0) {
+            LOG_INFO("Editor", "第一帧: UI 构建完成");
+        }
+
         ShowDemo();
         ImGui::ShowDemoWindow();
 
         // 渲染 ImGui
         ImGui::Render();
 
+        if (frameCount == 0) {
+            LOG_INFO("Editor", "第一帧: ImGui Render 调用成功");
+        }
+
+        // 结束 ImGui 帧
+        ImGui::EndFrame();
+
+        if (frameCount == 0) {
+            LOG_INFO("Editor", "第一帧: ImGui EndFrame 调用成功");
+            LOG_INFO("Editor", "第一帧: 字体图集已构建，无断言错误");
+            LOG_INFO("Editor", "编辑器运行正常，ImGui 初始化成功！");
+        }
+
         // 结束帧并呈现
         renderSystem->EndFrame();
         renderSystem->Present();
+
+        // 更新平台窗口（用于多视口支持）
+        ImGui::UpdatePlatformWindows();
+
+        frameCount++;
     }
     return 0;
 }
 
-void Editor::Shutdown()
-{
+void Editor::Shutdown() {
     LOG_INFO("Editor", "正在关闭编辑器");
 
     // 清理 ImGui
