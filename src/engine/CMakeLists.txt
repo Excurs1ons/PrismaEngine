@@ -22,7 +22,7 @@ set(CORE_SOURCES
     Object.cpp
     PhysicsSystem.cpp
     Platform.cpp
-    ResourceManagerNew.cpp
+    ResourceManager.cpp
     Scene.cpp
     SceneManager.cpp
     Serializable.cpp
@@ -138,7 +138,7 @@ set(CORE_HEADERS
     Object.h
     PhysicsSystem.h
     Platform.h
-    ResourceManagerNew.h
+    ResourceManager.h
     Scene.h
     SceneManager.h
     Serializable.h
@@ -266,6 +266,8 @@ if(PRISMA_ENABLE_RENDER_DX12)
         graphic/adapters/dx12/DX12Mesh.h
     )
     message(STATUS "Adding DirectX12 render device")
+else()
+    message(STATUS "DirectX12 render device DISABLED")
 endif()
 
 # OpenGL (跨平台)
@@ -282,10 +284,14 @@ endif()
 # Vulkan (跨平台)
 if(PRISMA_ENABLE_RENDER_VULKAN)
     list(APPEND ENGINE_GRAPHIC_SOURCES
+        graphic/adapters/vulkan/VulkanAdapters.cpp
+        graphic/adapters/vulkan/RenderDeviceVulkan.cpp
         graphic/adapters/vulkan/VulkanShader.cpp
         ${VULKAN_SOURCES}
     )
     list(APPEND ENGINE_GRAPHIC_HEADERS
+        graphic/adapters/vulkan/VulkanAdapters.h
+        graphic/adapters/vulkan/RenderDeviceVulkan.h
         graphic/adapters/vulkan/VulkanShader.h
         ${VULKAN_HEADERS}
     )
@@ -765,6 +771,19 @@ endif()
 
 # ImGui - 当启用 ImGui debug 或编辑器时链接
 if(PRISMA_ENABLE_IMGUI_DEBUG OR PRISMA_BUILD_EDITOR)
+    # === 强力修复 imgui 的 SDL3 和 Vulkan 路径及链接问题 ===
+    if(TARGET imgui)
+        target_include_directories(imgui SYSTEM PUBLIC "${CMAKE_BINARY_DIR}/_deps/SDL3-src/include")
+        target_include_directories(imgui SYSTEM PUBLIC "${CMAKE_BINARY_DIR}/_deps/Vulkan-Headers-src/include")
+        
+        find_package(Vulkan QUIET)
+        if(Vulkan_FOUND)
+            target_link_libraries(imgui PRIVATE Vulkan::Vulkan)
+        elseif(WIN32)
+            target_link_libraries(imgui PRIVATE vulkan-1)
+        endif()
+    endif()
+
     if(TARGET imgui::imgui)
         target_link_libraries(Engine PUBLIC imgui::imgui)
         message(STATUS "链接 imgui::imgui 到 Engine")
@@ -776,19 +795,12 @@ if(PRISMA_ENABLE_IMGUI_DEBUG OR PRISMA_BUILD_EDITOR)
     endif()
 endif()
 
-# 瓦片地图系统依赖
-# tinyxml2 - XML 解析 (TMX 格式)
-if(TARGET tinyxml2::tinyxml2)
-    target_link_libraries(Engine PUBLIC tinyxml2::tinyxml2)
-    message(STATUS "链接 tinyxml2::tinyxml2 到 Engine")
-elseif(TARGET tinyxml2)
-    target_link_libraries(Engine PUBLIC tinyxml2)
-    message(STATUS "链接 tinyxml2 到 Engine")
-elseif(TARGET tinyxml2static)
-    target_link_libraries(Engine PUBLIC tinyxml2static)
-    message(STATUS "链接 tinyxml2static 到 Engine")
-else()
-    message(WARNING "tinyxml2 目标未找到!")
+# 强力注入 tinyxml2 和 zstd 路径
+if(TARGET tinyxml2 OR TARGET tinyxml2::tinyxml2)
+    target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/_deps/tinyxml2-src")
+endif()
+if(EXISTS "${CMAKE_BINARY_DIR}/_deps/zstd-src")
+    target_include_directories(Engine PRIVATE "${CMAKE_BINARY_DIR}/_deps/zstd-src/lib")
 endif()
 
 # Zstandard - 压缩库 (Base64+zstd 格式)
