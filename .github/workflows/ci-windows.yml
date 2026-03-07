@@ -43,6 +43,11 @@ jobs:
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
+    - name: Build Engine with SDK (includes PrismaCraft)
+      run: |
+        cmake --preset engine-windows-x64-debug
+        cmake --build build/engine-windows-x64-debug --config Debug --parallel
+
     - name: Build Engine
       run: |
         cmake --preset engine-windows-x64-debug
