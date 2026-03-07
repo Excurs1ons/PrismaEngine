@@ -97,6 +97,98 @@ void RenderSystem::Shutdown() {
     LOG_INFO("Render", "渲染系统已关闭");
 }
 
+bool RenderSystem::InitializeImGui() {
+    LOG_INFO("Render", "正在初始化 ImGui");
+
+    // 1. 初始化 ImGui 上下文
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    LOG_INFO("Render", "ImGui 上下文创建成功");
+
+    // 2. 设置 IO 配置
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+    // 3. 加载默认字体
+    io.Fonts->AddFontDefault();
+    LOG_INFO("Render", "默认字体加载成功");
+
+    // 4. 设置样式
+    ImGui::StyleColorsDark();
+
+    // 5. 根据渲染后端初始化平台和渲染后端
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+    // DirectX 12 backend
+    LOG_INFO("Render", "初始化 ImGui Win32 平台后端");
+    if (!ImGui_ImplWin32_Init(GetModuleHandleA(NULL))) {
+        LOG_ERROR("Render", "ImGui Win32 平台后端初始化失败");
+        return false;
+    }
+    LOG_INFO("Render", "ImGui Win32 平台后端初始化成功");
+
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN)
+    // Vulkan backend
+    LOG_INFO("Render", "初始化 ImGui SDL3 平台后端");
+    // TODO: 初始化 SDL3 平台后端
+    LOG_ERROR("Render", "Vulkan 后端初始化未实现");
+    return false;
+
+#else
+    // OpenGL backend
+    LOG_INFO("Render", "初始化 ImGui SDL3 平台后端");
+    // TODO: 初始化 SDL3 平台后端
+    LOG_ERROR("Render", "OpenGL 后端初始化未实现");
+    return false;
+#endif
+
+    // 6. 初始化渲染后端（ImGui_ImplXXX_Init）
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+    // DirectX 12 backend
+    LOG_INFO("Render", "初始化 ImGui DX12 渲染后端");
+    if (!m_device || !m_device->InitializeImGui()) {
+        LOG_ERROR("Render", "ImGui DX12 渲染后端初始化失败");
+        return false;
+    }
+    LOG_INFO("Render", "ImGui DX12 渲染后端初始化成功");
+
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN)
+    // Vulkan backend
+    LOG_INFO("Render", "初始化 ImGui Vulkan 渲染后端");
+    if (!m_device || !m_device->InitializeImGui()) {
+        LOG_ERROR("Render", "ImGui Vulkan 渲染后端初始化失败");
+        return false;
+    }
+    LOG_INFO("Render", "ImGui Vulkan 渲染后端初始化成功");
+
+#else
+    LOG_ERROR("Render", "无支持的渲染后端");
+    return false;
+#endif
+
+    LOG_INFO("Render", "ImGui 初始化完成");
+    return true;
+}
+
+void RenderSystem::ShutdownImGui() {
+    LOG_INFO("Render", "正在清理 ImGui");
+
+    // 1. 清理渲染后端
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+#elif defined(PRISMA_ENABLE_RENDER_VULKAN)
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+#endif
+
+    // 2. 清理 ImGui 上下文
+    ImGui::DestroyContext();
+
+    LOG_INFO("Render", "ImGui 已清理");
+}
+
 RenderSystem::~RenderSystem() {
     // 默认析构函数会自动清理 std::unique_ptr 成员
     // 由于这是一个显式定义的析构函数，编译器会在看到 ForwardPipeline 完整定义的地方生成代码
@@ -119,6 +211,11 @@ void RenderSystem::BeginFrame() {
 
 void RenderSystem::EndFrame() {
     if (m_device) {
+        // 调用 GUI 渲染回调
+        if (m_guiCallback) {
+            m_guiCallback(m_device.get());
+        }
+
         m_device->EndFrame();
     }
 }

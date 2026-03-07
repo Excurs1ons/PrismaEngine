@@ -51,7 +51,7 @@ public:
     /// @param cmdBuffers 命令缓冲区数组
     /// @param fences 可选的围栏数组
     virtual void SubmitCommandBuffers(const std::vector<ICommandBuffer*>& cmdBuffers,
-                                     const std::vector<IFence*>& fences = {}) = 0;
+                                      const std::vector<IFence*>& fences = {}) = 0;
 
     // === 同步操作 ===
 
@@ -80,10 +80,8 @@ public:
     /// @param height 窗口高度
     /// @param vsync 是否启用垂直同步
     /// @return 交换链指针
-    virtual std::unique_ptr<ISwapChain> CreateSwapChain(void* windowHandle,
-                                                       uint32_t width,
-                                                       uint32_t height,
-                                                       bool vsync = true) = 0;
+    virtual std::unique_ptr<ISwapChain>
+    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync = true) = 0;
 
     /// @brief 获取当前交换链
     /// @return 交换链指针
@@ -124,20 +122,38 @@ public:
 
     /// @brief 获取GPU内存使用信息
     struct GPUMemoryInfo {
-        uint64_t totalMemory = 0;
-        uint64_t usedMemory = 0;
+        uint64_t totalMemory     = 0;
+        uint64_t usedMemory      = 0;
         uint64_t availableMemory = 0;
     };
+
+    /// @brief 获取GPU内存信息
+    /// @return GPU内存信息
     [[nodiscard]] virtual GPUMemoryInfo GetGPUMemoryInfo() const = 0;
 
     /// @brief 获取渲染统计信息
     struct RenderStats {
-        uint32_t frameCount = 0;
-        uint32_t drawCalls = 0;
-        uint32_t triangles = 0;
-        float frameTime = 0.0f;
+        uint32_t frameCount     = 0;
+        float frameTime         = 0.0f;
+        float fps               = 0.0f;
+        uint32_t drawCalls      = 0;
+        uint32_t triangles      = 0;
+        uint64_t gpuMemoryUsage = 0;
+        uint64_t cpuMemoryUsage = 0;
     };
+
+    /// @brief 获取渲染统计
+    /// @return 统计信息
     [[nodiscard]] virtual RenderStats GetRenderStats() const = 0;
+
+    // === ImGui 集成 ===
+
+    /// @brief 初始化 ImGui（与渲染后端无关）
+    /// @return 是否初始化成功
+    virtual bool InitializeImGui() = 0;
+
+    /// @brief 清理 ImGui 资源
+    virtual void ShutdownImGui() = 0;
 
     // === 调试功能 ===
 
@@ -153,4 +169,4 @@ public:
     virtual void SetDebugMarker(const std::string& name) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+}  // namespace PrismaEngine::Graphic
