@@ -14,9 +14,7 @@ namespace PrismaEngine {
 /// </summary>
 class EDITOR_API CommandLineEditor : public IApplication<CommandLineEditor> {
 public:
-    friend class IApplication;
-    CommandLineEditor();
-    ~CommandLineEditor() override;
+    friend class Singleton<CommandLineEditor>;
 
     bool Initialize() override;
     int Run() override;
@@ -34,6 +32,8 @@ public:
     void RegisterCommand(const std::string& name, const std::string& description, CommandHandler handler);
 
 private:
+    CommandLineEditor();
+    ~CommandLineEditor() override;
     CommandLineParser::Arguments m_args;
 
     struct CommandInfo {

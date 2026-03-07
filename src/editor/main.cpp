@@ -44,9 +44,6 @@ int main(int argc, char* argv[]) {
     LOG_INFO("Main", "检测到环境: {}", Environment::GetEnvironmentDescription());
 
     // 根据环境和参数选择编辑器类型
-    std::unique_ptr<IApplication<Editor>> guiEditor;
-    std::unique_ptr<IApplication<CommandLineEditor>> cliEditor;
-
     IApplicationBase* editor = nullptr;
     EditorRunMode runMode = args.mode;
 
@@ -54,10 +51,9 @@ int main(int argc, char* argv[]) {
     if (runMode == EditorRunMode::CLI || runMode == EditorRunMode::Batch) {
         // 用户明确要求命令行模式
         LOG_INFO("Main", "使用命令行模式（用户指定）");
-        auto cliEditorPtr = std::make_unique<CommandLineEditor>();
-        cliEditorPtr->SetArguments(args);
-        cliEditor = std::move(cliEditorPtr);
-        editor = cliEditor.get();
+        auto& cliEditor = CommandLineEditor::GetInstance();
+        cliEditor.SetArguments(args);
+        editor = &cliEditor;
     } else if (runMode == EditorRunMode::Server) {
         // 服务器模式（暂未实现）
         LOG_ERROR("Main", "服务器模式暂未实现");
@@ -67,15 +63,13 @@ int main(int argc, char* argv[]) {
         if (env == EnvironmentType::Desktop && Environment::HasDisplaySupport()) {
             // 有显示支持，使用 GUI 模式
             LOG_INFO("Main", "启动图形界面编辑器");
-            guiEditor = std::make_unique<Editor>();
-            editor = guiEditor.get();
+            editor = &Editor::GetInstance();
         } else {
             // 无显示支持，自动切换到 CLI 模式
             LOG_INFO("Main", "未检测到显示系统，自动切换到命令行模式");
-            auto cliEditorPtr = std::make_unique<CommandLineEditor>();
-            cliEditorPtr->SetArguments(args);
-            cliEditor = std::move(cliEditorPtr);
-            editor = cliEditor.get();
+            auto& cliEditor = CommandLineEditor::GetInstance();
+            cliEditor.SetArguments(args);
+            editor = &cliEditor;
         }
     }
 

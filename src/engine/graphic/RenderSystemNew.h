@@ -52,6 +52,9 @@ public:
     /// @return 是否初始化成功
     ENGINE_API bool InitializeImGui();
 
+    /// @brief 关闭 ImGui
+    ENGINE_API void ShutdownImGui();
+
     /// @brief 关闭渲染系统
     ENGINE_API void Shutdown() override;
 
