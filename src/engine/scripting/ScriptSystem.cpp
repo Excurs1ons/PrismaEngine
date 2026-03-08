@@ -23,14 +23,17 @@ void ScriptSystem::Initialize() {
 }
 
 void ScriptSystem::Update(float deltaTime) {
-    if (!m_initialized) return;
+    if (!m_initialized)
+        return;
 
     auto* pool = PrismaEngine::Core::ECS::World::GetInstance().GetComponentManager().GetPool<ScriptComponent>();
-    if (!pool) return;
+    if (!pool)
+        return;
 
     auto& components = pool->GetData();
     for (auto& script : components) {
-        if (!script.enabled) continue;
+        if (!script.enabled)
+            continue;
 
         if (!script.initialized) {
             ProcessScriptAwake(script);
@@ -68,9 +71,10 @@ bool ScriptSystem::LoadAssembly(const std::string& assemblyPath) {
 }
 
 void ScriptSystem::AddScript(PrismaEngine::Core::ECS::EntityID entity, const std::string& scriptPath) {
-    if (!m_initialized) return;
+    if (!m_initialized)
+        return;
 
-    auto* world = &PrismaEngine::Core::ECS::World::GetInstance();
+    auto* world      = &PrismaEngine::Core::ECS::World::GetInstance();
     auto* scriptComp = world->GetComponent<ScriptComponent>(entity);
     if (!scriptComp) {
         scriptComp = world->AddComponent<ScriptComponent>(entity);
@@ -78,7 +82,8 @@ void ScriptSystem::AddScript(PrismaEngine::Core::ECS::EntityID entity, const std
 
     // 检查是否已存在
     for (const auto& path : scriptComp->scriptPaths) {
-        if (path == scriptPath) return;
+        if (path == scriptPath)
+            return;
     }
 
     // 创建新脚本实例
@@ -92,11 +97,12 @@ void ScriptSystem::AddScript(PrismaEngine::Core::ECS::EntityID entity, const std
 
 void ScriptSystem::RemoveScript(PrismaEngine::Core::ECS::EntityID entity, const std::string& scriptPath) {
     auto* scriptComp = PrismaEngine::Core::ECS::World::GetInstance().GetComponent<ScriptComponent>(entity);
-    if (!scriptComp) return;
+    if (!scriptComp)
+        return;
 
     auto it = std::find(scriptComp->scriptPaths.begin(), scriptComp->scriptPaths.end(), scriptPath);
     if (it != scriptComp->scriptPaths.end()) {
-        size_t index = std::distance(scriptComp->scriptPaths.begin(), it);
+        (void)std::distance(scriptComp->scriptPaths.begin(), it);  // 保存索引以便将来使用
         scriptComp->scriptPaths.erase(it);
         // TODO: 移除对应的实例
     }
@@ -113,16 +119,20 @@ bool ScriptSystem::CompileScripts(const std::string& projectPath) {
 }
 
 void ScriptSystem::ProcessScriptAwake(ScriptComponent& script) {
+    (void)script;
     // TODO: 调用脚本Awake方法
 }
 
 void ScriptSystem::ProcessScriptStart(ScriptComponent& script) {
+    (void)script;
     // TODO: 调用脚本Start方法
 }
 
 void ScriptSystem::ProcessScriptUpdate(ScriptComponent& script, float deltaTime) {
+    (void)script;
+    (void)deltaTime;
     // TODO: 调用脚本Update方法
 }
 
-} // namespace Scripting
-} // namespace PrismaEngine
+}  // namespace Scripting
+}  // namespace PrismaEngine

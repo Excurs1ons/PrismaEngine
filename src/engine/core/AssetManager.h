@@ -1,12 +1,12 @@
 #pragma once
+#include "AssetBase.h"
 #include "Logger.h"
 #include "ManagerBase.h"
-#include "AssetBase.h"
+#include "StringHash.h"
 #include <filesystem>
 #include <memory>
 #include <optional>
 #include <string>
-#include "StringHash.h"
 
 namespace PrismaEngine {
 
@@ -31,11 +31,13 @@ public:
     }
 
     template <typename T, typename... Args> ResourceHandle<T> Load(const std::string& relative_path, Args&&... args) {
-        if (!IsInitialized()) Initialize(std::filesystem::current_path());
+        if (!IsInitialized())
+            Initialize(std::filesystem::current_path());
 
         Core::StringHash hash(relative_path);
         auto cached = GetCachedResource<T>(hash);
-        if (cached) return cached;
+        if (cached)
+            return cached;
 
         auto fullPath = FindResource(relative_path);
         if (!fullPath) {
@@ -66,5 +68,4 @@ private:
     struct Impl;
     std::unique_ptr<Impl> m_impl;
 };
-
 }  // namespace PrismaEngine
