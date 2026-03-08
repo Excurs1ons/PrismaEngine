@@ -141,8 +141,8 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
         list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
     endif()
 
-    # SDL3 后端 - 跨平台 (非 Windows)
-    if(NOT WIN32 AND EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+    # SDL3 后端 - 跨平台（包括 Windows）
+    if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
         list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
     endif()
 
@@ -175,3 +175,11 @@ endif()
 # 恢复消息等级
 set(CMAKE_MESSAGE_LOG_LEVEL ${OLD_LOG_LEVEL})
 set(CMAKE_WARN_DEPRECATED ON)
+
+# 确保 VMA ALIAS targets 存在（类似 GLM）
+if(TARGET vma AND NOT TARGET vma::VulkanMemoryAllocator)
+    add_library(vma::VulkanMemoryAllocator ALIAS vma)
+endif()
+if(TARGET vma AND NOT TARGET vma::VMA)
+    add_library(vma::VMA ALIAS vma)
+endif()
