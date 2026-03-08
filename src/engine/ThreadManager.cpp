@@ -6,12 +6,21 @@
 
 namespace PrismaEngine {
 
+std::shared_ptr<ThreadManager> ThreadManager::GetInstance() {
+    static std::shared_ptr<ThreadManager> instance = std::shared_ptr<ThreadManager>(new ThreadManager());
+    return instance;
+}
+
 ThreadManager::ThreadManager() {
+}
+
+ThreadManager::~ThreadManager() {
+    Shutdown();
 }
 
 int ThreadManager::Initialize() {
     LOG_INFO("Thread", "线程管理器初始化开始");
-    return true;
+    return 0;
 }
 
 void ThreadManager::Shutdown() {
@@ -52,5 +61,7 @@ void ThreadManager::SetThreadName(std::thread::id id, const std::string& name) {
 
 void ThreadManager::SetThreadAffinity(std::thread::id /*id*/, uint32_t /*coreMask*/) {}
 void ThreadManager::SetThreadPriority(std::thread::id /*id*/, int /*priority*/) {}
+
+void ThreadManager::Update(float /*deltaTime*/) {}
 
 }  // namespace PrismaEngine

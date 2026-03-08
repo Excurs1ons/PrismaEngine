@@ -8,10 +8,6 @@
 #include "ThreadManager.h"
 #include "DebugOverlay.h"
 
-#if PRISMA_ENABLE_IMGUI_DEBUG
-#include "imgui.h"
-#endif
-
 namespace PrismaEngine {
 
     std::shared_ptr<EngineCore> EngineCore::GetInstance() {
@@ -28,22 +24,28 @@ namespace PrismaEngine {
     int EngineCore::Initialize() {
         LOG_INFO("Engine", "Engine initialization started...");
 
-        if (!RegisterSystem(ThreadManager::GetInstance().get())) {
+        // 1. 注册核心基础系统 (0 为成功)
+        if (ThreadManager::GetInstance()->Initialize() != 0) {
             LOG_ERROR("Engine", "Failed to initialize ThreadManager");
             return -1;
         }
-        if (!RegisterSystem(PhysicsSystem::GetInstance().get())) {
+        m_systems.push_back(ThreadManager::GetInstance().get());
+
+        if (PhysicsSystem::GetInstance()->Initialize() != 0) {
             LOG_ERROR("Engine", "Failed to initialize PhysicsSystem");
             return -1;
         }
-        if (!RegisterSystem(::PrismaEngine::Graphic::RenderSystem::GetInstance().get())) {
-            LOG_ERROR("Engine", "Failed to initialize RenderSystem");
-            return -1;
-        }
-        if (!RegisterSystem(SceneManager::GetInstance().get())) {
+        m_systems.push_back(PhysicsSystem::GetInstance().get());
+
+        // 注意：RenderSystem 的初始化由编辑器手动调用带参数版本，这里只注册不初始化
+        m_systems.push_back(::PrismaEngine::Graphic::RenderSystem::GetInstance().get());
+
+        if (SceneManager::GetInstance()->Initialize() != 0) {
             LOG_ERROR("Engine", "Failed to initialize SceneManager");
             return -1;
         }
+        m_systems.push_back(SceneManager::GetInstance().get());
+
         LOG_INFO("Engine", "Core systems registered successfully.");
         m_initialized = true;
         return 0;
@@ -52,7 +54,7 @@ namespace PrismaEngine {
     bool EngineCore::RegisterSystem(ISubSystem* system) {
         if (!system) return false;
         m_systems.push_back(system);
-        return system->Initialize();
+        return system->Initialize() == 0;
     }
 
     void EngineCore::Shutdown() {
@@ -76,7 +78,7 @@ namespace PrismaEngine {
     }
 
     void EngineCore::Update() {
-        Platform::Update();
+        // 更新逻辑 (deltaTime 暂定)
         float deltaTime = 0.016f;
         for (ISubSystem* system : m_systems) {
             system->Update(deltaTime);

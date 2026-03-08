@@ -11,7 +11,7 @@ std::shared_ptr<PhysicsSystem> PhysicsSystem::GetInstance() {
 int PhysicsSystem::Initialize() {
     LOG_INFO("Physics", "物理系统初始化开始");
     LOG_INFO("Physics", "物理系统初始化完成");
-    return true;
+    return 0;
 }
 
 void PhysicsSystem::Shutdown() {

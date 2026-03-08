@@ -5,7 +5,7 @@
 namespace PrismaEngine {
 
 std::shared_ptr<SceneManager> SceneManager::GetInstance() {
-    static std::shared_ptr<SceneManager> instance = std::make_shared<SceneManager>();
+    static std::shared_ptr<SceneManager> instance = std::shared_ptr<SceneManager>(new SceneManager());
     return instance;
 }
 
@@ -13,7 +13,7 @@ int SceneManager::Initialize() {
     TriangleExample example;
     m_currentScene = example.CreateExampleScene();
     LOG_INFO("Scene", "Example scene created.");
-    return true;
+    return 0;
 }
 
 void SceneManager::Shutdown() {
@@ -30,4 +30,4 @@ Scene* SceneManager::GetCurrentScene() const {
     return m_currentScene.get();
 }
 
-}  // namespace PrismaEngine
+} // namespace PrismaEngine
