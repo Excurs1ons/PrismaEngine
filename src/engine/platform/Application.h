@@ -14,9 +14,10 @@ public:
     int Run() override;
     void Shutdown() override;
 
-private:
     Application() = default;
-    ~Application() = default;
+    virtual ~Application() = default;
+
+private:
     std::shared_ptr<EngineCore> engine = nullptr;
 };
 
