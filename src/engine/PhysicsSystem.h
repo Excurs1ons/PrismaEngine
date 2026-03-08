@@ -15,7 +15,7 @@ public:
     int Initialize() override;
     void Shutdown() override;
     void Update(float deltaTime) override;
-    PhysicsSystem() = default;
+    PhysicsSystem()           = default;
     ~PhysicsSystem() override = default;
 
 private:
