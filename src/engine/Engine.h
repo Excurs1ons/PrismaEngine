@@ -1,13 +1,13 @@
 #pragma once
 
+#include "Export.h"
 #include "ISubSystem.h"
 #include "Logger.h"
+#include "ManagerBase.h"
 #include "Singleton.h"
-#include "Export.h"
 #include <chrono>
 #include <memory>
 #include <vector>
-#include "ManagerBase.h"
 
 namespace PrismaEngine {
 
@@ -43,7 +43,6 @@ private:
 
     std::vector<ISubSystem*> m_systems;
     bool m_initialized = false;
-    bool isRunning_ = false;
+    bool isRunning_    = false;
 };
-
-} // namespace PrismaEngine
+}  // namespace PrismaEngine
