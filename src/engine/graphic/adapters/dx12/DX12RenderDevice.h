@@ -167,6 +167,73 @@ public:
 
     /// @brief 清理 ImGui 资源（DX12 特定）
     void ShutdownImGui() override;
+
+private:
+    // DirectX 12 核心组件
+    ComPtr<ID3D12Device> m_device;
+    ComPtr<ID3D12CommandQueue> m_commandQueue;
+    ComPtr<ID3D12CommandAllocator> m_commandAllocator;
+    ComPtr<ID3D12GraphicsCommandList> m_commandList;
+    ComPtr<ID3D12RootSignature> m_rootSignature;
+    ComPtr<ID3D12PipelineState> m_pipelineState;
+
+    // 交换链和渲染目标
+    ComPtr<IDXGISwapChain3> m_swapChain;
+    ComPtr<ID3D12Resource> m_renderTargets[2];
+    ComPtr<ID3D12Resource> m_depthStencil;
+    ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
+
+    // 同步对象
+    ComPtr<ID3D12Fence> m_fence;
+    HANDLE m_fenceEvent              = nullptr;
+    uint64_t m_fenceValue            = 0;
+    uint32_t m_frameIndex            = 0;
+    static const uint32_t FrameCount = 2;
+
+    // 动态缓冲区（每帧上传用）
+    ComPtr<ID3D12Resource> m_dynamicVertexBuffer;
+    ComPtr<ID3D12Resource> m_dynamicIndexBuffer;
+    ComPtr<ID3D12Resource> m_dynamicConstantBuffer;
+    uint8_t* m_dynamicVBCPUAddress = nullptr;
+    uint8_t* m_dynamicIBCPUAddress = nullptr;
+    uint8_t* m_dynamicCBCPUAddress = nullptr;
+    uint64_t m_dynamicVBSize       = 0;
+    uint64_t m_dynamicIBSize       = 0;
+    uint64_t m_dynamicCBSize       = 0;
+    uint64_t m_dynamicVBOffset     = 0;
+    uint64_t m_dynamicIBOffset     = 0;
+    uint64_t m_dynamicCBOffset     = 0;
+
+    // 视口和裁剪矩形
+    D3D12_VIEWPORT m_viewport;
+    D3D12_RECT m_scissorRect;
+
+    // 描述符大小
+    UINT m_rtvDescriptorSize = 0;
+
+    // 窗口句柄
+    void* m_windowHandle = nullptr;
+    uint32_t m_width     = 0;
+    uint32_t m_height    = 0;
+
+    // 自定义组件
+    std::unique_ptr<DX12ResourceFactory> m_resourceFactory;
+    std::unique_ptr<DX12SwapChain> m_swapChainAdapter;
+    bool m_initialized           = false;
+    uint64_t m_currentFenceValue = 1;
+
+    // 渲染统计
+    mutable RenderStats m_stats = {};
+
+    // 调试标记堆
+    ComPtr<ID3D12Debug> m_debugController;
+    ComPtr<ID3D12InfoQueue> m_infoQueue;
+
+    // 命令签名
+    ComPtr<ID3D12CommandSignature> m_commandSignature;
+    ComPtr<ID3D12CommandSignature> m_indexedCommandSignature;
+    ComPtr<ID3D12CommandSignature> m_dispatchCommandSignature;
 };
 
 }  // namespace PrismaEngine::Graphic::DX12
