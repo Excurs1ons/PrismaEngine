@@ -77,13 +77,8 @@ public:
     RenderStats GetRenderStats() const override;
 
     // ImGui 集成
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     bool InitializeImGui() override;
     void ShutdownImGui() override;
-#else
-    bool InitializeImGui() override { return true; }
-    void ShutdownImGui() override {}
-#endif
 
     // 调试
     void BeginDebugMarker(const std::string& name) override;
