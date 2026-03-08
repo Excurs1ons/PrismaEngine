@@ -62,7 +62,7 @@ void DirectoryWatcher::WatchLoop() {
                          NULL);
 
     if (m_hDir == INVALID_HANDLE_VALUE) {
-        LOG_ERROR("WindowsUtils", L"无法打开路径: {0}", m_directory);
+        LOG_ERROR("WindowsUtils", "无法打开路径: {0}", Logger::WStringToString(m_directory));
         return;
     }
 

@@ -9,20 +9,26 @@ namespace PrismaEngine {
 /// 应用程序初始化，需要完成平台层和引擎的初始化
 /// </summary>
 /// <returns></returns>
-bool Application::Initialize() {
+int Application::Initialize() {
     LOG_INFO("Application", "应用程序初始化开始");
 
     // 获取引擎单例
-    engine = &EngineCore::GetInstance();
+    engine = EngineCore::GetInstance();
 
-    // 初始化引擎
-    if (!engine->Initialize()) {
-        LOG_ERROR("Application", "引擎初始化失败");
+    if (!engine) {
+        LOG_ERROR("Application", "无法获取引擎实例");
         return false;
+    }
+    int result = engine->Initialize();
+    // 初始化引擎
+
+    if (result != 0) {
+        LOG_ERROR("Application", "引擎初始化失败");
+        return result;
     }
 
     LOG_INFO("Application", "应用程序初始化完成");
-    return true;
+    return 0;
 }
 
 int Application::Run() {

@@ -103,6 +103,7 @@ public:
     ENGINE_API static void PumpEvents();
     ENGINE_API static void Update() { PumpEvents(); }
     ENGINE_API static bool ShouldClose(WindowHandle window);
+    ENGINE_API static void SetShouldClose(WindowHandle window, bool shouldClose);
     ENGINE_API static WindowHandle GetCurrentWindow();
 
 #if defined(_WIN32)
@@ -165,4 +166,4 @@ public:
     ENGINE_API static void SetEventCallback(EventCallback callback);
 };
 
-} // namespace Engine
+} // namespace PrismaEngine

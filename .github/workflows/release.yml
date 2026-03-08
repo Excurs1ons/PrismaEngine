@@ -49,9 +49,9 @@ jobs:
         echo "Version: $VERSION"
         echo "Android only: $IS_ANDROID_ONLY"
 
-  # ========== Windows Engine SDK ==========
+  # ========== Windows Engine ==========
   release-windows-engine:
-    name: Windows Engine SDK
+    name: Windows Engine
     runs-on: windows-latest
     needs: get-version
     if: needs.get-version.outputs.is_android_only != 'true'
@@ -94,9 +94,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ========== Android Engine SDK ==========
+  # ========== Android Engine ==========
   release-android-engine:
-    name: Android Engine SDK
+    name: Android Engine
     runs-on: ubuntu-latest
     needs: get-version
     if: needs.get-version.outputs.is_android_only != 'true'
