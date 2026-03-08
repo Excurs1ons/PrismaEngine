@@ -3,8 +3,14 @@
 #include "Logger.h"
 #include "Platform.h"
 #include <imgui.h>
-#include <imgui_impl_sdl3.h>
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
 #include <imgui_impl_vulkan.h>
+#endif
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
+#endif
+#include <imgui_impl_sdl3.h>
 #include <SDL3/SDL.h>
 
 namespace PrismaEngine {
@@ -67,7 +73,12 @@ int Editor::Run() {
         Platform::PumpEvents();
         
         // Start ImGui Frame
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
         ImGui_ImplVulkan_NewFrame();
+#endif
+#if defined(PRISMA_ENABLE_RENDER_DX12)
+        ImGui_ImplDX12_NewFrame();
+#endif
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
