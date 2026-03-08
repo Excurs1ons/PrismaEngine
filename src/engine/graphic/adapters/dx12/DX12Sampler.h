@@ -25,6 +25,7 @@ public:
     ResourceType GetType() const override { return ResourceType::Sampler; }
 
     // ISampler接口实现
+    ResourceType GetType() const override;
     TextureFilter GetFilter() const override;
     TextureAddressMode GetAddressU() const override;
     TextureAddressMode GetAddressV() const override;

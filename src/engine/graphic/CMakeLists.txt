@@ -80,7 +80,7 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/RenderComponent.cpp
     graphic/RenderCommandContext.cpp
     graphic/RenderPass.cpp
-    graphic/RenderSystemNew.cpp
+    graphic/RenderSystem.cpp
     # graphic/ScriptableRenderPipeline.cpp  # 已删除：使用 LogicalPipeline 替代
     graphic/Shader.cpp
     graphic/stb_impl.cpp
@@ -109,7 +109,7 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/RenderComponent.h
     graphic/RenderGraph.h
     graphic/RenderPass.h
-    graphic/RenderSystemNew.h
+    graphic/RenderSystem.h
     # graphic/ScriptableRenderPipeline.h  # 已删除：使用 LogicalPipeline 替代
     graphic/ICamera.h
     graphic/Shader.h

@@ -26,7 +26,7 @@ public:
     void SetDepthStencil(IDepthStencil* depthStencil) override { m_depthStencil = depthStencil; }
     void SetViewport(uint32_t width, uint32_t height) override;
 
-    void Update(float deltaTime) override { /* 默认空实现 */ }
+    void Update(float deltaTime) override { UpdateTime(deltaTime); }
 
     uint32_t GetPriority() const override { return m_priority; }
     void SetPriority(uint32_t priority) override { m_priority = priority; }

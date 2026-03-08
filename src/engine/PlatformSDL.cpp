@@ -1,8 +1,7 @@
 #include "Platform.h"
 
-// SDL 用于非 Windows 平台（Linux, macOS 等）
-// Windows 使用 PlatformWindows.cpp，Android 使用 PlatformAndroid.cpp
-#if !defined(_WIN32) && !defined(__ANDROID__)
+// SDL 用于跨平台（Linux, macOS, 以及可选的 Windows/Android）
+#if !defined(_WIN32) && !defined(__ANDROID__) || defined(PRISMA_USE_SDL3)
 
 // 条件包含 SDL 头文件
 #if defined(__has_include)

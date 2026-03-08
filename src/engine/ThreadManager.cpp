@@ -63,12 +63,12 @@ void ThreadManager::SetThreadName(std::thread::id id, const std::string& name) {
     m_threadNames[id] = name;
 }
 
-void ThreadManager::SetThreadAffinity(std::thread::id id, uint32_t coreMask) {
+void ThreadManager::SetThreadAffinity([[maybe_unused]] std::thread::id id, [[maybe_unused]] uint32_t coreMask) {
     // 设置线程亲和性
     // 这是一个平台相关的操作，需要根据不同平台实现
 }
 
-void ThreadManager::SetThreadPriority(std::thread::id id, int priority) {
+void ThreadManager::SetThreadPriority([[maybe_unused]] std::thread::id id, [[maybe_unused]] int priority) {
     // 设置线程优先级
     // 这是一个平台相关的操作，需要根据不同平台实现
 }

@@ -6,21 +6,20 @@
 #include <string>
 #include <cstring>
 
-#if defined(__ANDROID__) || defined(ANDROID)
+#if defined(_WIN32)
+#include <Windows.h>
+#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_win32.h>
+#elif defined(__ANDROID__) || defined(ANDROID)
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_android.h>
+#else
+#include <vulkan/vulkan.h>
 #endif
 
-// VMA 实现必须在某个 .cpp 文件中定义一次
+// VMA 实现由 RenderDeviceVulkan.cpp 负责
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
-#define VMA_IMPLEMENTATION
-#if defined(ANDROID) || defined(__ANDROID__)
-    // 在 Android 上禁用静态函数导入，以避免链接错误
-    #define VMA_STATIC_VULKAN_FUNCTIONS 0
-    #define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
-#endif
 #include <vk_mem_alloc.h>
-#undef VMA_IMPLEMENTATION
 #endif
 namespace PrismaEngine::Graphic {
 

@@ -474,7 +474,7 @@ std::unique_ptr<IFence> DX12ResourceFactory::CreateFenceImpl() {
         return nullptr;
     }
 
-    HRESULT hr = d3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&fence));
+    HRESULT hr = d3d12Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(fence.GetAddressOf()));
     if (FAILED(hr)) {
         LOG_ERROR("DX12ResourceFactory", "Failed to create D3D12 fence");
         return nullptr;
@@ -788,7 +788,7 @@ Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DX12ResourceFactory::CreateDescript
     heapDesc.NodeMask = 0;
 
     ComPtr<ID3D12DescriptorHeap> heap;
-    HRESULT hr = d3d12Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&heap));
+    HRESULT hr = d3d12Device->CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(heap.GetAddressOf()));
     if (FAILED(hr)) {
         LOG_ERROR("DX12ResourceFactory", "Failed to create descriptor heap");
         return nullptr;
@@ -935,7 +935,7 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DX12ResourceFactory::CreateCommittedResou
         &desc,
         initialState,
         nullptr,
-        IID_PPV_ARGS(&resource)
+        IID_PPV_ARGS(resource.GetAddressOf())
     );
 
     if (FAILED(hr)) {

@@ -35,6 +35,7 @@ public:
     ResourceType GetType() const override { return ResourceType::Shader; }
 
     // IShader接口实现
+    ResourceType GetType() const override;
     ShaderType GetShaderType() const override;
     ShaderLanguage GetLanguage() const override;
     const std::string& GetEntryPoint() const override;

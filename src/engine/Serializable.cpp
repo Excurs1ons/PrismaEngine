@@ -5,7 +5,7 @@
 namespace PrismaEngine {
     namespace Serialization {
         // 实现非模板方法
-        void OutputArchive::SetCurrent(const std::string& key) {
+        void OutputArchive::SetCurrent([[maybe_unused]] const std::string& key) {
             // 默认实现为空，子类可以重写
         }
 
@@ -13,7 +13,7 @@ namespace PrismaEngine {
             SetCurrent(field);
         }
 
-        void InputArchive::SetCurrent(const std::string& key) {
+        void InputArchive::SetCurrent([[maybe_unused]] const std::string& key) {
             // 默认实现为空，子类可以重写
         }
     }

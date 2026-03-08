@@ -31,6 +31,9 @@ public:
     /// @brief 析构函数
     ~DX12RenderDevice() override;
 
+    /// @brief 帧缓冲区数量
+    static constexpr UINT FrameCount = 2;
+
     // IRenderDevice接口实现
     bool Initialize(const DeviceDesc& desc) override;
     void Shutdown() override;
@@ -104,6 +107,10 @@ public:
     /// @return DSV描述符堆指针
     ID3D12DescriptorHeap* GetDSVHeap() const;
 
+    /// @brief 获取 SRV 堆 (用于 ImGui 等)
+    /// @return SRV 描述符堆指针
+    ID3D12DescriptorHeap* GetSRVHeap() const { return m_srvHeap.Get(); }
+
     /// @brief 获取RTV描述符大小
     /// @return RTV描述符大小
     UINT GetRTVDescriptorSize() const;
@@ -157,44 +164,24 @@ public:
 
     /// @brief 获取交换链描述
     /// @param desc 输出描述
-    /// @return 是否成功
     bool GetSwapChainDesc(DXGI_SWAP_CHAIN_DESC* desc) const;
 
-    /// @brief 获取交换链描述 (兼容旧接口)
-    std::string GetSwapChainDesc() const;
-
-    /// @brief 调整交换链缓冲区
-    /// @param bufferCount 缓冲区数量
-    /// @param width 宽度
-    /// @param height 高度
-    /// @param format 格式
-    /// @param flags 标志
-    /// @return HRESULT
+    /// @brief 调整缓冲区大小
     HRESULT ResizeBuffers(UINT bufferCount, UINT width, UINT height, DXGI_FORMAT format, UINT flags);
 
     /// @brief 设置全屏状态
-    /// @param fullscreen 是否全屏
-    /// @param target 目标输出
-    /// @return HRESULT
     HRESULT SetFullscreenState(BOOL fullscreen, IDXGIOutput* target);
 
     /// @brief 获取交换链缓冲区
-    /// @param bufferIndex 缓冲区索引
-    /// @param riid 接口ID
-    /// @param ppSurface 输出表面
-    /// @return HRESULT
-    HRESULT GetSwapChainBuffer(UINT bufferIndex, REFIID riid, void** ppSurface);
+    HRESULT GetSwapChainBuffer(UINT buffer, REFIID riid, void** ppvResource);
 
-    /// @brief 获取绘制命令签名
-    /// @return 命令签名指针
+    /// @brief 获取命令签名
     ID3D12CommandSignature* GetCommandSignature();
 
-    /// @brief 获取索引绘制命令签名
-    /// @return 索引命令签名指针
+    /// @brief 获取索引命令签名
     ID3D12CommandSignature* GetIndexedCommandSignature();
 
     /// @brief 获取计算命令签名
-    /// @return 计算命令签名指针
     ID3D12CommandSignature* GetDispatchCommandSignature();
 
     // === ImGui 集成 ===
@@ -207,71 +194,63 @@ public:
     void ShutdownImGui() override;
 
 private:
-    // DirectX 12 核心组件
+    bool m_initialized = false;
+    void* m_windowHandle = nullptr;
+    uint32_t m_width = 0;
+    uint32_t m_height = 0;
+
     ComPtr<ID3D12Device> m_device;
     ComPtr<ID3D12CommandQueue> m_commandQueue;
     ComPtr<ID3D12CommandAllocator> m_commandAllocator;
     ComPtr<ID3D12GraphicsCommandList> m_commandList;
+    ComPtr<IDXGISwapChain3> m_swapChain;
+    ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
+    ComPtr<ID3D12DescriptorHeap> m_srvHeap;
+    ComPtr<ID3D12Resource> m_renderTargets[FrameCount];
+    ComPtr<ID3D12Resource> m_depthStencil;
     ComPtr<ID3D12RootSignature> m_rootSignature;
     ComPtr<ID3D12PipelineState> m_pipelineState;
 
-    // 交换链和渲染目标
-    ComPtr<IDXGISwapChain3> m_swapChain;
-    ComPtr<ID3D12Resource> m_renderTargets[2];
-    ComPtr<ID3D12Resource> m_depthStencil;
-    ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-    ComPtr<ID3D12DescriptorHeap> m_dsvHeap;
+    UINT m_rtvDescriptorSize = 0;
+    UINT m_frameIndex = 0;
 
     // 同步对象
     ComPtr<ID3D12Fence> m_fence;
-    HANDLE m_fenceEvent              = nullptr;
-    uint64_t m_fenceValue            = 0;
-    uint32_t m_frameIndex            = 0;
-    static const uint32_t FrameCount = 2;
+    uint64_t m_fenceValue = 0;
+    HANDLE m_fenceEvent = nullptr;
 
-    // 动态缓冲区（每帧上传用）
+    // 动态缓冲区
     ComPtr<ID3D12Resource> m_dynamicVertexBuffer;
     ComPtr<ID3D12Resource> m_dynamicIndexBuffer;
     ComPtr<ID3D12Resource> m_dynamicConstantBuffer;
-    uint8_t* m_dynamicVBCPUAddress = nullptr;
-    uint8_t* m_dynamicIBCPUAddress = nullptr;
-    uint8_t* m_dynamicCBCPUAddress = nullptr;
-    uint64_t m_dynamicVBSize       = 0;
-    uint64_t m_dynamicIBSize       = 0;
-    uint64_t m_dynamicCBSize       = 0;
-    uint64_t m_dynamicVBOffset     = 0;
-    uint64_t m_dynamicIBOffset     = 0;
-    uint64_t m_dynamicCBOffset     = 0;
 
-    // 视口和裁剪矩形
+    uint64_t m_dynamicVBSize = 0;
+    uint64_t m_dynamicIBSize = 0;
+    uint64_t m_dynamicCBSize = 0;
+
+    uint64_t m_dynamicVBOffset = 0;
+    uint64_t m_dynamicIBOffset = 0;
+    uint64_t m_dynamicCBOffset = 0;
+
+    void* m_dynamicVBCPUAddress = nullptr;
+    void* m_dynamicIBCPUAddress = nullptr;
+    void* m_dynamicCBCPUAddress = nullptr;
+
     D3D12_VIEWPORT m_viewport;
     D3D12_RECT m_scissorRect;
 
-    // 描述符大小
-    UINT m_rtvDescriptorSize = 0;
-
-    // 窗口句柄
-    void* m_windowHandle = nullptr;
-    uint32_t m_width     = 0;
-    uint32_t m_height    = 0;
-
-    // 自定义组件
     std::unique_ptr<DX12ResourceFactory> m_resourceFactory;
     std::unique_ptr<DX12SwapChain> m_swapChainAdapter;
-    bool m_initialized           = false;
-    uint64_t m_currentFenceValue = 1;
 
-    // 渲染统计
-    mutable RenderStats m_stats = {};
-
-    // 调试标记堆
+    mutable RenderStats m_stats;
     ComPtr<ID3D12Debug> m_debugController;
     ComPtr<ID3D12InfoQueue> m_infoQueue;
 
-    // 命令签名
+    // 命令签名组件
     ComPtr<ID3D12CommandSignature> m_commandSignature;
     ComPtr<ID3D12CommandSignature> m_indexedCommandSignature;
     ComPtr<ID3D12CommandSignature> m_dispatchCommandSignature;
 };
 
-}  // namespace PrismaEngine::Graphic::DX12
+} // namespace PrismaEngine::Graphic::DX12
