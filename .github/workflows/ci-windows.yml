@@ -52,9 +52,9 @@ jobs:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
     - name: Setup Vulkan SDK
-      uses: ashutoshvarma/setup-vulkan@v1.6
+      uses: humbletim/setup-vulkan-sdk@v1.2
       with:
-        vulkan-query-version: 1.3.204.1
+        vulkan-query-version: 1.3.296.0
         vulkan-components: Vulkan-Headers, Vulkan-Loader
         vulkan-use-cache: true
 
