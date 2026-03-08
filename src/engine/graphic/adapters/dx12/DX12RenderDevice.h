@@ -157,7 +157,45 @@ public:
 
     /// @brief 获取交换链描述
     /// @param desc 输出描述
+    /// @return 是否成功
+    bool GetSwapChainDesc(DXGI_SWAP_CHAIN_DESC* desc) const;
+
+    /// @brief 获取交换链描述 (兼容旧接口)
     std::string GetSwapChainDesc() const;
+
+    /// @brief 调整交换链缓冲区
+    /// @param bufferCount 缓冲区数量
+    /// @param width 宽度
+    /// @param height 高度
+    /// @param format 格式
+    /// @param flags 标志
+    /// @return HRESULT
+    HRESULT ResizeBuffers(UINT bufferCount, UINT width, UINT height, DXGI_FORMAT format, UINT flags);
+
+    /// @brief 设置全屏状态
+    /// @param fullscreen 是否全屏
+    /// @param target 目标输出
+    /// @return HRESULT
+    HRESULT SetFullscreenState(BOOL fullscreen, IDXGIOutput* target);
+
+    /// @brief 获取交换链缓冲区
+    /// @param bufferIndex 缓冲区索引
+    /// @param riid 接口ID
+    /// @param ppSurface 输出表面
+    /// @return HRESULT
+    HRESULT GetSwapChainBuffer(UINT bufferIndex, REFIID riid, void** ppSurface);
+
+    /// @brief 获取绘制命令签名
+    /// @return 命令签名指针
+    ID3D12CommandSignature* GetCommandSignature();
+
+    /// @brief 获取索引绘制命令签名
+    /// @return 索引命令签名指针
+    ID3D12CommandSignature* GetIndexedCommandSignature();
+
+    /// @brief 获取计算命令签名
+    /// @return 计算命令签名指针
+    ID3D12CommandSignature* GetDispatchCommandSignature();
 
     // === ImGui 集成 ===
 
