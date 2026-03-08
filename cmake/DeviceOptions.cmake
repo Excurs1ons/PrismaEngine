@@ -6,37 +6,33 @@
 # Native 音频模式：仅使用平台 SDK 原生音频 API，不依赖第三方库
 option(PRISMA_USE_NATIVE_AUDIO "Use platform native audio APIs only" ON)
 
-# Native 输入模式：仅使用平台原生输入 API
+# Native 输入模式：仅使用平台原生 input API
 option(PRISMA_USE_NATIVE_INPUT "Use platform native input APIs only" ON)
 
-# SDL3 支持：启用 SDL3 跨平台支持（窗口、输入、音频）
+# SDL3 支持：启用 SDL3 跨平台支持
 option(PRISMA_ENABLE_SDL3 "Enable SDL3 support" ON)
 
 # ========== 渲染后端选项 ==========
 
-# 默认设置
-set(PRISMA_ENABLE_RENDER_DX12_DEFAULT OFF)
-set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
-
-# Windows 平台特殊处理
-if(WIN32)
-    # 如果不是构建编辑器，默认可以用 DX12
-    if(NOT PRISMA_BUILD_EDITOR)
-        set(PRISMA_ENABLE_RENDER_DX12_DEFAULT ON)
-        set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT OFF)
+# 强制重置默认值逻辑
+if(PRISMA_BUILD_EDITOR)
+    set(PRISMA_ENABLE_RENDER_DX12 OFF CACHE BOOL "Enable DirectX12" FORCE)
+    set(PRISMA_ENABLE_RENDER_VULKAN ON CACHE BOOL "Enable Vulkan" FORCE)
+    set(PRISMA_DEFAULT_RENDER_BACKEND "Vulkan" CACHE STRING "Default render backend" FORCE)
+else()
+    # 默认设置
+    if(WIN32)
+        option(PRISMA_ENABLE_RENDER_DX12 "Enable DirectX12" ON)
+        option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan" OFF)
+        set(PRISMA_DEFAULT_RENDER_BACKEND "DirectX12" CACHE STRING "Default render backend")
+    else()
+        option(PRISMA_ENABLE_RENDER_DX12 "Enable DirectX12" OFF)
+        option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan" ON)
+        set(PRISMA_DEFAULT_RENDER_BACKEND "Vulkan" CACHE STRING "Default render backend")
     endif()
 endif()
 
-option(PRISMA_ENABLE_RENDER_DX12 "Enable DirectX12" ${PRISMA_ENABLE_RENDER_DX12_DEFAULT})
-option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan" ${PRISMA_ENABLE_RENDER_VULKAN_DEFAULT})
 option(PRISMA_ENABLE_RENDER_OPENGL "Enable OpenGL" OFF)
-
-# 强制设置默认后端
-if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_RENDER_VULKAN)
-    set(PRISMA_DEFAULT_RENDER_BACKEND "Vulkan" CACHE STRING "Default render backend" FORCE)
-else()
-    set(PRISMA_DEFAULT_RENDER_BACKEND "DirectX12" CACHE STRING "Default render backend" FORCE)
-endif()
 
 # ========== 功能特性选项 ==========
 
