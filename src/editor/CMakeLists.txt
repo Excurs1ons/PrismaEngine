@@ -1,5 +1,18 @@
 # 编辑器模块
 
+# ImGui 后端源文件 (根据平台条件添加)
+set(IMGUI_BACKENDS)
+if(WIN32)
+    list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
+endif()
+if(PRISMA_ENABLE_RENDER_VULKAN)
+    list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
+endif()
+# SDL3 后端 (非 Windows 平台)
+if(NOT WIN32)
+    list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+endif()
+
 # 源文件
 set(EDITOR_SOURCES
         Editor.cpp
@@ -7,10 +20,8 @@ set(EDITOR_SOURCES
         CommandLineParser.cpp
         CommandLineEditor.cpp
         Environment.cpp
-        # ImGui 后端 (直接包含源码以支持导出)
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp
-        ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+        # ImGui 后端
+        ${IMGUI_BACKENDS}
 )
 
 # 头文件
