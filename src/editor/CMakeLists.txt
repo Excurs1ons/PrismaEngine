@@ -7,6 +7,10 @@ set(EDITOR_SOURCES
         CommandLineParser.cpp
         CommandLineEditor.cpp
         Environment.cpp
+        # 直接包含 ImGui 后端实现，确保 DLL 链接成功
+        ${CMAKE_SOURCE_DIR}/.dependencies/imgui-src/backends/imgui_impl_sdl3.cpp
+        ${CMAKE_SOURCE_DIR}/.dependencies/imgui-src/backends/imgui_impl_vulkan.cpp
+        ${CMAKE_SOURCE_DIR}/.dependencies/imgui-src/backends/imgui_impl_win32.cpp
 )
 
 set(EDITOR_HEADERS
@@ -32,6 +36,9 @@ target_include_directories(Editor
         ${CMAKE_CURRENT_SOURCE_DIR}/../engine/audio
         ${CMAKE_CURRENT_SOURCE_DIR}/../engine/graphic
         ${CMAKE_CURRENT_SOURCE_DIR}/../engine/platform
+        # ImGui 后端包含目录
+        ${CMAKE_SOURCE_DIR}/.dependencies/imgui-src
+        ${CMAKE_SOURCE_DIR}/.dependencies/imgui-src/backends
 )
 
 # 链接依赖
@@ -59,6 +66,12 @@ if(WIN32)
             ${CMAKE_BINARY_DIR}/src/engine/$<CONFIG>
         )
     endif()
+
+    # Windows 系统库
+    find_package(Vulkan REQUIRED)
+    target_link_libraries(Editor PRIVATE
+        Vulkan::Vulkan
+    )
 
     # Windows 编译选项
     target_compile_options(Editor PRIVATE

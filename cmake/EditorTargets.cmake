@@ -2,10 +2,6 @@
 # 编辑器目标定义
 # 此文件定义可独立构建的 Editor 目标
 
-# ========== 构建选项 ==========
-
-option(PRISMA_BUILD_EDITOR "构建编辑器" ON)
-
 # ========== Editor 目标定义 ==========
 
 if(PRISMA_BUILD_EDITOR)

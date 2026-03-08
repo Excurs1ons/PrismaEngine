@@ -2,11 +2,6 @@
 # 引擎核心库目标定义
 # 此文件定义可独立构建的 Engine 库目标
 
-# ========== 构建选项 ==========
-
-option(PRISMA_BUILD_ENGINE "构建引擎核心库" ON)
-option(PRISMA_ENGINE_BUILD_SHARED "构建引擎为共享库(DLL)" OFF)
-
 # ========== Engine 目标定义 ==========
 # 注意：实际的 Engine 目标在 src/engine/CMakeLists.txt 中定义
 # 此文件主要用于配置和验证
