@@ -87,8 +87,8 @@ bool Environment::DetectDisplayLinux() {
     const char* ssh_connection = std::getenv("SSH_CONNECTION");
     if ((ssh_client && ssh_client[0] != '\0') || (ssh_connection && ssh_connection[0] != '\0')) {
         // 检查是否有 X11 转发
-        const char* display = std::getenv("DISPLAY");
-        if (!display || display[0] == '\0') {
+        const char* ssh_display = std::getenv("DISPLAY");
+        if (!ssh_display || ssh_display[0] == '\0') {
             LOG_DEBUG("Environment", "SSH 会话，但无 X11 转发");
             return false;
         }
