@@ -45,6 +45,10 @@ DX12Shader::~DX12Shader() {
 }
 
 // IShader接口实现
+ResourceType DX12Shader::GetType() const {
+    return ResourceType::Shader;
+}
+
 ShaderType DX12Shader::GetShaderType() const {
     return m_desc.type;
 }

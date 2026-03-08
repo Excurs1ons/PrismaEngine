@@ -7,14 +7,12 @@
 #include "DX12ResourceFactory.h"
 #include "DX12SwapChain.h"
 
-#include <Windows.h>
-#include <d3dcompiler.h>
-
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
 #include <imgui.h>
 #include <imgui_impl_dx12.h>
 #include <imgui_impl_win32.h>
-#endif
+
+#include <Windows.h>
+#include <d3dcompiler.h>
 
 namespace PrismaEngine::Graphic::DX12 {
 
@@ -46,13 +44,13 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
     // 启用调试层（如果请求）
     if (desc.enableDebug) {
         ComPtr<ID3D12Debug> debugController;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController)))) {
+        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(debugController.GetAddressOf())))) {
             debugController->EnableDebugLayer();
             m_debugController = debugController;
 
             // 配置断点
             ComPtr<ID3D12Debug1> debugController1;
-            if (SUCCEEDED(debugController->QueryInterface(IID_PPV_ARGS(&debugController1)))) {
+            if (SUCCEEDED(debugController->QueryInterface(IID_PPV_ARGS(debugController1.GetAddressOf())))) {
                 debugController1->SetEnableGPUBasedValidation(true);
             }
         }
@@ -65,7 +63,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
     }
 
     ComPtr<IDXGIFactory4> factory;
-    HRESULT hr = CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(&factory));
+    HRESULT hr = CreateDXGIFactory2(dxgi_factory_flags, IID_PPV_ARGS(factory.GetAddressOf()));
     if (FAILED(hr)) {
         return false;
     }
@@ -93,7 +91,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
     }
 
     // 创建D3D12设备
-    hr = D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+    hr = D3D12CreateDevice(hardware_adapter.Get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(m_device.GetAddressOf()));
     if (FAILED(hr)) {
         return false;
     }
@@ -106,14 +104,14 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         queueDesc.Flags                    = D3D12_COMMAND_QUEUE_FLAG_NONE;
         queueDesc.NodeMask                 = 0;
 
-        hr = m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue));
+        hr = m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(m_commandQueue.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
     }
 
     // 创建命令分配器
-    hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator));
+    hr = m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(m_commandAllocator.GetAddressOf()));
     if (FAILED(hr)) {
         return false;
     }
@@ -142,7 +140,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         }
 
         hr = m_device->CreateRootSignature(
-            0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature));
+            0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(m_rootSignature.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
@@ -223,7 +221,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         psoDesc.RTVFormats[0]                      = DXGI_FORMAT_R8G8B8A8_UNORM;
         psoDesc.SampleDesc.Count                   = 1;
 
-        hr = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState));
+        hr = m_device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(m_pipelineState.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
@@ -234,7 +232,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
                                      D3D12_COMMAND_LIST_TYPE_DIRECT,
                                      m_commandAllocator.Get(),
                                      m_pipelineState.Get(),
-                                     IID_PPV_ARGS(&m_commandList));
+                                     IID_PPV_ARGS(m_commandList.GetAddressOf()));
     if (FAILED(hr)) {
         return false;
     }
@@ -250,12 +248,26 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         rtvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         rtvHeapDesc.NodeMask                   = 0;
 
-        hr = m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap));
+        hr = m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(m_rtvHeap.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
 
         m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+    }
+
+    // 创建 SRV 描述符堆 (用于 ImGui)
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC srvHeapDesc = {};
+        srvHeapDesc.NumDescriptors             = 1; // 仅用于 ImGui 字体
+        srvHeapDesc.Type                       = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        srvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        srvHeapDesc.NodeMask                   = 0;
+
+        hr = m_device->CreateDescriptorHeap(&srvHeapDesc, IID_PPV_ARGS(m_srvHeap.GetAddressOf()));
+        if (FAILED(hr)) {
+            return false;
+        }
     }
 
     // 创建 DSV 描述符堆
@@ -266,7 +278,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         dsvHeapDesc.Flags                      = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         dsvHeapDesc.NodeMask                   = 0;
 
-        hr = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(&m_dsvHeap));
+        hr = m_device->CreateDescriptorHeap(&dsvHeapDesc, IID_PPV_ARGS(m_dsvHeap.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
@@ -307,7 +319,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
                                                &depthBufferDesc,
                                                D3D12_RESOURCE_STATE_DEPTH_WRITE,
                                                &clearValue,
-                                               IID_PPV_ARGS(&m_depthStencil));
+                                               IID_PPV_ARGS(m_depthStencil.GetAddressOf()));
 
         if (FAILED(hr)) {
             return false;
@@ -332,7 +344,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
 
         ComPtr<IDXGISwapChain1> swapChain1;
         hr = factory->CreateSwapChainForHwnd(
-            m_commandQueue.Get(), static_cast<HWND>(m_windowHandle), &swapChainDesc, nullptr, nullptr, &swapChain1);
+            m_commandQueue.Get(), static_cast<HWND>(m_windowHandle), &swapChainDesc, nullptr, nullptr, swapChain1.GetAddressOf());
 
         if (FAILED(hr)) {
             return false;
@@ -349,7 +361,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
         CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 
         for (UINT n = 0; n < FrameCount; n++) {
-            hr = m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTargets[n]));
+            hr = m_swapChain->GetBuffer(n, IID_PPV_ARGS(m_renderTargets[n].GetAddressOf()));
             if (FAILED(hr)) {
                 return false;
             }
@@ -370,7 +382,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
                                                &resourceDesc,
                                                D3D12_RESOURCE_STATE_GENERIC_READ,
                                                nullptr,
-                                               IID_PPV_ARGS(&m_dynamicVertexBuffer));
+                                               IID_PPV_ARGS(m_dynamicVertexBuffer.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
@@ -391,7 +403,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
                                                &resourceDesc,
                                                D3D12_RESOURCE_STATE_GENERIC_READ,
                                                nullptr,
-                                               IID_PPV_ARGS(&m_dynamicIndexBuffer));
+                                               IID_PPV_ARGS(m_dynamicIndexBuffer.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
@@ -411,7 +423,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
                                                &resourceDesc,
                                                D3D12_RESOURCE_STATE_GENERIC_READ,
                                                nullptr,
-                                               IID_PPV_ARGS(&m_dynamicConstantBuffer));
+                                               IID_PPV_ARGS(m_dynamicConstantBuffer.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
@@ -426,7 +438,7 @@ bool DX12RenderDevice::Initialize(const DeviceDesc& desc) {
 
     // 创建同步对象
     {
-        hr = m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence));
+        hr = m_device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(m_fence.GetAddressOf()));
         if (FAILED(hr)) {
             return false;
         }
@@ -491,8 +503,6 @@ std::string DX12RenderDevice::GetName() const {
 std::string DX12RenderDevice::GetAPIName() const {
     return "DirectX 12";
 }
-
-// ... 其他方法的实现 ...
 
 void DX12RenderDevice::WaitForIdle() {
     if (!m_initialized) {
@@ -561,8 +571,6 @@ UINT DX12RenderDevice::GetCurrentFrameIndex() const {
 UINT DX12RenderDevice::GetFrameCount() const {
     return FrameCount;
 }
-
-// ... 其他方法的占位符实现 ...
 
 std::unique_ptr<ICommandBuffer> DX12RenderDevice::CreateCommandBuffer(CommandBufferType type) {
     // TODO: 实现命令缓冲区创建
@@ -713,41 +721,38 @@ bool DX12RenderDevice::SupportsMeshShader() const {
 bool DX12RenderDevice::SupportsVariableRateShading() const {
     return false;  // 需要特定硬件支持
 }
-IRenderDevice::GPUMemoryInfo DX12RenderDevice::GetGPUMemoryInfo() const {
 
+IRenderDevice::GPUMemoryInfo DX12RenderDevice::GetGPUMemoryInfo() const {
     // TODO: 获取GPU内存信息
     return {};
 }
+
 IRenderDevice::RenderStats DX12RenderDevice::GetRenderStats() const {
     // TODO: 获取渲染统计信息
-    return {};
+    return m_stats;
 }
 
-void DX12RenderDevice::BeginDebugMarker(const std::string& /*name*/) {
-    // TODO: 实现调试标记
+void DX12RenderDevice::BeginDebugMarker(const std::string& name) {
+    (void)name;
 }
 
 void DX12RenderDevice::EndDebugMarker() {
-    // TODO: 实现调试标记结束
 }
 
-void DX12RenderDevice::SetDebugMarker(const std::string& /*name*/) {
-    // TODO: 实现设置调试标记
+void DX12RenderDevice::SetDebugMarker(const std::string& name) {
+    (void)name;
 }
 
 ID3D12CommandSignature* DX12RenderDevice::GetCommandSignature() {
-    // TODO: 实现命令签名
-    return nullptr;
+    return m_commandSignature.Get();
 }
 
 ID3D12CommandSignature* DX12RenderDevice::GetIndexedCommandSignature() {
-    // TODO: 实现索引命令签名
-    return nullptr;
+    return m_indexedCommandSignature.Get();
 }
 
 ID3D12CommandSignature* DX12RenderDevice::GetDispatchCommandSignature() {
-    // TODO: 实现计算命令签名
-    return nullptr;
+    return m_dispatchCommandSignature.Get();
 }
 
 IDXGISwapChain3* DX12RenderDevice::GetDXGISwapChain() const {
@@ -797,28 +802,24 @@ HRESULT DX12RenderDevice::GetSwapChainBuffer(UINT bufferIndex, REFIID riid, void
 }
 
 bool DX12RenderDevice::InitializeImGui() {
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
-    if (!m_device || !m_rtvHeap) return false;
+    if (!m_initialized || !m_srvHeap) {
+        return false;
+    }
 
-    // 初始化 ImGui DX12 后端
-    // 获取 RTV 描述符堆中的一个位置用于 ImGui
-    // 实际上 ImGui DX12 需要一个 ShaderVisible 的 SRV 堆
-    // 这里我们假设上层已经处理好了描述符堆的管理
-    
-    // 我们需要从资源工厂获取一个描述符
-    // 为简单起见，这里先返回 true，具体的初始化由 RenderSystem 完成
-    // 但我们需要确保这个方法被实现以满足接口要求
-    return true;
-#else
-    return true;
-#endif
+    // 初始化 DX12 ImGui 后端
+    // 注意：必须使用 SRV 堆，而不是 RTV 堆
+    return ImGui_ImplDX12_Init(
+        m_device.Get(),
+        FrameCount,
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        m_srvHeap.Get(),
+        m_srvHeap->GetCPUDescriptorHandleForHeapStart(),
+        m_srvHeap->GetGPUDescriptorHandleForHeapStart()
+    );
 }
 
 void DX12RenderDevice::ShutdownImGui() {
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     ImGui_ImplDX12_Shutdown();
-    ImGui_ImplWin32_Shutdown();
-#endif
 }
 
 }  // namespace PrismaEngine::Graphic::DX12

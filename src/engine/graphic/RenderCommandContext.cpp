@@ -61,16 +61,23 @@ void RenderCommandContext::SetPipelineState(IPipelineState* pipelineState) {
 void RenderCommandContext::SetVertexBuffer(IBuffer* buffer, uint32_t slot, uint32_t offset, uint32_t stride) {
     if (slot < 16) {
         m_stateCache.currentVertexBuffers[slot] = buffer;
+        m_stateCache.vertexBufferOffsets[slot] = offset;
+        m_stateCache.vertexBufferStrides[slot] = stride;
     }
 }
 
 void RenderCommandContext::SetIndexBuffer(IBuffer* buffer, uint32_t offset, bool is32Bit) {
     m_stateCache.currentIndexBuffer = buffer;
+    m_stateCache.indexBufferOffset = offset;
+    m_stateCache.indexIs32Bit = is32Bit;
 }
 
 void RenderCommandContext::SetConstantBuffer(IBuffer* buffer, uint32_t slot, uint32_t offset, uint32_t size) {
-    // 实现常量缓冲区绑定
-    (void)buffer; (void)slot; (void)offset; (void)size;
+    if (slot < 16) {
+        m_stateCache.currentConstantBuffers[slot] = buffer;
+        m_stateCache.constantBufferOffsets[slot] = offset;
+        m_stateCache.constantBufferSize[slot] = size;
+    }
 }
 
 void RenderCommandContext::SetTexture(ITexture* texture, uint32_t slot) {

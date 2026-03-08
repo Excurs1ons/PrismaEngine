@@ -191,10 +191,10 @@ bool DX12PipelineState::Create(IRenderDevice* device) {
     HRESULT hr = E_FAIL;
     if (m_type == PipelineType::Graphics) {
         auto desc = CreateD3D12PipelineDesc();
-        hr = d3d12Device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(&m_pipelineState));
+        hr = d3d12Device->CreateGraphicsPipelineState(&desc, IID_PPV_ARGS(m_pipelineState.GetAddressOf()));
     } else {
         auto desc = CreateD3D12ComputePipelineDesc();
-        hr = d3d12Device->CreateComputePipelineState(&desc, IID_PPV_ARGS(&m_pipelineState));
+        hr = d3d12Device->CreateComputePipelineState(&desc, IID_PPV_ARGS(m_pipelineState.GetAddressOf()));
     }
 
     if (FAILED(hr)) {
@@ -488,7 +488,7 @@ bool DX12PipelineState::CreateD3D12RootSignature() {
         0,
         signature->GetBufferPointer(),
         signature->GetBufferSize(),
-        IID_PPV_ARGS(&m_rootSignature)
+        IID_PPV_ARGS(m_rootSignature.GetAddressOf())
     );
 
     return SUCCEEDED(hr);

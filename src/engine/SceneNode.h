@@ -1,5 +1,7 @@
 #pragma once
 #include <memory>
+#include <vector>
+#include <algorithm>
 
 // 前向声明
 namespace PrismaEngine::Graphic {
@@ -47,7 +49,7 @@ public:
     }
 
 protected:
-    virtual void OnRender(PrismaEngine::Graphic::RenderCommandContext* /*context*/) {
+    virtual void OnRender([[maybe_unused]] PrismaEngine::Graphic::RenderCommandContext* context) {
         // 默认不做任何渲染
     }
 

@@ -104,7 +104,10 @@ private:
         std::string description;
         CommandLineHandler handler;
     };
+#pragma warning(push)
+#pragma warning(disable: 4251)
     std::vector<CommandInfo> m_commands;
+#pragma warning(pop)
 
     bool ParseOption(const std::string& arg);
     std::string GetNextValue(size_t& index);

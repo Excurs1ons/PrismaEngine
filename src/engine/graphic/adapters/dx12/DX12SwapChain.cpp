@@ -228,7 +228,7 @@ bool DX12SwapChain::Screenshot(const std::string& /*filename*/, uint32_t bufferI
 
     // 获取后台缓冲区
     ComPtr<ID3D12Resource> backBuffer;
-    HRESULT hr = m_device->GetSwapChainBuffer(bufferIndex, IID_PPV_ARGS(&backBuffer));
+    HRESULT hr = m_device->GetSwapChainBuffer(bufferIndex, IID_PPV_ARGS(backBuffer.GetAddressOf()));
     if (FAILED(hr)) {
         LOG_ERROR("SwapChain", "无法获取后台缓冲区");
         return false;
@@ -307,13 +307,14 @@ void DX12SwapChain::CreateRenderTargetAdapters() {
     }
 
     // 为每个缓冲区创建渲染目标适配器
-    m_renderTargets.resize(2);
+    const UINT frameCount = m_device->GetFrameCount();
+    m_renderTargets.resize(frameCount);
 
-    for (UINT i = 0; i < 2; ++i) {
+    for (UINT i = 0; i < frameCount; ++i) {
         if (m_device->GetRenderTarget(i) != nullptr) {
             // 创建纹理适配器包装现有的渲染目标
             ComPtr<ID3D12Resource> resource;
-            HRESULT hr = m_device->GetSwapChainBuffer(i, IID_PPV_ARGS(&resource));
+            HRESULT hr = m_device->GetSwapChainBuffer(i, IID_PPV_ARGS(resource.GetAddressOf()));
 
             if (SUCCEEDED(hr)) {
                 TextureDesc desc;

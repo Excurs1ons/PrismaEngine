@@ -104,7 +104,14 @@ private:
         IDepthStencil* currentDepthStencil = nullptr;
         IPipelineState* currentPipelineState = nullptr;
         IBuffer* currentVertexBuffers[16] = {nullptr};
+        uint32_t vertexBufferOffsets[16] = {0};
+        uint32_t vertexBufferStrides[16] = {0};
         IBuffer* currentIndexBuffer = nullptr;
+        uint32_t indexBufferOffset = 0;
+        bool indexIs32Bit = true;
+        IBuffer* currentConstantBuffers[16] = {nullptr};
+        uint32_t constantBufferOffsets[16] = {0};
+        uint32_t constantBufferSize[16] = {0};
         ITexture* currentTextures[16] = {nullptr};
         ISampler* currentSamplers[16] = {nullptr};
         Viewport currentViewport = {0, 0, 0, 0, 0, 1};
