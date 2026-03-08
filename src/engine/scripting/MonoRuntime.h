@@ -1,10 +1,10 @@
 #pragma once
 
+#include <functional>
+#include <memory>
 #include <string>
 #include <unordered_map>
-#include <memory>
 #include <vector>
-#include <functional>
 
 #ifdef PRISMA_ENABLE_MONO
 #include <mono/jit/jit.h>
@@ -18,62 +18,78 @@ namespace Scripting {
 
 #ifdef PRISMA_ENABLE_MONO
 // 使用实际的Mono类型
-using MonoDomainPtr = ::MonoDomain;
-using MonoObjectPtr = ::MonoObject;
-using MonoClassPtr = ::MonoClass;
-using MonoAssemblyPtr = ::MonoAssembly;
-using MonoImagePtr = ::MonoImage;
+using MonoDomainPtr     = ::MonoDomain;
+using MonoObjectPtr     = ::MonoObject;
+using MonoClassPtr      = ::MonoClass;
+using MonoAssemblyPtr   = ::MonoAssembly;
+using MonoImagePtr      = ::MonoImage;
 using MonoMethodDescPtr = ::MonoMethodDesc;
-using MonoMethodPtr = ::MonoMethod;
+using MonoMethodPtr     = ::MonoMethod;
 #else
 // 占位符类型
-struct MonoDomain { void* ptr; };
-struct MonoObject { void* ptr; };
-struct MonoClass { void* ptr; };
-struct MonoAssembly { void* ptr; };
-struct MonoImage { void* ptr; };
-struct MonoMethodDesc { void* ptr; };
-struct MonoMethod { void* ptr; };
+struct MonoDomain {
+    void* ptr;
+};
+struct MonoObject {
+    void* ptr;
+};
+struct MonoClass {
+    void* ptr;
+};
+struct MonoAssembly {
+    void* ptr;
+};
+struct MonoImage {
+    void* ptr;
+};
+struct MonoMethodDesc {
+    void* ptr;
+};
+struct MonoMethod {
+    void* ptr;
+};
 
 // 类型别名
-using MonoDomainPtr = MonoDomain;
-using MonoObjectPtr = MonoObject;
-using MonoClassPtr = MonoClass;
-using MonoAssemblyPtr = MonoAssembly;
-using MonoImagePtr = MonoImage;
+using MonoDomainPtr     = MonoDomain;
+using MonoObjectPtr     = MonoObject;
+using MonoClassPtr      = MonoClass;
+using MonoAssemblyPtr   = MonoAssembly;
+using MonoImagePtr      = MonoImage;
 using MonoMethodDescPtr = MonoMethodDesc;
-using MonoMethodPtr = MonoMethod;
+using MonoMethodPtr     = MonoMethod;
 #endif
 
 // Mono对象包装类
 class ManagedObject {
 public:
-    ManagedObject() = default;
+    ManagedObject()          = default;
     virtual ~ManagedObject() = default;
 
     bool IsValid() const { return rawPtr != nullptr; }
 
     // 通用方法调用
-    template<typename... Args>
-    ManagedObject InvokeMethod(const std::string& methodName, Args&&... args) {
-        return ManagedObject(); // 空实现
+    template <typename... Args> ManagedObject InvokeMethod(const std::string& methodName, Args&&... args) {
+        return ManagedObject();  // 空实现
     }
 
     void* rawPtr = nullptr;
 
 private:
-    MonoDomainPtr* m_domain = nullptr;
+    MonoDomainPtr* m_domain     = nullptr;
     MonoObjectPtr* m_monoObject = nullptr;
-    MonoClassPtr* m_class = nullptr;
+    MonoClassPtr* m_class       = nullptr;
 };
 
 // Mono域管理
 class MonoDomainManager {
 public:
-    MonoDomainManager() = default;
+    MonoDomainManager()  = default;
     ~MonoDomainManager() = default;
 
-    bool Initialize(const std::string& domainName) { return false; }
+    bool Initialize(const std::string& domainName) {
+        (void)domainName;
+        return false;
+    }
     void Shutdown() {}
     bool IsInitialized() const { return false; }
     void* GetNativeDomain() const { return nullptr; }
@@ -85,22 +101,28 @@ private:
 // 程序集管理
 class MonoAssemblyManager {
 public:
-    MonoAssemblyManager() = default;
+    MonoAssemblyManager()  = default;
     ~MonoAssemblyManager() = default;
 
-    bool Load(const std::string& assemblyPath) { return false; }
+    bool Load(const std::string& assemblyPath) {
+        (void)assemblyPath;
+        return false;
+    }
     bool IsLoaded() const { return false; }
-    ManagedObject CreateInstance(const std::string& className) { return ManagedObject(); }
+    ManagedObject CreateInstance(const std::string& className) {
+        (void)className;
+        return ManagedObject();
+    }
 
 private:
     MonoAssemblyPtr* m_assembly = nullptr;
-    MonoImagePtr* m_image = nullptr;
+    MonoImagePtr* m_image       = nullptr;
 };
 
 // Mono运行时管理器
 class MonoRuntime {
 public:
-    MonoRuntime() = default;
+    MonoRuntime()  = default;
     ~MonoRuntime() = default;
 
     static MonoRuntime& GetInstance();
@@ -115,7 +137,7 @@ public:
     ManagedObject CreateInstance(const std::string& assemblyName, const std::string& className);
 
     // 调用方法
-    template<typename... Args>
+    template <typename... Args>
     ManagedObject InvokeMethod(ManagedObject& instance, const std::string& methodName, Args&&... args) {
         return ManagedObject();
     }
@@ -163,5 +185,5 @@ private:
     std::vector<std::string> m_searchPaths;
 };
 
-} // namespace Scripting
-} // namespace Engine
+}  // namespace Scripting
+}  // namespace PrismaEngine
