@@ -32,10 +32,6 @@
 #include <Windows.h>
 #endif
 
-#if !defined(_WIN32) && !defined(__ANDROID__)
-#include <SDL3/SDL.h>
-#endif
-
 namespace PrismaEngine::Graphic {
 
 std::shared_ptr<RenderSystem> RenderSystem::GetInstance() {
