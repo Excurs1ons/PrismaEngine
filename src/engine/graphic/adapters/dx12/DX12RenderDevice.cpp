@@ -707,7 +707,7 @@ IRenderDevice::RenderStats DX12RenderDevice::GetRenderStats() const {
     return {};
 }
 
-void DX12RenderDevice::BeginDebugMarker(const std::string& name) {
+void DX12RenderDevice::BeginDebugMarker(const std::string& /*name*/) {
     // TODO: 实现调试标记
 }
 
@@ -715,7 +715,7 @@ void DX12RenderDevice::EndDebugMarker() {
     // TODO: 实现调试标记结束
 }
 
-void DX12RenderDevice::SetDebugMarker(const std::string& name) {
+void DX12RenderDevice::SetDebugMarker(const std::string& /*name*/) {
     // TODO: 实现设置调试标记
 }
 
