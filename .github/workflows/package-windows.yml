@@ -1,0 +1,176 @@
+name: Package Windows
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+        - debug
+        - release
+        - both
+
+env:
+  CMAKE_VERSION: '3.31.0'
+
+jobs:
+  build-windows-engine:
+    name: Windows Engine ${{ matrix.build_type }}
+    runs-on: windows-latest
+    if: github.event.inputs.build_type != 'debug' || matrix.build_type == 'Debug'
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .dependencies
+        key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Configure CMake
+      run: cmake --preset engine-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+
+    - name: Build Engine
+      run: cmake --build build/engine-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --parallel
+
+    - name: Package Engine
+      shell: pwsh
+      run: |
+        $cfg = "${{ matrix.build_type }}"
+        $pkgDir = "package-engine-x64-$cfg"
+
+        # 创建包目录结构
+        New-Item -ItemType Directory -Force -Path "$pkgDir/lib/$cfg"
+        New-Item -ItemType Directory -Force -Path "$pkgDir/include"
+        New-Item -ItemType Directory -Force -Path "$pkgDir/bin/$cfg"
+
+        # 复制库文件
+        Copy-Item "build/engine-windows-x64-$($cfg.ToLower())/lib/$cfg/PrismaEngine.lib" -Destination "$pkgDir/lib/$cfg/" -ErrorAction SilentlyContinue
+        Copy-Item "build/engine-windows-x64-$($cfg.ToLower())/lib/$cfg/PrismaEngine.dll" -Destination "$pkgDir/bin/$cfg/" -ErrorAction SilentlyContinue
+
+        # 复制头文件（排除内部实现）
+        $excludePatterns = @(
+          "*/adapters/*",
+          "*/drivers/*",
+          "*/platform/*",
+          "*.cpp"
+        )
+
+        Get-ChildItem -Path "src/engine" -Filter "*.h" -Recurse | Where-Object {
+          $file = $_
+          $exclude = $false
+          foreach ($pattern in $excludePatterns) {
+            if ($file.FullName -like "*$($pattern.Replace('*', ''))*") {
+              $exclude = $true
+              break
+            }
+          }
+          -not $exclude
+        } | ForEach-Object {
+          $destPath = "$pkgDir/include/$($file.FullName.Substring((Get-Item "src/engine").FullName.Length + 1))"
+          $destDir = Split-Path $destPath -Parent
+          New-Item -ItemType Directory -Force -Path $destDir | Out-Null
+          Copy-Item $file.FullName -Destination $destPath
+        }
+
+        # 复制依赖 DLL（SDL3 等）
+        Copy-Item "build/engine-windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/bin/$cfg/" -ErrorAction SilentlyContinue
+
+        # 打包
+        Compress-Archive -Path "$pkgDir/*" -DestinationPath "PrismaEngine-x64-$cfg.zip" -Force
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaEngine-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+        path: PrismaEngine-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}.zip
+        retention-days: 30
+
+  build-windows-runtime:
+    name: Windows Runtime ${{ matrix.build_type }}
+    runs-on: windows-latest
+    needs: build-windows-engine
+    if: github.event.inputs.build_type != 'debug' || matrix.build_type == 'Debug'
+
+    strategy:
+      matrix:
+        build_type: [Debug, Release]
+      fail-fast: false
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        submodules: false
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .dependencies
+        key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        restore-keys: |
+          ${{ runner.os }}-deps-
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Configure CMake
+      run: cmake --preset runtime-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+
+    - name: Build Runtime
+      run: cmake --build build/runtime-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Runtime --parallel
+
+    - name: Build Game
+      run: cmake --build build/runtime-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Game --parallel
+
+    - name: Package Runtime
+      shell: pwsh
+      run: |
+        $cfg = "${{ matrix.build_type }}"
+        $pkgDir = "package-runtime-x64-$cfg"
+
+        # 创建包目录
+        New-Item -ItemType Directory -Force -Path "$pkgDir"
+
+        # 复制可执行文件和 DLL
+        Copy-Item "build/runtime-windows-x64-$($cfg.ToLower())/bin/$cfg/PrismaRuntime.exe" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
+        Copy-Item "build/runtime-windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
+
+        # 复制资源
+        Copy-Item -Path "assets" -Destination "$pkgDir/assets" -Recurse -ErrorAction SilentlyContinue
+        Copy-Item -Path "projects" -Destination "$pkgDir/projects" -Recurse -ErrorAction SilentlyContinue
+
+        # 打包
+        Compress-Archive -Path "$pkgDir/*" -DestinationPath "PrismaRuntime-x64-$cfg.zip" -Force
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: PrismaRuntime-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+        path: PrismaRuntime-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}.zip
+        retention-days: 30

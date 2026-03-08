@@ -9,8 +9,11 @@ class RenderDeviceVulkan;
 
 class VulkanSwapChain : public ISwapChain {
 public:
-    VulkanSwapChain(RenderDeviceVulkan* device) : m_device(device) {}
-    ~VulkanSwapChain() override = default;
+    VulkanSwapChain(RenderDeviceVulkan* device) 
+        : m_device(device), m_renderPass(VK_NULL_HANDLE) {}
+    ~VulkanSwapChain() override {
+        // 在此处应有资源清理逻辑，暂留空
+    }
 
     uint32_t GetBufferCount() const override { return 3; }
     uint32_t GetCurrentBufferIndex() const override { return 0; }
@@ -22,6 +25,10 @@ public:
 
     ITexture* GetRenderTarget(uint32_t /*bufferIndex*/ = 0) override { return nullptr; }
     ITexture* GetCurrentRenderTarget() override { return nullptr; }
+
+    // 获取用于 ImGui 的 RenderPass
+    VkRenderPass GetRenderPass() const { return m_renderPass; }
+    void SetRenderPass(VkRenderPass renderPass) { m_renderPass = renderPass; }
 
     bool Present() override { return true; }
     bool SetMode(SwapChainMode /*mode*/) override { return true; }
@@ -44,6 +51,7 @@ public:
 
 private:
     RenderDeviceVulkan* m_device;
+    VkRenderPass m_renderPass;
 };
 
 } // namespace PrismaEngine::Graphic::Vulkan

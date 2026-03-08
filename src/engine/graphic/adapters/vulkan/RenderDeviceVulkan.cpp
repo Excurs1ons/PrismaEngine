@@ -27,22 +27,32 @@ bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     LOG_INFO("Vulkan", "正在初始化 Vulkan 设备 (vk-bootstrap + VMA)");
 
     // 1. 创建实例
+    LOG_INFO("Vulkan", "正在创建 Vulkan 实例 (Validation: {0})...", desc.enableValidation ? "ON" : "OFF");
     vkb::InstanceBuilder inst_builder;
     auto inst_ret = inst_builder.set_app_name(desc.name.c_str())
                         .request_validation_layers(desc.enableValidation)
                         .use_default_debug_messenger()
-                        .require_api_version(1, 3, 0)
+                        .require_api_version(1, 1, 0)
                         .build();
+    
+    // 如果启用验证层失败，尝试在关闭验证层的情况下重新创建
+    if (!inst_ret && desc.enableValidation) {
+        LOG_WARNING("Vulkan", "启用验证层失败，尝试在无验证层模式下启动...");
+        inst_ret = inst_builder.request_validation_layers(false).build();
+    }
+
     if (!inst_ret) {
         LOG_ERROR("Vulkan", "无法创建实例: {0}", inst_ret.error().message());
         return false;
     }
     m_vkbInstance = inst_ret.value();
     m_instance = m_vkbInstance.instance;
+    Logger::GetInstance().Flush();
 
     // 2. 选择物理设备
+    LOG_INFO("Vulkan", "正在选择物理设备...");
     vkb::PhysicalDeviceSelector selector{ m_vkbInstance };
-    auto phys_ret = selector.set_minimum_version(1, 3)
+    auto phys_ret = selector.set_minimum_version(1, 1)
                         .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
                         .select();
     if (!phys_ret) {
@@ -51,8 +61,10 @@ bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     }
     m_vkbPhysicalDevice = phys_ret.value();
     m_physicalDevice = m_vkbPhysicalDevice.physical_device;
+    Logger::GetInstance().Flush();
 
     // 3. 创建逻辑设备
+    LOG_INFO("Vulkan", "正在创建逻辑设备...");
     vkb::DeviceBuilder device_builder{ m_vkbPhysicalDevice };
     auto dev_ret = device_builder.build();
     if (!dev_ret) {
@@ -63,6 +75,7 @@ bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     m_device = m_vkbDevice.device;
 
     // 4. 获取队列
+    LOG_INFO("Vulkan", "正在获取队列...");
     auto g_queue_ret = m_vkbDevice.get_queue(vkb::QueueType::graphics);
     if (!g_queue_ret) {
         LOG_ERROR("Vulkan", "无法获取图形队列");
@@ -72,8 +85,9 @@ bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     m_graphicsQueueFamily = m_vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
     // 5. 初始化 VMA 分配器
+    LOG_INFO("Vulkan", "正在初始化 VMA...");
     VmaAllocatorCreateInfo allocatorInfo = {};
-    allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_3;
+    allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_1;
     allocatorInfo.physicalDevice = m_physicalDevice;
     allocatorInfo.device = m_device;
     allocatorInfo.instance = m_instance;
@@ -148,9 +162,17 @@ bool RenderDeviceVulkan::InitializeImGui() {
     init_info.MinImageCount = 3;
     init_info.ImageCount = 3;
     
-    // 注意：这里需要一个 RenderPass。在真正的项目中，通常从交换链获取。
-    // 为了让编辑器跑起来，我们可能需要先创建一个临时的或者从交换链获取。
-    // 这里暂时留空或由上层提供。
+    // 从交换链获取 RenderPass
+    if (m_swapChain) {
+        init_info.RenderPass = m_swapChain->GetRenderPass();
+    }
+
+    // 如果交换链还未准备好 RenderPass（例如初始化早期），ImGui 初始化会失败
+    // 在这里我们必须确保提供一个有效的 RenderPass
+    if (init_info.RenderPass == VK_NULL_HANDLE) {
+        LOG_ERROR("Vulkan", "ImGui requires a valid RenderPass for initialization.");
+        return false;
+    }
     
     return ImGui_ImplVulkan_Init(&init_info);
 #else
