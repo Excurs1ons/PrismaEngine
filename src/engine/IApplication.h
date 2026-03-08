@@ -39,7 +39,7 @@ public:
     /// </summary>
     /// <returns></returns>
     static T& GetInstance() {
-        return *T::GetInstance();
+        return T::GetInstance();
     }
 
     bool IsInitialized() const {
