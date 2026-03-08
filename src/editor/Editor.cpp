@@ -3,19 +3,13 @@
 #include "CommandLineEditor.h"
 #include "CommandLineParser.h"
 #include "Environment.h"
-#include "Logger.h"
-#include "Platform.h"
+#include "../engine/Engine.h"
+#include "../engine/Platform.h"
+
+// ImGui
 #include <imgui.h>
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-#include <imgui_impl_vulkan.h>
-#endif
-#if defined(PRISMA_ENABLE_RENDER_DX12)
-#include <imgui_impl_dx12.h>
-#include <imgui_impl_win32.h>
-#endif
 #include <imgui_impl_sdl3.h>
-#include <SDL3/SDL.h>
-#include <iostream>
+#include <imgui_impl_vulkan.h>
 
 namespace PrismaEngine {
 
@@ -31,84 +25,121 @@ Editor::~Editor() {
 }
 
 int Editor::Initialize() {
-    LOG_INFO("Editor", "正在初始化图形界面编辑器...");
+    LOG_INFO("Editor", "正在初始化编辑器 (Direct SDL3 Mode)...");
 
-    // 1. 创建窗口
-    WindowProps props;
-    props.Width = 1600;
-    props.Height = 900;
-    props.Title = "Prisma Engine Editor";
-    m_window = Platform::CreateWindow(props);
-
-    if (!m_window) {
-        LOG_FATAL("Editor", "无法创建编辑器窗口。");
+    // 1. 初始化 SDL3
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+        LOG_ERROR("Editor", "SDL_Init 失败: {}", SDL_GetError());
         return 1;
     }
 
-    // 2. 初始化渲染系统
-    auto renderSystem = Graphic::RenderSystem::GetInstance();
-    Graphic::RenderSystemDesc renderDesc;
-    renderDesc.backendType = Graphic::RenderAPIType::Vulkan;
-    renderDesc.windowHandle = m_window;
-    renderDesc.width = props.Width;
-    renderDesc.height = props.Height;
-    renderDesc.name = "EditorRender";
-
-    if (!renderSystem->Initialize(renderDesc)) {
-        LOG_FATAL("Editor", "渲染系统初始化失败。");
+    // 2. 创建窗口 (直接调用 SDL3)
+    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    m_window = SDL_CreateWindow("PrismaEngine Editor", 1280, 720, window_flags);
+    
+    if (!m_window) {
+        LOG_ERROR("Editor", "SDL_CreateWindow 失败: {}", SDL_GetError());
         return 2;
     }
 
-    // 3. 初始化 ImGui
-    if (!InitializeImGui()) {
-        LOG_ERROR("Editor", "ImGui 初始化失败。");
+    // 3. 初始化引擎核心
+    if (EngineCore::GetInstance()->Initialize() != 0) {
+        LOG_ERROR("Editor", "引擎核心初始化失败");
         return 3;
     }
 
-    LOG_INFO("Editor", "图形界面编辑器初始化完成。");
+    // 4. 初始化渲染后端 (将 SDL_Window* 作为 WindowHandle 传入)
+    Graphic::RenderSystemDesc renderDesc;
+    renderDesc.windowHandle = m_window; // 传入 SDL_Window*
+    renderDesc.width = 1280;
+    renderDesc.height = 720;
+    renderDesc.enableValidation = true;
+
+    if (!Graphic::RenderSystem::GetInstance()->Initialize(renderDesc)) {
+        LOG_ERROR("Editor", "渲染系统初始化失败");
+        return 4;
+    }
+
+    // 5. 初始化 ImGui
+    if (!InitializeImGui()) {
+        LOG_ERROR("Editor", "ImGui 初始化失败");
+        return 5;
+    }
+
+    SetRunning(true);
+    LOG_INFO("Editor", "编辑器初始化完成");
     return 0;
 }
 
 bool Editor::InitializeImGui() {
-    auto renderSystem = Graphic::RenderSystem::GetInstance();
-    return renderSystem->InitializeImGui();
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+    ImGui::StyleColorsDark();
+
+    // 绑定 SDL3 后端
+    if (!ImGui_ImplSDL3_InitForVulkan(m_window)) {
+        return false;
+    }
+
+    // 绑定渲染器后端 (通过 RenderSystem 辅助)
+    return Graphic::RenderSystem::GetInstance()->InitializeImGui();
 }
 
 int Editor::Run() {
-    LOG_INFO("Editor", "进入编辑器主循环。");
-    
-    while (!Platform::ShouldClose(m_window)) {
-        Platform::PumpEvents();
-        
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-        ImGui_ImplVulkan_NewFrame();
-#endif
-#if defined(PRISMA_ENABLE_RENDER_DX12)
-        ImGui_ImplDX12_NewFrame();
-#endif
+    while (IsRunning()) {
+        ProcessEvents();
+
+        if (m_minimized) {
+            SDL_Delay(10);
+            continue;
+        }
+
+        // 开始 ImGui 帧
+        Graphic::RenderSystem::GetInstance()->BeginFrame();
         ImGui_ImplSDL3_NewFrame();
         ImGui::NewFrame();
 
+        // 绘制编辑器 UI
         DrawMainMenu();
+        ImGui::ShowDemoWindow();
 
+        // 结束 ImGui 帧并渲染
         ImGui::Render();
-        
-        auto renderSystem = Graphic::RenderSystem::GetInstance();
-        renderSystem->BeginFrame();
-        // 渲染逻辑...
-        renderSystem->EndFrame();
-        renderSystem->Present();
+        Graphic::RenderSystem::GetInstance()->EndFrame();
+        Graphic::RenderSystem::GetInstance()->Present();
     }
-
     return 0;
+}
+
+void Editor::ProcessEvents() {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL3_ProcessEvent(&event);
+
+        if (event.type == SDL_EVENT_QUIT) {
+            SetRunning(false);
+        }
+        if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(m_window)) {
+            SetRunning(false);
+        }
+        if (event.type == SDL_EVENT_WINDOW_MINIMIZED) {
+            m_minimized = true;
+        }
+        if (event.type == SDL_EVENT_WINDOW_RESTORED) {
+            m_minimized = false;
+        }
+    }
 }
 
 void Editor::DrawMainMenu() {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("文件")) {
-            if (ImGui::MenuItem("退出", "Alt+F4")) {
-                Platform::SetShouldClose(m_window, true);
-            }
+            if (ImGui::MenuItem("退出", "Alt+F4")) SetRunning(false);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -118,87 +149,53 @@ void Editor::DrawMainMenu() {
 void Editor::Shutdown() {
     LOG_INFO("Editor", "正在关闭编辑器...");
     
-    auto renderSystem = Graphic::RenderSystem::GetInstance();
-    if (renderSystem) {
-        renderSystem->Shutdown();
-    }
+    Graphic::RenderSystem::GetInstance()->ShutdownImGui();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
 
     if (m_window) {
-        Platform::DestroyWindow(m_window);
+        SDL_DestroyWindow(m_window);
         m_window = nullptr;
     }
+    
+    SDL_Quit();
+    EngineCore::GetInstance()->Shutdown();
 }
 
-// ========== DLL 导出 C 接口 ==========
+} // namespace PrismaEngine
 
+// C 接口导出 (位于命名空间外)
 extern "C" {
-    /// @brief 编辑器统一入口点，承载所有运行模式逻辑
     EDITOR_API int PrismaEditor_Main(int argc, char** argv, Logger* externalLogger) {
-        // 1. 同步日志单例（如果外部提供了实例）
         if (externalLogger) {
             Logger::SetInstance(externalLogger);
-        } else {
-            Logger::GetInstance().Initialize();
+            LOG_INFO("EditorDLL", "成功挂载宿主日志系统");
         }
 
-        // 2. 解析命令行参数
-        CommandLineParser parser(argc, argv);
-        if (!parser.Parse()) {
-            LOG_FATAL("Editor", "命令行参数解析失败");
-            return 1;
-        }
+        PrismaEngine::CommandLineParser parser(argc, argv);
+        parser.Parse();
+        auto args = parser.GetArguments();
+        
+        PrismaEngine::EnvironmentType env = PrismaEngine::Environment::DetectEnvironment();
+        PrismaEngine::IApplicationBase* app = nullptr;
 
-        const auto& args = parser.GetArguments();
-
-        // 3. 处理信息显示
-        if (parser.ShouldShowInfo()) {
-            if (args.options.find("help") != args.options.end()) {
-                parser.ShowHelp();
-            } else if (args.options.find("version") != args.options.end()) {
-                parser.ShowVersion();
-            }
-            return 0;
-        }
-
-        // 4. 环境探测与模式选择
-        EnvironmentType env = Environment::DetectEnvironment();
-        LOG_INFO("Editor", "检测到运行环境: {}", Environment::GetEnvironmentDescription());
-
-        IApplicationBase* app = nullptr;
-        EditorRunMode runMode = args.mode;
-
-        if (runMode == EditorRunMode::CLI || runMode == EditorRunMode::Batch || env != EnvironmentType::Desktop) {
-            LOG_INFO("Editor", "启动命令行编辑器模式");
-            auto cliEditor = CommandLineEditor::GetInstance();
+        if (args.mode == PrismaEngine::EditorRunMode::CLI) {
+            auto cliEditor = PrismaEngine::CommandLineEditor::GetInstance();
             cliEditor->SetArguments(args);
             app = cliEditor.get();
         } else {
-            LOG_INFO("Editor", "启动图形界面编辑器模式");
-            app = Editor::GetInstance().get();
+            app = PrismaEngine::Editor::GetInstance().get();
         }
 
-        // 5. 初始化并运行
-        int exitCode = 0;
-        LOG_INFO("Editor", "正在初始化子系统...");
-        exitCode = app->Initialize();
-        
+        int exitCode = app->Initialize();
+        Logger::GetInstance().Flush();
+
         if (exitCode == 0) {
-            LOG_INFO("Editor", "编辑器运行中...");
-            try {
-                exitCode = app->Run();
-            } catch (const std::exception& e) {
-                LOG_ERROR("Editor", "运行时异常: {}", e.what());
-                exitCode = 1;
-            }
+            exitCode = app->Run();
             app->Shutdown();
-        } else {
-            LOG_FATAL("Editor", "编辑器初始化失败，错误码: {}", exitCode);
         }
 
-        LOG_INFO("Editor", "编辑器已退出，状态码: {}", exitCode);
         Logger::GetInstance().Flush();
         return exitCode;
     }
 }
-
-} // namespace PrismaEngine
