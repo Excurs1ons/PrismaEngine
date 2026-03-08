@@ -64,7 +64,7 @@ jobs:
           libpulse-dev \
           libxkbcommon-dev \
           libwayland-dev \
-          libwayland-egl-dev
+          libdrm-dev
 
     - name: Cache dependencies
       uses: actions/cache@v4
@@ -156,7 +156,7 @@ jobs:
           libpulse-dev \
           libxkbcommon-dev \
           libwayland-dev \
-          libwayland-egl-dev
+          libdrm-dev
 
     - name: Cache dependencies
       uses: actions/cache@v4
