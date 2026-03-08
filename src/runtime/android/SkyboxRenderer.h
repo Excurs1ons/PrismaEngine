@@ -29,7 +29,7 @@ public:
      * @brief 构造函数
      * @param cubemap cubemap纹理资源（可以为nullptr，此时使用纯色渲染）
      */
-    SkyboxRenderer(std::shared_ptr<CubemapTextureAsset> cubemap = nullptr);
+    explicit SkyboxRenderer(std::shared_ptr<CubemapTextureAsset> cubemap = std::shared_ptr<CubemapTextureAsset>());
 
     std::shared_ptr<CubemapTextureAsset> getCubemap() const { return cubemap_; }
 
