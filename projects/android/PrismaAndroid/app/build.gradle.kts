@@ -17,6 +17,7 @@ android {
         externalNativeBuild {
             cmake {
                 cppFlags += "-std=c++20"
+                cppFlags += "-DPRISMA_ENABLE_RENDER_VULKAN"
                 abiFilters("arm64-v8a")
             }
         }
