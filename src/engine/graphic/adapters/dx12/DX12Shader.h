@@ -31,6 +31,9 @@ public:
     /// @brief 析构函数
     ~DX12Shader() override;
 
+    // IResource接口实现
+    ResourceType GetType() const override { return ResourceType::Shader; }
+
     // IShader接口实现
     ShaderType GetShaderType() const override;
     ShaderLanguage GetLanguage() const override;

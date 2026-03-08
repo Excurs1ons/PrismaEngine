@@ -26,7 +26,10 @@ public:
     /// @brief 析构函数
     ~DX12Buffer() override;
 
-        // IBuffer接口实现
+    // IResource接口实现
+    ResourceType GetType() const override { return ResourceType::Buffer; }
+
+    // IBuffer接口实现
     BufferType GetBufferType() const override;
     uint64_t GetSize() const override;
     uint32_t GetStride() const override;

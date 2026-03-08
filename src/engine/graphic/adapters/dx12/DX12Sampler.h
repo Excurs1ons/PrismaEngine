@@ -21,6 +21,9 @@ public:
     /// @brief 析构函数
     ~DX12Sampler() override;
 
+    // IResource接口实现
+    ResourceType GetType() const override { return ResourceType::Sampler; }
+
     // ISampler接口实现
     TextureFilter GetFilter() const override;
     TextureAddressMode GetAddressU() const override;
