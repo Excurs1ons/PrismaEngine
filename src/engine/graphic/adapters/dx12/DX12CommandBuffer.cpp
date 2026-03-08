@@ -249,6 +249,8 @@ void DX12CommandBuffer::SetIndexBuffer(IBuffer* buffer, bool is32Bit, uint32_t o
 void DX12CommandBuffer::SetConstantBuffer(IBuffer* buffer, uint32_t slot, uint32_t offset, uint32_t size) {
     if (!m_isRecording || !buffer) return;
 
+    (void)size;
+
     ValidateAndSetPipelineState();
 
     DX12Buffer* dx12Buffer = static_cast<DX12Buffer*>(buffer);
@@ -491,7 +493,11 @@ void DX12CommandBuffer::UpdateTexture(ITexture* texture, const void* data, uint6
     // 实现纹理更新
     if (!m_isRecording || !texture || !data) return;
 
-    DX12Texture* dx12Texture = static_cast<DX12Texture*>(texture);
+    (void)dataSize;
+    (void)mipLevel;
+    (void)arraySlice;
+
+    // DX12Texture* dx12Texture = static_cast<DX12Texture*>(texture);
 
     // 需要实现更复杂的纹理更新逻辑
     // 包括放置纹理、状态转换等
@@ -518,17 +524,25 @@ void DX12CommandBuffer::UAVBarrier() {
 void DX12CommandBuffer::BeginTimestampQuery(void* queryPool, uint32_t queryIndex) {
     // 实现时间戳查询
     if (!m_isRecording) return;
+    (void)queryPool;
+    (void)queryIndex;
 }
 
 void DX12CommandBuffer::EndTimestampQuery(void* queryPool, uint32_t queryIndex) {
     // 实现时间戳查询
     if (!m_isRecording) return;
+    (void)queryPool;
+    (void)queryIndex;
 }
 
 void DX12CommandBuffer::ResolveQueryData(IBuffer* dstBuffer, void* queryPool,
                                         uint32_t startQuery, uint32_t queryCount) {
     // 实现查询数据解析
     if (!m_isRecording) return;
+    (void)dstBuffer;
+    (void)queryPool;
+    (void)startQuery;
+    (void)queryCount;
 }
 
 void DX12CommandBuffer::InsertDebugMarker(const std::string& name) {

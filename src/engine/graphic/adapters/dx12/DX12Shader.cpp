@@ -168,6 +168,9 @@ bool DX12Shader::RecompileFromSource(const std::string& source,
         return false;
     }
 
+    (void)source;
+    (void)options;
+
     // TODO: Implement proper shader compilation when DXC is available
     if (!errors.empty()) errors = "Shader compilation not implemented yet - please provide pre-compiled bytecode";
     return false;
