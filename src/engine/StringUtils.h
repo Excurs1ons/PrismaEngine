@@ -36,13 +36,13 @@ namespace StringUtils{
 
 	std::string ToLower(std::string str) {
 		for (size_t i = 0; i < str.length(); ++i) {
-			str[i] = std::tolower(static_cast<unsigned char>(str[i]));}
+			str[i] = static_cast<char>(std::tolower(static_cast<unsigned char>(str[i])));}
 		return str;
 	}
 
 	std::string ToUpper(std::string str) {
 		for (size_t i = 0; i < str.length(); ++i) {
-			str[i] = std::toupper(static_cast<unsigned char>(str[i]));}
+			str[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(str[i])));}
 		return str;
 	}
 }
