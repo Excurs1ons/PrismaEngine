@@ -1,13 +1,11 @@
 #pragma once
 #include "Engine.h"
 #include "IApplication.h"
-#include "Singleton.h"
 #include <memory>
 namespace PrismaEngine {
-class Application : public IApplication<Application>, public Singleton<Application> {
+class Application : public IApplication<Application> {
 public:
-    friend class IApplication;
-    friend class Singleton<Application>;
+    friend class IApplication<Application>;
     /// <summary>
     /// 应用程序初始化，应该包括完成平台层和渲染器的初始化
     /// </summary>
