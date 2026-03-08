@@ -14,7 +14,7 @@ public:
     friend class ManagerBase<ThreadManager>;
     bool Initialize() override;
     void Shutdown() override;
-    void Update(float deltaTime) override {}
+    void Update([[maybe_unused]] float deltaTime) override {}
     static constexpr const std::string GetName() { return R"(ThreadManager)"; }
     
     // 创建专用线程

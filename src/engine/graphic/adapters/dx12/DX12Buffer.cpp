@@ -53,6 +53,10 @@ DX12Buffer::~DX12Buffer() {
 }
 
 // IBuffer接口实现
+ResourceType DX12Buffer::GetType() const {
+    return ResourceType::Buffer;
+}
+
 BufferType DX12Buffer::GetBufferType() const {
     return m_desc.type;
 }

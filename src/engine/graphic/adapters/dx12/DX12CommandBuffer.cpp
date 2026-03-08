@@ -33,7 +33,7 @@ bool DX12CommandBuffer::Initialize() {
 
     // 创建命令分配器
     HRESULT hr = device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT,
-                                               IID_PPV_ARGS(&m_commandAllocator));
+                                               IID_PPV_ARGS(m_commandAllocator.GetAddressOf()));
     if (FAILED(hr)) {
         return false;
     }
@@ -41,7 +41,7 @@ bool DX12CommandBuffer::Initialize() {
     // 创建命令列表
     hr = device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT,
                                    m_commandAllocator.Get(), nullptr,
-                                   IID_PPV_ARGS(&m_commandList));
+                                   IID_PPV_ARGS(m_commandList.GetAddressOf()));
     if (FAILED(hr)) {
         return false;
     }

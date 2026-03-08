@@ -40,9 +40,12 @@ target_link_libraries(Editor
 )
 
 # Engine 作为静态库链接时，需要定义 ENGINE_BUILD_STATIC
-if(NOT PRISMA_BUILD_SHARED_LIBS)
-    target_compile_definitions(Editor PRIVATE ENGINE_BUILD_STATIC=1)
-endif()
+# ========== 编译定义 ==========
+target_compile_definitions(Editor
+    PRIVATE EDITOR_EXPORTS=1
+    PRIVATE PRISMA_USE_SDL3=1
+    PRIVATE PRISMA_ENABLE_RENDER_VULKAN=1
+)
 
 # ========== 平台特定依赖配置 ==========
 
@@ -57,23 +60,6 @@ if(WIN32)
         )
     endif()
 
-    # 链接 DirectX-Headers
-    if(TARGET Microsoft::DirectX-Headers)
-        target_link_libraries(Editor PRIVATE Microsoft::DirectX-Headers)
-    elseif(TARGET DirectX-Headers)
-        target_link_libraries(Editor PRIVATE DirectX-Headers)
-    else()
-        find_package(directx-headers CONFIG REQUIRED)
-        target_link_libraries(Editor PRIVATE Microsoft::DirectX-Headers)
-    endif()
-
-    # Windows 系统库
-    target_link_libraries(Editor PRIVATE
-        d3d12
-        dxgi
-        d3dcompiler
-    )
-
     # Windows 编译选项
     target_compile_options(Editor PRIVATE
         $<$<CXX_COMPILER_ID:MSVC>:/W3 /utf-8>
@@ -81,7 +67,6 @@ if(WIN32)
 
     target_compile_definitions(Editor PRIVATE _UNICODE UNICODE)
 endif()
-
 # Linux 平台
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Vulkan 依赖
