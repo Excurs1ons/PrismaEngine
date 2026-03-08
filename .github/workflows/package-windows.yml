@@ -3,8 +3,18 @@ name: Package Windows
 on:
   push:
     branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
   pull_request:
     branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'cmake/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
   workflow_dispatch:
     inputs:
       build_type:
