@@ -6,6 +6,7 @@
 #include "pipelines/forward/ForwardPipeline.h"
 
 // ImGui
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
 #include <imgui.h>
 #ifdef PRISMA_ENABLE_RENDER_DX12
 #include <imgui_impl_dx12.h>
@@ -14,6 +15,7 @@
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include <imgui_impl_vulkan.h>
 #include <imgui_impl_sdl3.h>
+#endif
 #endif
 
 #ifdef PRISMA_ENABLE_RENDER_DX12
@@ -109,6 +111,7 @@ void RenderSystem::Shutdown() {
 }
 
 bool RenderSystem::InitializeImGui() {
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     LOG_INFO("Render", "正在初始化 ImGui");
 
     // 1. 初始化 ImGui 上下文
@@ -180,9 +183,13 @@ bool RenderSystem::InitializeImGui() {
 
     LOG_INFO("Render", "ImGui 初始化完成");
     return true;
+#else
+    return true;
+#endif
 }
 
 void RenderSystem::ShutdownImGui() {
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     LOG_INFO("Render", "正在清理 ImGui");
 
     // 1. 清理渲染后端
@@ -198,6 +205,7 @@ void RenderSystem::ShutdownImGui() {
     ImGui::DestroyContext();
 
     LOG_INFO("Render", "ImGui 已清理");
+#endif
 }
 
 RenderSystem::~RenderSystem() {
