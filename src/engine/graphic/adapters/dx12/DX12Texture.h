@@ -26,6 +26,8 @@ public:
     /// @brief 析构函数
     ~DX12Texture() override;
 
+    // IResource接口实现
+    ResourceType GetType() const override { return ResourceType::Texture; }
     
     // ITexture接口实现
     [[nodiscard]] TextureType GetTextureType() const override;

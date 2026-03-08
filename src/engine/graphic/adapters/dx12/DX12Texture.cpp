@@ -442,8 +442,8 @@ D3D12_RESOURCE_DESC DX12Texture::GetD3D12ResourceDesc() const {
     desc.Alignment = 0;
     desc.Width = m_desc.width;
     desc.Height = m_desc.height;
-    desc.DepthOrArraySize = m_desc.arraySize;
-    desc.MipLevels = m_desc.mipLevels;
+    desc.DepthOrArraySize = static_cast<UINT16>(m_desc.arraySize);
+    desc.MipLevels = static_cast<UINT16>(m_desc.mipLevels);
     desc.Format = GetDXGIFormat();
     desc.SampleDesc.Count = 1;
     desc.SampleDesc.Quality = 0;

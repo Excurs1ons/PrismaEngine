@@ -219,7 +219,7 @@ bool DX12SwapChain::SetFullscreen(bool fullscreen) {
     return SUCCEEDED(hr);
 }
 
-bool DX12SwapChain::Screenshot(const std::string& filename, uint32_t bufferIndex) {
+bool DX12SwapChain::Screenshot(const std::string& /*filename*/, uint32_t /*bufferIndex*/) {
     if (!m_device || !m_device->GetDXGISwapChain()) {
         return false;
     }
