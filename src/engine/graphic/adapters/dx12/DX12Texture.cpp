@@ -19,24 +19,24 @@ DX12Texture::DX12Texture(DX12RenderDevice* device,
 
     // 从资源获取实际属性
     if (resource) {
-        auto desc = resource->GetDesc();
-        m_desc.width = desc.Width;
-        m_desc.height = desc.Height;
-        m_desc.depth = desc.DepthOrArraySize;
-        m_desc.mipLevels = desc.MipLevels;
-        m_desc.arraySize = desc.DepthOrArraySize;
+        auto resDesc = resource->GetDesc();
+        m_desc.width = static_cast<uint32_t>(resDesc.Width);
+        m_desc.height = resDesc.Height;
+        m_desc.depth = resDesc.DepthOrArraySize;
+        m_desc.mipLevels = resDesc.MipLevels;
+        m_desc.arraySize = resDesc.DepthOrArraySize;
         m_desc.format = TextureFormat::RGBA8_UNorm; // 需要根据DXGI格式转换
 
         // 判断纹理类型
-        if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D) {
+        if (resDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE1D) {
             m_desc.type = TextureType::Texture1D;
-        } else if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
-            if (desc.DepthOrArraySize > 1) {
+        } else if (resDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D) {
+            if (resDesc.DepthOrArraySize > 1) {
                 m_desc.type = TextureType::Texture2DArray;
             } else {
                 m_desc.type = TextureType::Texture2D;
             }
-        } else if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
+        } else if (resDesc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE3D) {
             m_desc.type = TextureType::Texture3D;
         }
     }
@@ -168,6 +168,9 @@ TextureMapDesc DX12Texture::Map(uint32_t mipLevel, uint32_t arraySlice, uint32_t
         return {};
     }
 
+    (void)mipLevel;
+    (void)arraySlice;
+
     // 检查资源是否可以映射
     auto desc = m_resource->GetDesc();
     if (desc.Dimension == D3D12_RESOURCE_DIMENSION_TEXTURE2D &&
@@ -179,7 +182,7 @@ TextureMapDesc DX12Texture::Map(uint32_t mipLevel, uint32_t arraySlice, uint32_t
 
     D3D12_RANGE readRange = {0, 0};
     if (mapType == 0) {  // Read
-        readRange.End = GetSubresourceSize(mipLevel);
+        readRange.End = static_cast<SIZE_T>(GetSubresourceSize(mipLevel));
     }
 
     // 计算子资源索引
@@ -221,6 +224,9 @@ void DX12Texture::UpdateData(const void* data, uint64_t dataSize,
     // 使用命令缓冲区更新纹理
     // 这需要通过DX12RenderDevice的命令缓冲区来完成
     // 这里暂时不实现
+    (void)data; (void)dataSize; (void)mipLevel; (void)arraySlice;
+    (void)left; (void)top; (void)front;
+    (void)width; (void)height; (void)depth;
 }
 
 void DX12Texture::GenerateMips() {
@@ -236,6 +242,9 @@ void DX12Texture::CopyFrom(ITexture* srcTexture,
     if (!srcDX12 || !srcDX12->m_resource || !m_resource) {
         return;
     }
+
+    (void)srcMipLevel; (void)srcArraySlice;
+    (void)dstMipLevel; (void)dstArraySlice;
 
     // 需要通过命令缓冲区执行复制
     // 这里暂时不实现
@@ -254,7 +263,7 @@ bool DX12Texture::ReadData(uint32_t mipLevel, uint32_t arraySlice,
     }
 
     uint64_t size = std::min(mapDesc.size, bufferSize);
-    memcpy(dstBuffer, mapDesc.data, size);
+    memcpy(dstBuffer, mapDesc.data, static_cast<size_t>(size));
 
     Unmap(mipLevel, arraySlice);
     return true;
@@ -266,6 +275,7 @@ uint64_t DX12Texture::CreateDescriptor(TextureDescriptorType descType,
                                      uint32_t arraySize) {
     // 需要通过DX12ResourceFactory创建描述符
     // 这里暂时返回0
+    (void)descType; (void)format; (void)mipLevel; (void)arraySize;
     return 0;
 }
 
@@ -294,6 +304,8 @@ void DX12Texture::Clear(const Color& color, uint32_t mipLevel, uint32_t arraySli
         return;
     }
 
+    (void)color; (void)mipLevel; (void)arraySlice;
+
     // 需要通过命令缓冲区清除
     // 这里暂时不实现
 }
@@ -302,6 +314,8 @@ void DX12Texture::ClearDepthStencil(float depth, uint8_t stencil) {
     if (!m_resource || !IsDepthStencil()) {
         return;
     }
+
+    (void)depth; (void)stencil;
 
     // 需要通过命令缓冲区清除
     // 这里暂时不实现
@@ -312,6 +326,8 @@ void DX12Texture::ResolveMultisampled(ITexture* dstTexture, TextureFormat format
         return;
     }
 
+    (void)format;
+
     // 需要通过命令缓冲区解决多重采样
     // 这里暂时不实现
 }
@@ -320,6 +336,7 @@ void DX12Texture::Discard(uint32_t mipLevel, uint32_t arraySlice) {
     // 丢弃资源内容
     // 在DirectX12中，这通常通过丢弃映射来实现
     // 这里暂时不实现
+    (void)mipLevel; (void)arraySlice;
 }
 
 void DX12Texture::Compact() {
@@ -337,6 +354,7 @@ bool DX12Texture::DebugSaveToFile(const std::string& filename,
     // 将纹理保存到文件
     // 这里需要使用stb_image_write
     // 暂时返回false
+    (void)filename; (void)mipLevel; (void)arraySlice;
     return false;
 }
 

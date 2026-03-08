@@ -63,6 +63,7 @@ DX12ResourceFactory::~DX12ResourceFactory() {
 
 // IResourceFactory接口实现
 bool DX12ResourceFactory::Initialize(IRenderDevice* device) {
+    (void)device;
     if (m_initialized) {
         return true;
     }
@@ -163,6 +164,7 @@ std::unique_ptr<ITexture> DX12ResourceFactory::CreateTextureImpl(const TextureDe
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
             D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
             uint32_t index = AllocateDescriptor(rtvHeap->heap.Get(), cpuHandle, gpuHandle);
+            (void)index;
             texture->CreateRTV(cpuHandle);
         }
     }
@@ -173,6 +175,7 @@ std::unique_ptr<ITexture> DX12ResourceFactory::CreateTextureImpl(const TextureDe
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
             D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
             uint32_t index = AllocateDescriptor(dsvHeap->heap.Get(), cpuHandle, gpuHandle);
+            (void)index;
             texture->CreateDSV(cpuHandle);
         }
     }
@@ -183,6 +186,7 @@ std::unique_ptr<ITexture> DX12ResourceFactory::CreateTextureImpl(const TextureDe
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
             D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
             uint32_t index = AllocateDescriptor(srvHeap->heap.Get(), cpuHandle, gpuHandle);
+            (void)index;
             texture->CreateSRV(cpuHandle);
         }
     }
@@ -193,6 +197,7 @@ std::unique_ptr<ITexture> DX12ResourceFactory::CreateTextureImpl(const TextureDe
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
             D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
             uint32_t index = AllocateDescriptor(uavHeap->heap.Get(), cpuHandle, gpuHandle);
+            (void)index;
             texture->CreateUAV(cpuHandle);
         }
     }
@@ -308,6 +313,7 @@ std::unique_ptr<IBuffer> DX12ResourceFactory::CreateBufferImpl(const BufferDesc&
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
             D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
             uint32_t index = AllocateDescriptor(srvHeap->heap.Get(), cpuHandle, gpuHandle);
+            (void)index;
             // buffer->CreateSRV(cpuHandle);
         }
     }
@@ -318,6 +324,7 @@ std::unique_ptr<IBuffer> DX12ResourceFactory::CreateBufferImpl(const BufferDesc&
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
             D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
             uint32_t index = AllocateDescriptor(uavHeap->heap.Get(), cpuHandle, gpuHandle);
+            (void)index;
             // buffer->CreateUAV(cpuHandle);
         }
     }
@@ -328,6 +335,7 @@ std::unique_ptr<IBuffer> DX12ResourceFactory::CreateBufferImpl(const BufferDesc&
             D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle;
             D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle;
             uint32_t index = AllocateDescriptor(cbvHeap->heap.Get(), cpuHandle, gpuHandle);
+            (void)index;
             // buffer->CreateCBV(cpuHandle);
         }
     }
@@ -428,6 +436,11 @@ std::unique_ptr<ISwapChain> DX12ResourceFactory::CreateSwapChainImpl(void* windo
                                                                     TextureFormat format,
                                                                     uint32_t bufferCount,
                                                                     bool vsync) {
+    (void)windowHandle;
+    (void)width;
+    (void)height;
+    (void)format;
+    (void)bufferCount;
     if (!m_initialized || !m_device) {
         LOG_ERROR("DX12ResourceFactory", "Factory not initialized");
         return nullptr;
@@ -670,6 +683,8 @@ bool DX12ResourceFactory::ValidateShaderDesc(const ShaderDesc& desc, std::string
 }
 
 bool DX12ResourceFactory::ValidatePipelineDesc(const PipelineDesc& desc, std::string& errorMsg) {
+    (void)desc;
+    (void)errorMsg;
     // 管线描述验证逻辑
     return true;
 }
@@ -785,6 +800,9 @@ Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> DX12ResourceFactory::CreateDescript
 uint32_t DX12ResourceFactory::AllocateDescriptor(ID3D12DescriptorHeap* heap,
                                                D3D12_CPU_DESCRIPTOR_HANDLE& cpuHandle,
                                                D3D12_GPU_DESCRIPTOR_HANDLE& gpuHandle) {
+    (void)heap;
+    (void)cpuHandle;
+    (void)gpuHandle;
     // TODO: 实现描述符分配
     // 这里需要维护一个描述符分配器
     return 0;
@@ -931,6 +949,9 @@ Microsoft::WRL::ComPtr<ID3D12Resource> DX12ResourceFactory::CreateCommittedResou
 bool DX12ResourceFactory::LoadImageFromFile(const std::string& filename,
                                            std::vector<uint8_t>& imageData,
                                            TextureDesc& desc) {
+    (void)filename;
+    (void)imageData;
+    (void)desc;
     // TODO: Implement proper image loading without stb_image
     LOG_ERROR("DX12ResourceFactory", "Image loading from file not implemented yet: {0}", filename);
     return false;
