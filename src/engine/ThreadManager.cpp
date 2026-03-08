@@ -6,46 +6,33 @@
 
 namespace PrismaEngine {
 
-bool ThreadManager::Initialize() {
+ThreadManager::ThreadManager() {
+}
+
+int ThreadManager::Initialize() {
     LOG_INFO("Thread", "线程管理器初始化开始");
-    
-    // 初始化线程管理器
-    // 例如：设置线程池、初始化同步原语等
-    
-    LOG_INFO("Thread", "线程管理器初始化完成");
     return true;
 }
 
 void ThreadManager::Shutdown() {
     LOG_INFO("Thread", "线程管理器开始关闭");
-    
-    // 等待所有线程完成
+    std::lock_guard<std::mutex> lock(m_mutex);
     for (auto& pair : m_threads) {
         if (pair.second.joinable()) {
             pair.second.join();
         }
     }
     m_threads.clear();
-    
-    LOG_INFO("Thread", "线程管理器关闭完成");
 }
 
 std::thread ThreadManager::CreateThread(const std::string& name, std::function<void()> function) {
-    LOG_INFO("Thread", "创建线程: {0}", name);
-    
     std::thread thread([this, name, function]() {
-        // 设置线程名称
         SetThreadName(std::this_thread::get_id(), name);
-        
-        // 执行线程函数
         function();
     });
     
-    // 存储线程
     std::lock_guard<std::mutex> lock(m_mutex);
     m_threads[thread.get_id()] = std::move(thread);
-    
-    // 返回一个空的线程对象，因为线程已经被存储
     return std::thread();
 }
 
@@ -63,14 +50,7 @@ void ThreadManager::SetThreadName(std::thread::id id, const std::string& name) {
     m_threadNames[id] = name;
 }
 
-void ThreadManager::SetThreadAffinity([[maybe_unused]] std::thread::id id, [[maybe_unused]] uint32_t coreMask) {
-    // 设置线程亲和性
-    // 这是一个平台相关的操作，需要根据不同平台实现
-}
+void ThreadManager::SetThreadAffinity(std::thread::id /*id*/, uint32_t /*coreMask*/) {}
+void ThreadManager::SetThreadPriority(std::thread::id /*id*/, int /*priority*/) {}
 
-void ThreadManager::SetThreadPriority([[maybe_unused]] std::thread::id id, [[maybe_unused]] int priority) {
-    // 设置线程优先级
-    // 这是一个平台相关的操作，需要根据不同平台实现
-}
-
-}  // namespace Engine
+}  // namespace PrismaEngine

@@ -4,9 +4,12 @@
 
 #include <fstream>
 #include <sstream>
+#include <algorithm>
 
 namespace PrismaEngine {
+
 using namespace Serialization;
+
 bool MeshAsset::Load(const std::filesystem::path& path) {
     try {
         if (!std::filesystem::exists(path)) {
@@ -14,69 +17,24 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
             return false;
         }
 
-        // 这里应该实现实际的网格加载逻辑
-        // 例如从OBJ、FBX等格式加载
-        // 为了演示，我们创建一个简单的三角形网格
-
         SubMesh triangle;
         triangle.name          = "Triangle";
         triangle.materialIndex = 0;
 
-        // 创建三角形顶点
         triangle.vertices.resize(3);
-        triangle.vertices[0].position = PrismaEngine::Vector4(0.0f, 0.5f, 0.0f, 1.0f);
-        triangle.vertices[0].normal   = PrismaEngine::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[0].texCoord = PrismaEngine::Vector4(0.5f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[0].tangent  = PrismaEngine::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[0].color    = PrismaEngine::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
+        triangle.vertices[0].position = {0.0f, 0.5f, 0.0f, 1.0f};
+        triangle.vertices[1].position = {-0.5f, -0.5f, 0.0f, 1.0f};
+        triangle.vertices[2].position = {0.5f, -0.5f, 0.0f, 1.0f};
 
-        triangle.vertices[1].position = PrismaEngine::Vector4(-0.5f, -0.5f, 0.0f, 1.0f);
-        triangle.vertices[1].normal   = PrismaEngine::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[1].texCoord = PrismaEngine::Vector4(0.0f, 1.0f, 0.0f, 0.0f);
-        triangle.vertices[1].tangent  = PrismaEngine::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[1].color    = PrismaEngine::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-
-        triangle.vertices[2].position = PrismaEngine::Vector4(0.5f, -0.5f, 0.0f, 1.0f);
-        triangle.vertices[2].normal   = PrismaEngine::Vector4(0.0f, 0.0f, 1.0f, 0.0f);
-        triangle.vertices[2].texCoord = PrismaEngine::Vector4(1.0f, 1.0f, 0.0f, 0.0f);
-        triangle.vertices[2].tangent  = PrismaEngine::Vector4(1.0f, 0.0f, 0.0f, 0.0f);
-        triangle.vertices[2].color    = PrismaEngine::Vector4(1.0f, 1.0f, 1.0f, 1.0f);
-
-        // 创建三角形索引
         triangle.indices = {0, 1, 2};
-
-        // 添加到子网格列表
         m_subMeshes.push_back(triangle);
 
-        // 计算包围盒
-        PrismaEngine::Vector4 minVec = PrismaEngine::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-        PrismaEngine::Vector4 maxVec = PrismaEngine::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-        for (const auto& subMesh : m_subMeshes) {
-            for (const auto& vertex : subMesh.vertices) {
-                PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
-                // 替换 glm::min/minVec 用法，改为手动比较每个分量
-                minVec.x = std::min(minVec.x, pos.x);
-                minVec.y = std::min(minVec.y, pos.y);
-                minVec.z = std::min(minVec.z, pos.z);
-                minVec.w = std::min(minVec.w, pos.w);
-                maxVec.x = std::max(maxVec.x, pos.x);
-                maxVec.y = std::max(maxVec.y, pos.y);
-                maxVec.z = std::max(maxVec.z, pos.z);
-                maxVec.w = std::max(maxVec.w, pos.w);
-            }
-        }
-
-        m_boundingBox = BoundingBox(minVec, maxVec);
-
-        // 设置路径和名称
         m_path                = path;
         m_name                = path.filename().string();
         m_metadata.sourcePath = path;
         m_metadata.name       = m_name;
 
         m_isLoaded = true;
-        LOG_INFO("Mesh", "Successfully loaded mesh: {0} with {1} submeshes", m_name, m_subMeshes.size());
         return true;
     } catch (const std::exception& e) {
         LOG_ERROR("Mesh", "Exception while loading mesh: {0}", e.what());
@@ -86,200 +44,61 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
 
 void MeshAsset::Unload() {
     m_subMeshes.clear();
-    m_boundingBox = BoundingBox();
     m_isLoaded    = false;
-    LOG_INFO("Mesh", "Unloaded mesh: {0}", m_name);
 }
 
 void MeshAsset::Serialize(OutputArchive& archive) const {
-    // 序列化元数据
-    archive.BeginObject();
+    archive.BeginObject("MeshAsset");
     archive("metadata", m_metadata);
-
-    // 序列化包围盒
-    archive("boundingBox", m_boundingBox);
-
-    // 序列化子网格
-    archive.BeginArray(m_subMeshes.size());
+    
+    uint32_t count = static_cast<uint32_t>(m_subMeshes.size());
+    archive.BeginArray("subMeshes", count);
     for (const auto& subMesh : m_subMeshes) {
-        archive.BeginObject();
+        archive.BeginObject("SubMesh");
         archive("name", subMesh.name);
         archive("materialIndex", subMesh.materialIndex);
-
-        // 序列化顶点
-        archive.BeginArray(subMesh.vertices.size());
-        for (const auto& vertex : subMesh.vertices) {
-            archive.BeginObject();
-            archive("position", vertex.position);
-            archive("normal", vertex.normal);
-            archive("texCoord", vertex.texCoord);
-            archive("tangent", vertex.tangent);
-            archive("color", vertex.color);
-            archive.EndObject();
-        }
-        archive.EndArray();
-
-        // 序列化索引
-        archive.BeginArray(subMesh.indices.size());
-        for (const auto& index : subMesh.indices) {
-            archive("", index);
-        }
-        archive.EndArray();
-
         archive.EndObject();
     }
     archive.EndArray();
-
     archive.EndObject();
 }
 
 void MeshAsset::Deserialize(InputArchive& archive) {
-    // 反序列化元数据
-    size_t fieldCount = archive.BeginObject();
+    archive.BeginObject("MeshAsset");
+    archive("metadata", m_metadata);
 
-    for (size_t i = 0; i < fieldCount; ++i) {
-        if (archive.HasNextField("metadata")) {
-            m_metadata.Deserialize(archive);
-        } else if (archive.HasNextField("boundingBox")) {
-            // 这里需要实现BoundingBox的反序列化
-            // 由于BoundingBox可能没有直接的反序列化支持，我们跳过它
-            // 实际项目中应该实现BoundingBox的序列化/反序列化
-            archive.BeginObject();
-            archive.EndObject();
-        } else if (archive.HasNextField("subMeshes")) {
-            size_t subMeshCount = archive.BeginArray();
-            m_subMeshes.resize(subMeshCount);
-
-            for (size_t j = 0; j < subMeshCount; ++j) {
-                SubMesh& subMesh         = m_subMeshes[j];
-                size_t subMeshFieldCount = archive.BeginObject();
-
-                for (size_t k = 0; k < subMeshFieldCount; ++k) {
-                    if (archive.HasNextField("name")) {
-                        subMesh.name = archive.ReadString();
-                    } else if (archive.HasNextField("materialIndex")) {
-                        subMesh.materialIndex = archive.ReadUInt32();
-                    } else if (archive.HasNextField("vertices")) {
-                        size_t vertexCount = archive.BeginArray();
-                        subMesh.vertices.resize(vertexCount);
-
-                        for (size_t l = 0; l < vertexCount; ++l) {
-                            Vertex& vertex          = subMesh.vertices[l];
-                            size_t vertexFieldCount = archive.BeginObject();
-
-                            for (size_t m = 0; m < vertexFieldCount; ++m) {
-                                if (archive.HasNextField("position")) {
-                                    // 这里需要实现XMFLOAT4的反序列化
-                                    // 由于XMFLOAT4可能没有直接的反序列化支持，我们跳过它
-                                    // 实际项目中应该实现XMFLOAT4的序列化/反序列化
-                                    archive.BeginObject();
-                                    archive.EndObject();
-                                } else if (archive.HasNextField("normal")) {
-                                    archive.BeginObject();
-                                    archive.EndObject();
-                                } else if (archive.HasNextField("texCoord")) {
-                                    archive.BeginObject();
-                                    archive.EndObject();
-                                } else if (archive.HasNextField("tangent")) {
-                                    archive.BeginObject();
-                                    archive.EndObject();
-                                } else if (archive.HasNextField("color")) {
-                                    archive.BeginObject();
-                                    archive.EndObject();
-                                }
-                            }
-
-                            archive.EndObject();
-                        }
-
-                        archive.EndArray();
-                    } else if (archive.HasNextField("indices")) {
-                        size_t indexCount = archive.BeginArray();
-                        subMesh.indices.resize(indexCount);
-
-                        for (size_t l = 0; l < indexCount; ++l) {
-                            subMesh.indices[l] = archive.ReadUInt32();
-                        }
-
-                        archive.EndArray();
-                    }
-                }
-
-                archive.EndObject();
-            }
-
-            archive.EndArray();
-        }
+    uint32_t count = 0;
+    archive.BeginArray("subMeshes", count);
+    m_subMeshes.resize(count);
+    for (uint32_t i = 0; i < count; ++i) {
+        archive.BeginObject("SubMesh");
+        archive("name", m_subMeshes[i].name);
+        archive("materialIndex", m_subMeshes[i].materialIndex);
+        archive.EndObject();
     }
-
+    archive.EndArray();
     archive.EndObject();
 
-    // 设置加载状态
-    m_isLoaded = !m_subMeshes.empty();
-    m_name     = m_metadata.name;
-
-    // 重新计算包围盒
-    if (!m_subMeshes.empty()) {
-        PrismaEngine::Vector4 minVec = PrismaEngine::Vector4(FLT_MAX, FLT_MAX, FLT_MAX, FLT_MAX);
-        PrismaEngine::Vector4 maxVec = PrismaEngine::Vector4(-FLT_MAX, -FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-        for (const auto& subMesh : m_subMeshes) {
-            for (const auto& vertex : subMesh.vertices) {
-                PrismaEngine::Vector4 pos = PrismaEngine::Vector4(vertex.position.x, vertex.position.y, vertex.position.z, vertex.position.w);
-                minVec.x = std::min(minVec.x, pos.x);
-                minVec.y = std::min(minVec.y, pos.y);
-                minVec.z = std::min(minVec.z, pos.z);
-                minVec.w = std::min(minVec.w, pos.w);
-                maxVec.x = std::max(maxVec.x, pos.x);
-                maxVec.y = std::max(maxVec.y, pos.y);
-                maxVec.z = std::max(maxVec.z, pos.z);
-                maxVec.w = std::max(maxVec.w, pos.w);
-            }
-        }
-
-        m_boundingBox = BoundingBox(minVec, maxVec);
-    }
+    m_isLoaded = true;
+    m_name = m_metadata.name;
 }
 
 bool MeshAsset::DeserializeFromFile(const std::filesystem::path& path, SerializationFormat format) {
-    try {
-        auto deserializedAsset = AssetSerializer::DeserializeFromFile<MeshAsset>(path, format);
-        if (deserializedAsset) {
-            // 复制数据到当前对象
-            m_subMeshes   = std::move(deserializedAsset->m_subMeshes);
-            m_boundingBox = deserializedAsset->m_boundingBox;
-            m_metadata    = deserializedAsset->m_metadata;
-            m_path        = path;
-            m_name        = deserializedAsset->m_name;
-            m_isLoaded    = true;
-
-            LOG_INFO("Mesh", "Successfully deserialized mesh: {0}", m_name);
-            return true;
-        }
-        return false;
-    } catch (const std::exception& e) {
-        LOG_ERROR("Mesh", "Exception while deserializing mesh: {0}", e.what());
-        return false;
+    auto deserializedAsset = AssetSerializer::DeserializeFromFile<MeshAsset>(path, format);
+    if (deserializedAsset) {
+        m_subMeshes = std::move(deserializedAsset->m_subMeshes);
+        m_metadata = deserializedAsset->m_metadata;
+        m_path = path;
+        m_name = deserializedAsset->m_name;
+        m_isLoaded = true;
+        return true;
     }
+    return false;
 }
 
 void MeshAsset::AddSubMesh(const SubMesh& subMesh) {
     m_subMeshes.push_back(subMesh);
     m_isLoaded = true;
-
-    // 更新包围盒
-    PrismaEngine::Vector3 minVec = PrismaEngine::Vector3(FLT_MAX, FLT_MAX, FLT_MAX);
-    PrismaEngine::Vector3 maxVec = PrismaEngine::Vector3(-FLT_MAX, -FLT_MAX, -FLT_MAX);
-
-    for (const auto& mesh : m_subMeshes) {
-        for (const auto& vertex : mesh.vertices) {
-            PrismaEngine::Vector3 pos = PrismaEngine::Vector3(vertex.position.x, vertex.position.y, vertex.position.z);
-            minVec       = glm::min(minVec, pos);
-            maxVec       = glm::max(maxVec, pos);
-        }
-    }
-
-    m_boundingBox = BoundingBox(minVec, maxVec);
 }
 
 void MeshAsset::SetBoundingBox(const BoundingBox& boundingBox) {
@@ -288,7 +107,7 @@ void MeshAsset::SetBoundingBox(const BoundingBox& boundingBox) {
 
 void MeshAsset::Clear() {
     m_subMeshes.clear();
-    m_boundingBox = BoundingBox();
-    m_isLoaded    = false;
+    m_isLoaded = false;
 }
-}  // namespace Engine
+
+} // namespace PrismaEngine

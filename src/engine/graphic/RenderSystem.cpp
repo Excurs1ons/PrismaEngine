@@ -34,37 +34,48 @@
 
 namespace PrismaEngine::Graphic {
 
-bool RenderSystem::Initialize() {
+std::shared_ptr<RenderSystem> RenderSystem::GetInstance() {
+    static std::shared_ptr<RenderSystem> instance = std::make_shared<RenderSystem>();
+    return instance;
+}
+
+int RenderSystem::Initialize() {
     RenderSystemDesc defaultDesc;
     return Initialize(defaultDesc);
 }
 
-bool RenderSystem::Initialize(const RenderSystemDesc& desc) {
-    LOG_INFO("Render", "Initializing RenderSystem...");
+int RenderSystem::Initialize(const RenderSystemDesc& desc) {
+    LOG_INFO("Render", "正在初始化渲染系统 (Backend: {0})...", 
+             desc.backendType == RenderAPIType::Vulkan ? "Vulkan" : "DirectX12");
     m_desc = desc;
+    Logger::GetInstance().Flush();
 
     // 1. 初始化设备
     if (!InitializeDevice(desc)) {
-        LOG_ERROR("Render", "Failed to initialize render device.");
+        LOG_ERROR("Render", "渲染设备初始化失败！请检查驱动程序或 SDK 是否正确安装。");
+        Logger::GetInstance().Flush();
         return false;
     }
 
     // 2. 初始化资源管理器
     if (!InitializeResourceManager()) {
-        LOG_ERROR("Render", "Failed to initialize resource manager.");
+        LOG_ERROR("Render", "资源管理器初始化失败。");
+        Logger::GetInstance().Flush();
         return false;
     }
 
     // 3. 初始化管线
     if (!InitializePipelines()) {
-        LOG_ERROR("Render", "Failed to initialize render pipelines.");
+        LOG_ERROR("Render", "渲染管线初始化失败。");
+        Logger::GetInstance().Flush();
         return false;
     }
 
     // 4. 启动渲染线程
     m_renderThread.Start();
 
-    LOG_INFO("Render", "RenderSystem initialized successfully.");
+    LOG_INFO("Render", "渲染系统初始化成功。");
+    Logger::GetInstance().Flush();
     return true;
 }
 
@@ -110,6 +121,7 @@ bool RenderSystem::InitializeImGui() {
         LOG_INFO("Render", "Initializing ImGui Win32 + DX12");
         if (!ImGui_ImplWin32_Init(static_cast<HWND>(m_desc.windowHandle))) return false;
         if (!m_device->InitializeImGui()) return false;
+        m_imguiInitialized = true;
     }
 #endif
 
@@ -120,22 +132,34 @@ bool RenderSystem::InitializeImGui() {
             if (!ImGui_ImplSDL3_InitForVulkan((SDL_Window*)m_desc.windowHandle)) return false;
         }
         if (!m_device->InitializeImGui()) return false;
+        m_imguiInitialized = true;
     }
 #endif
 
-    LOG_INFO("Render", "ImGui initialized successfully.");
-    return true;
+    if (m_imguiInitialized) {
+        LOG_INFO("Render", "ImGui initialized successfully.");
+    }
+    return m_imguiInitialized;
 }
 
 void RenderSystem::ShutdownImGui() {
+    if (!m_imguiInitialized) return;
+
 #if defined(PRISMA_ENABLE_RENDER_DX12)
-    ImGui_ImplDX12_Shutdown();
-    ImGui_ImplWin32_Shutdown();
+    if (m_desc.backendType == RenderAPIType::DirectX12) {
+        ImGui_ImplDX12_Shutdown();
+        ImGui_ImplWin32_Shutdown();
+    }
 #elif defined(PRISMA_ENABLE_RENDER_VULKAN)
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
+    if (m_desc.backendType == RenderAPIType::Vulkan) {
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplSDL3_Shutdown();
+    }
 #endif
-    ImGui::DestroyContext();
+    if (ImGui::GetCurrentContext()) {
+        ImGui::DestroyContext();
+    }
+    m_imguiInitialized = false;
 }
 
 RenderSystem::~RenderSystem() {
@@ -203,6 +227,20 @@ void RenderSystem::ResetStats() {
 }
 
 bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
+    LOG_INFO("Render", "正在探测可用后端...");
+#ifdef PRISMA_ENABLE_RENDER_DX12
+    LOG_INFO("Render", " - DirectX12: 已启用 (Enabled)");
+#else
+    LOG_INFO("Render", " - DirectX12: 未编译 (Disabled)");
+#endif
+
+#ifdef PRISMA_ENABLE_RENDER_VULKAN
+    LOG_INFO("Render", " - Vulkan:    已启用 (Enabled)");
+#else
+    LOG_INFO("Render", " - Vulkan:    未编译 (Disabled)");
+#endif
+    Logger::GetInstance().Flush();
+
     switch (desc.backendType) {
 #ifdef PRISMA_ENABLE_RENDER_DX12
         case RenderAPIType::DirectX12: {

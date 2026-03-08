@@ -1,4 +1,5 @@
 #include "ResourceManager.h"
+#include "Logger.h"
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IShader.h"
 #include "graphic/interfaces/IBuffer.h"
@@ -10,6 +11,11 @@
 #include <algorithm>
 
 namespace PrismaEngine::Graphic {
+
+std::shared_ptr<ResourceManager> ResourceManager::GetInstance() {
+    static std::shared_ptr<ResourceManager> instance = std::make_shared<ResourceManager>();
+    return instance;
+}
 
 ResourceManager::ResourceManager() 
     : m_device(nullptr)
@@ -27,25 +33,36 @@ ResourceManager::~ResourceManager() {
     Shutdown();
 }
 
-bool ResourceManager::Initialize() {
-    return true;
+int ResourceManager::Initialize() {
+    return 0;
 }
 
-bool ResourceManager::Initialize(IRenderDevice* device) {
-    if (!device) return false;
+int ResourceManager::Initialize(IRenderDevice* device) {
+    if (!device) return 1;
     m_device = device;
     
     // 启动异步加载线程
     m_loadingThread = std::thread(&ResourceManager::LoadingThreadFunction, this);
     
     m_initialized = true;
+    LOG_INFO("ResourceManager", "Resource manager initialized.");
     return true;
+}
+
+void ResourceManager::RegisterResource(std::shared_ptr<IResource> resource, const std::string& name) {
+    if (!resource) return;
+    std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
+    ResourceId id = GenerateId();
+    m_resources[id] = resource;
+    if (!name.empty()) {
+        m_nameToId[name] = id;
+    }
+    m_statsDirty = true;
 }
 
 void ResourceManager::Update(float deltaTime) {
     if (!m_initialized) return;
 
-    // 热重载定时检查
     if (m_hotReloadEnabled) {
         m_hotReloadTimer += deltaTime;
         if (m_hotReloadTimer >= HOT_RELOAD_INTERVAL) {
@@ -54,7 +71,6 @@ void ResourceManager::Update(float deltaTime) {
         }
     }
 
-    // 更新统计信息（如果需要）
     if (m_statsDirty) {
         UpdateResourceStats();
     }
@@ -144,12 +160,6 @@ std::shared_ptr<IShader> ResourceManager::LoadShader(const std::string& filename
 }
 
 std::shared_ptr<IShader> ResourceManager::CreateShader(const std::string& source, const ShaderDesc& desc) {
-    // 资源管理器不直接负责着色器编译逻辑，这应该由渲染后端在 CreateShaderImpl 中或者通过辅助工具完成
-    // 此处调用工厂方法，假设后端已处理好或提供了特定实现
-    if (!m_device || !m_device->GetResourceFactory()) return nullptr;
-    
-    // 注意：IResourceFactory::CreateShaderImpl 需要字节码，
-    // 此处暂存源码并标记需要编译，或调用后端的编译方法
     (void)source; (void)desc; 
     return nullptr;
 }
@@ -194,7 +204,7 @@ std::shared_ptr<ISampler> ResourceManager::GetDefaultSampler() {
 }
 
 void ResourceManager::ReleaseResource(ResourceId id) {
-    std::unique_lock lock(m_resourceMutex);
+    std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
     auto it = m_resources.find(id);
     if (it != m_resources.end()) {
         m_resources.erase(it);
@@ -203,7 +213,7 @@ void ResourceManager::ReleaseResource(ResourceId id) {
 }
 
 void ResourceManager::ReleaseAllResources() {
-    std::unique_lock lock(m_resourceMutex);
+    std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
     m_resources.clear();
     m_nameToId.clear();
     m_fileTimestamps.clear();
@@ -211,7 +221,7 @@ void ResourceManager::ReleaseAllResources() {
 }
 
 void ResourceManager::GarbageCollect() {
-    std::unique_lock lock(m_resourceMutex);
+    std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
     for (auto it = m_resources.begin(); it != m_resources.end(); ) {
         if (it->second.use_count() == 1) {
             for (auto nameIt = m_nameToId.begin(); nameIt != m_nameToId.end(); ) {
@@ -237,7 +247,7 @@ ResourceId ResourceManager::LoadTextureAsync(const std::string& filename) {
     task.id = id;
     
     {
-        std::lock_guard lock(m_loadQueueMutex);
+        std::lock_guard<std::mutex> lock(m_loadQueueMutex);
         m_loadQueue.push(task);
     }
     m_loadQueueCV.notify_one();
@@ -252,7 +262,7 @@ ResourceId ResourceManager::LoadShaderAsync(const std::string& filename) {
     task.id = id;
 
     {
-        std::lock_guard lock(m_loadQueueMutex);
+        std::lock_guard<std::mutex> lock(m_loadQueueMutex);
         m_loadQueue.push(task);
     }
     m_loadQueueCV.notify_one();
@@ -260,7 +270,7 @@ ResourceId ResourceManager::LoadShaderAsync(const std::string& filename) {
 }
 
 bool ResourceManager::IsAsyncLoadingComplete(ResourceId id) {
-    std::shared_lock lock(m_resourceMutex);
+    std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
     return m_resources.find(id) != m_resources.end();
 }
 
@@ -290,7 +300,7 @@ void ResourceManager::LoadingThreadFunction() {
     while (!m_shouldStopLoading) {
         ResourceLoadTask task;
         {
-            std::unique_lock lock(m_loadQueueMutex);
+            std::unique_lock<std::mutex> lock(m_loadQueueMutex);
             m_loadQueueCV.wait(lock, [this]{ return !m_loadQueue.empty() || m_shouldStopLoading; });
             if (m_shouldStopLoading) break;
             task = m_loadQueue.front();
@@ -309,7 +319,7 @@ void ResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
     }
 
     if (resource) {
-        std::unique_lock lock(m_resourceMutex);
+        std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
         m_resources[task.id] = resource;
         if (!task.name.empty()) m_nameToId[task.name] = task.id;
         m_statsDirty = true;
@@ -338,12 +348,11 @@ std::shared_ptr<IShader> ResourceManager::LoadShaderSync(const std::string& file
     desc.entryPoint = entryPoint;
     desc.target = target;
     desc.defines = defines;
-    // 此处需要字节码，暂留空或由工厂处理
     return nullptr;
 }
 
 void ResourceManager::UpdateResourceStats() const {
-    std::shared_lock lock(m_resourceMutex);
+    std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
     m_cachedStats = {};
     m_cachedStats.totalResources = static_cast<uint32_t>(m_resources.size());
     m_statsDirty = false;

@@ -1,44 +1,39 @@
 #pragma once
-
 #include "ManagerBase.h"
 #include <functional>
-#include <memory>
+#include <map>
 #include <mutex>
 #include <string>
 #include <thread>
-#include <unordered_map>
+#include <vector>
 
 namespace PrismaEngine {
-class ThreadManager : public ManagerBase<ThreadManager> {
-public:
-    friend class ManagerBase<ThreadManager>;
-    bool Initialize() override;
-    void Shutdown() override;
-    void Update([[maybe_unused]] float deltaTime) override {}
-    static constexpr const std::string GetName() { return R"(ThreadManager)"; }
-    
-    // 创建专用线程
-    std::thread CreateThread(const std::string& name, std::function<void()> function);
 
-    // 获取线程信息
+class ENGINE_API ThreadManager : public ManagerBase<ThreadManager> {
+    friend class ManagerBase<ThreadManager>;
+    static std::shared_ptr<ThreadManager> GetInstanceImpl();
+
+public:
+    static std::shared_ptr<ThreadManager> GetInstance() {
+        static std::shared_ptr<ThreadManager> instance = std::make_shared<ThreadManager>();
+        return instance;
+    }
+    static constexpr const char* GetStaticName() { return "ThreadManager"; }
+    int Initialize() override;
+    void Shutdown() override;
+
+    std::thread CreateThread(const std::string& name, std::function<void()> function);
     std::string GetThreadName(std::thread::id id) const;
     void SetThreadName(std::thread::id id, const std::string& name);
-
-    // 线程亲缘性设置（平台相关）
     void SetThreadAffinity(std::thread::id id, uint32_t coreMask);
-
-    // 线程优先级设置
     void SetThreadPriority(std::thread::id id, int priority);
+    ThreadManager();
+    ~ThreadManager() override = default;
 
 private:
-    // 存储所有线程
-    std::unordered_map<std::thread::id, std::thread> m_threads;
-    
-    // 存储线程名称
-    std::unordered_map<std::thread::id, std::string> m_threadNames;
-    
-    // 互斥锁，保护线程映射
+
+    std::map<std::thread::id, std::thread> m_threads;
+    std::map<std::thread::id, std::string> m_threadNames;
     mutable std::mutex m_mutex;
 };
-
-}  // namespace Engine
+}  // namespace PrismaEngine

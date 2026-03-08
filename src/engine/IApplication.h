@@ -9,36 +9,45 @@ namespace PrismaEngine {
 /// </summary>
 class ENGINE_API IApplicationBase {
 public:
-    virtual ~IApplicationBase() = default;
+    IApplicationBase();
+    virtual ~IApplicationBase();
+
     virtual int Initialize() = 0;
     virtual int Run() = 0;
     virtual void Shutdown() = 0;
-    virtual bool IsRunning() const = 0;
+
+    virtual bool IsRunning() const;
+
+protected:
+    virtual void SetRunning(bool running);
+
+private:
+    bool isRunning = false;
+    bool isInitialized = false;
 };
 
+/// <summary>
+/// 应用程序模板基类
+/// </summary>
 template<typename T>
-class IApplication : public IApplicationBase, public Singleton<T> {
+class IApplication : public IApplicationBase {
 public:
-    friend class Singleton<T>;
     ~IApplication() override = default;
 
     /// <summary>
-    /// 应用程序初始化，应该包括完成平台层和渲染器的初始化
+    /// 获取单例实例
     /// </summary>
     /// <returns></returns>
-    int Initialize() override = 0;
-    int Run() override = 0;
-    void Shutdown() override = 0;
-
-    // 提供获取运行状态的公共方法
-    bool IsRunning() const override {
-        return isRunning;
+    static T& GetInstance() {
+        return *T::GetInstance();
     }
 
-protected:
-    // 提供设置运行状态的保护方法
-    virtual void SetRunning(bool running) {
-        isRunning = running;
+    bool IsInitialized() const {
+        return isInitialized;
+    }
+
+    bool IsRunning() const override {
+        return IApplicationBase::IsRunning();
     }
 
 private:
@@ -46,4 +55,4 @@ private:
     bool isInitialized = false;
 };
 
-}
+} // namespace PrismaEngine

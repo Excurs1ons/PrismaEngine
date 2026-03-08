@@ -9,42 +9,42 @@
 #include <string>
 
 namespace PrismaEngine {
+
 using namespace Serialization;
-// Asset基类，继承自IResource和Serializable
-class Asset : public AssetBase ,public Serializable {
+
+/// <summary>
+/// Asset基类，继承自AssetBase和Serializable
+/// </summary>
+class ENGINE_API Asset : public AssetBase, public Serializable {
 public:
     Asset()          = default;
     virtual ~Asset() = default;
 
     // Serializable接口实现
-    virtual void Serialize(OutputArchive& archive) const override = 0;
-    virtual void Deserialize(InputArchive& archive) override      = 0;
+    void Serialize(OutputArchive& archive) const override = 0;
+    void Deserialize(InputArchive& archive) override      = 0;
 
     // Asset特定的序列化方法
     virtual bool SerializeToFile(const std::filesystem::path& filePath,
                                  SerializationFormat format = SerializationFormat::JSON) const;
 
     virtual bool DeserializeFromFile(const std::filesystem::path& filePath,
-                                     SerializationFormat format = SerializationFormat::JSON) {
-        // 注意：这里不能直接使用AssetSerializer::DeserializeFromFile，因为我们需要修改当前对象
-        // 而不是创建新对象。子类需要实现具体的逻辑。
-        return false;
-    }
+                                     SerializationFormat format = SerializationFormat::JSON);
 
     // 获取资产的元数据
     virtual std::string GetAssetType() const = 0;
     virtual std::string GetAssetVersion() const { return "1.0.0"; }
 
     // 获取和设置元数据
-    const Metadata& GetMetadata() const { return m_metadata; }
-    void SetMetadata(const Metadata& metadata) { m_metadata = metadata; }
+    const Resource::MetaData& GetMetadata() const { return m_metadata; }
+    void SetMetadata(const Resource::MetaData& metadata) { m_metadata = metadata; }
     void SetMetadata(const std::string& name, const std::string& description = "") {
         m_metadata.name        = name;
         m_metadata.description = description;
     }
 
 protected:
-    Metadata m_metadata;
+    Resource::MetaData m_metadata;
 };
 
 // 资产工厂接口
@@ -76,4 +76,4 @@ public:
     }
 };
 
-}  // namespace Engine
+}  // namespace PrismaEngine

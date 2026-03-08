@@ -1,22 +1,21 @@
 #pragma once
 
-// Windows 平台使用 DLL 导出/导入
+// 强制检查导出定义
 #if defined(_WIN32) || defined(_MSC_VER)
-    #if defined(ENGINE_BUILD_STATIC)
-        // 静态库构建 - 不需要导出/导入宏
-        #define ENGINE_API
-    #elif defined(ENGINE_EXPORTS)
+    // 检查是否正在构建 Engine 项目自身
+    #if defined(ENGINE_EXPORTS) || defined(PRISMA_ENGINE_EXPORTS) || defined(PrismaEngine_EXPORTS)
         #define ENGINE_API __declspec(dllexport)
     #else
         #define ENGINE_API __declspec(dllimport)
     #endif
-// Linux/Unix 平台使用 GCC/Clang 属性
-#elif defined(__GNUC__) || defined(__clang__)
-    #if defined(ENGINE_EXPORTS)
-        #define ENGINE_API __attribute__((visibility("default")))
+
+    // 检查是否正在构建 Editor 项目自身
+    #if defined(EDITOR_EXPORTS) || defined(PRISMA_EDITOR_EXPORTS) || defined(PrismaEditor_EXPORTS)
+        #define EDITOR_API __declspec(dllexport)
     #else
-        #define ENGINE_API
+        #define EDITOR_API __declspec(dllimport)
     #endif
 #else
-    #define ENGINE_API
+    #define ENGINE_API __attribute__((visibility("default")))
+    #define EDITOR_API __attribute__((visibility("default")))
 #endif

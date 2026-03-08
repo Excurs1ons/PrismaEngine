@@ -3,26 +3,29 @@
 #include "Export.h"
 #include "IApplication.h"
 #include "Logger.h"
-#include "Platform.h"  // 包含WindowHandle定义
+#include "Platform.h"
 #include "ProjectSettingsWindow.h"
 #include "Singleton.h"
+#include "ManagerBase.h"
 
 namespace PrismaEngine {
 
 #pragma warning(push)
 #pragma warning(disable: 4251 4275)
-class EDITOR_API Editor : public IApplication<Editor> {
+class EDITOR_API Editor : public IApplication<Editor>, public ManagerBase<Editor> {
 public:
-    friend class Singleton<Editor>;
-    bool Initialize() override;
+    Editor();
+    ~Editor() override;
+
+    static std::shared_ptr<Editor> GetInstance();
+
+    int Initialize() override;
     int Run() override;
     void Shutdown() override;
 
-private:
-    Editor();
-    ~Editor() override;
-    
     bool InitializeImGui();
+
+private:
     void DrawMainMenu();
 
     // 窗口句柄
@@ -37,9 +40,6 @@ private:
 } // namespace PrismaEngine
 
 extern "C" {
-// 导出其他函数供动态加载使用
-EDITOR_API bool Initialize();
-EDITOR_API int Run();
-EDITOR_API void Shutdown();
-EDITOR_API void Update();
+    /// @brief 编辑器统一入口点
+    EDITOR_API int PrismaEditor_Main(int argc, char** argv, Logger* externalLogger);
 }

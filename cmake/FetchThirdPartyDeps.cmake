@@ -90,9 +90,13 @@ set(CMAKE_WARN_DEPRECATED OFF)
 # 加载依赖 (使用 EXCLUDE_FROM_ALL 进一步隔离不需要的 target)
 FetchContent_MakeAvailable(glm nlohmann_json stb tinyxml2 zstd)
 
-if(TARGET stb AND NOT TARGET stb::stb)
-    add_library(stb INTERFACE IMPORTED GLOBAL)
-    set_target_properties(stb PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${stb_SOURCE_DIR}")
+# STB 总是作为接口库处理
+if(NOT TARGET stb)
+    add_library(stb INTERFACE)
+    target_include_directories(stb INTERFACE "${stb_SOURCE_DIR}")
+endif()
+if(NOT TARGET stb::stb)
+    add_library(stb::stb ALIAS stb)
 endif()
 
 if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_RENDER_VULKAN)
@@ -138,6 +142,13 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
     if(NOT TARGET imgui)
         add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
         target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
+        
+        # 强力注入包含路径
+        target_include_directories(imgui SYSTEM PUBLIC 
+            "${PRISMA_GLOBAL_DEPS_DIR}/SDL3-src/include"
+            "${PRISMA_GLOBAL_DEPS_DIR}/Vulkan-Headers-src/include"
+        )
+
         add_library(imgui::imgui ALIAS imgui)
     endif()
 endif()

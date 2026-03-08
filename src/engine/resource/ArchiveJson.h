@@ -8,64 +8,49 @@ namespace PrismaEngine {
     namespace Serialization {
 
         // JSON输出存档
-        class JsonOutputArchive : public OutputArchive {
+        class ENGINE_API JsonOutputArchive : public OutputArchive {
         public:
             explicit JsonOutputArchive() : m_json(json::object()) {}
 
-            void WriteBool(bool value) override {
-                m_currentValue = value;
-            }
+            void WriteBool(bool value) override { m_currentValue = value; CommitValue(); }
+            void WriteInt32(int32_t value) override { m_currentValue = value; CommitValue(); }
+            void WriteUInt32(uint32_t value) override { m_currentValue = value; CommitValue(); }
+            void WriteFloat(float value) override { m_currentValue = value; CommitValue(); }
+            void WriteDouble(double value) override { m_currentValue = value; CommitValue(); }
+            void WriteString(const std::string& value) override { m_currentValue = value; CommitValue(); }
 
-            void WriteInt32(int32_t value) override {
-                m_currentValue = value;
-            }
-
-            void WriteUInt32(uint32_t value) override {
-                m_currentValue = value;
-            }
-
-            void WriteFloat(float value) override {
-                m_currentValue = value;
-            }
-
-            void WriteDouble(double value) override {
-                m_currentValue = value;
-            }
-
-            void WriteString(const std::string& value) override {
-                m_currentValue = value;
-            }
-
-            void BeginArray(size_t size) override {
+            // 带 Key 版本
+            void BeginArray(const std::string& key, uint32_t& size) override {
+                (void)size;
+                m_currentKey = key;
                 m_currentValue = json::array();
                 m_arrayStack.push_back(std::ref(m_currentValue));
             }
-
-            void EndArray() override {
-                if (!m_arrayStack.empty()) {
-                    m_arrayStack.pop_back();
-                }
-            }
-
-            void BeginObject(size_t fieldCount = 0) override {
+            void BeginObject(const std::string& key) override {
+                m_currentKey = key;
                 m_currentValue = json::object();
                 m_objectStack.push_back(std::ref(m_currentValue));
             }
 
-            void EndObject() override {
-                if (!m_objectStack.empty()) {
-                    m_objectStack.pop_back();
-                }
+            // 兼容旧代码版本
+            void BeginArray(uint32_t size) override {
+                (void)size;
+                m_currentValue = json::array();
+                m_arrayStack.push_back(std::ref(m_currentValue));
+            }
+            void BeginObject(size_t fieldCount = 0) override {
+                (void)fieldCount;
+                m_currentValue = json::object();
+                m_objectStack.push_back(std::ref(m_currentValue));
             }
 
-            void SetCurrent(const std::string& key) override {
-                m_currentKey = key;
-            }
+            void EndArray() override { if (!m_arrayStack.empty()) m_arrayStack.pop_back(); }
+            void EndObject() override { if (!m_objectStack.empty()) m_objectStack.pop_back(); }
 
-            // 获取最终的JSON对象
+            void SetCurrent(const std::string& key) override { m_currentKey = key; }
+            void EnterField(const std::string& key) override { m_currentKey = key; }
+
             const json& GetJson() const { return m_json; }
-
-            // 将当前值添加到当前对象或数组中
             void CommitValue();
 
         private:
@@ -77,101 +62,57 @@ namespace PrismaEngine {
         };
 
         // JSON输入存档
-        class JsonInputArchive : public InputArchive {
+        class ENGINE_API JsonInputArchive : public InputArchive {
         public:
             explicit JsonInputArchive(const json& jsonData) : m_json(jsonData) {
                 m_iteratorStack.push_back(m_json.begin());
                 m_endIteratorStack.push_back(m_json.end());
             }
 
-            bool ReadBool() override {
-                return m_iteratorStack.back().value().get<bool>();
+            bool ReadBool() override { return m_iteratorStack.back().value().get<bool>(); }
+            int32_t ReadInt32() override { return m_iteratorStack.back().value().get<int32_t>(); }
+            uint32_t ReadUInt32() override { return m_iteratorStack.back().value().get<uint32_t>(); }
+            float ReadFloat() override { return m_iteratorStack.back().value().get<float>(); }
+            double ReadDouble() override { return m_iteratorStack.back().value().get<double>(); }
+            std::string ReadString() override { return m_iteratorStack.back().value().get<std::string>(); }
+
+            // 带 Key 版本
+            void BeginArray(const std::string& key, uint32_t& size) override {
+                const auto& val = m_iteratorStack.back().value()[key];
+                size = static_cast<uint32_t>(val.size());
+                m_iteratorStack.push_back(val.begin());
+                m_endIteratorStack.push_back(val.end());
+            }
+            void BeginObject(const std::string& key) override {
+                const auto& val = m_iteratorStack.back().value()[key];
+                m_iteratorStack.push_back(val.begin());
+                m_endIteratorStack.push_back(val.end());
             }
 
-            int32_t ReadInt32() override {
-                return m_iteratorStack.back().value().get<int32_t>();
-            }
-
-            uint32_t ReadUInt32() override {
-                return m_iteratorStack.back().value().get<uint32_t>();
-            }
-
-            float ReadFloat() override {
-                return m_iteratorStack.back().value().get<float>();
-            }
-
-            double ReadDouble() override {
-                return m_iteratorStack.back().value().get<double>();
-            }
-
-            std::string ReadString() override {
-                return m_iteratorStack.back().value().get<std::string>();
-            }
-
+            // 兼容旧代码版本
             size_t BeginArray() override {
-                const auto& arrayValue = m_iteratorStack.back().value();
-                if (!arrayValue.is_array()) {
-                    throw SerializationException("Expected JSON array");
-                }
-
-                m_iteratorStack.push_back(arrayValue.begin());
-                m_endIteratorStack.push_back(arrayValue.end());
-                return arrayValue.size();
+                const auto& val = m_iteratorStack.back().value();
+                m_iteratorStack.push_back(val.begin());
+                m_endIteratorStack.push_back(val.end());
+                return val.size();
             }
-
-            void EndArray() override {
-                m_iteratorStack.pop_back();
-                m_endIteratorStack.pop_back();
-            }
-
             size_t BeginObject() override {
-                const auto& objectValue = m_iteratorStack.back().value();
-                if (!objectValue.is_object()) {
-                    throw SerializationException("Expected JSON object");
-                }
-
-                m_iteratorStack.push_back(objectValue.begin());
-                m_endIteratorStack.push_back(objectValue.end());
-                return objectValue.size();
+                const auto& val = m_iteratorStack.back().value();
+                m_iteratorStack.push_back(val.begin());
+                m_endIteratorStack.push_back(val.end());
+                return val.size();
             }
 
-            void EndObject() override {
-                m_iteratorStack.pop_back();
-                m_endIteratorStack.pop_back();
+            void EndArray() override { m_iteratorStack.pop_back(); m_endIteratorStack.pop_back(); }
+            void EndObject() override { m_iteratorStack.pop_back(); m_endIteratorStack.pop_back(); }
+
+            bool HasNextField() override { return m_iteratorStack.back() != m_endIteratorStack.back(); }
+            bool HasNextField(const std::string& expectedField) override {
+                (void)expectedField;
+                return HasNextField();
             }
-
-            bool HasNextField(const std::string& expectedField = "") override {
-                auto& it = m_iteratorStack.back();
-                auto& endIt = m_endIteratorStack.back();
-
-                if (it == endIt) {
-                    return false;
-                }
-
-                if (!expectedField.empty()) {
-                    // 查找特定字段
-                    for (auto searchIt = it; searchIt != endIt; ++searchIt) {
-                        if (searchIt.key() == expectedField) {
-                            // 将迭代器移动到找到的字段
-                            while (it != searchIt) {
-                                ++it;
-                            }
-                            return true;
-                        }
-                    }
-                    return false;
-                }
-
-                return true;
-            }
-
-            void SetCurrent(const std::string& key) override {
-                // JSON中通过迭代器访问字段，此方法主要用于兼容性
-            }
-
-            std::string GetCurrentKey() const {
-                return m_iteratorStack.back().key();
-            }
+            void SetCurrent(const std::string& key) override { (void)key; }
+            void EnterField(const std::string& key) override { (void)key; }
 
         private:
             json m_json;

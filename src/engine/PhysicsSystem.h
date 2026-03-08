@@ -2,20 +2,23 @@
 #include "ISubSystem.h"
 #include "ManagerBase.h"
 #include "WorkerThread.h"
+#include <memory>
 #include <string>
 
 namespace PrismaEngine {
 
-class PhysicsSystem : public ManagerBase<PhysicsSystem> {
+class ENGINE_API PhysicsSystem : public ManagerBase<PhysicsSystem> {
 public:
-    friend class ISubSystem;
-    friend class ManagerBase<PhysicsSystem>;
-    static constexpr std::string GetName() { return R"(PhysicsSystem)"; }
-    bool Initialize() override;
+    static std::shared_ptr<PhysicsSystem> GetInstance();
+
+    static constexpr const char* GetStaticName() { return "PhysicsSystem"; }
+    int Initialize() override;
     void Shutdown() override;
     void Update(float deltaTime) override;
+    PhysicsSystem() = default;
+    ~PhysicsSystem() override = default;
 
 private:
-    WorkerThread workerThread;
+    WorkerThread m_workerThread;
 };
-}  // namespace Engine
+}  // namespace PrismaEngine

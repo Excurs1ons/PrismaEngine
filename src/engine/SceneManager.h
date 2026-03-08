@@ -5,17 +5,19 @@
 
 namespace PrismaEngine {
 
-class SceneManager : public ManagerBase<SceneManager> {
-    friend class ManagerBase<SceneManager>;
-
+class ENGINE_API SceneManager : public ManagerBase<SceneManager> {
 public:
-    static constexpr std::string GetName() { return R"(SceneManager)"; }
+    static std::shared_ptr<SceneManager> GetInstance();
+
+    static constexpr const char* GetStaticName() { return "SceneManager"; }
     void Shutdown() override;
     void Update(float deltaTime) override;
     Scene* GetCurrentScene() const;
-    bool Initialize() override;
+    int Initialize() override;
+    SceneManager() = default;
+    ~SceneManager() override = default;
 
 private:
     std::shared_ptr<Scene> m_currentScene;
 };
-}  // namespace Engine
+}  // namespace PrismaEngine
