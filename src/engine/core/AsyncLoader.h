@@ -561,9 +561,9 @@ namespace PrismaEngine {
                     indexCount = 0;
                 }
 
-                void reserve(size_t vertexCount, size_t indexCount) {
-                    vertices.reserve(vertexCount * 8);  // 假设每个顶点 8 个 float
-                    indices.reserve(indexCount);
+                void reserve(size_t newVertexCount, size_t newIndexCount) {
+                    vertices.reserve(newVertexCount * 8);  // 假设每个顶点 8 个 float
+                    indices.reserve(newIndexCount);
                 }
             };
 

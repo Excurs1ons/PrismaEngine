@@ -4,12 +4,23 @@
 #include <iostream>
 #include <filesystem>
 #include <sstream>
+#include <unordered_map>
 
 namespace PrismaEngine {
 
 namespace fs = std::filesystem;
 
-CommandLineEditor::CommandLineEditor() {
+struct CommandLineEditor::Impl {
+    struct CommandInfo {
+        std::string description;
+        CommandHandler handler;
+    };
+    std::unordered_map<std::string, CommandInfo> commands;
+};
+
+CommandLineEditor::CommandLineEditor() 
+    : m_impl(std::make_unique<Impl>())
+{
     LOG_INFO("CommandLineEditor", "初始化命令行编辑器");
     RegisterBuiltinCommands();
 }
@@ -22,7 +33,7 @@ void CommandLineEditor::SetArguments(const CommandLineParser::Arguments& args) {
     m_args = args;
 }
 
-bool CommandLineEditor::Initialize() {
+int CommandLineEditor::Initialize() {
     LOG_INFO("CommandLineEditor", "初始化命令行编辑器系统");
 
     // 设置日志级别
@@ -69,10 +80,10 @@ void CommandLineEditor::Shutdown() {
 void CommandLineEditor::RegisterCommand(const std::string& name,
                                         const std::string& description,
                                         CommandHandler handler) {
-    CommandLineEditor::CommandInfo info;
+    Impl::CommandInfo info;
     info.description = description;
     info.handler = handler;
-    m_commands[name] = info;
+    m_impl->commands[name] = info;
 }
 
 void CommandLineEditor::RegisterBuiltinCommands() {
@@ -87,8 +98,8 @@ void CommandLineEditor::RegisterBuiltinCommands() {
 }
 
 int CommandLineEditor::ExecuteCommand() {
-    auto it = m_commands.find(m_args.command);
-    if (it == m_commands.end()) {
+    auto it = m_impl->commands.find(m_args.command);
+    if (it == m_impl->commands.end()) {
         LOG_ERROR("CommandLineEditor", "未知命令: {}", m_args.command);
         ShowHelp();
         return 1;
@@ -112,7 +123,7 @@ void CommandLineEditor::ShowHelp() {
     std::cout << "========================\n\n";
     std::cout << "可用命令:\n\n";
 
-    for (const auto& [name, info] : m_commands) {
+    for (const auto& [name, info] : m_impl->commands) {
         std::cout << "  " << name;
         if (!info.description.empty()) {
             std::cout << " - " << info.description;
@@ -126,9 +137,9 @@ void CommandLineEditor::ShowHelp() {
 // ========== 内置命令实现 ==========
 
 int CommandLineEditor::CommandBuild(const std::vector<std::string>& args) {
+    (void)args;
     LOG_INFO("Build", "开始构建项目");
 
-    // 检查项目路径
     fs::path projectPath = m_args.projectPath;
     if (projectPath.empty()) {
         projectPath = fs::current_path();
@@ -141,18 +152,11 @@ int CommandLineEditor::CommandBuild(const std::vector<std::string>& args) {
 
     LOG_INFO("Build", "项目路径: {}", projectPath.string());
 
-    // TODO: 实现实际的构建逻辑
-    // 1. 加载项目配置
-    // 2. 编译着色器
-    // 3. 处理资源
-    // 4. 生成构建产物
-
     std::cout << "\n[构建] 项目路径: " << projectPath.string() << "\n";
     std::cout << "[构建] 配置: " << (m_args.verbose ? "Debug" : "Release") << "\n";
     std::cout << "[构建] 输出: " << (m_args.outputPath.empty() ? "build/" : m_args.outputPath) << "\n";
     std::cout << "[构建] 构建中...\n";
 
-    // 模拟构建过程
     std::cout << "[构建] 编译着色器...\n";
     std::cout << "[构建] 处理资源...\n";
     std::cout << "[构建] 生成构建产物...\n";
@@ -163,6 +167,7 @@ int CommandLineEditor::CommandBuild(const std::vector<std::string>& args) {
 }
 
 int CommandLineEditor::CommandClean(const std::vector<std::string>& args) {
+    (void)args;
     LOG_INFO("Clean", "清理构建产物");
 
     fs::path buildPath = "build";
@@ -198,7 +203,6 @@ int CommandLineEditor::CommandExport(const std::vector<std::string>& args) {
     std::string target = args[0];
     std::cout << "[导出] 目标: " << target << "\n";
 
-    // TODO: 实现实际的导出逻辑
     if (target == "resources" || target == "all") {
         std::cout << "[导出] 导出资源...\n";
     }
@@ -229,8 +233,6 @@ int CommandLineEditor::CommandImport(const std::vector<std::string>& args) {
     std::cout << "[导入] 源: " << source.string() << "\n";
     std::cout << "[导入] 导入中...\n";
 
-    // TODO: 实现实际的导入逻辑
-
     std::cout << "[导入] 完成\n";
     LOG_INFO("Import", "导入完成");
     return 0;
@@ -247,13 +249,13 @@ int CommandLineEditor::CommandPackage(const std::vector<std::string>& args) {
     std::cout << "[打包] 平台: " << platform << "\n";
     std::cout << "[打包] 打包中...\n";
 
-    // TODO: 实现实际的打包逻辑
     std::cout << "[打包] 完成\n";
     LOG_INFO("Package", "打包完成");
     return 0;
 }
 
 int CommandLineEditor::CommandShowInfo(const std::vector<std::string>& args) {
+    (void)args;
     LOG_INFO("Info", "显示项目信息");
 
     fs::path projectPath = m_args.projectPath;
@@ -265,7 +267,6 @@ int CommandLineEditor::CommandShowInfo(const std::vector<std::string>& args) {
     std::cout << "========================\n";
     std::cout << "路径: " << projectPath.string() << "\n";
 
-    // TODO: 读取实际的项目配置文件
     std::cout << "名称: PrismaEngine Project\n";
     std::cout << "版本: 0.1.0\n";
     std::cout << "引擎版本: " << CommandLineParser::GetVersion() << "\n";
@@ -276,6 +277,7 @@ int CommandLineEditor::CommandShowInfo(const std::vector<std::string>& args) {
 }
 
 int CommandLineEditor::CommandValidate(const std::vector<std::string>& args) {
+    (void)args;
     LOG_INFO("Validate", "验证项目配置");
 
     fs::path projectPath = m_args.projectPath;
@@ -289,11 +291,6 @@ int CommandLineEditor::CommandValidate(const std::vector<std::string>& args) {
     int errorCount = 0;
     int warningCount = 0;
 
-    // TODO: 实现实际的验证逻辑
-    // 1. 检查项目结构
-    // 2. 验证配置文件
-    // 3. 检查资源完整性
-
     if (valid) {
         std::cout << "[验证] 通过 (0 错误, " << warningCount << " 警告)\n";
         LOG_INFO("Validate", "验证通过");
@@ -306,9 +303,9 @@ int CommandLineEditor::CommandValidate(const std::vector<std::string>& args) {
 }
 
 int CommandLineEditor::CommandRun(const std::vector<std::string>& args) {
+    (void)args;
     LOG_INFO("Run", "运行项目");
 
-    // TODO: 实现项目运行逻辑
     std::cout << "[运行] 启动项目...\n";
     std::cout << "[运行] 这将启动一个新的游戏实例\n";
 

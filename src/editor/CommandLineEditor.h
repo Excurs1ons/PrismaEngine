@@ -16,7 +16,7 @@ class EDITOR_API CommandLineEditor : public IApplication<CommandLineEditor> {
 public:
     friend class Singleton<CommandLineEditor>;
 
-    bool Initialize() override;
+    int Initialize() override;
     int Run() override;
     void Shutdown() override;
 
@@ -36,11 +36,8 @@ private:
     ~CommandLineEditor() override;
     CommandLineParser::Arguments m_args;
 
-    struct CommandInfo {
-        std::string description;
-        CommandHandler handler;
-    };
-    std::unordered_map<std::string, CommandInfo> m_commands;
+    struct Impl;
+    std::unique_ptr<Impl> m_impl;
 
     // 内置命令
     int CommandBuild(const std::vector<std::string>& args);
