@@ -8,6 +8,9 @@
 #include "Singleton.h"
 #include "ManagerBase.h"
 
+// 显式包含 SDL3
+#include <SDL3/SDL.h>
+
 namespace PrismaEngine {
 
 #pragma warning(push)
@@ -27,19 +30,20 @@ public:
 
 private:
     void DrawMainMenu();
+    void ProcessEvents();
 
-    // 窗口句柄
-    WindowHandle m_window = nullptr;
+    // 显式使用 SDL_Window
+    SDL_Window* m_window = nullptr;
 
     // Editor Windows
     ProjectSettingsWindow m_projectSettingsWindow;
     bool m_showProjectSettings = false;
+    bool m_minimized = false;
 };
 #pragma warning(pop)
 
 } // namespace PrismaEngine
 
 extern "C" {
-    /// @brief 编辑器统一入口点
     EDITOR_API int PrismaEditor_Main(int argc, char** argv, Logger* externalLogger);
 }

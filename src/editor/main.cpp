@@ -7,15 +7,28 @@
     #define DLL_IMPORT
 #endif
 
-// 声明 DLL 导出的 C 接口
 extern "C" {
     DLL_IMPORT int PrismaEditor_Main(int argc, char** argv, Logger* externalLogger);
 }
 
 int main(int argc, char* argv[]) {
-    // 1. 获取宿主程序的日志系统实例
+    // 1. 获取并初始化日志系统
     Logger& logger = Logger::GetInstance();
     
-    // 2. 将控制权交给 DLL 中的编辑器主逻辑
-    return PrismaEditor_Main(argc, argv, &logger);
+    LogConfig config;
+    config.target = LogTarget::Both;
+    config.asyncMode = false; // 关键：在调试初始化问题时使用同步模式
+    logger.Initialize(config);
+
+    LOG_INFO("Launcher", "PrismaEditor 启动器已就绪...");
+
+    // 2. 调用 DLL 中的主函数
+    int exitCode = PrismaEditor_Main(argc, argv, &logger);
+
+    // 3. 强制刷新并关闭
+    LOG_INFO("Launcher", "程序即将退出，退出码: {}", exitCode);
+    logger.Flush();
+    logger.Shutdown();
+
+    return exitCode;
 }
