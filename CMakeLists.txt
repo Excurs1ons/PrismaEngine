@@ -35,6 +35,13 @@ project(PRISMA
 #set(ENV{HTTP_PROXY} "http://127.0.0.1:7897")
 #set(ENV{HTTPS_PROXY} "http://127.0.0.1:7897")
 
+# ========== 构建选项 ==========
+option(PRISMA_BUILD_ENGINE "构建引擎核心库" ON)
+option(PRISMA_BUILD_EDITOR "构建编辑器" ON)
+option(PRISMA_BUILD_RUNTIME "构建运行时" ON)
+option(PRISMA_BUILD_SDK "构建 SDK" OFF)
+option(PRISMA_BUILD_TESTING "构建测试" OFF)
+
 # ========== 包含配置模块 ==========
 
 # 工具函数

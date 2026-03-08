@@ -115,9 +115,7 @@ private:
     std::unique_ptr<VulkanResourceFactory> m_resourceFactory;
 
     // ImGui
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
-#endif
 
     // 设备能力
     struct DeviceFeatures {

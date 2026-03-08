@@ -44,7 +44,9 @@ Prisma_Declare_Dependency(nlohmann_json https://github.com/nlohmann/json.git ${P
 Prisma_Declare_Dependency(stb https://github.com/nothings/stb.git ${PRISMA_DEP_STB_VERSION})
 
 # tinyxml2
-set(TINYXML2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+if(NOT PRISMA_BUILD_TESTING)
+    set(TINYXML2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+endif()
 Prisma_Declare_Dependency(tinyxml2 https://github.com/leethomason/tinyxml2.git ${PRISMA_DEP_TINYXML2_VERSION})
 
 # zstd
@@ -93,13 +95,17 @@ endif()
 # ========== 依赖项加载与配置 ==========
 
 # 禁用所有不需要的测试和示例
-set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLM_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(NLOHMANN_ADD_NATVIS OFF CACHE BOOL "" FORCE)
-set(SDL_TESTS OFF CACHE BOOL "" FORCE)
-set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
-set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+if(NOT PRISMA_BUILD_TESTING)
+    set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+    set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(GLM_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(NLOHMANN_ADD_NATVIS OFF CACHE BOOL "" FORCE)
+    set(SDL_TESTS OFF CACHE BOOL "" FORCE)
+    set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
+    set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+endif()
 
 # 加载依赖
 FetchContent_MakeAvailable(glm nlohmann_json stb tinyxml2 zstd)
