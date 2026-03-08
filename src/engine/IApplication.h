@@ -30,8 +30,9 @@ private:
 /// 应用程序模板基类
 /// </summary>
 template<typename T>
-class IApplication : public IApplicationBase {
+class IApplication : public IApplicationBase, public Singleton<T> {
 public:
+    friend class Singleton<T>;
     ~IApplication() override = default;
 
     /// <summary>
@@ -39,7 +40,7 @@ public:
     /// </summary>
     /// <returns></returns>
     static T& GetInstance() {
-        return T::GetInstance();
+        return Singleton<T>::GetInstance();
     }
 
     bool IsInitialized() const {
