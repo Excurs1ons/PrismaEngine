@@ -176,7 +176,6 @@ extern "C" {
         parser.Parse();
         auto args = parser.GetArguments();
         
-        PrismaEngine::EnvironmentType env = PrismaEngine::Environment::DetectEnvironment();
         PrismaEngine::IApplicationBase* app = nullptr;
 
         if (args.mode == PrismaEngine::EditorRunMode::CLI) {
