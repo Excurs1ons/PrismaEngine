@@ -32,7 +32,9 @@
 #include <Windows.h>
 #endif
 
+#if !defined(_WIN32) && !defined(__ANDROID__)
 #include <SDL3/SDL.h>
+#endif
 
 namespace PrismaEngine::Graphic {
 
@@ -105,7 +107,7 @@ void RenderSystem::Shutdown() {
 }
 
 bool RenderSystem::InitializeImGui() {
-#ifdef PRISMA_BUILD_EDITOR
+#if defined(PRISMA_BUILD_EDITOR) && (defined(PRISMA_ENABLE_RENDER_DX12) || defined(PRISMA_ENABLE_RENDER_VULKAN))
     if (!m_device) {
         LOG_ERROR("Render", "Device not initialized, cannot init ImGui.");
         return false;
@@ -131,7 +133,7 @@ bool RenderSystem::InitializeImGui() {
     }
 #endif
 
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
+#if defined(PRISMA_ENABLE_RENDER_VULKAN) && !defined(_WIN32) && !defined(__ANDROID__)
     if (m_desc.backendType == RenderAPIType::Vulkan) {
         LOG_INFO("Render", "Initializing ImGui SDL3 + Vulkan");
         if (m_desc.windowHandle) {
@@ -149,13 +151,13 @@ bool RenderSystem::InitializeImGui() {
     }
     return m_imguiInitialized;
 #else
-    LOG_WARNING("Render", "ImGui not available in non-Editor builds.");
+    LOG_WARNING("Render", "ImGui not available in this build configuration.");
     return false;
 #endif
 }
 
 void RenderSystem::ShutdownImGui() {
-#ifdef PRISMA_BUILD_EDITOR
+#if defined(PRISMA_BUILD_EDITOR) && (defined(PRISMA_ENABLE_RENDER_DX12) || defined(PRISMA_ENABLE_RENDER_VULKAN))
     if (!m_imguiInitialized)
         return;
 
@@ -164,7 +166,8 @@ void RenderSystem::ShutdownImGui() {
         ImGui_ImplDX12_Shutdown();
         ImGui_ImplWin32_Shutdown();
     }
-#elif defined(PRISMA_ENABLE_RENDER_VULKAN)
+#endif
+#if defined(PRISMA_ENABLE_RENDER_VULKAN) && !defined(_WIN32) && !defined(__ANDROID__)
     if (m_desc.backendType == RenderAPIType::Vulkan) {
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplSDL3_Shutdown();
