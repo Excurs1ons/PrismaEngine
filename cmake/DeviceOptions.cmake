@@ -4,361 +4,46 @@
 # ========== Native 模式选项 ==========
 
 # Native 音频模式：仅使用平台 SDK 原生音频 API，不依赖第三方库
-option(PRISMA_USE_NATIVE_AUDIO "Use platform native audio APIs only (no third-party audio dependencies)" ON)
+option(PRISMA_USE_NATIVE_AUDIO "Use platform native audio APIs only" ON)
 
-# Native 输入模式：仅使用平台 SDK 原生输入 API，不依赖第三方库
-option(PRISMA_USE_NATIVE_INPUT "Use platform native input APIs only (no third-party input dependencies)" ON)
+# Native 输入模式：仅使用平台原生输入 API
+option(PRISMA_USE_NATIVE_INPUT "Use platform native input APIs only" ON)
 
-# Native 应用模式：仅使用平台 SDK 原生应用 API，不依赖第三方库
-option(PRISMA_USE_NATIVE_APP "Use platform SDK native app APIs only (no third-party app dependencies)" OFF)
-# ========== 平台默认配置 ==========
-# ========== 应用程序默认配置 ==========
-set(PRISMA_ENABLE_APP_NATIVE_DEFAULT OFF)
-set(PRISMA_ENABLE_APP_SDL3_DEFAULT OFF)
+# SDL3 支持：启用 SDL3 跨平台支持（窗口、输入、音频）
+option(PRISMA_ENABLE_SDL3 "Enable SDL3 support" ON)
 
-if(PRISMA_USE_NATIVE_APP)
-    # Native 模式：使用平台 SDK 原生应用 API
-    set(PRISMA_ENABLE_APP_NATIVE_DEFAULT ON)
-else()
-    # 跨平台模式：使用 SDL3 创建程序入口
-    set(PRISMA_ENABLE_APP_SDL3_DEFAULT ON)
-endif()
-# ========== 音频设备默认配置 ==========
-set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT OFF)
-set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT OFF)
-set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT OFF)
+# ========== 渲染后端选项 ==========
 
-if(PRISMA_USE_NATIVE_AUDIO)
-    # Native 音频模式：使用平台 SDK 原生音频 API
-    if(WIN32)
-        set(PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT ON)
-    elseif(ANDROID)
-        set(PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT ON)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        # Linux 使用 SDL3 音频
-        set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT ON)
-    elseif(APPLE)
-        message(FATAL_ERROR "APPLE is not supported yet.")
-    else()
-        message(FATAL_ERROR "Platform ${CMAKE_SYSTEM_NAME} is not supported yet.")
-    endif()
-else()
-    # 跨平台模式：使用 SDL3
-    set(PRISMA_ENABLE_AUDIO_SDL3_DEFAULT ON)
-endif()
-
-# ========== 输入设备默认配置 ==========
-set(PRISMA_ENABLE_INPUT_GAMEACTIVITY_DEFAULT OFF)
-set(PRISMA_ENABLE_INPUT_XINPUT_DEFAULT OFF)
-set(PRISMA_ENABLE_INPUT_SDL3_DEFAULT OFF)
-
-if(PRISMA_USE_NATIVE_INPUT)
-    # Native 输入模式：使用平台 SDK 原生输入 API
-    if(WIN32)
-        set(PRISMA_ENABLE_INPUT_XINPUT_DEFAULT ON)
-    elseif(ANDROID)
-        set(PRISMA_ENABLE_INPUT_GAMEACTIVITY_DEFAULT ON)
-    elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        # Linux 使用 SDL3 输入
-        set(PRISMA_ENABLE_INPUT_SDL3_DEFAULT ON)
-    elseif(APPLE)
-        message(FATAL_ERROR "APPLE is not supported yet.")
-    else()
-        message(FATAL_ERROR "Platform ${CMAKE_SYSTEM_NAME} is not supported yet.")
-    endif()
-else()
-    set(PRISMA_ENABLE_INPUT_SDL3_DEFAULT ON)
-endif()
-
-# ========== 渲染设备默认配置 (不受 Native 模式影响) ==========
-set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT OFF)
+# 默认设置
 set(PRISMA_ENABLE_RENDER_DX12_DEFAULT OFF)
-set(PRISMA_ENABLE_RENDER_OPENGL_DEFAULT OFF)
-set(PRISMA_ENABLE_RENDER_METAL_DEFAULT OFF)
+set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
 
+# Windows 平台特殊处理
 if(WIN32)
-    set(PRISMA_ENABLE_RENDER_DX12_DEFAULT ON)
-    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT OFF)
-    
-    # 如果构建编辑器，强制启用 Vulkan
-    if(PRISMA_BUILD_EDITOR)
-        set(PRISMA_ENABLE_RENDER_DX12_DEFAULT OFF)
-        set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
+    # 如果不是构建编辑器，默认可以用 DX12
+    if(NOT PRISMA_BUILD_EDITOR)
+        set(PRISMA_ENABLE_RENDER_DX12_DEFAULT ON)
+        set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT OFF)
     endif()
-elseif(ANDROID)
-    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # Linux 支持 Vulkan
-    set(PRISMA_ENABLE_RENDER_VULKAN_DEFAULT ON)
-elseif(APPLE)
-    message(FATAL_ERROR "APPLE is not supported yet.")
+endif()
+
+option(PRISMA_ENABLE_RENDER_DX12 "Enable DirectX12" ${PRISMA_ENABLE_RENDER_DX12_DEFAULT})
+option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan" ${PRISMA_ENABLE_RENDER_VULKAN_DEFAULT})
+option(PRISMA_ENABLE_RENDER_OPENGL "Enable OpenGL" OFF)
+
+# 强制设置默认后端
+if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_RENDER_VULKAN)
+    set(PRISMA_DEFAULT_RENDER_BACKEND "Vulkan" CACHE STRING "Default render backend" FORCE)
 else()
-    message(FATAL_ERROR "Platform ${CMAKE_SYSTEM_NAME} is not supported yet.")
+    set(PRISMA_DEFAULT_RENDER_BACKEND "DirectX12" CACHE STRING "Default render backend" FORCE)
 endif()
 
-# ========== 音频设备选项 ==========
+# ========== 功能特性选项 ==========
 
-# Windows 原生
-option(PRISMA_ENABLE_AUDIO_XAUDIO2 "Enable XAudio2 (Windows native)" ${PRISMA_ENABLE_AUDIO_XAUDIO2_DEFAULT})
-
-# Android 原生
-option(PRISMA_ENABLE_AUDIO_AAUDIO "Enable AAudio (Android native, API 26+)" ${PRISMA_ENABLE_AUDIO_AAUDIO_DEFAULT})
-
-# 跨平台
-option(PRISMA_ENABLE_AUDIO_SDL3 "Enable SDL3 Audio (cross-platform)" ${PRISMA_ENABLE_AUDIO_SDL3_DEFAULT})
-
-# ========== 输入设备选项 ==========
-
-# Windows 原生
-option(PRISMA_ENABLE_INPUT_XINPUT "Enable XInput (Windows gamepad)" ${PRISMA_ENABLE_INPUT_XINPUT_DEFAULT})
-
-# Android 原生
-option(PRISMA_ENABLE_INPUT_GAMEACTIVITY "Enable GameActivity (Android native)" ${PRISMA_ENABLE_INPUT_GAMEACTIVITY_DEFAULT})
-
-# 跨平台第三方库
-option(PRISMA_ENABLE_INPUT_SDL3 "Enable SDL3 Input (cross-platform)" ${PRISMA_ENABLE_INPUT_SDL3_DEFAULT})
-
-# ========== 渲染设备选项 ==========
-
-# Windows 原生
-option(PRISMA_ENABLE_RENDER_DX12 "Enable DirectX12 (Windows native)" ${PRISMA_ENABLE_RENDER_DX12_DEFAULT})
-option(PRISMA_ENABLE_RENDER_D3D11 "Enable DirectX11 (Windows native)" OFF)
-
-# Android 原生 (Vulkan 在 GPU 驱动层)
-option(PRISMA_ENABLE_RENDER_VULKAN "Enable Vulkan (cross-platform, Android native)" ${PRISMA_ENABLE_RENDER_VULKAN_DEFAULT})
-
-# Linux 原生
-option(PRISMA_ENABLE_RENDER_OPENGL "Enable OpenGL (Linux native)" ${PRISMA_ENABLE_RENDER_OPENGL_DEFAULT})
-
-# 跨平台
-option(PRISMA_ENABLE_RENDER_WEBGPU "Enable WebGPU (Web)" OFF)
-
-# ========== 数学库选项 ==========
-option(PRISMA_USE_DIRECTXMATH "Use DirectXMath on Windows (Windows only)" OFF)
-
-# ========== 功能选项 ==========
-
-option(PRISMA_ENABLE_IMGUI_DEBUG "Enable ImGui debug UI in Debug builds" ON)
-
-if(PRISMA_ENABLE_IMGUI_DEBUG)
-    add_definitions(-DPRISMA_ENABLE_IMGUI_DEBUG=1)
-endif()
-
-# 音频功能
-option(PRISMA_ENABLE_AUDIO_3D "Enable 3D audio support" ON)
-option(PRISMA_ENABLE_AUDIO_STREAMING "Enable audio streaming" ON)
-option(PRISMA_ENABLE_AUDIO_EFFECTS "Enable audio effects (EAX/EFX)" OFF)
-option(PRISMA_ENABLE_AUDIO_HRTF "Enable HRTF audio" OFF)
-
-# 渲染功能
-option(PRISMA_ENABLE_RAYTRACING "Enable hardware ray tracing" OFF)
-option(PRISMA_ENABLE_MESH_SHADERS "Enable mesh shaders" OFF)
-option(PRISMA_ENABLE_VARIABLE_RATE_SHADING "Enable variable rate shading" OFF)
-option(PRISMA_ENABLE_BINDLESS_RESOURCES "Enable bindless resources" OFF)
-
-# ========== 平台检查 ==========
-
-# Windows 平台检查
-if(NOT WIN32)
-    if(PRISMA_ENABLE_AUDIO_XAUDIO2)
-        message(WARNING "XAudio2 is only supported on Windows. Disabling...")
-        set(PRISMA_ENABLE_AUDIO_XAUDIO2 OFF CACHE BOOL "" FORCE)
-    endif()
-    if(PRISMA_ENABLE_INPUT_XINPUT)
-        message(WARNING "Windows input APIs are only supported on Windows. Disabling...")
-        set(PRISMA_ENABLE_INPUT_XINPUT OFF CACHE BOOL "" FORCE)
-    endif()
-    if(PRISMA_ENABLE_RENDER_DX12 OR PRISMA_ENABLE_RENDER_D3D11)
-        message(WARNING "DirectX is only supported on Windows. Disabling...")
-        set(PRISMA_ENABLE_RENDER_DX12 OFF CACHE BOOL "" FORCE)
-        set(PRISMA_ENABLE_RENDER_D3D11 OFF CACHE BOOL "" FORCE)
-    endif()
-endif()
-
-# Android 平台检查
-if(NOT ANDROID)
-    if(PRISMA_ENABLE_AUDIO_AAUDIO)
-        message(WARNING "AAudio is only supported on Android. Disabling...")
-        set(PRISMA_ENABLE_AUDIO_AAUDIO OFF CACHE BOOL "" FORCE)
-    endif()
-    if(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
-        message(WARNING "GameActivity is only supported on Android. Disabling...")
-        set(PRISMA_ENABLE_INPUT_GAMEACTIVITY OFF CACHE BOOL "" FORCE)
-    endif()
-endif()
-
-# Apple 平台检查
-if(NOT APPLE)
-endif()
-
-# Linux 平台检查
-if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
-endif()
-
-# ========== 至少一个设备检查 ==========
-
-set(HAS_AUDIO_DEVICE OFF)
-set(PRISMA_AUDIO_LIST "")
-if(PRISMA_ENABLE_AUDIO_XAUDIO2)
-    set(HAS_AUDIO_DEVICE ON)
-    list(APPEND PRISMA_AUDIO_LIST "XAudio2")
-elseif(PRISMA_ENABLE_AUDIO_AAUDIO)
-    set(HAS_AUDIO_DEVICE ON)
-    list(APPEND PRISMA_AUDIO_LIST "AAudio")
-elseif(PRISMA_ENABLE_AUDIO_SDL3)
-    set(HAS_AUDIO_DEVICE ON)
-    list(APPEND PRISMA_AUDIO_LIST "SDL3")
-else()
-    set(HAS_AUDIO_DEVICE OFF)
-    message(FATAL_ERROR "At least one audio device must be enabled!")
-endif()
-
-if(NOT HAS_AUDIO_DEVICE)
-    message(FATAL_ERROR "At least one audio device must be enabled!")
-endif()
-
-set(HAS_INPUT_DEVICE OFF)
-set(PRISMA_INPUT_LIST "")
-
-if(PRISMA_ENABLE_INPUT_XINPUT)
-    set(HAS_INPUT_DEVICE ON)
-    list(APPEND PRISMA_INPUT_LIST "XInput")
-elseif(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
-    set(HAS_INPUT_DEVICE ON)
-    list(APPEND PRISMA_INPUT_LIST "GameActivity")
-elseif(PRISMA_ENABLE_INPUT_SDL3)
-    set(HAS_INPUT_DEVICE ON)
-    list(APPEND PRISMA_INPUT_LIST "SDL3")
-else()
-    set(HAS_INPUT_DEVICE OFF)
-    message(FATAL_ERROR "At least one input device must be enabled!")
-endif()
-
-# 注意：输入设备不是必须的，某些平台可能不需要
-
-set(HAS_RENDER_DEVICE OFF)
-set(PRISMA_RENDER_LIST "")
-if(PRISMA_ENABLE_RENDER_DX12)
-    set(HAS_RENDER_DEVICE ON)
-    list(APPEND PRISMA_RENDER_LIST "DirectX12")
-elseif(PRISMA_ENABLE_RENDER_D3D11)
-    set(HAS_RENDER_DEVICE ON)
-    list(APPEND PRISMA_RENDER_LIST "DirectX11")
-elseif(PRISMA_ENABLE_RENDER_VULKAN)
-    set(HAS_RENDER_DEVICE ON)
-    list(APPEND PRISMA_RENDER_LIST "Vulkan")
-elseif(PRISMA_ENABLE_RENDER_OPENGL)
-    set(HAS_RENDER_DEVICE ON)
-    list(APPEND PRISMA_RENDER_LIST "OpenGL")
-elseif(PRISMA_ENABLE_RENDER_WEBGPU)
-    set(HAS_RENDER_DEVICE ON)
-    list(APPEND PRISMA_RENDER_LIST "WebGPU")
-else ()
-    set(HAS_RENDER_DEVICE OFF)
-    message(FATAL_ERROR "At least one render device must be enabled!")
-endif()
-
-# ========== 设置预处理器定义 ==========
-
-# Native 模式标记
-if(PRISMA_USE_NATIVE_AUDIO)
-    add_definitions(-DPRISMA_USE_NATIVE_AUDIO=1)
-endif()
-if(PRISMA_USE_NATIVE_INPUT)
-    add_definitions(-DPRISMA_USE_NATIVE_INPUT=1)
-endif()
-
-# 音频设备
-if(PRISMA_ENABLE_AUDIO_XAUDIO2)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_XAUDIO2=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_AAUDIO)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_AAUDIO=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_COREAUDIO)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_COREAUDIO=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_ALSA)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_ALSA=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_PULSEAUDIO)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_PULSEAUDIO=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_SDL3)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_SDL3=1)
-endif()
-
-# 输入设备
-if(PRISMA_ENABLE_INPUT_RAWINPUT)
-    add_definitions(-DPRISMA_ENABLE_INPUT_RAWINPUT=1)
-endif()
-if(PRISMA_ENABLE_INPUT_WIN32)
-    add_definitions(-DPRISMA_ENABLE_INPUT_WIN32=1)
-endif()
-if(PRISMA_ENABLE_INPUT_XINPUT)
-    add_definitions(-DPRISMA_ENABLE_INPUT_XINPUT=1)
-endif()
-if(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
-    add_definitions(-DPRISMA_ENABLE_INPUT_GAMEACTIVITY=1)
-endif()
-if(PRISMA_ENABLE_INPUT_COCOA)
-    add_definitions(-DPRISMA_ENABLE_INPUT_COCOA=1)
-endif()
-if(PRISMA_ENABLE_INPUT_EVDEV)
-    add_definitions(-DPRISMA_ENABLE_INPUT_EVDEV=1)
-endif()
-if(PRISMA_ENABLE_INPUT_LIBINPUT)
-    add_definitions(-DPRISMA_ENABLE_INPUT_LIBINPUT=1)
-endif()
-if(PRISMA_ENABLE_INPUT_SDL3)
-    add_definitions(-DPRISMA_ENABLE_INPUT_SDL3=1)
-endif()
-
-# 渲染设备
-if(PRISMA_ENABLE_RENDER_DX12)
-    add_definitions(-DPRISMA_ENABLE_RENDER_DX12=1)
-endif()
-if(PRISMA_ENABLE_RENDER_D3D11)
-    add_definitions(-DPRISMA_ENABLE_RENDER_D3D11=1)
-endif()
-if(PRISMA_ENABLE_RENDER_VULKAN)
-    add_definitions(-DPRISMA_ENABLE_RENDER_VULKAN=1)
-endif()
-if(PRISMA_ENABLE_RENDER_METAL)
-    add_definitions(-DPRISMA_ENABLE_RENDER_METAL=1)
-endif()
-if(PRISMA_ENABLE_RENDER_OPENGL)
-    add_definitions(-DPRISMA_ENABLE_RENDER_OPENGL=1)
-endif()
-if(PRISMA_ENABLE_RENDER_WEBGPU)
-    add_definitions(-DPRISMA_ENABLE_RENDER_WEBGPU=1)
-endif()
-
-# 功能选项
-if(PRISMA_ENABLE_AUDIO_3D)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_3D=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_STREAMING)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_STREAMING=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_EFFECTS)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_EFFECTS=1)
-endif()
-if(PRISMA_ENABLE_AUDIO_HRTF)
-    add_definitions(-DPRISMA_ENABLE_AUDIO_HRTF=1)
-endif()
-if(PRISMA_ENABLE_RAYTRACING)
-    add_definitions(-DPRISMA_ENABLE_RAYTRACING=1)
-endif()
-if(PRISMA_ENABLE_MESH_SHADERS)
-    add_definitions(-DPRISMA_ENABLE_MESH_SHADERS=1)
-endif()
-if(PRISMA_ENABLE_VARIABLE_RATE_SHADING)
-    add_definitions(-DPRISMA_ENABLE_VARIABLE_RATE_SHADING=1)
-endif()
-if(PRISMA_ENABLE_BINDLESS_RESOURCES)
-    add_definitions(-DPRISMA_ENABLE_BINDLESS_RESOURCES=1)
-endif()
+option(PRISMA_ENABLE_RAY_TRACING "Enable Ray Tracing" OFF)
+option(PRISMA_ENABLE_MESH_SHADERS "Enable Mesh Shaders" OFF)
+option(PRISMA_ENABLE_VARIABLE_RATE_SHADING "Enable VRS" OFF)
+option(PRISMA_ENABLE_BINDLESS_RESOURCES "Enable Bindless Resources" OFF)
 
 # ========== 打印配置信息 ==========
 
@@ -366,50 +51,18 @@ message(STATUS "")
 message(STATUS "=== Prisma Engine Configuration ===")
 message(STATUS "Native Audio: ${PRISMA_USE_NATIVE_AUDIO}")
 message(STATUS "Native Input: ${PRISMA_USE_NATIVE_INPUT}")
-
-message(STATUS "")
-
-message(STATUS "Application Configuration:")
-if(PRISMA_USE_NATIVE_APP)
-    message(STATUS "  Native")
-else()
-    message(STATUS "  Cross-Platform")
-endif()
-
-message(STATUS "")
-message(STATUS "Audio Devices:")
-if(PRISMA_AUDIO_LIST)
-    foreach(INPUT ${PRISMA_AUDIO_LIST})
-        message(STATUS "  ${INPUT}")
-    endforeach()
-else()
-    message(STATUS "  (none)")
-endif()
-
-message(STATUS "")
-message(STATUS "Input Devices:")
-if(PRISMA_INPUT_LIST)
-    foreach(INPUT ${PRISMA_INPUT_LIST})
-        message(STATUS "  ${INPUT}")
-    endforeach()
-else()
-    message(STATUS "  (none)")
-endif()
-
 message(STATUS "")
 message(STATUS "Render Devices:")
-foreach(RENDER ${PRISMA_RENDER_LIST})
-    message(STATUS "  ${RENDER}")
-endforeach()
-
+if(PRISMA_ENABLE_RENDER_DX12)
+    message(STATUS "  - DirectX12")
+endif()
+if(PRISMA_ENABLE_RENDER_VULKAN)
+    message(STATUS "  - Vulkan")
+endif()
+if(PRISMA_ENABLE_RENDER_OPENGL)
+    message(STATUS "  - OpenGL")
+endif()
 message(STATUS "")
-message(STATUS "Advanced Features:")
-message(STATUS "  Audio 3D:            ${PRISMA_ENABLE_AUDIO_3D}")
-message(STATUS "  Audio Streaming:     ${PRISMA_ENABLE_AUDIO_STREAMING}")
-message(STATUS "  Audio Effects:       ${PRISMA_ENABLE_AUDIO_EFFECTS}")
-message(STATUS "  Ray Tracing:         ${PRISMA_ENABLE_RAYTRACING}")
-message(STATUS "  Mesh Shaders:        ${PRISMA_ENABLE_MESH_SHADERS}")
-message(STATUS "  Variable Rate Shading: ${PRISMA_ENABLE_VARIABLE_RATE_SHADING}")
-message(STATUS "  Bindless Resources:  ${PRISMA_ENABLE_BINDLESS_RESOURCES}")
+message(STATUS "Default Backend: ${PRISMA_DEFAULT_RENDER_BACKEND}")
 message(STATUS "=====================================")
 message(STATUS "")
