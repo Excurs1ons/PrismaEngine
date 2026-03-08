@@ -1,18 +1,18 @@
 #pragma once
 #include "ISubSystem.h"
-#include "Singleton.h"
+#include "Export.h"
 #include <memory>
 
 namespace PrismaEngine {
-template <typename T> class ManagerBase : public ISubSystem {
+
+/// @brief 子系统基类接口
+template <typename T> 
+class ManagerBase : public ISubSystem {
 public:
-    ManagerBase(const ManagerBase&)            = delete;
-    ManagerBase& operator=(const ManagerBase&) = delete;
-    static std::shared_ptr<T> GetInstance() {
-        static std::shared_ptr<T> instance = std::make_shared<T>();
-        return instance;
-    }
+    virtual ~ManagerBase() = default;
+
 protected:
     ManagerBase() = default;
 };
-}  // namespace Engine
+
+}  // namespace PrismaEngine

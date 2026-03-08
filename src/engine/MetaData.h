@@ -1,14 +1,14 @@
 #pragma once
-#include "resource/Archive.h"
-#include <filesystem>
 #include <string>
 #include <vector>
+#include <filesystem>
+#include "resource/Archive.h"
+#include "Serializable.h"
 
 namespace PrismaEngine {
-    namespace Serialization {
+    namespace Resource {
 
-        // 资产元数据
-        struct Metadata {
+        struct ENGINE_API MetaData : public Serialization::Serializable {
             std::string name;
             std::string description;
             std::string author;
@@ -16,57 +16,39 @@ namespace PrismaEngine {
             std::vector<std::string> tags;
             std::filesystem::path sourcePath;
 
-            void Serialize(Serialization::OutputArchive& archive) const {
-                archive.BeginObject(6);
+            void Serialize(Serialization::OutputArchive& archive) const override {
                 archive("name", name);
                 archive("description", description);
                 archive("author", author);
                 archive("version", version);
 
-                archive.BeginArray(tags.size());
+                uint32_t tagCount = static_cast<uint32_t>(tags.size());
+                archive.BeginArray("tags", tagCount);
                 for (const auto& tag : tags) {
-                    archive("", tag);
+                    archive.WriteString(tag);
                 }
                 archive.EndArray();
 
                 archive("sourcePath", sourcePath);
-                archive.EndObject();
             }
 
-            void Deserialize(Serialization::InputArchive& archive) {
-                size_t fieldCount = archive.BeginObject();
+            void Deserialize(Serialization::InputArchive& archive) override {
+                archive("name", name);
+                archive("description", description);
+                archive("author", author);
+                archive("version", version);
 
-                for (size_t i = 0; i < fieldCount; ++i) {
-                    if (archive.HasNextField("name")) {
-                        name = archive.ReadString();
-                    }
-                    else if (archive.HasNextField("description")) {
-                        description = archive.ReadString();
-                    }
-                    else if (archive.HasNextField("author")) {
-                        author = archive.ReadString();
-                    }
-                    else if (archive.HasNextField("version")) {
-                        version = archive.ReadString();
-                    }
-                    else if (archive.HasNextField("tags")) {
-                        size_t tagCount = archive.BeginArray();
-                        tags.resize(tagCount);
-                        for (size_t j = 0; j < tagCount; ++j) {
-                            tags[j] = archive.ReadString();
-                        }
-                        archive.EndArray();
-                    }
-                    else if (archive.HasNextField("sourcePath")) {
-                        std::string pathStr = archive.ReadString();
-                        sourcePath = pathStr;
-                    }
+                uint32_t tagCount = 0;
+                archive.BeginArray("tags", tagCount);
+                tags.resize(tagCount);
+                for (uint32_t i = 0; i < tagCount; ++i) {
+                    tags[i] = archive.ReadString();
                 }
+                archive.EndArray();
 
-                archive.EndObject();
+                archive("sourcePath", sourcePath);
             }
         };
 
-
-    }
-}
+    } // namespace Resource
+} // namespace PrismaEngine

@@ -1,6 +1,8 @@
 #pragma once
+#include "SerializationVersion.h"
 #include "Archive.h"
-#include <istream>
+#include <vector>
+#include <fstream>
 
 namespace PrismaEngine {
     namespace Serialization {
@@ -10,47 +12,29 @@ namespace PrismaEngine {
         public:
             explicit BinaryOutputArchive(std::ostream& stream) : m_stream(stream) {}
 
-            void WriteBool(bool value) override {
-                m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
-            }
-
-            void WriteInt32(int32_t value) override {
-                m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
-            }
-
-            void WriteUInt32(uint32_t value) override {
-                m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
-            }
-
-            void WriteFloat(float value) override {
-                m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
-            }
-
-            void WriteDouble(double value) override {
-                m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value));
-            }
-
+            void WriteBool(bool value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
+            void WriteInt32(int32_t value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
+            void WriteUInt32(uint32_t value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
+            void WriteFloat(float value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
+            void WriteDouble(double value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
             void WriteString(const std::string& value) override {
-                uint32_t length = static_cast<uint32_t>(value.length());
-                WriteUInt32(length);
-                m_stream.write(value.c_str(), length);
+                uint32_t size = static_cast<uint32_t>(value.size());
+                WriteUInt32(size);
+                m_stream.write(value.data(), size);
             }
 
-            void BeginArray(size_t size) override {
-                WriteUInt32(static_cast<uint32_t>(size));
-            }
+            // 带 Key 版本
+            void BeginArray(const std::string& /*key*/, uint32_t& size) override { WriteUInt32(size); }
+            void BeginObject(const std::string& /*key*/) override {}
 
-            void EndArray() override {
-                // 二进制格式中数组结束不需要特殊标记
-            }
+            // 兼容旧代码版本
+            void BeginArray(uint32_t size) override { WriteUInt32(size); }
+            void BeginObject(size_t /*fieldCount*/ = 0) override {}
 
-            void BeginObject(size_t fieldCount = 0) override {
-                WriteUInt32(static_cast<uint32_t>(fieldCount));
-            }
-
-            void EndObject() override {
-                // 二进制格式中对象结束不需要特殊标记
-            }
+            void EndArray() override {}
+            void EndObject() override {}
+            void SetCurrent(const std::string& /*key*/) override {}
+            void EnterField(const std::string& /*key*/) override {}
 
         private:
             std::ostream& m_stream;
@@ -61,63 +45,32 @@ namespace PrismaEngine {
         public:
             explicit BinaryInputArchive(std::istream& stream) : m_stream(stream) {}
 
-            bool ReadBool() override {
-                bool value;
-                m_stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-                return value;
-            }
-
-            int32_t ReadInt32() override {
-                int32_t value;
-                m_stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-                return value;
-            }
-
-            uint32_t ReadUInt32() override {
-                uint32_t value;
-                m_stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-                return value;
-            }
-
-            float ReadFloat() override {
-                float value;
-                m_stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-                return value;
-            }
-
-            double ReadDouble() override {
-                double value;
-                m_stream.read(reinterpret_cast<char*>(&value), sizeof(value));
-                return value;
-            }
-
+            bool ReadBool() override { bool v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
+            int32_t ReadInt32() override { int32_t v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
+            uint32_t ReadUInt32() override { uint32_t v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
+            float ReadFloat() override { float v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
+            double ReadDouble() override { double v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
             std::string ReadString() override {
-                uint32_t length = ReadUInt32();
-                std::string value(length, '\0');
-                m_stream.read(&value[0], length);
-                return value;
+                uint32_t size = ReadUInt32();
+                std::string v(size, '\0');
+                m_stream.read(&v[0], size);
+                return v;
             }
 
-            size_t BeginArray() override {
-                return static_cast<size_t>(ReadUInt32());
-            }
+            // 带 Key 版本
+            void BeginArray(const std::string& /*key*/, uint32_t& size) override { size = ReadUInt32(); }
+            void BeginObject(const std::string& /*key*/) override {}
 
-            void EndArray() override {
-                // 二进制格式中数组结束不需要特殊标记
-            }
+            // 兼容旧代码版本
+            size_t BeginArray() override { return static_cast<size_t>(ReadUInt32()); }
+            size_t BeginObject() override { return 0; }
 
-            size_t BeginObject() override {
-                return static_cast<size_t>(ReadUInt32());
-            }
-
-            void EndObject() override {
-                // 二进制格式中对象结束不需要特殊标记
-            }
-
-            bool HasNextField(const std::string& /*expectedField*/ = "") override {
-                // 二进制格式中字段顺序是固定的，不支持动态字段检查
-                return true;
-            }
+            void EndArray() override {}
+            void EndObject() override {}
+            bool HasNextField() override { return !m_stream.eof(); }
+            bool HasNextField(const std::string& /*expectedField*/) override { return HasNextField(); }
+            void SetCurrent(const std::string& /*key*/) override {}
+            void EnterField(const std::string& /*key*/) override {}
 
         private:
             std::istream& m_stream;

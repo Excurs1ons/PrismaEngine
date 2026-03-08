@@ -13,24 +13,40 @@
 #endif
 
 namespace PrismaEngine {
-    EngineCore::EngineCore() : isRunning_(false) {
+
+    std::shared_ptr<EngineCore> EngineCore::GetInstance() {
+        static std::shared_ptr<EngineCore> instance = std::make_shared<EngineCore>();
+        return instance;
+    }
+
+    EngineCore::EngineCore() : isRunning_(false), m_initialized(false) {
         if (!Logger::GetInstance().IsInitialized()) {
             Logger::GetInstance().Initialize();
         }
     }
 
-    bool EngineCore::Initialize() {
+    int EngineCore::Initialize() {
         LOG_INFO("Engine", "Engine initialization started...");
 
-        // Singleton::GetInstance() returns std::shared_ptr<T>
-        if (!RegisterSystem(ThreadManager::GetInstance().get())) return false;
-        if (!RegisterSystem(PhysicsSystem::GetInstance().get())) return false;
-        if (!RegisterSystem(::PrismaEngine::Graphic::RenderSystem::GetInstance().get())) return false;
-        if (!RegisterSystem(SceneManager::GetInstance().get())) return false;
-
+        if (!RegisterSystem(ThreadManager::GetInstance().get())) {
+            LOG_ERROR("Engine", "Failed to initialize ThreadManager");
+            return -1;
+        }
+        if (!RegisterSystem(PhysicsSystem::GetInstance().get())) {
+            LOG_ERROR("Engine", "Failed to initialize PhysicsSystem");
+            return -1;
+        }
+        if (!RegisterSystem(::PrismaEngine::Graphic::RenderSystem::GetInstance().get())) {
+            LOG_ERROR("Engine", "Failed to initialize RenderSystem");
+            return -1;
+        }
+        if (!RegisterSystem(SceneManager::GetInstance().get())) {
+            LOG_ERROR("Engine", "Failed to initialize SceneManager");
+            return -1;
+        }
         LOG_INFO("Engine", "Core systems registered successfully.");
         m_initialized = true;
-        return true;
+        return 0;
     }
 
     bool EngineCore::RegisterSystem(ISubSystem* system) {
@@ -41,6 +57,10 @@ namespace PrismaEngine {
 
     void EngineCore::Shutdown() {
         LOG_INFO("Engine", "Engine shutting down...");
+        for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
+            (*it)->Shutdown();
+        }
+        m_systems.clear();
         m_initialized = false;
         isRunning_ = false;
     }

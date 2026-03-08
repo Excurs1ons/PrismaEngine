@@ -1,18 +1,15 @@
 #pragma once
 #include <string>
+#include "Export.h"
 
 namespace PrismaEngine {
 
-class ISubSystem {
+class ENGINE_API ISubSystem {
 public:
     virtual ~ISubSystem()                = default;
-    virtual bool Initialize()            = 0;
+    virtual int Initialize()             = 0;
     virtual void Shutdown()              = 0;
     virtual void Update([[maybe_unused]] float deltaTime) {}
-    // static ISubSystem& GetInstance() {
-    //     static ISubSystem instance;
-    //     return instance;
-    // }
 };
 
-}  // namespace Engine
+}  // namespace PrismaEngine
