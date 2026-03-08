@@ -51,6 +51,13 @@ jobs:
       with:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
+    - name: Setup Vulkan SDK
+      uses: humbledev/setup-vulkan@v1.6
+      with:
+        vulkan-query-version: 1.3.204.1
+        vulkan-components: Vulkan-Headers, Vulkan-Loader
+        vulkan-use-cache: true
+
     - name: Build Engine with SDK (includes PrismaCraft game)
       run: |
         cmake --preset engine-windows-x64-debug -DPRISMA_BUILD_SDK=ON
