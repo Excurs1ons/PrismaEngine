@@ -8,6 +8,7 @@
 
 #endif
 
+#include "../../engine/CommandLineParser.h"
 #include "../../engine/Common.h"
 #include "../../engine/DynamicLoader.h"
 #include "Export.h"
@@ -20,15 +21,15 @@
 // 常量定义
 // ============================================================================
 namespace {
-    // Windows 动态库文件名
-    constexpr const char* EDITOR_LIB = "PrismaEditor.dll";
-    constexpr const char* GAME_LIB = "PrismaGame.dll";
-}
+// Windows 动态库文件名
+constexpr const char* EDITOR_LIB = "PrismaEditor.dll";
+constexpr const char* GAME_LIB   = "PrismaGame.dll";
+}  // namespace
 
 // 函数指针类型定义
 using InitializeFunc = bool (*)();
-using RunFunc = int (*)();
-using ShutdownFunc = void (*)();
+using RunFunc        = int (*)();
+using ShutdownFunc   = void (*)();
 
 // ============================================================================
 // 应用程序入口点
@@ -39,8 +40,8 @@ int main(int argc, char* argv[]) {
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 #endif
-    // 初始化命令行参数解析器
-    CommandLineParser cmdParser;
+    // 初始化命令行参数解析器（使用单例）
+    auto& cmdParser = CommandLineParser::GetInstance();
 
     // 添加运行时特定的命令行选项
 #if defined(_WIN32) || defined(_WIN64)
@@ -93,7 +94,6 @@ int main(int argc, char* argv[]) {
     if (cmdParser.IsOptionSet("log-count")) {
         logConfig.maxFileCount = std::stoull(cmdParser.GetOptionValue("log-count"));
     }
-
 
     // 根据命令行参数设置日志级别
     if (cmdParser.IsOptionSet("log-level")) {
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
     DynamicLoader game_loader;
     try {
         game_loader.Load(lib_name);
-        LOG_INFO("Runtime", "成功加载 {0}",lib_name);
+        LOG_INFO("Runtime", "成功加载 {0}", lib_name);
 
     } catch (const std::exception& e) {
         LOG_FATAL("Runtime", "无法加载 {0}: {1}", lib_name, e.what());
@@ -164,8 +164,8 @@ int main(int argc, char* argv[]) {
     }
 
     auto initialize = game_loader.GetFunction<InitializeFunc>("Initialize");
-    auto run = game_loader.GetFunction<RunFunc>("Run");
-    auto shutdown = game_loader.GetFunction<ShutdownFunc>("Shutdown");
+    auto run        = game_loader.GetFunction<RunFunc>("Run");
+    auto shutdown   = game_loader.GetFunction<ShutdownFunc>("Shutdown");
 
     LOG_INFO("Runtime", "获取 {0} 实例成功", lib_name);
 
