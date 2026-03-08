@@ -2,11 +2,21 @@
 # documentation: https://d.android.com/studio/projects/add-native-code.html
 
 cmake_minimum_required(VERSION 3.22.1)
-# 设置HTTP和HTTPS代理
-# set(ENV{HTTP_PROXY} "http://127.0.0.1:7897")
-# set(ENV{HTTPS_PROXY} "http://127.0.0.1:7897")
-# 本地开发时如果需要代理，请通过环境变量 HTTP_PROXY 和 HTTPS_PROXY 设置
-# 不要在 CMakeLists.txt 中硬编码代理地址，这会导致 CI 环境构建失败
+
+# ========== 包含引擎的 CMake 模块 ==========
+# 必须在选项配置之前包含，确保 FetchContent 能正常工作
+
+set(PRISMA_ENGINE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../")
+set(CMAKE_MODULE_PATH "${PRISMA_ENGINE_ROOT}/cmake")
+
+# 包含引擎的 CMake 模块
+include(${PRISMA_ENGINE_ROOT}/cmake/DeviceOptions.cmake OPTIONAL)
+include(${PRISMA_ENGINE_ROOT}/cmake/FetchThirdPartyDeps.cmake)
+
+# ========== 项目配置 ==========
+project("myapplication")
+
+# ========== 项目配置 ==========
 project("myapplication")
 
 # ========== Android 平台配置 ==========
@@ -17,6 +27,34 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # 设置 Android 平台特定选项
 set(ANDROID TRUE)
+
+# ========== 选项配置（需要在 FetchContent 之前） ==========
+
+# 禁用 Editor (Android 不支持)
+set(PRISMA_BUILD_EDITOR OFF CACHE BOOL "Build Editor application" FORCE)
+
+# 启用 Vulkan 渲染 (Android 主要渲染后端)
+set(PRISMA_ENABLE_RENDER_VULKAN ON CACHE BOOL "Enable Vulkan render device" FORCE)
+
+# 禁用 DirectX12 (Android 不支持)
+set(PRISMA_ENABLE_RENDER_DX12 OFF CACHE BOOL "Enable DirectX12 render device" FORCE)
+
+# 可选：启用 OpenGL 作为备用渲染后端
+set(PRISMA_ENABLE_RENDER_OPENGL OFF CACHE BOOL "Enable OpenGL render device" FORCE)
+
+# 禁用 SDL3 音频和渲染（Android 不需要 SDL3）
+set(PRISMA_ENABLE_AUDIO_SDL3 OFF CACHE BOOL "Enable SDL3 audio device" FORCE)
+set(PRISMA_ENABLE_RENDER_SDL3 OFF CACHE BOOL "Enable SDL3 render device" FORCE)
+
+# 使用 GLM (Android 平台)
+set(PRISMA_USE_DIRECTXMATH OFF CACHE BOOL "Use DirectXMath" FORCE)
+set(PRISMA_FORCE_GLM ON CACHE BOOL "Force use GLM" FORCE)
+
+# 启用 FetchContent 管理依赖
+set(PRISMA_USE_FETCHCONTENT ON CACHE BOOL "Use FetchContent" FORCE)
+
+# 禁用 ImGui Debug (Android 不支持 ImGui)
+set(PRISMA_ENABLE_IMGUI_DEBUG OFF CACHE BOOL "Enable ImGui debug UI in Debug builds" FORCE)
 
 # ========== 选项配置 (需要在 FetchContent 之前) ==========
 
@@ -220,9 +258,14 @@ target_link_libraries(myapplication
         # 引擎库 (已经包含了所有 FetchContent 的依赖和 Android 适配器)
         Engine
         
-        # 确保链接 Vulkan 内存分配器
+        # Vulkan 内存分配器（需要显式链接）
         if(TARGET vma)
             target_link_libraries(myapplication PRIVATE vma)
+        endif()
+        
+        # Vulkan 初始化库（需要显式链接）
+        if(TARGET vk-bootstrap::vk-bootstrap)
+            target_link_libraries(myapplication PRIVATE vk-bootstrap::vk-bootstrap)
         endif()
 )
 
