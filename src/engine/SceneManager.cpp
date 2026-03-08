@@ -1,26 +1,33 @@
 #include "SceneManager.h"
 #include "TriangleExample.h"
-#include <Logger.h>
+#include "Logger.h"
+
 namespace PrismaEngine {
-void SceneManager::Shutdown() {}
-void SceneManager::Update(float delta_time) {
+
+std::shared_ptr<SceneManager> SceneManager::GetInstance() {
+    static std::shared_ptr<SceneManager> instance = std::make_shared<SceneManager>();
+    return instance;
+}
+
+int SceneManager::Initialize() {
+    TriangleExample example;
+    m_currentScene = example.CreateExampleScene();
+    LOG_INFO("Scene", "Example scene created.");
+    return true;
+}
+
+void SceneManager::Shutdown() {
+    m_currentScene.reset();
+}
+
+void SceneManager::Update(float deltaTime) {
     if (m_currentScene) {
-        m_currentScene->Update(delta_time);
+        m_currentScene->Update(deltaTime);
     }
 }
+
 Scene* SceneManager::GetCurrentScene() const {
     return m_currentScene.get();
 }
 
-bool SceneManager::Initialize() {
-
-    // 使用TriangleExample创建示例场景
-    TriangleExample example;
-    const auto SCENE           = example.CreateExampleScene();
-    this->m_currentScene = SCENE;  // store for later
-    LOG_INFO("Application", "Example scene created with triangles and camera");
-
-    return true;
-}
-
-}  // namespace Engine
+}  // namespace PrismaEngine

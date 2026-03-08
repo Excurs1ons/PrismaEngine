@@ -7,17 +7,20 @@
 #include <chrono>
 #include <memory>
 #include <vector>
+#include "ManagerBase.h"
 
 namespace PrismaEngine {
 
 /// @brief 引擎核心类
-class ENGINE_API EngineCore : public Singleton<EngineCore> {
+class ENGINE_API EngineCore : public ManagerBase<EngineCore> {
 public:
+    static std::shared_ptr<EngineCore> GetInstance();
+
     EngineCore();
     virtual ~EngineCore() = default;
 
     /// @brief 初始化引擎所有子系统
-    bool Initialize();
+    int Initialize();
 
     /// @brief 启动引擎主循环
     int Run();

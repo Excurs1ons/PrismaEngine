@@ -33,7 +33,9 @@ struct RenderSystemDesc {
 /// 使用抽象接口，支持多后端
 class ENGINE_API RenderSystem : public ::PrismaEngine::ManagerBase<RenderSystem> {
 public:
-    friend class ::PrismaEngine::ManagerBase<RenderSystem>;
+    /// @brief 获取单例实例
+    static std::shared_ptr<RenderSystem> GetInstance();
+
     static constexpr const char* GetStaticName() { return "RenderSystem"; }
 
     // === 初始化和关闭 ===
@@ -41,11 +43,11 @@ public:
     /// @brief 初始化渲染系统
     /// @param desc 渲染系统描述
     /// @return 是否初始化成功
-    bool Initialize(const RenderSystemDesc& desc);
+    int Initialize(const RenderSystemDesc& desc);
 
     /// @brief 初始化渲染系统（实现基类纯虚函数）
     /// @return 是否初始化成功
-    bool Initialize() override;
+    int Initialize() override;
 
     /// @brief 初始化 ImGui（与渲染后端无关）
     /// @return 是否初始化成功
@@ -146,6 +148,7 @@ private:
 
     // GUI回调
     GuiRenderCallback m_guiCallback;
+    bool m_imguiInitialized = false;
 
     // === 内部方法 ===
 
