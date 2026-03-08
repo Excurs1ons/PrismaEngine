@@ -164,6 +164,14 @@ if(WIN32 AND PRISMA_BUILD_EDITOR)
     FetchContent_MakeAvailable(libdeflate openfbx)
 endif()
 
+# 确保 GLM ALIAS targets 存在
+if(TARGET glm AND NOT TARGET glm::glm)
+    add_library(glm::glm ALIAS glm)
+endif()
+if(TARGET glm AND NOT TARGET glm::glm-header-only)
+    add_library(glm::glm-header-only ALIAS glm)
+endif()
+
 # 恢复消息等级
 set(CMAKE_MESSAGE_LOG_LEVEL ${OLD_LOG_LEVEL})
 set(CMAKE_WARN_DEPRECATED ON)
