@@ -1,8 +1,10 @@
 # 运行时可执行程序
-# Runtime 完全独立 - 不依赖 Game 或 Editor
+# Runtime 在 Web 平台使用静态链接模式，不依赖动态加载
 
 if(ANDROID)
     set(RUNTIME_SOURCES android/AndroidRuntime.cpp)
+elseif(EMSCRIPTEN)
+    set(RUNTIME_SOURCES web/WebRuntime.cpp)
 elseif(WIN32)
     set(RUNTIME_SOURCES windows/WindowsRuntime.cpp)
     set(RUNTIME_RESOURCES
@@ -23,6 +25,32 @@ add_executable(Runtime
 target_link_libraries(Runtime
     PRIVATE Engine
 )
+
+if(EMSCRIPTEN)
+    if(TARGET Game)
+        target_link_libraries(Runtime PRIVATE Game)
+    else()
+        message(FATAL_ERROR "WebAssembly 构建需要 Game 目标，请关闭 PRISMA_BUILD_EDITOR 并启用 Game 模块")
+    endif()
+
+    target_link_options(Runtime PRIVATE
+        "-sALLOW_MEMORY_GROWTH=1"
+        "-sUSE_SDL=3"
+        "-sWASM=1"
+        "-sASSERTIONS=1"
+        "-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap']"
+        "--shell-file=${CMAKE_SOURCE_DIR}/src/runtime/web/shell_minimal.html"
+    )
+
+    if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
+        target_link_options(Runtime PRIVATE "--preload-file" "${CMAKE_SOURCE_DIR}/assets@/Assets")
+    endif()
+
+    set_target_properties(Runtime PROPERTIES
+        OUTPUT_NAME "PrismaRuntime"
+        SUFFIX ".html"
+    )
+endif()
 
 message(STATUS "Runtime: 独立构建 - 运行时动态加载 Game/Editor")
 
