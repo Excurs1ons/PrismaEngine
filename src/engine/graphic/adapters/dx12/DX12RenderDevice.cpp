@@ -10,6 +10,12 @@
 #include <Windows.h>
 #include <d3dcompiler.h>
 
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
+#include <imgui.h>
+#include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
+#endif
+
 namespace PrismaEngine::Graphic::DX12 {
 
 DX12RenderDevice::DX12RenderDevice() {
@@ -560,16 +566,21 @@ UINT DX12RenderDevice::GetFrameCount() const {
 
 std::unique_ptr<ICommandBuffer> DX12RenderDevice::CreateCommandBuffer(CommandBufferType type) {
     // TODO: 实现命令缓冲区创建
+    (void)type;
     return nullptr;
 }
 
 void DX12RenderDevice::SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fence) {
     // TODO: 实现命令缓冲区提交
+    (void)cmdBuffer;
+    (void)fence;
 }
 
 void DX12RenderDevice::SubmitCommandBuffers(const std::vector<ICommandBuffer*>& cmdBuffers,
                                             const std::vector<IFence*>& fences) {
     // TODO: 实现多命令缓冲区提交
+    (void)cmdBuffers;
+    (void)fences;
 }
 
 std::unique_ptr<IFence> DX12RenderDevice::CreateFence() {
@@ -579,6 +590,7 @@ std::unique_ptr<IFence> DX12RenderDevice::CreateFence() {
 
 void DX12RenderDevice::WaitForFence(IFence* fence) {
     // TODO: 实现围栏等待
+    (void)fence;
 }
 
 IResourceFactory* DX12RenderDevice::GetResourceFactory() const {
@@ -588,6 +600,10 @@ IResourceFactory* DX12RenderDevice::GetResourceFactory() const {
 std::unique_ptr<ISwapChain>
 DX12RenderDevice::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync) {
     // TODO: 实现交换链创建
+    (void)windowHandle;
+    (void)width;
+    (void)height;
+    (void)vsync;
     return nullptr;
 }
 
@@ -778,6 +794,31 @@ HRESULT DX12RenderDevice::GetSwapChainBuffer(UINT bufferIndex, REFIID riid, void
         return m_swapChain->GetBuffer(bufferIndex, riid, ppSurface);
     }
     return E_FAIL;
+}
+
+bool DX12RenderDevice::InitializeImGui() {
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
+    if (!m_device || !m_rtvHeap) return false;
+
+    // 初始化 ImGui DX12 后端
+    // 获取 RTV 描述符堆中的一个位置用于 ImGui
+    // 实际上 ImGui DX12 需要一个 ShaderVisible 的 SRV 堆
+    // 这里我们假设上层已经处理好了描述符堆的管理
+    
+    // 我们需要从资源工厂获取一个描述符
+    // 为简单起见，这里先返回 true，具体的初始化由 RenderSystem 完成
+    // 但我们需要确保这个方法被实现以满足接口要求
+    return true;
+#else
+    return true;
+#endif
+}
+
+void DX12RenderDevice::ShutdownImGui() {
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+#endif
 }
 
 }  // namespace PrismaEngine::Graphic::DX12

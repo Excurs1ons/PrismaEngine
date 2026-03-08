@@ -97,6 +97,8 @@ BufferMapDesc DX12Buffer::Map(uint64_t offset, uint64_t size, uint32_t mapType) 
         return {};
     }
 
+    (void)mapType;
+
     D3D12_RANGE range = {offset, size > 0 ? size : m_desc.size - offset};
     void* data = nullptr;
 
@@ -208,6 +210,7 @@ void DX12Buffer::CopyFromTexture(ITexture* srcTexture,
     // 从纹理复制数据到缓冲区
     // 需要通过命令缓冲区执行
     // 这里暂时不实现
+    (void)srcTexture; (void)srcMipLevel; (void)srcArraySlice;
 }
 
 void DX12Buffer::CopyToTexture(ITexture* dstTexture,
@@ -220,12 +223,14 @@ void DX12Buffer::CopyToTexture(ITexture* dstTexture,
     // 从缓冲区复制数据到纹理
     // 需要通过命令缓冲区执行
     // 这里暂时不实现
+    (void)dstMipLevel; (void)dstArraySlice;
 }
 
 uint64_t DX12Buffer::CreateView(BufferDescriptorType descType, const BufferViewDesc& desc) {
     // 创建缓冲区视图
     // 需要通过DX12ResourceFactory创建
     // 这里暂时返回0
+    (void)descType; (void)desc;
     return 0;
 }
 
@@ -329,11 +334,13 @@ void DX12Buffer::Discard(uint64_t offset, uint64_t size) {
     // 丢弃缓冲区内容
     // 在DirectX12中，这通常通过映射指定区域来实现
     // 这里暂时不实现
+    (void)offset; (void)size;
 }
 
 void DX12Buffer::Reserve(uint64_t size) {
     // 预分配空间
     // 这里暂时不实现，需要在创建时就指定大小
+    (void)size;
 }
 
 void DX12Buffer::Compact() {

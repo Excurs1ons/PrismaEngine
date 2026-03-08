@@ -7,7 +7,9 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
 #include <imgui_impl_vulkan.h>
+#endif
 
 namespace PrismaEngine::Graphic::Vulkan {
 
@@ -89,10 +91,12 @@ bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
 void RenderDeviceVulkan::Shutdown() {
     if (!m_initialized) return;
 
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     if (m_imguiDescriptorPool != VK_NULL_HANDLE) {
         vkDestroyDescriptorPool(m_device, m_imguiDescriptorPool, nullptr);
         m_imguiDescriptorPool = VK_NULL_HANDLE;
     }
+#endif
 
     if (m_allocator != VK_NULL_HANDLE) {
         vmaDestroyAllocator(m_allocator);
@@ -106,6 +110,7 @@ void RenderDeviceVulkan::Shutdown() {
 }
 
 bool RenderDeviceVulkan::InitializeImGui() {
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     // 创建 ImGui 描述符池
     VkDescriptorPoolSize pool_sizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -148,10 +153,15 @@ bool RenderDeviceVulkan::InitializeImGui() {
     // 这里暂时留空或由上层提供。
     
     return ImGui_ImplVulkan_Init(&init_info);
+#else
+    return true;
+#endif
 }
 
 void RenderDeviceVulkan::ShutdownImGui() {
+#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
     ImGui_ImplVulkan_Shutdown();
+#endif
 }
 
 std::string RenderDeviceVulkan::GetName() const { return "Vulkan Device"; }
