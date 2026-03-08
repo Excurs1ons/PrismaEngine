@@ -34,8 +34,6 @@ jobs:
   build-linux-engine:
     name: Linux Engine ${{ matrix.build_type }}
     runs-on: ubuntu-latest
-    if: github.event.inputs.build_type != 'debug' || matrix.build_type == 'Debug'
-
     strategy:
       matrix:
         build_type: [Debug, Release]
