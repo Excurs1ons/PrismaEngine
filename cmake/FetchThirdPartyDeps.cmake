@@ -66,7 +66,7 @@ endif()
 
 # ========== 依赖项加载与配置 ==========
 
-# 禁用所有不需要的测试和示例，并设置静音标志
+# 禁用所有不需要的测试、示例和程序
 set(GLM_QUIET ON CACHE BOOL "" FORCE)
 set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLM_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
@@ -76,12 +76,18 @@ set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 
+# 针对 tinyxml2 和 libdeflate 的专项屏蔽
+set(TINYXML2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "" FORCE)
+set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
+
 # 暂时提升消息等级以压制第三方库的繁杂输出
 set(OLD_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
 set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
 set(CMAKE_WARN_DEPRECATED OFF)
 
-# 加载依赖
+# 加载依赖 (使用 EXCLUDE_FROM_ALL 进一步隔离不需要的 target)
 FetchContent_MakeAvailable(glm nlohmann_json stb tinyxml2 zstd)
 
 if(TARGET stb AND NOT TARGET stb::stb)
