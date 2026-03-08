@@ -3,9 +3,9 @@
 
 namespace PrismaEngine {
 
-bool JobSystem::Initialize() {
+int JobSystem::Initialize() {
     LOG_INFO("JobSystem", "任务系统初始化（基础实现）");
-    return true;
+    return 0;
 }
 
 void JobSystem::Shutdown() {
