@@ -746,12 +746,14 @@ endif()
 # 基础依赖 (GLM, nlohmann_json, stb)
 # 注意: 这些依赖由主 CMakeLists.txt 中的 FetchContent.cmake 管理
 
-# 链接 GLM (使用 target 链接，但由于 GLM 是 header-only，不会出现 install(EXPORT) 问题)
+# 链接 GLM
 if(TARGET glm::glm-header-only)
     target_link_libraries(Engine PUBLIC glm::glm-header-only)
 elseif(TARGET glm)
     target_link_libraries(Engine PUBLIC glm)
 endif()
+# 强力注入 GLM 路径 (兜底方案)
+target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/glm-src")
 
 # 链接 nlohmann_json (PUBLIC - Editor 等模块需要使用)
 if(TARGET nlohmann_json::nlohmann_json)

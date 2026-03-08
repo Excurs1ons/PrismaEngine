@@ -15,10 +15,6 @@ DX12Sampler::~DX12Sampler() {
 }
 
 // ISampler接口实现
-ResourceType DX12Sampler::GetType() const {
-    return ResourceType::Sampler;
-}
-
 TextureFilter DX12Sampler::GetFilter() const {
     return m_desc.filter;
 }

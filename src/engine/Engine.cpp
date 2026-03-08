@@ -25,7 +25,7 @@ namespace PrismaEngine {
         // Singleton::GetInstance() returns std::shared_ptr<T>
         if (!RegisterSystem(ThreadManager::GetInstance().get())) return false;
         if (!RegisterSystem(PhysicsSystem::GetInstance().get())) return false;
-        if (!RegisterSystem(Graphic::RenderSystem::GetInstance().get())) return false;
+        if (!RegisterSystem(::PrismaEngine::Graphic::RenderSystem::GetInstance().get())) return false;
         if (!RegisterSystem(SceneManager::GetInstance().get())) return false;
 
         LOG_INFO("Engine", "Core systems registered successfully.");

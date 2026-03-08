@@ -50,10 +50,6 @@ DX12Texture::~DX12Texture() {
 }
 
 // ITexture接口实现
-ResourceType DX12Texture::GetType() const {
-    return ResourceType::Texture;
-}
-
 TextureType DX12Texture::GetTextureType() const {
     return m_desc.type;
 }

@@ -25,7 +25,6 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
-extern HWND g_hWnd;
 #endif
 
 #include <SDL3/SDL.h>
@@ -106,7 +105,7 @@ bool RenderSystem::InitializeImGui() {
 #if defined(PRISMA_ENABLE_RENDER_DX12)
     if (m_desc.backendType == RenderAPIType::DirectX12) {
         LOG_INFO("Render", "Initializing ImGui Win32 + DX12");
-        if (!ImGui_ImplWin32_Init(g_hWnd)) return false;
+        if (!ImGui_ImplWin32_Init(static_cast<HWND>(m_desc.windowHandle))) return false;
         if (!m_device->InitializeImGui()) return false;
     }
 #endif
@@ -237,10 +236,10 @@ bool RenderSystem::InitializeResourceManager() {
 }
 
 bool RenderSystem::InitializePipelines() {
-    m_forwardPipeline = std::make_shared<ForwardPipeline>();
-    // Note: ForwardPipeline currently inherits from LogicalForwardPipeline, 
-    // not directly from IPipeline in the base implementation.
-    // We treat it as a specialized member.
+    auto forward = std::make_shared<ForwardPipeline>();
+    m_forwardPipeline = forward;
+    m_mainPipeline = forward;
+    LOG_INFO("Render", "Render pipelines initialized.");
     return true;
 }
 
@@ -257,15 +256,17 @@ void RenderSystem::UpdateStats(float deltaTime) {
     static uint32_t fpsFrameCount = 0;
     static float fpsUpdateTime = 0.0f;
 
-    fpsAccumulator += 1.0f / deltaTime;
-    fpsFrameCount++;
-    fpsUpdateTime += deltaTime;
+    if (deltaTime > 0.0f) {
+        fpsAccumulator += 1.0f / deltaTime;
+        fpsFrameCount++;
+        fpsUpdateTime += deltaTime;
 
-    if (fpsUpdateTime >= 1.0f) {
-        m_stats.fps = fpsAccumulator / fpsFrameCount;
-        fpsAccumulator = 0.0f;
-        fpsFrameCount = 0;
-        fpsUpdateTime = 0.0f;
+        if (fpsUpdateTime >= 1.0f) {
+            m_stats.fps = fpsAccumulator / fpsFrameCount;
+            fpsAccumulator = 0.0f;
+            fpsFrameCount = 0;
+            fpsUpdateTime = 0.0f;
+        }
     }
 }
 

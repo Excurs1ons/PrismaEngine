@@ -6,12 +6,15 @@
 #include "interfaces/IPipeline.h"
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceManager.h"
-#include "pipelines/forward/ForwardPipeline.h"
+#include "interfaces/RenderTypes.h"
 #include <functional>
 #include <memory>
 #include <string>
 
 namespace PrismaEngine::Graphic {
+
+// 前置声明
+class ForwardPipeline;
 
 /// @brief 渲染系统描述
 struct RenderSystemDesc {
