@@ -1,9 +1,9 @@
 #pragma once
 
 #include "AudioTypes.h"
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 
 namespace PrismaEngine::Audio {
 
@@ -11,10 +11,10 @@ namespace PrismaEngine::Audio {
 /// 这是音频系统的核心抽象，不同的音频后端只需要实现这一个接口
 class IAudioDevice {
 public:
-    virtual ~IAudioDevice() = default;
-    virtual AudioVoiceId PlayClip(const AudioClip& clip, const PlayDesc& desc = {}) = 0;
+    virtual ~IAudioDevice()                                                          = default;
+    virtual AudioVoiceId PlayClip(const AudioClip& clip, const PlayDesc& desc = {})  = 0;
     virtual void SetVoice3DPosition(AudioVoiceId voiceId, float x, float y, float z) = 0;
-    virtual std::string GenerateDebugReport() = 0;
+    virtual std::string GenerateDebugReport()                                        = 0;
     // ========== 初始化和关闭 ==========
     virtual AudioDeviceType GetDeviceType() const = 0;
     /// @brief 初始化音频设备
@@ -37,13 +37,13 @@ public:
 
     /// @brief 设备信息
     struct DeviceInfo {
-        std::string name;         // 设备名称
-        std::string driver;       // 驱动名称
-        std::string version;      // 版本号
-        bool isDefault = false;   // 是否为默认设备
-        uint32_t maxVoices = 0;   // 最大支持的并发音源数
-        bool supports3D = false;  // 是否支持3D音频
-        bool supportsEffects = false; // 是否支持音效
+        std::string name;              // 设备名称
+        std::string driver;            // 驱动名称
+        std::string version;           // 版本号
+        bool isDefault       = false;  // 是否为默认设备
+        uint32_t maxVoices   = 0;      // 最大支持的并发音源数
+        bool supports3D      = false;  // 是否支持3D音频
+        bool supportsEffects = false;  // 是否支持音效
     };
 
     /// @brief 获取当前设备信息
@@ -56,8 +56,10 @@ public:
 
     /// @brief 设置当前设备（如果支持）
     /// @param deviceName 设备名称
-    /// @return 是否设置成功
-    virtual bool SetDevice(const std::string& deviceName) { return false; }
+    virtual bool SetDevice(const std::string& deviceName) {
+        (void)deviceName;
+        return false;
+    }
 
     // ========== 基本播放控制 ==========
 
@@ -196,7 +198,12 @@ public:
     /// @param effectType 音效类型
     /// @param params 音效参数
     /// @return 是否成功
-    virtual bool ApplyEffect(AudioVoiceId voiceId, EffectType effectType, const void* params) { return false; }
+    virtual bool ApplyEffect(AudioVoiceId voiceId, EffectType effectType, const void* params) {
+        (void)params;
+        (void)voiceId;
+        (void)effectType;
+        return false;
+    }
 
     /// @brief 移除音频源的所有音效
     /// @param voiceId 音频Voice ID
@@ -230,4 +237,4 @@ public:
     virtual std::string EndProfile() { return ""; }
 };
 
-} // namespace Engine::Audio
+}  // namespace PrismaEngine::Audio

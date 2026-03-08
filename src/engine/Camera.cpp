@@ -6,26 +6,19 @@ namespace PrismaEngine {
 namespace Graphic {
 
 Camera::Camera()
-    : m_fov(PrismaEngine::PI / 4.0f)
-    , m_aspectRatio(16.0f / 9.0f)
-    , m_nearPlane(0.1f)
-    , m_farPlane(1000.0f)
-    , m_clearColor(0.0f, 0.0f, 0.0f, 1.0f)
-    , m_isViewDirty(true)
-    , m_isProjectionDirty(true)
-{
+    : m_fov(PrismaEngine::PI / 4.0f), m_aspectRatio(16.0f / 9.0f), m_nearPlane(0.1f), m_farPlane(1000.0f),
+      m_clearColor(0.0f, 0.0f, 0.0f, 1.0f), m_isViewDirty(true), m_isProjectionDirty(true) {
     // 初始化缓存向量
     m_forward = PrismaMath::vec3(0.0f, 0.0f, 1.0f);
-    m_up = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
-    m_right = PrismaMath::vec3(1.0f, 0.0f, 0.0f);
+    m_up      = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
+    m_right   = PrismaMath::vec3(1.0f, 0.0f, 0.0f);
 
     // 初始化矩阵为单位矩阵
-    m_viewMatrix = PrismaMath::mat4(1.0f);
+    m_viewMatrix       = PrismaMath::mat4(1.0f);
     m_projectionMatrix = PrismaMath::mat4(1.0f);
 }
 
-Camera::~Camera() {
-}
+Camera::~Camera() {}
 
 void Camera::Initialize() {
     LOG_INFO("Camera3D", "Camera3D component initialized for GameObject '{0}'", GetOwner()->name);
@@ -39,15 +32,16 @@ void Camera::Initialize() {
 }
 
 void Camera::Update(float deltaTime) {
+    (void)deltaTime;
     // 更新视图矩阵（如果需要）
     UpdateViewMatrix();
 }
 
 void Camera::SetPerspectiveProjection(float fov, float aspectRatio, float nearPlane, float farPlane) {
-    m_fov = fov;
-    m_aspectRatio = aspectRatio;
-    m_nearPlane = nearPlane;
-    m_farPlane = farPlane;
+    m_fov               = fov;
+    m_aspectRatio       = aspectRatio;
+    m_nearPlane         = nearPlane;
+    m_farPlane          = farPlane;
     m_isProjectionDirty = true;
 }
 
@@ -66,7 +60,7 @@ PrismaMath::mat4 Camera::GetViewMatrix() const {
 
 PrismaMath::mat4 Camera::GetProjectionMatrix() const {
     if (m_isProjectionDirty) {
-        m_projectionMatrix = glm::perspectiveRH(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+        m_projectionMatrix  = glm::perspectiveRH(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
         m_isProjectionDirty = false;
     }
     return m_projectionMatrix;
@@ -99,18 +93,18 @@ PrismaMath::vec3 Camera::GetRight() const {
 }
 
 void Camera::SetFOV(float fov) {
-    m_fov = fov;
+    m_fov               = fov;
     m_isProjectionDirty = true;
 }
 
 void Camera::SetNearFarPlanes(float nearPlane, float farPlane) {
-    m_nearPlane = nearPlane;
-    m_farPlane = farPlane;
+    m_nearPlane         = nearPlane;
+    m_farPlane          = farPlane;
     m_isProjectionDirty = true;
 }
 
 void Camera::SetAspectRatio(float aspectRatio) {
-    m_aspectRatio = aspectRatio;
+    m_aspectRatio       = aspectRatio;
     m_isProjectionDirty = true;
 }
 
@@ -137,9 +131,12 @@ void Camera::MoveLocal(float forward, float right, float up) {
 
     // 计算移动向量
     PrismaMath::vec3 movement = PrismaMath::vec3(0.0f, 0.0f, 0.0f);
-    if (forward != 0.0f) movement = movement + m_forward * forward;
-    if (right != 0.0f) movement = movement + m_right * right;
-    if (up != 0.0f) movement = movement + m_up * up;
+    if (forward != 0.0f)
+        movement = movement + m_forward * forward;
+    if (right != 0.0f)
+        movement = movement + m_right * right;
+    if (up != 0.0f)
+        movement = movement + m_up * up;
 
     MoveWorld(movement);
 }
@@ -147,16 +144,12 @@ void Camera::MoveLocal(float forward, float right, float up) {
 void Camera::Rotate(float pitch, float yaw, float roll) {
     if (auto transform = GetOwner()->GetTransform()) {
         // 创建旋转增量（弧度）
-        glm::quat deltaRotation = glm::quat(glm::vec3(
-            glm::radians(pitch),
-            glm::radians(yaw),
-            glm::radians(roll)
-        ));
+        glm::quat deltaRotation = glm::quat(glm::vec3(glm::radians(pitch), glm::radians(yaw), glm::radians(roll)));
 
         // 应用旋转到当前旋转
         glm::quat currentRotation = transform->rotation;
-        glm::quat newRotation = deltaRotation * currentRotation;
-        transform->rotation = newRotation;
+        glm::quat newRotation     = deltaRotation * currentRotation;
+        transform->rotation       = newRotation;
 
         MarkViewDirty();
     }
@@ -164,7 +157,7 @@ void Camera::Rotate(float pitch, float yaw, float roll) {
 
 void Camera::LookAt(const PrismaMath::vec3& target) {
     if (auto transform = GetOwner()->GetTransform()) {
-        PrismaMath::vec3 position = GetPosition();
+        PrismaMath::vec3 position  = GetPosition();
         PrismaMath::vec3 direction = glm::normalize(target - position);
 
         // 创建前向向量（相机看向-Z方向）
@@ -172,24 +165,24 @@ void Camera::LookAt(const PrismaMath::vec3& target) {
 
         // 计算上向量
         PrismaMath::vec3 worldUp = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
-        PrismaMath::vec3 right = glm::normalize(glm::cross(worldUp, forward));
-        PrismaMath::vec3 up = glm::cross(forward, right);
+        PrismaMath::vec3 right   = glm::normalize(glm::cross(worldUp, forward));
+        PrismaMath::vec3 up      = glm::cross(forward, right);
 
         // 创建旋转矩阵
         PrismaMath::mat4 rotationMatrix = PrismaMath::mat4(1.0f);
-        rotationMatrix[0][0] = right.x;
-        rotationMatrix[0][1] = up.x;
-        rotationMatrix[0][2] = forward.x;
-        rotationMatrix[1][0] = right.y;
-        rotationMatrix[1][1] = up.y;
-        rotationMatrix[1][2] = forward.y;
-        rotationMatrix[2][0] = right.z;
-        rotationMatrix[2][1] = up.z;
-        rotationMatrix[2][2] = forward.z;
+        rotationMatrix[0][0]            = right.x;
+        rotationMatrix[0][1]            = up.x;
+        rotationMatrix[0][2]            = forward.x;
+        rotationMatrix[1][0]            = right.y;
+        rotationMatrix[1][1]            = up.y;
+        rotationMatrix[1][2]            = forward.y;
+        rotationMatrix[2][0]            = right.z;
+        rotationMatrix[2][1]            = up.z;
+        rotationMatrix[2][2]            = forward.z;
 
         // 转换为四元数
         glm::quat rotationQuat = glm::quat_cast(rotationMatrix);
-        transform->rotation = rotationQuat;
+        transform->rotation    = rotationQuat;
         MarkViewDirty();
     }
 }
@@ -205,7 +198,8 @@ void Camera::UpdateViewMatrix() const {
 
     if (auto transform = GetOwner()->GetTransform()) {
         // 获取位置和旋转
-        PrismaMath::vec3 position = PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
+        PrismaMath::vec3 position =
+            PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
         glm::quat rotation = transform->rotation;
 
         // 创建旋转矩阵
@@ -217,15 +211,18 @@ void Camera::UpdateViewMatrix() const {
         // rotationMatrix = cameraFix * rotationMatrix;
 
         // 计算世界坐标系的各轴
-        m_forward = glm::normalize(PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));  // Z轴（前向）
-        m_up = glm::normalize(PrismaMath::vec3(rotationMatrix[1][0], rotationMatrix[1][1], rotationMatrix[1][2]));        // Y轴（上向）
-        m_right = glm::normalize(PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));     // X轴（右向）
+        m_forward = glm::normalize(
+            PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));  // Z轴（前向）
+        m_up = glm::normalize(
+            PrismaMath::vec3(rotationMatrix[1][0], rotationMatrix[1][1], rotationMatrix[1][2]));  // Y轴（上向）
+        m_right = glm::normalize(
+            PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));  // X轴（右向）
 
         // 计算视图矩阵（相机变换的逆矩阵）
         // 视图矩阵 = 旋转矩阵的转置 * 平移矩阵的逆
         PrismaMath::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
-        m_viewMatrix = glm::transpose(rotationMatrix);
-        m_viewMatrix = m_viewMatrix * translation;
+        m_viewMatrix                 = glm::transpose(rotationMatrix);
+        m_viewMatrix                 = m_viewMatrix * translation;
 
         m_isViewDirty = false;
     }
@@ -239,5 +236,5 @@ void Camera::MarkViewDirty() const {
     m_isViewDirty = true;
 }
 
-} // namespace Graphic
-} // namespace Engine
+}  // namespace Graphic
+}  // namespace PrismaEngine

@@ -1,9 +1,9 @@
 #include "CameraController.h"
 #include "Camera.h"
-#include "input/InputManager.h"
+#include "GameObject.h"
 #include "Logger.h"
 #include "Platform.h"
-#include "GameObject.h"
+#include "input/InputManager.h"
 #include "math/MathTypes.h"
 #include <cmath>
 using namespace PrismaEngine::Graphic;
@@ -13,7 +13,7 @@ using namespace Input;
 using namespace Graphic;
 CameraController::CameraController() : Component() {
     m_mouseControl = false;  // 默认关闭鼠标控制
-    m_firstMouse = true;
+    m_firstMouse   = true;
 }
 
 void CameraController::Initialize() {
@@ -27,8 +27,8 @@ void CameraController::Initialize() {
 
     // 获取初始鼠标位置
     auto mousePos = InputManager::GetInstance()->GetMousePosition();
-    m_lastMouseX = mousePos.x;
-    m_lastMouseY = mousePos.y;
+    m_lastMouseX  = mousePos.x;
+    m_lastMouseY  = mousePos.y;
 }
 
 void CameraController::Update(float deltaTime) {
@@ -43,7 +43,7 @@ void CameraController::Update(float deltaTime) {
 
 void CameraController::HandleKeyboardInput(float deltaTime) {
     float moveAmount = m_moveSpeed * deltaTime;
-    bool moved = false;
+    bool moved       = false;
 
     // WASD 控制移动
     if (InputManager::GetInstance()->IsKeyPressed(KeyCode::W)) {
@@ -60,7 +60,7 @@ void CameraController::HandleKeyboardInput(float deltaTime) {
         moved = true;
     }
     if (InputManager::GetInstance()->IsKeyPressed(KeyCode::D)) {
-        m_camera->MoveLocal(0.0f, moveAmount, 0.0f);   // 右移
+        m_camera->MoveLocal(0.0f, moveAmount, 0.0f);  // 右移
         moved = true;
     }
 
@@ -70,7 +70,7 @@ void CameraController::HandleKeyboardInput(float deltaTime) {
         moved = true;
     }
     if (InputManager::GetInstance()->IsKeyPressed(KeyCode::E)) {
-        m_camera->MoveLocal(0.0f, 0.0f, moveAmount);   // 上升
+        m_camera->MoveLocal(0.0f, 0.0f, moveAmount);  // 上升
         moved = true;
     }
 
@@ -80,25 +80,26 @@ void CameraController::HandleKeyboardInput(float deltaTime) {
         m_camera->Rotate(0.0f, -glm::radians(rotationAmount), 0.0f);  // 左转
     }
     if (InputManager::GetInstance()->IsKeyPressed(KeyCode::ArrowRight)) {
-        m_camera->Rotate(0.0f, glm::radians(rotationAmount), 0.0f);   // 右转
+        m_camera->Rotate(0.0f, glm::radians(rotationAmount), 0.0f);  // 右转
     }
     if (InputManager::GetInstance()->IsKeyPressed(KeyCode::ArrowUp)) {
         m_camera->Rotate(-glm::radians(rotationAmount), 0.0f, 0.0f);  // 上看
     }
     if (InputManager::GetInstance()->IsKeyPressed(KeyCode::ArrowDown)) {
-        m_camera->Rotate(glm::radians(rotationAmount), 0.0f, 0.0f);   // 下看
+        m_camera->Rotate(glm::radians(rotationAmount), 0.0f, 0.0f);  // 下看
     }
 }
 
 void CameraController::HandleMouseInput(float deltaTime) {
+    (void)deltaTime;
     if (!m_mouseControl) {
         return;
     }
 
     // 获取当前鼠标位置
     auto mousePos = InputManager::GetInstance()->GetMousePosition();
-    float mouseX = mousePos.x;
-    float mouseY = mousePos.y;
+    float mouseX  = mousePos.x;
+    float mouseY  = mousePos.y;
 
     if (m_firstMouse) {
         m_lastMouseX = mouseX;
@@ -124,4 +125,4 @@ void CameraController::HandleMouseInput(float deltaTime) {
     }
 }
 
-} // namespace PrismaEngine
+}  // namespace PrismaEngine
