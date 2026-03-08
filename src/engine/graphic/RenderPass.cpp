@@ -1,7 +1,7 @@
 #include "RenderPass.h"
 #include "Mesh.h"
 
-using PrismaEngine::Graphic::RenderCommandContext;
+namespace PrismaEngine::Graphic {
 
 RenderPass::RenderPass()
 {
@@ -22,7 +22,7 @@ RenderPass2D::~RenderPass2D()
 {
 }
 
-void RenderPass2D::Execute(PrismaEngine::Graphic::RenderCommandContext* /*context*/)
+void RenderPass2D::Execute(RenderCommandContext* /*context*/)
 {
     // 2D渲染通道执行逻辑
     // 在这里会实际执行所有排队的2D渲染命令
@@ -44,3 +44,5 @@ void RenderPass2D::SetViewport(uint32_t width, uint32_t height)
     m_width = width;
     m_height = height;
 }
+
+} // namespace PrismaEngine::Graphic

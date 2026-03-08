@@ -30,7 +30,6 @@ public:
     ResourceType GetType() const override { return ResourceType::Texture; }
     
     // ITexture接口实现
-    ResourceType GetType() const override;
     [[nodiscard]] TextureType GetTextureType() const override;
     [[nodiscard]] TextureFormat GetFormat() const override;
     FLOAT GetWidth() const override;
