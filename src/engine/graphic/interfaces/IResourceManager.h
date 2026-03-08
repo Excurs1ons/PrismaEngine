@@ -21,7 +21,21 @@ class IPipeline;
 class IPipelineState;
 class IResource;
 class IRenderDevice;
-
+/// @brief 获取资源统计信息
+struct ResourceStats {
+    uint32_t totalResources     = 0;
+    uint32_t loadedResources    = 0;
+    uint32_t loadingResources   = 0;
+    uint64_t totalMemoryUsage   = 0;
+    uint64_t textureMemoryUsage = 0;
+    uint64_t bufferMemoryUsage  = 0;
+    int textureCount            = 0;
+    int bufferCount             = 0;
+    int shaderCount             = 0;
+    int pipelineCount           = 0;
+    uint64_t gpuMemoryUsage     = 0;
+    uint64_t cpuMemoryUsage     = 0;
+};
 
 // 注意：TextureFilter, TextureAddressMode, TextureComparisonFunc, SamplerDesc 已在 RenderTypes.h 中定义
 
@@ -34,7 +48,7 @@ public:
     /// @brief 初始化资源管理器
     /// @param device 渲染设备
     /// @return 是否初始化成功
-    virtual bool Initialize(IRenderDevice* device) = 0;
+    virtual int Initialize(IRenderDevice* device) = 0;
 
     /// @brief 关闭资源管理器
     virtual void Shutdown() = 0;
@@ -160,21 +174,7 @@ public:
 
     // === 统计信息 ===
 
-    /// @brief 获取资源统计信息
-    struct ResourceStats {
-        uint32_t totalResources = 0;
-        uint32_t loadedResources = 0;
-        uint32_t loadingResources = 0;
-        uint64_t totalMemoryUsage = 0;
-        uint64_t textureMemoryUsage = 0;
-        uint64_t bufferMemoryUsage = 0;
-        int textureCount = 0;
-        int bufferCount = 0;
-        int shaderCount = 0;
-        int pipelineCount = 0;
-        uint64_t gpuMemoryUsage = 0;
-        uint64_t cpuMemoryUsage = 0;
-    };
+
     virtual ResourceStats GetResourceStats() const = 0;
 
     // === 资源热重载 ===

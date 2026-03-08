@@ -8,6 +8,7 @@
 #include <locale>
 #include <shlobj.h>
 #include <thread>
+#include <Logger.h>
 
 namespace PrismaEngine {
 
@@ -148,7 +149,7 @@ WindowHandle Platform::CreateWindow(const WindowProps& props) {
     );
 
     if (!hwnd) {
-        std::cerr << "[Platform] ERROR: 创建窗口失败" << std::endl;
+        LOG_ERROR("[PlatformWindows]", "创建窗口失败");
         return nullptr;
     }
 
@@ -168,7 +169,7 @@ WindowHandle Platform::CreateWindow(const WindowProps& props) {
     s_hwnd = hwnd;
     s_currentWindow = hwnd;
 
-    std::cout << "[Platform] 创建窗口成功: " << props.Title << std::endl;
+    LOG_INFO("PlatformWindows", "创建窗口成功: {}", props.Title);
     return hwnd;
 }
 
@@ -221,6 +222,10 @@ bool Platform::ShouldClose(WindowHandle window) {
     }
 
     return s_shouldClose;
+}
+
+void Platform::SetShouldClose(WindowHandle /*window*/, bool shouldClose) {
+    s_shouldClose = shouldClose;
 }
 
 bool Platform::SetWindowIcon(const std::string& path) {
@@ -334,8 +339,8 @@ bool Platform::IsKeyDown(PrismaEngine::Input::KeyCode key) {
         // 修饰键
         case KeyCode::LeftShift:    virtualKey = VK_LSHIFT; break;
         case KeyCode::RightShift:   virtualKey = VK_RSHIFT; break;
-        case KeyCode::LeftControl:  virtualKey = VK_LCONTROL; break;
-        case KeyCode::RightControl: virtualKey = VK_RCONTROL; break;
+        case KeyCode::LeftCtrl:     virtualKey = VK_LCONTROL; break;
+        case KeyCode::RightCtrl:    virtualKey = VK_RCONTROL; break;
         case KeyCode::LeftAlt:      virtualKey = VK_LMENU; break;
         case KeyCode::RightAlt:     virtualKey = VK_RMENU; break;
 
@@ -516,6 +521,6 @@ const char* Platform::GetLogDirectoryPath() {
     return path;
 }
 
-} // namespace Engine
+} // namespace PrismaEngine
 
 #endif // _WIN32

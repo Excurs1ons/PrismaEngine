@@ -1,7 +1,7 @@
 #include "Platform.h"
 
 // SDL 用于跨平台（Linux, macOS, 以及可选的 Windows/Android）
-#if !defined(_WIN32) && !defined(__ANDROID__) || defined(PRISMA_USE_SDL3)
+#if !defined(__ANDROID__)
 
 // 条件包含 SDL 头文件
 #if defined(__has_include)
@@ -151,6 +151,10 @@ void Platform::PumpEvents() {
 bool Platform::ShouldClose(WindowHandle window) {
     (void)window;
     return s_shouldClose;
+}
+
+void Platform::SetShouldClose(WindowHandle /*window*/, bool shouldClose) {
+    s_shouldClose = shouldClose;
 }
 
 WindowHandle Platform::GetCurrentWindow() {
