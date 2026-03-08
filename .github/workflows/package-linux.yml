@@ -127,8 +127,6 @@ jobs:
     name: Linux Runtime ${{ matrix.build_type }}
     runs-on: ubuntu-latest
     needs: build-linux-engine
-    if: github.event.inputs.build_type != 'debug' || matrix.build_type == 'Debug'
-
     strategy:
       matrix:
         build_type: [Debug, Release]

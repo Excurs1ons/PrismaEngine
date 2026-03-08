@@ -122,8 +122,6 @@ jobs:
     name: Windows Runtime ${{ matrix.build_type }}
     runs-on: windows-latest
     needs: build-windows-engine
-    if: github.event.inputs.build_type != 'debug' || matrix.build_type == 'Debug'
-
     strategy:
       matrix:
         build_type: [Debug, Release]
