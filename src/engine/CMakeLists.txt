@@ -821,18 +821,15 @@ if(TARGET libzstd_static)
 elseif(TARGET zstd::libzstd_static)
     target_link_libraries(Engine PUBLIC zstd::libzstd_static)
     message(STATUS "链接 zstd::libzstd_static 到 Engine")
-elseif(TARGET libzstd_shared)
-    target_link_libraries(Engine PUBLIC libzstd_shared)
-    message(STATUS "链接 libzstd_shared 到 Engine")
-elseif(TARGET zstd::libzstd_shared)
-    target_link_libraries(Engine PUBLIC zstd::libzstd_shared)
-    message(STATUS "链接 zstd::libzstd_shared 到 Engine")
 elseif(TARGET zstd)
     target_link_libraries(Engine PUBLIC zstd)
     message(STATUS "链接 zstd 到 Engine")
 elseif(TARGET zstd_static)
     target_link_libraries(Engine PUBLIC zstd_static)
     message(STATUS "链接 zstd_static 到 Engine")
+elseif(EXISTS "${PROJECT_SOURCE_DIR}/.dependencies/zstd-src")
+    target_include_directories(Engine PRIVATE "${PROJECT_SOURCE_DIR}/.dependencies/zstd-src/lib")
+    message(STATUS "zstd 目标未找到，但源码已存在，添加包含目录")
 else()
     message(WARNING "zstd 目标未找到!")
 endif()
@@ -843,17 +840,12 @@ target_compile_definitions(Engine PUBLIC
     PRISMA_DEFAULT_RENDER_DEVICE=${PRISMA_DEFAULT_RENDER_BACKEND}
 )
 
-# 定义音频后端启用宏（用于 AudioAPI.cpp 中的条件编译）
-# XAudio2 暂时禁用，需要修复接口
-# if(PRISMA_ENABLE_AUDIO_XAUDIO2)
-#     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_XAUDIO2=1)
-# endif()
-
+# 定义音频后端启用宏
 if(PRISMA_ENABLE_AUDIO_SDL3)
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
 endif()
 
-# 定义渲染后端启用宏（用于 Shader.cpp 等文件中的条件编译）
+# 定义渲染后端启用宏
 if(PRISMA_ENABLE_RENDER_DX12)
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_DX12=1)
 endif()

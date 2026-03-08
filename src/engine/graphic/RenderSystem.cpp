@@ -16,6 +16,9 @@
 
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "adapters/vulkan/VulkanAdapters.h"
+#ifndef IMGUI_IMPL_VULKAN
+#define IMGUI_IMPL_VULKAN
+#endif
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #endif
