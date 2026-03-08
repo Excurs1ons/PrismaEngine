@@ -52,8 +52,12 @@ public:
 
     std::shared_ptr<IShader> LoadShader(const std::string& filename, const std::string& entryPoint, const std::string& target, const std::vector<std::string>& defines = {}) override;
     std::shared_ptr<IShader> CreateShader(const std::string& source, const ShaderDesc& desc) override;
+    bool CompileShader(const ShaderDesc& desc, std::string* errors = nullptr) override;
 
+    std::shared_ptr<IPipeline> CreatePipeline(const PipelineDesc& desc) override;
     std::shared_ptr<IPipeline> LoadPipeline(const std::string& filename) override;
+    std::shared_ptr<IPipelineState> CreatePipelineState(const PipelineStateDesc& desc) override;
+    
     std::shared_ptr<ISampler> CreateSampler(const SamplerDesc& desc) override;
     std::shared_ptr<ISampler> GetDefaultSampler() override;
 

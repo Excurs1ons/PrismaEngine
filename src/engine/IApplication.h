@@ -7,10 +7,10 @@ namespace PrismaEngine {
 /// <summary>
 /// 应用程序基类（非模板，用于多态）
 /// </summary>
-class IApplicationBase {
+class ENGINE_API IApplicationBase {
 public:
     virtual ~IApplicationBase() = default;
-    virtual bool Initialize() = 0;
+    virtual int Initialize() = 0;
     virtual int Run() = 0;
     virtual void Shutdown() = 0;
     virtual bool IsRunning() const = 0;
@@ -26,7 +26,7 @@ public:
     /// 应用程序初始化，应该包括完成平台层和渲染器的初始化
     /// </summary>
     /// <returns></returns>
-    bool Initialize() override = 0;
+    int Initialize() override = 0;
     int Run() override = 0;
     void Shutdown() override = 0;
 

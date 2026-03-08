@@ -19,8 +19,8 @@ bool Logger::IsInitialized() const {
     return initialized;
 }
 
-void Logger::SetPlatformLogger(PrismaEngine::IPlatformLogger* platformLogger) {
-    this->platformLogger = platformLogger;
+void Logger::SetPlatformLogger(PrismaEngine::IPlatformLogger* newPlatformLogger) {
+    this->platformLogger = newPlatformLogger;
 }
 CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
     switch (level) {
