@@ -6,7 +6,9 @@
 #include "pipelines/forward/ForwardPipeline.h"
 
 // ImGui
+#ifdef PRISMA_BUILD_EDITOR
 #include <imgui.h>
+#endif
 
 #ifdef PRISMA_ENABLE_RENDER_DX12
 #include "adapters/dx12/DX12Adapters.h"
@@ -45,7 +47,8 @@ int RenderSystem::Initialize() {
 }
 
 int RenderSystem::Initialize(const RenderSystemDesc& desc) {
-    LOG_INFO("Render", "正在初始化渲染系统 (Backend: {0})...", 
+    LOG_INFO("Render",
+             "正在初始化渲染系统 (Backend: {0})...",
              desc.backendType == RenderAPIType::Vulkan ? "Vulkan" : "DirectX12");
     m_desc = desc;
     Logger::GetInstance().Flush();
@@ -92,7 +95,7 @@ void RenderSystem::Shutdown() {
     m_mainPipeline.reset();
     m_forwardPipeline.reset();
     m_resourceManager.reset();
-    
+
     if (m_device) {
         m_device->Shutdown();
         m_device.reset();
@@ -102,6 +105,7 @@ void RenderSystem::Shutdown() {
 }
 
 bool RenderSystem::InitializeImGui() {
+#ifdef PRISMA_BUILD_EDITOR
     if (!m_device) {
         LOG_ERROR("Render", "Device not initialized, cannot init ImGui.");
         return false;
@@ -119,8 +123,10 @@ bool RenderSystem::InitializeImGui() {
 #if defined(PRISMA_ENABLE_RENDER_DX12)
     if (m_desc.backendType == RenderAPIType::DirectX12) {
         LOG_INFO("Render", "Initializing ImGui Win32 + DX12");
-        if (!ImGui_ImplWin32_Init(static_cast<HWND>(m_desc.windowHandle))) return false;
-        if (!m_device->InitializeImGui()) return false;
+        if (!ImGui_ImplWin32_Init(static_cast<HWND>(m_desc.windowHandle)))
+            return false;
+        if (!m_device->InitializeImGui())
+            return false;
         m_imguiInitialized = true;
     }
 #endif
@@ -129,9 +135,11 @@ bool RenderSystem::InitializeImGui() {
     if (m_desc.backendType == RenderAPIType::Vulkan) {
         LOG_INFO("Render", "Initializing ImGui SDL3 + Vulkan");
         if (m_desc.windowHandle) {
-            if (!ImGui_ImplSDL3_InitForVulkan((SDL_Window*)m_desc.windowHandle)) return false;
+            if (!ImGui_ImplSDL3_InitForVulkan((SDL_Window*)m_desc.windowHandle))
+                return false;
         }
-        if (!m_device->InitializeImGui()) return false;
+        if (!m_device->InitializeImGui())
+            return false;
         m_imguiInitialized = true;
     }
 #endif
@@ -140,10 +148,16 @@ bool RenderSystem::InitializeImGui() {
         LOG_INFO("Render", "ImGui initialized successfully.");
     }
     return m_imguiInitialized;
+#else
+    LOG_WARNING("Render", "ImGui not available in non-Editor builds.");
+    return false;
+#endif
 }
 
 void RenderSystem::ShutdownImGui() {
-    if (!m_imguiInitialized) return;
+#ifdef PRISMA_BUILD_EDITOR
+    if (!m_imguiInitialized)
+        return;
 
 #if defined(PRISMA_ENABLE_RENDER_DX12)
     if (m_desc.backendType == RenderAPIType::DirectX12) {
@@ -160,6 +174,7 @@ void RenderSystem::ShutdownImGui() {
         ImGui::DestroyContext();
     }
     m_imguiInitialized = false;
+#endif
 }
 
 RenderSystem::~RenderSystem() {
@@ -175,7 +190,8 @@ void RenderSystem::Update(float deltaTime) {
 }
 
 void RenderSystem::BeginFrame() {
-    if (m_device) m_device->BeginFrame();
+    if (m_device)
+        m_device->BeginFrame();
 }
 
 void RenderSystem::EndFrame() {
@@ -188,12 +204,13 @@ void RenderSystem::EndFrame() {
 }
 
 void RenderSystem::Present() {
-    if (m_device) m_device->Present();
+    if (m_device)
+        m_device->Present();
     m_stats.frameCount++;
 }
 
 void RenderSystem::Resize(uint32_t width, uint32_t height) {
-    m_desc.width = width;
+    m_desc.width  = width;
     m_desc.height = height;
     // TODO: Resize swap chain
 }
@@ -212,11 +229,11 @@ void RenderSystem::SetGuiRenderCallback(GuiRenderCallback callback) {
 RenderSystem::RenderStats RenderSystem::GetRenderStats() const {
     RenderStats stats = m_stats;
     if (m_device) {
-        auto devStats = m_device->GetRenderStats();
+        auto devStats   = m_device->GetRenderStats();
         stats.drawCalls = devStats.drawCalls;
         stats.triangles = devStats.triangles;
-        
-        auto memInfo = m_device->GetGPUMemoryInfo();
+
+        auto memInfo         = m_device->GetGPUMemoryInfo();
         stats.gpuMemoryUsage = memInfo.usedMemory;
     }
     return stats;
@@ -245,24 +262,24 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
 #ifdef PRISMA_ENABLE_RENDER_DX12
         case RenderAPIType::DirectX12: {
             DeviceDesc devDesc;
-            devDesc.windowHandle = desc.windowHandle;
-            devDesc.width = desc.width;
-            devDesc.height = desc.height;
-            devDesc.enableDebug = desc.enableDebug;
+            devDesc.windowHandle     = desc.windowHandle;
+            devDesc.width            = desc.width;
+            devDesc.height           = desc.height;
+            devDesc.enableDebug      = desc.enableDebug;
             devDesc.enableValidation = desc.enableValidation;
-            m_device = DX12::CreateDX12RenderDeviceInterface(devDesc);
+            m_device                 = DX12::CreateDX12RenderDeviceInterface(devDesc);
             break;
         }
 #endif
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
         case RenderAPIType::Vulkan: {
             DeviceDesc devDesc;
-            devDesc.windowHandle = desc.windowHandle;
-            devDesc.width = desc.width;
-            devDesc.height = desc.height;
-            devDesc.enableDebug = desc.enableDebug;
+            devDesc.windowHandle     = desc.windowHandle;
+            devDesc.width            = desc.width;
+            devDesc.height           = desc.height;
+            devDesc.enableDebug      = desc.enableDebug;
             devDesc.enableValidation = desc.enableValidation;
-            m_device = Vulkan::CreateRenderDeviceVulkanInterface(devDesc);
+            m_device                 = Vulkan::CreateRenderDeviceVulkanInterface(devDesc);
             break;
         }
 #endif
@@ -277,9 +294,9 @@ bool RenderSystem::InitializeResourceManager() {
 }
 
 bool RenderSystem::InitializePipelines() {
-    auto forward = std::make_shared<ForwardPipeline>();
+    auto forward      = std::make_shared<ForwardPipeline>();
     m_forwardPipeline = forward;
-    m_mainPipeline = forward;
+    m_mainPipeline    = forward;
     LOG_INFO("Render", "Render pipelines initialized.");
     return true;
 }
@@ -292,10 +309,10 @@ void RenderSystem::RenderFrame() {
 }
 
 void RenderSystem::UpdateStats(float deltaTime) {
-    m_stats.frameTime = deltaTime;
-    static float fpsAccumulator = 0.0f;
+    m_stats.frameTime             = deltaTime;
+    static float fpsAccumulator   = 0.0f;
     static uint32_t fpsFrameCount = 0;
-    static float fpsUpdateTime = 0.0f;
+    static float fpsUpdateTime    = 0.0f;
 
     if (deltaTime > 0.0f) {
         fpsAccumulator += 1.0f / deltaTime;
@@ -303,20 +320,20 @@ void RenderSystem::UpdateStats(float deltaTime) {
         fpsUpdateTime += deltaTime;
 
         if (fpsUpdateTime >= 1.0f) {
-            m_stats.fps = fpsAccumulator / fpsFrameCount;
+            m_stats.fps    = fpsAccumulator / fpsFrameCount;
             fpsAccumulator = 0.0f;
-            fpsFrameCount = 0;
-            fpsUpdateTime = 0.0f;
+            fpsFrameCount  = 0;
+            fpsUpdateTime  = 0.0f;
         }
     }
 }
 
 RenderContext RenderSystem::GetRenderContext() const {
     RenderContext context;
-    context.device = m_device.get();
+    context.device     = m_device.get();
     context.frameIndex = m_stats.frameCount;
-    context.deltaTime = m_stats.frameTime;
+    context.deltaTime  = m_stats.frameTime;
     return context;
 }
 
-} // namespace PrismaEngine::Graphic
+}  // namespace PrismaEngine::Graphic
