@@ -15,7 +15,7 @@
 #include <vector>
 #include <condition_variable>
 
-// 前置声明，避免循环依赖
+// 前置声明
 namespace PrismaEngine {
 class IPlatformLogger;
 }
@@ -33,201 +33,74 @@ struct LogConfig {
     bool enableTimestamp      = true;
     bool enableThreadId       = true;
     bool enableSourceLocation = true;
-    bool enableCallStack      = false;            // 默认不启用调用堆栈捕获（性能优化）
+    bool enableCallStack      = false;
     bool asyncMode            = true;
     size_t asyncQueueSize     = 1024;
     std::string logFilePath   = "logs/engine.log";
-    size_t maxFileSize        = 10 * 1024 * 1024;  // 10MB
-    size_t maxFileCount       = 5;                 // 日志文件轮转
+    size_t maxFileSize        = 10 * 1024 * 1024;
+    size_t maxFileCount       = 5;
 };
 
-// 编译时格式化检查
-template<typename T>
-concept Formattable = requires(T && t) {
-    std::format("{}", std::forward<T>(t));
-};
-
-// 检查是否是字符串字面量或const char*类型
-template<typename T>
-concept StringType = std::is_same_v<std::decay_t<T>, const char*> || 
-                     std::is_same_v<std::decay_t<T>, char*> ||
-                     std::is_convertible_v<T, std::string_view> ||
-                     requires(T && t) {
-                         std::format("{}", std::forward<T>(t));
-                     };
-
-template<typename... Args>
-constexpr bool CheckFormattable() {
-    return (StringType<Args> && ...);
-}
-
-class Logger
+class ENGINE_API Logger
 {
 public:
-    // 获取单例实例（在DLL内部创建）- 内联定义避免DLL导出问题
-    static Logger& GetInstance() {
-        static Logger instance;
-        return instance;
-    }
+    static Logger& GetInstance();
+    static void SetInstance(Logger* instance);
 
-    // 禁止拷贝和移动
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
     Logger(Logger&&) = delete;
     Logger& operator=(Logger&&) = delete;
 
-    ENGINE_API ~Logger();
+    ~Logger();
 
-    // 初始化和关闭
-    ENGINE_API bool Initialize(const LogConfig& config = LogConfig());
+    bool Initialize(const LogConfig& config = LogConfig());
     bool IsInitialized() const;
     void Shutdown();
 
-    // 设置平台日志接口（必须在 Platform 初始化后调用）
     void SetPlatformLogger(PrismaEngine::IPlatformLogger* platformLogger);
+    void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
 
-    ENGINE_API void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
+    void SetMinLevel(LogLevel level);
+    void SetTarget(LogTarget target);
+    void EnableColors(bool enable);
 
-    // 设置配置
-    void SetMinLevel(LogLevel level) { config_.minLevel = level; }
-    void SetTarget(LogTarget target) { config_.target = target; }
-    void EnableColors(bool enable) { config_.enableColors = enable; }
-
-    // 日志作用域相关方法
     void PushLogScope(LogScope* scope);
     void PopLogScope(LogScope* scope);
     LogScope* GetCurrentLogScope() const;
 
-    // 辅助函数：宽字符串转 UTF-8
     static std::string WStringToString(const std::wstring& wstr);
 
-    // 日志输出（带源码位置）
     template<typename... Args>
     void Log(LogLevel level, std::string_view category, std::format_string<Args...> fmt, Args&&... args,
         std::source_location loc = std::source_location::current()) {
-
-        if (level < config_.minLevel) return;
-
+        if (level < GetMinLevel()) return;
         std::string message = std::format(fmt, std::forward<Args>(args)...);
         LogInternal(level, std::string(category), message, 
             SourceLocation(loc.file_name(), loc.line(), loc.function_name()));
     }
 
-    // 支持宽字符的日志输出
-    template<typename... Args>
-    void Log(LogLevel level, std::string_view category, std::wformat_string<Args...> fmt, Args&&... args,
-        std::source_location loc = std::source_location::current()) {
-
-        if (level < config_.minLevel) return;
-
-        std::wstring wmessage = std::format(fmt, std::forward<Args>(args)...);
-        LogInternal(level, std::string(category), WStringToString(wmessage), 
-            SourceLocation(loc.file_name(), loc.line(), loc.function_name()));
-    }
-
-    // 格式化日志输出
     template<typename... Args>
     inline void LogFormat(LogLevel level, const std::string& category,
         SourceLocation loc, std::format_string<Args...> fmt, Args&&... args) {
-
-
-        // 添加友好的编译错误信息
-        static_assert(CheckFormattable<Args...>(),
-            "One or more log arguments are not formattable.");
-
-        if (level < config_.minLevel) {
-            return;
-        }
+        if (level < GetMinLevel()) return;
         std::string message = std::format(fmt, std::forward<Args>(args)...);
         LogInternal(level, category, message, loc);
     }
 
-    // 支持宽字符的格式化日志输出
-    template<typename... Args>
-    inline void LogFormat(LogLevel level, const std::string& category,
-        SourceLocation loc, std::wformat_string<Args...> fmt, Args&&... args) {
-
-        if (level < config_.minLevel) return;
-        std::wstring wmessage = std::format(fmt, std::forward<Args>(args)...);
-        LogInternal(level, category, WStringToString(wmessage), loc);
-    }
-    // 快捷方法
-    template<typename... Args>
-    void Trace(std::string_view category, std::format_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Trace, category, fmt, std::forward<Args>(args)...);
-    }
-    template<typename... Args>
-    void Trace(std::string_view category, std::wformat_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Trace, category, fmt, std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    void Debug(std::string_view category, std::format_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Debug, category, fmt, std::forward<Args>(args)...);
-    }
-    template<typename... Args>
-    void Debug(std::string_view category, std::wformat_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Debug, category, fmt, std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    void Info(std::string_view category, std::format_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Info, category, fmt, std::forward<Args>(args)...);
-    }
-    template<typename... Args>
-    void Info(std::string_view category, std::wformat_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Info, category, fmt, std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    void Warning(std::string_view category, std::format_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Warning, category, fmt, std::forward<Args>(args)...);
-    }
-    template<typename... Args>
-    void Warning(std::string_view category, std::wformat_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Warning, category, fmt, std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    void Error(std::string_view category, std::format_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Error, category, fmt, std::forward<Args>(args)...);
-    }
-    template<typename... Args>
-    void Error(std::string_view category, std::wformat_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Error, category, fmt, std::forward<Args>(args)...);
-    }
-
-    template<typename... Args>
-    void Fatal(std::string_view category, std::format_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Fatal, category, fmt, std::forward<Args>(args)...);
-    }
-    template<typename... Args>
-    void Fatal(std::string_view category, std::wformat_string<Args...> fmt, Args&&... args) {
-        Log(LogLevel::Fatal, category, fmt, std::forward<Args>(args)...);
-    }
-
-    // 刷新日志
     void Flush();
-
-    // 写入日志条目（公开供LogScope使用）
     void WriteEntry(const LogEntry& entry);
-
-    // 调用堆栈相关方法
     std::vector<StackFrame> CaptureCallStack(int skipFrames = 0, int maxFrames = 32);
     std::string FormatCallStack(const std::vector<StackFrame>& callStack);
-    
-    // 获取指定日志级别的调用堆栈输出行为
     CallStackOutput GetCallStackOutputForLevel(LogLevel level);
 
+    LogLevel GetMinLevel() const;
+
 private:
-    // 私有构造函数（单例模式）
     Logger() = default;
 
     bool initialized = false;
-
-    // 平台日志接口（由外部设置）
     PrismaEngine::IPlatformLogger* platformLogger = nullptr;
-    // 内部方法
     void EnqueueEntry(LogEntry&& entry);
     void ProcessQueue();
     void RotateLogFile();
@@ -241,26 +114,21 @@ private:
     void WriteToConsole(const std::string& message, bool useColors);
     void WriteToFile(const std::string& message);
 
-    // 日志作用域相关成员
     mutable std::stack<LogScope*> m_logScopes;
     mutable std::mutex m_scopeMutex;
 
-    // 成员变量
     LogConfig config_;
     std::ofstream fileStream_;
     size_t currentFileSize_ = 0;
 
-    // 异步相关
     std::atomic<bool> running_{ false };
     std::queue<LogEntry> logQueue_;
     std::mutex queueMutex_;
     std::condition_variable queueCondition_;
     std::unique_ptr<std::thread> workerThread_;
-
-    std::mutex writeMutex_;  // 保护文件写入
+    std::mutex writeMutex_;
 };
 
-// 宏定义 - 自动捕获文件名、行号和函数名
 #define LOG_TRACE(category, fmt, ...) \
     ::Logger::GetInstance().LogFormat(::LogLevel::Trace, category, \
         ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
@@ -284,10 +152,6 @@ private:
 #define LOG_FATAL(category, fmt, ...) \
     ::Logger::GetInstance().LogFormat(::LogLevel::Fatal, category, \
         ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
-// 方式2: 简单字符串版本（不需要格式化）
-#define LOG_INFO_SIMPLE(category, message) \
-    ::Logger::GetInstance().LogInternal(::LogLevel::Info, category, \
-        message, GET_SOURCE_LOCATION())
 
 #define LOG_WARN LOG_WARNING
 #define LOG_ERR LOG_ERROR

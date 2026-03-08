@@ -14,7 +14,7 @@ class JobSystem : public ISubSystem {
     friend class Singleton<JobSystem>;
 
 public:
-    bool Initialize() override;
+    int Initialize() override;
     void Shutdown() override;
     using Job = std::function<void()>;
 

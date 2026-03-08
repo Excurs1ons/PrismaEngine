@@ -4,16 +4,42 @@
 #include "pch.h"
 #include <filesystem>
 #include <iostream>
-#if defined (_WIN32)
-#include <windows.h>
-#if defined(_MSC_VER)
-#include <intrin.h>
-#include <dbghelp.h>
+
+#if defined(_WIN32)
+#include <Windows.h>
+#include <DbgHelp.h>
 #pragma comment(lib, "dbghelp.lib")
 #endif
-#elif defined (__ANDROID__) || (ANDROID)
-#include <android/log.h>
-#endif
+
+static Logger* s_loggerInstance = nullptr;
+
+Logger& Logger::GetInstance() {
+    if (!s_loggerInstance) {
+        static Logger localInstance;
+        s_loggerInstance = &localInstance;
+    }
+    return *s_loggerInstance;
+}
+
+void Logger::SetInstance(Logger* instance) {
+    s_loggerInstance = instance;
+}
+
+void Logger::SetMinLevel(LogLevel level) { 
+    config_.minLevel = level; 
+}
+
+void Logger::SetTarget(LogTarget target) { 
+    config_.target = target; 
+}
+
+void Logger::EnableColors(bool enable) { 
+    config_.enableColors = enable; 
+}
+
+LogLevel Logger::GetMinLevel() const { 
+    return config_.minLevel; 
+}
 
 bool Logger::IsInitialized() const {
     return initialized;
