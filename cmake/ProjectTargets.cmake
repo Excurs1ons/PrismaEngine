@@ -41,7 +41,9 @@ if(PRISMA_BUILD_EDITOR)
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Editor>/Assets
         COMMENT "Copying resources to Editor directory"
     )
-    add_dependencies(copy-runtime-resources copy-editor-resources)
+    if(TARGET copy-runtime-resources)
+        add_dependencies(copy-runtime-resources copy-editor-resources)
+    endif()
 endif()
 
 # 确保在构建后复制资源
