@@ -8,6 +8,7 @@ on:
       - 'cmake/**'
       - 'CMakeLists.txt'
       - 'CMakePresets.json'
+      - '.github/workflows/package-windows.yml'
   pull_request:
     branches: [ main ]
     paths:
