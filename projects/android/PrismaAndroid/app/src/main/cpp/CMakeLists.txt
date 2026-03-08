@@ -146,24 +146,20 @@ if(TARGET vk-bootstrap)
 endif()
 
 # 添加 VMA (Vulkan Memory Allocator) include 目录（如果使用 FetchContent）
-if(TARGET vma::VulkanMemoryAllocator)
-    get_target_property(VMA_SOURCE_DIR vma::VulkanMemoryAllocator SOURCE_DIR)
-    if(VMA_SOURCE_DIR)
-        target_include_directories(myapplication PRIVATE ${VMA_SOURCE_DIR})
-        target_include_directories(myapplication PRIVATE ${VMA_SOURCE_DIR}/src)
-        message(STATUS "VMA include dir: ${VMA_SOURCE_DIR}")
-    else()
-        # 如果找不到 target，尝试直接添加路径
-        target_include_directories(myapplication PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src)
-        target_include_directories(myapplication PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src/src)
-        message(STATUS "VMA include dir (fallback): ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src")
-    endif()
-else()
-    # 如果 FetchContent 没有创建 target，添加路径
-    target_include_directories(myapplication PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src)
-    target_include_directories(myapplication PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src/src)
-    message(STATUS "VMA include dir (no target): ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src")
+# VMA 可能没有创建 target，所以直接添加 include 路径
+set(VMA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src)
+
+# 添加可能的 VMA 目录结构
+target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR})
+
+# 尝试查找并添加 VMA 的 src 目录（如果存在）
+if(EXISTS "${VMA_INCLUDE_DIR}/src")
+    target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR}/src)
+elseif(EXISTS "${VMA_INCLUDE_DIR}/include")
+    target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR}/include)
 endif()
+
+message(STATUS "VMA include dir: ${VMA_INCLUDE_DIR}")
 
 # 查找 Vulkan 库
 find_library(vulkan-lib vulkan)
