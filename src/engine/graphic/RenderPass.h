@@ -10,11 +10,11 @@
 #include "math/MathTypes.h"
 #include "Mesh.h"
 
-// 前向声明
 namespace PrismaEngine::Graphic {
+
+// 前向声明
 class IDeviceContext;
 class RenderCommandContext;
-}
 
 /// @deprecated 使用 graphic/LogicalPass.h 中的 LogicalPass 替代
 class [[deprecated("Use LogicalPass from graphic/LogicalPass.h instead")]] RenderPass
@@ -54,3 +54,5 @@ private:
     uint32_t m_width = 0;
     uint32_t m_height = 0;
 };
+
+} // namespace PrismaEngine::Graphic

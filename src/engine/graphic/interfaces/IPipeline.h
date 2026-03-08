@@ -149,9 +149,9 @@ public:
 
     // === 调试 ===
 
-    /// @brief 获取渲染流程名称
-    /// @return 名称
-    virtual const std::string& GetName() const = 0;
+    /// @brief 获取管线名称
+    /// @return 管线名称
+    virtual const char* GetName() const = 0;
 
     /// @brief 设置渲染流程名称
     /// @param name 名称
