@@ -128,17 +128,22 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
         ${imgui_SOURCE_DIR}/imgui_demo.cpp
     )
 
+    # Windows 后端
     if(WIN32)
         list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
         if(PRISMA_ENABLE_RENDER_DX12)
             list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_dx12.cpp)
         endif()
-        if(PRISMA_ENABLE_RENDER_VULKAN)
-            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
-        endif()
-        if(PRISMA_BUILD_EDITOR AND EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-        endif()
+    endif()
+
+    # Vulkan 后端 - 跨平台
+    if(PRISMA_ENABLE_RENDER_VULKAN)
+        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
+    endif()
+
+    # SDL3 后端 - 跨平台 (非 Windows)
+    if(NOT WIN32 AND EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
     endif()
 
     if(NOT TARGET imgui)
