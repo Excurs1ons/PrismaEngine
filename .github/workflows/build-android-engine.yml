@@ -86,7 +86,7 @@ jobs:
       uses: actions/cache@v4
       with:
         path: ./build/engine-android-${{ matrix.abi }}-debug
-        key: ${{ runner.os }}-engine-android-${{ matrix.abi }}-debug-${{ hashFiles('src/engine/**', 'projects/android/Engine.cmake', 'cmake/**') }}
+        key: ${{ runner.os }}-engine-android-${{ matrix.abi }}-debug-${{ hashFiles('src/**', 'cmake/**', 'CMakeLists.txt', 'CMakePresets.json') }}
 
     - name: Clean old dependencies cache
       run: rm -rf build/engine-android-${{ matrix.abi }}-debug/_deps/stb
