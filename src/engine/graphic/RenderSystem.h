@@ -51,10 +51,15 @@ public:
 
     /// @brief 初始化 ImGui（与渲染后端无关）
     /// @return 是否初始化成功
+#ifdef PRISMA_BUILD_EDITOR
     bool InitializeImGui();
 
     /// @brief 清理 ImGui 资源
     void ShutdownImGui();
+#else
+    bool InitializeImGui() { return false; }
+    void ShutdownImGui() {}
+#endif
 
     /// @brief 关闭渲染系统
     void Shutdown() override;
@@ -148,7 +153,9 @@ private:
 
     // GUI回调
     GuiRenderCallback m_guiCallback;
+#ifdef PRISMA_BUILD_EDITOR
     bool m_imguiInitialized = false;
+#endif
 
     // === 内部方法 ===
 
@@ -159,4 +166,4 @@ private:
     RenderContext GetRenderContext() const;
 };
 
-} // namespace PrismaEngine::Graphic
+}  // namespace PrismaEngine::Graphic
