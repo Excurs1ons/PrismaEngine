@@ -142,9 +142,11 @@ cmake .. -DPRISMA_ENABLE_AUDIO_OPENAL=ON \
 ### Web (Emscripten)
 
 ```cmake
-# Web 配置
-emcmake cmake .. -DPRISMA_ENABLE_AUDIO_SDL3=ON \
-                  -DPRISMA_ENABLE_RENDER_WEBGPU=ON
+# Web 配置（Runtime + Game 静态链接）
+emcmake cmake .. -DPRISMA_BUILD_EDITOR=OFF \
+                  -DPRISMA_BUILD_SHARED_LIBS=OFF \
+                  -DPRISMA_RUNTIME_DYNAMIC_LOAD=OFF \
+                  -DPRISMA_ENABLE_RENDER_OPENGL=ON
 ```
 
 ## 运行时设备选择
@@ -186,7 +188,7 @@ renderDesc.backendType = RenderDeviceType::Vulkan; // 或 DirectX12, OpenGL
 如果看到平台不兼容错误，检查：
 - Windows 只能使用 XAudio2 和 DirectX12
 - macOS/iOS 只能使用 Metal
-- Web 只能使用 WebGPU
+- Web 建议使用 OpenGL(ES) / SDL3 组合
 
 ### 性能建议
 
