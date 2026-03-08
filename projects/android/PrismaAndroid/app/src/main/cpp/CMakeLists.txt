@@ -219,6 +219,11 @@ target_link_libraries(myapplication
 
         # 引擎库 (已经包含了所有 FetchContent 的依赖和 Android 适配器)
         Engine
+        
+        # 确保链接 Vulkan 内存分配器
+        if(TARGET vma)
+            target_link_libraries(myapplication PRIVATE vma)
+        endif()
 )
 
 # ========== STB 接口库 ==========
