@@ -1,17 +1,14 @@
 #include "DeferredPipeline.h"
+#include "graphic/ICamera.h"
+#include "pipelines/SkyboxRenderPass.h"
+#include "pipelines/deferred/CompositionPass.h"
 #include "pipelines/deferred/GeometryPass.h"
 #include "pipelines/deferred/LightingPass.h"
-#include "pipelines/deferred/CompositionPass.h"
-#include "pipelines/SkyboxRenderPass.h"
 #include "pipelines/forward/TransparentPass.h"
-#include "graphic/ICamera.h"
 
 namespace PrismaEngine::Graphic {
 
-DeferredPipeline::DeferredPipeline()
-    : LogicalDeferredPipeline()
-    , m_camera(nullptr)
-    , m_ambientLight(0.1f, 0.1f, 0.1f) {
+DeferredPipeline::DeferredPipeline() : LogicalDeferredPipeline(), m_camera(nullptr), m_ambientLight(0.1f, 0.1f, 0.1f) {
     m_stats = {};
 }
 
@@ -41,7 +38,7 @@ bool DeferredPipeline::Initialize() {
 
     // 添加默认方向光
     Light defaultLight;
-    defaultLight.type = LightType::Directional;
+    defaultLight.type      = LightType::Directional;
     defaultLight.direction = PrismaMath::vec3(0.0f, -1.0f, -1.0f);
     // Normalize direction
     float length = sqrtf(defaultLight.direction.x * defaultLight.direction.x +
@@ -50,8 +47,8 @@ bool DeferredPipeline::Initialize() {
     if (length > 0.0f) {
         defaultLight.direction = defaultLight.direction / length;
     }
-    defaultLight.color = PrismaMath::vec3(1.0f, 1.0f, 1.0f);
-    defaultLight.intensity = 1.0f;
+    defaultLight.color       = PrismaMath::vec3(1.0f, 1.0f, 1.0f);
+    defaultLight.intensity   = 1.0f;
     defaultLight.castShadows = true;
     AddLight(defaultLight);
 
@@ -66,15 +63,20 @@ bool DeferredPipeline::Initialize() {
 }
 
 void DeferredPipeline::Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera) {
-    m_camera = camera;
+    m_camera              = camera;
     m_stats.lastFrameTime = deltaTime;
 
     // 更新所有 Pass 的时间
-    if (m_geometryPass) m_geometryPass->Update(deltaTime);
-    if (m_skyboxPass) m_skyboxPass->Update(deltaTime);
-    if (m_lightingPass) m_lightingPass->Update(deltaTime);
-    if (m_transparentPass) m_transparentPass->Update(deltaTime);
-    if (m_compositionPass) m_compositionPass->Update(deltaTime);
+    if (m_geometryPass)
+        m_geometryPass->Update(deltaTime);
+    if (m_skyboxPass)
+        m_skyboxPass->Update(deltaTime);
+    if (m_lightingPass)
+        m_lightingPass->Update(deltaTime);
+    if (m_transparentPass)
+        m_transparentPass->Update(deltaTime);
+    if (m_compositionPass)
+        m_compositionPass->Update(deltaTime);
 
     // 更新相机数据
     if (m_camera) {
@@ -109,6 +111,7 @@ void DeferredPipeline::SetLights(const std::vector<Light>& lights) {
 }
 
 void DeferredPipeline::SetAmbientLight(const PrismaMath::vec3& ambient) {
+    (void)ambient;
     m_ambientLight = ambient;
 }
 
@@ -131,7 +134,7 @@ void DeferredPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* ca
     }
 
     // 从相机接口获取视图和投影矩阵
-    PrismaMath::mat4 view = camera->GetViewMatrix();
+    PrismaMath::mat4 view       = camera->GetViewMatrix();
     PrismaMath::mat4 projection = camera->GetProjectionMatrix();
 
     // 更新几何通道
@@ -149,7 +152,7 @@ void DeferredPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* ca
     // 天空盒需要特殊的视图矩阵（移除平移部分）
     if (m_skyboxPass) {
         PrismaMath::mat4 skyboxView = view;
-        skyboxView[3] = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
+        skyboxView[3]               = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
         m_skyboxPass->SetViewMatrix(skyboxView);
         m_skyboxPass->SetProjectionMatrix(projection);
     }
@@ -157,10 +160,10 @@ void DeferredPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* ca
 
 void DeferredPipeline::CollectStats() {
     // TODO: 从各个 Pass 收集渲染统计
-    m_stats.geometryPassObjects = 0;
+    m_stats.geometryPassObjects   = 0;
     m_stats.geometryPassTriangles = 0;
-    m_stats.lightingPassLights = static_cast<uint32_t>(m_lights.size());
-    m_stats.transparentObjects = 0;
+    m_stats.lightingPassLights    = static_cast<uint32_t>(m_lights.size());
+    m_stats.transparentObjects    = 0;
 }
 
-} // namespace PrismaEngine::Graphic
+}  // namespace PrismaEngine::Graphic

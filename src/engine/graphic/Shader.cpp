@@ -1,21 +1,21 @@
 #include "Shader.h"
+#include "../Logger.h"
 #include "DefaultShader.h"
 #include "StringUtils.h"
-#include "../Logger.h"
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 
 #if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-#include "adapters/dx12/DX12Shader.h"
 #include "adapters/dx12/DX12RenderDevice.h"
+#include "adapters/dx12/DX12Shader.h"
 #include <d3dcompiler.h>
 using Microsoft::WRL::ComPtr;
 #endif
 
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
-#include "adapters/vulkan/VulkanShader.h"
 #include "adapters/vulkan/RenderDeviceVulkan.h"
+#include "adapters/vulkan/VulkanShader.h"
 #endif
 
 #if defined(FindResource)
@@ -26,19 +26,17 @@ using namespace PrismaEngine;
 using namespace StringUtils;
 
 namespace {
-    const std::string EXT_CompiledShaderObject = "cso";
-    const std::string EXT_HLSL = "hlsl";
-    const std::string EXT_SPIRV = "spv";
-}
+const std::string EXT_CompiledShaderObject = "cso";
+const std::string EXT_HLSL                 = "hlsl";
+const std::string EXT_SPIRV                = "spv";
+}  // namespace
 
 Shader::Shader() {
     // 创建平台特定的着色器实现
     m_impl = CreatePlatformShader();
 }
 
-Shader::Shader(std::shared_ptr<PrismaEngine::Graphic::IShader> impl)
-    : m_impl(std::move(impl)) {
-}
+Shader::Shader(std::shared_ptr<PrismaEngine::Graphic::IShader> impl) : m_impl(std::move(impl)) {}
 
 Shader::~Shader() {
     Unload();
@@ -111,11 +109,13 @@ const PrismaEngine::Graphic::ShaderReflection::Resource* Shader::FindResource(co
     return m_impl ? m_impl->FindResource(name) : nullptr;
 }
 
-const PrismaEngine::Graphic::ShaderReflection::Resource* Shader::FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const {
+const PrismaEngine::Graphic::ShaderReflection::Resource* Shader::FindResourceByBindPoint(uint32_t bindPoint,
+                                                                                         uint32_t space) const {
     return m_impl ? m_impl->FindResourceByBindPoint(bindPoint, space) : nullptr;
 }
 
-const PrismaEngine::Graphic::ShaderReflection::ConstantBuffer* Shader::FindConstantBuffer(const std::string& name) const {
+const PrismaEngine::Graphic::ShaderReflection::ConstantBuffer*
+Shader::FindConstantBuffer(const std::string& name) const {
     return m_impl ? m_impl->FindConstantBuffer(name) : nullptr;
 }
 
@@ -141,39 +141,45 @@ const PrismaEngine::Graphic::ShaderReflection::OutputParameter& Shader::GetOutpu
 // 重新编译
 bool Shader::Recompile(const PrismaEngine::Graphic::ShaderCompileOptions* options, std::string* errors) {
     if (!m_impl) {
-        if (errors) *errors = "Shader not loaded";
+        if (errors)
+            *errors = "Shader not loaded";
         return false;
     }
 
     std::string err;
     bool result = m_impl->Recompile(options, err);
-    if (errors) *errors = err;
+    if (errors)
+        *errors = err;
     return result;
 }
 
 bool Shader::RecompileFromSource(const std::string& source,
-                                const PrismaEngine::Graphic::ShaderCompileOptions* options,
-                                std::string* errors) {
+                                 const PrismaEngine::Graphic::ShaderCompileOptions* options,
+                                 std::string* errors) {
     if (!m_impl) {
-        if (errors != nullptr) *errors = "Shader not loaded";
+        if (errors != nullptr)
+            *errors = "Shader not loaded";
         return false;
     }
 
     std::string err;
     bool result = m_impl->RecompileFromSource(source, options, err);
-    if (errors != nullptr) *errors = err;
+    if (errors != nullptr)
+        *errors = err;
     return result;
 }
 
 bool Shader::ReloadFromFile(std::string* errors) {
     if (!m_impl) {
-        if (errors != nullptr) *errors = "Shader not loaded";
+        if (errors != nullptr)
+            *errors = "Shader not loaded";
         return false;
     }
 
     std::string err;
     bool result = m_impl->ReloadFromFile(err);
-    if (errors != nullptr) *errors = err;
+    if (errors != nullptr)
+        *errors = err;
     return result;
 }
 
@@ -215,9 +221,7 @@ std::string Shader::Disassemble() const {
 }
 
 // 调试
-bool Shader::DebugSaveToFile(const std::string& filename,
-                            bool includeDisassembly,
-                            bool includeReflection) const {
+bool Shader::DebugSaveToFile(const std::string& filename, bool includeDisassembly, bool includeReflection) const {
     return m_impl ? m_impl->DebugSaveToFile(filename, includeDisassembly, includeReflection) : false;
 }
 
@@ -365,6 +369,8 @@ std::shared_ptr<Shader> CreateShader(const std::string& vertexSource, const std:
     auto shader = std::make_shared<Shader>();
 #if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
     if (shader->CompileFromString(vertexSource.c_str(), pixelSource.c_str())) {
+        (void)vertexSource;
+        (void)pixelSource;
         return shader;
     }
 #endif
@@ -375,6 +381,6 @@ std::shared_ptr<Shader> CreateShader(const std::string& vertexSource, const std:
 bool Shader::LoadDefaultShader() {
     // 加载默认的着色器
     auto defaultShader = std::make_shared<Shader>();
-    m_impl = defaultShader->m_impl;
+    m_impl             = defaultShader->m_impl;
     return true;
 }
