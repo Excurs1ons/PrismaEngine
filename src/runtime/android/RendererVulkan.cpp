@@ -430,7 +430,7 @@ void RendererVulkan::createScene() {
                 go->AddComponent(std::make_shared<SkyboxRenderer>(cubemap));
                 aout << "RendererVulkan: Skybox created with cubemap texture" << std::endl;
             } else {
-                go->AddComponent(std::make_shared<SkyboxRenderer>(nullptr));
+                go->AddComponent(std::make_shared<SkyboxRenderer>(std::shared_ptr<CubemapTextureAsset>()));
                 aout << "RendererVulkan: Skybox created with solid color (no texture)" << std::endl;
             }
         }
