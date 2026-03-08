@@ -153,16 +153,52 @@ if(TARGET vma)
         target_include_directories(myapplication PRIVATE ${VMA_SOURCE_DIR})
         message(STATUS "VMA include dir: ${VMA_SOURCE_DIR}")
     else()
-        # Fallback: 使用 .dependencies 目录
+        # Fallback 1: 使用 .dependencies 目录
         set(VMA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src)
-        target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR})
-        message(STATUS "VMA include dir (fallback): ${VMA_INCLUDE_DIR}")
+        if(EXISTS "${VMA_INCLUDE_DIR}/src")
+            target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR}/src)
+            message(STATUS "VMA include dir (fallback with src): ${VMA_INCLUDE_DIR}/src")
+        elseif(EXISTS "${VMA_INCLUDE_DIR}/include")
+            target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR}/include)
+            message(STATUS "VMA include dir (fallback with include): ${VMA_INCLUDE_DIR}/include")
+        else()
+            # Fallback 2: 搜索 vk_mem_alloc.h 文件
+            file(GLOB_RECURSE VMA_HEADER_FILES
+                ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src/
+                "vk_mem_alloc.h"
+            )
+            if(VMA_HEADER_FILES)
+                get_filename_component(VMA_HEADER_DIR ${VMA_HEADER_FILES} DIRECTORY)
+                target_include_directories(myapplication PRIVATE ${VMA_HEADER_DIR})
+                message(STATUS "VMA include dir (found vk_mem_alloc.h): ${VMA_HEADER_DIR}")
+            else()
+                message(WARNING "VMA vk_mem_alloc.h not found in .dependencies/vma-src/")
+            endif()
+        endif()
     endif()
 else()
     # Fallback: 如果没有 vma target，使用 .dependencies 目录
     set(VMA_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src)
-    target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR})
-    message(STATUS "VMA include dir (no target): ${VMA_INCLUDE_DIR}")
+    if(EXISTS "${VMA_INCLUDE_DIR}/src")
+        target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR}/src)
+        message(STATUS "VMA include dir (no target with src): ${VMA_INCLUDE_DIR}/src")
+    elseif(EXISTS "${VMA_INCLUDE_DIR}/include")
+        target_include_directories(myapplication PRIVATE ${VMA_INCLUDE_DIR}/include)
+        message(STATUS "VMA include dir (no target with include): ${VMA_INCLUDE_DIR}/include")
+    else()
+        # Fallback 2: 搜索 vk_mem_alloc.h 文件
+        file(GLOB_RECURSE VMA_HEADER_FILES
+            ${CMAKE_CURRENT_SOURCE_DIR}/.dependencies/vma-src/
+            "vk_mem_alloc.h"
+        )
+        if(VMA_HEADER_FILES)
+            get_filename_component(VMA_HEADER_DIR ${VMA_HEADER_FILES} DIRECTORY)
+            target_include_directories(myapplication PRIVATE ${VMA_HEADER_DIR})
+            message(STATUS "VMA include dir (found vk_mem_alloc.h): ${VMA_HEADER_DIR}")
+        else()
+            message(WARNING "VMA vk_mem_alloc.h not found in .dependencies/vma-src/")
+        endif()
+    endif()
 endif()
 
 # 查找 Vulkan 库
