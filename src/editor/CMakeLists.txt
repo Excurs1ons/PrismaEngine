@@ -8,8 +8,8 @@ endif()
 if(PRISMA_ENABLE_RENDER_VULKAN)
     list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
 endif()
-# SDL3 后端 (非 Windows 平台)
-if(NOT WIN32)
+# SDL3 后端 - 编辑器在所有平台都使用 SDL3
+if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
     list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
 endif()
 

@@ -44,7 +44,8 @@
       "description": "Base Windows Editor configuration",
       "cacheVariables": {
         "PRISMA_BUILD_EDITOR": "ON",
-        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+        "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
+        "PRISMA_ENABLE_RENDER_VULKAN": "ON"
       }
     },
     {
