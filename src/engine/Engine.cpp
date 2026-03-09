@@ -22,17 +22,16 @@ namespace PrismaEngine {
     }
 
     int EngineCore::Initialize() {
-        LOG_INFO("Engine", "Engine initialization started...");
 
         // 1. 注册核心基础系统 (0 为成功)
         if (ThreadManager::GetInstance()->Initialize() != 0) {
-            LOG_ERROR("Engine", "Failed to initialize ThreadManager");
+            LOG_ERROR("Engine", "线程管理器初始化失败");
             return -1;
         }
         m_systems.push_back(ThreadManager::GetInstance().get());
 
         if (PhysicsSystem::GetInstance()->Initialize() != 0) {
-            LOG_ERROR("Engine", "Failed to initialize PhysicsSystem");
+            LOG_ERROR("Engine", "物理系统初始化失败");
             return -1;
         }
         m_systems.push_back(PhysicsSystem::GetInstance().get());
@@ -41,12 +40,12 @@ namespace PrismaEngine {
         m_systems.push_back(::PrismaEngine::Graphic::RenderSystem::GetInstance().get());
 
         if (SceneManager::GetInstance()->Initialize() != 0) {
-            LOG_ERROR("Engine", "Failed to initialize SceneManager");
+            LOG_ERROR("Engine", "场景管理器初始化失败");
             return -1;
         }
         m_systems.push_back(SceneManager::GetInstance().get());
 
-        LOG_INFO("Engine", "Core systems registered successfully.");
+        LOG_INFO("Engine", "核心系统注册成功。");
         m_initialized = true;
         return 0;
     }
@@ -58,7 +57,7 @@ namespace PrismaEngine {
     }
 
     void EngineCore::Shutdown() {
-        LOG_INFO("Engine", "Engine shutting down...");
+        LOG_INFO("Engine", "引擎正在关闭...");
         for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
             (*it)->Shutdown();
         }
@@ -70,7 +69,7 @@ namespace PrismaEngine {
     int EngineCore::Run() {
         if (!m_initialized) return -1;
         isRunning_ = true;
-        LOG_INFO("Engine", "Engine loop started.");
+        LOG_INFO("Engine", "引擎主循环已启动");
         while (isRunning_) {
             Update();
         }
