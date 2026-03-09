@@ -81,8 +81,6 @@ set(DX12_SOURCES
     graphic/adapters/dx12/DX12Buffer.cpp
     graphic/adapters/dx12/DX12CommandBuffer.cpp
     graphic/adapters/dx12/DX12Fence.cpp
-    graphic/adapters/dx12/DX12Material.cpp
-    graphic/adapters/dx12/DX12Mesh.cpp
     graphic/adapters/dx12/DX12PipelineState.cpp
     graphic/adapters/dx12/DX12RenderDevice.cpp
     graphic/adapters/dx12/DX12ResourceFactory.cpp
@@ -90,6 +88,22 @@ set(DX12_SOURCES
     graphic/adapters/dx12/DX12Shader.cpp
     graphic/adapters/dx12/DX12SwapChain.cpp
     graphic/adapters/dx12/DX12Texture.cpp
+)
+
+set(DX12_HEADERS
+    graphic/adapters/dx12/DX12Adapters.h
+    graphic/adapters/dx12/DX12Buffer.h
+    graphic/adapters/dx12/DX12CommandBuffer.h
+    graphic/adapters/dx12/DX12Fence.h
+    graphic/adapters/dx12/DX12Material.h
+    graphic/adapters/dx12/DX12Mesh.h
+    graphic/adapters/dx12/DX12PipelineState.h
+    graphic/adapters/dx12/DX12RenderDevice.h
+    graphic/adapters/dx12/DX12ResourceFactory.h
+    graphic/adapters/dx12/DX12Sampler.h
+    graphic/adapters/dx12/DX12Shader.h
+    graphic/adapters/dx12/DX12SwapChain.h
+    graphic/adapters/dx12/DX12Texture.h
 )
 
 set(DX12_HEADERS
