@@ -1,9 +1,17 @@
 #include "OBJParser.h"
-#include "Logger.h"
-
+#include "../Logger.h"
+#include <format>
 #include <fstream>
 #include <sstream>
 #include <filesystem>
+
+namespace PrismaEngine {
+namespace Resource {
+
+// 为了兼容旧代码，定义LOG_WARNING
+#ifndef LOG_WARNING
+#define LOG_WARNING(category, fmt, ...) ::Logger::GetInstance().LogFormat(::LogLevel::Warning, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+#endif
 
 namespace PrismaEngine {
 namespace Resource {
@@ -12,10 +20,12 @@ OBJParseResult OBJParser::Parse(const std::string& filePath) {
     OBJParseResult result;
 
     // 检查文件是否存在
-    if (!std::filesystem::exists(filePath)) {
+    std::ifstream testFile(filePath);
+    if (!testFile.good()) {
         result.error = "File does not exist: " + filePath;
         return result;
     }
+    testFile.close();
 
     // 打开文件
     std::ifstream file(filePath);
