@@ -40,6 +40,7 @@ if(PRISMA_BUILD_RUNTIME)
         "src/runtime/windows/WindowsRuntime.cpp"
         "src/runtime/linux/LinuxRuntime.cpp"
         "src/runtime/android/AndroidRuntime.cpp"
+        "src/runtime/web/WebRuntime.cpp"
     )
 
     # 运行时资源文件
@@ -138,6 +139,12 @@ if(ANDROID AND PRISMA_BUILD_RUNTIME)
             PRISMA_ANDROID_PLATFORM=1
         )
     endif()
+endif()
+
+# WebAssembly 运行时配置
+if(EMSCRIPTEN AND PRISMA_BUILD_RUNTIME)
+    set(PRISMA_RUNTIME_DYNAMIC_LOAD OFF CACHE BOOL "Web runtime disables dynamic loading" FORCE)
+    message(STATUS "WebAssembly 运行时: 静态链接 Game 模块")
 endif()
 
 # ========== 运行时测试支持 ==========
