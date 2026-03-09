@@ -55,6 +55,15 @@ cmake --build build/linux-x64-debug
 # Open projects/android/PrismaAndroid as a project
 ```
 
+
+### WebAssembly Builds
+```bash
+# Requires emsdk + emcmake
+emcmake cmake -B build/runtime-web-debug -DPRISMA_BUILD_EDITOR=OFF \
+              -DPRISMA_BUILD_SHARED_LIBS=OFF -DPRISMA_RUNTIME_DYNAMIC_LOAD=OFF
+cmake --build build/runtime-web-debug --target Runtime
+```
+
 ### Environment Setup
 ```bash
 # Initialize vcpkg
@@ -93,7 +102,8 @@ PrismaEngine/
 │   └── runtime/             # 运行时环境 / Runtime environment
 │       ├── windows/         # Windows 运行时
 │       ├── linux/           # Linux 运行时
-│       └── android/         # Android 运行时
+│       ├── android/         # Android 运行时
+│       └── web/             # WebAssembly 运行时
 ├── resources/               # 引擎资源 / Engine resources
 │   ├── common/              # 通用资源 / Common resources
 │   │   ├── shaders/

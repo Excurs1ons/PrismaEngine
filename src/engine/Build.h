@@ -42,6 +42,13 @@
     #define PRISMA_PLATFORM_LINUX 0
 #endif
 
+
+#if defined(__EMSCRIPTEN__)
+    #define PRISMA_PLATFORM_WEB 1
+#else
+    #define PRISMA_PLATFORM_WEB 0
+#endif
+
 #if defined(__APPLE__)
     #include <TargetConditionals.h>
     #if TARGET_OS_IPHONE

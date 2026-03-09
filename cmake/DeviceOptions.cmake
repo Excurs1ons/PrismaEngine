@@ -41,6 +41,19 @@ option(PRISMA_ENABLE_MESH_SHADERS "Enable Mesh Shaders" OFF)
 option(PRISMA_ENABLE_VARIABLE_RATE_SHADING "Enable VRS" OFF)
 option(PRISMA_ENABLE_BINDLESS_RESOURCES "Enable Bindless Resources" OFF)
 
+# WebAssembly 平台强制配置
+if(EMSCRIPTEN)
+    set(PRISMA_USE_NATIVE_AUDIO OFF CACHE BOOL "Use platform native audio APIs only" FORCE)
+    set(PRISMA_USE_NATIVE_INPUT OFF CACHE BOOL "Use platform native input APIs only" FORCE)
+    set(PRISMA_BUILD_EDITOR OFF CACHE BOOL "Build Editor application" FORCE)
+    set(PRISMA_BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+    set(PRISMA_RUNTIME_DYNAMIC_LOAD OFF CACHE BOOL "Runtime dynamic load for web" FORCE)
+    set(PRISMA_ENABLE_RENDER_DX12 OFF CACHE BOOL "Enable DirectX12" FORCE)
+    set(PRISMA_ENABLE_RENDER_VULKAN OFF CACHE BOOL "Enable Vulkan" FORCE)
+    set(PRISMA_ENABLE_RENDER_OPENGL ON CACHE BOOL "Enable OpenGL" FORCE)
+    set(PRISMA_DEFAULT_RENDER_BACKEND "OpenGL" CACHE STRING "Default render backend" FORCE)
+endif()
+
 # ========== 打印配置信息 ==========
 
 message(STATUS "")

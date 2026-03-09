@@ -75,6 +75,11 @@ if(WIN32)
         platform/WindowsUtils.cpp
         input/drivers/InputDriverWin32.cpp
     )
+elseif(EMSCRIPTEN OR LINUX)
+    list(APPEND CORE_SOURCES
+        PlatformSDL.cpp
+        platform/Application.cpp
+    )
 endif()
 
 # ========== 收集核心头文件 ==========
@@ -140,21 +145,33 @@ set(ENGINE_HEADERS
     ${ENGINE_GRAPHIC_HEADERS}
 )
 
-add_library(Engine SHARED
-    ${ENGINE_SOURCES}
-    ${ENGINE_HEADERS}
-    pch.h
-    pch.cpp
-    packing/Pipeline.h
-)
+if(EMSCRIPTEN)
+    add_library(Engine STATIC
+        ${ENGINE_SOURCES}
+        ${ENGINE_HEADERS}
+        pch.h
+        pch.cpp
+        packing/Pipeline.h
+    )
+    message(STATUS "Engine: WebAssembly 构建为静态库 (STATIC)")
+    target_compile_definitions(Engine PUBLIC ENGINE_BUILD_STATIC=1 PRISMA_HAS_SDL=1)
+else()
+    add_library(Engine SHARED
+        ${ENGINE_SOURCES}
+        ${ENGINE_HEADERS}
+        pch.h
+        pch.cpp
+        packing/Pipeline.h
+    )
 
-message(STATUS "Engine: 构建为动态库 (SHARED)")
-target_compile_definitions(Engine PRIVATE 
-    ENGINE_EXPORTS=1 
-    PRISMA_ENGINE_EXPORTS=1 
-    PrismaEngine_EXPORTS=1
-)
-target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
+    message(STATUS "Engine: 构建为动态库 (SHARED)")
+    target_compile_definitions(Engine PRIVATE
+        ENGINE_EXPORTS=1
+        PRISMA_ENGINE_EXPORTS=1
+        PrismaEngine_EXPORTS=1
+    )
+    target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
+endif()
 
 set_target_properties(Engine PROPERTIES OUTPUT_NAME PrismaEngine)
 
