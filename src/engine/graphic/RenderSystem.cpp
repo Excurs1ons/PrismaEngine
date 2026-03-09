@@ -13,7 +13,6 @@
 #ifdef PRISMA_ENABLE_RENDER_DX12
 #include "adapters/dx12/DX12Adapters.h"
 #include <imgui_impl_dx12.h>
-#include <imgui_impl_win32.h>
 #endif
 
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
@@ -21,7 +20,6 @@
 #ifndef IMGUI_IMPL_VULKAN
 #define IMGUI_IMPL_VULKAN
 #endif
-#include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #endif
 
@@ -81,7 +79,7 @@ int RenderSystem::Initialize(const RenderSystemDesc& desc) {
 }
 
 void RenderSystem::Shutdown() {
-    LOG_INFO("Render", "Shutting down RenderSystem...");
+    LOG_INFO("Render", "渲染系统正在关闭...");
 
     if (m_renderThread.IsRunning()) {
         m_renderThread.Stop();
@@ -99,29 +97,25 @@ void RenderSystem::Shutdown() {
         m_device.reset();
     }
 
-    LOG_INFO("Render", "RenderSystem shut down.");
+    LOG_INFO("RenderSystem", "渲染系统已关闭");
 }
 
 bool RenderSystem::InitializeImGui() {
-#if defined(PRISMA_BUILD_EDITOR) && (defined(PRISMA_ENABLE_RENDER_DX12) || defined(PRISMA_ENABLE_RENDER_VULKAN))
+
     if (!m_device) {
         LOG_ERROR("Render", "Device not initialized, cannot init ImGui.");
         return false;
     }
 
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
-    ImGui::StyleColorsDark();
+    // ImGui 上下文已经在 Editor 中创建，这里不再重复创建
 
 #if defined(PRISMA_ENABLE_RENDER_DX12)
     if (m_desc.backendType == RenderAPIType::DirectX12) {
-        LOG_INFO("Render", "Initializing ImGui Win32 + DX12");
-        if (!ImGui_ImplWin32_Init(static_cast<HWND>(m_desc.windowHandle)))
+        LOG_INFO("Render", "正在初始化ImGui(DX12)");
+
+        ImGui_ImplDX12_InitInfo init_info = {};
+        // TODO: 填充 init_info
+        if (!ImGui_ImplDX12_Init(init_info))
             return false;
         if (!m_device->InitializeImGui())
             return false;
@@ -129,31 +123,59 @@ bool RenderSystem::InitializeImGui() {
     }
 #endif
 
-#if defined(PRISMA_ENABLE_RENDER_VULKAN) && !defined(_WIN32) && !defined(__ANDROID__)
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
     if (m_desc.backendType == RenderAPIType::Vulkan) {
-        LOG_INFO("Render", "Initializing ImGui SDL3 + Vulkan");
-        if (m_desc.windowHandle) {
-            if (!ImGui_ImplSDL3_InitForVulkan((SDL_Window*)m_desc.windowHandle))
-                return false;
-        }
-        if (!m_device->InitializeImGui())
+        LOG_INFO("Render", "正在初始化 ImGui (Vulkan)...");
+        auto instancePtr = static_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+
+        // 先初始化渲染器端的 ImGui（创建描述符池等）
+        if (!m_device->InitializeImGui()) {
+            LOG_ERROR("Render", "Device ImGui 初始化失败");
             return false;
+        }
+
+        // 然后初始化 Vulkan 后端
+        ImGui_ImplVulkan_InitInfo init_info = {};
+        init_info.ApiVersion                = VK_API_VERSION_1_3;
+        init_info.Instance                  = instancePtr->GetInstance();
+        init_info.PhysicalDevice            = instancePtr->GetPhysicalDevice();
+        init_info.Device                    = instancePtr->GetDevice();
+        init_info.QueueFamily               = instancePtr->GetGraphicsQueueFamily();
+        init_info.Queue                     = instancePtr->GetGraphicsQueue();
+        init_info.MinImageCount             = 3;
+        init_info.ImageCount                = 3;
+        init_info.DescriptorPool            = instancePtr->GetImGuiDescriptorPool();
+        init_info.DescriptorPoolSize        = 0;  // 使用外部描述符池
+
+        // 设置渲染通道信息（新API使用 PipelineInfoMain）
+        init_info.PipelineInfoMain.Subpass    = 0;
+        init_info.PipelineInfoMain.RenderPass = instancePtr->GetImGuiRenderPass();
+
+        if (init_info.PipelineInfoMain.RenderPass == VK_NULL_HANDLE) {
+            LOG_ERROR("Render", "ImGui Vulkan 初始化失败：RenderPass 为空");
+            return false;
+        }
+
+        if (!ImGui_ImplVulkan_Init(&init_info)) {
+            LOG_ERROR("Render", "ImGui_ImplVulkan_Init 失败");
+            return false;
+        }
+
         m_imguiInitialized = true;
+        LOG_DEBUG("Render", "ImGui (Vulkan) 初始化完成");
     }
 #endif
 
     if (m_imguiInitialized) {
-        LOG_INFO("Render", "ImGui initialized successfully.");
+        LOG_INFO("Render", "ImGui初始化完成");
+        return true;
     }
-    return m_imguiInitialized;
-#else
-    LOG_WARNING("Render", "ImGui not available in this build configuration.");
+    LOG_FATAL("Render", "ImGui初始化失败");
     return false;
-#endif
 }
 
 void RenderSystem::ShutdownImGui() {
-#if defined(PRISMA_BUILD_EDITOR) && (defined(PRISMA_ENABLE_RENDER_DX12) || defined(PRISMA_ENABLE_RENDER_VULKAN))
+
     if (!m_imguiInitialized)
         return;
 
@@ -173,12 +195,9 @@ void RenderSystem::ShutdownImGui() {
         ImGui::DestroyContext();
     }
     m_imguiInitialized = false;
-#endif
 }
 
-RenderSystem::~RenderSystem() {
-    Shutdown();
-}
+RenderSystem::~RenderSystem() {}
 
 void RenderSystem::Update(float deltaTime) {
     UpdateStats(deltaTime);
