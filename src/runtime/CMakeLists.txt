@@ -26,6 +26,11 @@ target_link_libraries(Runtime
     PRIVATE Engine
 )
 
+# 链接 SDL3（Linux Runtime 需要 PlatformSDL 支持）
+if(LINUX AND TARGET SDL3::SDL3-static)
+    target_link_libraries(Runtime PRIVATE SDL3::SDL3-static)
+endif()
+
 if(EMSCRIPTEN)
     if(TARGET Game)
         target_link_libraries(Runtime PRIVATE Game)
