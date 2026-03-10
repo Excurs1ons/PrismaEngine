@@ -38,8 +38,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .dependencies
-        key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        key: ${{ runner.os }}-deps-v3-${{ hashFiles('cmake/DependencyVersions.cmake') }}
         restore-keys: |
+          ${{ runner.os }}-deps-v3-
           ${{ runner.os }}-deps-
 
     - name: Setup CMake
