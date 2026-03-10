@@ -107,9 +107,14 @@ endif()
 
 if(PRISMA_ENABLE_RENDER_VULKAN)
     # 为 vk-bootstrap 添加 -fPIC 以支持共享库链接
-    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(Vulkan-Headers vma vk-bootstrap)
-    set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
+    set(CMAKE_POSITION_INDEPENDENT_CODE OFF CACHE BOOL "" FORCE)
+    
+    # 确保 vk-bootstrap 使用 -fPIC
+    if(TARGET vk-bootstrap)
+        set_target_properties(vk-bootstrap PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    endif()
 endif()
 
 if(WIN32)
