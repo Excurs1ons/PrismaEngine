@@ -8,7 +8,7 @@
 
 // Vulkan headers
 #include <VkBootstrap.h>
-#include <vma/vk_mem_alloc.h>
+#include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
 #include <array>
