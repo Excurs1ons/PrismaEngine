@@ -106,7 +106,10 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_RENDER_VULKAN)
 endif()
 
 if(PRISMA_ENABLE_RENDER_VULKAN)
+    # 为 vk-bootstrap 添加 -fPIC 以支持共享库链接
+    set(CMAKE_POSITION_INDEPENDENT_CODE ON)
     FetchContent_MakeAvailable(Vulkan-Headers vma vk-bootstrap)
+    set(CMAKE_POSITION_INDEPENDENT_CODE OFF)
 endif()
 
 if(WIN32)
