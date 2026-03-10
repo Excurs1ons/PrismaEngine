@@ -229,6 +229,10 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     if(TARGET vk-bootstrap::vk-bootstrap)
         target_link_libraries(Engine PUBLIC vk-bootstrap::vk-bootstrap)
     endif()
+    # Vulkan 需要 ImGui 后端用于调试 UI
+    if(TARGET imgui)
+        target_link_libraries(Engine PUBLIC imgui)
+    endif()
 endif()
 
 if(PRISMA_ENABLE_RENDER_DX12 AND WIN32)
