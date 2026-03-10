@@ -37,15 +37,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .dependencies
-        key: ${{ runner.os }}-deps-v2-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        key: ${{ runner.os }}-deps-v3-${{ hashFiles('cmake/DependencyVersions.cmake') }}
         restore-keys: |
-          ${{ runner.os }}-deps-v2-
-          ${{ runner.os }}-deps-
-
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v2.0
-      with:
-        cmake-version: ${{ env.CMAKE_VERSION }}
+          ${{ runner.os }}-deps-v3-
 
     - name: Clean potentially corrupted dependencies
       run: |
@@ -56,6 +50,11 @@ jobs:
             rm -rf "$dir"
           fi
         done
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
 
     - name: Setup Ninja
       run: sudo apt-get install -y ninja-build
