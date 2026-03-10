@@ -207,9 +207,9 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     endif()
 endif()
 
-if(PRISMA_ENABLE_RENDER_DX12 AND WIN32)
-    target_link_libraries(Engine PUBLIC d3d12.lib d3dcompiler.lib dxgi.lib dxguid.lib)
-endif()
+    if(PRISMA_ENABLE_RENDER_DX12 AND WIN32)
+     target_link_libraries(Engine PUBLIC d3d12.lib d3dcompiler.lib dxgi.lib dxguid.lib)
+     endif()
 
 if(TARGET imgui)
     target_link_libraries(Engine PUBLIC imgui)
