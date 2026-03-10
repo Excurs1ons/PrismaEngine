@@ -4,9 +4,10 @@
 #include "VulkanSwapChain.h"
 #include <iostream>
 
-// 动态加载 Vulkan 函数以兼容 Android NDK (避免 vkGetDeviceBufferMemoryRequirements 链接错误)
+// 使用 Vulkan 1.2 版本以兼容 Android NDK (避免 vkGetDeviceBufferMemoryRequirements 链接错误)
+// VMA 会根据此版本选择不使用 Vulkan 1.3 的新函数
 #define VMA_IMPLEMENTATION
-#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
+#define VMA_VULKAN_VERSION 1002000 // Vulkan 1.2
 #include <vk_mem_alloc.h>
 
 #if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
