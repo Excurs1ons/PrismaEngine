@@ -8,9 +8,11 @@ endif()
 if(PRISMA_ENABLE_RENDER_VULKAN)
     list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
 endif()
-# SDL3 后端 - 编辑器在所有平台都使用 SDL3
-if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-    list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+# SDL3 后端 - 仅在使用 SDL3 时添加，但排除 Android 平台（Android 不使用 SDL3）
+if(NOT ANDROID AND (PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_USE_NATIVE_INPUT STREQUAL "OFF"))
+    if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+        list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+    endif()
 endif()
 
 # 源文件
