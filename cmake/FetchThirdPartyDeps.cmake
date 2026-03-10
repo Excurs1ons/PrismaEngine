@@ -149,9 +149,11 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG OR PRISMA_ENABLE_RENDER_VULK
         list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
     endif()
 
-    # SDL3 后端 - 跨平台（包括 Windows）
-    if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+    # SDL3 后端 - 仅在使用 SDL3 时添加
+    if(PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_USE_NATIVE_INPUT STREQUAL "OFF")
+        if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+        endif()
     endif()
 
     if(NOT TARGET imgui)
