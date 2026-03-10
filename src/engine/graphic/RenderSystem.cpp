@@ -13,6 +13,7 @@
 #ifdef PRISMA_ENABLE_RENDER_DX12
 #include "adapters/dx12/DX12Adapters.h"
 #include <imgui_impl_dx12.h>
+#include <imgui_impl_win32.h>
 #endif
 
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
@@ -115,7 +116,7 @@ bool RenderSystem::InitializeImGui() {
 
         ImGui_ImplDX12_InitInfo init_info = {};
         // TODO: 填充 init_info
-        if (!ImGui_ImplDX12_Init(init_info))
+        if (!ImGui_ImplDX12_Init(&init_info))
             return false;
         if (!m_device->InitializeImGui())
             return false;
