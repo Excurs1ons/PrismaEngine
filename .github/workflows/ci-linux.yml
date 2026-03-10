@@ -65,7 +65,7 @@ jobs:
         sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libwayland-dev libxkbcommon-dev libdrm-dev libvulkan-dev vulkan-tools
 
     - name: Configure
-      run: cmake --preset engine-linux-x64-debug
+      run: cmake --preset engine-linux-x64-debug -DPRISMA_BUILD_SHARED_LIBS=OFF
 
     - name: Build Engine
       run: cmake --build build/engine-linux-x64-debug --parallel 2
