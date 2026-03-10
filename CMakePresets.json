@@ -101,8 +101,7 @@
       "description": "Base Linux Engine configuration",
       "cacheVariables": {
         "PRISMA_BUILD_EDITOR": "OFF",
-        "PRISMA_BUILD_RUNTIME": "OFF",
-        "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+        "PRISMA_BUILD_RUNTIME": "OFF"
       }
     },
     {
