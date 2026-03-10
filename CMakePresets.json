@@ -34,8 +34,7 @@
       "inherits": "windows-base",
       "description": "Base Windows Engine configuration",
       "cacheVariables": {
-        "PRISMA_BUILD_EDITOR": "OFF",
-        "PRISMA_ENABLE_RENDER_VULKAN": "ON"
+        "PRISMA_BUILD_EDITOR": "OFF"
       }
     },
     {
