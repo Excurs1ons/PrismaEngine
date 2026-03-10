@@ -183,3 +183,17 @@ endif()
 if(TARGET vma AND NOT TARGET vma::VMA)
     add_library(vma::VMA ALIAS vma)
 endif()
+
+# 添加 VMA include 目录
+if(TARGET vma)
+    get_target_property(VMA_INCLUDE_DIRS vma INTERFACE_INCLUDE_DIRECTORIES)
+    if(NOT VMA_INCLUDE_DIRS)
+        # VMA 可能没有正确设置 include 目录，手动添加
+        get_target_property(VMA_SOURCE_DIR vma SOURCE_DIR)
+        if(VMA_SOURCE_DIR)
+            if(EXISTS "${VMA_SOURCE_DIR}/include")
+                target_include_directories(vma INTERFACE "${VMA_SOURCE_DIR}/include")
+            endif()
+        endif()
+    endif()
+endif()
