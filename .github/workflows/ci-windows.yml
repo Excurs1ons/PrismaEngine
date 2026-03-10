@@ -22,8 +22,6 @@ on:
       - 'CMakePresets.json'
       - '.github/workflows/**'
   workflow_dispatch:
-  workflow_dispatch:
-
 
 env:
   CMAKE_VERSION: '3.31.0'
@@ -41,8 +39,9 @@ jobs:
       uses: actions/cache@v4
       with:
         path: .dependencies
-        key: ${{ runner.os }}-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        key: ${{ runner.os }}-deps-v3-${{ hashFiles('cmake/DependencyVersions.cmake') }}
         restore-keys: |
+          ${{ runner.os }}-deps-v3-
           ${{ runner.os }}-deps-
 
     - name: Setup CMake
@@ -53,7 +52,7 @@ jobs:
     - name: Setup Vulkan SDK
       uses: humbletim/setup-vulkan-sdk@main
       with:
-        vulkan-query-version: 1.3.296.0
+        vulkan-query-version: 1.4.304.0
         vulkan-components: Vulkan-Headers, Vulkan-Loader
         vulkan-use-cache: true
 
