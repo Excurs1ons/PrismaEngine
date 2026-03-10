@@ -75,6 +75,53 @@ set(VULKAN_HEADERS
     graphic/adapters/vulkan/VulkanMesh.h
 )
 
+# DirectX 12 后端文件 (条件编译)
+set(DX12_SOURCES
+    graphic/adapters/dx12/DX12Adapters.cpp
+    graphic/adapters/dx12/DX12Buffer.cpp
+    graphic/adapters/dx12/DX12CommandBuffer.cpp
+    graphic/adapters/dx12/DX12Fence.cpp
+    graphic/adapters/dx12/DX12PipelineState.cpp
+    graphic/adapters/dx12/DX12RenderDevice.cpp
+    graphic/adapters/dx12/DX12ResourceFactory.cpp
+    graphic/adapters/dx12/DX12Sampler.cpp
+    graphic/adapters/dx12/DX12Shader.cpp
+    graphic/adapters/dx12/DX12SwapChain.cpp
+    graphic/adapters/dx12/DX12Texture.cpp
+)
+
+set(DX12_HEADERS
+    graphic/adapters/dx12/DX12Adapters.h
+    graphic/adapters/dx12/DX12Buffer.h
+    graphic/adapters/dx12/DX12CommandBuffer.h
+    graphic/adapters/dx12/DX12Fence.h
+    graphic/adapters/dx12/DX12Material.h
+    graphic/adapters/dx12/DX12Mesh.h
+    graphic/adapters/dx12/DX12PipelineState.h
+    graphic/adapters/dx12/DX12RenderDevice.h
+    graphic/adapters/dx12/DX12ResourceFactory.h
+    graphic/adapters/dx12/DX12Sampler.h
+    graphic/adapters/dx12/DX12Shader.h
+    graphic/adapters/dx12/DX12SwapChain.h
+    graphic/adapters/dx12/DX12Texture.h
+)
+
+set(DX12_HEADERS
+    graphic/adapters/dx12/DX12Adapters.h
+    graphic/adapters/dx12/DX12Buffer.h
+    graphic/adapters/dx12/DX12CommandBuffer.h
+    graphic/adapters/dx12/DX12Fence.h
+    graphic/adapters/dx12/DX12Material.h
+    graphic/adapters/dx12/DX12Mesh.h
+    graphic/adapters/dx12/DX12PipelineState.h
+    graphic/adapters/dx12/DX12RenderDevice.h
+    graphic/adapters/dx12/DX12ResourceFactory.h
+    graphic/adapters/dx12/DX12Sampler.h
+    graphic/adapters/dx12/DX12Shader.h
+    graphic/adapters/dx12/DX12SwapChain.h
+    graphic/adapters/dx12/DX12Texture.h
+)
+
 set(ENGINE_GRAPHIC_SOURCES
     ${PIPELINE_FORWARD_SOURCES}
     ${PIPELINE_DEFERRED_SOURCES}
@@ -184,3 +231,15 @@ endif()
 
 list(APPEND ENGINE_GRAPHIC_SOURCES ${UPSCALER_CORE_SOURCES})
 list(APPEND ENGINE_GRAPHIC_HEADERS ${UPSCALER_CORE_HEADERS})
+
+# ========== 渲染后端条件编译 / Render Backend Conditional Compilation ==========
+
+if(PRISMA_ENABLE_RENDER_VULKAN)
+    list(APPEND ENGINE_GRAPHIC_SOURCES ${VULKAN_SOURCES})
+    list(APPEND ENGINE_GRAPHIC_HEADERS ${VULKAN_HEADERS})
+endif()
+
+if(PRISMA_ENABLE_RENDER_DX12)
+    list(APPEND ENGINE_GRAPHIC_SOURCES ${DX12_SOURCES})
+    list(APPEND ENGINE_GRAPHIC_HEADERS ${DX12_HEADERS})
+endif()

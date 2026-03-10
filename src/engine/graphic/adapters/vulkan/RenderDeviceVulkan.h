@@ -1,21 +1,21 @@
 #pragma once
 
-#include "interfaces/IRenderDevice.h"
 #include "interfaces/ICommandBuffer.h"
 #include "interfaces/IFence.h"
-#include "interfaces/ISwapChain.h"
+#include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceFactory.h"
+#include "interfaces/ISwapChain.h"
 
 // Vulkan headers
-#include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
 #include <VkBootstrap.h>
+#include <vma/vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
+#include <array>
 #include <memory>
-#include <vector>
 #include <string>
 #include <unordered_map>
-#include <array>
+#include <vector>
 
 namespace PrismaEngine::Graphic::Vulkan {
 
@@ -42,7 +42,7 @@ public:
     std::unique_ptr<ICommandBuffer> CreateCommandBuffer(CommandBufferType type) override;
     void SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fence = nullptr) override;
     void SubmitCommandBuffers(const std::vector<ICommandBuffer*>& cmdBuffers,
-                             const std::vector<IFence*>& fences = {}) override;
+                              const std::vector<IFence*>& fences = {}) override;
 
     // 同步
     void WaitForIdle() override;
@@ -53,10 +53,8 @@ public:
     IResourceFactory* GetResourceFactory() const override;
 
     // 交换链
-    std::unique_ptr<ISwapChain> CreateSwapChain(void* windowHandle,
-                                               uint32_t width,
-                                               uint32_t height,
-                                               bool vsync = true) override;
+    std::unique_ptr<ISwapChain>
+    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync = true) override;
     ISwapChain* GetSwapChain() const override;
 
     // 帧管理
@@ -84,13 +82,17 @@ public:
     void BeginDebugMarker(const std::string& name) override;
     void EndDebugMarker() override;
     void SetDebugMarker(const std::string& name) override;
-
     // ========== Vulkan特定方法 ==========
     VkInstance GetInstance() const { return m_instance; }
     VkPhysicalDevice GetPhysicalDevice() const { return m_physicalDevice; }
     VkDevice GetDevice() const { return m_device; }
     VkQueue GetGraphicsQueue() const { return m_graphicsQueue; }
+    uint32_t GetGraphicsQueueFamily() const { return m_graphicsQueueFamily; }
+    VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
     VmaAllocator GetAllocator() const { return m_allocator; }
+
+    // 获取用于ImGui的RenderPass（从交换链获取）
+    VkRenderPass GetImGuiRenderPass() const;
 
 private:
     // vk-bootstrap 核心
@@ -98,16 +100,16 @@ private:
     vkb::PhysicalDevice m_vkbPhysicalDevice;
     vkb::Device m_vkbDevice;
 
-    VkInstance m_instance = VK_NULL_HANDLE;
+    VkInstance m_instance             = VK_NULL_HANDLE;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
-    VkDevice m_device = VK_NULL_HANDLE;
+    VkDevice m_device                 = VK_NULL_HANDLE;
 
     // VMA
     VmaAllocator m_allocator = VK_NULL_HANDLE;
 
     // 队列
-    VkQueue m_graphicsQueue = VK_NULL_HANDLE;
-    VkQueue m_presentQueue = VK_NULL_HANDLE;
+    VkQueue m_graphicsQueue        = VK_NULL_HANDLE;
+    VkQueue m_presentQueue         = VK_NULL_HANDLE;
     uint32_t m_graphicsQueueFamily = 0;
 
     // 资源
@@ -119,9 +121,9 @@ private:
 
     // 设备能力
     struct DeviceFeatures {
-        bool supportsBindless = false;
-        bool supportsRayTracing = false;
-        bool supportsMeshShading = false;
+        bool supportsBindless            = false;
+        bool supportsRayTracing          = false;
+        bool supportsMeshShading         = false;
         bool supportsVariableRateShading = false;
     } m_deviceFeatures;
 
@@ -130,4 +132,4 @@ private:
     bool m_initialized = false;
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+}  // namespace PrismaEngine::Graphic::Vulkan
