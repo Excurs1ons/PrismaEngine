@@ -4,7 +4,9 @@
 #include "VulkanSwapChain.h"
 #include <iostream>
 
+// 动态加载 Vulkan 函数以兼容 Android NDK (避免 vkGetDeviceBufferMemoryRequirements 链接错误)
 #define VMA_IMPLEMENTATION
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 1
 #include <vk_mem_alloc.h>
 
 #if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
