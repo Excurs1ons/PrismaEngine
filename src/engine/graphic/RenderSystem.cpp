@@ -188,6 +188,7 @@ void RenderSystem::ShutdownImGui() {
 #if defined(PRISMA_ENABLE_RENDER_VULKAN) && !defined(_WIN32) && !defined(__ANDROID__)
     if (m_desc.backendType == RenderAPIType::Vulkan) {
         ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplSDLRenderer3_Shutdown();
         ImGui_ImplSDL3_Shutdown();
     }
 #endif
