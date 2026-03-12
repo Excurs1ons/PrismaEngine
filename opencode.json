@@ -1,0 +1,66 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "provider": {
+    "volcengine": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "火山引擎",
+      "options": {
+        "baseURL": "https://ark.cn-beijing.volces.com/api/coding/v3",
+        "headers": {
+          "Authorization": "Bearer ${VOLCENGINE_API_KEY}"
+        }
+      },
+      "models": {
+        "doubao-seed-2.0-pro": {
+          "name": "豆包 Pro",
+          "limit": {
+            "context": 256000,
+            "output": 32000
+          }
+        },
+        "doubao-seed-2.0-lite": {
+          "name": "豆包 Lite",
+          "limit": {
+            "context": 256000,
+            "output": 32000
+          }
+        },
+        "doubao-seed-code": {
+          "name": "豆包 Code",
+          "limit": {
+            "context": 256000,
+            "output": 32000
+          }
+        },
+        "minimax-m2.5": {
+          "name": "MiniMax M2.5",
+          "limit": {
+            "context": 200000,
+            "output": 32000
+          }
+        },
+        "glm-4.7": {
+          "name": "GLM-4.7",
+          "limit": {
+            "context": 200000,
+            "output": 32000
+          }
+        },
+        "deepseek-v3.2": {
+          "name": "DeepSeek V3.2",
+          "limit": {
+            "context": 256000,
+            "output": 32000
+          }
+        },
+        "kimi-k2.5": {
+          "name": "Kimi K2.5",
+          "limit": {
+            "context": 256000,
+            "output": 32000
+          }
+        }
+      }
+    }
+  }
+}
