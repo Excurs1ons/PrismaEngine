@@ -10,14 +10,10 @@
 #include <Windows.h>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_win32.h>
-#elif defined(__ANDROID__) || defined(ANDROID)
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_android.h>
 #else
 #include <vulkan/vulkan.h>
 #endif
 
-// VMA 实现由 RenderDeviceVulkan.cpp 负责
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
 #include <vk_mem_alloc.h>
 #endif
@@ -62,19 +58,6 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         LOG_ERROR("VulkanRenderDevice", "Failed to create Win32 surface");
         return false;
     }
-#elif defined(__ANDROID__)
-    VkAndroidSurfaceCreateInfoKHR surfaceInfo = {};
-    surfaceInfo.sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR;
-    surfaceInfo.window = static_cast<ANativeWindow*>(desc.windowHandle);
-
-    if (vkCreateAndroidSurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface) != VK_SUCCESS) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create Android surface");
-        return false;
-    }
-#elif defined(__linux__)
-    // Linux 平台 - 需要 SDL3 或其他方式创建 surface
-    LOG_WARNING("VulkanRenderDevice", "Linux surface creation needs SDL3 integration");
-    return false;
 #endif
 
     // 3. 创建逻辑设备（包含物理设备选择，使用 vk-bootstrap）
@@ -620,13 +603,6 @@ bool VulkanRenderDevice::CreateInstanceWithVkBootstrap() {
     // 添加平台特定扩展
 #if defined(_WIN32)
     builder.enable_extension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(__ANDROID__)
-    builder.enable_extension(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
-#elif defined(__linux__)
-    // Linux 上使用字符串字面量避免宏未定义问题
-    builder.enable_extension("VK_KHR_xlib_surface");
-    builder.enable_extension("VK_KHR_xcb_surface");
-    builder.enable_extension("VK_KHR_wayland_surface");
 #endif
 
     // 调试模式下启用验证层

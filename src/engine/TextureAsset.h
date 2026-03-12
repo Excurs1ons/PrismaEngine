@@ -5,39 +5,30 @@
 #include <string>
 #include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
-#ifdef __ANDROID__
-#include <GLES3/gl3.h>
-#include <android/asset_manager.h>
-#endif
 
-class VulkanContext; // 前向声明
+class VulkanContext;
 
 class TextureAsset {
 public:
-#ifdef __ANDROID__
-    // Android: 使用 Vulkan 上下文创建
-    static std::shared_ptr<TextureAsset> loadAsset(
-            AAssetManager* assetManager,
-            const std::string& assetPath,
-            VulkanContext* vulkanContext = nullptr);
-#else
-    // 非Android平台: 使用文件路径
     static std::shared_ptr<TextureAsset> loadAsset(
             const std::string& assetPath,
             VulkanContext* vulkanContext = nullptr);
-#endif
 
     // 创建白色 1x1 fallback 纹理（类似 Unity 的默认白色纹理）
-    // 当材质没有纹理时使用此纹理作为 fallback
-    static std::shared_ptr<TextureAsset> createWhiteFallback(VulkanContext* vulkanContext);
+    static std::shared_ptr<TextureAsset> getWhiteFallback(VulkanContext* vulkanContext);
 
-    // 获取或创建全局白色 fallback 纹理（单例模式）
-    // 确保整个引擎只创建一个白色纹理，节省资源
-    static std::shared_ptr<TextureAsset> getOrCreateWhiteFallback(VulkanContext* vulkanContext);
+    // 获取白色 fallback
+    static std::shared_ptr<TextureAsset> White() { return getWhiteFallback(nullptr); }
 
-    virtual ~TextureAsset();
+    // 构造函数
+    TextureAsset();
+    ~TextureAsset();
 
-    // 获取 Vulkan 资源句柄
+    // 加载和卸载
+    bool load(const std::string& path);
+    void Unload();
+
+    // 属性
     VkImageView getImageView() const { return imageView_; }
     VkSampler getSampler() const { return sampler_; }
     glm::uvec2 getSize() const { return size_; }
