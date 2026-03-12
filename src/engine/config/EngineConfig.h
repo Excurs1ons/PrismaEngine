@@ -287,11 +287,3 @@
 #if !PRISMA_ENABLE_MULTITHREADING && PRISMA_ENABLE_RENDER_VULKAN
     #warning "Vulkan 后端建议启用多线程以获得最佳性能"
 #endif
-
-#if PRISMA_ENABLE_RENDER_DX12 && !defined(_WIN32)
-    #error "DirectX 12 仅支持 Windows 平台"
-#endif
-
-#if PRISMA_ENABLE_RENDER_METAL && !defined(__APPLE__)
-    #error "Metal 仅支持 Apple 平台"
-#endif

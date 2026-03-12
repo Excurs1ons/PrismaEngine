@@ -17,17 +17,7 @@ std::shared_ptr<AssetBase> CreateDefaultShader(const std::string& relativePath)
 {
     LOG_INFO("ResourceFallback", "为 {0} 创建默认着色器", relativePath);
 
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    auto shader = std::make_shared<Shader>();
-    if (shader->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
-        shader->SetName(std::string("DefaultShader(for ") + relativePath + ")");
-        return std::static_pointer_cast<AssetBase>(shader);
-    }
-
-    LOG_ERROR("ResourceFallback", "无法创建默认着色器");
-    return nullptr;
-#elif defined(PRISMA_ENABLE_RENDER_VULKAN)
-    // TODO: Vulkan着色器支持尚未完全实现
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
     LOG_WARNING("ResourceFallback", "Vulkan着色器支持尚未实现，默认着色器创建失败");
     return nullptr;
 #else

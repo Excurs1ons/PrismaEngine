@@ -6,13 +6,8 @@
 
 // ========== 渲染设备编译控制 ==========
 
-// 剪枝分支配置：仅启用 Vulkan
-#define PRISMA_ENABLE_RENDER_DX12 0        // DirectX12 已禁用
+// 仅启用 Vulkan
 #define PRISMA_ENABLE_RENDER_VULKAN 1       // Vulkan 1.3+ (默认后端)
-#define PRISMA_ENABLE_RENDER_OPENGL 0       // OpenGL 已禁用
-#define PRISMA_ENABLE_RENDER_METAL 0        // Metal 已禁用
-#define PRISMA_ENABLE_RENDER_WEBGPU 0       // WebGPU 已禁用
-#define PRISMA_ENABLE_RENDER_SOFTWARE 0      // 软件渲染器已禁用
 
 // ========== 渲染功能宏 ==========
 
@@ -96,17 +91,10 @@
 
 // ========== 便利宏 ==========
 
-// 定义启用的后端列表
-#define PRISMA_AVAILABLE_RENDER_VULKAN
-
-// 条件编译宏
 #define PRISMA_IF_VULKAN_ENABLED(code) code
-
-// 自动选择最佳后端
 #define PRISMA_DEFAULT_RENDER_BACKEND Vulkan
 
 // ========== 版本要求宏 ==========
 
-// Vulkan 版本要求
 #define PRISMA_VULKAN_REQUIRED_VERSION_MAJOR 1
 #define PRISMA_VULKAN_REQUIRED_VERSION_MINOR 3
