@@ -20,18 +20,12 @@
 #endif
 
 
-// SDL 相关（仅在非 Windows/Android 平台）
-#if !defined(_WIN32) && !defined(__ANDROID__)
-    #if defined(__has_include)
-        #if __has_include(<SDL3/SDL.h>)
-            #include <SDL3/SDL.h>
-            #define PRISMA_HAS_SDL 1
-        #endif
+// SDL 相关
+#if defined(__has_include)
+    #if __has_include(<SDL3/SDL.h>)
+        #include <SDL3/SDL.h>
+        #define PRISMA_HAS_SDL 1
     #endif
-#endif
-// Android 平台前向声明
-#ifdef __ANDROID__
-struct android_app;
 #endif
 
 // ------------------------------------------------------------
@@ -117,9 +111,9 @@ public:
     ENGINE_API static double GetTimeSeconds();
 
     // ------------------------------------------------------------
-    // 输入管理（需要 KeyCode 支持）
+    // 输入管理
     // ------------------------------------------------------------
-#if defined(PRISMA_HAS_KEYCODE) || defined(_WIN32) || defined(__ANDROID__) || defined(PRISMA_HAS_SDL)
+#if defined(_WIN32) || defined(PRISMA_HAS_SDL)
     ENGINE_API static bool IsKeyDown(PrismaEngine::Input::KeyCode key);
     ENGINE_API static bool IsMouseButtonDown(PrismaEngine::Input::MouseButton btn);
     ENGINE_API static void GetMousePosition(float& x, float& y);

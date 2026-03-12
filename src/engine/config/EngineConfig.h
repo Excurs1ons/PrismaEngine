@@ -184,32 +184,14 @@
 #define PRISMA_STRINGIFY(x) #x
 #define PRISMA_STRINGIZE2(x) PRISMA_STRINGIFY(x)
 
-// 平台检测
+// 平台检测 - Prune分支仅支持Windows
 #if defined(_WIN32) || defined(_WIN64)
     #define PRISMA_PLATFORM_WINDOWS
-#elif defined(__APPLE__)
-    #define PRISMA_PLATFORM_APPLE
-    #include <TargetConditionals.h>
-    #if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
-        #define PRISMA_PLATFORM_IOS
-    #else
-        #define PRISMA_PLATFORM_MACOS
-    #endif
-#elif defined(__ANDROID__)
-    #define PRISMA_PLATFORM_ANDROID
-#elif defined(__linux__)
-    #define PRISMA_PLATFORM_LINUX
 #endif
 
-// 架构检测
+// 架构检测 - Prune分支仅支持x64
 #if defined(_M_X64) || defined(__x86_64__)
     #define PRISMA_ARCH_X64
-#elif defined(_M_IX86) || defined(__i386__)
-    #define PRISMA_ARCH_X86
-#elif defined(_M_ARM64) || defined(__aarch64__)
-    #define PRISMA_ARCH_ARM64
-#elif defined(_M_ARM) || defined(__arm__)
-    #define PRISMA_ARCH_ARM
 #endif
 
 // 编译器检测

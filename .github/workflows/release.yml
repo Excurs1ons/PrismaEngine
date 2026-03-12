@@ -3,8 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*.*.*'           # 匹配 v1.0.0, v2.3.4 等标签
-      - 'android-v*.*.*'   # 兼容旧的 Android 标签格式
+      - 'v*.*.*'
   workflow_dispatch:
     inputs:
       version:
@@ -14,16 +13,13 @@ on:
 
 env:
   CMAKE_VERSION: '3.31.0'
-  ANDROID_NDK_VERSION: 27.0.12077973
 
 jobs:
-  # ========== 获取版本号 ==========
   get-version:
     name: Get Version
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.version.outputs.version }}
-      is_android_only: ${{ steps.version.outputs.is_android_only }}
 
     steps:
     - name: Get version from tag
@@ -34,27 +30,14 @@ jobs:
         else
           VERSION=${GITHUB_REF#refs/tags/}
         fi
-
-        # 检查是否是 android-v 标签
-        if [[ "$VERSION" =~ ^android-v ]]; then
-          IS_ANDROID_ONLY="true"
-          VERSION=${VERSION#android-v}
-        else
-          IS_ANDROID_ONLY="false"
-          VERSION=${VERSION#v}
-        fi
-
+        VERSION=${VERSION#v}
         echo "version=$VERSION" >> $GITHUB_OUTPUT
-        echo "is_android_only=$IS_ANDROID_ONLY" >> $GITHUB_OUTPUT
         echo "Version: $VERSION"
-        echo "Android only: $IS_ANDROID_ONLY"
 
-  # ========== Windows Engine ==========
   release-windows-engine:
     name: Windows Engine
     runs-on: windows-latest
     needs: get-version
-    if: needs.get-version.outputs.is_android_only != 'true'
 
     steps:
     - name: Checkout
@@ -91,157 +74,5 @@ jobs:
         prerelease: false
         files: PrismaEngine-win64-release.zip
         generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ========== Android Engine ==========
-  release-android-engine:
-    name: Android Engine
-    runs-on: ubuntu-latest
-    needs: get-version
-    if: needs.get-version.outputs.is_android_only != 'true'
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        submodules: false
-
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v2.0
-      with:
-        cmake-version: ${{ env.CMAKE_VERSION }}
-
-    - name: Setup Android NDK
-      uses: android-actions/setup-android@v3
-
-    - name: Set NDK path
-      run: |
-        NDK_PATH=$(find $ANDROID_HOME/ndk -maxdepth 1 -type d | grep -E "[0-9]+\.[0-9]+\.[0-9]+" | head -n 1)
-        if [ -z "$NDK_PATH" ]; then
-          NDK_PATH="$ANDROID_HOME/ndk-bundle"
-        fi
-        echo "ANDROID_NDK_HOME=$NDK_PATH" >> $GITHUB_ENV
-
-    - name: Setup Ninja
-      run: sudo apt-get install -y ninja-build
-
-    - name: Build ARM64
-      run: |
-        cmake -B build-android-arm64-release \
-          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI=arm64-v8a \
-          -DANDROID_PLATFORM=24 \
-          -DANDROID_STL=c++_shared \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DPRISMA_BUILD_EDITOR=OFF \
-          -DPRISMA_BUILD_RUNTIME=OFF \
-          -DPRISMA_USE_NATIVE_AUDIO=ON \
-          -DPRISMA_USE_NATIVE_INPUT=ON \
-          -DPRISMA_ENABLE_RENDER_VULKAN=ON \
-          -DPRISMA_USE_FETCHCONTENT=ON \
-          -G Ninja
-        cmake --build build-android-arm64-release --parallel 2
-
-    - name: Build ARM32
-      run: |
-        cmake -B build-android-arm32-release \
-          -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_HOME/build/cmake/android.toolchain.cmake \
-          -DANDROID_ABI=armeabi-v7a \
-          -DANDROID_PLATFORM=24 \
-          -DANDROID_STL=c++_shared \
-          -DCMAKE_BUILD_TYPE=Release \
-          -DPRISMA_BUILD_EDITOR=OFF \
-          -DPRISMA_BUILD_RUNTIME=OFF \
-          -DPRISMA_USE_NATIVE_AUDIO=ON \
-          -DPRISMA_USE_NATIVE_INPUT=ON \
-          -DPRISMA_ENABLE_RENDER_VULKAN=ON \
-          -DPRISMA_USE_FETCHCONTENT=ON \
-          -G Ninja
-        cmake --build build-android-arm32-release --parallel 2
-
-    - name: Package
-      run: |
-        mkdir -p artifacts/arm64-v8a artifacts/armeabi-v7a
-        cmake --install build-android-arm64-release --config Release --prefix artifacts/arm64-v8a
-        cmake --install build-android-arm32-release --config Release --prefix artifacts/armeabi-v7a
-        tar czf PrismaEngine-android-arm64-release.tar.gz -C artifacts/arm64-v8a .
-        tar czf PrismaEngine-android-arm32-release.tar.gz -C artifacts/armeabi-v7a .
-
-    - name: Upload to Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ needs.get-version.outputs.version }}
-        name: PrismaEngine v${{ needs.get-version.outputs.version }}
-        draft: false
-        prerelease: false
-        files: |
-          PrismaEngine-android-arm64-release.tar.gz
-          PrismaEngine-android-arm32-release.tar.gz
-        generate_release_notes: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  # ========== Android Runtime ==========
-  release-android-runtime:
-    name: Android Runtime
-    runs-on: ubuntu-latest
-    needs: get-version
-    defaults:
-      run:
-        working-directory: projects/android/PrismaAndroid
-
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-      with:
-        submodules: false
-
-    - name: Setup JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
-
-    - name: Setup Android NDK
-      uses: android-actions/setup-android@v3
-
-    - name: Cache Gradle
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.gradle/caches
-          ~/.gradle/wrapper
-        key: gradle-android-release-${{ hashFiles('projects/android/PrismaAndroid/**/*.gradle*') }}
-
-    - name: Grant execute permission
-      run: chmod +x ./gradlew
-
-    - name: Build Release APK
-      run: ./gradlew assembleRelease --build-cache --stacktrace
-
-    - name: Rename APK
-      run: |
-        mkdir -p release
-        cp app/build/outputs/apk/release/*.apk release/PrismaAndroid-v${{ needs.get-version.outputs.version }}-release.apk 2>/dev/null || \
-          find app/build/outputs/apk/release -name "*.apk" -exec cp {} release/PrismaAndroid-v${{ needs.get-version.outputs.version }}-release.apk \;
-
-    - name: Upload to Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ needs.get-version.outputs.is_android_only == 'true' && format('android-v{0}', needs.get-version.outputs.version) || format('v{0}', needs.get-version.outputs.version) }}
-        name: PrismaAndroid v${{ needs.get-version.outputs.version }}
-        draft: false
-        prerelease: false
-        files: projects/android/PrismaAndroid/release/*.apk
-        generate_release_notes: true
-        body: |
-          ## PrismaAndroid v${{ needs.get-version.outputs.version }}
-
-          ### 下载
-          - [PrismaAndroid-v${{ needs.get-version.outputs.version }}-release.apk](https://github.com/Excurs1ons/PrismaEngine/releases/download/${{ needs.get-version.outputs.is_android_only == 'true' && format('android-v{0}', needs.get-version.outputs.version) || format('v{0}', needs.get-version.outputs.version) }}/PrismaAndroid-v${{ needs.get-version.outputs.version }}-release.apk)
-
-          ### 安装
-          下载 APK 后直接安装到 Android 设备即可。
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
