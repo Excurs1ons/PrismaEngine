@@ -6,13 +6,6 @@
 #include <fstream>
 #include <iostream>
 
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-#include "adapters/dx12/DX12RenderDevice.h"
-#include "adapters/dx12/DX12Shader.h"
-#include <d3dcompiler.h>
-using Microsoft::WRL::ComPtr;
-#endif
-
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "adapters/vulkan/VulkanShader.h"
@@ -252,40 +245,11 @@ bool Shader::LoadWithFallback(const std::filesystem::path& path) {
     return LoadDefaultShader();
 }
 
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-// DX12特定的兼容方法
-bool Shader::CompileFromString(const char* vsSource, const char* psSource) {
-    // TODO: 实现从字符串编译DX12着色器
-    LOG_ERROR("Shader", "CompileFromString not yet implemented for DX12");
-    return false;
-}
-
-const std::string& Shader::GetModel() const {
-    static std::string model = "ps_5_0";
-    return model;
-}
-
-void Shader::SetModel(const std::string& model) {
-    // TODO: 实现设置编译目标
-}
-
-void Shader::SetEntryPoint(const std::string& entryPoint) {
-    // TODO: 实现设置入口点
-}
-#endif
-
 // 获取原生句柄（用于平台特定操作）
 const void* Shader::GetNativeHandle() const {
     if (!m_impl) {
         return nullptr;
     }
-
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    auto dx12Shader = std::dynamic_pointer_cast<PrismaEngine::Graphic::DX12::DX12Shader>(m_impl);
-    if (dx12Shader) {
-        return dx12Shader->GetBytecodeData();
-    }
-#endif
 
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
     auto vulkanShader = std::dynamic_pointer_cast<PrismaEngine::Graphic::Vulkan::VulkanShader>(m_impl);
@@ -302,13 +266,6 @@ bool Shader::LoadShaderFromFile(const std::filesystem::path& path) {
     // 检查文件扩展名
     auto ext = ToLower(path.extension().string());
 
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    if (Equals(ext, EXT_CompiledShaderObject) || Equals(ext, EXT_HLSL)) {
-        // 加载DX12着色器
-        return LoadDX12Shader(path);
-    }
-#endif
-
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
     if (Equals(ext, EXT_SPIRV)) {
         // 加载Vulkan着色器
@@ -319,15 +276,6 @@ bool Shader::LoadShaderFromFile(const std::filesystem::path& path) {
     LOG_ERROR("Shader", "不支持的着色器文件格式: {0}", ext);
     return false;
 }
-
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-bool Shader::LoadDX12Shader(const std::filesystem::path& path) {
-    // TODO: 实现DX12着色器加载
-    // 这里需要创建DX12Shader实例
-    LOG_ERROR("Shader", "DX12 shader loading not yet implemented");
-    return false;
-}
-#endif
 
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
 bool Shader::LoadVulkanShader(const std::filesystem::path& path) {
@@ -340,12 +288,6 @@ bool Shader::LoadVulkanShader(const std::filesystem::path& path) {
 
 std::shared_ptr<PrismaEngine::Graphic::IShader> Shader::CreatePlatformShader() {
     // 根据编译时宏创建平台特定的着色器实现
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    // 创建DX12着色器
-    // TODO: 需要DX12RenderDevice实例
-    // return std::make_shared<PrismaEngine::Graphic::DX12::DX12Shader>(...);
-#endif
-
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
     // 创建Vulkan着色器
     // TODO: 需要VulkanRenderDevice实例
@@ -367,13 +309,6 @@ std::shared_ptr<Shader> CreateShader(const std::filesystem::path& path) {
 
 std::shared_ptr<Shader> CreateShader(const std::string& vertexSource, const std::string& pixelSource) {
     auto shader = std::make_shared<Shader>();
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    if (shader->CompileFromString(vertexSource.c_str(), pixelSource.c_str())) {
-        (void)vertexSource;
-        (void)pixelSource;
-        return shader;
-    }
-#endif
     LOG_ERROR("Shader", "Failed to create shader from source strings");
     return nullptr;
 }
