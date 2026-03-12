@@ -288,7 +288,7 @@ bool UpscalerDLSS::CreateDLSSContext() {
     //
     // SLInputStreamCallback callbacks = {};
     // SLSetupDesc setupDesc = {};
-    // setupDesc.api = (PRISMA_ENABLE_RENDER_DX12) ? SL_API_DX12 : SL_API_VULKAN;
+    // setupDesc.api = SL_API_VULKAN;
     // setupDesc.callbacks = &callbacks;
     //
     // SLResult result = slSetFeatureLevel(SL_FEATURE_LEVEL_EXPERIMENTAL);
