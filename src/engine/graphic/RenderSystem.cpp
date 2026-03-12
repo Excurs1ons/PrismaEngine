@@ -10,11 +10,6 @@
 #include <imgui.h>
 #endif
 
-#ifdef PRISMA_ENABLE_RENDER_DX12
-#include "adapters/dx12/DX12Adapters.h"
-#include <imgui_impl_dx12.h>
-#endif
-
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "adapters/vulkan/VulkanAdapters.h"
 #ifndef IMGUI_IMPL_VULKAN
@@ -44,8 +39,7 @@ int RenderSystem::Initialize() {
 
 int RenderSystem::Initialize(const RenderSystemDesc& desc) {
     LOG_INFO("Render",
-             "正在初始化渲染系统 (Backend: {0})...",
-             desc.backendType == RenderAPIType::Vulkan ? "Vulkan" : "DirectX12");
+             "正在初始化渲染系统 (Backend: Vulkan)...");
     m_desc = desc;
     Logger::GetInstance().Flush();
 
@@ -109,20 +103,6 @@ bool RenderSystem::InitializeImGui() {
 
     // ImGui 上下文已经在 Editor 中创建，这里不再重复创建
 
-#if defined(PRISMA_ENABLE_RENDER_DX12)
-    if (m_desc.backendType == RenderAPIType::DirectX12) {
-        LOG_INFO("Render", "正在初始化ImGui(DX12)");
-
-        ImGui_ImplDX12_InitInfo init_info = {};
-        // TODO: 填充 init_info
-        if (!ImGui_ImplDX12_Init(init_info))
-            return false;
-        if (!m_device->InitializeImGui())
-            return false;
-        m_imguiInitialized = true;
-    }
-#endif
-
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
     if (m_desc.backendType == RenderAPIType::Vulkan) {
         LOG_INFO("Render", "正在初始化 ImGui (Vulkan)...");
@@ -179,12 +159,6 @@ void RenderSystem::ShutdownImGui() {
     if (!m_imguiInitialized)
         return;
 
-#if defined(PRISMA_ENABLE_RENDER_DX12)
-    if (m_desc.backendType == RenderAPIType::DirectX12) {
-        ImGui_ImplDX12_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-    }
-#endif
 #if defined(PRISMA_ENABLE_RENDER_VULKAN) && !defined(_WIN32) && !defined(__ANDROID__)
     if (m_desc.backendType == RenderAPIType::Vulkan) {
         ImGui_ImplVulkan_Shutdown();
@@ -263,12 +237,6 @@ void RenderSystem::ResetStats() {
 
 bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
     LOG_INFO("Render", "正在探测可用后端...");
-#ifdef PRISMA_ENABLE_RENDER_DX12
-    LOG_INFO("Render", " - DirectX12: 已启用 (Enabled)");
-#else
-    LOG_INFO("Render", " - DirectX12: 未编译 (Disabled)");
-#endif
-
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
     LOG_INFO("Render", " - Vulkan:    已启用 (Enabled)");
 #else
@@ -277,18 +245,6 @@ bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
     Logger::GetInstance().Flush();
 
     switch (desc.backendType) {
-#ifdef PRISMA_ENABLE_RENDER_DX12
-        case RenderAPIType::DirectX12: {
-            DeviceDesc devDesc;
-            devDesc.windowHandle     = desc.windowHandle;
-            devDesc.width            = desc.width;
-            devDesc.height           = desc.height;
-            devDesc.enableDebug      = desc.enableDebug;
-            devDesc.enableValidation = desc.enableValidation;
-            m_device                 = DX12::CreateDX12RenderDeviceInterface(devDesc);
-            break;
-        }
-#endif
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
         case RenderAPIType::Vulkan: {
             DeviceDesc devDesc;

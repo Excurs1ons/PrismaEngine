@@ -88,15 +88,6 @@ public:
     // 尝试加载着色器，失败时回退到默认着色器
     bool LoadWithFallback(const std::filesystem::path& path);
 
-    // 兼容旧接口的方法（在DX12时使用）
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    // 这些方法仅在DX12时可用
-    bool CompileFromString(const char* vsSource, const char* psSource);
-    const std::string& GetModel() const;
-    void SetModel(const std::string& model);
-    void SetEntryPoint(const std::string& entryPoint);
-#endif
-
     // 获取平台特定的着色器实现
     std::shared_ptr<PrismaEngine::Graphic::IShader> GetImplementation() const { return m_impl; }
 
@@ -112,10 +103,6 @@ private:
     bool LoadDefaultShader();
 
     // 平台特定的加载方法
-#if defined(PRISMA_ENABLE_RENDER_DX12) || (defined(PRISMA_PLATFORM_WINDOWS) && !defined(PRISMA_FORCE_GLM))
-    bool LoadDX12Shader(const std::filesystem::path& path);
-#endif
-
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
     bool LoadVulkanShader(const std::filesystem::path& path);
 #endif

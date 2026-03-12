@@ -30,14 +30,6 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
 endif()
 
 # 定义渲染后端启用宏
-if(PRISMA_ENABLE_RENDER_DX12)
-    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_DX12=1)
-endif()
-
-if(PRISMA_ENABLE_RENDER_OPENGL)
-    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_OPENGL=1)
-endif()
-
 if(PRISMA_ENABLE_RENDER_VULKAN)
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
 endif()
