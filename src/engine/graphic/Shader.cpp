@@ -273,28 +273,19 @@ bool Shader::LoadShaderFromFile(const std::filesystem::path& path) {
     }
 #endif
 
-    LOG_ERROR("Shader", "不支持的着色器文件格式: {0}", ext);
+    LOG_ERROR("Shader", "Unsupported shader format: {0}", ext);
     return false;
 }
 
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
 bool Shader::LoadVulkanShader(const std::filesystem::path& path) {
-    // TODO: 实现Vulkan着色器加载
-    // 这里需要创建VulkanShader实例
-    LOG_ERROR("Shader", "Vulkan shader loading not yet implemented");
+    LOG_ERROR("Shader", "Vulkan shader loading requires render device");
     return false;
 }
 #endif
 
 std::shared_ptr<PrismaEngine::Graphic::IShader> Shader::CreatePlatformShader() {
-    // 根据编译时宏创建平台特定的着色器实现
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-    // 创建Vulkan着色器
-    // TODO: 需要VulkanRenderDevice实例
-    // return std::make_shared<PrismaEngine::Graphic::Vulkan::VulkanShader>(...);
-#endif
-
-    LOG_ERROR("Shader", "No suitable render backend available for shader creation");
+    LOG_ERROR("Shader", "Shader creation requires render device");
     return nullptr;
 }
 
