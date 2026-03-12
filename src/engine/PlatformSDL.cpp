@@ -1,9 +1,5 @@
 #include "Platform.h"
 
-// SDL 用于跨平台（Linux, macOS, 以及可选的 Windows/Android）
-#if !defined(__ANDROID__)
-
-// 条件包含 SDL 头文件
 #if defined(__has_include)
     #if __has_include(<SDL3/SDL.h>)
         #include <SDL3/SDL.h>
@@ -11,7 +7,6 @@
         #define PRISMA_SDL_AVAILABLE 1
     #endif
 #else
-    // 如果不支持 __has_include，假设 SDL 可用
     #include <SDL3/SDL.h>
     #include <SDL3/SDL_vulkan.h>
     #define PRISMA_SDL_AVAILABLE 1
@@ -422,5 +417,3 @@ const char* Platform::GetLogDirectoryPath() {
 } // namespace PrismaEngine
 
 #endif // PRISMA_SDL_AVAILABLE
-
-#endif // !defined(_WIN32) && !defined(__ANDROID__)
