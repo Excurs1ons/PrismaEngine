@@ -356,26 +356,22 @@ bool VulkanRenderDevice::SupportsMultiThreaded() const {
 }
 
 bool VulkanRenderDevice::SupportsBindlessTextures() const {
-    // TODO: 检查是否支持 VK_EXT_descriptor_indexing
     return false;
 }
 
 bool VulkanRenderDevice::SupportsComputeShader() const {
-    return true; // Vulkan 必须支持计算着色器
+    return true;
 }
 
 bool VulkanRenderDevice::SupportsRayTracing() const {
-    // TODO: 检查 VK_KHR_ray_tracing
     return false;
 }
 
 bool VulkanRenderDevice::SupportsMeshShader() const {
-    // TODO: 检查 VK_EXT_mesh_shader
     return false;
 }
 
 bool VulkanRenderDevice::SupportsVariableRateShading() const {
-    // TODO: 检查 VK_KHR_fragment_shading_rate
     return false;
 }
 
