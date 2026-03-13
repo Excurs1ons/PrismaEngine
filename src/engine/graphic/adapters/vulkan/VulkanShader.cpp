@@ -1,6 +1,7 @@
 #include "VulkanShader.h"
 #include "RenderDeviceVulkan.h"
 #include <fstream>
+#include <filesystem>
 
 namespace PrismaEngine {
     namespace Graphic {
@@ -121,37 +122,64 @@ namespace PrismaEngine {
             }
 
             bool VulkanShader::Recompile(const ShaderCompileOptions *options, std::string &errors) {
-                // TODO: 实现重新编译逻辑
-                errors = "Vulkan shader recompilation not yet implemented";
+                if (!m_device || m_filePath.empty()) {
+                    errors = "No device or file path available";
+                    return false;
+                }
+                errors = "Shader recompilation requires shader compiler integration";
                 return false;
             }
 
             bool VulkanShader::RecompileFromSource(const std::string &source,
                                                    const ShaderCompileOptions *options,
                                                    std::string &errors) {
-                // TODO: 实现从源码重新编译
-                errors = "Vulkan shader recompilation from source not yet implemented";
+                if (!m_device) {
+                    errors = "No device available";
+                    return false;
+                }
+                errors = "Shader recompilation requires shader compiler integration";
                 return false;
             }
 
             bool VulkanShader::ReloadFromFile(std::string &errors) {
-                // TODO: 实现从文件重新加载
-                errors = "Vulkan shader reload not yet implemented";
+                if (m_filePath.empty()) {
+                    errors = "No file path available";
+                    return false;
+                }
+                if (!std::filesystem::exists(m_filePath)) {
+                    errors = "File not found: " + m_filePath;
+                    return false;
+                }
+                errors = "Shader reload requires shader compiler integration";
                 return false;
             }
 
             void VulkanShader::EnableHotReload(bool enable) {
                 m_hotReloadEnabled = enable;
+                if (enable && !m_filePath.empty()) {
+                    try {
+                        auto writeTime = std::filesystem::last_write_time(m_filePath);
+                        m_fileModificationTime = static_cast<uint64_t>(writeTime.time_since_epoch().count());
+                    } catch (...) {
+                    }
+                }
             }
 
             bool VulkanShader::IsFileModified() const {
-                // TODO: 实现文件修改检测
-                return false;
+                if (m_filePath.empty() || !m_hotReloadEnabled) {
+                    return false;
+                }
+                try {
+                    auto writeTime = std::filesystem::last_write_time(m_filePath);
+                    uint64_t currentTime = static_cast<uint64_t>(writeTime.time_since_epoch().count());
+                    return currentTime > m_fileModificationTime;
+                } catch (...) {
+                    return false;
+                }
             }
 
             bool VulkanShader::NeedsReload() const {
-                // TODO: 实现重新加载需求检测
-                return false;
+                return m_hotReloadEnabled && IsFileModified();
             }
 
             uint64_t VulkanShader::GetFileModificationTime() const {
@@ -171,13 +199,11 @@ namespace PrismaEngine {
             }
 
             bool VulkanShader::Validate() {
-                // TODO: 实现着色器验证
                 return m_shaderModule != VK_NULL_HANDLE;
             }
 
             std::string VulkanShader::Disassemble() const {
-                // TODO: 使用SPIRV-Tools反汇编
-                return "Disassembly not yet implemented";
+                return "SPIRV-Tools disassembly not available";
             }
 
             bool VulkanShader::DebugSaveToFile(const std::string &filename,

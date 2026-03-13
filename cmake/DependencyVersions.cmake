@@ -88,18 +88,6 @@ set(PRISMA_DEP_IMGUI_VERSION "docking")
 set(PRISMA_DEP_OPENFBX_VERSION "master")  # 2024-01-10
 
 # -------------------------------------------------------------------------------
-# 超分辨率 / Upscalers
-# -------------------------------------------------------------------------------
-
-# FSR SDK - AMD FidelityFX SDK
-# GitHub: https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
-set(PRISMA_DEP_FIDELITYFX_SDK_VERSION "v2.1.0")
-
-# Streamline - NVIDIA DLSS SDK
-# GitHub: https://github.com/NVIDIA-RTX/Streamline
-set(PRISMA_DEP_STREAMLINE_VERSION "v2.9.0")
-
-# -------------------------------------------------------------------------------
 # 依赖兼容性矩阵 / Dependency Compatibility Matrix
 # -------------------------------------------------------------------------------
 

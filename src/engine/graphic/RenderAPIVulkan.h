@@ -94,6 +94,8 @@ public:
     [[nodiscard]] VkPhysicalDevice GetPhysicalDevice() const { return m_physicalDevice; }
     /// @brief 获取逻辑设备
     [[nodiscard]] VkDevice GetVkDevice() const { return m_device; }
+    /// @brief 获取 VMA 分配器
+    [[nodiscard]] VmaAllocator GetVmaAllocator() const { return m_vmaAllocator; }
     /// @brief 获取图形队列
     [[nodiscard]] VkQueue GetGraphicsQueue() const { return m_graphicsQueue; }
     /// @brief 获取图形队列族索引
@@ -171,6 +173,7 @@ private:
 
     // 命令
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
+    std::vector<VkCommandBuffer> m_commandBuffers;
 
     // 同步对象
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 2;
