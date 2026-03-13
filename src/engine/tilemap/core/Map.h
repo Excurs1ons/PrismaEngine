@@ -142,7 +142,22 @@ struct TileMap {
             }
             if (layer->GetType() == LayerType::GroupLayer) {
                 auto* group = static_cast<GroupLayerImpl*>(layer.get());
-                // TODO: 递归搜索子层
+                Layer* found = FindLayerRecursive(group->groupData.layers, layerId);
+                if (found) return found;
+            }
+        }
+        return nullptr;
+    }
+
+    static Layer* FindLayerRecursive(const std::vector<std::unique_ptr<Layer>>& layers, int layerId) {
+        for (const auto& layer : layers) {
+            if (layer->id == layerId) {
+                return layer.get();
+            }
+            if (layer->GetType() == LayerType::GroupLayer) {
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                Layer* found = FindLayerRecursive(group->groupData.layers, layerId);
+                if (found) return found;
             }
         }
         return nullptr;
@@ -154,7 +169,23 @@ struct TileMap {
                 return layer.get();
             }
             if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归搜索子层
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                Layer* found = FindLayerByNameRecursive(group->groupData.layers, layerName);
+                if (found) return found;
+            }
+        }
+        return nullptr;
+    }
+
+    static Layer* FindLayerByNameRecursive(const std::vector<std::unique_ptr<Layer>>& layers, const std::string& layerName) {
+        for (const auto& layer : layers) {
+            if (layer->name == layerName) {
+                return layer.get();
+            }
+            if (layer->GetType() == LayerType::GroupLayer) {
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                Layer* found = FindLayerByNameRecursive(group->groupData.layers, layerName);
+                if (found) return found;
             }
         }
         return nullptr;
@@ -212,7 +243,8 @@ private:
             if (auto* tileLayer = layer->AsTileLayer()) {
                 result.push_back(tileLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectTileLayers(result, group->groupData.layers);
             }
         }
     }
@@ -222,7 +254,8 @@ private:
             if (auto* objectLayer = layer->AsObjectLayer()) {
                 result.push_back(objectLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectObjectLayers(result, group->groupData.layers);
             }
         }
     }
@@ -232,7 +265,8 @@ private:
             if (auto* imageLayer = layer->AsImageLayer()) {
                 result.push_back(imageLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectImageLayers(result, group->groupData.layers);
             }
         }
     }

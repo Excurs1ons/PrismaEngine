@@ -35,6 +35,7 @@ CompileFlags:
     - "-I/root/.repos/PrismaEngine/.dependencies/Vulkan-Headers-src/include/vulkan"
     - "-I/root/.repos/PrismaEngine/.dependencies/vk-bootstrap-src/include"
     - "-I/root/.repos/PrismaEngine/.dependencies/SDL3-src/include"
+    - "-I/root/.repos/PrismaEngine/.dependencies/SDL3-src/include/SDL3"
     - "-I/root/.repos/PrismaEngine/.dependencies/DirectX-Headers-src/include"
     - "-DPRISMA_ENABLE_RENDER_VULKAN=1"
     - "-DPRISMA_ENABLE_AUDIO_SDL3=1"

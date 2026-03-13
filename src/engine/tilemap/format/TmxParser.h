@@ -40,6 +40,9 @@ private:
         const std::filesystem::path& basePath
     );
 
+    // 解析 TSX 文件
+    static std::unique_ptr<Tileset> ParseTsxFile(const std::filesystem::path& tsxPath);
+
     // 解析层
     static std::unique_ptr<Layer> ParseLayer(
         void* layerElement,
