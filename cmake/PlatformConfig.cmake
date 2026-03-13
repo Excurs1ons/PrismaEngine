@@ -15,6 +15,13 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
         message(FATAL_ERROR "Prisma Engine (prune分支) 仅支持 Windows x64 架构")
     endif()
 
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    # Linux support for LSP/IDE only
+    set(PRISMA_PLATFORM_WINDOWS FALSE)
+    set(PRISMA_PLATFORM_LINUX TRUE)
+    set(PRISMA_PLATFORM_NAME "linux")
+    set(PRISMA_PLATFORM_ARCH "x64")
+    message(STATUS "Linux build: IDE/LSP support only (not for compilation)")
 else()
     message(FATAL_ERROR "Prisma Engine (prune分支) 仅支持 Windows x64 平台")
 endif()
