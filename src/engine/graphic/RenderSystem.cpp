@@ -2,6 +2,9 @@
 #include "../Camera.h"
 #include "../Logger.h"
 #include "../SceneManager.h"
+#include "../Scene.h"
+#include "../GameObject.h"
+#include "RenderComponent.h"
 #include "../core/ECS.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
@@ -271,7 +274,24 @@ bool RenderSystem::InitializePipelines() {
 
 void RenderSystem::RenderFrame() {
     BeginFrame();
-    // TODO: Scene rendering
+
+    auto* device = m_device.get();
+    if (!device) {
+        EndFrame();
+        Present();
+        return;
+    }
+
+    auto sceneManager = SceneManager::GetInstance();
+    auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
+    
+    if (scene && m_forwardPipeline) {
+        auto camera = scene->GetMainCamera();
+        if (camera) {
+            m_forwardPipeline->Update(0.0f, camera.get());
+        }
+    }
+
     EndFrame();
     Present();
 }
