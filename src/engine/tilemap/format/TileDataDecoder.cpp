@@ -9,8 +9,7 @@
 #include <zstd.h>
 #endif
 
-// zlib/miniz header - 存根实现（项目未配置 zlib）
-// TODO: 配置 zlib 依赖或使用其他解压缩库
+// zlib/miniz header - stub implementation
 namespace PrismaEngine {
 
 // zlib 常量定义（存根）

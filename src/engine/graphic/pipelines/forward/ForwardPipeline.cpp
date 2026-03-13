@@ -6,6 +6,7 @@
 #include "pipelines/forward/TransparentPass.h"
 #include "ui/UIPass.h"
 #include "Logger.h"
+#include "interfaces/IRenderDevice.h"
 
 namespace PrismaEngine::Graphic {
 
@@ -21,7 +22,7 @@ ForwardPipeline::~ForwardPipeline() {
 // === IPipeline 接口实现 ===
 
 bool ForwardPipeline::Initialize(IRenderDevice* device) {
-    (void)device;
+    m_device = device;
     LOG_INFO("ForwardPipeline", "Initializing ForwardPipeline...");
     
     // 创建所有 Pass
@@ -54,7 +55,7 @@ void ForwardPipeline::Shutdown() {
 
 void ForwardPipeline::Execute(const RenderContext& context) {
     PassExecutionContext passContext;
-    passContext.deviceContext = nullptr; // TODO
+    passContext.deviceContext = nullptr;
     passContext.renderTarget = nullptr;
     passContext.depthStencil = nullptr;
     
