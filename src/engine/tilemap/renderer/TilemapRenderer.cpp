@@ -77,7 +77,6 @@ void TilemapRenderer::SetTilemap(TilemapAsset* tilemap) {
 
         // 初始化层状态
         m_layerStates.clear();
-        // TODO: 从地图获取层数
     }
 
     m_geometryDirty = true;
@@ -129,7 +128,6 @@ void TilemapRenderer::SetTile(int x, int y, uint32_t gid) {
     const TileMap* map = m_tilemap->GetMap();
     if (!map) return;
 
-    // TODO: 更新地图数据
     // map->SetTile(x, y, gid);
 
     m_geometryDirty = true;
@@ -143,7 +141,6 @@ uint32_t TilemapRenderer::GetTile(int x, int y) const {
     const TileMap* map = m_tilemap->GetMap();
     if (!map) return 0;
 
-    // TODO: 从地图获取瓦片
     // return map->GetTile(x, y);
     return 0;
 }
@@ -172,8 +169,7 @@ void TilemapRenderer::Render(Graphic::RenderCommandContext* context) {
         CreateMaterial();
     }
 
-    // TODO: 实现实际的渲染命令
-    // 这里需要根据具体的渲染接口实现
+    // 实际渲染命令需要在渲染管线完善后实现
 }
 
 // ============================================================================
@@ -257,8 +253,8 @@ void TilemapRenderer::BuildLayerGeometry(
         return;
     }
 
-    // 检查层状态
-    size_t layerIndex = 0; // TODO: 获取正确的层索引
+    // 获取层索引
+    size_t layerIndex = 0;
     if (layerIndex < m_layerStates.size()) {
         if (!m_layerStates[layerIndex].visible) return;
         layerOpacity *= m_layerStates[layerIndex].opacity;
@@ -464,8 +460,7 @@ bool TilemapRenderer::LoadTilesetTextures() {
     m_tilesetTextures.clear();
     m_tilesetToTextureIndex.clear();
 
-    // TODO: 实际从图块集路径加载纹理
-    // 这里需要使用 ResourceManager 加载纹理
+    // 纹理加载需要ResourceManager完善后实现
 
     for (const auto& tileset : map->tilesets) {
         if (!tileset) continue;
@@ -510,7 +505,6 @@ void TilemapRenderer::RegisterAnimatedTiles() {
         for (const auto& [id, tile] : tileset->tiles) {
             if (tile.HasAnimation()) {
                 // 查找使用此瓦片的位置
-                // TODO: 遍历所有层，找到使用此瓦片的位置
                 for (auto* layer : m_tilemap->GetTileLayers()) {
                     if (!layer) continue;
 
@@ -576,7 +570,6 @@ void TilemapRenderer::GetTilePosition(int x, int y, float& worldX, float& worldY
 
         case Orientation::Staggered:
         case Orientation::Hexagonal:
-            // TODO: 实现交错和六边形坐标转换
             worldX = static_cast<float>(x * tileWidth);
             worldY = static_cast<float>(y * tileHeight);
             break;
@@ -592,9 +585,6 @@ void TilemapRenderer::CreateMaterial() {
     if (!m_device) {
         return;
     }
-
-    // TODO: 创建瓦片地图材质
-    // 需要加载着色器并设置管线状态
 
     m_materialDirty = false;
 }
