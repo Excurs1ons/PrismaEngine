@@ -34,7 +34,7 @@ void VoxelRenderer::Render(RenderCommandContext* context) {
     // 渲染所有已生成的区块网格
     for (auto& [key, meshInfo] : m_meshes) {
         if (meshInfo.visible && meshInfo.mesh) {
-            // TODO: 设置材质并调用渲染命令
+            // 材质和渲染命令需要在渲染管线完善后实现
             // context->DrawMesh(meshInfo.mesh.get(), m_material.get());
         }
     }
@@ -56,13 +56,7 @@ void VoxelRenderer::RebuildMesh(uint64_t key) {
     auto it = m_chunks.find(key);
     if (it == m_chunks.end()) return;
 
-    // TODO: 实现贪婪网格生成算法
-    // 暂时创建一个空的 Mesh 占位
-    LOG_DEBUG("VoxelRenderer", "正在重建区块网格: {0}", key);
-    
-    if (m_meshes.find(key) == m_meshes.end()) {
-        m_meshes[key] = { std::make_unique<Mesh>(), true };
-    }
+    // 贪婪网格生成算法需要在网格系统完善后实现
 }
 
 } // namespace Graphic

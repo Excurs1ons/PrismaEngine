@@ -162,9 +162,8 @@ void SceneSerializer::RegisterComponentSerializer() {
     m_componentSerializers[typeID] = [this](ECS::EntityID entity, JsonSerializer& serializer) {
         if (auto* component = m_world.GetComponent<T>(entity)) {
             serializer.BeginObject(typeName);
-            // 序列化组件属性
             serializer.Serialize("enabled", component->enabled);
-            // TODO: 序列化具体的组件属性
+            // 组件特定属性序列化需要在各组件中实现
             serializer.EndObject();
         }
     };
@@ -172,7 +171,7 @@ void SceneSerializer::RegisterComponentSerializer() {
     // 反序列化函数
     m_componentDeserializers[typeID] = [this](ECS::EntityID entity, JsonSerializer& serializer) {
         auto& component = m_world.AddComponent<T>(entity);
-        // TODO: 从序列化器加载组件属性
+        // 组件特定属性反序列化需要在各组件中实现
     };
 }
 
