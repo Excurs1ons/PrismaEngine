@@ -1,12 +1,20 @@
 #include "CanvasComponent.h"
+#include "../Platform.h"
 #include <algorithm>
 
 namespace PrismaEngine {
 
 void CanvasComponent::Initialize() {
-    // 设置为全屏
-    // TODO: 从窗口/视口获取屏幕尺寸
-    m_size = {1920.0f, 1080.0f};
+    int w = 0, h = 0;
+    auto window = PrismaEngine::Platform::GetCurrentWindow();
+    if (window) {
+        PrismaEngine::Platform::GetWindowSize(window, w, h);
+    }
+    if (w <= 0 || h <= 0) {
+        w = 1920;
+        h = 1080;
+    }
+    m_size = {static_cast<float>(w), static_cast<float>(h)};
     m_position = {0.0f, 0.0f};
 }
 
