@@ -4,16 +4,6 @@
 #include <algorithm>
 #include <cstring>
 
-#ifdef PRISMA_ENABLE_AUDIO_SDL3
-#include <SDL3/SDL.h>
-#endif
-
-#ifdef ENABLE_OPENAL
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <AL/alext.h>
-#endif
-
 #ifdef __has_include
     #if __has_include("stb_vorbis.h")
         #define STB_VORBIS_ENABLED 1
