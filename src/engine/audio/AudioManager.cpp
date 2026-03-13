@@ -3,7 +3,10 @@
 #include <filesystem>
 #include <algorithm>
 
-// 使用OpenAL作为音频后端
+#ifdef PRISMA_ENABLE_AUDIO_SDL3
+#include <SDL3/SDL.h>
+#endif
+
 #ifdef ENABLE_OPENAL
 #include <AL/al.h>
 #include <AL/alc.h>
@@ -354,10 +357,64 @@ AudioManager::AudioStats AudioManager::GetStats() const {
     return stats;
 }
 
-std::shared_ptr<AudioData> AudioManager::LoadWAV(const std::string& filePath) {
-    // TODO: 实现WAV加载
-    LOG_WARNING("AudioManager", "WAV加载功能尚未实现: {0}", filePath);
-    return nullptr;
+std::shared_ptr<AudioClip> AudioManager::LoadWAV(const std::string& filePath) {
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        return nullptr;
+    }
+
+    char riff[4];
+    file.read(riff, 4);
+    if (std::strncmp(riff, "RIFF", 4) != 0) {
+        return nullptr;
+    }
+
+    char wave[4];
+    file.read(wave, 4);
+    if (std::strncmp(wave, "WAVE", 4) != 0) {
+        return nullptr;
+    }
+
+    auto clip = std::make_shared<AudioClip>();
+    int dataSize = 0;
+    
+    while (file.good()) {
+        char chunkId[4];
+        file.read(chunkId, 4);
+        if (!file.good()) break;
+        
+        int chunkSize;
+        file.read(reinterpret_cast<char*>(&chunkSize), 4);
+        
+        if (std::strncmp(chunkId, "fmt ", 4) == 0) {
+            short audioFormat;
+            file.read(reinterpret_cast<char*>(&audioFormat), 2);
+            file.read(reinterpret_cast<char*>(&clip->format.channels), 2);
+            file.read(reinterpret_cast<char*>(&clip->format.sampleRate), 4);
+            int byteRate;
+            file.read(reinterpret_cast<char*>(&byteRate), 4);
+            short blockAlign;
+            file.read(reinterpret_cast<char*>(&blockAlign), 2);
+            file.read(reinterpret_cast<char*>(&clip->format.bitsPerSample), 2);
+        } else if (std::strncmp(chunkId, "data", 4) == 0) {
+            dataSize = chunkSize;
+            clip->data.resize(dataSize);
+            file.read(reinterpret_cast<char*>(clip->data.data()), dataSize);
+            break;
+        } else {
+            file.seekg(chunkSize, std::ios::cur);
+        }
+    }
+
+    if (clip->data.empty()) {
+        return nullptr;
+    }
+
+    clip->duration = static_cast<float>(clip->data.size()) / 
+        (clip->format.channels * clip->format.bitsPerSample / 8) / 
+        clip->format.sampleRate;
+    
+    return clip;
 }
 
 std::shared_ptr<AudioData> AudioManager::LoadOGG(const std::string& filePath) {
