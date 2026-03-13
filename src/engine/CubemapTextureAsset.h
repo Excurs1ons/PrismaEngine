@@ -1,6 +1,5 @@
 #pragma once
 
-#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #ifndef MY_APPLICATION_CUBEMAPTEXTUREASSET_H
 #define MY_APPLICATION_CUBEMAPTEXTUREASSET_H
 
@@ -24,5 +23,4 @@ private:
     bool loadFromFiles(const std::vector<std::string>& facePaths, VulkanContext* context);
 };
 
-#endif
 #endif
