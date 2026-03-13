@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include <filesystem>
 #include <algorithm>
+#include <cstring>
 
 #ifdef PRISMA_ENABLE_AUDIO_SDL3
 #include <SDL3/SDL.h>
@@ -13,16 +14,11 @@
 #include <AL/alext.h>
 #endif
 
-// stb_vorbis for OGG decoding
 #ifdef __has_include
     #if __has_include("stb_vorbis.h")
         #define STB_VORBIS_ENABLED 1
         #include "stb_vorbis.h"
     #endif
-#endif
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <AL/alext.h>
 #endif
 
 namespace PrismaEngine {
