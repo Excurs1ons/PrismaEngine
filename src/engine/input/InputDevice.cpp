@@ -6,6 +6,7 @@
 
 #if defined(PRISMA_ENABLE_INPUT_SDL3)
     #include "drivers/InputDriverSDL3.h"
+    #include <SDL3/SDL.h>
 #endif
 
 #include <algorithm>
@@ -333,12 +334,16 @@ const std::string& InputDevice::GetTextInput() const {
 
 void InputDevice::SetCursorVisible(bool visible) {
     m_cursorVisible = visible;
-    // TODO: 实现光标显示/隐藏
+#ifdef PRISMA_ENABLE_INPUT_SDL3
+    SDL_ShowCursor(visible ? SDL_TRUE : SDL_FALSE);
+#endif
 }
 
 void InputDevice::SetCursorLocked(bool locked) {
     m_cursorLocked = locked;
-    // TODO: 实现光标锁定
+#ifdef PRISMA_ENABLE_INPUT_SDL3
+    SDL_SetRelativeMouseMode(locked ? SDL_TRUE : SDL_FALSE);
+#endif
 }
 
 } // namespace PrismaEngine::Input
