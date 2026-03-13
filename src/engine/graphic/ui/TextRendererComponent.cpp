@@ -24,19 +24,21 @@ TextRendererComponent::~TextRendererComponent() {
 }
 
 void TextRendererComponent::Initialize() {
-    // 如果没有设置字体，使用默认字体
     if (m_fontPath.empty()) {
-        // TODO: 设置默认字体路径
+#ifdef _WIN32
+        m_fontPath = "C:/Windows/Fonts/arial.ttf";
+#elif __linux__
+        m_fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+#else
         m_fontPath = "fonts/default.ttf";
+#endif
     }
 
-    // 创建字体图集
     m_fontAtlas = std::make_shared<FontAtlas>();
     if (!m_fontAtlas->LoadFromTTF(m_fontPath, m_fontSize, s_charRanges)) {
         std::cerr << "Failed to load font: " << m_fontPath << std::endl;
     }
 
-    // 初始构建网格
     RebuildMesh();
 }
 
