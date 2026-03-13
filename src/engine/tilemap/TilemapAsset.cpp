@@ -67,8 +67,6 @@ void TilemapAsset::Serialize(OutputArchive& archive) const {
 
         // 序列化图块集数量
         archive("tilesetCount", static_cast<int>(m_map->tilesets.size()));
-
-        // TODO: 序列化完整地图数据
     }
 }
 
@@ -100,8 +98,6 @@ void TilemapAsset::Deserialize(InputArchive& archive) {
     archive("tileWidth", m_map->tileWidth);
     archive("tileHeight", m_map->tileHeight);
     archive("infinite", m_map->infinite);
-
-    // TODO: 反序列化完整地图数据
 
     m_isLoaded = true;
 }
