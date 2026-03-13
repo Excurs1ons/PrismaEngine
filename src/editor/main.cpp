@@ -1,5 +1,4 @@
 #include "../engine/Logger.h"
-#include <iostream>
 
 #if defined(_WIN32)
     #define DLL_IMPORT __declspec(dllimport)
