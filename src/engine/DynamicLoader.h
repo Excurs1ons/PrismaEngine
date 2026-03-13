@@ -1,8 +1,6 @@
 #pragma once
 
-#ifdef _WIN32
 #include <windows.h>
-#endif
 
 #include "Logger.h"
 
@@ -22,19 +20,16 @@ public:
     }
     
     bool Load(const std::string& libraryPath) {
-#ifdef _WIN32
         m_handle = LoadLibraryA(libraryPath.c_str());
         if (m_handle == nullptr) {
             DWORD error = GetLastError();
             LOG_ERROR("DynamicLoader", "Failed to load library: {0}, error: {1}", libraryPath.c_str(), error);
             throw std::runtime_error("Failed to load library: " + libraryPath);
         }
-#endif
         return true;
     }
     
     bool TryLoad(const std::string& libraryPath) {
-#ifdef _WIN32
         std::string tempPath = CopyToTempFile(libraryPath);
         if (tempPath.empty()) {
             LOG_FATAL("DynamicLoader", "Failed to create temp DLL: {0}", libraryPath.c_str());
@@ -51,24 +46,20 @@ public:
             m_tempPath = "";
             return false;
         }
-#endif
         return true;
     }
     
     void Unload() {
         if (m_handle) {
-#ifdef _WIN32
             FreeLibrary((HMODULE)m_handle);
             if (!m_tempPath.empty()) {
                 DeleteFileA(m_tempPath.c_str());
                 m_tempPath = "";
             }
-#endif
             m_handle = nullptr;
         }
     }
     
-#ifdef _WIN32
     std::string CopyToTempFile(const std::string& sourcePathStr) {
         std::filesystem::path sourcePath(sourcePathStr);
 
@@ -106,7 +97,6 @@ public:
         }
         return newTempFileName;
     }
-#endif
     
     template<typename T>
     T GetFunction(const std::string& functionName) {
@@ -115,7 +105,6 @@ public:
             throw std::runtime_error("Library not loaded");
         }
         
-#ifdef _WIN32
         FARPROC func = GetProcAddress((HMODULE)m_handle, functionName.c_str());
         if (!func) {
             DWORD error = GetLastError();
@@ -123,9 +112,6 @@ public:
             throw std::runtime_error("Failed to get function: " + functionName);
         }
         return reinterpret_cast<T>(func);
-#else
-        return nullptr;
-#endif
     }
     
     template<typename T>

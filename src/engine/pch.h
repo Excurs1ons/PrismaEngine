@@ -22,14 +22,9 @@
 #include <cstdint>
 #include <filesystem>
 
-#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include <vulkan/vulkan.h>
-#endif
-
-#ifdef PRISMA_ENABLE_AUDIO_SDL3
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
-#endif
 
 #ifdef PRISMA_BUILD_EDITOR
 #include <imgui.h>
@@ -39,7 +34,6 @@
 #include <nlohmann/json.hpp>
 #endif
 
-#ifndef SAFE_DELETE
 #define SAFE_DELETE(p) \
     { \
         if (p) { \
@@ -47,9 +41,7 @@
             (p) = nullptr; \
         } \
     }
-#endif
 
-#ifndef SAFE_DELETE_ARRAY
 #define SAFE_DELETE_ARRAY(p) \
     { \
         if (p) { \
@@ -57,7 +49,6 @@
             (p) = nullptr; \
         } \
     }
-#endif
 
 #ifdef _MSC_VER
 #pragma warning(push)
