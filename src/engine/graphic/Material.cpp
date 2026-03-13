@@ -120,12 +120,7 @@ std::shared_ptr<Material> Material::CreateDefault() {
 bool Material::Load(const std::filesystem::path& path) {
     m_path = path;
     m_name = path.filename().string();
-
-    // TODO: 从文件加载材质属性
-    // 目前标记为已加载
     m_isLoaded = true;
-
-    LOG_INFO("Material", "材质 '{0}' 已加载", m_name);
     return true;
 }
 
