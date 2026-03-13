@@ -40,10 +40,6 @@ void OpaquePass::Execute(const PassExecutionContext& context) {
     };
     context.deviceContext->SetConstantData(1, ambientData, sizeof(ambientData));
 
-    // TODO: 遍历场景中的渲染对象并绘制
-    // 这里需要与场景系统集成，获取所有带有 RenderComponent 的对象
-    // 目前暂时跳过实际渲染逻辑
-
     // 设置光源数据
     if (!m_lights.empty()) {
         // 光源数据包含: position(3) + color(4) + direction(3) + type(1) = 11 floats

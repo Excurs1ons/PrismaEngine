@@ -91,6 +91,7 @@ private:
     std::shared_ptr<class TransparentPass> m_transparentPass;
     std::shared_ptr<class PrismaEngine::UIPass> m_uiPass;
 
+    class IRenderDevice* m_device = nullptr;
     class ICamera* m_camera = nullptr;
     std::string m_pipelineName = "ForwardPipeline";
     std::string m_lastError;
