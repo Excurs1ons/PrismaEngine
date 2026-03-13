@@ -1,10 +1,7 @@
 #include "AudioAPI.h"
 #include "AudioDeviceNull.h"
-
-#ifdef PRISMA_ENABLE_AUDIO_SDL3
 #include <SDL3/SDL.h>
 #include "AudioDeviceSDL3.h"
-#endif
 
 #include "../Logger.h"
 #include <cstdlib>

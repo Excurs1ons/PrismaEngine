@@ -8,25 +8,20 @@
 #include "../core/ECS.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
-// ImGui
 #ifdef PRISMA_BUILD_EDITOR
 #include <imgui.h>
 #endif
 
-#ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "adapters/vulkan/VulkanAdapters.h"
 #ifndef IMGUI_IMPL_VULKAN
 #define IMGUI_IMPL_VULKAN
 #endif
 #include <imgui_impl_vulkan.h>
-#endif
 
-#if defined(_WIN32)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <Windows.h>
-#endif
 
 namespace PrismaEngine::Graphic {
 
