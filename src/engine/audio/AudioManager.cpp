@@ -13,6 +13,18 @@
 #include <AL/alext.h>
 #endif
 
+// stb_vorbis for OGG decoding
+#ifdef __has_include
+    #if __has_include("stb_vorbis.h")
+        #define STB_VORBIS_ENABLED 1
+        #include "stb_vorbis.h"
+    #endif
+#endif
+#include <AL/al.h>
+#include <AL/alc.h>
+#include <AL/alext.h>
+#endif
+
 namespace PrismaEngine {
 namespace Audio {
 
@@ -417,15 +429,47 @@ std::shared_ptr<AudioClip> AudioManager::LoadWAV(const std::string& filePath) {
     return clip;
 }
 
-std::shared_ptr<AudioData> AudioManager::LoadOGG(const std::string& filePath) {
-    // TODO: 实现OGG加载（需要stb_vorbis或libvorbis）
-    LOG_WARNING("AudioManager", "OGG加载功能尚未实现: {0}", filePath);
+std::shared_ptr<AudioClip> AudioManager::LoadOGG(const std::string& filePath) {
+#ifdef STB_VORBIS_ENABLED
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        return nullptr;
+    }
+
+    std::vector<char> fileData((std::istreambuf_iterator<char>(file)),
+                               std::istreambuf_iterator<char>());
+    
+    stb_vorbis* vorbis = stb_vorbis_open_memory(
+        reinterpret_cast<unsigned char*>(fileData.data()),
+        static_cast<int>(fileData.size()), nullptr, nullptr);
+    
+    if (!vorbis) {
+        return nullptr;
+    }
+
+    stb_vorbis_info info = stb_vorbis_get_info(vorbis);
+    int samples = stb_vorbis_stream_length_in_samples(vorbis);
+    
+    auto clip = std::make_shared<AudioClip>();
+    clip->format.channels = info.channels;
+    clip->format.sampleRate = info.sample_rate;
+    clip->format.bitsPerSample = 16;
+    
+    clip->data.resize(samples * info.channels * 2);
+    stb_vorbis_get_samples_short_interleaved(vorbis, info.channels,
+        reinterpret_cast<short*>(clip->data.data()), 
+        static_cast<int>(clip->data.size()) / 2);
+    
+    clip->duration = static_cast<float>(samples) / info.sample_rate;
+    
+    stb_vorbis_close(vorbis);
+    return clip;
+#else
     return nullptr;
+#endif
 }
 
-std::shared_ptr<AudioData> AudioManager::LoadMP3(const std::string& filePath) {
-    // TODO: 实现MP3加载（需要mpg123或类似库）
-    LOG_WARNING("AudioManager", "MP3加载功能尚未实现: {0}", filePath);
+std::shared_ptr<AudioClip> AudioManager::LoadMP3(const std::string& filePath) {
     return nullptr;
 }
 
