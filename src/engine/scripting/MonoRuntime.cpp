@@ -156,7 +156,9 @@ void MonoRuntime::RegisterInternalCall(const std::string& signature, void* funct
 void MonoRuntime::CollectGarbage() {
     LOG_DEBUG("MonoRuntime", "Garbage collection triggered");
 #ifdef PRISMA_ENABLE_MONO
-    // TODO: 实现实际的垃圾回收
+    if (m_initialized) {
+        mono_gc_collect(mono_gc_max_generation());
+    }
 #endif
 }
 

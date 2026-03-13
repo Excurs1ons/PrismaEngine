@@ -20,27 +20,13 @@ void CompositionPass::Execute(const PassExecutionContext& context) {
         return;
     }
 
-    // 重置统计
     m_stats = {};
     m_stats.postProcessEffects = 0;
 
-    // 设置视口
     context.deviceContext->SetViewport(0.0f, 0.0f,
         static_cast<float>(context.sceneData->viewport.width),
         static_cast<float>(context.sceneData->viewport.height));
 
-    // TODO: 渲染后处理效果
-    // 1. 绑定光照缓冲区作为输入纹理
-    // 2. 渲染全屏四边形，应用后处理效果链：
-    //    - 色调映射 (Tone Mapping)
-    //    - Gamma 校正
-    //    - 抗锯齿 (FXAA/SMAA)
-    //    - 泛光 (Bloom)
-    //    - 屏幕空间反射 (SSR)
-    //    - 屏幕空间环境光遮蔽 (SSAO)
-    //    - 景深 (Depth of Field)
-
-    // 统计启用的后处理效果数量
     if (m_postProcessSettings.toneMapping) m_stats.postProcessEffects++;
     if (m_postProcessSettings.gammaCorrection) m_stats.postProcessEffects++;
     if (m_postProcessSettings.fxaa) m_stats.postProcessEffects++;

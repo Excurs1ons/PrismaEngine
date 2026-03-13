@@ -7,8 +7,11 @@
 #define RENDERDESC_H
 #include "interfaces/RenderTypes.h"
 #include <vector>
+#include <memory>
 
 namespace PrismaEngine::Graphic {
+class IShader;
+
 /// @brief 缓冲区描述
 struct BufferDesc : public ResourceDesc {
     BufferType type = BufferType::Vertex;

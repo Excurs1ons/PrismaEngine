@@ -105,6 +105,7 @@ private:
     std::vector<uint8_t> m_bytecode;  // 兼容IShader接口
     ShaderReflection m_reflection;
     std::string m_compileLog;
+    std::string m_filePath;
     bool m_hotReloadEnabled = false;
     uint64_t m_fileModificationTime = 0;
     VkShaderModule m_shaderModule = VK_NULL_HANDLE;

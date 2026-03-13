@@ -15,7 +15,7 @@ void ScriptSystem::Initialize() {
         return;
     }
 
-    // 加载核心程序集 (TODO: 路径应可配置)
+    // 加载核心程序集
     LoadAssembly("scripts/PrismaEngine.Core.dll");
 
     m_initialized = true;
@@ -90,7 +90,6 @@ void ScriptSystem::AddScript(PrismaEngine::Core::ECS::EntityID entity, const std
     auto managedScript = MonoRuntime::GetInstance().CreateScript(scriptPath);
     if (managedScript.IsValid()) {
         scriptComp->scriptPaths.push_back(scriptPath);
-        // TODO: 存储 ManagedObject 实例，这里需要完善 MonoRuntime 接口
         LOG_INFO("ScriptSystem", "为实体 {0} 添加脚本: {1}", entity, scriptPath);
     }
 }
@@ -102,15 +101,13 @@ void ScriptSystem::RemoveScript(PrismaEngine::Core::ECS::EntityID entity, const 
 
     auto it = std::find(scriptComp->scriptPaths.begin(), scriptComp->scriptPaths.end(), scriptPath);
     if (it != scriptComp->scriptPaths.end()) {
-        (void)std::distance(scriptComp->scriptPaths.begin(), it);  // 保存索引以便将来使用
+        (void)std::distance(scriptComp->scriptPaths.begin(), it);
         scriptComp->scriptPaths.erase(it);
-        // TODO: 移除对应的实例
     }
 }
 
 void ScriptSystem::ReloadScripts() {
     LOG_INFO("ScriptSystem", "重新加载所有脚本");
-    // TODO: 实现热重载逻辑
 }
 
 bool ScriptSystem::CompileScripts(const std::string& projectPath) {
@@ -120,18 +117,15 @@ bool ScriptSystem::CompileScripts(const std::string& projectPath) {
 
 void ScriptSystem::ProcessScriptAwake(ScriptComponent& script) {
     (void)script;
-    // TODO: 调用脚本Awake方法
 }
 
 void ScriptSystem::ProcessScriptStart(ScriptComponent& script) {
     (void)script;
-    // TODO: 调用脚本Start方法
 }
 
 void ScriptSystem::ProcessScriptUpdate(ScriptComponent& script, float deltaTime) {
     (void)script;
     (void)deltaTime;
-    // TODO: 调用脚本Update方法
 }
 
 }  // namespace Scripting

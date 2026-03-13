@@ -5,6 +5,8 @@
 
 namespace PrismaEngine::Graphic {
 
+class IDeviceContext;
+
 /// @brief G-Buffer 目标枚举
 /// 延迟渲染的几何缓冲区目标
 enum class GBufferTarget : uint32_t {

@@ -1,37 +1,24 @@
 #pragma once
 
+#include "interfaces/IGBuffer.h"
+#include "interfaces/IDeviceContext.h"
 #include "math/MathTypes.h"
 #include <memory>
+#include <vulkan/vulkan.h>
+#include <vma/vk_mem_alloc.h>
 
 namespace PrismaEngine::Graphic {
 
 // 前置声明
 class RenderCommandContext;
 
-// G-Buffer渲染目标结构
-// 使用MRT（Multiple Render Targets）技术
-enum class GBufferTarget : uint32_t {
-    // 0: Position (RGB) + Roughness (A)
-    Position = 0,
-    // 1: Normal (RGB) + Metallic (A)
-    Normal = 1,
-    // 2: Albedo (RGB) + Ambient Occlusion (A)
-    Albedo = 2,
-    // 3: Emissive (RGB) + Material ID (A)
-    Emissive = 3,
-    // 深度缓冲（单独的深度纹理）
-    Depth = 4,
-
-    Count
-};
-
 // G- Buffer纹理格式定义
 struct GBufferFormats {
     static const uint32_t POSITION_FORMAT;      // DXGI_FORMAT_R16G16B16A16_FLOAT
     static const uint32_t NORMAL_FORMAT;        // DXGI_FORMAT_R16G16B16A16_FLOAT
-    static const uint32_t ALBEDO_FORMAT;        // DXGI_FORMAT_R8G8B8A8_UNORM
-    static const uint32_t EMISSIVE_FORMAT;      // DXGI_FORMAT_R11G11B10_FLOAT
-    static const uint32_t DEPTH_FORMAT;         // DXGI_FORMAT_D32_FLOAT
+    static const uint32_t ALBEDO_FORMAT;         // DXGI_FORMAT_R8G8B8A8_UNORM
+    static const uint32_t EMISSIVE_FORMAT;       // DXGI_FORMAT_R11G11B10_FLOAT
+    static const uint32_t DEPTH_FORMAT;          // DXGI_FORMAT_D32_FLOAT
 };
 
 // G-Buffer数据结构（用于着色器）
@@ -58,44 +45,38 @@ struct GBufferData {
 };
 
 // G-Buffer资源管理器
-class GBuffer
+class GBuffer : public IGBuffer
 {
 public:
     GBuffer();
-    ~GBuffer();
+    ~GBuffer() override;
 
-    // 创建G-Buffer资源
-    bool Create(uint32_t width, uint32_t height);
+    bool Initialize(uint32_t width, uint32_t height) override;
+    bool Resize(uint32_t width, uint32_t height) override;
 
-    // 销毁G-Buffer资源
-    void Destroy();
+    void SetAsRenderTarget(IDeviceContext* deviceContext) override;
+    void BindAsShaderResources(IDeviceContext* deviceContext, uint32_t startSlot = 0) override;
+    void UnbindShaderResources(IDeviceContext* deviceContext, uint32_t startSlot = 0, uint32_t count = 4) override;
 
-    // 调整G-Buffer尺寸
-    void Resize(uint32_t width, uint32_t height);
+    void Clear(IDeviceContext* deviceContext, const float color[4]) override;
+    void ClearDepth(IDeviceContext* deviceContext, float depth = 1.0f) override;
 
-    // 设置为渲染目标
-    void SetAsRenderTarget(RenderCommandContext* context);
-
-    // 设置为着色器资源
-    void SetAsShaderResources(RenderCommandContext* context);
-
-    // 清除G-Buffer
-    void Clear(RenderCommandContext* context);
-
-    // 获取渲染目标视图
     void* GetRenderTargetView(GBufferTarget target) const;
-
-    // 获取着色器资源视图
     void* GetShaderResourceView(GBufferTarget target) const;
-
-    // 获取深度缓冲区视图
     void* GetDepthStencilView() const;
 
-    // 获取宽度
-    uint32_t GetWidth() const { return m_width; }
+    uint32_t GetWidth() const override { return m_width; }
+    uint32_t GetHeight() const override { return m_height; }
+    bool IsInitialized() const override { return m_created; }
 
-    // 获取高度
-    uint32_t GetHeight() const { return m_height; }
+    ITextureRenderTarget* GetTarget(GBufferTarget target) override;
+    IDepthStencil* GetDepthStencil() override;
+    void GetColorTargets(ITextureRenderTarget** targets, uint32_t count) override;
+    uint32_t GetColorTargetCount() const override { return 4; }
+    TextureFormat GetTargetFormat(GBufferTarget target) const override;
+
+    bool InitializeVulkanResources(uint32_t width, uint32_t height);
+    void DestroyVulkanResources();
 
 private:
     // 渲染目标资源
@@ -107,12 +88,25 @@ private:
 
     RenderTarget m_renderTargets[static_cast<uint32_t>(GBufferTarget::Count)];
 
-    // 深度缓冲
     void* m_depthBuffer = nullptr;
     void* m_depthStencilView = nullptr;
     void* m_depthShaderResourceView = nullptr;
 
-    // 尺寸
+    struct VulkanRenderTarget {
+        VkImage image = VK_NULL_HANDLE;
+        VkImageView imageView = VK_NULL_HANDLE;
+        VmaAllocation allocation = VK_NULL_HANDLE;
+    };
+    VulkanRenderTarget m_vulkanTargets[4];
+    struct VulkanDepthTarget {
+        VkImage image = VK_NULL_HANDLE;
+        VkImageView imageView = VK_NULL_HANDLE;
+        VmaAllocation allocation = VK_NULL_HANDLE;
+    };
+    VulkanDepthTarget m_vulkanDepth;
+    VkDevice m_vkDevice = VK_NULL_HANDLE;
+    VmaAllocator m_vmaAllocator = VK_NULL_HANDLE;
+
     uint32_t m_width = 0;
     uint32_t m_height = 0;
 
