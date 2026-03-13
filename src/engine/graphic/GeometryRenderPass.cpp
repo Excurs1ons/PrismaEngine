@@ -1,6 +1,8 @@
 #include "GeometryRenderPass.h"
 #include "Mesh.h"
 #include "Logger.h"
+#include "RenderCommandContext.h"
+#include "interfaces/IBuffer.h"
 
 using PrismaEngine::Graphic::RenderCommandContext;
 
@@ -28,16 +30,39 @@ void GeometryRenderPass::Execute(PrismaEngine::Graphic::RenderCommandContext* co
         return;
     }
     
-    // 清除渲染目标
     ClearRenderTarget(m_clearColor[0], m_clearColor[1], m_clearColor[2], m_clearColor[3]);
     
-    // 渲染队列中的所有网格
     for (const auto& item : m_renderQueue) {
-        // TODO: 实现实际的网格渲染逻辑
-        // 这需要访问网格的顶点数据、索引数据和材质信息
+        if (!item.mesh) {
+            continue;
+        }
         
-        LOG_DEBUG("GeometryRenderPass", "Rendering mesh: {0}", 
-                 item.mesh ? "valid mesh" : "null mesh");
+        for (const auto& subMesh : item.mesh->subMeshes) {
+            if (subMesh.vertexBufferHandle.IsValid()) {
+                context->SetVertexBuffer(
+                    reinterpret_cast<IBuffer*>(subMesh.vertexBufferHandle.GetId()),
+                    0, 0, sizeof(Vertex)
+                );
+            }
+            
+            if (subMesh.indexBufferHandle.IsValid()) {
+                context->SetIndexBuffer(
+                    reinterpret_cast<IBuffer*>(subMesh.indexBufferHandle.GetId()),
+                    0, true
+                );
+            }
+            
+            context->SetConstantData(0, item.transform, sizeof(item.transform));
+            
+            if (subMesh.indexBufferHandle.IsValid() && subMesh.indicesCount() > 0) {
+                context->DrawIndexed(subMesh.indicesCount(), 0);
+            } else if (subMesh.verticesCount() > 0) {
+                context->Draw(subMesh.verticesCount(), 0);
+            }
+        }
+        
+        LOG_DEBUG("GeometryRenderPass", "Rendered mesh with {0} submeshes", 
+                  item.mesh->subMeshes.size());
     }
     
     LOG_INFO("GeometryRenderPass", "Executed geometry render pass with {0} meshes", 

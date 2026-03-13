@@ -196,7 +196,13 @@ void RenderSystem::Present() {
 void RenderSystem::Resize(uint32_t width, uint32_t height) {
     m_desc.width  = width;
     m_desc.height = height;
-    // TODO: Resize swap chain
+    
+    if (m_device) {
+        auto* swapChain = m_device->GetSwapChain();
+        if (swapChain) {
+            swapChain->Resize(width, height);
+        }
+    }
 }
 
 void RenderSystem::SetMainPipeline(std::shared_ptr<IPipeline> pipeline) {

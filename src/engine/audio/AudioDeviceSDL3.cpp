@@ -593,8 +593,11 @@ void AudioDeviceSDL3::UpdateVoiceStates() {
 
         // 检查是否播放完成
         if (voice.state == VoiceState::Playing) {
-            // 简单的时长检查（实际应该基于音频流状态）
-            // TODO: 完善播放状态检查
+            // 基于播放位置判断是否播放完成
+            voice.playbackPosition += static_cast<float>(voice.samplesAvailable) / voice.spec.freq;
+            if (voice.playbackPosition >= voice.clipDuration && !voice.looping) {
+                voice.state = VoiceState::Stopped;
+            }
         }
     }
 
@@ -760,17 +763,50 @@ AudioVoiceId AudioDeviceSDL3::PlayClip(const AudioClip& clip, const PlayDesc& de
 }
 
 void AudioDeviceSDL3::BeginProfile() {
-    // TODO: 实现性能分析开始
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats = {};
+    m_stats.activeVoices = static_cast<uint32_t>(m_playingVoices.size());
+    m_stats.totalVoicesCreated = m_nextVoiceId.load() - 1;
+    m_stats.maxConcurrentVoices = std::max(m_stats.maxConcurrentVoices, m_stats.activeVoices);
 }
 
 std::string AudioDeviceSDL3::EndProfile() {
-    // TODO: 实现性能分析结束
-    return "";
+    std::lock_guard<std::mutex> lock(m_mutex);
+    m_stats.activeVoices = static_cast<uint32_t>(m_playingVoices.size());
+    
+    std::string report = "Audio Profile Report\n";
+    report += "===================\n";
+    report += "Active Voices: " + std::to_string(m_stats.activeVoices) + "\n";
+    report += "Total Created: " + std::to_string(m_stats.totalVoicesCreated) + "\n";
+    report += "Max Concurrent: " + std::to_string(m_stats.maxConcurrentVoices) + "\n";
+    report += "CPU Usage: " + std::to_string(m_stats.cpuUsage) + "%\n";
+    report += "Memory Usage: " + std::to_string(m_stats.memoryUsage / 1024) + "KB\n";
+    report += "Dropouts: " + std::to_string(m_stats.dropouts) + "\n";
+    report += "Underruns: " + std::to_string(m_stats.underruns) + "\n";
+    
+    return report;
 }
 
 std::string AudioDeviceSDL3::GenerateDebugReport() {
-    // TODO: 生成调试报告
-    return "SDL3 Audio Device Debug Report";
+    std::lock_guard<std::mutex> lock(m_mutex);
+    
+    std::string report = "SDL3 Audio Device Debug Report\n";
+    report += "==============================\n";
+    report += "Device ID: " + std::to_string(m_deviceId) + "\n";
+    report += "Initialized: " + std::string(m_initialized ? "Yes" : "No") + "\n";
+    report += "Sample Rate: " + std::to_string(m_obtainedSpec.freq) + " Hz\n";
+    report += "Channels: " + std::to_string(m_obtainedSpec.channels) + "\n";
+    report += "Format: " + std::to_string(m_obtainedSpec.format) + "\n";
+    report += "Master Volume: " + std::to_string(m_masterVolume) + "\n";
+    report += "Playing Voices: " + std::to_string(m_playingVoices.size()) + "\n";
+    report += "Samples Processed: " + std::to_string(m_totalSamplesProcessed) + "\n";
+    
+    report += "\nListener Position: (";
+    report += std::to_string(m_listener.GetPosition().x) + ", ";
+    report += std::to_string(m_listener.GetPosition().y) + ", ";
+    report += std::to_string(m_listener.GetPosition().z) + ")\n";
+    
+    return report;
 }
 
 } // namespace PrismaEngine::Audio
