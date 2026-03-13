@@ -63,6 +63,11 @@ set(VULKAN_SOURCES
     graphic/adapters/vulkan/VulkanAdapters.cpp
     graphic/adapters/vulkan/RenderDeviceVulkan.cpp
     graphic/adapters/vulkan/VulkanShader.cpp
+    graphic/adapters/vulkan/VulkanResources.cpp
+    graphic/adapters/vulkan/VulkanResourceFactory.cpp
+    graphic/adapters/vulkan/VulkanFence.cpp
+    graphic/adapters/vulkan/VulkanSampler.cpp
+    graphic/adapters/vulkan/VulkanPipelineState.cpp
 )
 
 set(VULKAN_HEADERS
@@ -73,55 +78,11 @@ set(VULKAN_HEADERS
     graphic/adapters/vulkan/VulkanShader.h
     graphic/adapters/vulkan/VulkanMaterial.h
     graphic/adapters/vulkan/VulkanMesh.h
+    graphic/adapters/vulkan/VulkanResources.h
+    graphic/adapters/vulkan/VulkanFence.h
+    graphic/adapters/vulkan/VulkanSampler.h
+    graphic/adapters/vulkan/VulkanPipelineState.h
 )
-
-# ========== 超分辨率模块 / Upscaler Module ==========
-
-set(UPSCALER_CORE_SOURCES
-    graphic/upscaler/UpscalerManager.cpp
-    graphic/upscaler/UpscalerPass.cpp
-)
-
-set(UPSCALER_CORE_HEADERS
-    graphic/upscaler/UpscalerManager.h
-    graphic/upscaler/UpscalerPass.h
-    graphic/interfaces/IUpscaler.h
-)
-
-if(PRISMA_ENABLE_UPSCALER_MOTION_VECTORS)
-    list(APPEND UPSCALER_CORE_SOURCES graphic/upscaler/MotionVectorPass.cpp)
-    list(APPEND UPSCALER_CORE_HEADERS graphic/upscaler/MotionVectorPass.h)
-endif()
-
-if(PRISMA_ENABLE_UPSCALER_FSR)
-    list(APPEND UPSCALER_CORE_SOURCES
-        graphic/upscaler/adapters/FSR/UpscalerFSR.cpp
-        graphic/upscaler/adapters/FSR/FSRResources.cpp
-    )
-    list(APPEND UPSCALER_CORE_HEADERS
-        graphic/upscaler/adapters/FSR/UpscalerFSR.h
-        graphic/upscaler/adapters/FSR/FSRResources.h
-    )
-endif()
-
-if(PRISMA_ENABLE_UPSCALER_DLSS)
-    list(APPEND UPSCALER_CORE_SOURCES
-        graphic/upscaler/adapters/DLSS/UpscalerDLSS.cpp
-        graphic/upscaler/adapters/DLSS/DLSSResources.cpp
-    )
-    list(APPEND UPSCALER_CORE_HEADERS
-        graphic/upscaler/adapters/DLSS/UpscalerDLSS.h
-        graphic/upscaler/adapters/DLSS/DLSSResources.h
-    )
-endif()
-
-if(PRISMA_ENABLE_UPSCALER_TSR)
-    list(APPEND UPSCALER_CORE_SOURCES graphic/upscaler/adapters/TSR/UpscalerTSR.cpp)
-    list(APPEND UPSCALER_CORE_HEADERS graphic/upscaler/adapters/TSR/UpscalerTSR.h)
-endif()
-
-list(APPEND ENGINE_GRAPHIC_SOURCES ${UPSCALER_CORE_SOURCES})
-list(APPEND ENGINE_GRAPHIC_HEADERS ${UPSCALER_CORE_HEADERS})
 
 # ========== 渲染后端条件编译 / Render Backend Conditional Compilation ==========
 
