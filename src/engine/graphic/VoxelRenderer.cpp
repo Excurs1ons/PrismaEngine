@@ -2,7 +2,7 @@
 #include "RenderCommandContext.h"
 #include "Logger.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Graphic {
 
 VoxelRenderer::VoxelRenderer() {
@@ -18,7 +18,7 @@ void VoxelRenderer::Initialize() {
     LOG_INFO("VoxelRenderer", "初始化 Voxel 渲染器");
 }
 
-void VoxelRenderer::Update(float deltaTime) {
+void VoxelRenderer::Update(Timestep ts) {
     // 遍历所有区块，检查是否需要重建网格
     for (auto& [key, chunk] : m_chunks) {
         if (chunk->dirty) {
@@ -60,4 +60,4 @@ void VoxelRenderer::RebuildMesh(uint64_t key) {
 }
 
 } // namespace Graphic
-} // namespace PrismaEngine
+} // namespace Prisma

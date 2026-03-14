@@ -6,7 +6,7 @@
 #include "pipelines/deferred/LightingPass.h"
 #include "pipelines/forward/TransparentPass.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 DeferredPipeline::DeferredPipeline() : LogicalDeferredPipeline(), m_camera(nullptr), m_ambientLight(0.1f, 0.1f, 0.1f) {
     m_stats = {};
@@ -20,21 +20,21 @@ bool DeferredPipeline::Initialize() {
     return true;
 }
 
-void DeferredPipeline::Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera) {
+void DeferredPipeline::Update(Timestep ts, Prisma::Graphic::ICamera* camera) {
     m_camera              = camera;
-    m_stats.lastFrameTime = deltaTime;
+    m_stats.lastFrameTime = ts;
 
     // 更新所有 Pass 的时间
     if (m_geometryPass)
-        m_geometryPass->Update(deltaTime);
+        m_geometryPass->Update(ts);
     if (m_skyboxPass)
-        m_skyboxPass->Update(deltaTime);
+        m_skyboxPass->Update(ts);
     if (m_lightingPass)
-        m_lightingPass->Update(deltaTime);
+        m_lightingPass->Update(ts);
     if (m_transparentPass)
-        m_transparentPass->Update(deltaTime);
+        m_transparentPass->Update(ts);
     if (m_compositionPass)
-        m_compositionPass->Update(deltaTime);
+        m_compositionPass->Update(ts);
 
     // 更新相机数据
     if (m_camera) {
@@ -103,7 +103,7 @@ bool DeferredPipeline::IsPostProcessEffectEnabled(PostProcessEffect effect) cons
     return false;
 }
 
-void DeferredPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* camera) {
+void DeferredPipeline::UpdatePassesCameraData(Prisma::Graphic::ICamera* camera) {
     if (!camera) {
         return;
     }
@@ -150,4 +150,4 @@ void DeferredPipeline::CollectStats() {
     m_stats.lightingPassLights = static_cast<uint32_t>(m_lights.size());
 }
 
-}  // namespace PrismaEngine::Graphic
+}  // namespace Prisma::Graphic

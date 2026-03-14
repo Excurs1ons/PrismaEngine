@@ -17,23 +17,23 @@ elseif(LINUX)
 endif()
 
 # 创建可执行程序
-add_executable(Runtime
+add_executable(PrismaLauncher
     ${RUNTIME_SOURCES}
 )
 
-# 只链接 Engine（不链接 Game 或 Editor）
-target_link_libraries(Runtime
+# 只链接 Engine
+target_link_libraries(PrismaLauncher
     PRIVATE Engine
 )
 
 if(EMSCRIPTEN)
     if(TARGET Game)
-        target_link_libraries(Runtime PRIVATE Game)
+        target_link_libraries(PrismaLauncher PRIVATE Game)
     else()
         message(FATAL_ERROR "WebAssembly 构建需要 Game 目标，请关闭 PRISMA_BUILD_EDITOR 并启用 Game 模块")
     endif()
 
-    target_link_options(Runtime PRIVATE
+    target_link_options(PrismaLauncher PRIVATE
         "-sALLOW_MEMORY_GROWTH=1"
         "-sUSE_SDL=3"
         "-sWASM=1"
@@ -43,30 +43,30 @@ if(EMSCRIPTEN)
     )
 
     if(EXISTS "${CMAKE_SOURCE_DIR}/assets")
-        target_link_options(Runtime PRIVATE "--preload-file" "${CMAKE_SOURCE_DIR}/assets@/Assets")
+        target_link_options(PrismaLauncher PRIVATE "--preload-file" "${CMAKE_SOURCE_DIR}/assets@/Assets")
     endif()
 
-    set_target_properties(Runtime PROPERTIES
-        OUTPUT_NAME "PrismaRuntime"
+    set_target_properties(PrismaLauncher PROPERTIES
+        OUTPUT_NAME "PrismaLauncher"
         SUFFIX ".html"
     )
 endif()
 
-message(STATUS "Runtime: 独立构建 - 运行时动态加载 Game/Editor")
+message(STATUS "Launcher: 独立构建 - 运行时动态加载 Game/Editor")
 
 # 编译选项
-target_compile_options(Runtime PRIVATE
+target_compile_options(PrismaLauncher PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W3 /utf-8>
 )
 
 # 编译定义
-target_compile_definitions(Runtime
+target_compile_definitions(PrismaLauncher
     PRIVATE _UNICODE UNICODE
 )
 
 # 设置输出名称
-set_target_properties(Runtime PROPERTIES
-    OUTPUT_NAME "PrismaRuntime"
+set_target_properties(PrismaLauncher PROPERTIES
+    OUTPUT_NAME "PrismaLauncher"
 )
 
 # 安装规则

@@ -5,7 +5,7 @@
 #include <sstream>
 #include <algorithm>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 std::string TmxParser::s_lastError;
 
@@ -997,4 +997,4 @@ std::unique_ptr<TileMap> TmxParser::ParseString(
     return map;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

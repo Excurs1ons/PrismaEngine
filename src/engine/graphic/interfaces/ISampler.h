@@ -3,7 +3,7 @@
 #include "RenderTypes.h"
 #include "IResource.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 采样器抽象接口
 class ISampler : public IResource {
@@ -58,4 +58,4 @@ public:
     virtual uint64_t GetHandle() const = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

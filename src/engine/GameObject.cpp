@@ -1,7 +1,7 @@
 #include "GameObject.h"
 #include "Component.h"
 #include "Transform.h"
-namespace PrismaEngine{
+namespace Prisma{
     GameObject::GameObject(std::string name, std::unique_ptr<Transform> transform) {
         this->name = name;
         if (transform) {

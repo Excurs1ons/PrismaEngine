@@ -35,7 +35,7 @@ private:
 // 日志作用域管理器，用于管理多个日志作用域
 class LogScopeManager {
 public:
-    static LogScopeManager& GetInstance() {
+    static LogScopeManager& Get() {
         static LogScopeManager instance;
         return instance;
     }

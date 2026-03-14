@@ -1,7 +1,7 @@
 #include "JobSystem.h"
 #include "Logger.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
 int JobSystem::Initialize() {
     LOG_INFO("JobSystem", "任务系统初始化（基础实现）");
@@ -28,4 +28,4 @@ void JobSystem::ThreadPool::WorkerThread() {
     // 待实现真正的线程池逻辑
 }
 
-}  // namespace PrismaEngine
+}  // namespace Prisma

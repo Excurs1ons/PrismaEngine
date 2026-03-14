@@ -3,7 +3,7 @@
 #include "Export.h"
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Serialization {
 
         // OutputArchive模板特化实现
@@ -104,4 +104,4 @@ namespace PrismaEngine {
         }
 
     } // namespace Serialization
-} // namespace PrismaEngine
+} // namespace Prisma

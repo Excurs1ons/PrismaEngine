@@ -11,6 +11,6 @@ public:
     void SaveSettings();
 
 private:
-    PrismaEngine::Core::ProjectSettings m_settings;
+    Prisma::Core::ProjectSettings m_settings;
     std::string m_settingsPath = "project_settings.json";
 };

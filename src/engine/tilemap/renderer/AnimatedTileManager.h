@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <cstdint>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 动画瓦片变化
@@ -50,7 +50,7 @@ public:
     void Clear();
 
     // 更新动画
-    void Update(float deltaTime);
+    void Update(Timestep ts);
 
     // 获取变化的瓦片
     const std::vector<TileChange>& GetChangedTiles() const { return m_changedTiles; }
@@ -91,4 +91,4 @@ private:
     float m_timeScale = 1.0f;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

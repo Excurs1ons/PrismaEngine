@@ -1,11 +1,11 @@
 #pragma once
 #include "Engine.h"
-#include "IApplication.h"
+#include "Application.h"
 #include <memory>
-namespace PrismaEngine {
-class Application : public IApplication<Application> {
+namespace Prisma {
+class Application : public Application<Application> {
 public:
-    friend class IApplication<Application>;
+    friend class Application<Application>;
     /// <summary>
     /// 应用程序初始化，应该包括完成平台层和渲染器的初始化
     /// </summary>
@@ -18,7 +18,7 @@ public:
     virtual ~Application() = default;
 
 private:
-    std::shared_ptr<EngineCore> engine = nullptr;
+    std::shared_ptr<Engine> engine = nullptr;
 };
 
 }  // namespace Engine

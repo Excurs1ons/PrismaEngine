@@ -13,7 +13,7 @@
 #include <memory>
 #include <vector>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 天空盒逻辑 Pass
 /// 负责渲染天空盒，不包含具体图形 API
@@ -29,8 +29,8 @@ public:
     void Execute(const PassExecutionContext& context) override;
 
     /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    /// @param ts 时间增量
+    void Update(Timestep ts) override;
 
     // === 天空盒特有功能 ===
 
@@ -61,4 +61,4 @@ private:
     bool m_meshInitialized;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

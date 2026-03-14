@@ -5,7 +5,7 @@
 #include <memory>
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // TSX 解析器 (外部图块集文件)
@@ -35,4 +35,4 @@ private:
     static std::vector<Frame> ParseAnimation(void* animationElement);
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

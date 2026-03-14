@@ -7,7 +7,7 @@
 #include <functional>
 #include <cmath>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Graphic {
 
         /**
@@ -326,4 +326,4 @@ namespace PrismaEngine {
         };
 
     } // namespace Graphic
-} // namespace PrismaEngine
+} // namespace Prisma

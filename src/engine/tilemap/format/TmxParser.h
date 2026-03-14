@@ -5,7 +5,7 @@
 #include <memory>
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // TMX 解析器
@@ -90,4 +90,4 @@ private:
     static LayerType ParseLayerType(const std::string& str);
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

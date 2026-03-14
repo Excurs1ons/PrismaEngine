@@ -6,7 +6,7 @@
 #include <array>
 #include <mutex>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 /// @brief SDL3音频设备实现
 /// SDL3提供了跨平台的音频支持，适合简单的2D游戏音频需求
@@ -19,7 +19,7 @@ public:
     bool Initialize(const AudioDesc& desc) override;
     void Shutdown() override;
     bool IsInitialized() const override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     DeviceInfo GetDeviceInfo() const override;
     std::vector<DeviceInfo> GetAvailableDevices() const override;

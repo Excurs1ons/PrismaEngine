@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 #include "interfaces/RenderTypes.h"
-namespace PrismaEngine {
+namespace Prisma {
 using namespace Graphic;
 struct SubMesh {
     std::string name;

@@ -11,7 +11,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 通用层基类 (多态包装)
@@ -272,4 +272,4 @@ private:
     }
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

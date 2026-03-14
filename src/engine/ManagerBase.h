@@ -3,7 +3,7 @@
 #include "Export.h"
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// @brief 子系统基类接口
 template <typename T> 
@@ -15,4 +15,4 @@ protected:
     ManagerBase() = default;
 };
 
-}  // namespace PrismaEngine
+}  // namespace Prisma

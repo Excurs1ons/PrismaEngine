@@ -1,6 +1,6 @@
 #include "VulkanFence.h"
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 VulkanFence::VulkanFence(VkDevice device)
     : m_device(device) {
@@ -59,4 +59,4 @@ void VulkanFence::SetEventOnCompletion(uint64_t value, void* event) {
     // Simplified implementation
 }
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

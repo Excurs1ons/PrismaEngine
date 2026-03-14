@@ -4,7 +4,7 @@
 
 #include "RenderTypes.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
     // 命名空间的空实现
     // 未来如果有静态变量需要初始化，可以在这里添加
 }

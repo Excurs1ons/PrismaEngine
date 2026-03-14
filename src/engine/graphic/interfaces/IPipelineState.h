@@ -6,7 +6,7 @@
 #include <vector>
 #include "IRenderDevice.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 混合状态描述
 struct BlendState {
@@ -269,4 +269,4 @@ protected:
     bool m_isValid = false;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

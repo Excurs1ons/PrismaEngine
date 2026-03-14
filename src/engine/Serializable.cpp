@@ -2,7 +2,7 @@
 #include "Export.h"
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Serialization {
         // 实现非模板方法
         void OutputArchive::SetCurrent([[maybe_unused]] const std::string& key) {

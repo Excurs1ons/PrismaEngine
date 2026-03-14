@@ -2,7 +2,7 @@
 #include "RenderCommandContext.h"
 #include "Logger.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 const uint32_t GBufferFormats::POSITION_FORMAT = 10;
 const uint32_t GBufferFormats::NORMAL_FORMAT = 10;
@@ -315,4 +315,4 @@ TextureFormat GBuffer::GetTargetFormat(GBufferTarget target) const {
     }
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

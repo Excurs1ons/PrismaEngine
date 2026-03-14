@@ -1,7 +1,7 @@
 #include "RenderPass.h"
 #include "Mesh.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 RenderPass::RenderPass()
 {
@@ -45,4 +45,4 @@ void RenderPass2D::SetViewport(uint32_t width, uint32_t height)
     m_height = height;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

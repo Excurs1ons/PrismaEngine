@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 class AudioDeviceSDL3;
 class AudioDeviceNull;
@@ -66,4 +66,4 @@ inline std::string AudioAPI::GetDeviceDescription(AudioDeviceType deviceType) {
     }
 }
 
-} // namespace PrismaEngine::Audio
+} // namespace Prisma::Audio

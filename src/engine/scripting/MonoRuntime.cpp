@@ -3,10 +3,10 @@
 #include "core/ECS.h"
 #include <iostream>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Scripting {
 
-MonoRuntime& MonoRuntime::GetInstance() {
+MonoRuntime& MonoRuntime::Get() {
     static MonoRuntime instance;
     return instance;
 }
@@ -168,4 +168,4 @@ ManagedObject MonoRuntime::CreateScript(const std::string& scriptPath) {
 }
 
 } // namespace Scripting
-} // namespace PrismaEngine
+} // namespace Prisma

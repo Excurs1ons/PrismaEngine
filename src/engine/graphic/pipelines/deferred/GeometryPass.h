@@ -9,7 +9,7 @@
 #include <memory>
 #include <pipelines/forward/ForwardRenderPassBase.h>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 几何逻辑 Pass
 /// 将场景几何信息渲染到 G-Buffer
@@ -34,8 +34,8 @@ public:
     void Execute(const PassExecutionContext& context) override;
 
     /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    /// @param ts 时间增量
+    void Update(Timestep ts) override;
 
     // === G-Buffer 设置 ===
 
@@ -75,4 +75,4 @@ private:
     RenderStats m_stats;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -2,10 +2,10 @@
 #include "Logger.h"
 #include "ResourceFallbackImpl.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Resource {
 
-std::shared_ptr<AssetBase> AssetFallback::CreateDefaultResource(
+std::shared_ptr<Asset> AssetFallback::CreateDefaultResource(
     AssetType type,
     const std::string& relativePath)
 {
@@ -25,10 +25,10 @@ std::shared_ptr<AssetBase> AssetFallback::CreateDefaultResource(
     }
 }
 
-std::shared_ptr<AssetBase> AssetFallback::CreateFallbackResource(
+std::shared_ptr<Asset> AssetFallback::CreateFallbackResource(
     AssetType type,
     const std::string& relativePath,
-    std::shared_ptr<AssetBase> /*failedResource*/)
+    std::shared_ptr<Asset> /*failedResource*/)
 {
     LOG_WARNING("ResourceFallback", "资源 {0} 加载失败，创建默认回退资源", relativePath);
 

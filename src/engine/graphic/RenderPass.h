@@ -10,7 +10,7 @@
 #include "math/MathTypes.h"
 #include "Mesh.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前向声明
 class IDeviceContext;
@@ -24,7 +24,7 @@ public:
     virtual ~RenderPass();
 
     /// @deprecated 使用 IPass::Execute(const PassExecutionContext&) 替代
-    virtual void Execute(PrismaEngine::Graphic::RenderCommandContext* context) = 0;
+    virtual void Execute(Prisma::Graphic::RenderCommandContext* context) = 0;
 
     /// @deprecated 使用 IDeviceContext::SetRenderTarget() 替代
     virtual void SetRenderTarget(void* renderTarget) = 0;
@@ -43,7 +43,7 @@ public:
     RenderPass2D();
     ~RenderPass2D() override;
 
-    void Execute(PrismaEngine::Graphic::RenderCommandContext* context) override;
+    void Execute(Prisma::Graphic::RenderCommandContext* context) override;
 
     void AddMeshToRenderQueue(const std::shared_ptr<Mesh>& mesh, const PrismaMath::mat4& transform);
     void SetCameraMatrix(const PrismaMath::mat4& viewProjection);
@@ -55,4 +55,4 @@ private:
     uint32_t m_height = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -4,7 +4,7 @@
 #include "../resource/AssetSerializer.h"
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 加载
@@ -102,4 +102,4 @@ void TilemapAsset::Deserialize(InputArchive& archive) {
     m_isLoaded = true;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

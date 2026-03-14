@@ -3,46 +3,78 @@
 #include "Export.h"
 #include "ISubSystem.h"
 #include "Logger.h"
-#include "ManagerBase.h"
-#include "Singleton.h"
-#include <chrono>
+#include "core/Timestep.h"
 #include <memory>
 #include <vector>
+#include <string>
 
-namespace PrismaEngine {
+namespace Prisma {
 
-/// @brief 引擎核心类
-class ENGINE_API EngineCore : public ManagerBase<EngineCore> {
+class Application;
+class AssetManager;
+namespace Input { class InputManager; }
+namespace Graphic { class RenderSystem; }
+
+/**
+ * @brief 引擎配置规范
+ */
+struct EngineSpecification {
+    std::string Name = "PrismaEngine";
+    bool Headless = false;
+    LogLevel MinLogLevel = LogLevel::Trace;
+    uint32_t MaxFPS = 0; 
+};
+
+/**
+ * @brief 引擎核心类 (心脏)
+ */
+class ENGINE_API Engine {
 public:
-    static std::shared_ptr<EngineCore> GetInstance();
+    Engine(const EngineSpecification& spec = EngineSpecification());
+    ~Engine();
 
-    EngineCore();
-    virtual ~EngineCore() = default;
+    Engine(const Engine&) = delete;
+    Engine& operator=(const Engine&) = delete;
 
-    /// @brief 初始化引擎所有子系统
     int Initialize();
-
-    /// @brief 启动引擎主循环
-    int Run();
-
-    /// @brief 关闭引擎
+    int Run(std::unique_ptr<Application> app);
     void Shutdown();
 
-    /// @brief 每一帧的更新逻辑
-    void Update();
+    static Engine& Get() { return *s_Instance; }
+    
+    // --- 快车道访问：杜绝 dynamic_cast ---
+    AssetManager* GetAssetManager() { return m_AssetManager; }
+    Input::InputManager* GetInputManager() { return m_InputManager; }
+    Graphic::RenderSystem* GetRenderSystem() { return m_RenderSystem; }
 
-    /// @brief 检查引擎是否已初始化
-    bool IsInitialized() const { return m_initialized; }
+    const EngineSpecification& GetSpecification() const { return m_Spec; }
+    bool IsRunning() const { return m_Running; }
 
-    /// @brief 检查引擎是否正在运行
-    bool IsRunning() const { return isRunning_; }
+    // 通用系统添加 (用于非核心扩展)
+    template<typename T, typename... Args>
+    T* AddSystem(Args&&... args) {
+        auto system = std::make_unique<T>(std::forward<Args>(args)...);
+        T* ptr = system.get();
+        m_Systems.push_back(std::move(system));
+        return ptr;
+    }
 
 private:
-    /// @brief 注册并初始化子系统
-    bool RegisterSystem(ISubSystem* system);
+    void Update(Timestep ts);
+    
+    EngineSpecification m_Spec;
+    std::vector<std::unique_ptr<ISubSystem>> m_Systems;
+    std::unique_ptr<Application> m_CurrentApp;
+    
+    // 核心系统指针缓存 (快车道)
+    AssetManager* m_AssetManager = nullptr;
+    Input::InputManager* m_InputManager = nullptr;
+    Graphic::RenderSystem* m_RenderSystem = nullptr;
 
-    std::vector<ISubSystem*> m_systems;
-    bool m_initialized = false;
-    bool isRunning_    = false;
+    bool m_Initialized = false;
+    bool m_Running = false;
+
+    static Engine* s_Instance;
 };
-}  // namespace PrismaEngine
+
+} // namespace Prisma

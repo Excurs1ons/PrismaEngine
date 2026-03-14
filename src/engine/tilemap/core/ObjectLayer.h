@@ -5,9 +5,9 @@
 
 #include "TileLayer.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ObjectLayer 和 MapObject 已在 TileLayer.h 中定义
 // 此文件提供便捷的 include 路径
 
-} // namespace PrismaEngine
+} // namespace Prisma

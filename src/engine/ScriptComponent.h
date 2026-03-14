@@ -1,6 +1,6 @@
 #pragma once
 #include "Component.h"
-namespace PrismaEngine {
+namespace Prisma {
 
     class ScriptComponent :
             public Component {

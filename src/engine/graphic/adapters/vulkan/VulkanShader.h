@@ -7,7 +7,7 @@
 #include <RenderDesc.h>
 
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 #ifdef FindResource
 #undef FindResource
@@ -118,4 +118,4 @@ private:
     void DestroyShaderModule();
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

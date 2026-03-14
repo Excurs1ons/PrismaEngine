@@ -2,7 +2,7 @@
 
 #include "ForwardRenderPassBase.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 DepthPrePass::DepthPrePass()
     : ForwardRenderPass("DepthPrePass") {
@@ -10,8 +10,8 @@ DepthPrePass::DepthPrePass()
     m_priority = 50;
 }
 
-void DepthPrePass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void DepthPrePass::Update(Timestep ts) {
+    UpdateTime(ts);
 }
 
 void DepthPrePass::Execute(const PassExecutionContext& context) {
@@ -31,4 +31,4 @@ void DepthPrePass::Execute(const PassExecutionContext& context) {
     context.deviceContext->SetConstantData(0, &m_viewProjection, sizeof(PrismaMath::mat4));
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

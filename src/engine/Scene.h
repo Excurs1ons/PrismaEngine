@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-using namespace PrismaEngine;
+using namespace Prisma;
 
 class Scene
 {
@@ -23,19 +23,19 @@ public:
     void RemoveGameObject(GameObject* gameObject);
     
     // 更新场景中的所有对象
-    void Update(float deltaTime);
+    void Update(Timestep ts);
     
       
     // 获取场景中的所有游戏对象
     const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
     
     // 获取主相机
-    std::shared_ptr<PrismaEngine::Graphic::ICamera> GetMainCamera();
+    std::shared_ptr<Prisma::Graphic::ICamera> GetMainCamera();
 
     // 设置主相机 (非拥有引用)
-    void SetMainCamera(std::shared_ptr<PrismaEngine::Graphic::ICamera> camera);
+    void SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera);
 
 private:
     std::vector<std::shared_ptr<GameObject>> m_gameObjects;
-    std::shared_ptr<PrismaEngine::Graphic::ICamera> m_mainCamera;
+    std::shared_ptr<Prisma::Graphic::ICamera> m_mainCamera;
 };

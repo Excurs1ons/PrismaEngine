@@ -10,7 +10,7 @@
 #include <memory>
 #include <vector>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 光照逻辑 Pass
 /// 使用 G-Buffer 计算场景光照
@@ -55,8 +55,8 @@ public:
     void Execute(const PassExecutionContext& context) override;
 
     /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    /// @param ts 时间增量
+    void Update(Timestep ts) override;
 
     // === G-Buffer 设置 ===
 
@@ -121,4 +121,4 @@ private:
     RenderStats m_stats;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

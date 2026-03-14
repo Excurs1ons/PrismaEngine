@@ -6,7 +6,7 @@
 #include <map>
 #include "../Export.h"
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Serialization {
 
         class OutputArchive;
@@ -104,4 +104,4 @@ namespace PrismaEngine {
         template<> ENGINE_API void InputArchive::DeserializeValue<std::filesystem::path>(const std::string& key, std::filesystem::path& value);
 
     } // namespace Serialization
-} // namespace PrismaEngine
+} // namespace Prisma

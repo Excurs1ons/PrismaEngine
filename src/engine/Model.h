@@ -13,7 +13,7 @@
 #include "math/MathTypes.h"
 #include <vector>
 
-using namespace PrismaEngine;
+using namespace Prisma;
 
 typedef uint16_t Index;
 

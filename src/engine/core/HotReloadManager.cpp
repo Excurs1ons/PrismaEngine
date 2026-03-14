@@ -2,7 +2,7 @@
 
 #include "Logger.h"
 
-namespace PrismaEngine::Core {
+namespace Prisma::Core {
 
 class HotReloadManager {
 public:
