@@ -2,6 +2,8 @@
 #include "Shader.h"
 #include "interfaces/ICommandBuffer.h"
 #include "Logger.h"
+#include <unordered_map>
+#include <format>
 
 namespace Prisma::Graphic {
 

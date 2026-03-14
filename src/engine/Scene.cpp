@@ -32,7 +32,7 @@ void Scene::RemoveGameObject(GameObject* gameObject)
 void Scene::Update(Timestep ts)
 {
     for (auto& obj : m_gameObjects) {
-        obj->OnUpdate(ts);
+        obj->Update(ts);
     }
 }
 

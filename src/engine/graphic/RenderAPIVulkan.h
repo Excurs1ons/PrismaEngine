@@ -155,6 +155,7 @@ private:
     std::unique_ptr<vkb::Instance> m_vkBootstrapInstance;
     vkb::Device m_vkBootstrapDevice;
     vkb::Swapchain m_vkBootstrapSwapchain;
+    VkDebugUtilsMessengerEXT m_debugMessenger = VK_NULL_HANDLE;
 
     // VMA 分配器
     VmaAllocator m_vmaAllocator = nullptr;

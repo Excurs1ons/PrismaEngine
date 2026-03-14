@@ -1,4 +1,5 @@
 #include "RenderAPIVulkan.h"
+#include "Platform.h"
 #include "Logger.h"
 #include "LogScope.h"
 #include <algorithm>

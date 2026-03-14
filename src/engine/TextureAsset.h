@@ -8,6 +8,8 @@
 
 class VulkanContext;
 
+namespace Prisma {
+
 class TextureAsset {
 public:
     static std::shared_ptr<TextureAsset> loadAsset(
@@ -36,7 +38,6 @@ public:
     uint32_t getHeight() const { return size_.y; }
     VkFormat getFormat() const { return format_; }
 
-    void Unload();
 protected:
 
     TextureAsset(VulkanContext* context);
@@ -50,4 +51,6 @@ protected:
     VkFormat format_ = VK_FORMAT_R8G8B8A8_SRGB;
     uint32_t mipLevels_ = 1;
 };
+
+} // namespace Prisma
 #endif

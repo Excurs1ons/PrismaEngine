@@ -78,7 +78,7 @@ public:
     std::string GenerateDebugReport() override;
 
     // 更新
-    void Update(Timestep ts) override;
+    void Update(Prisma::Timestep ts) override;
 
 private:
     // 内部 Voice 状态
@@ -120,4 +120,4 @@ private:
     mutable std::mutex m_mutex;
 };
 
-} // namespace Engine::Audio
+} // namespace Prisma::Audio

@@ -22,6 +22,7 @@ struct RenderSystemDesc {
     uint32_t height            = 900;
     bool enableDebug           = true;
     bool enableValidation      = true;
+    bool enableVSync           = true;
     uint32_t maxFramesInFlight = 3;
     std::string name           = "PrismaApp";
 };

@@ -2,6 +2,7 @@
 
 #include "interfaces/RenderTypes.h"
 #include "graphic/Renderer.h"
+#include "ForwardRenderPassBase.h"
 #include <vector>
 
 namespace Prisma::Graphic {
@@ -12,21 +13,22 @@ class ICommandBuffer;
  * @brief 不透明渲染通道 (Opaque Pass)
  * 没有任何单例，由 ForwardPipeline 调用。
  */
-class OpaquePass {
+class OpaquePass : public ForwardRenderPass {
 public:
     OpaquePass();
-    ~OpaquePass() = default;
+    ~OpaquePass() override = default;
 
-    // 执行渲染逻辑
+    // IPass 接口实现
+    void Execute(const PassExecutionContext& context) override;
+    void Update(Prisma::Timestep ts) override;
+
+    // 旧版执行接口支持 (向后兼容)
     void Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands);
 
     // 数据设置
-    void SetCameraData(const PrismaMath::mat4& view, const PrismaMath::mat4& proj);
     void SetLights(const std::vector<Light>& lights);
 
 private:
-    PrismaMath::mat4 m_ViewMatrix;
-    PrismaMath::mat4 m_ProjMatrix;
     std::vector<Light> m_Lights;
 };
 

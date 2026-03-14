@@ -70,55 +70,27 @@ namespace Prisma {
             }
 
             bool VulkanShader::HasReflection() const {
-                return !m_reflection.resources.empty() || !m_reflection.constantBuffers.empty();
+                return !m_reflection.Resources.empty() || !m_reflection.PushConstantRanges.empty();
             }
 
-            const ShaderReflection::Resource *
+            const ShaderResource *
             VulkanShader::FindResource(const std::string &name) const {
-                for (const auto &resource: m_reflection.resources) {
-                    if (resource.name == name) {
+                for (const auto &resource: m_reflection.Resources) {
+                    if (resource.Name == name) {
                         return &resource;
                     }
                 }
                 return nullptr;
             }
 
-            const ShaderReflection::Resource *
+            const ShaderResource *
             VulkanShader::FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const {
-                for (const auto &resource: m_reflection.resources) {
-                    if (resource.bindPoint == bindPoint && resource.space == space) {
+                for (const auto &resource: m_reflection.Resources) {
+                    if (resource.Binding == bindPoint && resource.Set == space) {
                         return &resource;
                     }
                 }
                 return nullptr;
-            }
-
-            const ShaderReflection::ConstantBuffer *
-            VulkanShader::FindConstantBuffer(const std::string &name) const {
-                for (const auto &cb: m_reflection.constantBuffers) {
-                    if (cb.name == name) {
-                        return &cb;
-                    }
-                }
-                return nullptr;
-            }
-
-            uint32_t VulkanShader::GetInputParameterCount() const {
-                return static_cast<uint32_t>(m_reflection.inputs.size());
-            }
-
-            const ShaderReflection::InputParameter &
-            VulkanShader::GetInputParameter(uint32_t index) const {
-                return m_reflection.inputs[index];
-            }
-
-            uint32_t VulkanShader::GetOutputParameterCount() const {
-                return static_cast<uint32_t>(m_reflection.outputs.size());
-            }
-
-            const ShaderReflection::OutputParameter &
-            VulkanShader::GetOutputParameter(uint32_t index) const {
-                return m_reflection.outputs[index];
             }
 
             bool VulkanShader::Recompile(const ShaderCompileOptions *options, std::string &errors) {

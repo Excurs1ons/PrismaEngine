@@ -34,7 +34,7 @@ void MeshRenderer::Render(RenderCommandContext* context)
 
     if (auto owner = GetOwner()) {
         if (auto transform = owner->GetTransform()) {
-            Prisma::Matrix4x4 matrix = transform->GetWorldMatrix();
+            Prisma::Matrix4x4 matrix = transform->GetMatrix();
             context->SetConstantBuffer("ObjectConstants", reinterpret_cast<const float*>(&matrix), 16);
         }
     }

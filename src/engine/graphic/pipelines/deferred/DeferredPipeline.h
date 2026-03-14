@@ -9,18 +9,10 @@
 #include <memory>
 #include <vector>
 
-namespace Prisma {
-namespace Graphic {
-
-// 前置声明
-class ICamera;
-
-} // namespace Graphic
-} // namespace Engine
-
 namespace Prisma::Graphic {
 
 // 前置声明
+class ICamera;
 class GeometryPass;
 class LightingPass;
 class SkyboxPass;
@@ -72,7 +64,7 @@ public:
     /// @brief 更新管线数据
     /// @param ts 时间增量
     /// @param camera 相机接口
-    void Update(Timestep ts, Prisma::Graphic::ICamera* camera);
+    void Update(Prisma::Timestep ts, Prisma::Graphic::ICamera* camera);
 
     /// @brief 执行管线渲染
     /// @param context 执行上下文

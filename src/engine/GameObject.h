@@ -3,50 +3,47 @@
 #include <memory>
 #include <string>
 #include <vector>
+
 namespace Prisma {
 
+class Component;
 
-class GameObject
+class GameObject : public std::enable_shared_from_this<GameObject>
 {
 public:
     std::string name;
     
-    GameObject(std::string name) : name(std::move(name)) {
-        m_Transform = AddComponent<Transform>();
-    }
-    
-    GameObject() : GameObject("GameObject") {}
+    GameObject();
+    GameObject(std::string name);
+    virtual ~GameObject();
 
-    [[nodiscard]] std::shared_ptr<Transform> GetTransform() { return m_Transform; }
-    
+    void Initialize();
+    void Update(Timestep ts);
+    void Shutdown();
+
+    template<typename T, typename... Args>
+    std::shared_ptr<T> AddComponent(Args&&... args) {
+        auto comp = std::make_shared<T>(std::forward<Args>(args)...);
+        comp->SetOwner(shared_from_this().get());
+        comp->Initialize();
+        m_Components.push_back(comp);
+        return comp;
+    }
+
     template<typename T>
-    std::shared_ptr<T> AddComponent() {
-        auto component = std::make_shared<T>();
-        m_Components.push_back(component);
-        component->SetOwner(this);
-        component->Initialize();
-        return component;
-    }
-
-    template <typename T>
     std::shared_ptr<T> GetComponent() {
-        // FIXME: This is slow! Don't call this every frame.
         for (auto& comp : m_Components) {
-            auto casted = std::dynamic_pointer_cast<T>(comp);
-            if (casted) return casted;
+            auto result = std::dynamic_pointer_cast<T>(comp);
+            if (result) return result;
         }
         return nullptr;
     }
 
-    void Update(Timestep ts) {
-        for (auto& comp : m_Components) {
-            comp->Update(ts);
-        }
-    }
-
+    std::shared_ptr<Transform> GetTransform() const { return m_Transform; }
 
 private:
     std::shared_ptr<Transform> m_Transform;
     std::vector<std::shared_ptr<Component>> m_Components;
 };
-}
+
+} // namespace Prisma

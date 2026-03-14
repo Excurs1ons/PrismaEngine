@@ -49,14 +49,8 @@ public:
     const ShaderReflection& GetReflection() const override;
     bool HasReflection() const override;
 
-    const ShaderReflection::Resource* FindResource(const std::string& name) const override;
-    const ShaderReflection::Resource* FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const override;
-    const ShaderReflection::ConstantBuffer* FindConstantBuffer(const std::string& name) const override;
-
-    uint32_t GetInputParameterCount() const override;
-    const ShaderReflection::InputParameter& GetInputParameter(uint32_t index) const override;
-    uint32_t GetOutputParameterCount() const override;
-    const ShaderReflection::OutputParameter& GetOutputParameter(uint32_t index) const override;
+    const ShaderResource* FindResource(const std::string& name) const override;
+    const ShaderResource* FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const override;
 
     bool Recompile(const ShaderCompileOptions* options, std::string& errors) override;
     bool RecompileFromSource(const std::string& source,

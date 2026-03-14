@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/Map.h"
-#include "../resource/Asset.h"
+#include "../core/Asset.h"
 #include <filesystem>
 #include <memory>
 
@@ -22,13 +22,12 @@ public:
     bool IsLoaded() const override { return m_isLoaded; }
     AssetType GetType() const override { return AssetType::Tilemap; }
 
-    // Serializable 接口实现
-    void Serialize(OutputArchive& archive) const override;
-    void Deserialize(InputArchive& archive) override;
+    // ISerializable 接口实现
+    void Serialize(Serialization::OutputArchive& archive) const override;
+    void Deserialize(Serialization::InputArchive& archive) override;
 
     // 资产特定方法
     std::string GetAssetType() const override { return "Tilemap"; }
-    std::string GetAssetVersion() const override { return "1.0.0"; }
 
     // 获取解析后的地图数据
     const TileMap* GetMap() const { return m_map.get(); }

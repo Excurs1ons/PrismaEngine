@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Asset.h"
+#include "ISubSystem.h"
 #include "interfaces/ShaderReflection.h"
 #include <vector>
 #include <memory>
