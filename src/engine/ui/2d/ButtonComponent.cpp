@@ -1,14 +1,14 @@
 #include "ButtonComponent.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
 void ButtonComponent::Initialize() {
     // 初始化为正常颜色
     UpdateColor();
 }
 
-void ButtonComponent::Update(float deltaTime) {
-    UIComponent::Update(deltaTime);
+void ButtonComponent::Update(Timestep ts) {
+    UIComponent::Update(ts);
     // 颜色在状态改变时更新
 }
 
@@ -46,4 +46,4 @@ void ButtonComponent::OnReleased() {
     UpdateColor();
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

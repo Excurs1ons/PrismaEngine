@@ -1,6 +1,6 @@
 #pragma once
 #include "LogEntry.h"
-namespace PrismaEngine {
+namespace Prisma {
 
 /**
  * @brief 平台日志接口

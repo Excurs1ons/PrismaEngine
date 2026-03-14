@@ -5,7 +5,7 @@
 #include <memory>
 #include <string>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 class ShaderFactory {
 public:
@@ -30,4 +30,4 @@ public:
         const ShaderDesc& desc);
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

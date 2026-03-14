@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 材质属性结构
 struct MaterialProperties {
@@ -87,4 +87,4 @@ public:
     virtual void UpdateConstantBuffer() = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

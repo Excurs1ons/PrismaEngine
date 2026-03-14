@@ -6,7 +6,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-namespace PrismaEngine::Core {
+namespace Prisma::Core {
 
 ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
     ImageLoadResult result;

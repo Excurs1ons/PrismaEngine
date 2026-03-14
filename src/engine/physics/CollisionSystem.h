@@ -9,7 +9,7 @@
 #include <limits>
 #include <cmath>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Physics {
 
         /**
@@ -536,4 +536,4 @@ namespace PrismaEngine {
         };
 
     } // namespace Physics
-} // namespace PrismaEngine
+} // namespace Prisma

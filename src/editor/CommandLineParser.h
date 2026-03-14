@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <functional>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// <summary>
 /// 命令行编辑器运行模式
@@ -113,4 +113,4 @@ private:
     std::string GetNextValue(size_t& index);
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

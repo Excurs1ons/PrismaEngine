@@ -1,6 +1,6 @@
 #include "LightingPass.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 LightingPass::LightingPass()
     : LogicalPass("LightingPass")
@@ -14,8 +14,8 @@ LightingPass::LightingPass()
     m_priority = 150;
 }
 
-void LightingPass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void LightingPass::Update(Timestep ts) {
+    UpdateTime(ts);
 }
 
 void LightingPass::Execute(const PassExecutionContext& context) {
@@ -59,4 +59,4 @@ void LightingPass::SetIBLTextures(ITexture* irradianceMap, ITexture* prefilterMa
     m_brdfLUT = brdfLUT;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

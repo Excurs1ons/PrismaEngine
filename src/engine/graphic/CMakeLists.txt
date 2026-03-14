@@ -58,6 +58,64 @@ set(PIPELINE_DEFERRED_HEADERS
     graphic/pipelines/deferred/GBuffer.h
 )
 
+# 基础图形源文件
+set(ENGINE_GRAPHIC_SOURCES
+    graphic/RenderSystem.cpp
+    graphic/RenderCommandContext.cpp
+    graphic/RenderComponent.cpp
+    graphic/RenderGraph.cpp
+    graphic/RenderPass.cpp
+    graphic/Shader.cpp
+    graphic/ShaderFactory.cpp
+    graphic/TextureAtlas.cpp
+    graphic/VoxelRenderer.cpp
+    graphic/EngineShaderAdapter.cpp
+    graphic/GeometryRenderPass.cpp
+    graphic/Material.cpp
+    graphic/Mesh.cpp
+    graphic/MeshRenderer.cpp
+    graphic/stb_impl.cpp
+    graphic/RenderResourceManager.cpp
+    graphic/RenderAPIVulkan.cpp
+    ${PIPELINE_FORWARD_SOURCES}
+    ${PIPELINE_DEFERRED_SOURCES}
+    ${UI_SOURCES}
+    ${LOGICAL_SOURCES}
+)
+
+set(ENGINE_GRAPHIC_HEADERS
+    graphic/RenderSystem.h
+    graphic/RenderCommandContext.h
+    graphic/RenderComponent.h
+    graphic/RenderGraph.h
+    graphic/RenderGraphCore.h
+    graphic/RenderPass.h
+    graphic/Shader.h
+    graphic/ShaderFactory.h
+    graphic/TextureAtlas.h
+    graphic/VoxelRenderer.h
+    graphic/EngineShaderAdapter.h
+    graphic/GeometryRenderPass.h
+    graphic/Material.h
+    graphic/Mesh.h
+    graphic/MeshRenderer.h
+    graphic/DefaultShader.h
+    graphic/FrustumCulling.h
+    graphic/ICamera.h
+    graphic/RenderDesc.h
+    graphic/RenderErrorHandling.h
+    graphic/RenderException.h
+    graphic/SubMesh.h
+    graphic/test_shader.h
+    graphic/RenderResourceManager.h
+    graphic/RenderAPIVulkan.h
+    ${PIPELINE_FORWARD_HEADERS}
+    ${PIPELINE_DEFERRED_HEADERS}
+    ${UI_HEADERS}
+    ${LOGICAL_HEADERS}
+)
+
+
 # Vulkan 后端文件 (条件编译)
 set(VULKAN_SOURCES
     graphic/adapters/vulkan/VulkanAdapters.cpp

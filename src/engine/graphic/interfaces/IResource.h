@@ -5,7 +5,7 @@
 #include <string_view>
 #include <atomic>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 资源基础抽象类
 /// 所有渲染资源的基类
@@ -97,4 +97,4 @@ protected:
     mutable std::atomic<uint64_t> m_lastAccessTimestamp{0};
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -15,7 +15,7 @@
 #include <thread>
 #include <unordered_map>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 class ITexture;
 class IShader;
@@ -31,16 +31,16 @@ struct ResourceLoadTask {
     std::function<void(ResourceId, std::shared_ptr<IResource>)> callback;
 };
 
-class ENGINE_API ResourceManager : public IResourceManager, public ManagerBase<ResourceManager> {
+class ENGINE_API RenderResourceManager : public IResourceManager, public ManagerBase<RenderResourceManager> {
 public:
-    static std::shared_ptr<ResourceManager> GetInstance();
+    static std::shared_ptr<RenderResourceManager> Get();
 
-    ResourceManager();
-    ~ResourceManager() override;
+    RenderResourceManager();
+    ~RenderResourceManager() override;
 
     int Initialize() override;
     int Initialize(IRenderDevice* device) override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
     void Shutdown() override;
 
     // === 纹理管理 ===
@@ -89,13 +89,18 @@ public:
     std::shared_ptr<T> GetResource(const std::string& name) {
         std::shared_lock lock(m_resourceMutex);
         auto it = m_nameToId.find(name);
-        if (it != m_nameToId.end()) {
-            auto resIt = m_resources.find(it->second);
-            if (resIt != m_resources.end()) {
-                return std::dynamic_pointer_cast<T>(resIt->second);
-            }
+        if (it == m_nameToId.end()) {
+            return nullptr;
         }
-        return nullptr;
+
+        auto resIt = m_resources.find(it->second);
+        if (resIt == m_resources.end()) {
+            return nullptr;
+        }
+
+        // 听着，如果你在这里传错了类型，那是你自己的问题。
+        // 我们用 static_pointer_cast 追求极致速度，不要 RTTI 这种垃圾。
+        return std::static_pointer_cast<T>(resIt->second);
     }
     
     void RegisterResource(std::shared_ptr<IResource> resource, const std::string& name = "");
@@ -143,4 +148,4 @@ private:
     std::shared_ptr<ISampler> m_defaultSampler;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

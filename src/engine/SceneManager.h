@@ -3,15 +3,15 @@
 #include "Scene.h"
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 class ENGINE_API SceneManager : public ManagerBase<SceneManager> {
 public:
-    static std::shared_ptr<SceneManager> GetInstance();
+    static std::shared_ptr<SceneManager> Get();
 
     static constexpr const char* GetStaticName() { return "SceneManager"; }
     void Shutdown() override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
     Scene* GetCurrentScene() const;
     int Initialize() override;
     SceneManager() = default;
@@ -20,4 +20,4 @@ public:
 private:
     std::shared_ptr<Scene> m_currentScene;
 };
-}  // namespace PrismaEngine
+}  // namespace Prisma

@@ -4,7 +4,7 @@
 #include "math/MathTypes.h"
 #include "graphic/interfaces/IDeviceContext.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
 UIPass::UIPass()
     : Graphic::LogicalPass("UIPass") {
@@ -161,4 +161,4 @@ void UIPass::RenderUIComponent(const Graphic::PassExecutionContext& context, UIC
     context.deviceContext->DrawIndexed(6);
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

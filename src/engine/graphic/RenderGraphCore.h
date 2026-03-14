@@ -75,22 +75,22 @@ struct ResourceDesc {
 };
 
 // 强类型资源句柄
-class ResourceHandle {
+class AssetHandle {
 public:
     static const uint32_t InvalidIndex = UINT32_MAX;
 
-    ResourceHandle() : m_id(InvalidIndex), m_version(0) {}
-    ResourceHandle(uint32_t id, uint32_t version) : m_id(id), m_version(version) {}
+    AssetHandle() : m_id(InvalidIndex), m_version(0) {}
+    AssetHandle(uint32_t id, uint32_t version) : m_id(id), m_version(version) {}
 
     bool isValid() const { return m_id != InvalidIndex; }
     uint32_t getId() const { return m_id; }
     uint32_t getVersion() const { return m_version; }
 
-    bool operator==(const ResourceHandle& other) const {
+    bool operator==(const AssetHandle& other) const {
         return m_id == other.m_id && m_version == other.m_version;
     }
 
-    bool operator!=(const ResourceHandle& other) const {
+    bool operator!=(const AssetHandle& other) const {
         return !(*this == other);
     }
 
@@ -107,10 +107,10 @@ public:
     RenderCommandContext* getCommandContext() const { return m_cmdContext; }
 
     // 获取资源描述
-    ResourceDesc getResourceDesc(ResourceHandle handle) const;
+    ResourceDesc getResourceDesc(AssetHandle handle) const;
 
     // 获取原生资源（用于后端API调用）
-    void* getNativeResource(ResourceHandle handle) const;
+    void* getNativeResource(AssetHandle handle) const;
 
 private:
     RenderCommandContext* m_cmdContext;
@@ -121,12 +121,12 @@ private:
 class RenderPassBuilder {
 public:
     template<typename T>
-    RenderPassBuilder& read(ResourceHandle handle, T** outData = nullptr);
+    RenderPassBuilder& read(AssetHandle handle, T** outData = nullptr);
 
     template<typename T>
-    RenderPassBuilder& write(ResourceHandle handle, T** outData = nullptr);
+    RenderPassBuilder& write(AssetHandle handle, T** outData = nullptr);
 
-    RenderPassBuilder& createTexture(const ResourceDesc& desc, ResourceHandle& outHandle, const std::string& name = "");
+    RenderPassBuilder& createTexture(const ResourceDesc& desc, AssetHandle& outHandle, const std::string& name = "");
 
     template<typename PassData, typename ExecuteFunc>
     RenderPassBuilder& setExecuteFunc(ExecuteFunc&& func);
@@ -148,9 +148,9 @@ public:
     ~RenderGraph();
 
     // 资源管理
-    ResourceHandle createTexture(const ResourceDesc& desc, const std::string& name = "");
-    ResourceHandle importTexture(void* nativeResource, const ResourceDesc& desc, const std::string& name = "");
-    ResourceHandle getBackbuffer() const { return m_backbufferHandle; }
+    AssetHandle createTexture(const ResourceDesc& desc, const std::string& name = "");
+    AssetHandle importTexture(void* nativeResource, const ResourceDesc& desc, const std::string& name = "");
+    AssetHandle getBackbuffer() const { return m_backbufferHandle; }
 
     // Pass构建
     template<typename PassData = void>
@@ -158,14 +158,14 @@ public:
 
     // 图编译和执行
     void compile();
-    void execute(PrismaEngine::Graphic::IRenderDevice* backend);
-    void present(ResourceHandle backbuffer);
+    void execute(Prisma::Graphic::IRenderDevice* backend);
+    void present(AssetHandle backbuffer);
 
     // 调试和分析
     void visualizeGraph(const std::string& filename) const;
     void dumpExecutionOrder() const;
-    ResourceDesc getResourceDesc(ResourceHandle handle) const;
-    const std::string& getResourceName(ResourceHandle handle) const;
+    ResourceDesc getResourceDesc(AssetHandle handle) const;
+    const std::string& getResourceName(AssetHandle handle) const;
 
 private:
     friend class RenderPassBuilder;
@@ -199,11 +199,11 @@ private:
     std::vector<PassNode> m_passes;
     std::vector<ResourceNode> m_resources;
     std::vector<uint32_t> m_executionOrder;
-    std::vector<ResourceHandle> m_resourceHandles;
+    std::vector<AssetHandle> m_resourceHandles;
     std::unordered_map<std::string, uint32_t> m_passNameToIndex;
     std::unordered_map<std::string, uint32_t> m_resourceNameToIndex;
 
-    ResourceHandle m_backbufferHandle;
+    AssetHandle m_backbufferHandle;
     uint32_t m_nextResourceId = 0;
     uint32_t m_nextResourceVersion = 1;
 
@@ -216,8 +216,8 @@ private:
     void generateBarriers();
 
     // 资源生命周期管理
-    void allocateResources(PrismaEngine::Graphic::IRenderDevice* backend);
-    void deallocateResources(PrismaEngine::Graphic::IRenderDevice* backend);
+    void allocateResources(Prisma::Graphic::IRenderDevice* backend);
+    void deallocateResources(Prisma::Graphic::IRenderDevice* backend);
 
     // 调试辅助
     void validateGraph() const;

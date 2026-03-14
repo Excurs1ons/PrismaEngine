@@ -2,7 +2,7 @@
 
 #include "RenderTypes.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class ITexture;
@@ -142,4 +142,4 @@ public:
     virtual void EnableDebugLayer(bool enable) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

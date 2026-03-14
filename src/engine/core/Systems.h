@@ -4,7 +4,7 @@
 #include "Components.h"
 #include <vector>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Core {
 namespace ECS {
 
@@ -17,7 +17,7 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 
@@ -52,7 +52,7 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 
@@ -66,7 +66,7 @@ private:
     float m_accumulator = 0.0f;
 
     // 固定更新
-    void FixedUpdate(float fixedDeltaTime);
+    void FixedUpdate(Timestep fixedDeltaTime);
 
     // 碰撞检测
     void DetectCollisions();
@@ -84,13 +84,13 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 
 private:
     // 更新动画
-    void UpdateAnimation(EntityID entity, AnimationComponent* anim, float deltaTime);
+    void UpdateAnimation(EntityID entity, AnimationComponent* anim, Timestep ts);
 };
 
 // 音频系统 - 处理AudioSource组件
@@ -102,7 +102,7 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 
@@ -129,7 +129,7 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 
@@ -141,7 +141,7 @@ private:
     void InitializeScript(EntityID entity, ScriptComponent* script);
 
     // 更新脚本
-    void UpdateScript(EntityID entity, ScriptComponent* script, float deltaTime);
+    void UpdateScript(EntityID entity, ScriptComponent* script, Timestep ts);
 
     // 脚本执行环境
     void* m_scriptContext = nullptr;
@@ -156,7 +156,7 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 
@@ -196,7 +196,7 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 
@@ -224,7 +224,7 @@ public:
 
     void Initialize() override;
 
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     void Shutdown() override;
 

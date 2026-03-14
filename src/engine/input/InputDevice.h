@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <atomic>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 /// @brief 输入设备类型
 enum class InputDriverType {
@@ -176,4 +176,4 @@ private:
     std::atomic<bool> m_initialized{false};
 };
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input

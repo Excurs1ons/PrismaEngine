@@ -2,7 +2,7 @@
 #include "interfaces/IRenderDevice.h"
 #include <iostream>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // 默认字符范围：ASCII (0-127) + 常用中文 (0x4E00-0x9FFF)
 const uint32_t TextRendererComponent::s_charRanges[] = {
@@ -25,13 +25,6 @@ TextRendererComponent::~TextRendererComponent() {
 
 void TextRendererComponent::Initialize() {
     if (m_fontPath.empty()) {
-#ifdef _WIN32
-        m_fontPath = "C:/Windows/Fonts/arial.ttf";
-#elif __linux__
-        m_fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-#else
-        m_fontPath = "fonts/default.ttf";
-#endif
     }
 
     m_fontAtlas = std::make_shared<FontAtlas>();
@@ -42,7 +35,7 @@ void TextRendererComponent::Initialize() {
     RebuildMesh();
 }
 
-void TextRendererComponent::Update(float deltaTime) {
+void TextRendererComponent::Update(Timestep ts) {
     // 文本内容变化时重新构建网格
     if (m_dirty) {
         RebuildMesh();
@@ -211,4 +204,4 @@ std::vector<char32_t> TextRendererComponent::UTF8ToCodepoints(const std::string&
     return codepoints;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

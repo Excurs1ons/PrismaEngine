@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <iterator>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 std::unique_ptr<IAudioDevice> AudioAPI::CreateDevice(AudioDeviceType deviceType,
                                                        const AudioDesc& desc) {
@@ -163,4 +163,4 @@ AudioDeviceType AudioAPI::GetDeviceFromConfig() {
     return AudioDeviceType::Auto;
 }
 
-} // namespace PrismaEngine::Audio
+} // namespace Prisma::Audio

@@ -3,9 +3,6 @@
 #include <chrono>
 #include <thread>
 
-#ifdef _WIN32
-    #include <Windows.h>
-#endif
 
 float Time::DeltaTime = 0.0f;
 float Time::TotalTime = 0.0f;
@@ -18,7 +15,7 @@ float Time::GetTime() {
     return duration<float>(now - start).count();
 }
 
-namespace PrismaEngine {
+namespace Prisma {
 
 void Platform::SleepMilliseconds(uint32_t ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
@@ -35,4 +32,4 @@ bool Platform::CreateVulkanSurface(void* instance, WindowHandle windowHandle, vo
     return false;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

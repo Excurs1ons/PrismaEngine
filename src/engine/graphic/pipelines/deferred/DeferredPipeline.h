@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Graphic {
 
 // 前置声明
@@ -18,7 +18,7 @@ class ICamera;
 } // namespace Graphic
 } // namespace Engine
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class GeometryPass;
@@ -70,9 +70,9 @@ public:
     bool Initialize();
 
     /// @brief 更新管线数据
-    /// @param deltaTime 时间增量
+    /// @param ts 时间增量
     /// @param camera 相机接口
-    void Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera);
+    void Update(Timestep ts, Prisma::Graphic::ICamera* camera);
 
     /// @brief 执行管线渲染
     /// @param context 执行上下文
@@ -140,7 +140,7 @@ public:
 
 private:
     /// @brief 更新所有 Pass 的相机数据
-    void UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* camera);
+    void UpdatePassesCameraData(Prisma::Graphic::ICamera* camera);
 
     /// @brief 收集渲染统计
     void CollectStats();
@@ -154,7 +154,7 @@ private:
     std::shared_ptr<CompositionPass> m_compositionPass;
 
     // 相机接口
-    PrismaEngine::Graphic::ICamera* m_camera;
+    Prisma::Graphic::ICamera* m_camera;
 
     // 光照数据
     std::vector<Light> m_lights;
@@ -164,4 +164,4 @@ private:
     RenderStats m_stats;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 几何体构建器 - 用于构建瓦片地图的渲染几何体
@@ -78,4 +78,4 @@ private:
     );
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

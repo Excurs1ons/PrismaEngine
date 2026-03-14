@@ -2,9 +2,9 @@
 #include "2d/ButtonComponent.h"
 #include <algorithm>
 
-namespace PrismaEngine {
+namespace Prisma {
 
-UIInputManager& UIInputManager::GetInstance() {
+UIInputManager& UIInputManager::Get() {
     static UIInputManager instance;
     return instance;
 }
@@ -97,4 +97,4 @@ void UIInputManager::HandleMouseButton(const PrismaMath::vec2& mousePos, Input::
     }
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

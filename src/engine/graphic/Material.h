@@ -1,76 +1,54 @@
 #pragma once
-#include "AssetBase.h"
-#include "../math/MathTypes.h"
-#include <string>
+
+#include "Asset.h"
+#include "interfaces/RenderTypes.h"
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <variant>
 
-// 前向声明
-namespace PrismaEngine::Graphic {
-    class RenderCommandContext;
-}
+namespace Prisma::Graphic {
 
-namespace PrismaEngine {
+class ITexture;
+class IBuffer;
+class Shader;
 
-    class Shader; // 前向声明
+/**
+ * @brief 材质参数值 (统一存储)
+ */
+using MaterialParamValue = std::variant<float, PrismaMath::vec3, PrismaMath::vec4, std::shared_ptr<ITexture>>;
 
-    // 材质属性结构
-    struct MaterialProperties {
-        PrismaEngine::Color baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
-        float metallic = 0.0f;     // 金属度 [0, 1]
-        float roughness = 0.5f;    // 粗糙度 [0, 1]
-        float emissive = 0.0f;     // 自发光强度
-        float normalScale = 1.0f;  // 法线贴图强度
+/**
+ * @brief 材质资产 (Material)
+ * 一个材质由一个 Shader 和一组参数组成。
+ */
+class ENGINE_API Material : public Prisma::Asset {
+public:
+    Material(std::shared_ptr<Shader> shader);
+    ~Material() override = default;
 
-        // 纹理路径 (可选)
-        std::string albedoTexture;     // 反照率纹理
-        std::string normalTexture;     // 法线纹理
-        std::string metallicTexture;   // 金属度纹理
-        std::string roughnessTexture;  // 粗糙度纹理
-        std::string emissiveTexture;   // 自发光纹理
-    };
+    // Asset 接口
+    bool Load(const std::filesystem::path& path) override;
+    void Unload() override;
+    bool IsLoaded() const override { return m_Shader != nullptr; }
+    Prisma::AssetType GetType() const override { return Prisma::AssetType::Material; }
 
-    class Material : public AssetBase
-    {
-    public:
-        Material();
-        Material(const std::string& name);
-        ~Material() override;
+    // 参数设置
+    void SetParam(const std::string& name, const MaterialParamValue& value);
+    const MaterialParamValue* GetParam(const std::string& name) const;
 
-        // 基础属性设置
-        void SetBaseColor(const PrismaMath::vec4& color);
-        void SetBaseColor(float r, float g, float b, float a = 1.0f);
-        void SetMetallic(float metallic);
-        void SetRoughness(float roughness);
-        void SetEmissive(float emissive);
+    // 获取 Shader
+    std::shared_ptr<Shader> GetShader() const { return m_Shader; }
 
-        // 纹理设置
-        void SetAlbedoTexture(const std::string& texturePath);
-        void SetNormalTexture(const std::string& texturePath);
+    // 状态绑定 (由 OpaquePass 调用)
+    void Bind(class ICommandBuffer* cmd);
 
-        // 着色器设置
-        void SetShader(std::shared_ptr<Shader> shader);
-        std::shared_ptr<Shader> GetShader() const { return m_shader; }
+private:
+    std::shared_ptr<Shader> m_Shader;
+    std::unordered_map<std::string, MaterialParamValue> m_Params;
+    
+    // 底层 Vulkan Descriptor Set 缓存 (由 RHI 管理)
+    void* m_DescriptorSetHandle = nullptr; 
+};
 
-        // 应用材质到渲染上下文
-        void Apply(PrismaEngine::Graphic::RenderCommandContext* context);
-
-        // 创建默认材质
-        static std::shared_ptr<Material> CreateDefault();
-
-        // ResourceBase 接口实现
-        bool Load(const std::filesystem::path& path) override;
-        void Unload() override;
-        bool IsLoaded() const override;
-        AssetType GetType() const override {
-            return AssetType::Material;
-        }
-
-        // 获取材质属性
-        const MaterialProperties& GetProperties() const { return m_properties; }
-
-    private:
-        MaterialProperties m_properties;
-        std::shared_ptr<Shader> m_shader;
-        bool m_isLoaded;
-    };
-}
+} // namespace Prisma::Graphic

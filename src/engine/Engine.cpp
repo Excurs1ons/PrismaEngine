@@ -1,87 +1,159 @@
 #include "Engine.h"
-#include "core/AssetManager.h"
-#include "Logger.h"
-#include "PhysicsSystem.h"
 #include "Platform.h"
+#include "Application.h"
+#include "Logger.h"
+#include "core/AssetManager.h"
+#include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
-#include "SceneManager.h"
-#include "ThreadManager.h"
-#include "DebugOverlay.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
-    std::shared_ptr<EngineCore> EngineCore::GetInstance() {
-        static std::shared_ptr<EngineCore> instance = std::make_shared<EngineCore>();
-        return instance;
+Engine* Engine::s_Instance = nullptr;
+
+Engine::Engine(const EngineSpecification& spec)
+    : m_Spec(spec), m_Running(false), m_Initialized(false) {
+    s_Instance = this;
+}
+
+Engine::~Engine() {
+    Shutdown();
+    s_Instance = nullptr;
+}
+
+int Engine::Initialize() {
+    if (m_Initialized) return 0;
+    
+    // 基础系统先行
+    Logger::Get().SetMinLevel(m_Spec.MinLogLevel);
+    LOG_INFO("Engine", "Prisma Engine Initializing: {0}", m_Spec.Name);
+
+    if (!Platform::IsInitialized()) {
+        Platform::Initialize();
     }
 
-    EngineCore::EngineCore() : isRunning_(false), m_initialized(false) {
-        if (!Logger::GetInstance().IsInitialized()) {
-            Logger::GetInstance().Initialize();
-        }
-    }
-
-    int EngineCore::Initialize() {
-
-        // 1. 注册核心基础系统 (0 为成功)
-        if (ThreadManager::GetInstance()->Initialize() != 0) {
-            LOG_ERROR("Engine", "线程管理器初始化失败");
+    // 显式注册核心系统
+    m_AssetManager = AddSystem<AssetManager>();
+    m_InputManager = AddSystem<Input::InputManager>();
+    
+    // 新增：ShaderLibrary 子系统
+    AddSystem<Graphic::ShaderLibrary>();
+    
+    // 初始化所有子系统
+    for (auto& sys : m_Systems) {
+        if (sys->Initialize() != 0) {
+            LOG_FATAL("Engine", "System initialization failed!");
             return -1;
         }
-        m_systems.push_back(ThreadManager::GetInstance().get());
+    }
 
-        if (PhysicsSystem::GetInstance()->Initialize() != 0) {
-            LOG_ERROR("Engine", "物理系统初始化失败");
+    m_Initialized = true;
+    return 0;
+}
+
+int Engine::Run(std::unique_ptr<Application> app) {
+    if (!m_Initialized || !app) return -1;
+    
+    m_CurrentApp = std::move(app);
+    m_Running = true;
+
+    // 1. 初始化窗口与渲染系统 (非 Headless)
+    if (!m_Spec.Headless) {
+        m_CurrentApp->InitWindow();
+
+        Graphic::RenderSystemDesc rDesc;
+        auto& window = m_CurrentApp->GetWindow();
+        rDesc.windowHandle = window.GetNativeWindow();
+        rDesc.width = window.GetWidth();
+        rDesc.height = window.GetHeight();
+        
+        m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
+        if (m_RenderSystem->Initialize() != 0) {
+            LOG_FATAL("Engine", "Failed to initialize RenderSystem!");
             return -1;
         }
-        m_systems.push_back(PhysicsSystem::GetInstance().get());
+    }
 
-        // 注意：RenderSystem 的初始化由编辑器手动调用带参数版本，这里只注册不初始化
-        m_systems.push_back(::PrismaEngine::Graphic::RenderSystem::GetInstance().get());
+    if (m_CurrentApp->OnInitialize() != 0) return -1;
 
-        if (SceneManager::GetInstance()->Initialize() != 0) {
-            LOG_ERROR("Engine", "场景管理器初始化失败");
-            return -1;
+    // 2. 窗口事件统一分发
+    m_CurrentApp->GetWindow().SetEventCallback([this](Event& e) {
+        EventDispatcher dispatcher(e);
+        dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
+            if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
+            return false;
+        });
+
+        if (m_InputManager) m_InputManager->OnEvent(e);
+        m_CurrentApp->OnEvent(e);
+    });
+
+    double lastFrameTime = Platform::GetTimeSeconds();
+
+    // --- 核心主循环 ---
+    while (m_Running && m_CurrentApp->IsRunning()) {
+        double time = Platform::GetTimeSeconds();
+        float deltaTime = static_cast<float>(time - lastFrameTime);
+        lastFrameTime = time;
+
+        // A. 事件泵送
+        m_CurrentApp->GetWindow().OnUpdate();
+        if (!m_Running) break;
+
+        // B. 逻辑与渲染更新
+        if (m_Spec.Headless || !m_CurrentApp->IsMinimized()) {
+            // 1. 逻辑更新 (Subsystems & App)
+            Update(Timestep(std::min(deltaTime, 0.1f)));
+            
+            // 2. 渲染流程 (交给 RenderSystem 统筹)
+            if (m_RenderSystem) {
+                m_RenderSystem->BeginFrame();
+
+                // 提交阶段：让应用层把东西扔进渲染队列
+                // 注意：这里不再手动凑 RenderContext，由 RenderSystem 或 App 内部处理
+                m_CurrentApp->OnRender(); 
+
+                // UI 渲染 (ImGui)
+                m_CurrentApp->OnImGuiRender();
+
+                m_RenderSystem->EndFrame();
+            }
+        } else {
+            Platform::SleepMilliseconds(10);
         }
-        m_systems.push_back(SceneManager::GetInstance().get());
 
-        LOG_INFO("Engine", "核心系统注册成功。");
-        m_initialized = true;
-        return 0;
-    }
-
-    bool EngineCore::RegisterSystem(ISubSystem* system) {
-        if (!system) return false;
-        m_systems.push_back(system);
-        return system->Initialize() == 0;
-    }
-
-    void EngineCore::Shutdown() {
-        LOG_INFO("Engine", "引擎正在关闭...");
-        for (auto it = m_systems.rbegin(); it != m_systems.rend(); ++it) {
-            (*it)->Shutdown();
-        }
-        m_systems.clear();
-        m_initialized = false;
-        isRunning_ = false;
-    }
-
-    int EngineCore::Run() {
-        if (!m_initialized) return -1;
-        isRunning_ = true;
-        LOG_INFO("Engine", "引擎主循环已启动");
-        while (isRunning_) {
-            Update();
-        }
-        return 0;
-    }
-
-    void EngineCore::Update() {
-        // 更新逻辑 (deltaTime 暂定)
-        float deltaTime = 0.016f;
-        for (ISubSystem* system : m_systems) {
-            system->Update(deltaTime);
+        // C. FPS 帧同步控制 (Linus 批准版)
+        if (m_Spec.MaxFPS > 0) {
+            float targetFrameTime = 1.0f / m_Spec.MaxFPS;
+            while (Platform::GetTimeSeconds() - time < targetFrameTime) {
+                // 剩余时间较多时可以 Sleep 释放 CPU
+                if (targetFrameTime - (Platform::GetTimeSeconds() - time) > 0.002f) {
+                    Platform::SleepMilliseconds(1);
+                }
+            }
         }
     }
 
-} // namespace PrismaEngine
+    m_CurrentApp->OnShutdown();
+    return 0;
+}
+
+void Engine::Update(Timestep ts) {
+    for (auto& sys : m_Systems) sys->Update(ts);
+    if (m_CurrentApp) m_CurrentApp->OnUpdate(ts);
+}
+
+void Engine::Shutdown() {
+    if (!m_Initialized) return;
+    
+    LOG_INFO("Engine", "Shutting down engine...");
+    for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) (*it)->Shutdown();
+    m_Systems.clear();
+    
+    m_AssetManager = nullptr;
+    m_InputManager = nullptr;
+    m_RenderSystem = nullptr;
+    m_Initialized = false;
+    m_Running = false;
+}
+
+} // namespace Prisma

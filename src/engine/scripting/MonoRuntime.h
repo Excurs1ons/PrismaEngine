@@ -13,7 +13,7 @@
 #include <mono/metadata/mono-config.h>
 #endif
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Scripting {
 
 #ifdef PRISMA_ENABLE_MONO
@@ -125,7 +125,7 @@ public:
     MonoRuntime()  = default;
     ~MonoRuntime() = default;
 
-    static MonoRuntime& GetInstance();
+    static MonoRuntime& Get();
 
     // 初始化和清理
     bool Initialize(const std::string& configPath = "");
@@ -186,4 +186,4 @@ private:
 };
 
 }  // namespace Scripting
-}  // namespace PrismaEngine
+}  // namespace Prisma

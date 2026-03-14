@@ -2,11 +2,11 @@
 #include "GameObject.h"
 #include "Logger.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Graphic {
 
 Camera::Camera()
-    : m_fov(PrismaEngine::PI / 4.0f), m_aspectRatio(16.0f / 9.0f), m_nearPlane(0.1f), m_farPlane(1000.0f),
+    : m_fov(Prisma::PI / 4.0f), m_aspectRatio(16.0f / 9.0f), m_nearPlane(0.1f), m_farPlane(1000.0f),
       m_clearColor(0.0f, 0.0f, 0.0f, 1.0f), m_isViewDirty(true), m_isProjectionDirty(true) {
     // 初始化缓存向量
     m_forward = PrismaMath::vec3(0.0f, 0.0f, 1.0f);
@@ -31,8 +31,8 @@ void Camera::Initialize() {
     }
 }
 
-void Camera::Update(float deltaTime) {
-    (void)deltaTime;
+void Camera::Update(Timestep ts) {
+    (void)ts;
     // 更新视图矩阵（如果需要）
     UpdateViewMatrix();
 }
@@ -207,7 +207,7 @@ void Camera::UpdateViewMatrix() const {
 
         // 相机默认前向是-Z，所以需要额外旋转
         // 注意：这个 180 度旋转可能导致相机朝向错误，暂时禁用
-        // PrismaMath::mat4 cameraFix = glm::rotate(glm::mat4(1.0f), PrismaEngine::PI, glm::vec3(0.0f, 1.0f, 0.0f));
+        // PrismaMath::mat4 cameraFix = glm::rotate(glm::mat4(1.0f), Prisma::PI, glm::vec3(0.0f, 1.0f, 0.0f));
         // rotationMatrix = cameraFix * rotationMatrix;
 
         // 计算世界坐标系的各轴
@@ -237,4 +237,4 @@ void Camera::MarkViewDirty() const {
 }
 
 }  // namespace Graphic
-}  // namespace PrismaEngine
+}  // namespace Prisma

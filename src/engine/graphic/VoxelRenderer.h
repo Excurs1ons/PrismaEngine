@@ -7,7 +7,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Graphic {
 
 /**
@@ -50,7 +50,7 @@ public:
     virtual ~VoxelRenderer();
 
     void Initialize() override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
     void Render(RenderCommandContext* context) override;
 
     // 区块管理
@@ -77,4 +77,4 @@ private:
 };
 
 } // namespace Graphic
-} // namespace PrismaEngine
+} // namespace Prisma

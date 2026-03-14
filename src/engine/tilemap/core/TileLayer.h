@@ -6,7 +6,7 @@
 #include <memory>
 #include <cstdint>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 前向声明
@@ -255,4 +255,4 @@ public:
     Layer* FindLayerByName(const std::string& layerName) const;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

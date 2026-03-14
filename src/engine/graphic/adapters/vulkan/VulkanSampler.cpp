@@ -1,6 +1,6 @@
 #include "VulkanSampler.h"
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 VulkanSampler::VulkanSampler(VkDevice device, const SamplerDesc& desc)
     : m_device(device), m_desc(desc) {
@@ -33,4 +33,4 @@ VulkanSampler::~VulkanSampler() {
     }
 }
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

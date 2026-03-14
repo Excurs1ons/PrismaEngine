@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <iostream>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // 版本信息
 static const char* ENGINE_VERSION = "0.1.0-alpha";
@@ -271,4 +271,4 @@ const char* CommandLineParser::GetBuildInfo() {
     return buildInfo.c_str();
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

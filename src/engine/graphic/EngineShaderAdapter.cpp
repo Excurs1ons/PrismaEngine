@@ -1,9 +1,9 @@
 #include "EngineShaderAdapter.h"
 #include <fstream>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
-EngineShaderAdapter::EngineShaderAdapter(std::shared_ptr<PrismaEngine::Shader> engineShader)
+EngineShaderAdapter::EngineShaderAdapter(std::shared_ptr<Prisma::Shader> engineShader)
     : m_engineShader(std::move(engineShader)) {
 }
 
@@ -191,4 +191,4 @@ const std::vector<std::string>& EngineShaderAdapter::GetDefines() const {
     return m_emptyStringVector;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

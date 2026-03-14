@@ -2,14 +2,16 @@
 #include <string>
 #include "Export.h"
 
-namespace PrismaEngine {
+#include "core/Timestep.h"
+
+namespace Prisma {
 
 class ENGINE_API ISubSystem {
 public:
     virtual ~ISubSystem()                = default;
     virtual int Initialize()             = 0;
     virtual void Shutdown()              = 0;
-    virtual void Update([[maybe_unused]] float deltaTime) {}
+    virtual void Update([[maybe_unused]] Timestep ts) {}
 };
 
-}  // namespace PrismaEngine
+}  // namespace Prisma

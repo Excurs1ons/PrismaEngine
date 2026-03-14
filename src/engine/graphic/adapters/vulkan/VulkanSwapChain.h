@@ -3,7 +3,7 @@
 #include "interfaces/ISwapChain.h"
 #include <vulkan/vulkan.h>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 class RenderDeviceVulkan;
 
@@ -54,4 +54,4 @@ private:
     VkRenderPass m_renderPass;
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

@@ -7,7 +7,7 @@
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class RenderCommandContext;
@@ -114,4 +114,4 @@ private:
     bool m_created = false;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

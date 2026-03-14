@@ -3,7 +3,7 @@
 #include "IRenderTarget.h"
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 class IDeviceContext;
 
@@ -99,4 +99,4 @@ public:
     virtual void SetAsRenderTarget(IDeviceContext* deviceContext) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

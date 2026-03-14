@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <unordered_map>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 // ========== InputDriverSDL3 ==========
 
@@ -318,5 +318,5 @@ void InputDriverSDL3::SetVibration(uint32_t index, float leftMotor, float rightM
     }
 }
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input
 #endif

@@ -5,7 +5,7 @@
 #include <string>
 #include <cstdint>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 瓦片数据解码器
@@ -104,4 +104,4 @@ private:
     );
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

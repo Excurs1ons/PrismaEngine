@@ -7,16 +7,16 @@
 #include <thread>
 #include <vector>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 class ENGINE_API ThreadManager : public ManagerBase<ThreadManager> {
 public:
-    static std::shared_ptr<ThreadManager> GetInstance();
+    static std::shared_ptr<ThreadManager> Get();
 
     static constexpr const char* GetStaticName() { return "ThreadManager"; }
     int Initialize() override;
     void Shutdown() override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     std::thread CreateThread(const std::string& name, std::function<void()> function);
     std::string GetThreadName(std::thread::id id) const;
@@ -32,4 +32,4 @@ private:
     std::map<std::thread::id, std::string> m_threadNames;
     mutable std::mutex m_mutex;
 };
-}  // namespace PrismaEngine
+}  // namespace Prisma

@@ -6,11 +6,6 @@
 #define PRISMA_DEBUG 0
 #endif
 
-#if PRISMA_DEBUG && defined(_WIN32)
-#define PRISMA_ENABLE_IMGUI_DEBUG 1
-#else
-#define PRISMA_ENABLE_IMGUI_DEBUG 0
-#endif
 
 #define PRISMA_PLATFORM_WINDOWS 1
 #define PRISMA_PLATFORM_ANDROID 0

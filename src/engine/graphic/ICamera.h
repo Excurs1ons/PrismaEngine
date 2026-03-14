@@ -2,7 +2,7 @@
 
 #include "math/MathTypes.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Graphic {
 
 // 相机接口
@@ -53,7 +53,7 @@ public:
     virtual void SetAspectRatio(float aspectRatio) = 0;
 
     // 更新相机（每帧调用）
-    virtual void Update(float deltaTime) = 0;
+    virtual void Update(Timestep ts) = 0;
 
     // 是否是活动相机
     virtual bool IsActive() const = 0;

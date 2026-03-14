@@ -11,7 +11,7 @@
 #include <imgui_impl_vulkan.h>
 #endif
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 RenderDeviceVulkan::RenderDeviceVulkan() {
     m_resourceFactory = std::make_unique<VulkanResourceFactory>(this);
@@ -46,7 +46,7 @@ bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         return false;
     }
     LOG_DEBUG("Vulkan", "创建 Vulkan 实例成功");
-    Logger::GetInstance().Flush();
+    Logger::Get().Flush();
 
     // 2. 选择物理设备
     LOG_INFO("Vulkan", "正在选择物理设备...");
@@ -62,7 +62,7 @@ bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     }
     m_vkbPhysicalDevice = phys_ret.value();
     m_physicalDevice    = m_vkbPhysicalDevice.physical_device;
-    Logger::GetInstance().Flush();
+    Logger::Get().Flush();
 
     // 3. 创建逻辑设备
     LOG_INFO("Vulkan", "正在创建逻辑设备...");
@@ -217,4 +217,4 @@ void RenderDeviceVulkan::BeginDebugMarker(const std::string& name) {}
 void RenderDeviceVulkan::EndDebugMarker() {}
 void RenderDeviceVulkan::SetDebugMarker(const std::string& name) {}
 
-}  // namespace PrismaEngine::Graphic::Vulkan
+}  // namespace Prisma::Graphic::Vulkan

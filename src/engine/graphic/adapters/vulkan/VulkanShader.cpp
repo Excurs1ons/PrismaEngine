@@ -3,7 +3,7 @@
 #include <fstream>
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Graphic {
         namespace Vulkan {
 

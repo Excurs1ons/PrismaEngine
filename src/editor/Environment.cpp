@@ -1,29 +1,22 @@
 #include "Environment.h"
+#include "../engine/Platform.h"
 #include "../engine/Logger.h"
-#include <iostream>
 
-#if defined(_WIN32) || defined(_WIN64)
-    #include <windows.h>
-    #include <VersionHelpers.h>
-#endif
-
-namespace PrismaEngine {
+namespace Prisma {
 
 EnvironmentType Environment::DetectEnvironment() {
-    if (HasDisplaySupport()) {
+    if (Platform::HasDisplaySupport()) {
         return EnvironmentType::Desktop;
     }
     return EnvironmentType::Headless;
 }
 
 bool Environment::HasDisplaySupport() {
-#if defined(_WIN32) || defined(_WIN64)
-    return DetectDisplayWindows();
-#else
-    return false;
-#endif
+    return Platform::HasDisplaySupport();
 }
 
 bool Environment::IsRunningInTerminal() {
-    return !IsRedirectedOutput();
+    return Platform::IsRunningInTerminal();
 }
+
+} // namespace Prisma

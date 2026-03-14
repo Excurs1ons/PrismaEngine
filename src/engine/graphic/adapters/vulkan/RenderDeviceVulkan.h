@@ -17,7 +17,7 @@
 #include <unordered_map>
 #include <vector>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 // 前置声明
 class VulkanCommandBuffer;
@@ -83,7 +83,7 @@ public:
     void EndDebugMarker() override;
     void SetDebugMarker(const std::string& name) override;
     // ========== Vulkan特定方法 ==========
-    VkInstance GetInstance() const { return m_instance; }
+    VkInstance Get() const { return m_instance; }
     VkPhysicalDevice GetPhysicalDevice() const { return m_physicalDevice; }
     VkDevice GetDevice() const { return m_device; }
     VkQueue GetGraphicsQueue() const { return m_graphicsQueue; }
@@ -132,4 +132,4 @@ private:
     bool m_initialized = false;
 };
 
-}  // namespace PrismaEngine::Graphic::Vulkan
+}  // namespace Prisma::Graphic::Vulkan

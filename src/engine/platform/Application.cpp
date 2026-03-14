@@ -4,7 +4,7 @@
 #include "Logger.h"
 #include "Platform.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 /// <summary>
 /// 应用程序初始化，需要完成平台层和引擎的初始化
 /// </summary>
@@ -13,7 +13,7 @@ int Application::Initialize() {
     LOG_INFO("Application", "应用程序初始化开始");
 
     // 获取引擎单例
-    engine = EngineCore::GetInstance();
+    engine = Engine::Get();
 
     if (!engine) {
         LOG_ERROR("Application", "无法获取引擎实例");

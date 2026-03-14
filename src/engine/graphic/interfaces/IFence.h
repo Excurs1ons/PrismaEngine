@@ -3,7 +3,7 @@
 #include "RenderTypes.h"
 #include <cstdint>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 围栏抽象接口
 /// 用于CPU和GPU之间的同步
@@ -37,4 +37,4 @@ public:
     virtual void SetEventOnCompletion(uint64_t value, void* event) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

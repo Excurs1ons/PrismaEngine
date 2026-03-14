@@ -10,7 +10,7 @@
 #include "VulkanFence.h"
 #include <vma/vk_mem_alloc.h>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 VulkanResourceFactory::VulkanResourceFactory(RenderDeviceVulkan* device)
     : m_device(device), m_vkDevice(device->GetDevice()), m_vmaAllocator(device->GetAllocator()) {
@@ -368,4 +368,4 @@ void VulkanResourceFactory::ProcessDeferredDestructions() {
     // Process deferred destruction queue
 }
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

@@ -13,7 +13,7 @@
 // 使用新系统的 AudioFormat 定义
 #include "core/IAudioDriver.h"
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 // 前置声明
 struct AudioClip;

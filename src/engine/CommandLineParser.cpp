@@ -6,7 +6,7 @@
 
 CommandLineParser::CommandLineParser() {
     AddActionOption("help", "h", "显示帮助信息", false, [](const std::string&) {
-        CommandLineParser::GetInstance().ShowHelp();
+        CommandLineParser::Get().ShowHelp();
         return true;  // 显示帮助后退出
     });
 }

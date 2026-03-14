@@ -4,9 +4,9 @@
 #include <mutex>
 #include <thread>
 
-namespace PrismaEngine {
+namespace Prisma {
 
-std::shared_ptr<ThreadManager> ThreadManager::GetInstance() {
+std::shared_ptr<ThreadManager> ThreadManager::Get() {
     static std::shared_ptr<ThreadManager> instance = std::shared_ptr<ThreadManager>(new ThreadManager());
     return instance;
 }
@@ -62,6 +62,6 @@ void ThreadManager::SetThreadName(std::thread::id id, const std::string& name) {
 void ThreadManager::SetThreadAffinity(std::thread::id /*id*/, uint32_t /*coreMask*/) {}
 void ThreadManager::SetThreadPriority(std::thread::id /*id*/, int /*priority*/) {}
 
-void ThreadManager::Update(float /*deltaTime*/) {}
+void ThreadManager::Update(Timestep /*ts*/) {}
 
-}  // namespace PrismaEngine
+}  // namespace Prisma

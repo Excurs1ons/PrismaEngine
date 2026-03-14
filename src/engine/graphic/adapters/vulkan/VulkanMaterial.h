@@ -5,7 +5,7 @@
 #include <string>
 #include <vulkan/vulkan.h>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 // 前置声明
 class VulkanRenderDevice;
@@ -79,4 +79,4 @@ private:
     void Cleanup();
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

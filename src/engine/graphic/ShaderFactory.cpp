@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 std::unique_ptr<IShader> ShaderFactory::CreateShader(
     RenderAPIType backendType,
@@ -28,4 +28,4 @@ std::unique_ptr<IShader> ShaderFactory::CreateShaderFromFile(
     return CreateShader(backendType, sourceCode, desc);
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

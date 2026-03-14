@@ -5,7 +5,7 @@
 #include "resource/Archive.h"
 #include "Serializable.h"
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Resource {
 
         struct ENGINE_API MetaData : public Serialization::Serializable {
@@ -51,4 +51,4 @@ namespace PrismaEngine {
         };
 
     } // namespace Resource
-} // namespace PrismaEngine
+} // namespace Prisma

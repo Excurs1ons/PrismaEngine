@@ -12,7 +12,7 @@
 // 前向声明
 class Mesh;
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// @deprecated 使用 graphic/pipelines/deferred/GeometryPass.h 中的 GeometryPass 替代
 class [[deprecated("Use GeometryPass from graphic/pipelines/deferred/GeometryPass.h instead")]] GeometryRenderPass : public RenderPass
@@ -21,7 +21,7 @@ public:
     GeometryRenderPass();
     ~GeometryRenderPass();
 
-    void Execute(PrismaEngine::Graphic::RenderCommandContext* context) override;
+    void Execute(Prisma::Graphic::RenderCommandContext* context) override;
     void SetRenderTarget(void* renderTarget) override;
     void ClearRenderTarget(float r, float g, float b, float a) override;
     void SetViewport(uint32_t width, uint32_t height) override;

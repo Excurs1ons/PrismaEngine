@@ -7,7 +7,7 @@
 #include <stack>
 #include <unordered_set>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Graphic {
 
         // ============================================================================
@@ -165,7 +165,7 @@ namespace PrismaEngine {
 
                 bool addTexture(const std::string& texturePath, const std::string& name) override {
                     // 加载纹理
-                    PrismaEngine::TextureAsset asset;
+                    Prisma::TextureAsset asset;
                     if (!asset.Load(texturePath)) {
                         LOG_ERROR("TextureAtlas", "加载纹理失败: {}", texturePath);
                         return false;
@@ -474,7 +474,7 @@ namespace PrismaEngine {
                 }
 
                 bool addSourceTexture(const std::string& filePath, const std::string& name) override {
-                    PrismaEngine::TextureAsset asset;
+                    Prisma::TextureAsset asset;
                     if (!asset.Load(filePath)) {
                         LOG_ERROR("TextureAtlasBuilder", "加载纹理失败: {}", filePath);
                         return false;
@@ -585,4 +585,4 @@ namespace PrismaEngine {
         }
 
     } // namespace Graphic
-} // namespace PrismaEngine
+} // namespace Prisma

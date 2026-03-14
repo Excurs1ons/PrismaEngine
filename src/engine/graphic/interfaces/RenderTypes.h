@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Graphic {
-using namespace PrismaEngine;
+namespace Prisma::Graphic {
+using namespace Prisma;
 // 前置声明
 class IResource;
 class ITexture;
@@ -512,11 +512,11 @@ enum class StencilOp {
 
     // 光源结构
     struct Light {
-        PrismaEngine::Vector3 position;
-        PrismaEngine::Vector4 color;     // RGB + intensity
-        PrismaEngine::Vector3 direction;  // 用于方向光
+        Prisma::Vector3 position;
+        Prisma::Vector4 color;     // RGB + intensity
+        Prisma::Vector3 direction;  // 用于方向光
         int type;  // 0=directional, 1=point, 2=spot
     };
 
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

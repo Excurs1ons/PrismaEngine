@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 /// @brief 音频设备抽象接口
 /// 这是音频系统的核心抽象，不同的音频后端只需要实现这一个接口
@@ -30,8 +30,8 @@ public:
     virtual bool IsInitialized() const = 0;
 
     /// @brief 更新音频设备（每帧调用）
-    /// @param deltaTime 时间增量（秒）
-    virtual void Update(float deltaTime) = 0;
+    /// @param ts 时间增量（秒）
+    virtual void Update(Timestep ts) = 0;
 
     // ========== 设备信息 ==========
 
@@ -237,4 +237,4 @@ public:
     virtual std::string EndProfile() { return ""; }
 };
 
-}  // namespace PrismaEngine::Audio
+}  // namespace Prisma::Audio

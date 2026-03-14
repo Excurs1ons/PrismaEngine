@@ -1,6 +1,6 @@
 #include "ECS.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Core {
 namespace ECS {
 
@@ -10,4 +10,4 @@ namespace ECS {
 
 } // namespace ECS
 } // namespace Core
-} // namespace PrismaEngine
+} // namespace Prisma

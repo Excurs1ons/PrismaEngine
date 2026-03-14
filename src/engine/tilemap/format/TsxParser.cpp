@@ -2,7 +2,7 @@
 #include <tinyxml2.h>
 #include <sstream>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 std::string TsxParser::s_lastError;
 
@@ -400,4 +400,4 @@ std::unique_ptr<Tileset> TsxParser::ParseString(const std::string& tsxContent) {
     return tileset;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

@@ -6,7 +6,7 @@
 #include <string>
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 逻辑 Pass 基类
 /// 提供通用的 Pass 实现，所有逻辑 Pass 应继承此类
@@ -26,7 +26,7 @@ public:
     void SetDepthStencil(IDepthStencil* depthStencil) override { m_depthStencil = depthStencil; }
     void SetViewport(uint32_t width, uint32_t height) override;
 
-    void Update(float deltaTime) override { UpdateTime(deltaTime); }
+    void Update(Timestep ts) override { UpdateTime(ts); }
 
     uint32_t GetPriority() const override { return m_priority; }
     void SetPriority(uint32_t priority) override { m_priority = priority; }
@@ -67,9 +67,9 @@ protected:
     const float* GetClearColor() const { return m_clearColor; }
 
     /// @brief 更新时间
-    void UpdateTime(float deltaTime) {
-        m_deltaTime = deltaTime;
-        m_totalTime += deltaTime;
+    void UpdateTime(Timestep ts) {
+        m_deltaTime = ts;
+        m_totalTime += ts;
     }
 
     // Pass 成员变量
@@ -93,4 +93,4 @@ protected:
     float m_clearColor[4];
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

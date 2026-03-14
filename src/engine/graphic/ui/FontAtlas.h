@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 namespace Graphic {
 class ITexture;
@@ -69,4 +69,4 @@ private:
     bool m_uploaded;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

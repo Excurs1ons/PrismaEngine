@@ -2,9 +2,9 @@
 #include "TriangleExample.h"
 #include "Logger.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
-std::shared_ptr<SceneManager> SceneManager::GetInstance() {
+std::shared_ptr<SceneManager> SceneManager::Get() {
     static std::shared_ptr<SceneManager> instance = std::shared_ptr<SceneManager>(new SceneManager());
     return instance;
 }
@@ -20,9 +20,9 @@ void SceneManager::Shutdown() {
     m_currentScene.reset();
 }
 
-void SceneManager::Update(float deltaTime) {
+void SceneManager::Update(Timestep ts) {
     if (m_currentScene) {
-        m_currentScene->Update(deltaTime);
+        m_currentScene->Update(ts);
     }
 }
 
@@ -30,4 +30,4 @@ Scene* SceneManager::GetCurrentScene() const {
     return m_currentScene.get();
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

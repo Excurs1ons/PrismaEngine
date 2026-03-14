@@ -1,74 +1,68 @@
 #include "OpaquePass.h"
-#include <algorithm>
+#include "graphic/interfaces/ICommandBuffer.h"
+#include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/IDescriptorSet.h" // 包含描述符接口
+#include "graphic/Mesh.h"
+#include "graphic/Material.h"
+#include "Logger.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
-OpaquePass::OpaquePass()
-    : ForwardRenderPass("OpaquePass")
-    , m_ambientColor(0.1f, 0.1f, 0.1f)
-    , m_ambientIntensity(1.0f) {
-    // 不透明物体优先级较低，最先渲染
-    m_priority = 100;
+OpaquePass::OpaquePass() 
+    : m_ViewMatrix(1.0f), m_ProjMatrix(1.0f) {}
+
+void OpaquePass::SetCameraData(const PrismaMath::mat4& view, const PrismaMath::mat4& proj) {
+    m_ViewMatrix = view;
+    m_ProjMatrix = proj;
 }
 
-void OpaquePass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void OpaquePass::SetLights(const std::vector<Light>& lights) {
+    m_Lights = lights;
 }
 
-void OpaquePass::Execute(const PassExecutionContext& context) {
-    if (!context.deviceContext) {
-        return;
-    }
+void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {
+    if (!cmd || commands.empty()) return;
 
-    // 重置统计
-    m_stats = {};
+    // 1. 准备全局数据 (Set 0)
+    // 在真实 RHI 中，这里会向 RenderDevice 请求一个临时的 DescriptorSet。
+    // 为了演示，我们假设已经拿到了一个全局 Set。
+    // IDescriptorSet* globalSet = GetGlobalDescriptorSet(); 
+    // globalSet->BindBuffer(0, cameraBuffer);
+    // globalSet->Update();
+    // cmd->BindDescriptorSet(0, globalSet);
 
-    // 设置视口
-    context.deviceContext->SetViewport(0.0f, 0.0f,
-        static_cast<float>(context.sceneData->viewport.width),
-        static_cast<float>(context.sceneData->viewport.height));
+    Material* lastMaterial = nullptr;
+    Shader* lastShader = nullptr;
 
-    // 设置视图投影矩阵
-    context.deviceContext->SetConstantData(0, &m_viewProjection, sizeof(PrismaMath::mat4));
+    for (const auto& command : commands) {
+        if (!command.mesh || !command.material) continue;
 
-    // 设置环境光
-    float ambientData[4] = {
-        m_ambientColor.x * m_ambientIntensity,
-        m_ambientColor.y * m_ambientIntensity,
-        m_ambientColor.z * m_ambientIntensity,
-        1.0f
-    };
-    context.deviceContext->SetConstantData(1, ambientData, sizeof(ambientData));
-
-    // 设置光源数据
-    if (!m_lights.empty()) {
-        // 光源数据包含: position(3) + color(4) + direction(3) + type(1) = 11 floats
-        std::vector<float> lightData;
-        lightData.reserve(m_lights.size() * 11);
-
-        for (const auto& light : m_lights) {
-            lightData.push_back(light.position.x);
-            lightData.push_back(light.position.y);
-            lightData.push_back(light.position.z);
-
-            lightData.push_back(light.color.x);
-            lightData.push_back(light.color.y);
-            lightData.push_back(light.color.z);
-            lightData.push_back(light.color.w);
-
-            lightData.push_back(light.direction.x);
-            lightData.push_back(light.direction.y);
-            lightData.push_back(light.direction.z);
-
-            lightData.push_back(static_cast<float>(light.type));
+        // 2. 状态切换优化：Shader 切换
+        Shader* currentShader = command.material->GetShader().get();
+        if (currentShader != lastShader) {
+            // cmd->SetPipelineState(currentShader->GetPipeline());
+            lastShader = currentShader;
         }
 
-        context.deviceContext->SetConstantData(2, lightData.data(),
-            static_cast<uint32_t>(lightData.size() * sizeof(float)));
+        // 3. 状态切换优化：Material 切换 (Set 1)
+        if (command.material != lastMaterial) {
+            command.material->Bind(cmd); // 内部会调用 cmd->BindDescriptorSet(1, ...)
+            lastMaterial = command.material;
+        }
 
-        uint32_t lightCount = static_cast<uint32_t>(m_lights.size());
-        context.deviceContext->SetConstantData(3, &lightCount, sizeof(lightCount));
+        // 4. 提交物体的变换矩阵 (Push Constants)
+        // 这是最快的方式，不需要 Descriptor Set 切换
+        cmd->PushConstants(ShaderType::Vertex, &command.transform, sizeof(PrismaMath::mat4));
+
+        // 5. 提交绘制请求
+        for (const auto& subMesh : command.mesh->GetSubMeshes()) {
+            if (subMesh.VertexBuffer && subMesh.IndexBuffer) {
+                cmd->SetVertexBuffer(subMesh.VertexBuffer.get(), 0);
+                cmd->SetIndexBuffer(subMesh.IndexBuffer.get());
+                cmd->DrawIndexed(subMesh.IndexCount);
+            }
+        }
     }
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

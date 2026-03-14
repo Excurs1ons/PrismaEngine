@@ -1,7 +1,7 @@
 #include "SkyboxRenderPass.h"
 #include <iostream>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 SkyboxPass::SkyboxPass()
     : ForwardRenderPass("SkyboxPass")
@@ -13,8 +13,8 @@ SkyboxPass::SkyboxPass()
     InitializeSkyboxMesh();
 }
 
-void SkyboxPass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void SkyboxPass::Update(Timestep ts) {
+    UpdateTime(ts);
 }
 
 void SkyboxPass::Execute(const PassExecutionContext& context) {
@@ -181,4 +181,4 @@ void SkyboxPass::InitializeSkyboxMesh() {
     m_initialized = true;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

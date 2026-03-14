@@ -6,7 +6,7 @@
 #include <vulkan/vulkan.h>
 #include <algorithm>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 class VulkanTexture : public ITexture {
 public:
@@ -75,4 +75,4 @@ private:
     BufferDesc m_desc;
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

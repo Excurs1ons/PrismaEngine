@@ -7,7 +7,7 @@
 #include <string>
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class IRenderTarget;
@@ -192,4 +192,4 @@ public:
     virtual void InsertDebugMarker(const std::string& name) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

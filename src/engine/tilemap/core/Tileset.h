@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 图块变换
@@ -180,4 +180,4 @@ public:
     }
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

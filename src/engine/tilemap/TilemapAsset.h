@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 瓦片地图资源类
@@ -16,7 +16,7 @@ public:
     TilemapAsset() = default;
     ~TilemapAsset() override = default;
 
-    // AssetBase 接口实现
+    // Asset 接口实现
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
     bool IsLoaded() const override { return m_isLoaded; }
@@ -158,4 +158,4 @@ inline bool TilemapAsset::GetProperty<bool>(
     return defaultValue;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

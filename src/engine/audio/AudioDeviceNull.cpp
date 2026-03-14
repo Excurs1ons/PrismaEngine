@@ -4,7 +4,7 @@
 #include <cstring>
 #include <cmath>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 AudioDeviceNull::AudioDeviceNull() {
     LOG_INFO("Audio", "创建空音频设备");
@@ -460,7 +460,7 @@ std::string AudioDeviceNull::GenerateDebugReport() {
     return report;
 }
 
-void AudioDeviceNull::Update(float deltaTime) {
+void AudioDeviceNull::Update(Timestep ts) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     // 模拟播放进度
@@ -469,7 +469,7 @@ void AudioDeviceNull::Update(float deltaTime) {
 
         if (voice.playing && !voice.paused) {
             // 更新播放位置
-            voice.position += deltaTime * voice.pitch;
+            voice.position += ts * voice.pitch;
 
             // 检查是否播放完毕
             if (voice.position >= voice.duration) {

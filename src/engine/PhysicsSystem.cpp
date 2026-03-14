@@ -1,9 +1,9 @@
 #include "PhysicsSystem.h"
 #include "Logger.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
-std::shared_ptr<PhysicsSystem> PhysicsSystem::GetInstance() {
+std::shared_ptr<PhysicsSystem> PhysicsSystem::Get() {
     static std::shared_ptr<PhysicsSystem> instance = std::make_shared<PhysicsSystem>();
     return instance;
 }
@@ -18,8 +18,8 @@ void PhysicsSystem::Shutdown() {
     LOG_INFO("Physics", "物理系统开始关闭");
 }
 
-void PhysicsSystem::Update(float deltaTime) {
-    if (deltaTime <= 0.0f) return;
+void PhysicsSystem::Update(Timestep ts) {
+    if (ts <= 0.0f) return;
 }
 
-}  // namespace PrismaEngine
+}  // namespace Prisma

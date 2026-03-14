@@ -1,9 +1,9 @@
 #include "UIComponent.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
-void UIComponent::Update(float deltaTime) {
-    (void)deltaTime;
+void UIComponent::Update(Timestep ts) {
+    (void)ts;
     // 基础 Update - 子类可以扩展
 }
 
@@ -33,4 +33,4 @@ bool UIComponent::HitTest(const PrismaMath::vec2& point) const {
            point.y <= screenPos.y + m_size.y;
 }
 
-}  // namespace PrismaEngine
+}  // namespace Prisma

@@ -5,7 +5,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 namespace Graphic {
 class IBuffer;
@@ -137,4 +137,4 @@ private:
     int m_chunkSize = 32;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

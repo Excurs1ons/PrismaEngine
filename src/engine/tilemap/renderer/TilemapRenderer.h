@@ -9,7 +9,7 @@
 #include <vector>
 #include <unordered_map>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 namespace Graphic {
 class IRenderDevice;
@@ -66,7 +66,7 @@ public:
 
     // Component 接口
     void Initialize() override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
     void Shutdown() override;
 
     // =====================================================================
@@ -134,7 +134,7 @@ public:
     bool AreAnimatedTilesEnabled() const { return m_animatedTilesEnabled; }
 
     // 更新动画瓦片 (在 Update 中自动调用)
-    void UpdateAnimatedTiles(float deltaTime);
+    void UpdateAnimatedTiles(Timestep ts);
 
 private:
     // =====================================================================
@@ -252,4 +252,4 @@ private:
     std::vector<AnimatedTileInfo> m_animatedTiles;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

@@ -6,13 +6,13 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// @brief UI 输入管理器（最简实现）
 /// 处理鼠标/触摸输入并分发到 UI 组件
 class UIInputManager {
 public:
-    static UIInputManager& GetInstance();
+    static UIInputManager& Get();
 
     /// @brief 注册 UI 组件
     void RegisterComponent(UIComponent* component);
@@ -34,4 +34,4 @@ private:
     PrismaMath::vec2 m_lastMousePosition{0.0f, 0.0f};
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

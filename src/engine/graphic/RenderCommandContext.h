@@ -5,7 +5,7 @@
 #include <string>
 #include <map>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 渲染命令上下文实现
 /// 实现 IDeviceContext 接口，提供命令执行功能
@@ -126,4 +126,4 @@ private:
     std::map<std::string, void*> m_namedResources;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

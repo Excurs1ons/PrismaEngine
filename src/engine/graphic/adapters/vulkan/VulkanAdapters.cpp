@@ -1,7 +1,7 @@
 #include "VulkanAdapters.h"
 #include "RenderDeviceVulkan.h"
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 std::unique_ptr<RenderDeviceVulkan> CreateRenderDeviceVulkan(const DeviceDesc& deviceDesc) {
     auto device = std::make_unique<RenderDeviceVulkan>();
@@ -19,4 +19,4 @@ std::unique_ptr<IRenderDevice> CreateRenderDeviceVulkanInterface(const DeviceDes
     return nullptr;
 }
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

@@ -9,7 +9,7 @@
 #include <mutex>
 #include "Logger.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Core {
 namespace ECS {
 
@@ -50,7 +50,7 @@ class ISystem {
 public:
     virtual ~ISystem() = default;
     virtual void Initialize() {}
-    virtual void Update(float deltaTime) = 0;
+    virtual void Update(Timestep ts) = 0;
     virtual void Shutdown() {}
     bool enabled = true;
 
@@ -230,7 +230,7 @@ private:
 // 世界 - 管理所有实体、组件和系统
 class World {
 public:
-    static World& GetInstance() {
+    static World& Get() {
         static World instance;
         return instance;
     }
@@ -278,10 +278,10 @@ public:
         return ptr;
     }
 
-    void Update(float deltaTime) {
+    void Update(Timestep ts) {
         for (auto& system : m_systems) {
             if (system->enabled) {
-                system->Update(deltaTime);
+                system->Update(ts);
             }
         }
     }
@@ -343,4 +343,4 @@ private:
 
 } // namespace ECS
 } // namespace Core
-} // namespace PrismaEngine
+} // namespace Prisma

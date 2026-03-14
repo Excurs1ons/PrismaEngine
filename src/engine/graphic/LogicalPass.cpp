@@ -1,6 +1,6 @@
 #include "LogicalPass.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 LogicalPass::LogicalPass(const char* name)
     : m_name(name)
@@ -25,4 +25,4 @@ void LogicalPass::SetViewport(uint32_t width, uint32_t height) {
 
 
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

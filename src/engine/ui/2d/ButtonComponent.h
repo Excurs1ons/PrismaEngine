@@ -4,7 +4,7 @@
 #include "../math/MathTypes.h"
 #include <string>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// @brief 按钮组件（最简实现）
 class ButtonComponent : public UIComponent {
@@ -13,7 +13,7 @@ public:
     ~ButtonComponent() override = default;
 
     void Initialize() override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     // === 文本设置 ===
     void SetText(const std::string& text) { m_text = text; }
@@ -42,4 +42,4 @@ private:
     PrismaMath::vec4 m_pressedColor{0.1f, 0.5f, 0.9f, 1.0f}; // 深蓝色
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

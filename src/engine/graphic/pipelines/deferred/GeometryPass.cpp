@@ -1,6 +1,6 @@
 #include "GeometryPass.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 GeometryPass::GeometryPass()
     : ForwardRenderPass("GeometryPass")
@@ -10,8 +10,8 @@ GeometryPass::GeometryPass()
     m_priority = 50;
 }
 
-void GeometryPass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void GeometryPass::Update(Timestep ts) {
+    UpdateTime(ts);
 }
 
 void GeometryPass::Execute(const PassExecutionContext& context) {
@@ -32,4 +32,4 @@ void GeometryPass::Execute(const PassExecutionContext& context) {
     }
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

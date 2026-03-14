@@ -16,7 +16,7 @@
 #include <vector>
 
 // 前置声明
-namespace PrismaEngine {
+namespace Prisma {
 class IPlatformLogger;
 }
 
@@ -43,7 +43,7 @@ struct LogConfig {
 
 class ENGINE_API Logger {
 public:
-    static Logger& GetInstance();
+    static Logger& Get();
     static void SetInstance(Logger* instance);
 
     Logger(const Logger&)            = delete;
@@ -57,7 +57,7 @@ public:
     bool IsInitialized() const;
     void Shutdown();
 
-    void SetPlatformLogger(PrismaEngine::IPlatformLogger* platformLogger);
+    void SetPlatformLogger(Prisma::IPlatformLogger* platformLogger);
     void LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc);
 
     void SetMinLevel(LogLevel level);
@@ -107,7 +107,7 @@ private:
     Logger() = default;
 
     bool initialized                              = false;
-    PrismaEngine::IPlatformLogger* platformLogger = nullptr;
+    Prisma::IPlatformLogger* platformLogger = nullptr;
     void EnqueueEntry(LogEntry&& entry);
     void ProcessQueue();
     void RotateLogFile();
@@ -137,27 +137,27 @@ private:
 };
 
 #define LOG_TRACE(category, fmt, ...)                                                                                  \
-    ::Logger::GetInstance().LogFormat(                                                                                 \
+    ::Logger::Get().LogFormat(                                                                                 \
         ::LogLevel::Trace, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
 
 #define LOG_DEBUG(category, fmt, ...)                                                                                  \
-    ::Logger::GetInstance().LogFormat(                                                                                 \
+    ::Logger::Get().LogFormat(                                                                                 \
         ::LogLevel::Debug, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
 
 #define LOG_INFO(category, fmt, ...)                                                                                   \
-    ::Logger::GetInstance().LogFormat(                                                                                 \
+    ::Logger::Get().LogFormat(                                                                                 \
         ::LogLevel::Info, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
 
 #define LOG_WARNING(category, fmt, ...)                                                                                \
-    ::Logger::GetInstance().LogFormat(                                                                                 \
+    ::Logger::Get().LogFormat(                                                                                 \
         ::LogLevel::Warning, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
 
 #define LOG_ERROR(category, fmt, ...)                                                                                  \
-    ::Logger::GetInstance().LogFormat(                                                                                 \
+    ::Logger::Get().LogFormat(                                                                                 \
         ::LogLevel::Error, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
 
 #define LOG_FATAL(category, fmt, ...)                                                                                  \
-    ::Logger::GetInstance().LogFormat(                                                                                 \
+    ::Logger::Get().LogFormat(                                                                                 \
         ::LogLevel::Fatal, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
 
 #define LOG_WARN LOG_WARNING

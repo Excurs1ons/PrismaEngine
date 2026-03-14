@@ -8,7 +8,7 @@
 #include "math/MathTypes.h"
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 深度预渲染逻辑 Pass
 /// 用于提前构建深度缓冲，优化后续渲染的遮挡剔除
@@ -33,8 +33,8 @@ public:
     void Execute(const PassExecutionContext& context) override;
 
     /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    /// @param ts 时间增量
+    void Update(Timestep ts) override;
 
     // === 渲染统计 ===
 
@@ -50,4 +50,4 @@ private:
     RenderStats m_stats;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

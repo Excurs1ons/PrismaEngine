@@ -1,7 +1,7 @@
 #include "VulkanResources.h"
 #include <algorithm>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 VulkanTexture::VulkanTexture(VkImage image, VkImageView imageView, const TextureDesc& desc)
     : m_image(image), m_imageView(imageView), m_desc(desc) {
@@ -37,4 +37,4 @@ VulkanBuffer::VulkanBuffer(VkBuffer buffer, const BufferDesc& desc)
 VulkanBuffer::~VulkanBuffer() {
 }
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

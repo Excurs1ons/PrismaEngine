@@ -9,7 +9,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // 前向声明
 class UIComponent;
@@ -66,4 +66,4 @@ private:
     std::vector<UIRenderItem> m_renderQueue;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

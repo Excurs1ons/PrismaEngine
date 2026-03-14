@@ -14,7 +14,7 @@
 
 #if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // 调试消息类型
 enum class DebugMessageType {
@@ -46,7 +46,7 @@ struct DebugMessage {
 class DebugOverlay {
 public:
     // 单例访问
-    static DebugOverlay& GetInstance();
+    static DebugOverlay& Get();
 
     // ========== 消息输出 ==========
 
@@ -104,7 +104,7 @@ public:
     // ========== 渲染 ==========
 
     // 每帧更新（更新消息时间）
-    void Update(float deltaTime);
+    void Update(Timestep ts);
 
     // 渲染调试覆盖层（在渲染管线中调用）
     void Render();
@@ -160,19 +160,19 @@ private:
 };
 
 // 便捷宏
-#define DEBUG_LOG(text)           PrismaEngine::DebugOverlay::Log(text)
-#define DEBUG_WARNING(text)        PrismaEngine::DebugOverlay::Warning(text)
-#define DEBUG_ERROR(text)          PrismaEngine::DebugOverlay::Error(text)
-#define DEBUG_SUCCESS(text)        PrismaEngine::DebugOverlay::Success(text)
-#define DEBUG_WATCH_FLOAT(name, v) PrismaEngine::DebugOverlay::WatchVar(name, &(v))
-#define DEBUG_WATCH_INT(name, v)   PrismaEngine::DebugOverlay::WatchVar(name, &(v))
-#define DEBUG_WATCH_BOOL(name, v)  PrismaEngine::DebugOverlay::WatchVar(name, &(v))
+#define DEBUG_LOG(text)           Prisma::DebugOverlay::Log(text)
+#define DEBUG_WARNING(text)        Prisma::DebugOverlay::Warning(text)
+#define DEBUG_ERROR(text)          Prisma::DebugOverlay::Error(text)
+#define DEBUG_SUCCESS(text)        Prisma::DebugOverlay::Success(text)
+#define DEBUG_WATCH_FLOAT(name, v) Prisma::DebugOverlay::WatchVar(name, &(v))
+#define DEBUG_WATCH_INT(name, v)   Prisma::DebugOverlay::WatchVar(name, &(v))
+#define DEBUG_WATCH_BOOL(name, v)  Prisma::DebugOverlay::WatchVar(name, &(v))
 
-} // namespace PrismaEngine
+} // namespace Prisma
 
 #else
 // 非Debug构建时，定义为空操作
-namespace PrismaEngine {
+namespace Prisma {
 struct DebugOverlay {
     static void AddMessage(const std::string&, int = 0, float = 5.0f) {}
     static void Log(const std::string&) {}

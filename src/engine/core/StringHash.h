@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Core {
 
 /**
@@ -59,11 +59,11 @@ private:
 };
 
 } // namespace Core
-} // namespace PrismaEngine
+} // namespace Prisma
 
 /**
  * @brief 字面量支持: "path/to/asset"_hash
  */
-constexpr PrismaEngine::Core::StringHash::HashType operator"" _hash(const char* str, size_t) {
-    return PrismaEngine::Core::StringHash::HashCompileTime(str);
+constexpr Prisma::Core::StringHash::HashType operator"" _hash(const char* str, size_t) {
+    return Prisma::Core::StringHash::HashCompileTime(str);
 }

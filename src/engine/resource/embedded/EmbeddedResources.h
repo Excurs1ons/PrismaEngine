@@ -1,7 +1,7 @@
 #pragma once
 #include <cstddef>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Resource {
 
 static const unsigned char DEFAULT_VERTEX_SHADER_BYTES[] = {
@@ -42,4 +42,4 @@ const DefaultMeshData::Vertex DefaultMeshData::VERTICES[3] = {
 const unsigned short DefaultMeshData::INDICES[3] = { 0, 1, 2 };
 
 } // namespace Resource
-} // namespace PrismaEngine
+} // namespace Prisma

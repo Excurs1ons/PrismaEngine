@@ -3,7 +3,7 @@
 #include "interfaces/IFence.h"
 #include <vulkan/vulkan.h>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 class VulkanFence : public IFence {
 public:
@@ -24,4 +24,4 @@ private:
     VkFence m_fence = VK_NULL_HANDLE;
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

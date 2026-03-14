@@ -3,7 +3,7 @@
 #include "../Serializable.h"
 #include "../resource/Archive.h"
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Core {
         struct ProjectSettings : public Serialization::Serializable {
             std::string companyName = "DefaultCompany";

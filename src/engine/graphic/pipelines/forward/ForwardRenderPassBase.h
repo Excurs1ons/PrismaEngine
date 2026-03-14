@@ -7,7 +7,7 @@
 
 #pragma once
 #include "LogicalPass.h"
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 /// @brief 前向渲染 Pass 基类
 /// 用于前向渲染管线中的 Pass
 class ForwardRenderPass : public LogicalPass {

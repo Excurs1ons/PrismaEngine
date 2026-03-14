@@ -12,7 +12,7 @@
 #include <fstream>
 #include <iostream>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 FontAtlas::FontAtlas()
     : m_atlasWidth(2048)
@@ -232,4 +232,4 @@ const CharGlyph* FontAtlas::GetGlyph(char32_t codepoint) const {
     return &s_emptyGlyph;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

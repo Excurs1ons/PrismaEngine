@@ -8,7 +8,7 @@
 #include <queue>
 #include <thread>
 #include <vector>
-namespace PrismaEngine {
+namespace Prisma {
 
 class JobSystem : public ISubSystem {
     friend class Singleton<JobSystem>;
@@ -39,6 +39,6 @@ public:
 };
 
 // 宏定义简化作业提交
-#define SUBMIT_JOB(job) JobSystem::GetInstance().SubmitJob(job)
-#define SUBMIT_JOB_TO_POOL(job, poolIndex) JobSystem::GetInstance().SubmitJob(job, poolIndex)
-}  // namespace Engine
+#define SUBMIT_JOB(job) JobSystem::Get().SubmitJob(job)
+#define SUBMIT_JOB_TO_POOL(job, poolIndex) JobSystem::Get().SubmitJob(job, poolIndex)
+}  // namespace Prisma

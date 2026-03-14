@@ -2,7 +2,7 @@
 #include "Export.h"
 #include <string>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// <summary>
 /// 运行环境类型
@@ -48,4 +48,4 @@ private:
     static bool IsRedirectedOutput();
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

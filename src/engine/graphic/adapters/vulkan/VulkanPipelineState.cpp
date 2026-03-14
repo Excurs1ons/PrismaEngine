@@ -1,7 +1,7 @@
 #include "VulkanPipelineState.h"
 #include "VulkanShader.h"
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 VulkanPipelineState::VulkanPipelineState() {
     m_blendState = BlendState::Default;
@@ -207,4 +207,4 @@ std::unique_ptr<IPipelineState> VulkanPipelineState::Clone() const {
     return clone;
 }
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

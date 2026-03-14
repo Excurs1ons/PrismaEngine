@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 // ========== AudioDevice ==========
 
@@ -74,7 +74,7 @@ void AudioDevice::Shutdown() {
     m_initialized.store(false);
 }
 
-void AudioDevice::Update(float deltaTime) {
+void AudioDevice::Update(Timestep ts) {
     if (!m_initialized.load()) {
         return;
     }
@@ -649,4 +649,4 @@ void AudioDevice::OnBufferEnd(IAudioDriver::SourceId sourceId, void* userData) {
     }
 }
 
-} // namespace PrismaEngine::Audio
+} // namespace Prisma::Audio

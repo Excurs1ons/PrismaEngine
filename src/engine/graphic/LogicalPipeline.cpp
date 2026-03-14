@@ -3,7 +3,7 @@
 #include "interfaces/IGBuffer.h"
 #include <iostream>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 LogicalPipeline::LogicalPipeline(const char* name)
     : m_name(name)
@@ -189,4 +189,4 @@ void LogicalDeferredPipeline::Execute(const PassExecutionContext& context) {
     LogicalPipeline::Execute(context);
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

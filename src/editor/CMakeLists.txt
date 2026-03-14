@@ -27,6 +27,7 @@ set(EDITOR_SOURCES
 # 头文件
 set(EDITOR_HEADERS
         Editor.h
+        EditorLayer.h
         ProjectSettingsWindow.h
         CommandLineParser.h
         CommandLineEditor.h
@@ -34,7 +35,7 @@ set(EDITOR_HEADERS
         Export.h
 )
 
-# 1. 创建编辑器主逻辑动态库 (重命名为 PrismaEditorCore 以避免冲突)
+# 1. 创建编辑器主逻辑动态库
 add_library(Editor SHARED
     ${EDITOR_SOURCES}
     ${EDITOR_HEADERS}
@@ -47,23 +48,23 @@ target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 target_link_libraries(Editor PRIVATE Engine)
 
 # 2. 创建编辑器启动器 (EXE)
-add_executable(PrismaEditor main.cpp)
+add_executable(Prisma main.cpp)
 
 # 链接到编辑器 DLL 和 引擎 DLL
-target_link_libraries(PrismaEditor PRIVATE Editor Engine)
+target_link_libraries(Prisma PRIVATE Editor Engine)
 
 # ========== 路径与输出配置 ==========
 
 # 统一输出到 ${CMAKE_BINARY_DIR}/bin
 set_target_properties(Editor PROPERTIES
-    OUTPUT_NAME "PrismaEditorCore"
+    OUTPUT_NAME "PrismaEditor"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 )
 
-set_target_properties(PrismaEditor PROPERTIES
-    OUTPUT_NAME "PrismaEditor"
+set_target_properties(Prisma PROPERTIES
+    OUTPUT_NAME "Prisma"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 

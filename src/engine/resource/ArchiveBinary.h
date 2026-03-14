@@ -4,7 +4,7 @@
 #include <vector>
 #include <fstream>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Serialization {
 
         // 二进制输出存档

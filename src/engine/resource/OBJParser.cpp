@@ -5,15 +5,15 @@
 #include <sstream>
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Resource {
 
 // 为了兼容旧代码，定义LOG_WARNING
 #ifndef LOG_WARNING
-#define LOG_WARNING(category, fmt, ...) ::Logger::GetInstance().LogFormat(::LogLevel::Warning, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+#define LOG_WARNING(category, fmt, ...) ::Logger::Get().LogFormat(::LogLevel::Warning, category, ::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
 #endif
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Resource {
 
 OBJParseResult OBJParser::Parse(const std::string& filePath) {
@@ -502,4 +502,4 @@ bool OBJParser::SkipWhitespace(std::istringstream& line) {
 }
 
 } // namespace Resource
-} // namespace PrismaEngine
+} // namespace Prisma

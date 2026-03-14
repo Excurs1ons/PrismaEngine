@@ -10,7 +10,7 @@
 #endif
 
 // zlib/miniz header - stub implementation
-namespace PrismaEngine {
+namespace Prisma {
 
 // zlib 常量定义（存根）
 #define Z_OK 0
@@ -42,9 +42,9 @@ inline int deflateInit2(z_stream*, int, int, int, int, int) { return Z_OK; }
 inline int deflate(z_stream*, int) { return Z_STREAM_END; }
 inline int deflateEnd(z_stream*) { return Z_OK; }
 
-} // namespace PrismaEngine
+} // namespace Prisma
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // Base64 编码/解码
@@ -612,4 +612,4 @@ std::string TileDataDecoder::Encode(
     return Base64Encode(processed);
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

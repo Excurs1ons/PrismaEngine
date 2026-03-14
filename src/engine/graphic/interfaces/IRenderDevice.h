@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class ICommandBuffer;
@@ -169,4 +169,4 @@ public:
     virtual void SetDebugMarker(const std::string& name) = 0;
 };
 
-}  // namespace PrismaEngine::Graphic
+}  // namespace Prisma::Graphic

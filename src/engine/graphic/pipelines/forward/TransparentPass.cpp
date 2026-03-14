@@ -1,7 +1,7 @@
 #include "TransparentPass.h"
 #include <algorithm>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 TransparentPass::TransparentPass()
     : ForwardRenderPass("TransparentPass")
@@ -13,8 +13,8 @@ TransparentPass::TransparentPass()
     m_priority = 300;
 }
 
-void TransparentPass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void TransparentPass::Update(Timestep ts) {
+    UpdateTime(ts);
 }
 
 void TransparentPass::Execute(const PassExecutionContext& context) {
@@ -38,4 +38,4 @@ void TransparentPass::Execute(const PassExecutionContext& context) {
     context.deviceContext->SetConstantData(1, &depthWriteValue, sizeof(float));
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

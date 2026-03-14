@@ -8,7 +8,7 @@
 #include <atomic>
 #include <chrono>
 
-namespace PrismaEngine::Core {
+namespace Prisma::Core {
 
 class HotReloadManager {
 public:

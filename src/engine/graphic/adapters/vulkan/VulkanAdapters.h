@@ -9,7 +9,7 @@
 
 #include <memory>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 class RenderDeviceVulkan;
 
@@ -23,4 +23,4 @@ ENGINE_API std::unique_ptr<RenderDeviceVulkan> CreateRenderDeviceVulkan(const De
 /// @return 渲染设备接口
 ENGINE_API std::unique_ptr<IRenderDevice> CreateRenderDeviceVulkanInterface(const DeviceDesc& deviceDesc);
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

@@ -6,7 +6,7 @@
 #include <SDL3/SDL.h>
 #include <array>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 /// @brief SDL3 跨平台输入驱动
 /// 支持：键盘、鼠标、手柄
@@ -86,6 +86,6 @@ inline IInputDriver* CreateSDL3InputDriver() {
     return new InputDriverSDL3();
 }
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input
 
 #endif // PRISMA_ENABLE_INPUT_SDL3

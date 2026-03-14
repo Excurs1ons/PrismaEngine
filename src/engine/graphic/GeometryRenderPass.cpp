@@ -4,9 +4,9 @@
 #include "RenderCommandContext.h"
 #include "interfaces/IBuffer.h"
 
-using PrismaEngine::Graphic::RenderCommandContext;
+using Prisma::Graphic::RenderCommandContext;
 
-namespace PrismaEngine {
+namespace Prisma {
 
 GeometryRenderPass::GeometryRenderPass()
     : m_renderTarget(nullptr)
@@ -23,7 +23,7 @@ GeometryRenderPass::~GeometryRenderPass()
 {
 }
 
-void GeometryRenderPass::Execute(PrismaEngine::Graphic::RenderCommandContext* context)
+void GeometryRenderPass::Execute(Prisma::Graphic::RenderCommandContext* context)
 {
     if (!context) {
         LOG_WARNING("GeometryRenderPass", "Render command context is null");

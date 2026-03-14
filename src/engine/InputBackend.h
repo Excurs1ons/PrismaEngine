@@ -1,6 +1,6 @@
 #pragma once
 #include "input/InputManager.h"
-namespace PrismaEngine {
+namespace Prisma {
     namespace Input {
 
         enum InputBackendType {

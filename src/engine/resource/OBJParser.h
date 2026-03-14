@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <cstdint>
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Resource {
 
 /**
@@ -119,4 +119,4 @@ private:
 };
 
 } // namespace Resource
-} // namespace PrismaEngine
+} // namespace Prisma
