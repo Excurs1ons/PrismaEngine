@@ -5,7 +5,7 @@
 #include "interfaces/IBuffer.h"
 #include "interfaces/ISampler.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 RenderCommandContext::RenderCommandContext() = default;
 
@@ -195,4 +195,4 @@ void RenderCommandContext::SetNativeDepthStencil(void* depthStencil) {
     m_nativeDepthStencil = depthStencil;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

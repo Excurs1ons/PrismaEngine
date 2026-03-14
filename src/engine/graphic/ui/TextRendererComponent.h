@@ -7,7 +7,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 class IRenderDevice;
 
@@ -19,7 +19,7 @@ public:
 
     // Component 接口
     void Initialize() override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
     void Shutdown() override;
 
     // 设置文本内容
@@ -79,4 +79,4 @@ private:
     static const uint32_t s_charRanges[];
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

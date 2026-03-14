@@ -6,7 +6,7 @@
 #include <string>
 #include "interfaces/IDeviceContext.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 场景数据结构
 /// 包含 Pass 执行所需的场景信息
@@ -24,7 +24,7 @@ struct SceneData {
 
     // 时间数据
     struct {
-        float deltaTime;
+        Timestep ts;
         float totalTime;
     } time;
 
@@ -49,7 +49,7 @@ struct SceneData {
         camera.nearPlane = 0.1f;
         camera.farPlane = 1000.0f;
 
-        time.deltaTime = 0.0f;
+        time.ts = 0.0f;
         time.totalTime = 0.0f;
 
         viewport.width = 1920;
@@ -103,8 +103,8 @@ public:
     virtual void SetViewport(uint32_t width, uint32_t height) = 0;
 
     /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    virtual void Update(float deltaTime) = 0;
+    /// @param ts 时间增量
+    virtual void Update(Timestep ts) = 0;
 
     /// @brief 执行 Pass
     /// @param context 执行上下文
@@ -167,4 +167,4 @@ public:
     virtual void SetDepthStencil(IDepthStencil* depthStencil) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

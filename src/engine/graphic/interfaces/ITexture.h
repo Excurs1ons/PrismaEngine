@@ -4,7 +4,7 @@
 #include "IResource.h"
 
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class IRenderDevice;
@@ -250,4 +250,4 @@ public:
     virtual bool Validate() = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

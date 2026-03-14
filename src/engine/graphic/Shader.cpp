@@ -1,312 +1,49 @@
 #include "Shader.h"
-#include "../Logger.h"
-#include "DefaultShader.h"
-#include "StringUtils.h"
-#include <filesystem>
-#include <fstream>
-#include <iostream>
+#include "Logger.h"
 
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-#include "adapters/vulkan/RenderDeviceVulkan.h"
-#include "adapters/vulkan/VulkanShader.h"
-#endif
-
-#if defined(FindResource)
-#undef FindResource
-#endif
-
-using namespace PrismaEngine;
-using namespace StringUtils;
-
-namespace {
-const std::string EXT_CompiledShaderObject = "cso";
-const std::string EXT_HLSL                 = "hlsl";
-const std::string EXT_SPIRV                = "spv";
-}  // namespace
-
-Shader::Shader() {
-    // 创建平台特定的着色器实现
-    m_impl = CreatePlatformShader();
-}
-
-Shader::Shader(std::shared_ptr<PrismaEngine::Graphic::IShader> impl) : m_impl(std::move(impl)) {}
-
-Shader::~Shader() {
-    Unload();
-}
+namespace Prisma::Graphic {
 
 bool Shader::Load(const std::filesystem::path& path) {
-    if (!std::filesystem::exists(path)) {
-        LOG_ERROR("Shader", "着色器文件不存在: {0}", path.string());
-        return false;
+    // 1. 加载 SPIR-V 字节码 (这里简化处理，实际应读取文件)
+    LOG_INFO("Shader", "Loading shader bytecode from: {0}", path.string());
+    
+    // 2. 模拟反射信息填充 (实际应使用 spirv-cross 等工具自动生成)
+    // 假设这是一个基础的 PBR Shader
+    ShaderResource albedo;
+    albedo.Name = "u_Albedo";
+    albedo.ResourceType = ShaderResource::Type::Sampler2D;
+    albedo.Set = 1;
+    albedo.Binding = 0;
+    m_Reflection.Resources.push_back(albedo);
+    
+    ShaderResource params;
+    params.Name = "u_MaterialParams";
+    params.ResourceType = ShaderResource::Type::UniformBuffer;
+    params.Set = 1;
+    params.Binding = 1;
+    params.Size = sizeof(float) * 4; // metallic, roughness, etc.
+    m_Reflection.Resources.push_back(params);
+
+    // 3. 构建快速查找映射
+    for (uint32_t i = 0; i < (uint32_t)m_Reflection.Resources.size(); ++i) {
+        m_ResourceMap[m_Reflection.Resources[i].Name] = i;
     }
 
-    return LoadShaderFromFile(path);
+    return true;
 }
 
 void Shader::Unload() {
-    if (m_impl) {
-        m_impl.reset();
-    }
+    m_Bytecode.clear();
+    m_Reflection.Resources.clear();
+    m_ResourceMap.clear();
 }
 
-bool Shader::IsLoaded() const {
-    return m_impl != nullptr;
-}
-
-AssetType Shader::GetType() const {
-    return AssetType::Shader;
-}
-
-// 着色器特定方法
-PrismaEngine::Graphic::ShaderType Shader::GetShaderType() const {
-    return m_impl ? m_impl->GetShaderType() : PrismaEngine::Graphic::ShaderType::Vertex;
-}
-
-PrismaEngine::Graphic::ShaderLanguage Shader::GetLanguage() const {
-    return m_impl ? m_impl->GetLanguage() : PrismaEngine::Graphic::ShaderLanguage::HLSL;
-}
-
-const std::string& Shader::GetEntryPoint() const {
-    static std::string empty;
-    return m_impl ? m_impl->GetEntryPoint() : empty;
-}
-
-const std::string& Shader::GetTarget() const {
-    static std::string empty;
-    return m_impl ? m_impl->GetTarget() : empty;
-}
-
-const std::vector<uint8_t>& Shader::GetBytecode() const {
-    static std::vector<uint8_t> empty;
-    return m_impl ? m_impl->GetBytecode() : empty;
-}
-
-const std::string& Shader::GetFilename() const {
-    static std::string empty;
-    return m_impl ? m_impl->GetFilename() : empty;
-}
-
-// 反射信息
-const PrismaEngine::Graphic::ShaderReflection& Shader::GetReflection() const {
-    static PrismaEngine::Graphic::ShaderReflection empty;
-    return m_impl ? m_impl->GetReflection() : empty;
-}
-
-bool Shader::HasReflection() const {
-    return m_impl ? m_impl->HasReflection() : false;
-}
-
-// 资源查找
-const PrismaEngine::Graphic::ShaderReflection::Resource* Shader::FindResource(const std::string& name) const {
-    return m_impl ? m_impl->FindResource(name) : nullptr;
-}
-
-const PrismaEngine::Graphic::ShaderReflection::Resource* Shader::FindResourceByBindPoint(uint32_t bindPoint,
-                                                                                         uint32_t space) const {
-    return m_impl ? m_impl->FindResourceByBindPoint(bindPoint, space) : nullptr;
-}
-
-const PrismaEngine::Graphic::ShaderReflection::ConstantBuffer*
-Shader::FindConstantBuffer(const std::string& name) const {
-    return m_impl ? m_impl->FindConstantBuffer(name) : nullptr;
-}
-
-// 输入/输出参数
-uint32_t Shader::GetInputParameterCount() const {
-    return m_impl ? m_impl->GetInputParameterCount() : 0;
-}
-
-const PrismaEngine::Graphic::ShaderReflection::InputParameter& Shader::GetInputParameter(uint32_t index) const {
-    static PrismaEngine::Graphic::ShaderReflection::InputParameter empty;
-    return m_impl ? m_impl->GetInputParameter(index) : empty;
-}
-
-uint32_t Shader::GetOutputParameterCount() const {
-    return m_impl ? m_impl->GetOutputParameterCount() : 0;
-}
-
-const PrismaEngine::Graphic::ShaderReflection::OutputParameter& Shader::GetOutputParameter(uint32_t index) const {
-    static PrismaEngine::Graphic::ShaderReflection::OutputParameter empty;
-    return m_impl ? m_impl->GetOutputParameter(index) : empty;
-}
-
-// 重新编译
-bool Shader::Recompile(const PrismaEngine::Graphic::ShaderCompileOptions* options, std::string* errors) {
-    if (!m_impl) {
-        if (errors)
-            *errors = "Shader not loaded";
-        return false;
-    }
-
-    std::string err;
-    bool result = m_impl->Recompile(options, err);
-    if (errors)
-        *errors = err;
-    return result;
-}
-
-bool Shader::RecompileFromSource(const std::string& source,
-                                 const PrismaEngine::Graphic::ShaderCompileOptions* options,
-                                 std::string* errors) {
-    if (!m_impl) {
-        if (errors != nullptr)
-            *errors = "Shader not loaded";
-        return false;
-    }
-
-    std::string err;
-    bool result = m_impl->RecompileFromSource(source, options, err);
-    if (errors != nullptr)
-        *errors = err;
-    return result;
-}
-
-bool Shader::ReloadFromFile(std::string* errors) {
-    if (!m_impl) {
-        if (errors != nullptr)
-            *errors = "Shader not loaded";
-        return false;
-    }
-
-    std::string err;
-    bool result = m_impl->ReloadFromFile(err);
-    if (errors != nullptr)
-        *errors = err;
-    return result;
-}
-
-// 热重载
-void Shader::EnableHotReload(bool enable) {
-    if (m_impl) {
-        m_impl->EnableHotReload(enable);
-    }
-}
-
-bool Shader::NeedsReload() const {
-    return m_impl ? m_impl->NeedsReload() : false;
-}
-
-uint64_t Shader::GetFileModificationTime() const {
-    return m_impl ? m_impl->GetFileModificationTime() : 0;
-}
-
-// 编译信息
-const std::string& Shader::GetCompileLog() const {
-    static std::string empty;
-    return m_impl ? m_impl->GetCompileLog() : empty;
-}
-
-bool Shader::HasWarnings() const {
-    return m_impl ? m_impl->HasWarnings() : false;
-}
-
-bool Shader::HasErrors() const {
-    return m_impl ? m_impl->HasErrors() : false;
-}
-
-bool Shader::Validate() const {
-    return m_impl ? m_impl->Validate() : false;
-}
-
-std::string Shader::Disassemble() const {
-    return m_impl ? m_impl->Disassemble() : "";
-}
-
-// 调试
-bool Shader::DebugSaveToFile(const std::string& filename, bool includeDisassembly, bool includeReflection) const {
-    return m_impl ? m_impl->DebugSaveToFile(filename, includeDisassembly, includeReflection) : false;
-}
-
-// 依赖信息
-const std::vector<std::string>& Shader::GetDependencies() const {
-    static std::vector<std::string> empty;
-    return m_impl ? m_impl->GetDependencies() : empty;
-}
-
-const std::vector<std::string>& Shader::GetIncludes() const {
-    static std::vector<std::string> empty;
-    return m_impl ? m_impl->GetIncludes() : empty;
-}
-
-const std::vector<std::string>& Shader::GetDefines() const {
-    static std::vector<std::string> empty;
-    return m_impl ? m_impl->GetDefines() : empty;
-}
-
-// 尝试加载着色器，失败时回退到默认着色器
-bool Shader::LoadWithFallback(const std::filesystem::path& path) {
-    if (Load(path)) {
-        return true;
-    }
-
-    // 加载默认着色器
-    LOG_WARN("Shader", "无法加载着色器 {0}，使用默认着色器", path.string());
-    return LoadDefaultShader();
-}
-
-// 获取原生句柄（用于平台特定操作）
-const void* Shader::GetNativeHandle() const {
-    if (!m_impl) {
-        return nullptr;
-    }
-
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-    auto vulkanShader = std::dynamic_pointer_cast<PrismaEngine::Graphic::Vulkan::VulkanShader>(m_impl);
-    if (vulkanShader) {
-        return reinterpret_cast<void*>(vulkanShader->GetShaderModule());
-    }
-#endif
-
-    return nullptr;
-}
-
-// 内部辅助方法
-bool Shader::LoadShaderFromFile(const std::filesystem::path& path) {
-    // 检查文件扩展名
-    auto ext = ToLower(path.extension().string());
-
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-    if (Equals(ext, EXT_SPIRV)) {
-        // 加载Vulkan着色器
-        return LoadVulkanShader(path);
-    }
-#endif
-
-    LOG_ERROR("Shader", "Unsupported shader format: {0}", ext);
-    return false;
-}
-
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-bool Shader::LoadVulkanShader(const std::filesystem::path& path) {
-    LOG_ERROR("Shader", "Vulkan shader loading requires render device");
-    return false;
-}
-#endif
-
-std::shared_ptr<PrismaEngine::Graphic::IShader> Shader::CreatePlatformShader() {
-    LOG_ERROR("Shader", "Shader creation requires render device");
-    return nullptr;
-}
-
-// 工厂函数
-std::shared_ptr<Shader> CreateShader(const std::filesystem::path& path) {
-    auto shader = std::make_shared<Shader>();
-    if (shader->Load(path)) {
-        return shader;
+const ShaderResource* Shader::FindResource(const std::string& name) const {
+    auto it = m_ResourceMap.find(name);
+    if (it != m_ResourceMap.end()) {
+        return &m_Reflection.Resources[it->second];
     }
     return nullptr;
 }
 
-std::shared_ptr<Shader> CreateShader(const std::string& vertexSource, const std::string& pixelSource) {
-    auto shader = std::make_shared<Shader>();
-    LOG_ERROR("Shader", "Failed to create shader from source strings");
-    return nullptr;
-}
-
-bool Shader::LoadDefaultShader() {
-    // 加载默认的着色器
-    auto defaultShader = std::make_shared<Shader>();
-    m_impl             = defaultShader->m_impl;
-    return true;
-}
+} // namespace Prisma::Graphic

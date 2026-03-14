@@ -4,7 +4,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 前向声明
@@ -107,4 +107,4 @@ struct TileInstance {
     }
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

@@ -6,7 +6,7 @@
 #include <memory>
 #include <string>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 顶点结构（跨平台）
 struct Vertex {
@@ -139,4 +139,4 @@ public:
     virtual void UnloadFromGPU() = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

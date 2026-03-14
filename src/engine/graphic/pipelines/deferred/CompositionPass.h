@@ -8,7 +8,7 @@
 #include <memory>
 #include <vector>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 合成逻辑 Pass
 /// 将光照结果与后处理效果合成最终图像
@@ -44,8 +44,8 @@ public:
     void Execute(const PassExecutionContext& context) override;
 
     /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    /// @param ts 时间增量
+    void Update(Timestep ts) override;
 
     // === 输入缓冲区设置 ===
 
@@ -128,4 +128,4 @@ private:
     RenderStats m_stats;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -1,20 +1,20 @@
 #pragma once
 #include "Export.h"
-#include "IApplication.h"
+#include "Application.h"
 #include "CommandLineParser.h"
 #include "ManagerBase.h"
 #include <string>
 #include <unordered_map>
 #include <functional>
 
-namespace PrismaEngine {
+namespace Prisma {
 
-class EDITOR_API CommandLineEditor : public IApplication<CommandLineEditor>, public ManagerBase<CommandLineEditor> {
+class EDITOR_API CommandLineEditor : public Application<CommandLineEditor>, public ManagerBase<CommandLineEditor> {
 public:
     CommandLineEditor();
     ~CommandLineEditor() override;
 
-    static std::shared_ptr<CommandLineEditor> GetInstance();
+    static std::shared_ptr<CommandLineEditor> Get();
 
     int Initialize() override;
     int Run() override;
@@ -45,4 +45,4 @@ private:
     int ExecuteCommand();
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

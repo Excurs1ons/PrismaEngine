@@ -6,18 +6,11 @@
 #include <string>
 #include <cstring>
 
-#if defined(_WIN32)
-#include <Windows.h>
-#include <vulkan/vulkan.h>
-#include <vulkan/vulkan_win32.h>
-#else
-#include <vulkan/vulkan.h>
-#endif
 
 #if defined(PRISMA_ENABLE_RENDER_VULKAN)
 #include <vk_mem_alloc.h>
 #endif
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // ============================================================================
 // VulkanRenderDevice - 构造/析构
@@ -47,18 +40,13 @@ bool VulkanRenderDevice::Initialize(const DeviceDesc& desc) {
         return false;
     }
 
-    // 2. 创建 surface
-#if defined(_WIN32)
-    VkWin32SurfaceCreateInfoKHR surfaceInfo = {};
-    surfaceInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surfaceInfo.hwnd = static_cast<HWND>(desc.windowHandle);
-    surfaceInfo.hinstance = GetModuleHandle(nullptr);
-
-    if (vkCreateWin32SurfaceKHR(m_instance, &surfaceInfo, nullptr, &m_surface) != VK_SUCCESS) {
-        LOG_ERROR("VulkanRenderDevice", "Failed to create Win32 surface");
+    // 2. 创建 surface (使用平台抽象接口)
+    void* surfacePtr = nullptr;
+    if (!Platform::CreateVulkanSurface(m_instance, desc.windowHandle, &surfacePtr)) {
+        LOG_ERROR("VulkanRenderDevice", "Failed to create Vulkan surface via Platform");
         return false;
     }
-#endif
+    m_surface = static_cast<VkSurfaceKHR>(surfacePtr);
 
     // 3. 创建逻辑设备（包含物理设备选择，使用 vk-bootstrap）
     if (!CreateDeviceWithVkBootstrap()) {
@@ -662,10 +650,11 @@ bool VulkanRenderDevice::CreateInstanceWithVkBootstrap() {
            .set_app_version(1, 0, 0)
            .set_engine_version(1, 0, 0);
 
-    // 添加平台特定扩展
-#if defined(_WIN32)
-    builder.enable_extension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#endif
+    // 添加平台特定扩展 (使用统一抽象接口)
+    auto requiredExtensions = Platform::GetRequiredVulkanInstanceExtensions();
+    for (const char* ext : requiredExtensions) {
+        builder.enable_extension(ext);
+    }
 
     // 调试模式下启用验证层
 #ifdef _DEBUG
@@ -819,4 +808,4 @@ bool VulkanRenderDevice::CreateSwapChainWithVkBootstrap(uint32_t width, uint32_t
     return true;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

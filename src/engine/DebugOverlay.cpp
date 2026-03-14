@@ -7,15 +7,15 @@
 #include <algorithm>
 #include <cctype>
 
-namespace PrismaEngine {
+namespace Prisma {
 
-DebugOverlay& DebugOverlay::GetInstance() {
+DebugOverlay& DebugOverlay::Get() {
     static DebugOverlay instance;
     return instance;
 }
 
 void DebugOverlay::AddMessage(const std::string& text, DebugMessageType type, float duration) {
-    GetInstance().m_messages.emplace_back(text, type, duration);
+    Get().m_messages.emplace_back(text, type, duration);
 }
 
 void DebugOverlay::Log(const std::string& text) {
@@ -35,7 +35,7 @@ void DebugOverlay::Success(const std::string& text) {
 }
 
 void DebugOverlay::WatchVar(const std::string& name, const float* value) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     // 移除同名变量
     inst.UnwatchVar(name);
     WatchedVar var;
@@ -46,7 +46,7 @@ void DebugOverlay::WatchVar(const std::string& name, const float* value) {
 }
 
 void DebugOverlay::WatchVar(const std::string& name, const int* value) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     inst.UnwatchVar(name);
     WatchedVar var;
     var.name = name;
@@ -56,7 +56,7 @@ void DebugOverlay::WatchVar(const std::string& name, const int* value) {
 }
 
 void DebugOverlay::WatchVar(const std::string& name, const bool* value) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     inst.UnwatchVar(name);
     WatchedVar var;
     var.name = name;
@@ -66,7 +66,7 @@ void DebugOverlay::WatchVar(const std::string& name, const bool* value) {
 }
 
 void DebugOverlay::WatchVar(const std::string& name, const std::string* value) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     inst.UnwatchVar(name);
     WatchedVar var;
     var.name = name;
@@ -76,14 +76,14 @@ void DebugOverlay::WatchVar(const std::string& name, const std::string* value) {
 }
 
 void DebugOverlay::UnwatchVar(const std::string& name) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     auto it = std::remove_if(inst.m_watchedVars.begin(), inst.m_watchedVars.end(),
         [&name](const WatchedVar& v) { return v.name == name; });
     inst.m_watchedVars.erase(it, inst.m_watchedVars.end());
 }
 
 void DebugOverlay::AddStat(const std::string& name, const std::function<std::string()>& getter) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     // 移除同名统计
     inst.RemoveStat(name);
     StatEntry entry;
@@ -93,7 +93,7 @@ void DebugOverlay::AddStat(const std::string& name, const std::function<std::str
 }
 
 void DebugOverlay::SetStat(const std::string& name, const std::string& value) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     // 查找现有统计
     auto it = std::find_if(inst.m_stats.begin(), inst.m_stats.end(),
         [&name](const StatEntry& e) { return e.name == name; });
@@ -109,7 +109,7 @@ void DebugOverlay::SetStat(const std::string& name, const std::string& value) {
 }
 
 void DebugOverlay::RemoveStat(const std::string& name) {
-    auto& inst = GetInstance();
+    auto& inst = Get();
     auto it = std::remove_if(inst.m_stats.begin(), inst.m_stats.end(),
         [&name](const StatEntry& e) { return e.name == name; });
     inst.m_stats.erase(it, inst.m_stats.end());
@@ -125,10 +125,10 @@ const char* DebugOverlay::GetTypeColor(DebugMessageType type) const {
     }
 }
 
-void DebugOverlay::Update(float deltaTime) {
+void DebugOverlay::Update(Timestep ts) {
     // 更新消息时间
     for (auto& msg : m_messages) {
-        msg.timeLeft -= deltaTime;
+        msg.timeLeft -= ts;
     }
     // 移除过期消息
     m_messages.erase(
@@ -265,6 +265,6 @@ void DebugOverlay::Shutdown() {
 DebugOverlay::DebugOverlay() = default;
 DebugOverlay::~DebugOverlay() = default;
 
-} // namespace PrismaEngine
+} // namespace Prisma
 
 #endif // PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG

@@ -1,4 +1,4 @@
-#include "ResourceManager.h"
+#include "RenderResourceManager.h"
 #include "Logger.h"
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IShader.h"
@@ -10,14 +10,14 @@
 #include <fstream>
 #include <algorithm>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
-std::shared_ptr<ResourceManager> ResourceManager::GetInstance() {
-    static std::shared_ptr<ResourceManager> instance = std::make_shared<ResourceManager>();
+std::shared_ptr<RenderResourceManager> RenderResourceManager::Get() {
+    static std::shared_ptr<RenderResourceManager> instance = std::make_shared<RenderResourceManager>();
     return instance;
 }
 
-ResourceManager::ResourceManager() 
+RenderResourceManager::RenderResourceManager() 
     : m_device(nullptr)
     , m_initialized(false)
     , m_nextId(1)
@@ -29,54 +29,55 @@ ResourceManager::ResourceManager()
     m_cacheDirectory = ".resource_cache";
 }
 
-ResourceManager::~ResourceManager() {
+RenderResourceManager::~RenderResourceManager() {
     Shutdown();
 }
 
-int ResourceManager::Initialize() {
+int RenderResourceManager::Initialize() {
     return 0;
 }
 
-int ResourceManager::Initialize(IRenderDevice* device) {
+int RenderResourceManager::Initialize(IRenderDevice* device) {
     if (!device) return 1;
     m_device = device;
     
     // 启动异步加载线程
-    m_loadingThread = std::thread(&ResourceManager::LoadingThreadFunction, this);
+    m_loadingThread = std::thread(&RenderResourceManager::LoadingThreadFunction, this);
     
     m_initialized = true;
-    LOG_INFO("ResourceManager", "Resource manager initialized.");
+    LOG_INFO("RenderResourceManager", "Resource manager initialized.");
     return true;
 }
 
-void ResourceManager::RegisterResource(std::shared_ptr<IResource> resource, const std::string& name) {
+void RenderResourceManager::RegisterResource(std::shared_ptr<IResource> resource, const std::string& name) {
     if (!resource) return;
-    std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
+
     ResourceId id = GenerateId();
-    m_resources[id] = resource;
-    if (!name.empty()) {
-        m_nameToId[name] = id;
+    
+    {
+        std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
+        m_resources[id] = resource;
+        if (!name.empty()) {
+            m_nameToId[name] = id;
+        }
     }
+    
     m_statsDirty = true;
 }
 
-void ResourceManager::Update(float deltaTime) {
+void RenderResourceManager::Update(Timestep ts) {
     if (!m_initialized) return;
 
     if (m_hotReloadEnabled) {
-        m_hotReloadTimer += deltaTime;
+        m_hotReloadTimer += ts;
         if (m_hotReloadTimer >= HOT_RELOAD_INTERVAL) {
             CheckFileModifications();
             m_hotReloadTimer = 0.0f;
         }
     }
-
-    if (m_statsDirty) {
-        UpdateResourceStats();
-    }
 }
 
-void ResourceManager::Shutdown() {
+void RenderResourceManager::Shutdown() {
     m_shouldStopLoading = true;
     m_loadQueueCV.notify_all();
     if (m_loadingThread.joinable()) {
@@ -87,7 +88,7 @@ void ResourceManager::Shutdown() {
     m_initialized = false;
 }
 
-std::shared_ptr<ITexture> ResourceManager::LoadTexture(const std::string& filename, bool generateMips) {
+std::shared_ptr<ITexture> RenderResourceManager::LoadTexture(const std::string& filename, bool generateMips) {
     auto res = GetResource<ITexture>(filename);
     if (res) return res;
 
@@ -101,7 +102,7 @@ std::shared_ptr<ITexture> ResourceManager::LoadTexture(const std::string& filena
     return res;
 }
 
-std::shared_ptr<ITexture> ResourceManager::CreateTexture(const TextureDesc& desc) {
+std::shared_ptr<ITexture> RenderResourceManager::CreateTexture(const TextureDesc& desc) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     auto texture = m_device->GetResourceFactory()->CreateTextureImpl(desc);
     if (texture) {
@@ -112,7 +113,7 @@ std::shared_ptr<ITexture> ResourceManager::CreateTexture(const TextureDesc& desc
     return nullptr;
 }
 
-std::shared_ptr<ITexture> ResourceManager::CreateTextureFromMemory(const void* data, uint64_t dataSize, const TextureDesc& desc) {
+std::shared_ptr<ITexture> RenderResourceManager::CreateTextureFromMemory(const void* data, uint64_t dataSize, const TextureDesc& desc) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     auto texture = m_device->GetResourceFactory()->CreateTextureFromMemory(data, dataSize, desc);
     if (texture) {
@@ -123,7 +124,7 @@ std::shared_ptr<ITexture> ResourceManager::CreateTextureFromMemory(const void* d
     return nullptr;
 }
 
-std::shared_ptr<IBuffer> ResourceManager::CreateBuffer(const BufferDesc& desc) {
+std::shared_ptr<IBuffer> RenderResourceManager::CreateBuffer(const BufferDesc& desc) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     auto buffer = m_device->GetResourceFactory()->CreateBufferImpl(desc);
     if (buffer) {
@@ -134,7 +135,7 @@ std::shared_ptr<IBuffer> ResourceManager::CreateBuffer(const BufferDesc& desc) {
     return nullptr;
 }
 
-std::shared_ptr<IBuffer> ResourceManager::CreateDynamicBuffer(uint64_t size, BufferType type) {
+std::shared_ptr<IBuffer> RenderResourceManager::CreateDynamicBuffer(uint64_t size, BufferType type) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     auto buffer = m_device->GetResourceFactory()->CreateDynamicBuffer(size, type, BufferUsage::Dynamic);
     if (buffer) {
@@ -145,7 +146,7 @@ std::shared_ptr<IBuffer> ResourceManager::CreateDynamicBuffer(uint64_t size, Buf
     return nullptr;
 }
 
-std::shared_ptr<IShader> ResourceManager::LoadShader(const std::string& filename, const std::string& entryPoint, const std::string& target, const std::vector<std::string>& defines) {
+std::shared_ptr<IShader> RenderResourceManager::LoadShader(const std::string& filename, const std::string& entryPoint, const std::string& target, const std::vector<std::string>& defines) {
     auto res = GetResource<IShader>(filename);
     if (res) return res;
 
@@ -159,32 +160,32 @@ std::shared_ptr<IShader> ResourceManager::LoadShader(const std::string& filename
     return res;
 }
 
-std::shared_ptr<IShader> ResourceManager::CreateShader(const std::string& source, const ShaderDesc& desc) {
+std::shared_ptr<IShader> RenderResourceManager::CreateShader(const std::string& source, const ShaderDesc& desc) {
     (void)source; (void)desc; 
     return nullptr;
 }
 
-bool ResourceManager::CompileShader(const ShaderDesc& desc, std::string* errors) {
+bool RenderResourceManager::CompileShader(const ShaderDesc& desc, std::string* errors) {
     (void)desc; (void)errors;
     return false;
 }
 
-std::shared_ptr<IPipeline> ResourceManager::CreatePipeline(const PipelineDesc& desc) {
+std::shared_ptr<IPipeline> RenderResourceManager::CreatePipeline(const PipelineDesc& desc) {
     (void)desc;
     return nullptr;
 }
 
-std::shared_ptr<IPipelineState> ResourceManager::CreatePipelineState(const PipelineStateDesc& desc) {
+std::shared_ptr<IPipelineState> RenderResourceManager::CreatePipelineState(const PipelineStateDesc& desc) {
     (void)desc;
     return nullptr;
 }
 
-std::shared_ptr<IPipeline> ResourceManager::LoadPipeline(const std::string& filename) {
+std::shared_ptr<IPipeline> RenderResourceManager::LoadPipeline(const std::string& filename) {
     (void)filename;
     return nullptr;
 }
 
-std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc) {
+std::shared_ptr<ISampler> RenderResourceManager::CreateSampler(const SamplerDesc& desc) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     auto sampler = m_device->GetResourceFactory()->CreateSamplerImpl(desc);
     if (sampler) {
@@ -195,7 +196,7 @@ std::shared_ptr<ISampler> ResourceManager::CreateSampler(const SamplerDesc& desc
     return nullptr;
 }
 
-std::shared_ptr<ISampler> ResourceManager::GetDefaultSampler() {
+std::shared_ptr<ISampler> RenderResourceManager::GetDefaultSampler() {
     if (!m_defaultSampler) {
         SamplerDesc desc;
         m_defaultSampler = CreateSampler(desc);
@@ -203,7 +204,7 @@ std::shared_ptr<ISampler> ResourceManager::GetDefaultSampler() {
     return m_defaultSampler;
 }
 
-void ResourceManager::ReleaseResource(ResourceId id) {
+void RenderResourceManager::ReleaseResource(ResourceId id) {
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
     auto it = m_resources.find(id);
     if (it != m_resources.end()) {
@@ -212,7 +213,7 @@ void ResourceManager::ReleaseResource(ResourceId id) {
     }
 }
 
-void ResourceManager::ReleaseAllResources() {
+void RenderResourceManager::ReleaseAllResources() {
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
     m_resources.clear();
     m_nameToId.clear();
@@ -220,7 +221,7 @@ void ResourceManager::ReleaseAllResources() {
     m_statsDirty = true;
 }
 
-void ResourceManager::GarbageCollect() {
+void RenderResourceManager::GarbageCollect() {
     std::unique_lock<std::shared_mutex> lock(m_resourceMutex);
     for (auto it = m_resources.begin(); it != m_resources.end(); ) {
         if (it->second.use_count() == 1) {
@@ -239,7 +240,7 @@ void ResourceManager::GarbageCollect() {
     }
 }
 
-ResourceId ResourceManager::LoadTextureAsync(const std::string& filename) {
+ResourceId RenderResourceManager::LoadTextureAsync(const std::string& filename) {
     ResourceId id = GenerateId();
     ResourceLoadTask task;
     task.type = ResourceLoadTask::LoadTexture;
@@ -254,7 +255,7 @@ ResourceId ResourceManager::LoadTextureAsync(const std::string& filename) {
     return id;
 }
 
-ResourceId ResourceManager::LoadShaderAsync(const std::string& filename) {
+ResourceId RenderResourceManager::LoadShaderAsync(const std::string& filename) {
     ResourceId id = GenerateId();
     ResourceLoadTask task;
     task.type = ResourceLoadTask::LoadShader;
@@ -269,34 +270,34 @@ ResourceId ResourceManager::LoadShaderAsync(const std::string& filename) {
     return id;
 }
 
-bool ResourceManager::IsAsyncLoadingComplete(ResourceId id) {
+bool RenderResourceManager::IsAsyncLoadingComplete(ResourceId id) {
     std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
     return m_resources.find(id) != m_resources.end();
 }
 
-ResourceStats ResourceManager::GetResourceStats() const {
+ResourceStats RenderResourceManager::GetResourceStats() const {
     if (m_statsDirty) UpdateResourceStats();
     return m_cachedStats;
 }
 
-void ResourceManager::EnableHotReload(bool enable) {
+void RenderResourceManager::EnableHotReload(bool enable) {
     m_hotReloadEnabled = enable;
     if (enable) UpdateFileTimestamps();
 }
 
-void ResourceManager::CheckAndReloadResources() {
+void RenderResourceManager::CheckAndReloadResources() {
     CheckFileModifications();
 }
 
-std::shared_mutex& ResourceManager::GetResourceLock() {
+std::shared_mutex& RenderResourceManager::GetResourceLock() {
     return m_resourceMutex;
 }
 
-ResourceId ResourceManager::GenerateId() {
+ResourceId RenderResourceManager::GenerateId() {
     return m_nextId++;
 }
 
-void ResourceManager::LoadingThreadFunction() {
+void RenderResourceManager::LoadingThreadFunction() {
     while (!m_shouldStopLoading) {
         ResourceLoadTask task;
         {
@@ -310,7 +311,7 @@ void ResourceManager::LoadingThreadFunction() {
     }
 }
 
-void ResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
+void RenderResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
     std::shared_ptr<IResource> resource = nullptr;
     if (task.type == ResourceLoadTask::LoadTexture) {
         resource = LoadTextureSync(task.path, true);
@@ -323,10 +324,12 @@ void ResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
         m_resources[task.id] = resource;
         if (!task.name.empty()) m_nameToId[task.name] = task.id;
         m_statsDirty = true;
+    } else {
+        LOG_ERROR("RenderResourceManager", "Failed to load resource asynchronously: {0}", task.path);
     }
 }
 
-std::shared_ptr<ITexture> ResourceManager::LoadTextureSync(const std::string& filename, bool generateMips) {
+std::shared_ptr<ITexture> RenderResourceManager::LoadTextureSync(const std::string& filename, bool generateMips) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     TextureDesc desc;
     std::vector<uint8_t> data;
@@ -338,7 +341,7 @@ std::shared_ptr<ITexture> ResourceManager::LoadTextureSync(const std::string& fi
     return nullptr;
 }
 
-std::shared_ptr<IShader> ResourceManager::LoadShaderSync(const std::string& filename, const std::string& entryPoint, const std::string& target, const std::vector<std::string>& defines) {
+std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string& filename, const std::string& entryPoint, const std::string& target, const std::vector<std::string>& defines) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     std::ifstream file(filename);
     if (!file.is_open()) return nullptr;
@@ -351,14 +354,14 @@ std::shared_ptr<IShader> ResourceManager::LoadShaderSync(const std::string& file
     return nullptr;
 }
 
-void ResourceManager::UpdateResourceStats() const {
+void RenderResourceManager::UpdateResourceStats() const {
     std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
     m_cachedStats = {};
     m_cachedStats.totalResources = static_cast<uint32_t>(m_resources.size());
     m_statsDirty = false;
 }
 
-void ResourceManager::UpdateFileTimestamps() {
+void RenderResourceManager::UpdateFileTimestamps() {
     for (const auto& [name, id] : m_nameToId) {
         if (std::filesystem::exists(name)) {
             m_fileTimestamps[name] = std::filesystem::last_write_time(name);
@@ -366,7 +369,7 @@ void ResourceManager::UpdateFileTimestamps() {
     }
 }
 
-void ResourceManager::CheckFileModifications() {
+void RenderResourceManager::CheckFileModifications() {
     for (auto it = m_fileTimestamps.begin(); it != m_fileTimestamps.end(); ++it) {
         if (std::filesystem::exists(it->first)) {
             auto currentTime = std::filesystem::last_write_time(it->first);
@@ -377,18 +380,18 @@ void ResourceManager::CheckFileModifications() {
     }
 }
 
-bool ResourceManager::LoadFromCache(const std::string& filename, std::vector<uint8_t>& data) {
+bool RenderResourceManager::LoadFromCache(const std::string& filename, std::vector<uint8_t>& data) {
     (void)filename; (void)data;
     return false; 
 }
 
-void ResourceManager::SaveToCache(const std::string& filename, const void* data, size_t size) {
+void RenderResourceManager::SaveToCache(const std::string& filename, const void* data, size_t size) {
     (void)filename; (void)data; (void)size;
 }
 
-bool ResourceManager::LoadImageFromFile(const std::string& filename, std::vector<uint8_t>& data, TextureDesc& desc) {
+bool RenderResourceManager::LoadImageFromFile(const std::string& filename, std::vector<uint8_t>& data, TextureDesc& desc) {
     (void)filename; (void)data; (void)desc;
     return false;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

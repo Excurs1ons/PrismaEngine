@@ -4,7 +4,7 @@
 #include "RenderDesc.h"
 #include <vulkan/vulkan.h>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 class VulkanSampler : public ISampler {
 public:
@@ -38,4 +38,4 @@ private:
     SamplerDesc m_desc;
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

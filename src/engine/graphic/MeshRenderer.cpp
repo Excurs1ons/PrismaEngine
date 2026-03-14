@@ -5,7 +5,7 @@
 #include "RenderCommandContext.h"
 #include <cassert>
 
-using PrismaEngine::Graphic::RenderCommandContext;
+using Prisma::Graphic::RenderCommandContext;
 
 void MeshRenderer::DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh> mesh)
 {
@@ -45,7 +45,7 @@ void MeshRenderer::DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh>
 }
 
 // 将内联实现移出到此处
-void MeshRenderer::Render(PrismaEngine::Graphic::RenderCommandContext* context)
+void MeshRenderer::Render(Prisma::Graphic::RenderCommandContext* context)
 {
     LOG_DEBUG("MeshRenderer", "Render called. mesh present={0} material present={1} context ptr={2}", (bool)m_mesh, (bool)m_material, reinterpret_cast<uintptr_t>(context));
 
@@ -87,7 +87,7 @@ void MeshRenderer::Render(PrismaEngine::Graphic::RenderCommandContext* context)
     DrawMesh(context, m_mesh);
 }
 
-void MeshRenderer::Update(float deltaTime) {}
+void MeshRenderer::Update(Timestep ts) {}
 
 MeshRenderer::MeshRenderer() {}
 

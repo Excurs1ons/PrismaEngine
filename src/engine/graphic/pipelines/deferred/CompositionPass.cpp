@@ -1,6 +1,6 @@
 #include "CompositionPass.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 CompositionPass::CompositionPass()
     : LogicalPass("CompositionPass")
@@ -11,8 +11,8 @@ CompositionPass::CompositionPass()
     m_priority = 900;
 }
 
-void CompositionPass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void CompositionPass::Update(Timestep ts) {
+    UpdateTime(ts);
 }
 
 void CompositionPass::Execute(const PassExecutionContext& context) {
@@ -107,4 +107,4 @@ void CompositionPass::SetSSAOParams(float radius, float bias, float power) {
     m_ssaoParams.power = power;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

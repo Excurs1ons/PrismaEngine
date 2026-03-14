@@ -4,7 +4,7 @@
 #include <algorithm>
 
 // 前向声明
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
     class RenderCommandContext;
 }
 
@@ -25,14 +25,14 @@ public:
     }
 
     // 更新节点（递归调用子节点）
-    virtual void Update(float deltaTime) {
+    virtual void Update(Timestep ts) {
         for (auto& child : m_children) {
-            child->Update(deltaTime);
+            child->Update(ts);
         }
     }
 
     // 渲染节点（递归调用子节点）
-    virtual void Render(PrismaEngine::Graphic::RenderCommandContext* context) {
+    virtual void Render(Prisma::Graphic::RenderCommandContext* context) {
         // 应用当前节点的变换
         PushTransform();
 
@@ -49,7 +49,7 @@ public:
     }
 
 protected:
-    virtual void OnRender([[maybe_unused]] PrismaEngine::Graphic::RenderCommandContext* context) {
+    virtual void OnRender([[maybe_unused]] Prisma::Graphic::RenderCommandContext* context) {
         // 默认不做任何渲染
     }
 

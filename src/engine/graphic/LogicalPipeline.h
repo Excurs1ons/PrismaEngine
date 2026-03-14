@@ -7,7 +7,7 @@
 #include <memory>
 #include <algorithm>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 逻辑 Pipeline 类
 /// 职责：管理和执行 IPass
@@ -108,4 +108,4 @@ protected:
     IGBuffer* m_gBuffer;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

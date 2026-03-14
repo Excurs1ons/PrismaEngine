@@ -7,7 +7,7 @@
 #include <mutex>
 #include <atomic>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 /// @brief 高层音频设备
 ///
@@ -38,7 +38,7 @@ public:
     bool IsInitialized() const { return m_initialized.load(); }
 
     /// @brief 更新音频设备（每帧调用）
-    void Update(float deltaTime);
+    void Update(Timestep ts);
 
     /// @brief 获取设备信息
     DeviceInfo GetDeviceInfo() const;
@@ -244,4 +244,4 @@ private:
     std::unordered_map<IAudioDriver::SourceId, AudioVoiceId> m_sourceToVoice;
 };
 
-} // namespace PrismaEngine::Audio
+} // namespace Prisma::Audio

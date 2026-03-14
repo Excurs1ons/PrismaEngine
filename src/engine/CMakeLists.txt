@@ -20,14 +20,13 @@ endif()
 set(CORE_SOURCES
     CommandLineParser.cpp
     Engine.cpp
-    IApplication.cpp
+    Application.cpp
     JobSystem.cpp
     Logger.cpp
     LogScope.cpp
     Object.cpp
     PhysicsSystem.cpp
     Platform.cpp
-    ResourceManager.cpp
     Scene.cpp
     SceneManager.cpp
     Serializable.cpp
@@ -45,8 +44,10 @@ set(CORE_SOURCES
     scripting/ScriptSystem.cpp
     core/AssetManager.cpp
     core/ECS.cpp
-    core/AsyncLoader.cpp
     core/Serialization.cpp
+    core/Layer.cpp
+    core/LayerStack.cpp
+    core/UUID.cpp
     ui/UIComponent.cpp
     ui/UIInputManager.cpp
     ui/2d/ButtonComponent.cpp
@@ -56,7 +57,6 @@ set(CORE_SOURCES
     audio/AudioAPI.cpp
     input/InputDevice.cpp
     input/InputManager.cpp
-    resource/Asset.cpp
     resource/AssetSerializer.cpp
     resource/MeshAsset.cpp
     resource/ResourceFallback.cpp
@@ -90,13 +90,13 @@ set(CORE_HEADERS
     CommandLineParser.h
     Common.h
     Engine.h
+    Application.h
     JobSystem.h
     Logger.h
     LogScope.h
     Object.h
     PhysicsSystem.h
     Platform.h
-    ResourceManager.h
     Scene.h
     SceneManager.h
     Serializable.h
@@ -117,9 +117,14 @@ set(CORE_HEADERS
     scripting/MonoRuntime.h
     scripting/ScriptSystem.h
     core/AssetManager.h
+    core/Asset.h
+    core/UUID.h
     core/ECS.h
     core/ProjectSettings.h
     core/Serialization.h
+    core/Layer.h
+    core/LayerStack.h
+    core/Event.h
     ui/UIComponent.h
     ui/UIInputManager.h
     ui/2d/ButtonComponent.h
@@ -131,7 +136,6 @@ set(CORE_HEADERS
     audio/IAudioDevice.h
     input/InputDevice.h
     input/InputManager.h
-    resource/Asset.h
     resource/AssetSerializer.h
     resource/MeshAsset.h
     resource/ResourceFallback.h
@@ -176,7 +180,7 @@ target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
 
-set_target_properties(Engine PROPERTIES OUTPUT_NAME PrismaEngine)
+set_target_properties(Engine PROPERTIES OUTPUT_NAME Prisma)
 
 if(MSVC)
     set_target_properties(Engine PROPERTIES

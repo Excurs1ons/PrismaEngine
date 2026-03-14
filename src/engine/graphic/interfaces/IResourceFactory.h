@@ -5,7 +5,7 @@
 #include "IPipelineState.h"
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class IRenderDevice;
@@ -232,4 +232,4 @@ public:
     virtual void ProcessDeferredDestructions() = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Core {
+namespace Prisma::Core {
 
 class IImageLoader {
 public:
@@ -24,4 +24,4 @@ public:
     virtual ImageLoadResult loadFromMemory(const uint8_t* data, size_t size) = 0;
 };
 
-} // namespace PrismaEngine::Core
+} // namespace Prisma::Core

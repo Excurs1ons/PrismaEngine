@@ -62,7 +62,7 @@ void ProjectSettingsWindow::LoadSettings() {
         try {
             json j;
             file >> j;
-            PrismaEngine::Serialization::JsonInputArchive archive(j);
+            Prisma::Serialization::JsonInputArchive archive(j);
             m_settings.Deserialize(archive);
         } catch (...) {
             // Handle error or use defaults
@@ -71,7 +71,7 @@ void ProjectSettingsWindow::LoadSettings() {
 }
 
 void ProjectSettingsWindow::SaveSettings() {
-    PrismaEngine::Serialization::JsonOutputArchive archive;
+    Prisma::Serialization::JsonOutputArchive archive;
     m_settings.Serialize(archive);
 
     std::ofstream file(m_settingsPath);

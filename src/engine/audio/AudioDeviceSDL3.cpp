@@ -5,7 +5,7 @@
 #include <cmath>
 #include <chrono>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 // ========== SDL3工厂函数 ==========
 
@@ -112,7 +112,7 @@ bool AudioDeviceSDL3::IsInitialized() const {
     return m_initialized.load();
 }
 
-void AudioDeviceSDL3::Update(float deltaTime) {
+void AudioDeviceSDL3::Update(Timestep ts) {
     if (!m_initialized.load()) {
         return;
     }
@@ -809,4 +809,4 @@ std::string AudioDeviceSDL3::GenerateDebugReport() {
     return report;
 }
 
-} // namespace PrismaEngine::Audio
+} // namespace Prisma::Audio

@@ -8,8 +8,8 @@
     do { \
         LOG_ERROR("RendererVulkan", errorMessage); \
         if (frameScope) { \
-            Logger::GetInstance().PopLogScope(frameScope); \
-            LogScopeManager::GetInstance().DestroyScope(frameScope, false); \
+            Logger::Get().PopLogScope(frameScope); \
+            LogScopeManager::Get().DestroyScope(frameScope, false); \
         } \
         return; \
     } while(0)
@@ -18,8 +18,8 @@
     do { \
         LOG_ERROR("RendererVulkan", errorMessage); \
         if (frameScope) { \
-            Logger::GetInstance().PopLogScope(frameScope); \
-            LogScopeManager::GetInstance().DestroyScope(frameScope, false); \
+            Logger::Get().PopLogScope(frameScope); \
+            LogScopeManager::Get().DestroyScope(frameScope, false); \
         } \
         return returnValue; \
     } while(0)
@@ -30,8 +30,8 @@
         if (result != VK_SUCCESS) { \
             LOG_ERROR("RendererVulkan", errorMessage ": {0}", static_cast<int>(result)); \
             if (frameScope) { \
-                Logger::GetInstance().PopLogScope(frameScope); \
-                LogScopeManager::GetInstance().DestroyScope(frameScope, false); \
+                Logger::Get().PopLogScope(frameScope); \
+                LogScopeManager::Get().DestroyScope(frameScope, false); \
             } \
             return; \
         } \

@@ -6,7 +6,7 @@
 #include <memory>
 #include <cstdint>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Physics {
 
         /**
@@ -339,14 +339,14 @@ namespace PrismaEngine {
 
             /**
              * @brief 物理步进
-             * @param deltaTime 时间步长（秒）
+             * @param ts 时间步长（秒）
              */
-            void integrate(double deltaTime);
+            void integrate(double ts);
 
             /**
              * @brief 计算速度阻尼
              */
-            void applyDamping(double deltaTime);
+            void applyDamping(double ts);
 
             // ========== 用户数据 ==========
 
@@ -396,4 +396,4 @@ namespace PrismaEngine {
         };
 
     } // namespace Physics
-} // namespace PrismaEngine
+} // namespace Prisma

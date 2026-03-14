@@ -4,9 +4,9 @@
 #include "math/MathTypes.h"
 #include "Component.h"
 #include "graphic/ICamera.h"
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
-    class Camera : public Component, public PrismaEngine::Graphic::ICamera {
+    class Camera : public Component, public Prisma::Graphic::ICamera {
     public:
         // 设置和获取清除颜色
         void SetClearColor(float r, float g, float b, float a = 1.0f) override;
@@ -24,7 +24,7 @@ namespace PrismaEngine::Graphic {
         // Component接口实现
         void Initialize() override;
 
-        void Update(float deltaTime) override;
+        void Update(Timestep ts) override;
 
         // 设置透视投影参数
         void SetPerspectiveProjection(float fov, float aspectRatio, float nearPlane = 0.1f,
@@ -33,7 +33,7 @@ namespace PrismaEngine::Graphic {
         // 移动相机（相对于世界坐标系）
         void MoveWorld(float x, float y, float z);
 
-        void MoveWorld(const PrismaEngine::Vector3 &direction);
+        void MoveWorld(const Prisma::Vector3 &direction);
 
         // 移动相机（相对于相机坐标系）
         void MoveLocal(float forward, float right, float up);
@@ -42,24 +42,24 @@ namespace PrismaEngine::Graphic {
         void Rotate(float pitch, float yaw, float roll);
 
         // 看向目标点
-        void LookAt(const PrismaEngine::Vector3 &target);
+        void LookAt(const Prisma::Vector3 &target);
 
         void LookAt(float x, float y, float z);
 
         // ICamera接口实现
-        PrismaEngine::Matrix4x4 GetViewMatrix() const override;
+        Prisma::Matrix4x4 GetViewMatrix() const override;
 
-        PrismaEngine::Matrix4x4 GetProjectionMatrix() const override;
+        Prisma::Matrix4x4 GetProjectionMatrix() const override;
 
-        PrismaEngine::Matrix4x4 GetViewProjectionMatrix() const override;
+        Prisma::Matrix4x4 GetViewProjectionMatrix() const override;
 
-        PrismaEngine::Vector3 GetPosition() const override;
+        Prisma::Vector3 GetPosition() const override;
 
-        PrismaEngine::Vector3 GetForward() const override;
+        Prisma::Vector3 GetForward() const override;
 
-        PrismaEngine::Vector3 GetUp() const override;
+        Prisma::Vector3 GetUp() const override;
 
-        PrismaEngine::Vector3 GetRight() const override;
+        Prisma::Vector3 GetRight() const override;
 
         float GetFOV() const override { return m_fov; }
 
@@ -79,7 +79,7 @@ namespace PrismaEngine::Graphic {
 
         void SetActive(bool active) override { m_isActive = active; }
 
-        PrismaEngine::Vector4 GetClearColor() const override;
+        Prisma::Vector4 GetClearColor() const override;
 
     private:
         void UpdateViewMatrix() const;
@@ -95,13 +95,13 @@ namespace PrismaEngine::Graphic {
         float m_farPlane;
 
         // 缓存的矩阵
-        mutable PrismaEngine::Matrix4x4 m_viewMatrix;
-        mutable PrismaEngine::Matrix4x4 m_projectionMatrix;
+        mutable Prisma::Matrix4x4 m_viewMatrix;
+        mutable Prisma::Matrix4x4 m_projectionMatrix;
 
         // 缓存的向量（从Transform计算得出）
-        mutable PrismaEngine::Vector3 m_forward;
-        mutable PrismaEngine::Vector3 m_up;
-        mutable PrismaEngine::Vector3 m_right;
+        mutable Prisma::Vector3 m_forward;
+        mutable Prisma::Vector3 m_up;
+        mutable Prisma::Vector3 m_right;
 
         // 脏标记
         mutable bool m_isViewDirty;

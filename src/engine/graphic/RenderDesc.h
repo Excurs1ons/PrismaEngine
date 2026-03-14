@@ -9,7 +9,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 class IShader;
 
 /// @brief 缓冲区描述

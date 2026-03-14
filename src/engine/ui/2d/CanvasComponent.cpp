@@ -2,13 +2,13 @@
 #include "../Platform.h"
 #include <algorithm>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 void CanvasComponent::Initialize() {
     int w = 0, h = 0;
-    auto window = PrismaEngine::Platform::GetCurrentWindow();
+    auto window = Prisma::Platform::GetCurrentWindow();
     if (window) {
-        PrismaEngine::Platform::GetWindowSize(window, w, h);
+        Prisma::Platform::GetWindowSize(window, w, h);
     }
     if (w <= 0 || h <= 0) {
         w = 1920;
@@ -18,12 +18,12 @@ void CanvasComponent::Initialize() {
     m_position = {0.0f, 0.0f};
 }
 
-void CanvasComponent::Update(float deltaTime) {
-    UIComponent::Update(deltaTime);
+void CanvasComponent::Update(Timestep ts) {
+    UIComponent::Update(ts);
 
     // 更新所有子组件
     for (auto* child : m_children) {
-        child->Update(deltaTime);
+        child->Update(ts);
     }
 }
 
@@ -38,4 +38,4 @@ void CanvasComponent::RemoveChild(UIComponent* child) {
     m_children.erase(it, m_children.end());
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

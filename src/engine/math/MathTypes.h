@@ -13,7 +13,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <numbers>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // 向量类型
 using Vector2 = glm::vec2;
@@ -129,5 +129,5 @@ inline Quaternion LookRotation(const Vector3& forward, const Vector3& up) {
 
 } // namespace Math
 
-} // namespace PrismaEngine
+} // namespace Prisma
 

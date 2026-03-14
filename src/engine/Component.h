@@ -1,25 +1,29 @@
 #pragma once
 
-
+#include "Export.h"
+#include "core/Timestep.h"
 #include "math/MathTypes.h"
 #include <string>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 class GameObject;
 
-class Component {
+class ENGINE_API Component {
 public:
     virtual ~Component() = default;
     virtual void Initialize(){};
-    virtual void Update([[maybe_unused]] float deltaTime) {}
+    virtual void Update([[maybe_unused]] Timestep ts) {}
     virtual void Shutdown(){};
+    
     void SetOwner(GameObject* gameObject) { this->owner = gameObject; }
-    void Owner(GameObject* gameObject){
+    void Owner(GameObject* gameObject) {
         SetOwner(gameObject);
     }
     [[nodiscard]] GameObject* GetOwner() const { return owner; }
 
+protected:
     GameObject* owner = nullptr;
 };
-} // namespace Engine
+
+} // namespace Prisma

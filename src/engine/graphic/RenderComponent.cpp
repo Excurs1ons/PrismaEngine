@@ -6,8 +6,8 @@
 #include "Transform.h"
 #include "Logger.h"
 
-using PrismaEngine::Graphic::RenderCommandContext;
-namespace PrismaEngine {
+using Prisma::Graphic::RenderCommandContext;
+namespace Prisma {
     namespace Graphic {
 
 
@@ -71,14 +71,14 @@ namespace PrismaEngine {
             // 设置世界矩阵 (寄存器 b1)
             if (auto transform = GetOwner()->GetTransform()) {
                 // 手动构建世界矩阵：位置 * 旋转 * 缩放
-                PrismaEngine::Matrix4x4 translation = glm::translate(glm::mat4(1.0f), transform->position);
-                PrismaEngine::Matrix4x4 rotationX = glm::rotate(glm::mat4(1.0f), transform->rotation.x, Vector3(1,0,0));
-                PrismaEngine::Matrix4x4 rotationY = glm::rotate(glm::mat4(1.0f), transform->rotation.y, Vector3(0,1,0));
-                PrismaEngine::Matrix4x4 rotationZ = glm::rotate(glm::mat4(1.0f), transform->rotation.z, Vector3(0,0,1));
-                PrismaEngine::Matrix4x4 scale = glm::scale(glm::mat4(1.0f), transform->scale);
+                Prisma::Matrix4x4 translation = glm::translate(glm::mat4(1.0f), transform->position);
+                Prisma::Matrix4x4 rotationX = glm::rotate(glm::mat4(1.0f), transform->rotation.x, Vector3(1,0,0));
+                Prisma::Matrix4x4 rotationY = glm::rotate(glm::mat4(1.0f), transform->rotation.y, Vector3(0,1,0));
+                Prisma::Matrix4x4 rotationZ = glm::rotate(glm::mat4(1.0f), transform->rotation.z, Vector3(0,0,1));
+                Prisma::Matrix4x4 scale = glm::scale(glm::mat4(1.0f), transform->scale);
 
                 // 组合矩阵：S * R * T
-                PrismaEngine::Matrix4x4 worldMatrix =
+                Prisma::Matrix4x4 worldMatrix =
                         scale * rotationZ * rotationY * rotationX * translation;
 
                 context->SetConstantBuffer("World", reinterpret_cast<const float *>(&worldMatrix),
@@ -123,7 +123,7 @@ namespace PrismaEngine {
         }
 
         void RenderComponent::SetColor(float r, float g, float b, float a) {
-            m_color = PrismaEngine::Color(r, g, b, a);
+            m_color = Prisma::Color(r, g, b, a);
 
             // 如果已有材质，更新其基础颜色
             if (m_material) {
@@ -132,7 +132,7 @@ namespace PrismaEngine {
         }
 
 // 获取颜色
-        PrismaEngine::Color RenderComponent::GetColor() const {
+        Prisma::Color RenderComponent::GetColor() const {
             if (m_material) {
                 const auto &color = m_material->GetProperties().baseColor;
                 return color;
@@ -141,7 +141,7 @@ namespace PrismaEngine {
         }
 
 // 材质相关方法
-        void RenderComponent::SetMaterial(std::shared_ptr <PrismaEngine::Material> material) {
+        void RenderComponent::SetMaterial(std::shared_ptr <Prisma::Material> material) {
             m_material = std::move(material);
             if (m_material) {
                 // 同步颜色到材质
@@ -149,11 +149,11 @@ namespace PrismaEngine {
             }
         }
 
-        std::shared_ptr <PrismaEngine::Material> RenderComponent::GetOrCreateMaterial() {
+        std::shared_ptr <Prisma::Material> RenderComponent::GetOrCreateMaterial() {
             if (!m_material) {
-                m_material = PrismaEngine::Material::CreateDefault();
+                m_material = Prisma::Material::CreateDefault();
                 // 同步颜色到新材质
-                PrismaEngine::Color color;
+                Prisma::Color color;
                 m_material->SetBaseColor(m_color);
             }
             return m_material;
@@ -164,7 +164,7 @@ namespace PrismaEngine {
                       GetOwner() ? GetOwner()->name : "Unknown");
         }
 
-        void RenderComponent::Update(float deltaTime) {
+        void RenderComponent::Update(Timestep ts) {
             // 渲染组件通常不需要每帧更新，除非有动画等
         }
 

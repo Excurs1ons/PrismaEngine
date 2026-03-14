@@ -1,8 +1,5 @@
 #include "InputDevice.h"
 
-#if defined(_WIN32) && (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
-    #include "drivers/InputDriverWin32.h"
-#endif
 
 #if defined(PRISMA_ENABLE_INPUT_SDL3)
     #include "drivers/InputDriverSDL3.h"
@@ -11,7 +8,7 @@
 
 #include <algorithm>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 // ========== InputDevice ==========
 
@@ -63,11 +60,6 @@ void InputDevice::Update() {
 }
 
 std::unique_ptr<IInputDriver> InputDevice::CreateDriver(InputDriverType type) {
-    #if defined(_WIN32) && (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
-        if (type == InputDriverType::Auto || type == InputDriverType::Win32) {
-            return std::unique_ptr<IInputDriver>(CreateWin32InputDriver());
-        }
-    #endif
 
     #if defined(PRISMA_ENABLE_INPUT_SDL3)
         if (type == InputDriverType::Auto || type == InputDriverType::SDL3) {
@@ -346,4 +338,4 @@ void InputDevice::SetCursorLocked(bool locked) {
 #endif
 }
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input

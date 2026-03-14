@@ -12,7 +12,7 @@
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 class RenderDeviceVulkan;
 
@@ -70,4 +70,4 @@ private:
     VmaAllocator m_vmaAllocator = VK_NULL_HANDLE;
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

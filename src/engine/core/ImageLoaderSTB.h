@@ -6,7 +6,7 @@
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Core {
+namespace Prisma::Core {
 
 /**
  * @brief STB图像加载器实现
@@ -28,5 +28,5 @@ private:
     static bool isFormatSupported(const std::string& extension);
 };
 
-} // namespace PrismaEngine::Core
+} // namespace Prisma::Core
 

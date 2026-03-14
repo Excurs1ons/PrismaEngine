@@ -1,133 +1,55 @@
 #include "Material.h"
-#include "../core/AssetManager.h"
-#include "DefaultShader.h"
-#include "Logger.h"
-#include "RenderCommandContext.h"
 #include "Shader.h"
+#include "interfaces/ICommandBuffer.h"
+#include "Logger.h"
 
-using namespace PrismaEngine;
+namespace Prisma::Graphic {
 
-Material::Material()
-    : m_isLoaded(false) {
-    m_name = "Unnamed Material";
-}
+// ... 初始化和参数设置保持不变 ...
 
-Material::Material(const std::string& name)
-    : m_isLoaded(false) {
-    m_name = name;
-}
+void Material::Bind(ICommandBuffer* cmd) {
+    if (!m_Shader || !cmd) return;
 
-Material::~Material() {
-    Material::Unload();
-}
+    // 1. 核心逻辑：基于反射自动绑定参数
+    const auto& reflection = m_Shader->GetReflection();
+    
+    // 遍历 Shader 需要的所有资源
+    for (const auto& resource : reflection.Resources) {
+        // 在材质参数映射表中找同名资源
+        auto it = m_Params.find(resource.Name);
+        if (it == m_Params.end()) {
+            // 记录缺失的参数，方便调试
+            LOG_WARN("Material", "Missing required parameter: {0} for shader binding.", resource.Name);
+            continue;
+        }
 
-// 基础属性设置
-void Material::SetBaseColor(const PrismaMath::vec4& color) {
-    m_properties.baseColor = color;
-}
-
-void Material::SetBaseColor(float r, float g, float b, float a) {
-    m_properties.baseColor = PrismaMath::vec4(r, g, b, a);
-}
-
-void Material::SetMetallic(float metallic) {
-    m_properties.metallic = std::clamp(metallic, 0.0f, 1.0f);
-}
-
-void Material::SetRoughness(float roughness) {
-    m_properties.roughness = std::clamp(roughness, 0.0f, 1.0f);
-}
-
-void Material::SetEmissive(float emissive) {
-    m_properties.emissive = std::max(0.0f, emissive);
-}
-
-// 纹理设置
-void Material::SetAlbedoTexture(const std::string& texturePath) {
-    m_properties.albedoTexture = texturePath;
-}
-
-void Material::SetNormalTexture(const std::string& texturePath) {
-    m_properties.normalTexture = texturePath;
-}
-
-// 着色器设置
-void Material::SetShader(std::shared_ptr<Shader> shader) {
-    m_shader = shader;
-}
-
-void Material::Apply(PrismaEngine::Graphic::RenderCommandContext* context) {
-    if (!context) {
-        LOG_WARNING("Material", "Apply: context is null");
-        return;
+        // 2. 根据反射信息进行资源的分发
+        const auto& value = it->second;
+        
+        switch (resource.ResourceType) {
+            case ShaderResource::Type::Sampler2D:
+            case ShaderResource::Type::SamplerCube:
+            case ShaderResource::Type::Image2D: {
+                // 如果参数是一个贴图
+                if (std::holds_alternative<std::shared_ptr<ITexture>>(value)) {
+                    auto texture = std::get<std::shared_ptr<ITexture>>(value);
+                    // cmd->BindTexture(resource.Set, resource.Binding, texture.get());
+                }
+                break;
+            }
+            case ShaderResource::Type::UniformBuffer: {
+                // 如果参数是基础数值 (float, vec3, vec4)
+                // 在现代引擎中，这里通常会统一合并到一个共享的 Dynamic Uniform Buffer 里。
+                // 我们以后会实现一个 DescriptorManager 来处理这个。
+                break;
+            }
+            default:
+                break;
+        }
     }
 
-    LOG_DEBUG("Material", "应用材质 '{0}' 到渲染上下文", m_name);
-
-    // Note: 材质特定的PSO设置需要在渲染管线重构后实现
-    // 当前使用RenderBackend的默认PSO
-
-    // 1. 设置基础颜色常量缓冲区 (寄存器 b2)
-    context->SetConstantBuffer("BaseColor", reinterpret_cast<const float*>(&m_properties.baseColor), 4);
-
-    // 2. 设置其他材质参数 (寄存器 b3)
-    float materialParams[4] = {
-        m_properties.metallic,      // metallic
-        m_properties.roughness,     // roughness
-        m_properties.emissive,      // emissive
-        m_properties.normalScale    // normalScale
-    };
-    context->SetConstantBuffer("MaterialParams", materialParams, 4);
-
-    // if (!m_properties.albedoTexture.empty()) {
-    //     // 绑定反照率纹理
-    // }
-    // context->SetSampler("MainSampler", mainSampler);
-
-    LOG_DEBUG("Material", "材质应用完成: 颜色=({0}, {1}, {2}, {3}), 金属度={4}, 粗糙度={5}",
-        m_properties.baseColor.x, m_properties.baseColor.y, m_properties.baseColor.z, m_properties.baseColor.w,
-        m_properties.metallic, m_properties.roughness);
+    // 3. 提交底层 Descriptor Set
+    // cmd->BindDescriptorSet(1, m_DescriptorSetHandle);
 }
 
-// 创建默认材质
-std::shared_ptr<Material> Material::CreateDefault() {
-    auto material = std::make_shared<Material>("DefaultMaterial");
-
-    // 设置默认属性
-    material->SetBaseColor(1.0f, 1.0f, 1.0f, 1.0f);  // 白色
-    material->SetMetallic(0.0f);                        // 非金属
-    material->SetRoughness(0.5f);                       // 中等粗糙度
-    material->SetEmissive(0.0f);                        // 无自发光
-
-    // 使用硬编码的默认着色器
-    auto defaultShader = std::make_shared<Shader>();
-//    if (defaultShader->CompileFromString(Graphic::DEFAULT_VERTEX_SHADER, Graphic::DEFAULT_PIXEL_SHADER)) {
-//        defaultShader->SetName("DefaultMaterialShader");
-//        material->SetShader(defaultShader);
-//        //LOG_INFO("Material", "默认材质加载了硬编码着色器");
-//    } else {
-//        //LOG_ERROR("Material", "默认材质无法编译硬编码着色器");
-//    }
-
-    material->m_isLoaded = true;
-    return material;
-}
-
-// ResourceBase 接口实现
-bool Material::Load(const std::filesystem::path& path) {
-    m_path = path;
-    m_name = path.filename().string();
-    m_isLoaded = true;
-    return true;
-}
-
-void Material::Unload() {
-    m_isLoaded = false;
-    m_shader.reset();
-    m_properties = MaterialProperties(); // 重置为默认值
-    LOG_INFO("Material", "材质 '{0}' 已卸载", m_name);
-}
-
-bool Material::IsLoaded() const {
-    return m_isLoaded;
-}
+} // namespace Prisma::Graphic

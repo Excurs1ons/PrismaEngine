@@ -5,7 +5,7 @@
 #include <memory>
 #include <unordered_map>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 class VulkanPipelineState : public IPipelineState {
 public:
@@ -72,4 +72,4 @@ private:
     std::unordered_map<ShaderType, std::shared_ptr<IShader>> m_shaders;
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

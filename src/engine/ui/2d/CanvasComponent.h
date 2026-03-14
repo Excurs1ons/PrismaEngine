@@ -3,7 +3,7 @@
 #include "UIComponent.h"
 #include <vector>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// @brief 渲染模式
 enum class CanvasRenderMode {
@@ -19,7 +19,7 @@ public:
     ~CanvasComponent() override = default;
 
     void Initialize() override;
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
 
     /// @brief 设置渲染模式
     void SetRenderMode(CanvasRenderMode mode) { m_renderMode = mode; }
@@ -37,4 +37,4 @@ private:
     std::vector<UIComponent*> m_children;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

@@ -8,7 +8,7 @@
 #include <functional>
 #include <utility>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Graphic {
 
         // 前向声明
@@ -361,4 +361,4 @@ namespace PrismaEngine {
         };
 
     } // namespace Graphic
-} // namespace PrismaEngine
+} // namespace Prisma

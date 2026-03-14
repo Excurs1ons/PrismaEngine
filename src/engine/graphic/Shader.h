@@ -1,115 +1,58 @@
 #pragma once
-#include "../core/AssetManager.h"
-#include "AssetBase.h"
-#include "interfaces/IShader.h"
-#include "interfaces/RenderTypes.h"
-#include <filesystem>
+
+#include "Asset.h"
+#include "interfaces/ShaderReflection.h"
+#include <vector>
 #include <memory>
-#include <string>
+#include <unordered_map>
 
-// 前置声明特定平台的着色器类
-namespace PrismaEngine::Graphic::DX12 {
-    class DX12Shader;
-}
+namespace Prisma::Graphic {
 
-namespace PrismaEngine::Graphic::Vulkan {
-    class VulkanShader;
-}
-
-namespace PrismaEngine {
-class RenderDevice;  // 前置声明
-
-/// @brief 着色器资源类
-/// 根据编译时的宏定义自动选择使用DX12Shader或VulkanShader
-class Shader : public AssetBase {
+/**
+ * @brief 现代着色器资产 (Shader Asset)
+ * 这是一个纯数据容器，包含 SPIR-V 字节码和反射信息。
+ * 不再有复杂的 Implementation 切换，RHI 后端直接消费这些数据。
+ */
+class ENGINE_API Shader : public Prisma::Asset {
 public:
-    Shader();
-    Shader(std::shared_ptr<PrismaEngine::Graphic::IShader> impl);
-    ~Shader();
+    Shader() = default;
+    ~Shader() override = default;
 
-    // IAsset implementation
+    // Asset 接口
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
-    bool IsLoaded() const override;
-    AssetType GetType() const override;
+    bool IsLoaded() const override { return !m_Bytecode.empty(); }
+    Prisma::AssetType GetType() const override { return Prisma::AssetType::Shader; }
 
-    // 着色器特定方法
-    PrismaEngine::Graphic::ShaderType GetShaderType() const;
-    PrismaEngine::Graphic::ShaderLanguage GetLanguage() const;
-    const std::string& GetEntryPoint() const;
-    const std::string& GetTarget() const;
-    const std::vector<uint8_t>& GetBytecode() const;
-    const std::string& GetFilename() const;
+    // 访问器
+    const std::vector<uint32_t>& GetBytecode() const { return m_Bytecode; }
+    const ShaderReflection& GetReflection() const { return m_Reflection; }
 
-    // 反射信息
-    const PrismaEngine::Graphic::ShaderReflection& GetReflection() const;
-    bool HasReflection() const;
-
-    // 资源查找
-    const PrismaEngine::Graphic::ShaderReflection::Resource* FindResource(const std::string& name) const;
-    const PrismaEngine::Graphic::ShaderReflection::Resource* FindResourceByBindPoint(uint32_t bindPoint, uint32_t space = 0) const;
-    const PrismaEngine::Graphic::ShaderReflection::ConstantBuffer* FindConstantBuffer(const std::string& name) const;
-
-    // 输入/输出参数
-    uint32_t GetInputParameterCount() const;
-    const PrismaEngine::Graphic::ShaderReflection::InputParameter& GetInputParameter(uint32_t index) const;
-    uint32_t GetOutputParameterCount() const;
-    const PrismaEngine::Graphic::ShaderReflection::OutputParameter& GetOutputParameter(uint32_t index) const;
-
-    // 重新编译
-    bool Recompile(const PrismaEngine::Graphic::ShaderCompileOptions* options = nullptr, std::string* errors = nullptr);
-    bool RecompileFromSource(const std::string& source,
-                            const PrismaEngine::Graphic::ShaderCompileOptions* options = nullptr,
-                            std::string* errors = nullptr);
-    bool ReloadFromFile(std::string* errors = nullptr);
-
-    // 热重载
-    void EnableHotReload(bool enable);
-    bool NeedsReload() const;
-    uint64_t GetFileModificationTime() const;
-
-    // 编译信息
-    const std::string& GetCompileLog() const;
-    bool HasWarnings() const;
-    bool HasErrors() const;
-    bool Validate() const;
-    std::string Disassemble() const;
-
-    // 调试
-    bool DebugSaveToFile(const std::string& filename,
-                        bool includeDisassembly = false,
-                        bool includeReflection = false) const;
-
-    // 依赖信息
-    const std::vector<std::string>& GetDependencies() const;
-    const std::vector<std::string>& GetIncludes() const;
-    const std::vector<std::string>& GetDefines() const;
-
-    // 尝试加载着色器，失败时回退到默认着色器
-    bool LoadWithFallback(const std::filesystem::path& path);
-
-    // 获取平台特定的着色器实现
-    std::shared_ptr<PrismaEngine::Graphic::IShader> GetImplementation() const { return m_impl; }
-
-    // 获取原生句柄（用于平台特定操作）
-    const void* GetNativeHandle() const;
+    // 反射查找
+    const ShaderResource* FindResource(const std::string& name) const;
 
 private:
-    std::shared_ptr<PrismaEngine::Graphic::IShader> m_impl;
-
-    // 内部辅助方法
-    bool LoadShaderFromFile(const std::filesystem::path& path);
-    std::shared_ptr<PrismaEngine::Graphic::IShader> CreatePlatformShader();
-    bool LoadDefaultShader();
-
-    // 平台特定的加载方法
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-    bool LoadVulkanShader(const std::filesystem::path& path);
-#endif
+    std::vector<uint32_t> m_Bytecode;
+    ShaderReflection m_Reflection;
+    
+    // 快速查找映射表
+    std::unordered_map<std::string, uint32_t> m_ResourceMap;
 };
 
-// 工厂函数
-std::shared_ptr<Shader> CreateShader(const std::filesystem::path& path);
-std::shared_ptr<Shader> CreateShader(const std::string& vertexSource, const std::string& pixelSource);
+/**
+ * @brief 着色器管理器 (属于 Engine 的子系统)
+ */
+class ShaderLibrary : public ISubSystem {
+public:
+    int Initialize() override { return 0; }
+    void Shutdown() override { m_Shaders.clear(); }
+    void Update(Timestep ts) override {}
 
-}  // namespace Engine
+    std::shared_ptr<Shader> Load(const std::string& name, const std::filesystem::path& path);
+    std::shared_ptr<Shader> Get(const std::string& name);
+
+private:
+    std::unordered_map<std::string, std::shared_ptr<Shader>> m_Shaders;
+};
+
+} // namespace Prisma::Graphic

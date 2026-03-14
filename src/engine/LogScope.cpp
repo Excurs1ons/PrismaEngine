@@ -28,7 +28,7 @@ void LogScope::EndScope(bool success) {
     // 只有在失败时才输出缓存的日志
     if (!success) {
         for (const auto& entry : m_cachedEntries) {
-            Logger::GetInstance().WriteEntry(entry);
+            Logger::Get().WriteEntry(entry);
         }
     }
     

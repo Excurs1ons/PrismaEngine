@@ -6,18 +6,18 @@
 #include <sstream>
 #include <algorithm>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 using namespace Serialization;
 
 bool MeshAsset::Load(const std::filesystem::path& path) {
     try {
         if (!std::filesystem::exists(path)) {
-            LOG_ERROR("Mesh", "Mesh file does not exist: {0}", path.string());
+            LOG_ERROR("MeshAsset", "Mesh file does not exist: {0}", path.string());
             return false;
         }
 
-        SubMesh triangle;
+        Graphic::SubMesh triangle;
         triangle.name          = "Triangle";
         triangle.materialIndex = 0;
 
@@ -29,27 +29,26 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
         triangle.indices = {0, 1, 2};
         m_subMeshes.push_back(triangle);
 
-        m_path                = path;
-        m_name                = path.filename().string();
-        m_metadata.sourcePath = path;
-        m_metadata.name       = m_name;
+        Path                = path;
+        Name                = path.filename().string();
+        m_Metadata.sourcePath = path;
+        m_Metadata.name       = Name;
 
-        m_isLoaded = true;
+        SetLoaded(true);
         return true;
     } catch (const std::exception& e) {
-        LOG_ERROR("Mesh", "Exception while loading mesh: {0}", e.what());
+        LOG_ERROR("MeshAsset", "Exception while loading mesh: {0}", e.what());
         return false;
     }
 }
 
 void MeshAsset::Unload() {
+    Asset::Unload();
     m_subMeshes.clear();
-    m_isLoaded    = false;
 }
 
 void MeshAsset::Serialize(OutputArchive& archive) const {
-    archive.BeginObject("MeshAsset");
-    archive("metadata", m_metadata);
+    Asset::Serialize(archive);
     
     uint32_t count = static_cast<uint32_t>(m_subMeshes.size());
     archive.BeginArray("subMeshes", count);
@@ -60,12 +59,10 @@ void MeshAsset::Serialize(OutputArchive& archive) const {
         archive.EndObject();
     }
     archive.EndArray();
-    archive.EndObject();
 }
 
 void MeshAsset::Deserialize(InputArchive& archive) {
-    archive.BeginObject("MeshAsset");
-    archive("metadata", m_metadata);
+    Asset::Deserialize(archive);
 
     uint32_t count = 0;
     archive.BeginArray("subMeshes", count);
@@ -77,37 +74,22 @@ void MeshAsset::Deserialize(InputArchive& archive) {
         archive.EndObject();
     }
     archive.EndArray();
-    archive.EndObject();
 
-    m_isLoaded = true;
-    m_name = m_metadata.name;
+    SetLoaded(true);
 }
 
-bool MeshAsset::DeserializeFromFile(const std::filesystem::path& path, SerializationFormat format) {
-    auto deserializedAsset = AssetSerializer::DeserializeFromFile<MeshAsset>(path, format);
-    if (deserializedAsset) {
-        m_subMeshes = std::move(deserializedAsset->m_subMeshes);
-        m_metadata = deserializedAsset->m_metadata;
-        m_path = path;
-        m_name = deserializedAsset->m_name;
-        m_isLoaded = true;
-        return true;
-    }
-    return false;
-}
-
-void MeshAsset::AddSubMesh(const SubMesh& subMesh) {
+void MeshAsset::AddSubMesh(const Graphic::SubMesh& subMesh) {
     m_subMeshes.push_back(subMesh);
-    m_isLoaded = true;
+    SetLoaded(true);
 }
 
-void MeshAsset::SetBoundingBox(const BoundingBox& boundingBox) {
+void MeshAsset::SetBoundingBox(const Graphic::BoundingBox& boundingBox) {
     m_boundingBox = boundingBox;
 }
 
 void MeshAsset::Clear() {
     m_subMeshes.clear();
-    m_isLoaded = false;
+    SetLoaded(false);
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

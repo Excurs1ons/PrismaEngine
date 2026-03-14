@@ -22,9 +22,9 @@
 #include "ISwapChain.h"
 #include "IFence.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 渲染系统命名空间
 /// 包含所有渲染相关的抽象接口和类型定义
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

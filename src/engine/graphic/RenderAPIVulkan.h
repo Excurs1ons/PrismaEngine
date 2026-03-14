@@ -24,7 +24,7 @@
 #include <vector>
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief Vulkan 渲染设备实现
 class VulkanRenderDevice : public IRenderDevice {
@@ -194,4 +194,4 @@ private:
     uint32_t m_frameCount = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

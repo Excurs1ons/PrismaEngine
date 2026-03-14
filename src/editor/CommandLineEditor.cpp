@@ -6,11 +6,11 @@
 #include <sstream>
 #include <unordered_map>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 namespace fs = std::filesystem;
 
-std::shared_ptr<CommandLineEditor> CommandLineEditor::GetInstance() {
+std::shared_ptr<CommandLineEditor> CommandLineEditor::Get() {
     static std::shared_ptr<CommandLineEditor> instance = std::make_shared<CommandLineEditor>();
     return instance;
 }
@@ -57,7 +57,7 @@ int CommandLineEditor::Initialize() {
         }
     }
 
-    Logger::GetInstance().SetMinLevel(logLevel);
+    Logger::Get().SetMinLevel(logLevel);
     LOG_INFO("CommandLineEditor", "命令行编辑器初始化完成");
     return 0;
 }
@@ -158,4 +158,4 @@ int CommandLineEditor::CommandRun(const std::vector<std::string>& args) {
     return 0;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

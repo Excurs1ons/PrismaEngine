@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 透明物体逻辑 Pass
 /// 使用深度缓冲和 Alpha 混合渲染透明物体
@@ -33,8 +33,8 @@ public:
     void Execute(const PassExecutionContext& context) override;
 
     /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    /// @param ts 时间增量
+    void Update(Timestep ts) override;
 
     // === 渲染设置 ===
 
@@ -70,4 +70,4 @@ private:
     RenderStats m_stats;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

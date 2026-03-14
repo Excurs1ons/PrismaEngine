@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <string>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 /// @brief 按键码
 enum class KeyCode : uint32_t {
@@ -183,4 +183,4 @@ public:
 /// @brief 驱动创建函数类型
 using DriverCreateFunc = IInputDriver*(*)();
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input

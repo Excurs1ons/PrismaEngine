@@ -17,9 +17,35 @@
 #include <chrono>
 #include <iostream>
 #include <thread>
+#include <cstdlib>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
-namespace PrismaEngine {
+namespace Prisma {
+
+...
+
+std::vector<const char*> Platform::GetRequiredVulkanInstanceExtensions() {
+    uint32_t count = 0;
+    const char* const* extensions = SDL_Vulkan_GetInstanceExtensions(&count);
+    if (!extensions) return {};
+    return std::vector<const char*>(extensions, extensions + count);
+}
+
+bool Platform::CreateVulkanSurface(void* instance, WindowHandle window, void** outSurface) {
+    if (!instance || !window || !outSurface) return false;
+    VkSurfaceKHR surface = VK_NULL_HANDLE;
+    if (SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(window),
+                                  static_cast<VkInstance>(instance), nullptr, &surface)) {
+        *outSurface = static_cast<void*>(surface);
+        return true;
+    }
+    return false;
+}
 
 // ------------------------------------------------------------
 // Platform 类静态成员变量定义
@@ -131,14 +157,29 @@ void Platform::SetWindowTitle(WindowHandle window, const char* title) {
 void Platform::PumpEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (s_eventCallback) {
-            if (s_eventCallback(&event)) {
-                continue;
-            }
-        }
+        if (!s_eventCallback) continue;
 
-        if (event.type == SDL_EVENT_QUIT) {
-            s_shouldClose = true;
+        switch (event.type) {
+            case SDL_EVENT_QUIT: {
+                WindowCloseEvent e;
+                e.NativeEvent = &event;
+                s_eventCallback(e);
+                s_shouldClose = true;
+                break;
+            }
+            case SDL_EVENT_WINDOW_RESIZED: {
+                WindowResizeEvent e(event.window.data1, event.window.data2);
+                e.NativeEvent = &event;
+                s_eventCallback(e);
+                break;
+            }
+            case SDL_EVENT_KEY_DOWN: {
+                KeyPressedEvent e(event.key.scancode, event.key.repeat);
+                e.NativeEvent = &event;
+                s_eventCallback(e);
+                break;
+            }
+            // ... 更多事件转换 ...
         }
     }
 }
@@ -390,6 +431,63 @@ bool Platform::CreateVulkanSurface(void* instance, WindowHandle windowHandle, vo
 // ------------------------------------------------------------
 // IPlatformLogger 接口实现
 // ------------------------------------------------------------
+void Platform::DebugPrint(const char* message) {
+    std::cout << message;
+}
+
+void Platform::SetConsoleColor(LogLevel level) {
+    switch (level) {
+        case LogLevel::Trace:   std::cout << "\033[37m"; break;
+        case LogLevel::Debug:   std::cout << "\033[36m"; break;
+        case LogLevel::Info:    std::cout << "\033[32m"; break;
+        case LogLevel::Warning: std::cout << "\033[33m"; break;
+        case LogLevel::Error:   std::cout << "\033[31m"; break;
+        case LogLevel::Fatal:   std::cout << "\033[41;37m"; break;
+        default: ResetConsoleColor(); break;
+    }
+}
+
+void Platform::ResetConsoleColor() {
+    std::cout << "\033[0m";
+}
+
+uint32_t Platform::GetProcessId() {
+#if defined(_WIN32)
+    return (uint32_t)GetCurrentProcessId();
+#else
+    return (uint32_t)getpid();
+#endif
+}
+
+std::tm Platform::GetLocalTime(std::time_t time) {
+    std::tm tm;
+    localtime_r(&time, &tm);
+    return tm;
+}
+
+void Platform::ShowMessageBox(const std::string& title, const std::string& message) {
+    SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, title.c_str(), message.c_str(), nullptr);
+}
+
+bool Platform::HasDisplaySupport() {
+    const char* display = getenv("DISPLAY");
+    const char* wayland = getenv("WAYLAND_DISPLAY");
+    return display != nullptr || wayland != nullptr;
+}
+
+bool Platform::IsRunningInTerminal() {
+    return isatty(fileno(stdin)) != 0;
+}
+
+std::string Platform::GetEnvironmentVariable(const std::string& name) {
+    const char* val = getenv(name.c_str());
+    return val ? std::string(val) : "";
+}
+
+void Platform::SetEnvironmentVariable(const std::string& name, const std::string& value) {
+    setenv(name.c_str(), value.c_str(), 1);
+}
+
 void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
     (void)level;
     (void)tag;
@@ -414,6 +512,6 @@ const char* Platform::GetLogDirectoryPath() {
     return logPath;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma
 
 #endif // PRISMA_SDL_AVAILABLE

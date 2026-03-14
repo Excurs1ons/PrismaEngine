@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 构造/析构
@@ -27,14 +27,14 @@ void TilemapRenderer::Initialize() {
     // 材质会在首次渲染时创建
 }
 
-void TilemapRenderer::Update(float deltaTime) {
+void TilemapRenderer::Update(Timestep ts) {
     if (!m_tilemap || !m_tilemap->IsLoaded()) {
         return;
     }
 
     // 更新动画瓦片
     if (m_animatedTilesEnabled) {
-        UpdateAnimatedTiles(deltaTime);
+        UpdateAnimatedTiles(ts);
     }
 
     // 如果几何体脏，重建
@@ -176,7 +176,7 @@ void TilemapRenderer::Render(Graphic::RenderCommandContext* context) {
 // 动画瓦片
 // ============================================================================
 
-void TilemapRenderer::UpdateAnimatedTiles(float deltaTime) {
+void TilemapRenderer::UpdateAnimatedTiles(Timestep ts) {
     if (!m_tilemap || !m_tilemap->IsLoaded()) {
         return;
     }
@@ -187,7 +187,7 @@ void TilemapRenderer::UpdateAnimatedTiles(float deltaTime) {
         }
 
         // 更新计时器
-        animTile.frameTimer += deltaTime * 1000.0f; // 转换为毫秒
+        animTile.frameTimer += ts * 1000.0f; // 转换为毫秒
 
         const Frame& currentFrame = animTile.tile->animation[animTile.currentFrame];
         if (animTile.frameTimer >= currentFrame.duration) {
@@ -589,4 +589,4 @@ void TilemapRenderer::CreateMaterial() {
     m_materialDirty = false;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

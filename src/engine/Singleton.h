@@ -9,7 +9,7 @@ public:
     Singleton(const Singleton&) = delete;
     Singleton& operator=(const Singleton&) = delete;
 
-    static T& GetInstance() {
+    static T& Get() {
         static T instance;
         return instance;
     }
@@ -25,7 +25,7 @@ public:
     SharedSingleton(const SharedSingleton&)      = delete;
     SharedSingleton& operator=(const SharedSingleton&) = delete;
 
-    static std::shared_ptr<T> GetInstance() {
+    static std::shared_ptr<T> Get() {
         static std::shared_ptr<T> instance = std::make_shared<T>();
         return instance;
     }
