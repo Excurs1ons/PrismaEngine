@@ -5,12 +5,14 @@
 #include "Platform.h"
 #include "input/InputManager.h"
 #include "math/MathTypes.h"
+#include "Engine.h"
 #include <cmath>
-using namespace Prisma::Graphic;
 
 namespace Prisma {
+
 using namespace Input;
 using namespace Graphic;
+
 CameraController::CameraController() : Component() {
     m_mouseControl = false;  // 默认关闭鼠标控制
     m_firstMouse   = true;
@@ -26,14 +28,16 @@ void CameraController::Initialize() {
     }
 
     // 获取初始鼠标位置
-    auto mousePos = InputManager::Get()->GetMousePosition();
-    m_lastMouseX  = mousePos.x;
-    m_lastMouseY  = mousePos.y;
+    auto inputManager = Engine::Get().GetInputManager();
+    if (inputManager) {
+        auto mousePos = inputManager->GetMousePosition();
+        m_lastMouseX  = mousePos.x;
+        m_lastMouseY  = mousePos.y;
+    }
 }
 
 void CameraController::Update(Timestep ts) {
     if (m_camera == nullptr) {
-        LOG_WARNING("CameraController", "Camera not found on GameObject");
         return;
     }
 
@@ -42,50 +46,45 @@ void CameraController::Update(Timestep ts) {
 }
 
 void CameraController::HandleKeyboardInput(Timestep ts) {
+    auto inputManager = Engine::Get().GetInputManager();
+    if (!inputManager) return;
+
     float moveAmount = m_moveSpeed * ts;
-    bool moved       = false;
 
     // WASD 控制移动
-    if (InputManager::Get()->IsKeyPressed(KeyCode::W)) {
-        LOG_INFO("CameraController", "W key pressed - moving forward");
+    if (inputManager->IsKeyPressed(KeyCode::W)) {
         m_camera->MoveLocal(moveAmount, 0.0f, 0.0f);  // 前进
-        moved = true;
     }
-    if (InputManager::Get()->IsKeyPressed(KeyCode::S)) {
+    if (inputManager->IsKeyPressed(KeyCode::S)) {
         m_camera->MoveLocal(-moveAmount, 0.0f, 0.0f);  // 后退
-        moved = true;
     }
-    if (InputManager::Get()->IsKeyPressed(KeyCode::A)) {
+    if (inputManager->IsKeyPressed(KeyCode::A)) {
         m_camera->MoveLocal(0.0f, -moveAmount, 0.0f);  // 左移
-        moved = true;
     }
-    if (InputManager::Get()->IsKeyPressed(KeyCode::D)) {
+    if (inputManager->IsKeyPressed(KeyCode::D)) {
         m_camera->MoveLocal(0.0f, moveAmount, 0.0f);  // 右移
-        moved = true;
     }
 
     // Q/E 控制上下移动
-    if (InputManager::Get()->IsKeyPressed(KeyCode::Q)) {
+    if (inputManager->IsKeyPressed(KeyCode::Q)) {
         m_camera->MoveLocal(0.0f, 0.0f, -moveAmount);  // 下降
-        moved = true;
     }
-    if (InputManager::Get()->IsKeyPressed(KeyCode::E)) {
+    if (inputManager->IsKeyPressed(KeyCode::E)) {
         m_camera->MoveLocal(0.0f, 0.0f, moveAmount);  // 上升
-        moved = true;
     }
 
     // 方向键控制旋转
     float rotationAmount = m_rotationSpeed * ts;
-    if (InputManager::Get()->IsKeyPressed(KeyCode::ArrowLeft)) {
+    if (inputManager->IsKeyPressed(KeyCode::ArrowLeft)) {
         m_camera->Rotate(0.0f, -glm::radians(rotationAmount), 0.0f);  // 左转
     }
-    if (InputManager::Get()->IsKeyPressed(KeyCode::ArrowRight)) {
+    if (inputManager->IsKeyPressed(KeyCode::ArrowRight)) {
         m_camera->Rotate(0.0f, glm::radians(rotationAmount), 0.0f);  // 右转
     }
-    if (InputManager::Get()->IsKeyPressed(KeyCode::ArrowUp)) {
+    if (inputManager->IsKeyPressed(KeyCode::ArrowUp)) {
         m_camera->Rotate(-glm::radians(rotationAmount), 0.0f, 0.0f);  // 上看
     }
-    if (InputManager::Get()->IsKeyPressed(KeyCode::ArrowDown)) {
+    if (inputManager->IsKeyPressed(KeyCode::ArrowDown)) {
         m_camera->Rotate(glm::radians(rotationAmount), 0.0f, 0.0f);  // 下看
     }
 }
@@ -96,8 +95,11 @@ void CameraController::HandleMouseInput(Timestep ts) {
         return;
     }
 
+    auto inputManager = Engine::Get().GetInputManager();
+    if (!inputManager) return;
+
     // 获取当前鼠标位置
-    auto mousePos = InputManager::Get()->GetMousePosition();
+    auto mousePos = inputManager->GetMousePosition();
     float mouseX  = mousePos.x;
     float mouseY  = mousePos.y;
 

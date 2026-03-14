@@ -38,11 +38,12 @@ public:
         return nullptr;
     }
 
-    void OnUpdate(Timestep ts) {
+    void Update(Timestep ts) {
         for (auto& comp : m_Components) {
-            comp->OnUpdate(ts);
+            comp->Update(ts);
         }
     }
+
 
 private:
     std::shared_ptr<Transform> m_Transform;

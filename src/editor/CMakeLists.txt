@@ -48,10 +48,10 @@ target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 target_link_libraries(Editor PRIVATE Engine)
 
 # 2. 创建编辑器启动器 (EXE)
-add_executable(Prisma main.cpp)
+add_executable(PrismaEditor main.cpp)
 
 # 链接到编辑器 DLL 和 引擎 DLL
-target_link_libraries(Prisma PRIVATE Editor Engine)
+target_link_libraries(PrismaEditor PRIVATE Editor Engine)
 
 # ========== 路径与输出配置 ==========
 
@@ -63,7 +63,7 @@ set_target_properties(Editor PROPERTIES
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 )
 
-set_target_properties(Prisma PROPERTIES
+set_target_properties(PrismaEditor PROPERTIES
     OUTPUT_NAME "Prisma"
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )

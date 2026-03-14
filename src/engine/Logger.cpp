@@ -4,14 +4,11 @@
 #include "pch.h"
 #include <filesystem>
 #include <iostream>
-#include <chrono>
-#include <ctime>
+#include <iomanip>
+#include <sstream>
 
-// 为了实现完全独立，Logger 直接包含必要的原生头文件，不经过 Platform
-#ifdef _WIN32
-    #include <windows.h>
-#else
-    #include <unistd.h>
+#if defined(_WIN32)
+#include <Windows.h>
 #endif
 
 namespace Prisma {
@@ -50,96 +47,258 @@ bool Logger::IsInitialized() const {
     return m_Initialized;
 }
 
+void Logger::SetPlatformLogger(IPlatformLogger* platformLogger) {
+    this->m_PlatformLogger = platformLogger;
+}
+
+CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
+    return CallStackOutput::None;
+}
+
 bool Logger::Initialize(const LogConfig& config) {
-    if (m_Initialized) return false;
-    m_Config = config;
+    if (m_Initialized) {
+        return false;
+    }
     m_Initialized = true;
+    m_Config     = config;
+
+    std::string logFilePath = m_Config.logFilePath;
+
+    if (m_PlatformLogger != nullptr) {
+        const char* platformLogDir = m_PlatformLogger->GetLogDirectoryPath();
+        if (platformLogDir != nullptr) {
+            std::filesystem::path originalPath(m_Config.logFilePath);
+            std::filesystem::path platformPath(platformLogDir);
+            platformPath /= originalPath.filename();
+            logFilePath = platformPath.string();
+        }
+    }
+
+    std::filesystem::path logPath(logFilePath);
+    if (logPath.has_parent_path()) {
+        std::filesystem::create_directories(logPath.parent_path());
+    }
+
+    if (static_cast<int>(m_Config.target) & static_cast<int>(LogTarget::File)) {
+        m_FileStream.open(logFilePath, std::ios::app);
+    }
+
+#if defined(_WIN32)
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    if (m_Config.enableColors) {
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        DWORD mode      = 0;
+        if (GetConsoleMode(hConsole, &mode)) {
+            mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+            SetConsoleMode(hConsole, mode);
+        }
+    }
+#endif
+
+    if (m_Config.asyncMode) {
+        m_Running      = true;
+        m_WorkerThread = std::make_unique<std::thread>(&Logger::ProcessQueue, this);
+    }
+
     return true;
 }
 
 void Logger::Shutdown() {
+    if (m_Config.asyncMode) {
+        m_Running = false;
+        m_QueueCondition.notify_one();
+        if (m_WorkerThread && m_WorkerThread->joinable()) {
+            m_WorkerThread->join();
+        }
+    }
+
+    Flush();
+
+    if (m_FileStream.is_open()) {
+        m_FileStream.close();
+    }
     m_Initialized = false;
 }
 
-// 内部私有的独立颜色设置方法，不依赖 Platform
-static void InternalSetConsoleColor(LogLevel level) {
-#ifdef _WIN32
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE) return;
-    WORD attr = 0;
-    switch (level) {
-        case LogLevel::Trace:   attr = FOREGROUND_INTENSITY; break;
-        case LogLevel::Debug:   attr = FOREGROUND_GREEN | FOREGROUND_BLUE; break;
-        case LogLevel::Info:    attr = FOREGROUND_GREEN; break;
-        case LogLevel::Warning: attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
-        case LogLevel::Error:   attr = FOREGROUND_RED | FOREGROUND_INTENSITY; break;
-        case LogLevel::Fatal:   attr = BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
-        default:                attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; break;
+Logger::~Logger() {
+    if (m_Initialized) {
+        Shutdown();
     }
-    SetConsoleTextAttribute(hConsole, attr);
+}
+
+void Logger::LogInternal(LogLevel level, const std::string& category, const std::string& message, SourceLocation loc) {
+    if (level < m_Config.minLevel)
+        return;
+
+    LogEntry entry(level, message, category, loc);
+
+    LogScope* currentScope = GetCurrentLogScope();
+    if (currentScope) {
+        currentScope->CacheLogEntry(entry);
+    } else {
+        if (m_Config.asyncMode) {
+            EnqueueEntry(std::move(entry));
+        } else {
+            WriteEntry(entry);
+        }
+    }
+}
+
+std::string Logger::WStringToString(const std::wstring& wstr) {
+    if (wstr.empty())
+        return std::string();
+#if defined(_WIN32)
+    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);   
+    std::string strTo(size_needed, 0);
+    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);      
+    return strTo;
 #else
-    switch (level) {
-        case LogLevel::Trace:   std::cout << "\033[37m"; break;
-        case LogLevel::Debug:   std::cout << "\033[36m"; break;
-        case LogLevel::Info:    std::cout << "\033[32m"; break;
-        case LogLevel::Warning: std::cout << "\033[33m"; break;
-        case LogLevel::Error:   std::cout << "\033[31m"; break;
-        case LogLevel::Fatal:   std::cout << "\033[41;37m"; break;
-        default:                std::cout << "\033[0m"; break;
-    }
+    return std::filesystem::path(wstr).string();
 #endif
 }
 
-static void InternalResetConsoleColor() {
-#ifdef _WIN32
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole != INVALID_HANDLE_VALUE)
-        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-#else
-    std::cout << "\033[0m";
-#endif
+void Logger::Flush() {
+    if (m_FileStream.is_open()) {
+        std::lock_guard<std::mutex> lock(m_WriteMutex);
+        m_FileStream.flush();
+    }
 }
 
-void Logger::LogInternal(LogLevel level, const char* tag, const std::string& message) {
-    if (!m_Initialized || level < m_Config.minLevel) return;
+void Logger::EnqueueEntry(LogEntry&& entry) {
+    std::unique_lock<std::mutex> lock(m_QueueMutex);
+    if (m_LogQueue.size() >= m_Config.asyncQueueSize) {
+        m_LogQueue.pop();
+    }
+    m_LogQueue.push(std::move(entry));
+    m_QueueCondition.notify_one();
+}
 
-    auto now = std::chrono::system_clock::now();
-    auto timeT = std::chrono::system_clock::to_time_t(now);
-    
+void Logger::ProcessQueue() {
+    while (m_Running) {
+        std::unique_lock<std::mutex> lock(m_QueueMutex);
+        m_QueueCondition.wait(lock, [this] { return !m_LogQueue.empty() || !m_Running; });
+
+        while (!m_LogQueue.empty()) {
+            LogEntry entry = std::move(m_LogQueue.front());
+            m_LogQueue.pop();
+            lock.unlock();
+            WriteEntry(entry);
+            lock.lock();
+        }
+    }
+}
+
+void Logger::WriteEntry(const LogEntry& entry) {
+    if (static_cast<int>(m_Config.target) & static_cast<int>(LogTarget::Console)) {
+        std::string consoleMsg = FormatEntry(entry, m_Config.enableColors);
+        WriteToConsole(consoleMsg, m_Config.enableColors);
+    }
+
+    if (static_cast<int>(m_Config.target) & static_cast<int>(LogTarget::File)) {
+        std::string fileMsg = FormatEntry(entry, false);
+        WriteToFile(fileMsg);
+    }
+}
+
+void Logger::PushLogScope(LogScope* scope) {
+    if (!scope) return;
+    std::lock_guard<std::mutex> lock(m_scopeMutex);
+    m_logScopes.push(scope);
+}
+
+void Logger::PopLogScope(LogScope* scope) {
+    std::lock_guard<std::mutex> lock(m_scopeMutex);
+    if (!m_logScopes.empty() && m_logScopes.top() == scope) {
+        m_logScopes.pop();
+    }
+}
+
+LogScope* Logger::GetCurrentLogScope() const {
+    std::lock_guard<std::mutex> lock(m_scopeMutex);
+    if (!m_logScopes.empty()) return m_logScopes.top();
+    return nullptr;
+}
+
+std::vector<StackFrame> Logger::CaptureCallStack(int skipFrames, int maxFrames) {
+    return {};
+}
+
+std::string Logger::FormatEntry(const LogEntry& entry, bool useColors) {
+    std::ostringstream oss;
+    if (useColors) {
+        oss << ColorCode(GetLevelColor(entry.level));
+    }
+    if (m_Config.enableTimestamp) {
+        oss << "[" << GetTimestamp(entry.timestamp) << "] ";
+    }
+    oss << "[" << GetLevelString(entry.level) << "] ";
+    if (!entry.category.empty()) {
+        oss << "[" << entry.category << "] ";
+    }
+    oss << entry.message;
+    if (useColors) {
+        oss << ColorCode(LogColor::Reset);
+    }
+    return oss.str();
+}
+
+std::string Logger::GetLevelString(LogLevel level) {
+    switch (level) {
+        case LogLevel::Trace:   return "TRACE";
+        case LogLevel::Debug:   return "DEBUG";
+        case LogLevel::Info:    return "INFO ";
+        case LogLevel::Warning: return "WARN ";
+        case LogLevel::Error:   return "ERROR";
+        case LogLevel::Fatal:   return "FATAL";
+        default:                return "UNKNOWN";
+    }
+}
+
+LogColor Logger::GetLevelColor(LogLevel level) {
+    switch (level) {
+        case LogLevel::Trace:   return LogColor::BrightBlack;
+        case LogLevel::Debug:   return LogColor::Cyan;
+        case LogLevel::Info:    return LogColor::Green;
+        case LogLevel::Warning: return LogColor::Yellow;
+        case LogLevel::Error:   return LogColor::Red;
+        case LogLevel::Fatal:   return LogColor::BrightRed;
+        default:                return LogColor::White;
+    }
+}
+
+std::string Logger::ColorCode(LogColor color) {
+    return std::format("\033[{}m", static_cast<int>(color));
+}
+
+std::string Logger::GetTimestamp(const std::chrono::system_clock::time_point& time) {
+    auto timeT = std::chrono::system_clock::to_time_t(time);
     std::tm tm;
 #ifdef _WIN32
     localtime_s(&tm, &timeT);
 #else
     localtime_r(&timeT, &tm);
 #endif
-
-    char timeStr[32];
-    std::strftime(timeStr, sizeof(timeStr), "%H:%M:%S", &tm);
-
-    std::string levelStr;
-    switch (level) {
-        case LogLevel::Trace:   levelStr = "[TRACE]"; break;
-        case LogLevel::Debug:   levelStr = "[DEBUG]"; break;
-        case LogLevel::Info:    levelStr = "[INFO ]"; break;
-        case LogLevel::Warning: levelStr = "[WARN ]"; break;
-        case LogLevel::Error:   levelStr = "[ERROR]"; break;
-        case LogLevel::Fatal:   levelStr = "[FATAL]"; break;
-    }
-
-    std::string fullMessage = "[" + std::string(timeStr) + "] " + levelStr + " [" + tag + "] " + message;
-
-    // 控制台输出
-    if (m_Config.target == LogTarget::Console || m_Config.target == LogTarget::Both) {
-        if (m_Config.enableColors) InternalSetConsoleColor(level);
-        std::cout << fullMessage << std::endl;
-        if (m_Config.enableColors) InternalResetConsoleColor();
-    }
-
-    // 平台调试输出 (直接调用 API，不通过 Platform)
-#ifdef _WIN32
-    OutputDebugStringA(fullMessage.c_str());
-    OutputDebugStringA("\n");
-#endif
+    std::ostringstream oss;
+    oss << std::put_time(&tm, "%H:%M:%S");
+    return oss.str();
 }
+
+void Logger::WriteToConsole(const std::string& message, bool useColors) {
+    std::cout << message << std::endl;
+}
+
+void Logger::WriteToFile(const std::string& message) {
+    if (m_FileStream.is_open()) {
+        std::lock_guard<std::mutex> lock(m_WriteMutex);
+        m_FileStream << message << std::endl;
+    }
+}
+
+std::string Logger::FormatCallStack(const std::vector<StackFrame>& callStack) {
+    return "";
+}
+
+void Logger::RotateLogFile() {}
 
 } // namespace Prisma

@@ -6,6 +6,8 @@
 
 #include "LogEntry.h"
 
+namespace Prisma {
+
 // 日志作用域类，用于缓存特定范围内的日志
 // 只有在作用域结束时指定失败的情况下才会输出日志
 class LogScope {
@@ -49,3 +51,5 @@ public:
 private:
     std::mutex m_scopesMutex;
 };
+
+} // namespace Prisma

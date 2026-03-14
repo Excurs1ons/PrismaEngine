@@ -56,10 +56,10 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
 
         // 5. 提交绘制请求
         for (const auto& subMesh : command.mesh->GetSubMeshes()) {
-            if (subMesh.VertexBuffer && subMesh.IndexBuffer) {
-                cmd->SetVertexBuffer(subMesh.VertexBuffer.get(), 0);
-                cmd->SetIndexBuffer(subMesh.IndexBuffer.get());
-                cmd->DrawIndexed(subMesh.IndexCount);
+            if (subMesh.vertexBuffer && subMesh.indexBuffer) {
+                cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                cmd->SetIndexBuffer(subMesh.indexBuffer.get());
+                cmd->DrawIndexed(subMesh.indexCount);
             }
         }
     }

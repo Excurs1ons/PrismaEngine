@@ -4,12 +4,15 @@
 #include <Windows.h>
 #include <process.h>
 #include <iostream>
+#include <vector>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_win32.h>
 
-namespace Prisma {
+// Undefine Win32 macros that conflict with our method names
+#undef GetEnvironmentVariable
+#undef SetEnvironmentVariable
 
-...
+namespace Prisma {
 
 std::vector<const char*> Platform::GetRequiredVulkanInstanceExtensions() {
     return { VK_KHR_SURFACE_EXTENSION_NAME, VK_KHR_WIN32_SURFACE_EXTENSION_NAME };
@@ -103,13 +106,13 @@ bool Platform::IsRunningInTerminal() {
 
 std::string Platform::GetEnvironmentVariable(const std::string& name) {
     char buffer[1024];
-    DWORD size = GetEnvironmentVariableA(name.c_str(), buffer, 1024);
+    DWORD size = ::GetEnvironmentVariableA(name.c_str(), buffer, 1024);
     if (size > 0 && size < 1024) return std::string(buffer);
     return "";
 }
 
 void Platform::SetEnvironmentVariable(const std::string& name, const std::string& value) {
-    SetEnvironmentVariableA(name.c_str(), value.c_str());
+    ::SetEnvironmentVariableA(name.c_str(), value.c_str());
 }
 
 } // namespace Prisma

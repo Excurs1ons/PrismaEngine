@@ -7,6 +7,9 @@
 #include "graphic/Material.h"
 #include "graphic/ui/TextRendererComponent.h"
 
+using namespace Prisma;
+using namespace Prisma::Graphic;
+
 TriangleExample::TriangleExample()
 = default;
 
@@ -73,9 +76,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     
     // 添加变换组件并设置位置
     auto transform = gameObject->GetTransform();
-    transform->position.x = pos.x;
-    transform->position.y = pos.y;
-    transform->position.z = pos.z;
+    transform->SetPosition(pos);
     
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
@@ -110,9 +111,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateQuad(const std::string& name,
 
     // 添加变换组件并设置位置
     auto transform = gameObject->GetTransform();
-    transform->position.x = pos.x;
-    transform->position.y = pos.y;
-    transform->position.z = pos.z;
+    transform->SetPosition(pos);
 
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
@@ -160,13 +159,10 @@ std::shared_ptr<GameObject> TriangleExample::CreateCube(const std::string& name,
 
     // 添加变换组件并设置位置
     auto transform = gameObject->GetTransform();
-    transform->position.x = pos.x;
-    transform->position.y = pos.y;
-    transform->position.z = pos.z;
+    transform->SetPosition(pos);
 
     // 为立方体添加一些旋转使其看起来更有立体感
-    transform->rotation.x = 45.0f;  // 绕X轴旋转45度
-    transform->rotation.y = 45.0f;  // 绕Y轴旋转45度
+    transform->SetRotation(Vector3(45.0f, 45.0f, 0.0f));  // 绕X轴旋转45度, 绕Y轴旋转45度
 
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
@@ -232,12 +228,10 @@ std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& nam
 
     // 添加变换组件并设置位置
     auto transform = gameObject->GetTransform();
-    transform->position.x = pos.x;
-    transform->position.y = pos.y;
-    transform->position.z = 0.0f;
+    transform->SetPosition({pos.x, pos.y, 0.0f});
 
     // 将四边形旋转90度，使其平放在地上（绕X轴旋转）
-    transform->rotation.x = 90.0f;  // 绕X轴旋转90度，使Z轴向上
+    transform->SetRotation(Vector3(90.0f, 0.0f, 0.0f));  // 绕X轴旋转90度，使Z轴向上
 
     // 添加渲染组件
     auto renderComponent = gameObject->AddComponent<RenderComponent>();
@@ -278,17 +272,13 @@ std::shared_ptr<GameObject> TriangleExample::CreateGround(const std::string& nam
 
 std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& name, Prisma::Vector3 pos, Quaternion rotation)
 {
-    using namespace Prisma::Graphic;
-
     // 创建游戏对象
     auto game_object = std::make_shared<GameObject>(name);
 
     // 添加变换组件并设置位置
     auto transform = game_object->GetTransform();
-    transform->position.x = pos.x;
-    transform->position.y = pos.y;
-    transform->position.z = pos.z;
-    transform->rotation = rotation;
+    transform->SetPosition(pos);
+    transform->SetRotation(rotation);
 
     // 添加3D相机组件
     auto camera = game_object->AddComponent<Camera>();
@@ -312,16 +302,12 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
 
 std::shared_ptr<GameObject> TriangleExample::CreateDebugText(const std::string& name)
 {
-    using namespace Prisma;
-
     // 创建游戏对象
     auto gameObject = std::make_shared<GameObject>(name);
 
     // 添加变换组件并设置位置（屏幕中央）
     auto transform = gameObject->GetTransform();
-    transform->position.x = 0.0f;   // 屏幕中央 X
-    transform->position.y = 0.0f;   // 屏幕中央 Y
-    transform->position.z = 0.0f;
+    transform->SetPosition({0.0f, 0.0f, 0.0f});
 
     // 添加文本渲染组件
     auto textRenderer = gameObject->AddComponent<TextRendererComponent>();

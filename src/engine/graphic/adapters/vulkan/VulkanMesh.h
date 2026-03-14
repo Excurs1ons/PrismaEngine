@@ -26,8 +26,8 @@ public:
 
     // IMesh接口实现
     uint32_t GetSubMeshCount() const override;
-    const SubMesh* GetSubMesh(uint32_t index) const override;
-    uint32_t AddSubMesh(const SubMesh& subMesh) override;
+    const SubMeshBuffer* GetSubMesh(uint32_t index) const override;
+    uint32_t AddSubMesh(const SubMeshBuffer& subMesh) override;
     const BoundingBox& GetBoundingBox() const override;
     void UpdateBoundingBox() override;
     void Bind(class ICommandBuffer* commandBuffer, uint32_t subMeshIndex = 0) override;
@@ -78,7 +78,7 @@ public:
 private:
     VulkanRenderDevice* m_device;
     VulkanResourceFactory* m_factory;
-    std::vector<SubMesh> m_subMeshes;
+    std::vector<SubMeshBuffer> m_subMeshes;
     BoundingBox m_boundingBox;
     std::string m_name;
     bool m_keepCpuData;
@@ -95,13 +95,13 @@ private:
     /// @param vertices 顶点数据
     /// @param subMesh 子网格
     /// @return 是否成功
-    bool CreateVertexBuffer(const std::vector<Vertex>& vertices, SubMesh& subMesh);
+    bool CreateVertexBuffer(const std::vector<Vertex>& vertices, SubMeshBuffer& subMesh);
 
     /// @brief 创建索引缓冲区
     /// @param indices 索引数据
     /// @param subMesh 子网格
     /// @return 是否成功
-    bool CreateIndexBuffer(const std::vector<uint32_t>& indices, SubMesh& subMesh);
+    bool CreateIndexBuffer(const std::vector<uint32_t>& indices, SubMeshBuffer& subMesh);
 
     /// @brief 创建缓冲区
     /// @param size 缓冲区大小

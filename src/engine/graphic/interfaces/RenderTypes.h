@@ -51,20 +51,20 @@ struct Vertex {
 
 // 简单的包围盒结构
 struct BoundingBox {
-    PrismaMath::vec3 minBounds;
-    PrismaMath::vec3 maxBounds;
+    Vector3 minBounds;
+    Vector3 maxBounds;
 
     BoundingBox() {
-        minBounds = PrismaMath::vec3(0, 0, 0);
-        maxBounds = PrismaMath::vec3(0, 0, 0);
+        minBounds = Vector3(0, 0, 0);
+        maxBounds = Vector3(0, 0, 0);
     }
-    BoundingBox(const PrismaMath::vec3& minVal, const PrismaMath::vec3& maxVal) {
+    BoundingBox(const Vector3& minVal, const Vector3& maxVal) {
         minBounds = minVal;
         maxBounds = maxVal;
     }
 
     // 扩展包围盒以包含点
-    void Encapsulate(const PrismaMath::vec3& point) {
+    void Encapsulate(const Vector3& point) {
         if (point.x < minBounds.x) minBounds.x = point.x;
         if (point.y < minBounds.y) minBounds.y = point.y;
         if (point.z < minBounds.z) minBounds.z = point.z;
@@ -80,14 +80,27 @@ struct BoundingBox {
     }
 
     // 获取中心点
-    [[nodiscard]] PrismaMath::vec3 GetCenter() const {
+    [[nodiscard]] Vector3 GetCenter() const {
         return (minBounds + maxBounds) * 0.5f;
     }
 
     // 获取尺寸
-    [[nodiscard]] PrismaMath::vec3 GetSize() const {
+    [[nodiscard]] Vector3 GetSize() const {
         return maxBounds - minBounds;
     }
+};
+
+/// @brief 子网格 GPU 资源缓冲区
+struct SubMeshBuffer {
+    std::string name;
+    uint32_t materialIndex;
+    uint32_t baseVertex;
+    uint32_t baseIndex;
+    uint32_t indexCount;
+    uint32_t vertexCount;
+    std::shared_ptr<IBuffer> vertexBuffer;
+    std::shared_ptr<IBuffer> indexBuffer;
+    bool use16BitIndices;
 };
 
 // 资源ID类型

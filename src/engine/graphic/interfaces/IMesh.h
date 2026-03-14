@@ -8,70 +8,6 @@
 
 namespace Prisma::Graphic {
 
-/// @brief 顶点结构（跨平台）
-struct Vertex {
-    glm::vec4 position;     // 位置 (x, y, z, w)
-    glm::vec4 normal;       // 法线 (nx, ny, nz, padding)
-    glm::vec4 texCoord;     // 纹理坐标 (u, v, padding1, padding2)
-    glm::vec4 tangent;      // 切线 (tx, ty, tz, handedness)
-    glm::vec4 color;        // 顶点颜色 (r, g, b, a)
-
-    static constexpr size_t GetVertexStride() { return sizeof(Vertex); }
-};
-
-/// @brief 子网格
-struct SubMesh {
-    std::string name;
-    uint32_t materialIndex;  // 对应材质的索引
-    uint32_t baseVertex;     // 起始顶点索引
-    uint32_t baseIndex;      // 起始索引位置
-    uint32_t indexCount;     // 索引数量
-    uint32_t vertexCount;    // 顶点数量
-
-    // 平台特定的缓冲区（通过接口访问）
-    std::shared_ptr<IBuffer> vertexBuffer;
-    std::shared_ptr<IBuffer> indexBuffer;
-    bool use16BitIndices;    // 是否使用16位索引
-};
-
-/// @brief 包围盒
-struct BoundingBox {
-    glm::vec3 minBounds;
-    glm::vec3 maxBounds;
-
-    BoundingBox() : minBounds(0, 0, 0), maxBounds(0, 0, 0) {}
-    BoundingBox(const glm::vec3& min, const glm::vec3& max) : minBounds(min), maxBounds(max) {}
-
-    /// @brief 扩展包围盒以包含点
-    void Encapsulate(const glm::vec3& point) {
-        minBounds = glm::min(minBounds, point);
-        maxBounds = glm::max(maxBounds, point);
-    }
-
-    /// @brief 合并另一个包围盒
-    void Merge(const BoundingBox& other) {
-        minBounds = glm::min(minBounds, other.minBounds);
-        maxBounds = glm::max(maxBounds, other.maxBounds);
-    }
-
-    /// @brief 获取中心点
-    glm::vec3 GetCenter() const {
-        return (minBounds + maxBounds) * 0.5f;
-    }
-
-    /// @brief 获取尺寸
-    glm::vec3 GetSize() const {
-        return maxBounds - minBounds;
-    }
-
-    /// @brief 获取半径
-    float GetRadius() const {
-        glm::vec3 center = GetCenter();
-        glm::vec3 extents = maxBounds - center;
-        return glm::length(extents);
-    }
-};
-
 /// @brief 网格抽象接口
 class IMesh {
 public:
@@ -84,12 +20,12 @@ public:
     /// @brief 获取子网格
     /// @param index 子网格索引
     /// @return 子网格数据
-    virtual const SubMesh* GetSubMesh(uint32_t index) const = 0;
+    virtual const SubMeshBuffer* GetSubMesh(uint32_t index) const = 0;
 
     /// @brief 添加子网格
     /// @param subMesh 子网格数据
     /// @return 子网格索引
-    virtual uint32_t AddSubMesh(const SubMesh& subMesh) = 0;
+    virtual uint32_t AddSubMesh(const SubMeshBuffer& subMesh) = 0;
 
     /// @brief 获取全局包围盒
     /// @return 包围盒

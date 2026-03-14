@@ -37,6 +37,13 @@ public:
     void SetParam(const std::string& name, const MaterialParamValue& value);
     const MaterialParamValue* GetParam(const std::string& name) const;
 
+    // 快捷方法 (向后兼容)
+    static std::shared_ptr<Material> CreateDefault();
+    void SetBaseColor(float r, float g, float b, float a);
+    void SetBaseColor(const Prisma::Color& color);
+    void SetMetallic(float metallic);
+    void SetRoughness(float roughness);
+
     // 获取 Shader
     std::shared_ptr<Shader> GetShader() const { return m_Shader; }
 

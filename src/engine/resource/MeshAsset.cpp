@@ -17,7 +17,7 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
             return false;
         }
 
-        Graphic::SubMesh triangle;
+        SubMesh triangle;
         triangle.name          = "Triangle";
         triangle.materialIndex = 0;
 
@@ -78,7 +78,7 @@ void MeshAsset::Deserialize(InputArchive& archive) {
     SetLoaded(true);
 }
 
-void MeshAsset::AddSubMesh(const Graphic::SubMesh& subMesh) {
+void MeshAsset::AddSubMesh(const SubMesh& subMesh) {
     m_subMeshes.push_back(subMesh);
     SetLoaded(true);
 }

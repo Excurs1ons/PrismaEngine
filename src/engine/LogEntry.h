@@ -5,6 +5,8 @@
 #include <vector>
 #include <string>
 
+namespace Prisma {
+
 // 日志级别
 enum class LogLevel { Trace = 0, Debug = 1, Info = 2, Warning = 3, Error = 4, Fatal = 5 };
 
@@ -81,3 +83,5 @@ struct LogEntry {
         : level(lvl), message(std::move(msg)), category(std::move(cat)), timestamp(std::chrono::system_clock::now()),
           threadId(std::this_thread::get_id()), location(loc) {}
 };
+
+} // namespace Prisma
