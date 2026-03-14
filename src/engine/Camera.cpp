@@ -26,7 +26,7 @@ void Camera::Initialize() {
     // 初始化Transform的旋转（相机默认看向-Z方向）
     if (auto transform = GetOwner()->GetTransform()) {
         // 设置初始旋转为 Identity
-        transform->rotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);
+        transform->SetRotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
         MarkViewDirty();
     }
 }
@@ -72,7 +72,7 @@ PrismaMath::mat4 Camera::GetViewProjectionMatrix() const {
 
 PrismaMath::vec3 Camera::GetPosition() const {
     if (auto transform = GetOwner()->GetTransform()) {
-        return PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
+        return transform->GetPosition();
     }
     return PrismaMath::vec3(0.0f, 0.0f, 0.0f);
 }
@@ -110,18 +110,18 @@ void Camera::SetAspectRatio(float aspectRatio) {
 
 void Camera::MoveWorld(float x, float y, float z) {
     if (auto transform = GetOwner()->GetTransform()) {
-        transform->position.x += x;
-        transform->position.y += y;
-        transform->position.z += z;
+        Prisma::Vector3 pos = transform->GetPosition();
+        pos.x += x;
+        pos.y += y;
+        pos.z += z;
+        transform->SetPosition(pos);
         MarkViewDirty();
     }
 }
 
 void Camera::MoveWorld(const PrismaMath::vec3& direction) {
     if (auto transform = GetOwner()->GetTransform()) {
-        transform->position.x += direction.x;
-        transform->position.y += direction.y;
-        transform->position.z += direction.z;
+        transform->SetPosition(transform->GetPosition() + direction);
         MarkViewDirty();
     }
 }
@@ -147,9 +147,8 @@ void Camera::Rotate(float pitch, float yaw, float roll) {
         glm::quat deltaRotation = glm::quat(glm::vec3(glm::radians(pitch), glm::radians(yaw), glm::radians(roll)));
 
         // 应用旋转到当前旋转
-        glm::quat currentRotation = transform->rotation;
-        glm::quat newRotation     = deltaRotation * currentRotation;
-        transform->rotation       = newRotation;
+        glm::quat newRotation     = deltaRotation * transform->GetRotation();
+        transform->SetRotation(newRotation);
 
         MarkViewDirty();
     }
@@ -182,7 +181,7 @@ void Camera::LookAt(const PrismaMath::vec3& target) {
 
         // 转换为四元数
         glm::quat rotationQuat = glm::quat_cast(rotationMatrix);
-        transform->rotation    = rotationQuat;
+        transform->SetRotation(rotationQuat);
         MarkViewDirty();
     }
 }
@@ -198,9 +197,8 @@ void Camera::UpdateViewMatrix() const {
 
     if (auto transform = GetOwner()->GetTransform()) {
         // 获取位置和旋转
-        PrismaMath::vec3 position =
-            PrismaMath::vec3(transform->position.x, transform->position.y, transform->position.z);
-        glm::quat rotation = transform->rotation;
+        PrismaMath::vec3 position = transform->GetPosition();
+        glm::quat rotation = transform->GetRotation();
 
         // 创建旋转矩阵
         PrismaMath::mat4 rotationMatrix = glm::mat4_cast(rotation);

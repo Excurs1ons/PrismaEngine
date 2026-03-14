@@ -7,34 +7,28 @@
 #include <memory>
 #include <utility>
 #include "Model.h"
-using namespace Prisma;
 
-class MeshRenderer :public RenderComponent
+namespace Prisma::Graphic {
+
+class MeshRenderer : public RenderComponent
 {
 public:
+    MeshRenderer();
     MeshRenderer(std::shared_ptr<Model> model) : model_(model) {}
+    ~MeshRenderer() override;
 
     std::shared_ptr<Model> getModel() const { return model_; }
 
-private:
-    std::shared_ptr<Model> model_;
-private:
-    std::shared_ptr<Mesh> m_mesh;
-    std::shared_ptr<Prisma::Material> m_material;
-
-protected:
-    void DrawMesh(Prisma::Graphic::RenderCommandContext* context, std::shared_ptr<Mesh> mesh);
-
-public:
-    // 移除了内联的Render实现，在cpp文件中实现
-
-    void Render(Prisma::Graphic::RenderCommandContext* context) override;
+    void Render(RenderCommandContext* context) override;
+    void Update(Timestep ts) override;
+    void Initialize() override;
+    void Shutdown() override;
 
     void SetMesh(std::shared_ptr<Mesh> mesh) {
         m_mesh = std::move(mesh);
     }
     
-    void SetMaterial(std::shared_ptr<Prisma::Material> material) override {
+    void SetMaterial(std::shared_ptr<Material> material) override {
         m_material = material;
     }
 
@@ -42,12 +36,17 @@ public:
         return m_mesh;
     }
 
-    [[nodiscard]] std::shared_ptr<Prisma::Material> GetMaterial() const override {
+    [[nodiscard]] std::shared_ptr<Material> GetMaterial() const override {
         return m_material;
     }
-    void Update(Timestep ts) override;
-    MeshRenderer();
-    ~MeshRenderer() override;
-    void Initialize() override;
-    void Shutdown() override;
+
+protected:
+    void DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh> mesh);
+
+private:
+    std::shared_ptr<Model> model_;
+    std::shared_ptr<Mesh> m_mesh;
+    std::shared_ptr<Material> m_material;
 };
+
+} // namespace Prisma::Graphic

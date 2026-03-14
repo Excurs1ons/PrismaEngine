@@ -5,9 +5,51 @@
 
 namespace Prisma::Graphic {
 
-// ... 初始化和参数设置保持不变 ...
+Material::Material(std::shared_ptr<Shader> shader) : m_Shader(std::move(shader)) {
+}
 
-void Material::Bind(ICommandBuffer* cmd) {
+bool Material::Load(const std::filesystem::path& path) {
+    (void)path;
+    // TODO: 从 .mat 文件加载材质数据
+    return true;
+}
+
+void Material::Unload() {
+    m_Shader = nullptr;
+    m_Params.clear();
+}
+
+void Material::SetParam(const std::string& name, const MaterialParamValue& value) {
+    m_Params[name] = value;
+}
+
+const MaterialParamValue* Material::GetParam(const std::string& name) const {
+    auto it = m_Params.find(name);
+    return it != m_Params.end() ? &it->second : nullptr;
+}
+
+std::shared_ptr<Material> Material::CreateDefault() {
+    // 默认创建一个不带 Shader 的材质 (或者应该找一个内置的默认 Shader)
+    return std::make_shared<Material>(nullptr);
+}
+
+void Material::SetBaseColor(float r, float g, float b, float a) {
+    SetParam("BaseColor", Prisma::Color(r, g, b, a));
+}
+
+void Material::SetBaseColor(const Prisma::Color& color) {
+    SetParam("BaseColor", color);
+}
+
+void Material::SetMetallic(float metallic) {
+    SetParam("Metallic", metallic);
+}
+
+void Material::SetRoughness(float roughness) {
+    SetParam("Roughness", roughness);
+}
+
+void Material::Bind(class ICommandBuffer* cmd) {
     if (!m_Shader || !cmd) return;
 
     // 1. 核心逻辑：基于反射自动绑定参数
@@ -32,15 +74,13 @@ void Material::Bind(ICommandBuffer* cmd) {
             case ShaderResource::Type::Image2D: {
                 // 如果参数是一个贴图
                 if (std::holds_alternative<std::shared_ptr<ITexture>>(value)) {
-                    auto texture = std::get<std::shared_ptr<ITexture>>(value);
+                    // auto texture = std::get<std::shared_ptr<ITexture>>(value);
                     // cmd->BindTexture(resource.Set, resource.Binding, texture.get());
                 }
                 break;
             }
             case ShaderResource::Type::UniformBuffer: {
                 // 如果参数是基础数值 (float, vec3, vec4)
-                // 在现代引擎中，这里通常会统一合并到一个共享的 Dynamic Uniform Buffer 里。
-                // 我们以后会实现一个 DescriptorManager 来处理这个。
                 break;
             }
             default:

@@ -5,6 +5,7 @@
 #include "core/AssetManager.h"
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
+#include "graphic/Shader.h"
 
 namespace Prisma {
 

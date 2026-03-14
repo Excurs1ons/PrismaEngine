@@ -45,7 +45,7 @@ void Application::OnEvent(Event& e) {
     });
 
     // 2. 将事件分发给 InputManager 更新状态 (Polling 支持)
-    if (auto* inputManager = Input::InputManager::Get().get()) {
+    if (auto* inputManager = Engine::Get().GetInputManager()) {
         inputManager->OnEvent(e);
     }
 
