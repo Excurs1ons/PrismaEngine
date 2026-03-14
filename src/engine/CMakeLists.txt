@@ -44,7 +44,6 @@ set(CORE_SOURCES
     scripting/ScriptSystem.cpp
     core/AssetManager.cpp
     core/ECS.cpp
-    core/Serialization.cpp
     core/Layer.cpp
     core/LayerStack.cpp
     core/UUID.cpp
@@ -73,10 +72,6 @@ set(CORE_SOURCES
 if(WIN32)
     list(APPEND CORE_SOURCES
         PlatformWindows.cpp
-        platform/Application.cpp
-        platform/ApplicationWindows.cpp
-        platform/WindowsUtils.cpp
-        input/drivers/InputDriverWin32.cpp
     )
 elseif(LINUX)
     list(APPEND CORE_SOURCES
@@ -100,7 +95,6 @@ set(CORE_HEADERS
     Scene.h
     SceneManager.h
     Serializable.h
-    Serialization.h
     ThreadManager.h
     WorkerThread.h
     Camera.h

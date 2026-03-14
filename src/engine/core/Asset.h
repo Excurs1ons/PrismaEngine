@@ -43,11 +43,14 @@ public:
     virtual ~Asset() = default;
 
     virtual AssetType GetType() const = 0;
+    virtual std::string GetAssetType() const { return "Unknown"; }
     virtual bool Load(const std::filesystem::path& path) = 0;
     virtual void Unload() { m_State = AssetState::None; }
 
     AssetState GetState() const { return m_State; }
-    bool IsLoaded() const { return m_State == AssetState::Loaded; }
+    virtual bool IsLoaded() const { return m_State == AssetState::Loaded; }
+
+    void SetName(const std::string& name) { Name = name; }
 
     // Serialization
     void Serialize(Serialization::OutputArchive& archive) const override {

@@ -5,6 +5,8 @@
 
 #include <mutex>
 
+namespace Prisma {
+
 LogScope::LogScope(const std::string& scopeName)
     : m_scopeName(scopeName) {
 }
@@ -53,3 +55,5 @@ void LogScopeManager::DestroyScope(LogScope* scope, bool success) {
         delete scope;
     }
 }
+
+} // namespace Prisma

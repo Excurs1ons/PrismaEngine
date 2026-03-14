@@ -42,11 +42,11 @@ private:
 /**
  * @brief 着色器管理器 (属于 Engine 的子系统)
  */
-class ShaderLibrary : public ISubSystem {
+class ShaderLibrary : public Prisma::ISubSystem {
 public:
     int Initialize() override { return 0; }
     void Shutdown() override { m_Shaders.clear(); }
-    void Update(Timestep ts) override {}
+    void Update(Prisma::Timestep ts) override {}
 
     std::shared_ptr<Shader> Load(const std::string& name, const std::filesystem::path& path);
     std::shared_ptr<Shader> Get(const std::string& name);

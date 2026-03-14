@@ -5,10 +5,11 @@
 #include "graphic/RenderComponent.h"
 #include "graphic/ICamera.h"
 #include "SceneNode.h"
+#include "core/Timestep.h"
 #include <memory>
 #include <vector>
 
-using namespace Prisma;
+namespace Prisma {
 
 class Scene
 {
@@ -39,3 +40,5 @@ private:
     std::vector<std::shared_ptr<GameObject>> m_gameObjects;
     std::shared_ptr<Prisma::Graphic::ICamera> m_mainCamera;
 };
+
+} // namespace Prisma

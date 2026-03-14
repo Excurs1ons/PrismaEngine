@@ -12,6 +12,29 @@
 
 namespace Prisma {
 
+// ------------------------------------------------------------
+// 窗口相关枚举和结构
+// ------------------------------------------------------------
+enum class FullScreenMode { Window, ExclusiveFullScreen, FullScreen };
+enum class WindowShowState { Default, Show, Hide, Maximize, Minimize };
+
+struct WindowProps {
+    std::string Title;
+    uint32_t Width;
+    uint32_t Height;
+    bool Resizable                = false;
+    FullScreenMode fullScreenMode = FullScreenMode::Window;
+    WindowShowState ShowState     = WindowShowState::Default;
+
+    WindowProps(std::string t = "Engine", uint32_t w = 1280, uint32_t h = 720)
+        : Title(t), Width(w), Height(h) {}
+};
+
+using WindowHandle = void*;
+using PlatformThreadHandle = void*;
+using PlatformMutexHandle  = void*;
+using ThreadFunc = void* (*)(void*);
+
 class Platform {
 public:
     static bool s_initialized;
@@ -92,12 +115,6 @@ public:
     ENGINE_API static void LockMutex(PlatformMutexHandle mtx);
     ENGINE_API static void UnlockMutex(PlatformMutexHandle mtx);
     ENGINE_API static void SleepMilliseconds(uint32_t ms);
-
-    // ------------------------------------------------------------
-    // Vulkan 支持
-    // ------------------------------------------------------------
-    ENGINE_API static std::vector<const char*> GetVulkanInstanceExtensions();
-    ENGINE_API static bool CreateVulkanSurface(void* instance, WindowHandle windowHandle, void** outSurface);
 
     // ------------------------------------------------------------
     // IPlatformLogger 接口实现

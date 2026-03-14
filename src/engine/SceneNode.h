@@ -2,14 +2,19 @@
 #include <memory>
 #include <vector>
 #include <algorithm>
+#include "core/Timestep.h"
+
+namespace Prisma {
 
 // 前向声明
-namespace Prisma::Graphic {
+namespace Graphic {
     class RenderCommandContext;
 }
 
 class SceneNode {
 public:
+    virtual ~SceneNode() = default;
+
     // 添加子节点
     void AddChild(std::shared_ptr<SceneNode> child) {
         child->m_parent = this;
@@ -66,3 +71,5 @@ private:
         // 从矩阵栈弹出变换
     }
 };
+
+} // namespace Prisma

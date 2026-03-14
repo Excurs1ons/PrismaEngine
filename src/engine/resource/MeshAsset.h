@@ -1,7 +1,6 @@
-#pragma once
-
 #include "../core/Asset.h"
 #include "../graphic/Mesh.h"
+#include "../graphic/SubMesh.h"
 #include <vector>
 
 namespace Prisma {
@@ -25,15 +24,15 @@ public:
     std::string GetAssetType() const override { return "Mesh"; }
 
     // 网格属性
-    const std::vector<Graphic::SubMesh>& GetSubMeshes() const { return m_subMeshes; }
+    const std::vector<SubMesh>& GetSubMeshes() const { return m_subMeshes; }
     const Graphic::BoundingBox& GetBoundingBox() const { return m_boundingBox; }
 
-    void AddSubMesh(const Graphic::SubMesh& subMesh);
+    void AddSubMesh(const SubMesh& subMesh);
     void SetBoundingBox(const Graphic::BoundingBox& boundingBox);
     void Clear();
 
 private:
-    std::vector<Graphic::SubMesh> m_subMeshes;
+    std::vector<SubMesh> m_subMeshes;
     Graphic::BoundingBox m_boundingBox;
 };
 
