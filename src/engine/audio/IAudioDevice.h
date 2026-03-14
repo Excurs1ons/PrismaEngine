@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AudioTypes.h"
+#include "core/Timestep.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -31,7 +32,7 @@ public:
 
     /// @brief 更新音频设备（每帧调用）
     /// @param ts 时间增量（秒）
-    virtual void Update(Timestep ts) = 0;
+    virtual void Update(Prisma::Timestep ts) = 0;
 
     // ========== 设备信息 ==========
 
@@ -119,7 +120,7 @@ public:
     /// @param velocity 速度 (vx, vy, vz)
     virtual void SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) = 0;
 
-    /// @brief 设置音频源3D方向
+    /// @brief 设置音频源3D direction
     /// @param voiceId 音频Voice ID
     /// @param direction 方向 (dx, dy, dz)
     virtual void SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) = 0;

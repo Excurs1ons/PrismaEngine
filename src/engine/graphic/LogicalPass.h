@@ -3,6 +3,7 @@
 #include "interfaces/IPass.h"
 #include "interfaces/IRenderTarget.h"
 #include "math/MathTypes.h"
+#include "core/Timestep.h"
 #include <string>
 #include <memory>
 
@@ -26,7 +27,7 @@ public:
     void SetDepthStencil(IDepthStencil* depthStencil) override { m_depthStencil = depthStencil; }
     void SetViewport(uint32_t width, uint32_t height) override;
 
-    void Update(Timestep ts) override { UpdateTime(ts); }
+    void Update(Prisma::Timestep ts) override { UpdateTime(ts); }
 
     uint32_t GetPriority() const override { return m_priority; }
     void SetPriority(uint32_t priority) override { m_priority = priority; }
@@ -67,7 +68,7 @@ protected:
     const float* GetClearColor() const { return m_clearColor; }
 
     /// @brief 更新时间
-    void UpdateTime(Timestep ts) {
+    void UpdateTime(Prisma::Timestep ts) {
         m_deltaTime = ts;
         m_totalTime += ts;
     }

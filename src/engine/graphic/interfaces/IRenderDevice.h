@@ -98,6 +98,9 @@ public:
     /// @brief 呈现帧
     virtual void Present() = 0;
 
+    /// @brief 调整交换链大小
+    virtual void Resize(uint32_t width, uint32_t height) = 0;
+
     // === 查询支持的功能 ===
 
     /// @brief 检查是否支持多线程

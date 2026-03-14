@@ -1,5 +1,4 @@
 #include "TextureAsset.h"
-#include "AssetSerializer.h"
 #include "Logger.h"
 #include <filesystem>
 
@@ -13,31 +12,28 @@ bool TextureAsset::Load(const std::filesystem::path& path) {
         return false;
     }
 
-    Path = path;
-    Name = path.filename().string();
-    m_Metadata.sourcePath = path;
-    m_Metadata.name = Name;
+    SetPath(path);
     SetLoaded(true);
     return true;
 }
 
 void TextureAsset::Unload() {
-    Asset::Unload();
     m_Data.clear();
+    SetLoaded(false);
 }
 
 void TextureAsset::Serialize(OutputArchive& archive) const {
     Asset::Serialize(archive);
-    archive("width", m_Width);
-    archive("height", m_Height);
-    archive("channels", m_Channels);
+    archive.Write("width", m_Width);
+    archive.Write("height", m_Height);
+    archive.Write("channels", m_Channels);
 }
 
 void TextureAsset::Deserialize(InputArchive& archive) {
     Asset::Deserialize(archive);
-    archive("width", m_Width);
-    archive("height", m_Height);
-    archive("channels", m_Channels);
+    archive.Read("width", m_Width);
+    archive.Read("height", m_Height);
+    archive.Read("channels", m_Channels);
 
     SetLoaded(true);
 }

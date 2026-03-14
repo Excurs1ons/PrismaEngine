@@ -1,6 +1,7 @@
 #include "Application.h"
 #include "Platform.h"
 #include "Logger.h"
+#include "Engine.h"
 #include "input/InputManager.h"
 
 namespace Prisma {
@@ -10,46 +11,62 @@ Application* Application::s_Instance = nullptr;
 Application::Application(const ApplicationSpecification& spec)
     : m_Spec(spec) {
     s_Instance = this;
+    m_Running = true;
 }
 
 Application::~Application() {
-    if (s_Instance == this) {
-        s_Instance = nullptr;
-    }
+    s_Instance = nullptr;
+}
+
+bool Application::Initialize() {
+    InitWindow();
+    return true;
 }
 
 void Application::InitWindow() {
-    // 显式创建窗口
-    m_Window = Window::Create(m_Spec.WindowProperties);
-    m_Window->SetEventCallback([this](Event& e) {
-        this->OnEvent(e);
-    });
+    WindowProps props;
+    props.Title = m_Spec.Name;
+    props.Width = m_Spec.Width;
+    props.Height = m_Spec.Height;
+    
+    m_Window = Window::Create(props);
+    if (!m_Window) {
+        LOG_FATAL("Application", "Failed to create window!");
+        return;
+    }
+
+    m_Window->SetEventCallback([this](Event& e) { OnEvent(e); });
+}
+
+void Application::Run() {
+    while (m_Running) {
+        float time = (float)Platform::GetProcessId(); // Placeholder
+        Timestep ts = time - m_LastFrameTime;
+        m_LastFrameTime = time;
+
+        if (!m_Minimized) {
+            OnUpdate(ts);
+            OnRender();
+        }
+
+        m_Window->OnUpdate();
+    }
+}
+
+void Application::Close() {
+    m_Running = false;
 }
 
 void Application::OnEvent(Event& e) {
-    EventDispatcher dispatcher(e);
-    
-    // 1. 基础窗口事件处理
-    dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
-        this->Close();
-        return true;
-    });
+    if (e.GetEventType() == EventType::WindowClose) {
+        Close();
+        e.Handled = true;
+    }
 
-    dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
-        if (event.GetWidth() == 0 || event.GetHeight() == 0) {
-            m_Minimized = true;
-        } else {
-            m_Minimized = false;
-        }
-        return false;
-    });
-
-    // 2. 将事件分发给 InputManager 更新状态 (Polling 支持)
     if (auto* inputManager = Engine::Get().GetInputManager()) {
         inputManager->OnEvent(e);
     }
 
-    // 3. 分发到各层 (逆序)
     for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it) {
         if (e.Handled) break;
         (*it)->OnEvent(e);
@@ -57,18 +74,16 @@ void Application::OnEvent(Event& e) {
 }
 
 void Application::OnUpdate(Timestep ts) {
-    for (Layer* layer : m_LayerStack) {
+    for (Layer* layer : m_LayerStack)
         layer->OnUpdate(ts);
-    }
 }
 
 void Application::OnRender() {
+    for (Layer* layer : m_LayerStack)
+        layer->OnImGuiRender();
 }
 
 void Application::OnImGuiRender() {
-    for (Layer* layer : m_LayerStack) {
-        layer->OnImGuiRender();
-    }
 }
 
 void Application::PushLayer(Layer* layer) {

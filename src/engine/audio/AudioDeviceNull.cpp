@@ -460,7 +460,7 @@ std::string AudioDeviceNull::GenerateDebugReport() {
     return report;
 }
 
-void AudioDeviceNull::Update(Timestep ts) {
+void AudioDeviceNull::Update(Prisma::Timestep ts) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     // 模拟播放进度

@@ -1,26 +1,27 @@
 #include "DeferredPipeline.h"
 #include "graphic/ICamera.h"
-#include "pipelines/SkyboxRenderPass.h"
-#include "pipelines/deferred/CompositionPass.h"
-#include "pipelines/deferred/GeometryPass.h"
-#include "pipelines/deferred/LightingPass.h"
-#include "pipelines/forward/TransparentPass.h"
+#include "../SkyboxRenderPass.h"
+#include "CompositionPass.h"
+#include "GeometryPass.h"
+#include "LightingPass.h"
+#include "../forward/TransparentPass.h"
 
 namespace Prisma::Graphic {
 
-DeferredPipeline::DeferredPipeline() : LogicalDeferredPipeline(), m_camera(nullptr), m_ambientLight(0.1f, 0.1f, 0.1f) {
+DeferredPipeline::DeferredPipeline() : LogicalDeferredPipeline() {
+    m_camera = nullptr;
+    m_ambientLight = PrismaMath::vec3(0.1f, 0.1f, 0.1f);
     m_stats = {};
 }
 
 DeferredPipeline::~DeferredPipeline() {
-    // Pass 会通过 shared_ptr 自动释放
 }
 
 bool DeferredPipeline::Initialize() {
     return true;
 }
 
-void DeferredPipeline::Update(Timestep ts, Prisma::Graphic::ICamera* camera) {
+void DeferredPipeline::Update(Prisma::Timestep ts, Prisma::Graphic::ICamera* camera) {
     m_camera              = camera;
     m_stats.lastFrameTime = ts;
 
@@ -84,7 +85,6 @@ void DeferredPipeline::SetLights(const std::vector<Light>& lights) {
 }
 
 void DeferredPipeline::SetAmbientLight(const PrismaMath::vec3& ambient) {
-    (void)ambient;
     m_ambientLight = ambient;
 }
 

@@ -35,7 +35,7 @@ public:
 
     /// @brief 更新 Pass 数据
     /// @param ts 时间增量
-    void Update(Timestep ts) override;
+    void Update(Prisma::Timestep ts) override;
 
     // === G-Buffer 设置 ===
 

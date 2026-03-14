@@ -13,7 +13,10 @@
 #include "math/MathTypes.h"
 #include <vector>
 
-using namespace Prisma;
+namespace Prisma {
+
+using namespace Prisma::Graphic;
+using namespace Graphic;
 
 typedef uint16_t Index;
 
@@ -63,5 +66,7 @@ private:
     std::vector<Index> indices_;
     std::shared_ptr<TextureAsset> spTexture_;
 };
+
+} // namespace Prisma
 
 #endif //ANDROIDGLINVESTIGATIONS_MODEL_H

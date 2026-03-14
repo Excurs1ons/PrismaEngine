@@ -31,7 +31,7 @@ public:
     virtual ~ScriptSystem() = default;
 
     void Initialize() override;
-    void Update(Timestep ts) override;
+    void Update(Prisma::Timestep ts) override;
     void Shutdown() override;
 
     // 加载程序集
@@ -59,7 +59,7 @@ private:
     // 处理脚本生命周期
     void ProcessScriptAwake(ScriptComponent& script);
     void ProcessScriptStart(ScriptComponent& script);
-    void ProcessScriptUpdate(ScriptComponent& script, Timestep ts);
+    void ProcessScriptUpdate(ScriptComponent& script, Prisma::Timestep ts);
 };
 
 } // namespace Scripting

@@ -61,6 +61,7 @@ public:
     void BeginFrame() override;
     void EndFrame() override;
     void Present() override;
+    void Resize(uint32_t width, uint32_t height) override;
 
     // 功能查询
     bool SupportsMultiThreaded() const override { return true; }

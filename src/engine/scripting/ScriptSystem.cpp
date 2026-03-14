@@ -22,7 +22,7 @@ void ScriptSystem::Initialize() {
     LOG_INFO("ScriptSystem", "脚本系统初始化完成");
 }
 
-void ScriptSystem::Update(Timestep ts) {
+void ScriptSystem::Update(Prisma::Timestep ts) {
     if (!m_initialized)
         return;
 
@@ -123,7 +123,7 @@ void ScriptSystem::ProcessScriptStart(ScriptComponent& script) {
     (void)script;
 }
 
-void ScriptSystem::ProcessScriptUpdate(ScriptComponent& script, Timestep ts) {
+void ScriptSystem::ProcessScriptUpdate(ScriptComponent& script, Prisma::Timestep ts) {
     (void)script;
     (void)ts;
 }

@@ -1,6 +1,6 @@
 #include "RenderSystem.h"
-#include "RenderAPIVulkan.h"
-#include "pipelines/ForwardPipeline.h"
+#include "adapters/vulkan/RenderDeviceVulkan.h"
+#include "pipelines/forward/ForwardPipeline.h"
 #include "Logger.h"
 
 namespace Prisma::Graphic {
@@ -25,11 +25,16 @@ int RenderSystem::Initialize() {
 
 bool RenderSystem::InitializeDevice() {
     if (m_desc.backendType == RenderAPIType::Vulkan) {
-        m_device = std::make_unique<RenderAPIVulkan>();
-        // 这里需要把 m_desc 传给底层驱动，
-        // 实际代码中可能需要调整接口来接收 desc。
-        // 但现在我们先聚焦在 Engine 集成上。
-        return m_device->Initialize(m_desc); 
+        m_device = std::make_unique<Vulkan::RenderDeviceVulkan>();
+        
+        DeviceDesc devDesc;
+        devDesc.name = m_desc.name;
+        devDesc.width = m_desc.width;
+        devDesc.height = m_desc.height;
+        devDesc.vsync = m_desc.enableVSync;
+        devDesc.enableValidation = true; // For debug
+        
+        return m_device->Initialize(devDesc); 
     }
     return false;
 }

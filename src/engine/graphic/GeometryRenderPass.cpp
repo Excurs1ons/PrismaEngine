@@ -28,8 +28,6 @@ void GeometryRenderPass::Execute(RenderCommandContext* context)
         return;
     }
     
-    // ClearRenderTarget logic here if needed
-    
     for (const auto& item : m_renderQueue) {
         if (!item.mesh) {
             continue;

@@ -3,6 +3,7 @@
 #include "IRenderTarget.h"
 #include "RenderTypes.h"
 #include "math/MathTypes.h"
+#include "core/Timestep.h"
 #include <string>
 #include "interfaces/IDeviceContext.h"
 
@@ -24,7 +25,7 @@ struct SceneData {
 
     // 时间数据
     struct {
-        Timestep ts;
+        Prisma::Timestep ts;
         float totalTime;
     } time;
 
@@ -104,7 +105,7 @@ public:
 
     /// @brief 更新 Pass 数据
     /// @param ts 时间增量
-    virtual void Update(Timestep ts) = 0;
+    virtual void Update(Prisma::Timestep ts) = 0;
 
     /// @brief 执行 Pass
     /// @param context 执行上下文
