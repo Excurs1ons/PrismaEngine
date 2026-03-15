@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <xhash>
+#include <functional>
 
 namespace Prisma {
 
