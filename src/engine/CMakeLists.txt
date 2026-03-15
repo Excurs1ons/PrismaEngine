@@ -27,6 +27,7 @@ set(CORE_SOURCES
     Object.cpp
     PhysicsSystem.cpp
     Platform.cpp
+    Window.cpp
     Scene.cpp
     SceneManager.cpp
     Serializable.cpp
@@ -72,6 +73,7 @@ set(CORE_SOURCES
 if(WIN32)
     list(APPEND CORE_SOURCES
         PlatformWindows.cpp
+        PlatformSDLWindow.cpp
     )
 elseif(LINUX)
     list(APPEND CORE_SOURCES
