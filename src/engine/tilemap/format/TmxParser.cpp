@@ -629,7 +629,7 @@ std::unique_ptr<Tileset> TmxParser::ParseTsxFile(const std::filesystem::path& ts
 // 层解析
 // ============================================================================
 
-std::unique_ptr<Layer> TmxParser::ParseLayer(
+std::unique_ptr<TilemapLayer> TmxParser::ParseLayer(
     void* layerElement,
     const std::filesystem::path& basePath,
     TileMap& map

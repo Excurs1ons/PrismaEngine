@@ -7,10 +7,15 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <vulkan/vulkan_win32.h>
+#include <shlobj.h>
+#include <chrono>
 
 // Undefine Win32 macros that conflict with our method names
 #undef GetEnvironmentVariable
 #undef SetEnvironmentVariable
+#undef CreateWindow
+#undef CreateMutex
+#undef DestroyWindow
 
 namespace Prisma {
 
@@ -37,6 +42,7 @@ bool Platform::CreateVulkanSurface(void* instance, WindowHandle window, void** o
 bool Platform::s_initialized = false;
 bool Platform::s_shouldClose = false;
 WindowHandle Platform::s_currentWindow = nullptr;
+Platform::EventCallback Platform::s_eventCallback = nullptr;
 
 bool Platform::Initialize() {
     if (s_initialized) return true;
@@ -113,6 +119,187 @@ std::string Platform::GetEnvironmentVariable(const std::string& name) {
 
 void Platform::SetEnvironmentVariable(const std::string& name, const std::string& value) {
     ::SetEnvironmentVariableA(name.c_str(), value.c_str());
+}
+
+// 窗口管理函数
+WindowHandle Platform::CreateWindow(const WindowProps& desc) {
+    // 使用Windows API创建窗口，避免与类方法名冲突
+    WNDCLASSA wc = {};
+    wc.lpfnWndProc = ::DefWindowProcA;
+    wc.hInstance = ::GetModuleHandleA(nullptr);
+    wc.lpszClassName = "PrismaEngine";
+    ::RegisterClassA(&wc);
+    
+    HWND hwnd = ::CreateWindowExA(
+        0,
+        "PrismaEngine",
+        desc.Title.c_str(),
+        WS_OVERLAPPEDWINDOW,
+        CW_USEDEFAULT, CW_USEDEFAULT,
+        desc.Width, desc.Height,
+        nullptr, nullptr,
+        ::GetModuleHandleA(nullptr),
+        nullptr
+    );
+    
+    s_currentWindow = (WindowHandle)hwnd;
+    return s_currentWindow;
+}
+
+void Platform::DestroyWindow(WindowHandle window) {
+    // TODO: 实现窗口销毁
+    (void)window;
+}
+
+void Platform::GetWindowSize(WindowHandle window, int& outW, int& outH) {
+    // TODO: 实现获取窗口大小
+    outW = 1280;
+    outH = 720;
+    (void)window;
+}
+
+void Platform::SetWindowTitle(WindowHandle window, const char* title) {
+    // TODO: 实现设置窗口标题
+    (void)window;
+    (void)title;
+}
+
+void Platform::PumpEvents() {
+    // 处理Windows消息
+    MSG msg;
+    while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+}
+
+bool Platform::ShouldClose(WindowHandle window) {
+    (void)window;
+    return s_shouldClose;
+}
+
+void Platform::SetShouldClose(WindowHandle window, bool shouldClose) {
+    (void)window;
+    s_shouldClose = shouldClose;
+}
+
+WindowHandle Platform::GetCurrentWindow() {
+    return s_currentWindow;
+}
+
+// 时间管理函数
+uint64_t Platform::GetTimeMicroseconds() {
+    static LARGE_INTEGER frequency;
+    static bool firstCall = true;
+    
+    if (firstCall) {
+        QueryPerformanceFrequency(&frequency);
+        firstCall = false;
+    }
+    
+    LARGE_INTEGER counter;
+    QueryPerformanceCounter(&counter);
+    
+    return (counter.QuadPart * 1000000) / frequency.QuadPart;
+}
+
+double Platform::GetTimeSeconds() {
+    return GetTimeMicroseconds() / 1000000.0;
+}
+
+// 文件系统函数
+bool Platform::FileExists(const char* path) {
+    DWORD attrib = GetFileAttributesA(path);
+    return (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+size_t Platform::FileSize(const char* path) {
+    WIN32_FILE_ATTRIBUTE_DATA fileInfo;
+    if (GetFileAttributesExA(path, GetFileExInfoStandard, &fileInfo)) {
+        return (size_t)fileInfo.nFileSizeLow | ((size_t)fileInfo.nFileSizeHigh << 32);
+    }
+    return 0;
+}
+
+size_t Platform::ReadFile(const char* path, void* dst, size_t maxBytes) {
+    HANDLE hFile = CreateFileA(path, GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) return 0;
+    
+    DWORD bytesRead;
+    DWORD toRead = (DWORD)(maxBytes > 0xFFFFFFFF ? 0xFFFFFFFF : maxBytes);
+    BOOL result = ::ReadFile(hFile, dst, toRead, &bytesRead, nullptr);
+    CloseHandle(hFile);
+    
+    return result ? (size_t)bytesRead : 0;
+}
+
+const char* Platform::GetExecutablePath() {
+    static char buffer[MAX_PATH];
+    GetModuleFileNameA(nullptr, buffer, MAX_PATH);
+    return buffer;
+}
+
+const char* Platform::GetPersistentPath() {
+    static char buffer[MAX_PATH];
+    if (SHGetFolderPathA(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, buffer) == S_OK) {
+        return buffer;
+    }
+    return ".";
+}
+
+const char* Platform::GetTemporaryPath() {
+    static char buffer[MAX_PATH];
+    GetTempPathA(MAX_PATH, buffer);
+    return buffer;
+}
+
+// 线程和同步函数
+PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
+    return (PlatformThreadHandle)_beginthreadex(nullptr, 0, (unsigned(__stdcall*)(void*))entry, userData, 0, nullptr);
+}
+
+void Platform::JoinThread(PlatformThreadHandle thread) {
+    WaitForSingleObject(thread, INFINITE);
+    CloseHandle(thread);
+}
+
+PlatformMutexHandle Platform::CreateMutex() {
+    return (PlatformMutexHandle)::CreateMutexA(nullptr, FALSE, nullptr);
+}
+
+void Platform::DestroyMutex(PlatformMutexHandle mtx) {
+    ::CloseHandle(mtx);
+}
+
+void Platform::LockMutex(PlatformMutexHandle mtx) {
+    ::WaitForSingleObject(mtx, INFINITE);
+}
+
+void Platform::UnlockMutex(PlatformMutexHandle mtx) {
+    ::ReleaseMutex(mtx);
+}
+
+// IPlatformLogger接口实现
+void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
+    // 简单实现 - 输出到stdout
+    SetConsoleColor(level);
+    std::cout << "[" << tag << "] " << message << std::endl;
+    ResetConsoleColor();
+}
+
+const char* Platform::GetLogDirectoryPath() {
+    static char buffer[MAX_PATH];
+    if (SHGetFolderPathA(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, buffer) == S_OK) {
+        strcat_s(buffer, "\\PrismaEngine\\Logs");
+        CreateDirectoryA(buffer, nullptr);
+        return buffer;
+    }
+    return ".";
+}
+
+// SDL特定功能
+void Platform::SetEventCallback(EventCallback callback) {
+    s_eventCallback = callback;
 }
 
 } // namespace Prisma

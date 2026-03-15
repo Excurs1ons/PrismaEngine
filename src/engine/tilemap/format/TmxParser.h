@@ -44,7 +44,7 @@ private:
     static std::unique_ptr<Tileset> ParseTsxFile(const std::filesystem::path& tsxPath);
 
     // 解析层
-    static std::unique_ptr<Layer> ParseLayer(
+    static std::unique_ptr<TilemapLayer> ParseLayer(
         void* layerElement,
         const std::filesystem::path& basePath,
         TileMap& map
