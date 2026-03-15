@@ -73,11 +73,11 @@ public:
     }
 
     // 查找层
-    Layer* FindLayer(int layerId) const {
+    TilemapLayer* FindLayer(int layerId) const {
         return m_map ? m_map->FindLayer(layerId) : nullptr;
     }
 
-    Layer* FindLayerByName(const std::string& layerName) const {
+    TilemapLayer* FindLayerByName(const std::string& layerName) const {
         return m_map ? m_map->FindLayerByName(layerName) : nullptr;
     }
 
