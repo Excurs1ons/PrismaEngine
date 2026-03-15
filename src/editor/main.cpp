@@ -3,6 +3,8 @@
 #include "../engine/Application.h"
 #include "../engine/Logger.h"
 
+extern "C" Prisma::Application* CreateApplication();
+
 /**
  * @brief Prisma Editor Launcher
  */
@@ -12,22 +14,26 @@ int main(int argc, char* argv[]) {
     logConfig.target = Prisma::LogTarget::Both;
     Prisma::Logger::Get().Initialize(logConfig);
 
-    // 1. Initialize engine
-    auto engine = Prisma::Engine::Get();
-    if (engine->Initialize() != 0) {
+    // 1. Create Engine (Architecture fix: explicit instantiation on stack)
+    Prisma::EngineSpecification spec;
+    spec.Name = "Prisma Editor";
+    Prisma::Engine engine(spec);
+
+    // 2. Initialize engine
+    if (engine.Initialize() != 0) {
         return -1;
     }
 
-    // 2. Create application
-    std::unique_ptr<Prisma::Application> app(Prisma::CreateApplication());
+    // 3. Create application
+    std::unique_ptr<Prisma::Application> app(CreateApplication());
 
     if (app) {
-        // 3. Engine drives the lifecycle
-        engine->Run(std::move(app));
+        // 4. Engine drives the lifecycle
+        engine.Run(std::move(app));
     }
 
-    // 4. Shutdown
-    engine->Shutdown();
+    // 5. Shutdown
+    engine.Shutdown();
 
     return 0;
 }

@@ -18,55 +18,20 @@ Application::~Application() {
     s_Instance = nullptr;
 }
 
-bool Application::Initialize() {
-    InitWindow();
-    return true;
+int Application::OnInitialize() {
+    return 0;
 }
 
-void Application::InitWindow() {
-    WindowProps props;
-    props.Title = m_Spec.Name;
-    props.Width = m_Spec.Width;
-    props.Height = m_Spec.Height;
-    
-    m_Window = Window::Create(props);
-    if (!m_Window) {
-        LOG_FATAL("Application", "Failed to create window!");
-        return;
-    }
-
-    m_Window->SetEventCallback([this](Event& e) { OnEvent(e); });
-}
-
-void Application::Run() {
-    while (m_Running) {
-        float time = (float)Platform::GetProcessId(); // Placeholder
-        Timestep ts = time - m_LastFrameTime;
-        m_LastFrameTime = time;
-
-        if (!m_Minimized) {
-            OnUpdate(ts);
-            OnRender();
-        }
-
-        m_Window->OnUpdate();
-    }
-}
-
-void Application::Close() {
-    m_Running = false;
+void Application::OnShutdown() {
 }
 
 void Application::OnEvent(Event& e) {
-    if (e.GetEventType() == EventType::WindowClose) {
-        Close();
-        e.Handled = true;
-    }
-
+    // 1. Dispatch to Engine-wide systems first (Input, etc.)
     if (auto* inputManager = Engine::Get().GetInputManager()) {
         inputManager->OnEvent(e);
     }
 
+    // 2. Dispatch to Layers (from top to bottom)
     for (auto it = m_LayerStack.rbegin(); it != m_LayerStack.rend(); ++it) {
         if (e.Handled) break;
         (*it)->OnEvent(e);
@@ -80,18 +45,22 @@ void Application::OnUpdate(Timestep ts) {
 
 void Application::OnRender() {
     for (Layer* layer : m_LayerStack)
-        layer->OnImGuiRender();
+        layer->OnRender();
 }
 
 void Application::OnImGuiRender() {
+    for (Layer* layer : m_LayerStack)
+        layer->OnImGuiRender();
 }
 
 void Application::PushLayer(Layer* layer) {
     m_LayerStack.PushLayer(layer);
+    layer->OnAttach();
 }
 
 void Application::PushOverlay(Layer* overlay) {
     m_LayerStack.PushOverlay(overlay);
+    overlay->OnAttach();
 }
 
 } // namespace Prisma

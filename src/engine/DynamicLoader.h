@@ -3,12 +3,21 @@
 
 #include "Logger.h"
 
+#ifdef _WIN32
+    #ifndef WIN32_LEAN_AND_MEAN
+        #define WIN32_LEAN_AND_MEAN
+    #endif
+    #include <windows.h>
+#endif
+
 #include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+namespace Prisma {
 
 class DynamicLoader {
 public:
@@ -141,3 +150,5 @@ private:
     void* m_handle;
     std::string m_tempPath;
 };
+
+} // namespace Prisma

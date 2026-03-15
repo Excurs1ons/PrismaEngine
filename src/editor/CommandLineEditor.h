@@ -1,6 +1,5 @@
 #pragma once
 #include "Export.h"
-#include "Application.h"
 #include "CommandLineParser.h"
 #include "ManagerBase.h"
 #include <string>
@@ -9,7 +8,7 @@
 
 namespace Prisma {
 
-class EDITOR_API CommandLineEditor : public Application<CommandLineEditor>, public ManagerBase<CommandLineEditor> {
+class EDITOR_API CommandLineEditor : public ManagerBase<CommandLineEditor> {
 public:
     CommandLineEditor();
     ~CommandLineEditor() override;
@@ -17,7 +16,7 @@ public:
     static std::shared_ptr<CommandLineEditor> Get();
 
     int Initialize() override;
-    int Run() override;
+    int Run();
     void Shutdown() override;
 
     void SetArguments(const CommandLineParser::Arguments& args);

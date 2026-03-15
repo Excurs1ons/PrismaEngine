@@ -11,7 +11,7 @@
 
 namespace Prisma {
 
-class Scene
+class ENGINE_API Scene
 {
 public:
     Scene();

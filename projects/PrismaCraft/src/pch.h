@@ -14,11 +14,12 @@
 #include <fstream>
 #include <filesystem>
 #include <sstream>
+#include <cstdint>
 
 // 游戏特定类型
-using GameObjectID = uint32;
-using ComponentID = uint32;
-using EntityID = uint32;
+using GameObjectID = uint32_t;
+using ComponentID = uint32_t;
+using EntityID = uint32_t;
 
 // 注意：游戏特定的枚举、常量和函数
 // 将在各自的头文件中定义，不在PCH中包含

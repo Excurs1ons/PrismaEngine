@@ -14,9 +14,8 @@ using json = nlohmann::json;
  */
 class ENGINE_API JsonOutputArchive : public OutputArchive {
 public:
-    JsonOutputArchive() {
-        m_stack.push(&m_root);
-    }
+    JsonOutputArchive();
+    ~JsonOutputArchive();
 
     void BeginObject(const std::string& name) override {
         json& current = *m_stack.top();
@@ -59,9 +58,8 @@ private:
  */
 class ENGINE_API JsonInputArchive : public InputArchive {
 public:
-    explicit JsonInputArchive(const json& data) : m_root(data) {
-        m_stack.push(const_cast<json*>(&m_root));
-    }
+    explicit JsonInputArchive(const json& data);
+    ~JsonInputArchive();
 
     void BeginObject(const std::string& name) override {
         const json& current = *m_stack.top();

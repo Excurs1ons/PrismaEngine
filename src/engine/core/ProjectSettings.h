@@ -5,7 +5,7 @@
 
 namespace Prisma {
     namespace Core {
-        struct ProjectSettings : public Serialization::Serializable {
+        struct ProjectSettings : public Serialization::ISerializable {
             std::string companyName = "DefaultCompany";
             std::string productName = "PrismaProject";
             std::string version = "1.0.0";

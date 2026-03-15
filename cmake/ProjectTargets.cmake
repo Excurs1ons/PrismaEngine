@@ -16,6 +16,9 @@ endif()
 if(TARGET Game)
     list(APPEND PRISMA_DEPENDENCIES Game)
 endif()
+if(TARGET PrismaCraft)
+    list(APPEND PRISMA_DEPENDENCIES PrismaCraft)
+endif()
 
 add_custom_target(Prisma ALL
     DEPENDS ${PRISMA_DEPENDENCIES}
