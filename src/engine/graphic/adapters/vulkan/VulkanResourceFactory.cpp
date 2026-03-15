@@ -92,13 +92,30 @@ std::unique_ptr<IBuffer> VulkanResourceFactory::CreateBufferImpl(const BufferDes
     bufferInfo.size = desc.size;
     bufferInfo.usage = 0;
 
-    uint32_t usage = static_cast<uint32_t>(desc.usage);
-    if ((usage & static_cast<uint32_t>(BufferUsage::Vertex)) != 0) bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-    if ((usage & static_cast<uint32_t>(BufferUsage::Index)) != 0) bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-    if ((usage & static_cast<uint32_t>(BufferUsage::Uniform)) != 0) bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-    if ((usage & static_cast<uint32_t>(BufferUsage::Storage)) != 0) bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-    if ((usage & static_cast<uint32_t>(BufferUsage::Indirect)) != 0) bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-    if ((usage & static_cast<uint32_t>(BufferUsage::ShaderResource)) != 0) bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    // 根据 BufferType 设置 Vulkan buffer usage
+    switch (desc.type) {
+        case BufferType::Vertex:
+            bufferInfo.usage |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+            break;
+        case BufferType::Index:
+            bufferInfo.usage |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            break;
+        case BufferType::Constant:
+            bufferInfo.usage |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+            break;
+        case BufferType::Structured:
+            bufferInfo.usage |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            break;
+        case BufferType::IndirectArgument:
+            bufferInfo.usage |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+            break;
+        default:
+            break;
+    }
+
+    // 根据 BufferUsage 添加额外的 usage flags
+    if (static_cast<uint32_t>(desc.usage) & static_cast<uint32_t>(BufferUsage::ShaderResource))
+        bufferInfo.usage |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
 
     bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
@@ -122,7 +139,13 @@ std::unique_ptr<IBuffer> VulkanResourceFactory::CreateDynamicBuffer(uint64_t siz
 }
 
 std::unique_ptr<IShader> VulkanResourceFactory::CreateShaderImpl(const ShaderDesc& desc, const std::vector<uint8_t>& bytecode, const ShaderReflection& reflection) {
-    return std::make_unique<VulkanShader>(desc, bytecode, reflection);
+    // 将 uint8_t 字节码转换为 uint32_t SPIR-V
+    std::vector<uint32_t> spirv;
+    if (bytecode.size() % 4 == 0) {
+        spirv.resize(bytecode.size() / 4);
+        memcpy(spirv.data(), bytecode.data(), bytecode.size());
+    }
+    return std::make_unique<VulkanShader>(m_device, desc, spirv, reflection);
 }
 
 std::unique_ptr<IPipelineState> VulkanResourceFactory::CreatePipelineStateImpl() {

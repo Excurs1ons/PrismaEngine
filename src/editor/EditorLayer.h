@@ -20,7 +20,7 @@ public:
         // 更新逻辑
     }
 
-    void OnRender() override {
+    void OnRender() {
         auto renderSystem = Graphic::RenderSystem::Get();
         
         // 渲染场景 (推送模式)

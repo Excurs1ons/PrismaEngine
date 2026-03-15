@@ -106,12 +106,23 @@ public:
     /// @brief 复制数据到另一个缓冲区
     /// @param dstBuffer 目标缓冲区
     /// @param srcOffset 源偏移量
+
     /// @param dstOffset 目标偏移量
     /// @param size 复制大小
     virtual void CopyTo(IBuffer* dstBuffer,
                        uint64_t srcOffset = 0,
                        uint64_t dstOffset = 0,
                        uint64_t size = 0) = 0;
+
+    /// @brief 从另一个缓冲区复制数据
+    /// @param srcBuffer 源缓冲区
+    /// @param srcOffset 源偏移量
+    /// @param dstOffset 目标偏移量
+    /// @param size 复制大小
+    virtual void CopyFromBuffer(IBuffer* srcBuffer,
+                                 uint64_t srcOffset = 0,
+                                 uint64_t dstOffset = 0,
+                                 uint64_t size = 0) = 0;
 
     /// @brief 填充缓冲区
     /// @param value 填充值（4字节）

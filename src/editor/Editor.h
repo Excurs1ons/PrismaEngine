@@ -20,8 +20,6 @@ public:
     Editor();
     ~Editor() override;
 
-    static std::shared_ptr<Editor> Get();
-
     // 被动初始化接口，仅负责应用层自身的逻辑
     int OnInitialize() override;
     void OnShutdown() override;

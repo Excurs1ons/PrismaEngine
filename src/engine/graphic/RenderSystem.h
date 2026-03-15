@@ -6,9 +6,15 @@
 #include "interfaces/IRenderDevice.h"
 #include "interfaces/IResourceManager.h"
 #include "interfaces/RenderTypes.h"
+#include "ICamera.h"
 #include <functional>
 #include <memory>
 #include <string>
+
+namespace Prisma {
+    // 前向声明
+    class Scene;
+}
 
 namespace Prisma::Graphic {
 
@@ -51,6 +57,9 @@ public:
     IRenderDevice* GetDevice() const { return m_device.get(); }
     IResourceManager* GetResourceManager() const { return m_resourceManager.get(); }
 
+    // === 静态访问 ===
+    static RenderSystem* Get();
+
     // === 渲染流程 ===
     void SetMainPipeline(std::shared_ptr<IPipeline> pipeline);
     IPipeline* GetMainPipeline() const { return m_mainPipeline.get(); }
@@ -60,6 +69,9 @@ public:
     void ShutdownImGui();
     using GuiRenderCallback = std::function<void(IRenderDevice*)>;
     void SetGuiRenderCallback(GuiRenderCallback callback);
+
+    // === 场景渲染 ===
+    void RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera);
 
 private:
     bool InitializeDevice();

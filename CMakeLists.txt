@@ -110,19 +110,12 @@ if(PRISMA_BUILD_EDITOR)
     message(STATUS "已添加编辑器模块")
     # 应用编辑器目标后配置（必须在 add_subdirectory 之后）
     include(cmake/EditorPostTargets.cmake)
-else()
-    # Game 模块 (Editor 模式下不需要 Game)
-    if(EXISTS ${CMAKE_SOURCE_DIR}/src/game/CMakeLists.txt)
-        add_subdirectory(src/game)
-        message(STATUS "已添加 Game 模块")
-    endif()
-    
-    # 外部项目模块 (PrismaCraft 等) - 在 SDK 模式下构建
-    if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt AND PRISMA_BUILD_SDK)
-        # PrismaCraft 使用内部构建方式：直接从构建目录链接，不需要安装 SDK
-        add_subdirectory(projects)
-        message(STATUS "已添加 Projects 模块 (SDK 模式 - 内部构建)")
-    endif()
+endif()
+
+# 外部项目模块 (PrismaCraft 等)
+if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt)
+    add_subdirectory(projects)
+    message(STATUS "已添加 Projects 模块")
 endif()
 
 # 运行时模块 (最后添加，以便能检测到 Game/Editor 目标)

@@ -16,14 +16,8 @@
 
 namespace Prisma {
 
-std::shared_ptr<Editor> Editor::Get() {
-    static std::shared_ptr<Editor> instance = std::shared_ptr<Editor>(new Editor());
-    s_Instance = instance.get();
-    return instance;
-}
-
 Editor::Editor() 
-    : Application({ "Prisma Editor", { 1280, 720 } }) {
+    : Application(ApplicationSpecification{ "Prisma Editor", 1280, 720 }) {
 }
 
 Editor::~Editor() {
@@ -31,8 +25,6 @@ Editor::~Editor() {
 
 int Editor::OnInitialize() {
     LOG_INFO("Editor", "Initializing Editor Plugin (Pure Mode)...");
-
-    // 注意：此时 RenderSystem 已经由 Engine 初始化完毕
 
     // 1. 初始化 ImGui
     if (!InitializeImGui()) {
@@ -57,49 +49,47 @@ bool Editor::InitializeImGui() {
 
     ImGui::StyleColorsDark();
 
-    // 绑定后端 (此时窗口已经由基类创建并就绪)
-    SDL_Window* sdlWindow = static_cast<SDL_Window*>(GetWindow().GetNativeWindow());
+    // 绑定后端
+    auto& window = Engine::Get().GetWindow();
+    SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
     if (!ImGui_ImplSDL3_InitForVulkan(sdlWindow)) {
         return false;
     }
 
-    return Graphic::RenderSystem::Get()->InitializeImGui();
+    return Engine::Get().GetRenderSystem()->InitializeImGui();
 }
 
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
 }
 
-void Editor::OnRender() {
-    auto renderSystem = Graphic::RenderSystem::Get();
-    
-    renderSystem->BeginFrame();
-    
-    for (Layer* layer : m_LayerStack) {
-        layer->OnRender();
-    }
-    
+void Editor::OnImGuiRender() {
+    // 1. ImGui 帧开始
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    for (Layer* layer : m_LayerStack) {
-        layer->OnImGuiRender();
-    }
+    // 2. 渲染所有 Layer 的 UI
+    Application::OnImGuiRender();
 
+    // 3. ImGui 帧结束
     ImGui::Render();
-    
-    renderSystem->EndFrame();
-    renderSystem->Present();
+}
+
+void Editor::OnRender() {
+    // 这里放置场景提交逻辑 (由 Engine 循环调用)
+    Application::OnRender();
 }
 
 void Editor::OnShutdown() {
     LOG_INFO("Editor", "Shutting down Editor...");
 
-    Graphic::RenderSystem::Get()->ShutdownImGui();
+    auto renderSystem = Engine::Get().GetRenderSystem();
+    if (renderSystem) {
+        renderSystem->ShutdownImGui();
+    }
+    
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
-
-    // 注意：RenderSystem 的 Shutdown 由 Engine 统一管理
 }
 
 } // namespace Prisma
@@ -107,8 +97,6 @@ void Editor::OnShutdown() {
 // ============================================================================
 // Factory
 // ============================================================================
-extern "C" {
-    EDITOR_API Prisma::Application* CreateApplication() {
-        return Prisma::Editor::Get().get();
-    }
+extern "C" EDITOR_API Prisma::Application* CreateApplication() {
+    return new Prisma::Editor();
 }

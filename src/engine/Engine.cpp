@@ -59,34 +59,53 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
     // 1. 初始化窗口与渲染系统 (非 Headless)
     if (!m_Spec.Headless) {
-        m_CurrentApp->InitWindow();
+        WindowProps props;
+        auto& appSpec = m_CurrentApp->GetSpecification();
+        props.Title = appSpec.Name;
+        props.Width = appSpec.Width;
+        props.Height = appSpec.Height;
+
+        m_Window = Window::Create(props);
+        if (!m_Window) {
+            LOG_FATAL("Engine", "Failed to create window!");
+            return -1;
+        }
 
         Graphic::RenderSystemDesc rDesc;
-        auto& window = m_CurrentApp->GetWindow();
-        rDesc.windowHandle = window.GetNativeWindow();
-        rDesc.width = window.GetWidth();
-        rDesc.height = window.GetHeight();
+        rDesc.windowHandle = m_Window->GetNativeWindow();
+        rDesc.width = m_Window->GetWidth();
+        rDesc.height = m_Window->GetHeight();
         
         m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
         if (m_RenderSystem->Initialize() != 0) {
             LOG_FATAL("Engine", "Failed to initialize RenderSystem!");
             return -1;
         }
+
+        // 2. 窗口事件统一分发 (Engine 级处理)
+        m_Window->SetEventCallback([this](Event& e) {
+            EventDispatcher dispatcher(e);
+            
+            dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
+                m_Running = false;
+                return true;
+            });
+
+            dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
+                if (event.GetWidth() == 0 || event.GetHeight() == 0) {
+                    m_Minimized = true;
+                    return false;
+                }
+                m_Minimized = false;
+                if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
+                return false;
+            });
+
+            if (m_CurrentApp) m_CurrentApp->OnEvent(e);
+        });
     }
 
     if (m_CurrentApp->OnInitialize() != 0) return -1;
-
-    // 2. 窗口事件统一分发
-    m_CurrentApp->GetWindow().SetEventCallback([this](Event& e) {
-        EventDispatcher dispatcher(e);
-        dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
-            if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
-            return false;
-        });
-
-        if (m_InputManager) m_InputManager->OnEvent(e);
-        m_CurrentApp->OnEvent(e);
-    });
 
     double lastFrameTime = Platform::GetTimeSeconds();
 
@@ -96,37 +115,33 @@ int Engine::Run(std::unique_ptr<Application> app) {
         float deltaTime = static_cast<float>(time - lastFrameTime);
         lastFrameTime = time;
 
-        // A. 事件泵送
-        m_CurrentApp->GetWindow().OnUpdate();
+        // A. 事件泵送 (如果是非 Headless 模式)
+        if (m_Window) {
+            m_Window->OnUpdate();
+        }
+        
         if (!m_Running) break;
 
         // B. 逻辑与渲染更新
-        if (m_Spec.Headless || !m_CurrentApp->IsMinimized()) {
+        if (m_Spec.Headless || !m_Minimized) {
             // 1. 逻辑更新 (Subsystems & App)
             Update(Timestep(std::min(deltaTime, 0.1f)));
             
-            // 2. 渲染流程 (交给 RenderSystem 统筹)
+            // 2. 渲染流程
             if (m_RenderSystem) {
                 m_RenderSystem->BeginFrame();
-
-                // 提交阶段：让应用层把东西扔进渲染队列
-                // 注意：这里不再手动凑 RenderContext，由 RenderSystem 或 App 内部处理
                 m_CurrentApp->OnRender(); 
-
-                // UI 渲染 (ImGui)
                 m_CurrentApp->OnImGuiRender();
-
                 m_RenderSystem->EndFrame();
             }
         } else {
             Platform::SleepMilliseconds(10);
         }
 
-        // C. FPS 帧同步控制 (Linus 批准版)
+        // C. FPS 帧同步控制
         if (m_Spec.MaxFPS > 0) {
             float targetFrameTime = 1.0f / m_Spec.MaxFPS;
             while (Platform::GetTimeSeconds() - time < targetFrameTime) {
-                // 剩余时间较多时可以 Sleep 释放 CPU
                 if (targetFrameTime - (Platform::GetTimeSeconds() - time) > 0.002f) {
                     Platform::SleepMilliseconds(1);
                 }

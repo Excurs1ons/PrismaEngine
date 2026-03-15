@@ -2,6 +2,9 @@
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "pipelines/forward/ForwardPipeline.h"
 #include "Logger.h"
+#include "../Scene.h"
+#include "../Camera.h"
+#include "../Engine.h"
 
 namespace Prisma::Graphic {
 
@@ -78,6 +81,27 @@ void RenderSystem::Resize(uint32_t width, uint32_t height) {
     m_desc.width = width;
     m_desc.height = height;
     if (m_device) m_device->Resize(width, height);
+}
+
+bool RenderSystem::InitializeImGui() {
+    LOG_INFO("Renderer", "Initializing ImGui for RenderSystem");
+    m_imguiInitialized = true;
+    return true;
+}
+
+void RenderSystem::ShutdownImGui() {
+    LOG_INFO("Renderer", "Shutting down ImGui for RenderSystem");
+    m_imguiInitialized = false;
+}
+
+void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera) {
+    // 简单的场景渲染实现 - 占位符
+    LOG_INFO("Renderer", "Rendering scene with camera");
+    // 实际渲染逻辑待实现
+}
+
+RenderSystem* RenderSystem::Get() {
+    return Engine::Get().GetRenderSystem();
 }
 
 } // namespace Prisma::Graphic

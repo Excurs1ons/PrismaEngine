@@ -296,6 +296,7 @@ void Logger::WriteToFile(const std::string& message) {
 }
 
 std::string Logger::FormatCallStack(const std::vector<StackFrame>& callStack) {
+    (void)callStack; // Suppress unused parameter warning in release builds
     return "";
 }
 

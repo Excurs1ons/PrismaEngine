@@ -4,6 +4,7 @@
 #include "ISubSystem.h"
 #include "Logger.h"
 #include "core/Timestep.h"
+#include "Window.h"
 #include <memory>
 #include <vector>
 #include <string>
@@ -42,8 +43,11 @@ public:
 
     static Engine& Get() { return *s_Instance; }
     
-    // --- 快车道访问：杜绝 dynamic_cast ---
-    AssetManager* GetAssetManager() { return m_AssetManager; }
+    // --- Window Management ---
+    Window& GetWindow() { return *m_Window; }
+    bool IsMinimized() const { return m_Minimized; }
+
+    // --- Fast Track Access ---
     Input::InputManager* GetInputManager() { return m_InputManager; }
     Graphic::RenderSystem* GetRenderSystem() { return m_RenderSystem; }
 
@@ -65,6 +69,7 @@ private:
     EngineSpecification m_Spec;
     std::vector<std::unique_ptr<ISubSystem>> m_Systems;
     std::unique_ptr<Application> m_CurrentApp;
+    std::unique_ptr<Window> m_Window;
     
     // 核心系统指针缓存 (快车道)
     AssetManager* m_AssetManager = nullptr;
@@ -73,6 +78,7 @@ private:
 
     bool m_Initialized = false;
     bool m_Running = false;
+    bool m_Minimized = false;
 
     static Engine* s_Instance;
 };

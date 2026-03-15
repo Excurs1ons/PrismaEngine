@@ -49,6 +49,10 @@ namespace Prisma {
                 return m_bytecode;
             }
 
+            ResourceType VulkanShader::GetType() const {
+                return ResourceType::Shader;
+            }
+
             const std::string &VulkanShader::GetFilename() const {
                 return m_desc.filename;
             }

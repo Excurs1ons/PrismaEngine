@@ -32,37 +32,33 @@ public:
     }
 
     /**
-     * @brief 准备渲染数据 (这里是重点！)
+     * @brief 准备渲染数据并提交 (OnRender 替代 PrepareRenderData)
      */
-    void PrepareRenderData(Graphic::RenderContext& ctx) {
+    void OnRender() override {
         // 1. 获取相机信息并填入上下文
+        Graphic::CameraData cameraData;
         auto* scene = SceneManager::Get()->GetCurrentScene();
         if (scene) {
             auto camera = scene->GetMainCamera();
             if (camera) {
-                ctx.camera.viewMatrix = camera->GetViewMatrix();
-                ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
-                ctx.camera.position = camera->GetPosition();
+                cameraData.viewMatrix = camera->GetViewMatrix();
+                cameraData.projectionMatrix = camera->GetProjectionMatrix();
+                cameraData.position = camera->GetPosition();
             }
         }
 
         // 2. 开启 Renderer 的场景收集
-        Graphic::Renderer::BeginScene(ctx.camera);
+        Graphic::Renderer::BeginScene(cameraData);
 
         // 3. 提交渲染指令 (模拟提交一个旋转的方块)
         // 在真实项目中，这里会遍历 Scene 的 Renderables
-        PrismaMath::mat4 transform = PrismaMath::translate(PrismaMath::mat4(1.0f), {0, 0, -5});
-        transform = PrismaMath::rotate(transform, m_CubeRotation, {0, 1, 0});
+        // PrismaMath::mat4 transform = PrismaMath::translate(PrismaMath::mat4(1.0f), {0, 0, -5});
+        // transform = PrismaMath::rotate(transform, m_CubeRotation, {0, 1, 0});
         
         // Renderer::Submit(m_CubeMesh.get(), m_WoodMaterial.get(), transform);
 
         // 4. 结束收集，准备执行
         Graphic::Renderer::EndScene();
-    }
-
-    void OnRender() override {
-        // 以前这里是手动调渲染，现在这里什么都不用做！
-        // 因为渲染流程已经被 Engine 和 Pipeline 接管了。
     }
 
 private:
@@ -88,15 +84,6 @@ public:
         return 0;
     }
 
-    /**
-     * @brief 转发渲染准备请求到逻辑层
-     */
-    void PrepareRenderData(Graphic::RenderContext& ctx) override {
-        if (m_GameplayLayer) {
-            m_GameplayLayer->PrepareRenderData(ctx);
-        }
-    }
-
     void OnShutdown() override {
         LOG_INFO("Game", "Shutting down PrismaCraft...");
     }
@@ -107,8 +94,6 @@ private:
 
 } // namespace Prisma
 
-extern "C" {
-    ENGINE_API Prisma::Application* CreateApplication() {
-        return new Prisma::PrismaCraft();
-    }
+extern "C" __declspec(dllexport) Prisma::Application* CreateApplication() {
+    return new Prisma::PrismaCraft();
 }

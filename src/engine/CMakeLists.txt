@@ -59,6 +59,7 @@ set(CORE_SOURCES
     input/InputDevice.cpp
     input/InputManager.cpp
     resource/AssetSerializer.cpp
+    resource/ArchiveJson.cpp
     resource/MeshAsset.cpp
     resource/ResourceFallback.cpp
     resource/ResourceFallbackImpl.cpp
