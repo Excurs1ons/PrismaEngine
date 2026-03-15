@@ -22,6 +22,11 @@ set(UI_SOURCES
     graphic/ui/UIPass.cpp
 )
 
+# 额外的渲染Pass源文件
+set(EXTRA_PASS_SOURCES
+    graphic/pipelines/SkyboxRenderPass.cpp
+)
+
 # UI 模块头文件
 set(UI_HEADERS
     graphic/ui/FontAtlas.h
@@ -77,6 +82,8 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/stb_impl.cpp
     graphic/RenderResourceManager.cpp
     graphic/RenderAPIVulkan.cpp
+    graphic/interfaces/IPipelineState.cpp
+    ${EXTRA_PASS_SOURCES}
     ${PIPELINE_FORWARD_SOURCES}
     ${PIPELINE_DEFERRED_SOURCES}
     ${UI_SOURCES}
