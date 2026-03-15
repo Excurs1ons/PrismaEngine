@@ -12,7 +12,7 @@ namespace Prisma {
 // 前向声明
 // ============================================================================
 
-class Layer;
+class TilemapLayer;
 
 // ============================================================================
 // 图块层
@@ -244,15 +244,15 @@ public:
     PropertyMap properties;
 
     // 子层列表
-    std::vector<std::unique_ptr<Layer>> layers;
+    std::vector<std::unique_ptr<TilemapLayer>> layers;
 
     // 类型标识
     static constexpr LayerType Type = LayerType::GroupLayer;
     LayerType GetLayerType() const { return Type; }
 
     // 查找子层
-    Layer* FindLayer(int layerId) const;
-    Layer* FindLayerByName(const std::string& layerName) const;
+    TilemapLayer* FindLayer(int layerId) const;
+    TilemapLayer* FindLayerByName(const std::string& layerName) const;
 };
 
 } // namespace Prisma
