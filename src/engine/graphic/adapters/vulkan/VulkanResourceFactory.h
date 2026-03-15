@@ -10,7 +10,7 @@
 #include "interfaces/IFence.h"
 #include "VulkanResources.h"
 #include <vulkan/vulkan.h>
-#include <vma/vk_mem_alloc.h>
+#include <vk_mem_alloc.h>
 
 namespace Prisma::Graphic::Vulkan {
 

@@ -75,8 +75,6 @@ if(WIN32)
     )
 elseif(LINUX)
     list(APPEND CORE_SOURCES
-        PlatformSDL.cpp
-        platform/Application.cpp
     )
 endif()
 
