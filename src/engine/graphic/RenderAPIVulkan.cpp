@@ -435,10 +435,17 @@ IRenderDevice::RenderStats VulkanRenderDevice::GetRenderStats() const {
 void VulkanRenderDevice::BeginDebugMarker(const std::string& name) {
 #if defined(VK_EXT_debug_utils)
     if (m_debugMessenger != VK_NULL_HANDLE) {
-        VkDebugUtilsLabelEXT label = {};
-        label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-        label.pLabelName = name.c_str();
-        vkCmdBeginDebugUtilsLabelEXT(m_commandBuffers[m_currentFrameIndex], &label);
+        // 动态加载扩展函数
+        static auto vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(
+            vkGetInstanceProcAddr(m_instance, "vkCmdBeginDebugUtilsLabelEXT")
+        );
+
+        if (vkCmdBeginDebugUtilsLabelEXT && m_currentFrameIndex < m_commandBuffers.size()) {
+            VkDebugUtilsLabelEXT label = {};
+            label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+            label.pLabelName = name.c_str();
+            vkCmdBeginDebugUtilsLabelEXT(m_commandBuffers[m_currentFrameIndex], &label);
+        }
     }
 #else
     (void)name;
@@ -448,7 +455,14 @@ void VulkanRenderDevice::BeginDebugMarker(const std::string& name) {
 void VulkanRenderDevice::EndDebugMarker() {
 #if defined(VK_EXT_debug_utils)
     if (m_debugMessenger != VK_NULL_HANDLE) {
-        vkCmdEndDebugUtilsLabelEXT(m_commandBuffers[m_currentFrameIndex]);
+        // 动态加载扩展函数
+        static auto vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(
+            vkGetInstanceProcAddr(m_instance, "vkCmdEndDebugUtilsLabelEXT")
+        );
+
+        if (vkCmdEndDebugUtilsLabelEXT && m_currentFrameIndex < m_commandBuffers.size()) {
+            vkCmdEndDebugUtilsLabelEXT(m_commandBuffers[m_currentFrameIndex]);
+        }
     }
 #endif
 }

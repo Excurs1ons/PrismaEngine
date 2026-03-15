@@ -41,6 +41,7 @@ set(CORE_SOURCES
     SoundSynthesizer.cpp
     TriangleExample.cpp
     pch.cpp
+    graphic/Renderer.cpp
     scripting/MonoRuntime.cpp
     scripting/ScriptSystem.cpp
     core/AssetManager.cpp
@@ -193,6 +194,20 @@ target_link_libraries(Engine
         stb
         tinyxml2
 )
+
+if(PRISMA_ENABLE_AUDIO_SDL3)
+    # SDL3库链接
+    if(TARGET SDL3-shared)
+        target_link_libraries(Engine PUBLIC SDL3-shared)
+    elseif(TARGET SDL3-static)
+        target_link_libraries(Engine PUBLIC SDL3-static)
+    elseif(TARGET SDL3)
+        target_link_libraries(Engine PUBLIC SDL3)
+    else()
+        # 直接链接库文件
+        target_link_libraries(Engine PUBLIC "${CMAKE_BINARY_DIR}/lib/Release/SDL3.lib")
+    endif()
+endif()
 
 if(PRISMA_ENABLE_RENDER_VULKAN)
     target_link_libraries(Engine PUBLIC Vulkan::Vulkan)
