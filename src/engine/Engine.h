@@ -27,7 +27,7 @@ struct EngineSpecification {
 };
 
 /**
- * @brief 引擎核心类 (心脏)
+ * @brief 引擎核心类
  */
 class ENGINE_API Engine {
 public:

@@ -81,7 +81,6 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/MeshRenderer.cpp
     graphic/stb_impl.cpp
     graphic/RenderResourceManager.cpp
-    graphic/RenderAPIVulkan.cpp
     graphic/interfaces/IPipelineState.cpp
     ${EXTRA_PASS_SOURCES}
     ${PIPELINE_FORWARD_SOURCES}
@@ -115,7 +114,6 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/SubMesh.h
     graphic/test_shader.h
     graphic/RenderResourceManager.h
-    graphic/RenderAPIVulkan.h
     ${PIPELINE_FORWARD_HEADERS}
     ${PIPELINE_DEFERRED_HEADERS}
     ${UI_HEADERS}

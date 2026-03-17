@@ -46,7 +46,7 @@ class IPipeline {
 public:
     virtual ~IPipeline() = default;
 
-    virtual bool Initialize(IRenderDevice* device) = 0;
+    virtual int Initialize(IRenderDevice* device) = 0;
     virtual void Shutdown() = 0;
 
     // 执行渲染逻辑

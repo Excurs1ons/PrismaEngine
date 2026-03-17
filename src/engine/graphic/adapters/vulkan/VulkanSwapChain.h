@@ -2,6 +2,7 @@
 
 #include "interfaces/ISwapChain.h"
 #include <vulkan/vulkan.h>
+#include <Logger.h>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -10,9 +11,12 @@ class RenderDeviceVulkan;
 class VulkanSwapChain : public ISwapChain {
 public:
     VulkanSwapChain(RenderDeviceVulkan* device) 
-        : m_device(device), m_renderPass(VK_NULL_HANDLE) {}
+        : m_device(device), m_renderPass(VK_NULL_HANDLE) { 
+        LOG_INFO("Vulkan", "创建 Vulkan SwapChain 实例");
+    }
     ~VulkanSwapChain() override {
         // 在此处应有资源清理逻辑，暂留空
+        LOG_INFO("Vulkan", "销毁 Vulkan SwapChain 实例");
     }
 
     uint32_t GetBufferCount() const override { return 3; }

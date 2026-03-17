@@ -1,5 +1,5 @@
 #include "GBuffer.h"
-#include "graphic/RenderAPIVulkan.h"
+#include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "Logger.h"
 
 namespace Prisma::Graphic {

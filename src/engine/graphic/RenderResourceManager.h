@@ -31,16 +31,16 @@ struct ResourceLoadTask {
     std::function<void(ResourceId, std::shared_ptr<IResource>)> callback;
 };
 
-class ENGINE_API RenderResourceManager : public IResourceManager, public ManagerBase<RenderResourceManager> {
+class ENGINE_API RenderResourceManager : public IRenderResourceManager {
 public:
-    static std::shared_ptr<RenderResourceManager> Get();
+    static std::shared_ptr<IRenderResourceManager> Get();
 
     RenderResourceManager();
     ~RenderResourceManager() override;
 
-    int Initialize() override;
+    int Initialize() ;
     int Initialize(IRenderDevice* device) override;
-    void Update(Timestep ts) override;
+    void Update(Timestep ts);
     void Shutdown() override;
 
     // === 纹理管理 ===

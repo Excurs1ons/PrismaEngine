@@ -33,7 +33,7 @@ public:
     ~RenderDeviceVulkan() override;
 
     // ========== IRenderDevice接口实现 ==========
-    bool Initialize(const DeviceDesc& desc) override;
+    int Initialize(const DeviceDesc& desc) override;
     void Shutdown() override;
     std::string GetName() const override;
     std::string GetAPIName() const override;
@@ -75,22 +75,22 @@ public:
     GPUMemoryInfo GetGPUMemoryInfo() const override;
     RenderStats GetRenderStats() const override;
 
-    // ImGui 集成
-    bool InitializeImGui() override;
-    void ShutdownImGui() override;
-
     // 调试
     void BeginDebugMarker(const std::string& name) override;
     void EndDebugMarker() override;
     void SetDebugMarker(const std::string& name) override;
-    // ========== Vulkan特定方法 ==========
-    VkInstance Get() const { return m_instance; }
-    VkPhysicalDevice GetPhysicalDevice() const { return m_physicalDevice; }
-    VkDevice GetDevice() const { return m_device; }
-    VkQueue GetGraphicsQueue() const { return m_graphicsQueue; }
-    uint32_t GetGraphicsQueueFamily() const { return m_graphicsQueueFamily; }
-    VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
+    
+    // ========== Vulkan特定方法 (IRenderDevice 接口要求) ==========
+    VkInstance GetVkInstance() const override { return m_instance; }
+    VkPhysicalDevice GetPhysicalDevice() const override { return m_physicalDevice; }
+    VkDevice GetVkDevice() const override { return m_device; }
+    VkQueue GetGraphicsQueue() const override { return m_graphicsQueue; }
+    uint32_t GetGraphicsQueueFamily() const override { return m_graphicsQueueFamily; }
+    VmaAllocator GetVmaAllocator() const override { return m_allocator; }
     VmaAllocator GetAllocator() const { return m_allocator; }
+    bool IsInitialized() const override { return m_initialized; }
+    uint32_t GetCurrentFrameIndex() const override { return m_currentFrameIndex; }
+    VkDescriptorPool GetImGuiDescriptorPool() const override { return m_imguiDescriptorPool; }
 
     // 获取用于ImGui的RenderPass（从交换链获取）
     VkRenderPass GetImGuiRenderPass() const;
@@ -131,6 +131,7 @@ private:
     RenderStats m_stats;
     DeviceDesc m_desc;
     bool m_initialized = false;
+    uint32_t m_currentFrameIndex = 0;
 };
 
 }  // namespace Prisma::Graphic::Vulkan

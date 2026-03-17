@@ -137,7 +137,7 @@ void Logger::LogInternal(LogLevel level, const std::string& category, const std:
     if (currentScope) {
         currentScope->CacheLogEntry(entry);
     } else {
-        if (m_Config.asyncMode) {
+        if (m_Config.asyncMode && level < LogLevel::Error) {
             EnqueueEntry(std::move(entry));
         } else {
             WriteEntry(entry);
@@ -236,6 +236,12 @@ std::string Logger::FormatEntry(const LogEntry& entry, bool useColors) {
     if (!entry.category.empty()) {
         oss << "[" << entry.category << "] ";
     }
+
+    if (m_Config.enableSourceLocation && entry.location.file && entry.location.file[0] != '\0') {
+        std::filesystem::path filePath(entry.location.file);
+        oss << "(" << filePath.filename().string() << ":" << entry.location.line << ") ";
+    }
+
     oss << entry.message;
     if (useColors) {
         oss << ColorCode(LogColor::Reset);
