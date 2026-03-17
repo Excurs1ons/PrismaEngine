@@ -20,7 +20,7 @@ public:
     ~ForwardPipeline() override;
 
     // IPipeline 接口
-    bool Initialize(IRenderDevice* device) override;
+    int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
 

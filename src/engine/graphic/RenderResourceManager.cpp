@@ -12,7 +12,7 @@
 
 namespace Prisma::Graphic {
 
-std::shared_ptr<RenderResourceManager> RenderResourceManager::Get() {
+std::shared_ptr<IRenderResourceManager> RenderResourceManager::Get() {
     static std::shared_ptr<RenderResourceManager> instance = std::make_shared<RenderResourceManager>();
     return instance;
 }
@@ -46,7 +46,7 @@ int RenderResourceManager::Initialize(IRenderDevice* device) {
     
     m_initialized = true;
     LOG_INFO("RenderResourceManager", "Resource manager initialized.");
-    return true;
+    return 0;
 }
 
 void RenderResourceManager::RegisterResource(std::shared_ptr<IResource> resource, const std::string& name) {

@@ -7,11 +7,13 @@
 #include "VulkanSwapChain.h"
 #include "VulkanFence.h"
 #include <vk_mem_alloc.h>
+#include "Logger.h"
 
 namespace Prisma::Graphic::Vulkan {
 
 VulkanResourceFactory::VulkanResourceFactory(RenderDeviceVulkan* device)
-    : m_device(device), m_vkDevice(device->GetDevice()), m_vmaAllocator(device->GetAllocator()) {
+    : m_device(device), m_vkDevice(device->GetVkDevice()), m_vmaAllocator(device->GetAllocator()) {
+    LOG_INFO("Vulkan", "创建 Vulkan 资源工厂实例");
 }
 
 VulkanResourceFactory::~VulkanResourceFactory() {

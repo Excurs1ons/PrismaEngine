@@ -5,9 +5,9 @@
 #include "../Scene.h"
 #include "../Camera.h"
 #include "../Engine.h"
+#include "RenderResourceManager.h"
 
 namespace Prisma::Graphic {
-
 RenderSystem::RenderSystem(const RenderSystemDesc& desc)
     : m_desc(desc) {}
 
@@ -17,19 +17,36 @@ RenderSystem::~RenderSystem() {
 
 int RenderSystem::Initialize() {
     LOG_INFO("Renderer", "Initializing RenderSystem backend: {0}", (int)m_desc.backendType);
-    
-    if (!InitializeDevice()) return -1;
-    if (!InitializeResourceManager()) return -1;
-    if (!InitializePipelines()) return -1;
+    int dev_init_result = InitializeDevice();
+    if (dev_init_result != 0) {
+        LOG_ERROR("Renderer", "RenderDevice initializing failed! {0}", dev_init_result);
+        return dev_init_result;
+    }
+    LOG_INFO("Renderer", "RenderDevice initialized successfully: {0} ({1})", m_device->GetName(), m_device->GetAPIName());
+
+    int res_manager_init_result = InitializeRenderResourceManager();
+    if (res_manager_init_result != 0) {
+        LOG_ERROR("Renderer", "Render Resource Manager initializing failed! {0}", res_manager_init_result);
+        return res_manager_init_result;
+    }
+    LOG_INFO("Renderer", "Render Resource Manager initialized successfully.");
+
+    int pipeline_init_result = InitializeRenderPipelines();
+    if (pipeline_init_result != 0) {
+        LOG_ERROR("Renderer", "Render Pipelines initializing failed! {0}", pipeline_init_result);
+        return pipeline_init_result;
+    }
+    LOG_INFO("Renderer", "Pipelines initialized successfully.");
 
     LOG_INFO("Renderer", "RenderSystem initialized successfully.");
     return 0;
 }
 
-bool RenderSystem::InitializeDevice() {
+int RenderSystem::InitializeDevice() {
     if (m_desc.backendType == RenderAPIType::Vulkan) {
+        LOG_INFO("Renderer", "Creating Vulkan RenderDevice...");
         m_device = std::make_unique<Vulkan::RenderDeviceVulkan>();
-        
+
         DeviceDesc devDesc;
         devDesc.name = m_desc.name;
         devDesc.width = m_desc.width;
@@ -39,19 +56,20 @@ bool RenderSystem::InitializeDevice() {
         
         return m_device->Initialize(devDesc); 
     }
-    return false;
+    LOG_ERROR("Renderer", "Unsupported RenderAPIType: {0}", (int)m_desc.backendType);
+    return -1;
 }
 
-bool RenderSystem::InitializeResourceManager() {
+int RenderSystem::InitializeRenderResourceManager() {
     // 资源管理器需要设备指针
-    // m_resourceManager = std::make_unique<RenderResourceManager>(m_device.get());
-    return true;
+    m_renderResourceManager = std::make_unique<RenderResourceManager>();
+    return m_renderResourceManager->Initialize(m_device.get());
 }
 
-bool RenderSystem::InitializePipelines() {
+int RenderSystem::InitializeRenderPipelines() {
     // 默认创建前向渲染管线
-    // m_mainPipeline = std::make_shared<ForwardPipeline>(m_device.get());
-    return true;
+    m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+    return m_mainRenderPipeline->Initialize(m_device.get());
 }
 
 void RenderSystem::Update(Timestep ts) {
@@ -60,8 +78,10 @@ void RenderSystem::Update(Timestep ts) {
 
 void RenderSystem::Shutdown() {
     LOG_INFO("Renderer", "Shutting down renderer...");
-    if (m_mainPipeline) m_mainPipeline.reset();
-    if (m_resourceManager) m_resourceManager.reset();
+    if (m_mainRenderPipeline)
+        m_mainRenderPipeline.reset();
+    if (m_renderResourceManager)
+        m_renderResourceManager.reset();
     if (m_device) m_device->Shutdown();
 }
 
@@ -83,10 +103,10 @@ void RenderSystem::Resize(uint32_t width, uint32_t height) {
     if (m_device) m_device->Resize(width, height);
 }
 
-bool RenderSystem::InitializeImGui() {
+int RenderSystem::InitializeImGui() {
     LOG_INFO("Renderer", "Initializing ImGui for RenderSystem");
-    m_imguiInitialized = true;
-    return true;
+
+    return 0;
 }
 
 void RenderSystem::ShutdownImGui() {

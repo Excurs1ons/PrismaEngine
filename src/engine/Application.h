@@ -25,7 +25,8 @@ public:
     static Application& Get() { return *s_Instance; }
 
     // --- Lifecycle Hooks ---
-    virtual int OnInitialize();
+    virtual int OnInitialize()      = 0;
+    virtual int OnImGuiInitialize() { return -1; }
     virtual void OnShutdown();
     virtual void OnUpdate(Timestep ts);
     virtual void OnRender();

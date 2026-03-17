@@ -28,7 +28,7 @@ public:
     void OnRender() override;
     void OnImGuiRender() override;
 
-    bool InitializeImGui();
+    int OnImGuiInitialize() override;
 
 private:
     // Editor Windows

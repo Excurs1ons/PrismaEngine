@@ -18,10 +18,6 @@ Application::~Application() {
     s_Instance = nullptr;
 }
 
-int Application::OnInitialize() {
-    return 0;
-}
-
 void Application::OnShutdown() {
 }
 

@@ -10,7 +10,7 @@
 #include <functional>
 #include <memory>
 #include <string>
-
+#include "Logger.h"
 namespace Prisma {
     // 前向声明
     class Scene;
@@ -54,18 +54,24 @@ public:
     void Resize(uint32_t width, uint32_t height);
 
     // === 设备访问 ===
-    IRenderDevice* GetDevice() const { return m_device.get(); }
-    IResourceManager* GetResourceManager() const { return m_resourceManager.get(); }
+    IRenderDevice* GetDevice() const {
+        if (!m_device) {
+            LOG_ERROR("RenderSystem", "尝试访问未初始化的渲染设备");
+            return nullptr;
+        }
+        return m_device.get();
+    }
+    IRenderResourceManager* GetRenderResourceManager() const { return m_renderResourceManager.get(); }
 
     // === 静态访问 ===
     static RenderSystem* Get();
 
     // === 渲染流程 ===
     void SetMainPipeline(std::shared_ptr<IPipeline> pipeline);
-    IPipeline* GetMainPipeline() const { return m_mainPipeline.get(); }
+    IPipeline* GetMainPipeline() const { return m_mainRenderPipeline.get(); }
 
     // === ImGui ===
-    bool InitializeImGui();
+    int InitializeImGui();
     void ShutdownImGui();
     using GuiRenderCallback = std::function<void(IRenderDevice*)>;
     void SetGuiRenderCallback(GuiRenderCallback callback);
@@ -74,14 +80,14 @@ public:
     void RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera);
 
 private:
-    bool InitializeDevice();
-    bool InitializeResourceManager();
-    bool InitializePipelines();
+    int InitializeDevice();
+    int InitializeRenderResourceManager();
+    int InitializeRenderPipelines();
 
     RenderSystemDesc m_desc;
     std::unique_ptr<IRenderDevice> m_device;
-    std::unique_ptr<IResourceManager> m_resourceManager;
-    std::shared_ptr<IPipeline> m_mainPipeline;
+    std::unique_ptr<IRenderResourceManager> m_renderResourceManager;
+    std::shared_ptr<IPipeline> m_mainRenderPipeline;
     
     bool m_imguiInitialized = false;
     GuiRenderCallback m_guiCallback;

@@ -14,22 +14,23 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
+
+#define IMGUI_IMPL_VULKAN_USE_LOADER
+
 namespace Prisma {
 
-Editor::Editor() 
-    : Application(ApplicationSpecification{ "Prisma Editor", 1280, 720 }) {
-}
+Editor::Editor() : Application(ApplicationSpecification{"Prisma Editor", 1280, 720}) {}
 
-Editor::~Editor() {
-}
+Editor::~Editor() {}
 
 int Editor::OnInitialize() {
     LOG_INFO("Editor", "Initializing Editor Plugin (Pure Mode)...");
 
     // 1. 初始化 ImGui
-    if (!InitializeImGui()) {
+    int result = OnImGuiInitialize();
+    if (result != 0) {
         LOG_ERROR("Editor", "ImGui initialization failed");
-        return 1;
+        return result;
     }
 
     // 2. 推送编辑器层
@@ -39,7 +40,7 @@ int Editor::OnInitialize() {
     return 0;
 }
 
-bool Editor::InitializeImGui() {
+int Editor::OnImGuiInitialize() {
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
@@ -49,16 +50,37 @@ bool Editor::InitializeImGui() {
 
     ImGui::StyleColorsDark();
 
+    auto& engine      = Engine::Get();
+    auto renderSystem = engine.GetRenderSystem();
+    auto device       = renderSystem->GetDevice();
+    auto vkInstance   = device->GetVkInstance();
     // 绑定后端
-    auto& window = Engine::Get().GetWindow();
+    auto& window          = engine.GetWindow();
     SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
     if (!ImGui_ImplSDL3_InitForVulkan(sdlWindow)) {
-        return false;
+
+        return -1;
     }
 
+    ImGui_ImplVulkan_InitInfo init_info;
+    init_info.Instance       = device->GetVkInstance();
+    init_info.PhysicalDevice = device->GetPhysicalDevice();
+    init_info.Device         = device->GetVkDevice();
+    init_info.QueueFamily    = device->GetGraphicsQueueFamily();
+    init_info.Queue          = device->GetGraphicsQueue();
+    init_info.DescriptorPool = device->GetImGuiDescriptorPool();
+    init_info.PipelineCache  = VK_NULL_HANDLE;
+    init_info.DescriptorPool = VK_NULL_HANDLE;
+    init_info.MinImageCount  = 2;
+    init_info.ImageCount     = 2;
+    init_info.UseDynamicRendering               = false;
+    init_info.Allocator           = nullptr;
+    init_info.CheckVkResultFn                   = nullptr;
+    if (!ImGui_ImplVulkan_Init(&init_info)) {
+        return -1;
+    }
     return Engine::Get().GetRenderSystem()->InitializeImGui();
 }
-
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
 }
@@ -66,6 +88,7 @@ void Editor::OnUpdate(Timestep ts) {
 void Editor::OnImGuiRender() {
     // 1. ImGui 帧开始
     ImGui_ImplSDL3_NewFrame();
+    // ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
 
     // 2. 渲染所有 Layer 的 UI
@@ -87,12 +110,12 @@ void Editor::OnShutdown() {
     if (renderSystem) {
         renderSystem->ShutdownImGui();
     }
-    
+
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 }
 
-} // namespace Prisma
+}  // namespace Prisma
 
 // ============================================================================
 // Factory

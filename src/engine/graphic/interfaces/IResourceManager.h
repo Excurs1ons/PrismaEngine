@@ -41,10 +41,9 @@ struct ResourceStats {
 
 /// @brief 资源管理器抽象接口
 /// 提供统一的资源加载、创建和管理功能
-class IResourceManager {
+class IRenderResourceManager {
 public:
-    virtual ~IResourceManager() = default;
-
+    virtual ~IRenderResourceManager() = default;
     /// @brief 初始化资源管理器
     /// @param device 渲染设备
     /// @return 是否初始化成功
