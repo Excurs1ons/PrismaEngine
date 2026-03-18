@@ -64,6 +64,7 @@ private:
 };
 
 // --- 具体事件定义 ---
+// 添加了缺失的事件类以支持完整的输入处理，特别是为了与 ImGui 集成。
 
 class ENGINE_API WindowResizeEvent : public Event {
 public:
@@ -103,6 +104,94 @@ private:
     bool m_IsRepeat;
 };
 
-// ... 其他事件(MouseMoved, MouseButton等)暂不罗列，结构一致 ...
+class ENGINE_API KeyReleasedEvent : public Event {
+public:
+    KeyReleasedEvent(int keycode) : m_KeyCode(keycode) {}
+
+    int GetKeyCode() const { return m_KeyCode; }
+
+    EVENT_CLASS_TYPE(KeyReleased)
+    EVENT_CLASS_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
+private:
+    int m_KeyCode;
+};
+
+class ENGINE_API KeyTypedEvent : public Event {
+public:
+    KeyTypedEvent(int keycode) : m_KeyCode(keycode) {}
+
+    int GetKeyCode() const { return m_KeyCode; }
+
+    EVENT_CLASS_TYPE(KeyTyped)
+    EVENT_CLASS_CATEGORY(EventCategoryKeyboard | EventCategoryInput)
+private:
+    int m_KeyCode;
+};
+
+class ENGINE_API MouseMovedEvent : public Event {
+public:
+    MouseMovedEvent(float x, float y) : m_MouseX(x), m_MouseY(y) {}
+
+    float GetX() const { return m_MouseX; }
+    float GetY() const { return m_MouseY; }
+
+    std::string ToString() const override {
+        return "MouseMovedEvent: " + std::to_string(m_MouseX) + ", " + std::to_string(m_MouseY);
+    }
+
+    EVENT_CLASS_TYPE(MouseMoved)
+    EVENT_CLASS_CATEGORY(EventCategoryMouse | EventCategoryInput)
+private:
+    float m_MouseX, m_MouseY;
+};
+
+class ENGINE_API MouseScrolledEvent : public Event {
+public:
+    MouseScrolledEvent(float xOffset, float yOffset) : m_XOffset(xOffset), m_YOffset(yOffset) {}
+
+    float GetXOffset() const { return m_XOffset; }
+    float GetYOffset() const { return m_YOffset; }
+
+    std::string ToString() const override {
+        return "MouseScrolledEvent: " + std::to_string(m_XOffset) + ", " + std::to_string(m_YOffset);
+    }
+
+    EVENT_CLASS_TYPE(MouseScrolled)
+    EVENT_CLASS_CATEGORY(EventCategoryMouse | EventCategoryInput)
+private:
+    float m_XOffset, m_YOffset;
+};
+
+class ENGINE_API MouseButtonEvent : public Event {
+public:
+    int GetMouseButton() const { return m_Button; }
+
+    EVENT_CLASS_CATEGORY(EventCategoryMouse | EventCategoryInput | EventCategoryMouseButton)
+protected:
+    MouseButtonEvent(int button) : m_Button(button) {}
+    int m_Button;
+};
+
+class ENGINE_API MouseButtonPressedEvent : public MouseButtonEvent {
+public:
+    MouseButtonPressedEvent(int button) : MouseButtonEvent(button) {}
+
+    std::string ToString() const override {
+        return "MouseButtonPressedEvent: " + std::to_string(m_Button);
+    }
+
+    EVENT_CLASS_TYPE(MouseButtonPressed)
+};
+
+class ENGINE_API MouseButtonReleasedEvent : public MouseButtonEvent {
+public:
+    MouseButtonReleasedEvent(int button) : MouseButtonEvent(button) {}
+
+    std::string ToString() const override {
+        return "MouseButtonReleasedEvent: " + std::to_string(m_Button);
+    }
+
+    EVENT_CLASS_TYPE(MouseButtonReleased)
+};
 
 } // namespace Prisma

@@ -30,6 +30,8 @@ public:
 
     int OnImGuiInitialize() override;
 
+    void* GetImGuiContext() override;
+
 private:
     // Editor Windows
     ProjectSettingsWindow m_projectSettingsWindow;

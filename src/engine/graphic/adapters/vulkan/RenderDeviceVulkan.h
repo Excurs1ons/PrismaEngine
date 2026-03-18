@@ -82,6 +82,7 @@ public:
     
     // ========== Vulkan特定方法 (IRenderDevice 接口要求) ==========
     VkInstance GetVkInstance() const override { return m_instance; }
+    VkSurfaceKHR GetVkSurface() const { return m_surface; }
     VkPhysicalDevice GetPhysicalDevice() const override { return m_physicalDevice; }
     VkDevice GetVkDevice() const override { return m_device; }
     VkQueue GetGraphicsQueue() const override { return m_graphicsQueue; }
@@ -102,6 +103,7 @@ private:
     vkb::Device m_vkbDevice;
 
     VkInstance m_instance             = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface            = VK_NULL_HANDLE;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
     VkDevice m_device                 = VK_NULL_HANDLE;
 
@@ -112,6 +114,16 @@ private:
     VkQueue m_graphicsQueue        = VK_NULL_HANDLE;
     VkQueue m_presentQueue         = VK_NULL_HANDLE;
     uint32_t m_graphicsQueueFamily = 0;
+
+    // 命令控制
+    VkCommandPool m_commandPool = VK_NULL_HANDLE;
+    std::vector<VkCommandBuffer> m_commandBuffers;
+
+    // 同步
+    std::vector<VkSemaphore> m_imageAvailableSemaphores;
+    std::vector<VkSemaphore> m_renderFinishedSemaphores;
+    std::vector<VkFence> m_inFlightFences;
+    uint32_t m_currentFrame = 0;
 
     // 资源
     std::unique_ptr<VulkanSwapChain> m_swapChain;

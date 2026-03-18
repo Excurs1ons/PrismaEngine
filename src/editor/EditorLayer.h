@@ -54,6 +54,11 @@ public:
         if (event.NativeEvent) {
             ImGui_ImplSDL3_ProcessEvent((const SDL_Event*)event.NativeEvent);
         }
+
+        // 检查 ImGui 是否想要捕获此事件。如果是，则标记事件为已处理，防止其传递给下层（如游戏世界）。
+        ImGuiIO& io = ImGui::GetIO();
+        event.Handled |= event.IsInCategory(EventCategoryMouse) && io.WantCaptureMouse;
+        event.Handled |= event.IsInCategory(EventCategoryKeyboard) && io.WantCaptureKeyboard;
     }
 };
 

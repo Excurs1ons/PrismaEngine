@@ -125,6 +125,7 @@ set(ENGINE_GRAPHIC_HEADERS
 set(VULKAN_SOURCES
     graphic/adapters/vulkan/VulkanAdapters.cpp
     graphic/adapters/vulkan/RenderDeviceVulkan.cpp
+    graphic/adapters/vulkan/VulkanSwapChain.cpp
     graphic/adapters/vulkan/VulkanShader.cpp
     graphic/adapters/vulkan/VulkanResources.cpp
     graphic/adapters/vulkan/VulkanResourceFactory.cpp
