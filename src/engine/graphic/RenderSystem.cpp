@@ -103,17 +103,6 @@ void RenderSystem::Resize(uint32_t width, uint32_t height) {
     if (m_device) m_device->Resize(width, height);
 }
 
-int RenderSystem::InitializeImGui() {
-    LOG_INFO("Renderer", "Initializing ImGui for RenderSystem");
-
-    return 0;
-}
-
-void RenderSystem::ShutdownImGui() {
-    LOG_INFO("Renderer", "Shutting down ImGui for RenderSystem");
-    m_imguiInitialized = false;
-}
-
 void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera) {
     // 简单的场景渲染实现 - 占位符
     LOG_INFO("Renderer", "Rendering scene with camera");
