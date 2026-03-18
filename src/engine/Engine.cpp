@@ -156,6 +156,13 @@ int Engine::Run(std::unique_ptr<Application> app) {
     }
 
     m_CurrentApp->OnShutdown();
+    
+    // 确保在销毁应用程序（及其中资源，如被析构的 VulkanBuffer/Texture）之前，GPU 已完成所有工作。
+    // 这可以防止触发 VUID-vkDestroyBuffer-buffer-00922 等验证错误。
+    if (GetRenderSystem() && GetRenderSystem()->GetDevice()) {
+        GetRenderSystem()->GetDevice()->WaitForIdle();
+    }
+
     return 0;
 }
 

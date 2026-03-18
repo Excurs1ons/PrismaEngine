@@ -26,9 +26,13 @@ bool VulkanResourceFactory::Initialize(IRenderDevice* device) {
 }
 
 void VulkanResourceFactory::Shutdown() {
+    if (m_vkDevice != VK_NULL_HANDLE) {
+        vkDeviceWaitIdle(m_vkDevice);
+    }
     m_device = nullptr;
     m_vkDevice = VK_NULL_HANDLE;
-    m_vmaAllocator = VK_NULL_HANDLE;
+    // 不建议在这里将 m_vmaAllocator 置为 NULL，因为由它分配的资源（如 VulkanBuffer）
+    // 可能会在此之后才执行析构函数（例如被 Application 成员引用）。
 }
 
 void VulkanResourceFactory::Reset() {
@@ -82,7 +86,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
         return nullptr;
     }
 
-    return std::make_unique<VulkanTexture>(image, imageView, desc);
+    return std::make_unique<VulkanTexture>(m_vmaAllocator, image, allocation, imageView, desc);
 }
 
 std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromFile(const std::string& filename, const TextureDesc* desc) { return nullptr; }
@@ -129,7 +133,7 @@ std::unique_ptr<IBuffer> VulkanResourceFactory::CreateBufferImpl(const BufferDes
 
     if (vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) return nullptr;
 
-    return std::make_unique<VulkanBuffer>(buffer, desc);
+    return std::make_unique<VulkanBuffer>(m_vmaAllocator, buffer, allocation, desc);
 }
 
 std::unique_ptr<IBuffer> VulkanResourceFactory::CreateDynamicBuffer(uint64_t size, BufferType type, BufferUsage usage) {

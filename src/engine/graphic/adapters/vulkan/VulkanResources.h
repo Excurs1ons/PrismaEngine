@@ -4,13 +4,14 @@
 #include "interfaces/IBuffer.h"
 #include "RenderDesc.h"
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 #include <algorithm>
 
 namespace Prisma::Graphic::Vulkan {
 
 class VulkanTexture : public ITexture {
 public:
-    VulkanTexture(VkImage image, VkImageView imageView, const TextureDesc& desc);
+    VulkanTexture(VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, const TextureDesc& desc);
     ~VulkanTexture() override;
 
     ResourceType GetType() const override { return ResourceType::Texture; }
@@ -99,14 +100,17 @@ public:
     VkImageView GetVkImageView() const { return m_imageView; }
 
 private:
+    // 存储分配器和分配信息以实现析构时的自动资源销毁
+    VmaAllocator m_allocator = VK_NULL_HANDLE;
     VkImage m_image = VK_NULL_HANDLE;
+    VmaAllocation m_allocation = VK_NULL_HANDLE;
     VkImageView m_imageView = VK_NULL_HANDLE;
     TextureDesc m_desc;
 };
 
 class VulkanBuffer : public IBuffer {
 public:
-    VulkanBuffer(VkBuffer buffer, const BufferDesc& desc);
+    VulkanBuffer(VmaAllocator allocator, VkBuffer buffer, VmaAllocation allocation, const BufferDesc& desc);
     ~VulkanBuffer() override;
 
     ResourceType GetType() const override { return ResourceType::Buffer; }
@@ -173,7 +177,10 @@ public:
     VkBuffer GetVkBuffer() const { return m_buffer; }
 
 private:
+    // 存储分配器和分配信息以实现析构时的自动资源销毁
+    VmaAllocator m_allocator = VK_NULL_HANDLE;
     VkBuffer m_buffer = VK_NULL_HANDLE;
+    VmaAllocation m_allocation = VK_NULL_HANDLE;
     BufferDesc m_desc;
 };
 
