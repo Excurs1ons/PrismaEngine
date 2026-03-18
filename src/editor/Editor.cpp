@@ -46,8 +46,8 @@ int Editor::OnImGuiInitialize() {
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;  // 禁用多视口
     ImGui::StyleColorsDark();
 
     auto& engine      = Engine::Get();
@@ -70,16 +70,24 @@ int Editor::OnImGuiInitialize() {
     init_info.Queue          = device->GetGraphicsQueue();
     init_info.DescriptorPool = device->GetImGuiDescriptorPool();
     init_info.PipelineCache  = VK_NULL_HANDLE;
-    init_info.DescriptorPool = VK_NULL_HANDLE;
     init_info.MinImageCount  = 2;
     init_info.ImageCount     = 2;
     init_info.UseDynamicRendering               = false;
     init_info.Allocator           = nullptr;
     init_info.CheckVkResultFn                   = nullptr;
+    // --- 关键：新版本设置 RenderPass 的地方 ---
+    init_info.PipelineInfoMain.RenderPass  = device->GetImGuiRenderPass();
+    init_info.PipelineInfoMain.Subpass     = 0;
+    init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+
+    // 如果你开启了多窗口 (Viewports)，副窗口通常也用同样的设置
+    init_info.PipelineInfoForViewports = init_info.PipelineInfoMain;
+   
     if (!ImGui_ImplVulkan_Init(&init_info)) {
         return -1;
     }
-    return Engine::Get().GetRenderSystem()->InitializeImGui();
+
+    return 0;
 }
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
@@ -106,11 +114,7 @@ void Editor::OnRender() {
 void Editor::OnShutdown() {
     LOG_INFO("Editor", "Shutting down Editor...");
 
-    auto renderSystem = Engine::Get().GetRenderSystem();
-    if (renderSystem) {
-        renderSystem->ShutdownImGui();
-    }
-
+    ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();
     ImGui::DestroyContext();
 }

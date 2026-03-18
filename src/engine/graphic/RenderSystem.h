@@ -70,12 +70,6 @@ public:
     void SetMainPipeline(std::shared_ptr<IPipeline> pipeline);
     IPipeline* GetMainPipeline() const { return m_mainRenderPipeline.get(); }
 
-    // === ImGui ===
-    int InitializeImGui();
-    void ShutdownImGui();
-    using GuiRenderCallback = std::function<void(IRenderDevice*)>;
-    void SetGuiRenderCallback(GuiRenderCallback callback);
-
     // === 场景渲染 ===
     void RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera);
 
@@ -88,9 +82,6 @@ private:
     std::unique_ptr<IRenderDevice> m_device;
     std::unique_ptr<IRenderResourceManager> m_renderResourceManager;
     std::shared_ptr<IPipeline> m_mainRenderPipeline;
-    
-    bool m_imguiInitialized = false;
-    GuiRenderCallback m_guiCallback;
 };
 
 }  // namespace Prisma::Graphic
