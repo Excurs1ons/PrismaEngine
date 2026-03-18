@@ -6,6 +6,7 @@
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/Shader.h"
+#include <imgui.h>
 
 namespace Prisma {
 
@@ -128,11 +129,16 @@ int Engine::Run(std::unique_ptr<Application> app) {
             Update(Timestep(std::min(deltaTime, 0.1f)));
             
             // 2. 渲染流程
-            if (m_RenderSystem) {
-                m_RenderSystem->BeginFrame();
+            if (GetRenderSystem()) {
+                // 同步 ImGui 上下文 (跨 DLL 必备)
+                if (auto ctx = (ImGuiContext*)m_CurrentApp->GetImGuiContext()) {
+                    ImGui::SetCurrentContext(ctx);
+                }
+
+                GetRenderSystem()->BeginFrame();
                 m_CurrentApp->OnRender(); 
                 m_CurrentApp->OnImGuiRender();
-                m_RenderSystem->EndFrame();
+                GetRenderSystem()->EndFrame();
             }
         } else {
             Platform::SleepMilliseconds(10);

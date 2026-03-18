@@ -62,7 +62,7 @@ int Editor::OnImGuiInitialize() {
         return -1;
     }
 
-    ImGui_ImplVulkan_InitInfo init_info;
+    ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance       = device->GetVkInstance();
     init_info.PhysicalDevice = device->GetPhysicalDevice();
     init_info.Device         = device->GetVkDevice();
@@ -93,10 +93,14 @@ void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
 }
 
+void* Editor::GetImGuiContext() {
+    return (void*)ImGui::GetCurrentContext();
+}
+
 void Editor::OnImGuiRender() {
     // 1. ImGui 帧开始
+    ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
-    // ImGui_ImplVulkan_NewFrame();
     ImGui::NewFrame();
 
     // 2. 渲染所有 Layer 的 UI
@@ -104,6 +108,8 @@ void Editor::OnImGuiRender() {
 
     // 3. ImGui 帧结束
     ImGui::Render();
+    // 注意：不再在这里调用 ImGui_ImplVulkan_RenderDrawData
+    // 而是由 RenderDeviceVulkan::EndFrame 在正确的 RenderPass 中调用
 }
 
 void Editor::OnRender() {

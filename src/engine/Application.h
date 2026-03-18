@@ -33,6 +33,8 @@ public:
     virtual void OnImGuiRender();
     virtual void OnEvent(Event& e);
 
+    virtual void* GetImGuiContext() { return nullptr; }
+
     // --- State Control ---
     void Close() { m_Running = false; }
     bool IsRunning() const { return m_Running; }
