@@ -15,6 +15,10 @@ VulkanSwapChain::~VulkanSwapChain() {
 }
 
 int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t height, bool vsync) {
+    // 在重新初始化（如窗口缩放）前等待 GPU 空闲，避免销毁正在被 CommandBuffer 引用的旧资源。
+    if (m_device->GetVkDevice() != VK_NULL_HANDLE) {
+        vkDeviceWaitIdle(m_device->GetVkDevice());
+    }
     Cleanup();
 
     LOG_INFO("Vulkan", "Initializing SwapChain: {0}x{1}, vsync: {2}", width, height, vsync);

@@ -70,8 +70,8 @@ int Editor::OnImGuiInitialize() {
     init_info.Queue          = device->GetGraphicsQueue();
     init_info.DescriptorPool = device->GetImGuiDescriptorPool();
     init_info.PipelineCache  = VK_NULL_HANDLE;
-    init_info.MinImageCount  = 2;
-    init_info.ImageCount     = 2;
+    init_info.MinImageCount  = 3;
+    init_info.ImageCount     = 3;
     init_info.UseDynamicRendering               = false;
     init_info.Allocator           = nullptr;
     init_info.CheckVkResultFn                   = nullptr;
@@ -119,6 +119,12 @@ void Editor::OnRender() {
 
 void Editor::OnShutdown() {
     LOG_INFO("Editor", "Shutting down Editor...");
+
+    if (auto renderSystem = Engine::Get().GetRenderSystem()) {
+        if (renderSystem->GetDevice()) {
+            renderSystem->GetDevice()->WaitForIdle();
+        }
+    }
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL3_Shutdown();

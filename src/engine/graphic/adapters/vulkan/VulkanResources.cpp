@@ -3,11 +3,18 @@
 
 namespace Prisma::Graphic::Vulkan {
 
-VulkanTexture::VulkanTexture(VkImage image, VkImageView imageView, const TextureDesc& desc)
-    : m_image(image), m_imageView(imageView), m_desc(desc) {
+VulkanTexture::VulkanTexture(VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, const TextureDesc& desc)
+    : m_allocator(allocator), m_image(image), m_allocation(allocation), m_imageView(imageView), m_desc(desc) {
+    // 构造函数现在接收并存储 VMA 相关对象，以便在析构时能够正确释放资源。
 }
 
 VulkanTexture::~VulkanTexture() {
+    if (m_allocator) {
+        // 在销毁 Texture 资源时，通过 VMA 释放关联的 VkImage 和内存。
+        if (m_image != VK_NULL_HANDLE && m_allocation != VK_NULL_HANDLE) {
+            vmaDestroyImage(m_allocator, m_image, m_allocation);
+        }
+    }
 }
 
 uint64_t VulkanTexture::GetBytesPerPixel() const {
@@ -30,11 +37,16 @@ uint64_t VulkanTexture::GetSubresourceSize(uint32_t mipLevel) const {
     return mipWidth * mipHeight * GetBytesPerPixel();
 }
 
-VulkanBuffer::VulkanBuffer(VkBuffer buffer, const BufferDesc& desc)
-    : m_buffer(buffer), m_desc(desc) {
+VulkanBuffer::VulkanBuffer(VmaAllocator allocator, VkBuffer buffer, VmaAllocation allocation, const BufferDesc& desc)
+    : m_allocator(allocator), m_buffer(buffer), m_allocation(allocation), m_desc(desc) {
+    // 构造函数现在接收并存储 VMA 相关对象，以便在析构时能够正确释放资源。
 }
 
 VulkanBuffer::~VulkanBuffer() {
+    // 在销毁 Buffer 资源时，通过 VMA 释放关联的 VkBuffer 和内存。
+    if (m_allocator != VK_NULL_HANDLE && m_buffer != VK_NULL_HANDLE && m_allocation != VK_NULL_HANDLE) {
+        vmaDestroyBuffer(m_allocator, m_buffer, m_allocation);
+    }
 }
 
 } // namespace Prisma::Graphic::Vulkan
