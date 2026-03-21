@@ -47,6 +47,12 @@ target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 # 链接依赖
 target_link_libraries(Editor PRIVATE Engine)
 
+# 链接Blender集成模块
+if(TARGET BlenderIntegration)
+    target_link_libraries(Editor PRIVATE BlenderIntegration)
+    target_compile_definitions(Editor PRIVATE PRISMA_ENABLE_BLENDER_INTEGRATION=1)
+endif()
+
 # 2. 创建编辑器启动器 (EXE)
 add_executable(PrismaEditor main.cpp)
 
