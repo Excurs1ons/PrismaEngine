@@ -26,6 +26,11 @@ void SceneManager::Update(Timestep ts) {
     }
 }
 
+void SceneManager::CreateNewScene() {
+    LOG_INFO("Scene", "Creating new empty scene...");
+    m_currentScene = std::make_shared<Scene>();
+}
+
 Scene* SceneManager::GetCurrentScene() const {
     return m_currentScene.get();
 }

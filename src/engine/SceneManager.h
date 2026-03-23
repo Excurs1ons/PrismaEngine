@@ -13,6 +13,7 @@ public:
     void Shutdown() override;
     void Update(Timestep ts) override;
     Scene* GetCurrentScene() const;
+    void CreateNewScene();
     int Initialize() override;
     SceneManager() = default;
     ~SceneManager() override = default;
