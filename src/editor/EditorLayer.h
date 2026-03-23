@@ -119,7 +119,10 @@ public:
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("New Scene", "Ctrl+N")) {
-                    // TODO: Implement new scene logic
+                    if (auto sceneManager = SceneManager::Get()) {
+                        sceneManager->CreateNewScene();
+                        m_selectedEntity = nullptr;
+                    }
                 }
                 if (ImGui::MenuItem("Exit", "Alt+F4")) {
                     Application::Get().Close();
