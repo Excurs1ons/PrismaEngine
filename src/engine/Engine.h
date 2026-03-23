@@ -13,6 +13,7 @@ namespace Prisma {
 
 class Application;
 class AssetManager;
+class JobSystem;
 namespace Input { class InputManager; }
 namespace Graphic { class RenderSystem; }
 
@@ -50,6 +51,7 @@ public:
     // --- Fast Track Access ---
     Input::InputManager* GetInputManager() { return m_InputManager; }
     Graphic::RenderSystem* GetRenderSystem() { return m_RenderSystem; }
+    JobSystem* GetJobSystem() { return m_JobSystem; }
 
     const EngineSpecification& GetSpecification() const { return m_Spec; }
     bool IsRunning() const { return m_Running; }
@@ -75,6 +77,7 @@ private:
     AssetManager* m_AssetManager = nullptr;
     Input::InputManager* m_InputManager = nullptr;
     Graphic::RenderSystem* m_RenderSystem = nullptr;
+    JobSystem* m_JobSystem = nullptr;
 
     bool m_Initialized = false;
     bool m_Running = false;

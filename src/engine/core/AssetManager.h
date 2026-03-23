@@ -5,6 +5,7 @@
 #include "ISubSystem.h" // 继承自这个，而不是 ManagerBase
 #include "StringHash.h"
 #include "../JobSystem.h"
+#include "../Engine.h"
 #include <filesystem>
 #include <memory>
 #include <optional>
@@ -87,8 +88,8 @@ public:
 
         std::filesystem::path path = *fullPath;
         
-        // 这里的 JobSystem 以后也要改
-        JobSystem::Get()->SubmitJob([this, hash, relativePath, path, callback, args...]() {
+        // 使用引擎统一管理的 JobSystem
+        Engine::Get().GetJobSystem()->SubmitJob([this, hash, relativePath, path, callback, args...]() {
             auto asset = std::make_shared<T>(args...);
             asset->Name = relativePath;
             asset->Path = path;

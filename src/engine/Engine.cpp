@@ -2,6 +2,7 @@
 #include "Platform.h"
 #include "Application.h"
 #include "Logger.h"
+#include "JobSystem.h"
 #include "core/AssetManager.h"
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
@@ -13,7 +14,7 @@ namespace Prisma {
 Engine* Engine::s_Instance = nullptr;
 
 Engine::Engine(const EngineSpecification& spec)
-    : m_Spec(spec), m_Running(false), m_Initialized(false) {
+    : m_Spec(spec), m_Initialized(false), m_Running(false) {
     s_Instance = this;
 }
 
@@ -34,6 +35,7 @@ int Engine::Initialize() {
     }
 
     // 显式注册核心系统
+    m_JobSystem = AddSystem<JobSystem>();
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
     
@@ -181,6 +183,7 @@ void Engine::Shutdown() {
     m_AssetManager = nullptr;
     m_InputManager = nullptr;
     m_RenderSystem = nullptr;
+    m_JobSystem = nullptr;
     m_Initialized = false;
     m_Running = false;
 }

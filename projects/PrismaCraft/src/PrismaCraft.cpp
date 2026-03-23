@@ -94,6 +94,12 @@ private:
 
 } // namespace Prisma
 
-extern "C" __declspec(dllexport) Prisma::Application* CreateApplication() {
+#ifdef _WIN32
+#define PRISMACRAFT_API __declspec(dllexport)
+#else
+#define PRISMACRAFT_API __attribute__((visibility("default")))
+#endif
+
+extern "C" PRISMACRAFT_API Prisma::Application* CreateApplication() {
     return new Prisma::PrismaCraft();
 }

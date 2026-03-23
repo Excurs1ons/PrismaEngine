@@ -29,6 +29,9 @@ project(PRISMA
     LANGUAGES CXX
 )
 
+# 强制开启位置无关代码 (Position Independent Code)，确保静态库可以链接进动态库
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
 # ========== 注释: 代理配置 ==========
 # 本地开发时如果需要代理，请通过环境变量 HTTP_PROXY 和 HTTPS_PROXY 设置
 # 不要在 CMakeLists.txt 中硬编码代理地址，这会导致 CI 环境构建失败
