@@ -26,7 +26,7 @@ public:
     // ISubSystem 接口
     int Initialize() override;
     void Shutdown() override;
-    void Update(Timestep ts) override {}
+    void Update(Timestep ts) override;
 
     // 显式初始化
     bool Initialize(const std::filesystem::path& projectRoot);
@@ -110,6 +110,7 @@ public:
     bool IsInitialized() const;
 
 private:
+    float m_lastCleanupTime = 0.0f;
     std::shared_ptr<Asset> GetAssetFromCache(Core::StringHash::HashType hash);
     void RegisterAsset(Core::StringHash::HashType hash, std::shared_ptr<Asset> asset);
 

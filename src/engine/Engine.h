@@ -16,6 +16,7 @@ class AssetManager;
 class JobSystem;
 namespace Input { class InputManager; }
 namespace Graphic { class RenderSystem; }
+class SceneManager;
 
 /**
  * @brief 引擎配置规范
@@ -51,6 +52,7 @@ public:
     // --- Fast Track Access ---
     Input::InputManager* GetInputManager() { return m_InputManager; }
     Graphic::RenderSystem* GetRenderSystem() { return m_RenderSystem; }
+    SceneManager* GetSceneManager() { return m_SceneManager; }
     JobSystem* GetJobSystem() { return m_JobSystem; }
 
     const EngineSpecification& GetSpecification() const { return m_Spec; }
@@ -77,6 +79,7 @@ private:
     AssetManager* m_AssetManager = nullptr;
     Input::InputManager* m_InputManager = nullptr;
     Graphic::RenderSystem* m_RenderSystem = nullptr;
+    SceneManager* m_SceneManager = nullptr;
     JobSystem* m_JobSystem = nullptr;
 
     bool m_Initialized = false;

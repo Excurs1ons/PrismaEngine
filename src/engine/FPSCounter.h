@@ -36,7 +36,7 @@ public:
                 char buffer[128];
                 snprintf(buffer, sizeof(buffer),
                     "FPS: %d\nFrame Time: %.2f ms\nDeltaTime: %.3f s",
-                    fps, frameTime, ts);
+                    fps, frameTime, ts.GetSeconds());
                 m_textRenderer->SetText(buffer);
 
                 // 根据 FPS 改变颜色

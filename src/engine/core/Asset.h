@@ -46,8 +46,16 @@ public:
     void SetPath(const std::filesystem::path& path) { m_Path = path; }
 
     // ISerializable 接口实现
-    void Serialize(Serialization::OutputArchive& archive) const override {}
-    void Deserialize(Serialization::InputArchive& archive) override {}
+    void Serialize(Serialization::OutputArchive& archive) const override {
+        archive("Handle", (uint64_t)m_Handle);
+        archive("Name", m_Name);
+    }
+    void Deserialize(Serialization::InputArchive& archive) override {
+        uint64_t handle = 0;
+        archive("Handle", handle);
+        m_Handle = handle;
+        archive("Name", m_Name);
+    }
 
 protected:
     UUID m_Handle;

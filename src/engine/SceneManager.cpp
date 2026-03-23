@@ -4,11 +4,6 @@
 
 namespace Prisma {
 
-std::shared_ptr<SceneManager> SceneManager::Get() {
-    static std::shared_ptr<SceneManager> instance = std::shared_ptr<SceneManager>(new SceneManager());
-    return instance;
-}
-
 int SceneManager::Initialize() {
     TriangleExample example;
     m_currentScene = example.CreateExampleScene();

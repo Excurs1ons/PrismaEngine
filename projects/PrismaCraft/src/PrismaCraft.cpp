@@ -37,7 +37,7 @@ public:
     void OnRender() override {
         // 1. 获取相机信息并填入上下文
         Graphic::CameraData cameraData;
-        auto* scene = SceneManager::Get()->GetCurrentScene();
+        auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
         if (scene) {
             auto camera = scene->GetMainCamera();
             if (camera) {

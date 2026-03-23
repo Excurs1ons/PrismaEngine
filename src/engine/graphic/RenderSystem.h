@@ -63,9 +63,6 @@ public:
     }
     IRenderResourceManager* GetRenderResourceManager() const { return m_renderResourceManager.get(); }
 
-    // === 静态访问 ===
-    static RenderSystem* Get();
-
     // === 渲染流程 ===
     void SetMainPipeline(std::shared_ptr<IPipeline> pipeline);
     IPipeline* GetMainPipeline() const { return m_mainRenderPipeline.get(); }

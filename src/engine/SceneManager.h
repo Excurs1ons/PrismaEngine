@@ -1,22 +1,21 @@
 #pragma once
-#include "ManagerBase.h"
+#include "ISubSystem.h"
 #include "Scene.h"
 #include <memory>
 
 namespace Prisma {
 
-class ENGINE_API SceneManager : public ManagerBase<SceneManager> {
+class ENGINE_API SceneManager : public ISubSystem {
 public:
-    static std::shared_ptr<SceneManager> Get();
-
-    static constexpr const char* GetStaticName() { return "SceneManager"; }
-    void Shutdown() override;
-    void Update(Timestep ts) override;
-    Scene* GetCurrentScene() const;
-    void CreateNewScene();
-    int Initialize() override;
     SceneManager() = default;
     ~SceneManager() override = default;
+
+    int Initialize() override;
+    void Shutdown() override;
+    void Update(Timestep ts) override;
+
+    Scene* GetCurrentScene() const;
+    void CreateNewScene();
 
 private:
     std::shared_ptr<Scene> m_currentScene;

@@ -7,6 +7,7 @@
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/Shader.h"
+#include "SceneManager.h"
 #include <imgui.h>
 
 namespace Prisma {
@@ -38,6 +39,7 @@ int Engine::Initialize() {
     m_JobSystem = AddSystem<JobSystem>();
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
+    m_SceneManager = AddSystem<SceneManager>();
     
     // 新增：ShaderLibrary 子系统
     AddSystem<Graphic::ShaderLibrary>();
@@ -90,15 +92,18 @@ int Engine::Run(std::unique_ptr<Application> app) {
             EventDispatcher dispatcher(e);
             
             dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
+                LOG_INFO("Engine", "Window close requested (Event: {0})", event.GetName());
                 m_Running = false;
                 return true;
             });
 
             dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
                 if (event.GetWidth() == 0 || event.GetHeight() == 0) {
+                    LOG_INFO("Engine", "Window minimized: {0}x{1}", event.GetWidth(), event.GetHeight());
                     m_Minimized = true;
                     return false;
                 }
+                LOG_INFO("Engine", "Window resized to {0}x{1}", event.GetWidth(), event.GetHeight());
                 m_Minimized = false;
                 if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
                 return false;
@@ -183,6 +188,7 @@ void Engine::Shutdown() {
     m_AssetManager = nullptr;
     m_InputManager = nullptr;
     m_RenderSystem = nullptr;
+    m_SceneManager = nullptr;
     m_JobSystem = nullptr;
     m_Initialized = false;
     m_Running = false;
