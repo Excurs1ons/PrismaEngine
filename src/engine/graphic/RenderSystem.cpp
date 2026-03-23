@@ -104,13 +104,14 @@ void RenderSystem::Resize(uint32_t width, uint32_t height) {
 }
 
 void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera) {
-    // 简单的场景渲染实现 - 占位符
-    LOG_INFO("Renderer", "Rendering scene with camera");
-    // 实际渲染逻辑待实现
-}
+    if (!scene || !camera) {
+        LOG_WARNING("RenderSystem", "Attempting to render with null scene or camera");
+        return;
+    }
 
-RenderSystem* RenderSystem::Get() {
-    return Engine::Get().GetRenderSystem();
+    if (m_mainRenderPipeline) {
+        m_mainRenderPipeline->Render(scene, camera);
+    } else {
+        LOG_ERROR("RenderSystem", "No active pipeline to render the scene");
+    }
 }
-
-} // namespace Prisma::Graphic

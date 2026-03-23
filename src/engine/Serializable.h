@@ -39,7 +39,7 @@ public:
     virtual void Write(const std::string& key, const PrismaMath::vec4& value) = 0;
     virtual void Write(const std::string& key, const PrismaMath::quat& value) = 0;
 
-    virtual void SetCurrent(const std::string& key) {}
+    virtual void SetCurrent(const std::string& key) { m_currentKey = key; }
 
     template <typename T>
     void operator()(const std::string& key, const T& value) {
@@ -64,6 +64,9 @@ public:
             EndObject();
         }
     }
+
+protected:
+    std::string m_currentKey;
 };
 
 /// <summary>
@@ -86,7 +89,7 @@ public:
     virtual bool Read(const std::string& key, PrismaMath::vec4& value) = 0;
     virtual bool Read(const std::string& key, PrismaMath::quat& value) = 0;
 
-    virtual void SetCurrent(const std::string& key) {}
+    virtual void SetCurrent(const std::string& key) { m_currentKey = key; }
 
     template <typename T>
     void operator()(const std::string& key, T& value) {
@@ -114,6 +117,9 @@ public:
             EndObject();
         }
     }
+
+protected:
+    std::string m_currentKey;
 };
 
 }  // namespace Serialization

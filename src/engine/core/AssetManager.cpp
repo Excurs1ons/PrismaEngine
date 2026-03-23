@@ -40,6 +40,26 @@ void AssetManager::Shutdown() {
     m_Impl->initialized = false;
 }
 
+void AssetManager::Update(Timestep ts) {
+    m_lastCleanupTime += ts;
+
+    // 每 30 秒进行一次资源缓存清理
+    if (m_lastCleanupTime >= 30.0f) {
+        LOG_TRACE("AssetManager", "Starting periodic cleanup...");
+        auto it = m_Impl->assets.begin();
+        while (it != m_Impl->assets.end()) {
+            // 如果只有 AssetManager 自己持有该资源的 shared_ptr，说明它没被其他人使用了
+            if (it->second.use_count() == 1) {
+                LOG_TRACE("AssetManager", "Cleaning up unused asset: {0}", it->second->GetName());
+                it = m_Impl->assets.erase(it);
+            } else {
+                ++it;
+            }
+        }
+        m_lastCleanupTime = 0.0f;
+    }
+}
+
 void AssetManager::AddSearchPath(const std::filesystem::path& path) {
     m_Impl->searchPaths.push_back(path);
 }

@@ -55,10 +55,11 @@ public:
     }
 
     void OnRender() {
-        auto renderSystem = Graphic::RenderSystem::Get();
-        
+        auto renderSystem = Engine::Get().GetRenderSystem();
+
         // 渲染场景
-        auto sceneManager = SceneManager::Get();
+        auto sceneManager = Engine::Get().GetSceneManager();
+
         if (sceneManager) {
             auto* scene = sceneManager->GetCurrentScene();
             if (scene) {
@@ -119,7 +120,7 @@ public:
         if (ImGui::BeginMenuBar()) {
             if (ImGui::BeginMenu("File")) {
                 if (ImGui::MenuItem("New Scene", "Ctrl+N")) {
-                    if (auto sceneManager = SceneManager::Get()) {
+                    if (auto sceneManager = Engine::Get().GetSceneManager()) {
                         sceneManager->CreateNewScene();
                         m_selectedEntity = nullptr;
                     }
@@ -157,7 +158,7 @@ public:
             
             // Recreate Framebuffer texture when viewport resizes
             if (m_viewportSize.x > 0 && m_viewportSize.y > 0) {
-                if (auto renderSystem = Graphic::RenderSystem::Get()) {
+                if (auto renderSystem = Engine::Get().GetRenderSystem()) {
                     if (auto resourceManager = renderSystem->GetRenderResourceManager()) {
                         Graphic::TextureDesc desc;
                         desc.width = (uint32_t)m_viewportSize.x;
@@ -202,7 +203,7 @@ public:
         ImGui::PopStyleVar();
 
         ImGui::Begin("Scene Hierarchy");
-        if (auto sceneManager = SceneManager::Get()) {
+        if (auto sceneManager = Engine::Get().GetSceneManager()) {
             if (auto scene = sceneManager->GetCurrentScene()) {
                 auto& objects = scene->GetGameObjects();
                 for (auto& obj : objects) {
