@@ -26,20 +26,6 @@ void Platform::SleepMilliseconds(uint32_t ms) {
     std::this_thread::sleep_for(std::chrono::milliseconds(ms));
 }
 
-// NOTE: Windows-specific implementations are in PlatformWindows.cpp
-// This file contains generic or placeholder implementations.
-
-#ifndef _WIN32
-std::vector<const char*> Platform::GetRequiredVulkanInstanceExtensions() {
-    return {};
-}
-
-bool Platform::CreateVulkanSurface(void* instance, WindowHandle window, void** outSurface) {
-    (void)instance;
-    (void)window;
-    (void)outSurface;
-    return false;
-}
-#endif
+// NOTE: Platform-specific implementations are in PlatformWindows.cpp or PlatformLinux.cpp
 
 } // namespace Prisma

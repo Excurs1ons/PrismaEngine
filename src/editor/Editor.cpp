@@ -106,6 +106,11 @@ void Editor::OnImGuiRender() {
     // 2. 渲染所有 Layer 的 UI
     Application::OnImGuiRender();
 
+    // 渲染 Editor 自己的内置窗口
+    if (m_showProjectSettings) {
+        m_projectSettingsWindow.Draw(&m_showProjectSettings);
+    }
+
     // 3. ImGui 帧结束
     ImGui::Render();
     // 注意：不再在这里调用 ImGui_ImplVulkan_RenderDrawData

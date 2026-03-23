@@ -13,8 +13,6 @@
 
 namespace Prisma {
 
-#pragma warning(push)
-#pragma warning(disable: 4251 4275)
 class EDITOR_API Editor : public Application {
 public:
     Editor();
@@ -31,6 +29,8 @@ public:
     int OnImGuiInitialize() override;
 
     void* GetImGuiContext() override;
+    
+    void OpenProjectSettings() { m_showProjectSettings = true; }
 
 private:
     // Editor Windows

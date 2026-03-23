@@ -39,6 +39,6 @@ public:
 };
 
 // 宏定义简化作业提交
-#define SUBMIT_JOB(job) JobSystem::Get().SubmitJob(job)
-#define SUBMIT_JOB_TO_POOL(job, poolIndex) JobSystem::Get().SubmitJob(job, poolIndex)
+#define SUBMIT_JOB(job) ::Prisma::Engine::Get().GetJobSystem()->SubmitJob(job)
+#define SUBMIT_JOB_TO_POOL(job, poolIndex) ::Prisma::Engine::Get().GetJobSystem()->SubmitJob(job, poolIndex)
 }  // namespace Prisma
