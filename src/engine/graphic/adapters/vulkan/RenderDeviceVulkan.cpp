@@ -1,6 +1,6 @@
 // [修复] 不在此包含 imgui_impl_vulkan.h
 // 目的：Engine.dll 不再直接使用 ImGui Vulkan 后端 API，
-//         渲染通过由 Editor.dll 注册的回调执行，
+//         渲染通过由 PrismaEditor.dll 注册的回调执行，
 //         避免两份独立的编译单元共享状态导致指针崩溃。
 #include "RenderDeviceVulkan.h"
 #include "Logger.h"

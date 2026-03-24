@@ -104,18 +104,19 @@ public:
     //   PrismaEditor.dll（Editor）两份，导致两侧的 ImGui 后端状态
     //   （BackendRendererUserData）互不相通的问题。
     //
-    // 问题根源：
-    //   ImGui_ImplVulkan_Init() 在 Editor.dll 侧调用，BackendRendererUserData
-    //   注册在 Editor.dll 的静态数据段中。EndFrame() 在 Prisma.dll 侧调用
+    //   问题根源：
+    //   ImGui_ImplVulkan_Init() 在 PrismaEditor.dll 侧调用，BackendRendererUserData
+    //   注册在 PrismaEditor.dll 的静态数据段中。EndFrame() 在 Prisma.dll 侧调用
     //   ImGui_ImplVulkan_RenderDrawData，此时 ImGui_ImplVulkan_GetBackendData()
     //   拿到的是 Prisma.dll 侧未初始化的数据（内容全为 nullptr/0），
     //   访问字体纹理 TexID 得到 ImTextureID_Invalid（0xFFFFFFFFFFFFFFFF），
     //   传给 vkCmdBindDescriptorSets 引发访问冲突崩溃。
     //
-    // 修复过程：
+    //   修复过程：
     //   将 ImGui_ImplVulkan_RenderDrawData 调用完全移出 Engine，
-    //   改为让调用方（Editor.dll）在收到 VkCommandBuffer 句柄后
+    //   改为让调用方（PrismaEditor.dll）在收到 VkCommandBuffer 句柄后
     //   在自己的 DLL 上下文中执行实际渲染，从而使用正确的后端数据。
+
     // -----------------------------------------------------------------------
     using OverlayRenderCallback = std::function<void(VkCommandBuffer)>;
     void SetOverlayRenderCallback(OverlayRenderCallback callback) { m_overlayRenderCallback = std::move(callback); }
@@ -171,7 +172,7 @@ private:
     bool m_frameActive = false;
     bool m_hasPendingPresent = false;
 
-    // 覆盖层渲染回调（指向 Editor.dll 的实际渲染函数）
+    // 覆盖层渲染回调（指向 PrismaEditor.dll 的实际渲染函数）
     OverlayRenderCallback m_overlayRenderCallback;
 };
 
