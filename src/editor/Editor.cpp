@@ -18,7 +18,11 @@
 #include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
 
 
-#define IMGUI_IMPL_VULKAN_USE_LOADER
+// [修复] 移除 IMGUI_IMPL_VULKAN_USE_LOADER 定义
+// 原因：当定义此宏时，ImGui 会使用动态函数指针调用 Vulkan API。
+//        如果这些函数指针未被正确加载，调用时会访问空指针导致 0xc0000005 异常。
+// 解决：使用标准 Vulkan 函数原型（通过 Vulkan-Headers 提供），避免函数指针初始化问题。
+// #define IMGUI_IMPL_VULKAN_USE_LOADER
 
 namespace Prisma {
 
