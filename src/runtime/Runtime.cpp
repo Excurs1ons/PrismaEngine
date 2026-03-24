@@ -34,14 +34,14 @@ int main(int argc, char* argv[]) {
     // 跨平台尝试加载动态库
     std::vector<std::string> libNames = {
 #if defined(_WIN32)
-        "Editor.dll",
         "PrismaEditor.dll",
+        "Editor.dll",
 #elif defined(__APPLE__)
-        "libEditor.dylib",
         "libPrismaEditor.dylib",
+        "libEditor.dylib",
 #else
-        "libEditor.so",
         "libPrismaEditor.so",
+        "libEditor.so",
 #endif
     };
 
