@@ -4,11 +4,12 @@
 #include "Platform.h"
 #include "Singleton.h"
 #include "core/Event.h"
+#include "Export.h"
 #include <cstring>
 
 namespace Prisma::Input {
 
-class InputManager : public ManagerBase<InputManager> {
+class ENGINE_API InputManager : public ManagerBase<InputManager> {
 public:
     bool IsKeyDown(KeyCode key) const;
     bool IsMouseButtonDown(MouseButton button) const;

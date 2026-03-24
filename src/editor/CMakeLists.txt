@@ -1,17 +1,23 @@
-# 编辑器模块
-
 # ImGui 后端源文件 (根据平台条件添加)
+# -----------------------------------------------------------------------
+# [修复] 不再向 Editor 目标添加 imgui_impl_vulkan.cpp / imgui_impl_sdl3.cpp
+#
+# 目的：避免 ImGui Vulkan 后端被编译两次。
+#
+# 问题根源：
+#   FetchThirdPartyDeps.cmake 已将 imgui_impl_vulkan.cpp 编译进静态库 `imgui`，
+#   Engine.dll 通过 PUBLIC 链接将其传递给 Editor.dll。
+#   若 Editor.dll 再单独编译一份 imgui_impl_vulkan.cpp，则 ImGui 后端的
+#   静态全局变量（包括 g_FunctionsLoaded 和 BackendRendererUserData）在两
+#   个编译单元中各自独立存在。ImGui_ImplVulkan_Init 向一个副本注册后端数据，
+#   而 ImGui_ImplVulkan_RenderDrawData 从另一个副本的 GetBackendData() 读取，
+#   得到全零数据，字体纹理 TexID 始终为 ImTextureID_Invalid（0xFFFFFFFFFFFFFFFF），
+#   传入 vkCmdBindDescriptorSets 引发访问冲突崩溃。
+#
+# 修复过程：
+#   Editor 只链接 imgui 静态库（已包含所有 backends），不再独立编译任何 backend。
+# -----------------------------------------------------------------------
 set(IMGUI_BACKENDS)
-if(WIN32)
-    list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
-endif()
-if(PRISMA_ENABLE_RENDER_VULKAN)
-    list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
-endif()
-# SDL3 后端 - 编辑器在所有平台都使用 SDL3
-if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-    list(APPEND IMGUI_BACKENDS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-endif()
 
 # 源文件
 set(EDITOR_SOURCES
@@ -45,7 +51,7 @@ add_library(Editor SHARED
 target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 
 # 链接依赖
-target_link_libraries(Editor PRIVATE Engine)
+target_link_libraries(Editor PRIVATE Engine imgui::imgui)
 
 # 2. 创建编辑器启动器 (EXE)
 add_executable(PrismaEditor main.cpp)
