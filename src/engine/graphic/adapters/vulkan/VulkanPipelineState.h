@@ -4,6 +4,8 @@
 #include <vulkan/vulkan.h>
 #include <memory>
 #include <unordered_map>
+#include <string>
+#include <vector>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -70,6 +72,20 @@ private:
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
     VkDevice m_device = VK_NULL_HANDLE;
     std::unordered_map<ShaderType, std::shared_ptr<IShader>> m_shaders;
+
+    PipelineType m_type = PipelineType::Graphics;
+    PrimitiveTopology m_topology = PrimitiveTopology::TriangleList;
+    BlendState m_blendState = BlendState::Default;
+    RasterizerState m_rasterizerState = RasterizerState::Default;
+    DepthStencilState m_depthStencilState = DepthStencilState::Default;
+    std::vector<VertexInputAttribute> m_inputAttributes;
+    std::vector<TextureFormat> m_renderTargetFormats = {TextureFormat::RGBA8_UNorm};
+    TextureFormat m_depthStencilFormat = TextureFormat::Unknown;
+    uint32_t m_sampleCount = 1;
+    uint32_t m_sampleQuality = 0;
+    bool m_isValid = false;
+    std::string m_errors;
+    std::string m_debugName;
 };
 
 } // namespace Prisma::Graphic::Vulkan

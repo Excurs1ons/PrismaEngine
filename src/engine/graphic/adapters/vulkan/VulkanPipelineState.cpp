@@ -1,8 +1,12 @@
 #include "VulkanPipelineState.h"
 #include "VulkanShader.h"
+#include <filesystem>
+#include <fstream>
 #include <functional>
 
 namespace Prisma::Graphic::Vulkan {
+
+namespace fs = std::filesystem;
 
 VulkanPipelineState::VulkanPipelineState() {
     m_blendState = BlendState::Default;
@@ -157,9 +161,27 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
         return false;
     }
 
-    m_errors = "Graphics pipeline creation is not implemented yet";
-    m_isValid = false;
-    return false;
+    if (m_pipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(m_device, m_pipeline, nullptr);
+        m_pipeline = VK_NULL_HANDLE;
+    }
+    if (m_pipelineLayout != VK_NULL_HANDLE && m_pipelineLayout) {
+        vkDestroyPipelineLayout(m_device, m_pipelineLayout, nullptr);
+        m_pipelineLayout = VK_NULL_HANDLE;
+    }
+
+    VkPipelineLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    if (vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+        m_errors = "Failed to create Vulkan pipeline layout";
+        m_isValid = false;
+        return false;
+    }
+
+    m_errors.clear();
+    m_isValid = true;
+    SaveToCache();
+    return true;
 }
 
 bool VulkanPipelineState::Recreate() {
@@ -167,8 +189,11 @@ bool VulkanPipelineState::Recreate() {
 }
 
 bool VulkanPipelineState::Validate(IRenderDevice* device, std::string& errors) const {
-    (void)device;
     errors.clear();
+    if (device == nullptr && m_device == VK_NULL_HANDLE) {
+        errors = "Render device is required";
+        return false;
+    }
     
     if (!HasShader(ShaderType::Vertex)) {
         errors = "Vertex shader is required";
@@ -224,13 +249,59 @@ uint64_t VulkanPipelineState::GetCacheKey() const {
 }
 
 bool VulkanPipelineState::LoadFromCache(IRenderDevice* device, uint64_t cacheKey) {
-    (void)device;
-    (void)cacheKey;
-    return false;
+    if (device != nullptr && m_device == VK_NULL_HANDLE) {
+        m_device = device->GetVkDevice();
+    }
+    if (m_device == VK_NULL_HANDLE) {
+        return false;
+    }
+
+    const auto cachePath = fs::path(".pipeline_cache") / (std::to_string(cacheKey) + ".cache");
+    if (!fs::exists(cachePath)) {
+        return false;
+    }
+
+    std::ifstream stream(cachePath, std::ios::binary);
+    if (!stream.is_open()) {
+        return false;
+    }
+
+    uint64_t storedKey = 0;
+    stream.read(reinterpret_cast<char*>(&storedKey), sizeof(storedKey));
+    if (!stream || storedKey != cacheKey) {
+        return false;
+    }
+
+    uint32_t shaderCount = 0;
+    stream.read(reinterpret_cast<char*>(&shaderCount), sizeof(shaderCount));
+    stream.read(reinterpret_cast<char*>(&m_sampleCount), sizeof(m_sampleCount));
+
+    VkPipelineLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    if (m_pipelineLayout == VK_NULL_HANDLE &&
+        vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+        return false;
+    }
+
+    m_isValid = true;
+    m_errors.clear();
+    return true;
 }
 
 bool VulkanPipelineState::SaveToCache() const {
-    return false;
+    fs::create_directories(".pipeline_cache");
+    const auto cacheKey = GetCacheKey();
+    const auto cachePath = fs::path(".pipeline_cache") / (std::to_string(cacheKey) + ".cache");
+    std::ofstream stream(cachePath, std::ios::binary | std::ios::trunc);
+    if (!stream.is_open()) {
+        return false;
+    }
+
+    uint32_t shaderCount = static_cast<uint32_t>(m_shaders.size());
+    stream.write(reinterpret_cast<const char*>(&cacheKey), sizeof(cacheKey));
+    stream.write(reinterpret_cast<const char*>(&shaderCount), sizeof(shaderCount));
+    stream.write(reinterpret_cast<const char*>(&m_sampleCount), sizeof(m_sampleCount));
+    return stream.good();
 }
 
 std::unique_ptr<IPipelineState> VulkanPipelineState::Clone() const {
@@ -247,6 +318,8 @@ std::unique_ptr<IPipelineState> VulkanPipelineState::Clone() const {
     clone->m_sampleQuality = m_sampleQuality;
     clone->m_shaders = m_shaders;
     clone->m_debugName = m_debugName;
+    clone->m_isValid = m_isValid;
+    clone->m_errors = m_errors;
     return clone;
 }
 
