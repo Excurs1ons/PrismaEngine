@@ -53,11 +53,6 @@ Prisma_Declare_Dependency(Vulkan-Headers https://github.com/KhronosGroup/Vulkan-
 Prisma_Declare_Dependency(vma https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git ${PRISMA_DEP_VMA_VERSION})
 Prisma_Declare_Dependency(vk-bootstrap https://github.com/charles-lunarg/vk-bootstrap.git ${PRISMA_DEP_VK_BOOTSTRAP_VERSION})
 
-# 仅在启用 DirectX12 时获取 DirectX-Headers（Prune Branch 剔除 DirectX）
-if(WIN32 AND PRISMA_ENABLE_RENDER_DX12)
-    Prisma_Declare_Dependency(DirectX-Headers https://github.com/microsoft/DirectX-Headers.git ${PRISMA_DEP_DIRECTX_HEADERS_VERSION})
-endif()
-
 Prisma_Declare_Dependency(imgui https://github.com/ocornut/imgui.git ${PRISMA_DEP_IMGUI_VERSION})
 
 if(WIN32 AND PRISMA_BUILD_EDITOR)
@@ -122,14 +117,6 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     FetchContent_MakeAvailable(Vulkan-Headers vma vk-bootstrap)
 endif()
 
-# 仅在启用 DirectX12 时加载 DirectX-Headers（Prune Branch 剔除 DirectX）
-if(WIN32 AND PRISMA_ENABLE_RENDER_DX12)
-    FetchContent_MakeAvailable(DirectX-Headers)
-    if(TARGET DirectX-Headers AND NOT TARGET Microsoft::DirectX-Headers)
-        add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
-    endif()
-endif()
-
 # ImGui 静态库创建
 if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
     FetchContent_MakeAvailable(imgui)
@@ -145,9 +132,6 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
     # Windows 后端
     if(WIN32)
         list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
-        if(PRISMA_ENABLE_RENDER_DX12)
-            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_dx12.cpp)
-        endif()
     endif()
 
     # Vulkan 后端 - 跨平台

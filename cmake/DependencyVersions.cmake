@@ -69,10 +69,6 @@ set(PRISMA_DEP_VMA_VERSION "v3.1.0")
 # GitHub: https://github.com/charles-lunarg/vk-bootstrap
 set(PRISMA_DEP_VK_BOOTSTRAP_VERSION "v1.4.343")
 
-# DirectX-Headers (Windows) - DirectX 12 头文件
-# GitHub: https://github.com/microsoft/DirectX-Headers
-set(PRISMA_DEP_DIRECTX_HEADERS_VERSION "v1.614.1")
-
 # -------------------------------------------------------------------------------
 # 编辑器工具 / Editor Tools
 # -------------------------------------------------------------------------------
