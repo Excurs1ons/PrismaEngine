@@ -32,6 +32,7 @@ public:
     virtual void Write(const std::string& key, float value) = 0;
     virtual void Write(const std::string& key, int32_t value) = 0;
     virtual void Write(const std::string& key, uint32_t value) = 0;
+    virtual void Write(const std::string& key, uint64_t value) = 0;
     virtual void Write(const std::string& key, bool value) = 0;
     virtual void Write(const std::string& key, const std::string& value) = 0;
     virtual void Write(const std::string& key, const PrismaMath::vec2& value) = 0;
@@ -51,6 +52,7 @@ public:
         if constexpr (std::is_same_v<T, float>) Write(key, value);
         else if constexpr (std::is_same_v<T, int32_t>) Write(key, value);
         else if constexpr (std::is_same_v<T, uint32_t>) Write(key, value);
+        else if constexpr (std::is_same_v<T, uint64_t>) Write(key, value);
         else if constexpr (std::is_same_v<T, bool>) Write(key, value);
         else if constexpr (std::is_same_v<T, std::string>) Write(key, value);
         else if constexpr (std::is_same_v<T, std::filesystem::path>) Write(key, value.string());
@@ -82,6 +84,7 @@ public:
     virtual bool Read(const std::string& key, float& value) = 0;
     virtual bool Read(const std::string& key, int32_t& value) = 0;
     virtual bool Read(const std::string& key, uint32_t& value) = 0;
+    virtual bool Read(const std::string& key, uint64_t& value) = 0;
     virtual bool Read(const std::string& key, bool& value) = 0;
     virtual bool Read(const std::string& key, std::string& value) = 0;
     virtual bool Read(const std::string& key, PrismaMath::vec2& value) = 0;
@@ -101,6 +104,7 @@ public:
         if constexpr (std::is_same_v<T, float>) Read(key, value);
         else if constexpr (std::is_same_v<T, int32_t>) Read(key, value);
         else if constexpr (std::is_same_v<T, uint32_t>) Read(key, value);
+        else if constexpr (std::is_same_v<T, uint64_t>) Read(key, value);
         else if constexpr (std::is_same_v<T, bool>) Read(key, value);
         else if constexpr (std::is_same_v<T, std::string>) Read(key, value);
         else if constexpr (std::is_same_v<T, std::filesystem::path>) {

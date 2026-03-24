@@ -52,6 +52,7 @@ void Logger::SetPlatformLogger(IPlatformLogger* platformLogger) {
 }
 
 CallStackOutput Logger::GetCallStackOutputForLevel(LogLevel level) {
+    (void)level;
     return CallStackOutput::None;
 }
 
@@ -221,6 +222,8 @@ LogScope* Logger::GetCurrentLogScope() const {
 }
 
 std::vector<StackFrame> Logger::CaptureCallStack(int skipFrames, int maxFrames) {
+    (void)skipFrames;
+    (void)maxFrames;
     return {};
 }
 
@@ -291,6 +294,7 @@ std::string Logger::GetTimestamp(const std::chrono::system_clock::time_point& ti
 }
 
 void Logger::WriteToConsole(const std::string& message, bool useColors) {
+    (void)useColors;
     std::cout << message << std::endl;
 }
 

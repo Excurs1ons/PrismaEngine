@@ -114,7 +114,10 @@ void RenderComponent::Initialize() {
               GetOwner() ? GetOwner()->name : "Unknown");
 }
 
-void RenderComponent::Update(Timestep ts) {
+void RenderComponent::Update(Timestep /*ts*/) {
+    if (m_material) {
+        m_material->SetBaseColor(m_color);
+    }
 }
 
 void RenderComponent::Shutdown() {
