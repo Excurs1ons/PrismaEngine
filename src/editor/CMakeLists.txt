@@ -74,16 +74,6 @@ set_target_properties(PrismaEditor PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
-# 自动拷贝 SDL3.dll 到输出目录 (Windows)
-if(WIN32 AND TARGET SDL3::SDL3-shared)
-    add_custom_command(TARGET PrismaEditor POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        $<TARGET_FILE:SDL3::SDL3-shared>
-        $<TARGET_FILE_DIR:PrismaEditor>
-        COMMENT "Copying SDL3.dll to bin directory"
-    )
-endif()
-
 # 设置 VS 调试属性：工作目录设为项目根目录以加载资源
 if(MSVC)
     set_target_properties(PrismaEditor PROPERTIES
@@ -93,7 +83,11 @@ endif()
 
 # ========== 跨平台依赖 ==========
 
-if(TARGET SDL3::SDL3-shared)
+if(TARGET SDL3::SDL3-static)
+    target_link_libraries(Editor PRIVATE SDL3::SDL3-static)
+elseif(TARGET SDL3-static)
+    target_link_libraries(Editor PRIVATE SDL3-static)
+elseif(TARGET SDL3::SDL3-shared)
     target_link_libraries(Editor PRIVATE SDL3::SDL3-shared)
 elseif(TARGET SDL3)
     target_link_libraries(Editor PRIVATE SDL3)
