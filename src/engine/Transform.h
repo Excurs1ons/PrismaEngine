@@ -5,7 +5,7 @@
 namespace Prisma {
 class GameObject;  // 前向声明以避免循环依赖
 
-class Transform : public Component
+class ENGINE_API Transform : public Component
 {
 public:
     Transform() : m_Position(0.0f), m_Rotation(1.0f, 0.0f, 0.0f, 0.0f), m_Scale(1.0f), m_Matrix(1.0f), m_Dirty(true) {}

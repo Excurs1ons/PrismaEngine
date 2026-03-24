@@ -10,6 +10,7 @@
 
 // 显式包含 SDL3
 #include <SDL3/SDL.h>
+#include <vulkan/vulkan.h>
 
 namespace Prisma {
 
@@ -36,6 +37,8 @@ private:
     // Editor Windows
     ProjectSettingsWindow m_projectSettingsWindow;
     bool m_showProjectSettings = false;
+
+    VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
 };
 
 } // namespace Prisma

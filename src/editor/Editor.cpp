@@ -14,6 +14,9 @@
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 
+// 访问具体的 Vulkan 设备类型，以注册 ImGui 渲染回调
+#include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
+
 
 #define IMGUI_IMPL_VULKAN_USE_LOADER
 
@@ -53,6 +56,7 @@ int Editor::OnImGuiInitialize() {
     auto& engine      = Engine::Get();
     auto renderSystem = engine.GetRenderSystem();
     auto device       = renderSystem->GetDevice();
+    auto* vkDevice    = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(device);
     // 绑定后端
     auto& window          = engine.GetWindow();
     SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
@@ -62,31 +66,63 @@ int Editor::OnImGuiInitialize() {
     }
 
     ImGui_ImplVulkan_InitInfo init_info = {};
+
+    // [修复] ApiVersion 必须与创建 VkInstance 时使用的 Vulkan API 版本一致。
+    //   目的：ImGui 内部根据此版本决定初始化路径（例如是否启用某些 Vulkan 1.2/1.3 特性）。
+    //   问题根源：原代码未设置此字段，默认值为 0，导致 ImGui_ImplVulkan_Init 内部
+    //             选择了错误的代码路径，字体纹理的 DescriptorSet 未被正确创建，
+    //             其 TexID 留在 ImTextureID_Invalid（即 0xFFFFFFFFFFFFFFFF），
+    //             渲染时 vkCmdBindDescriptorSets 读取该无效句柄引发访问冲突崩溃。
+    //   过程：设置为与 RenderDeviceVulkan::Initialize 中 require_api_version(1,3,0) 一致的值。
+    init_info.ApiVersion     = VK_API_VERSION_1_3;
+
     init_info.Instance       = device->GetVkInstance();
     init_info.PhysicalDevice = device->GetPhysicalDevice();
     init_info.Device         = device->GetVkDevice();
     init_info.QueueFamily    = device->GetGraphicsQueueFamily();
     init_info.Queue          = device->GetGraphicsQueue();
-    init_info.DescriptorPool = device->GetImGuiDescriptorPool();
+
+    VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 } };
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = pool_sizes;
+    vkCreateDescriptorPool(device->GetVkDevice(), &pool_info, nullptr, &m_imguiDescriptorPool);
+
+    init_info.DescriptorPool = m_imguiDescriptorPool;
     init_info.PipelineCache  = VK_NULL_HANDLE;
-    init_info.MinImageCount  = 3;
-    init_info.ImageCount     = 3;
+    init_info.MinImageCount  = 2;    // Vulkan 规范要求 >= 2
+    init_info.ImageCount     = 3;    // 与交换链缓冲数对齐
     init_info.UseDynamicRendering               = false;
     init_info.Allocator           = nullptr;
     init_info.CheckVkResultFn                   = nullptr;
-    // --- 关键：新版本设置 RenderPass 的地方 ---
-    init_info.PipelineInfoMain.RenderPass  = device->GetImGuiRenderPass();
+
+    // RenderPass / MSAA 设置（使用交换链的 RenderPass，禁用多重采样）
+    init_info.PipelineInfoMain.RenderPass  = vkDevice->GetOverlayRenderPass();
     init_info.PipelineInfoMain.Subpass     = 0;
+    // [修复] MSAASamples 必须显式设置为 VK_SAMPLE_COUNT_1_BIT（= 1）。
+    //   若保持 0（零值初始化默认），ImGui 内部在创建 pipeline 时
+    //   vkCreateGraphicsPipelines 会收到无效的采样数，driver 可能返回错误。
     init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-    // 如果你开启了多窗口 (Viewports)，副窗口通常也用同样的设置
+    // 副视口使用相同的管线配置（当前已禁用多视口，此字段实际未使用）
     init_info.PipelineInfoForViewports = init_info.PipelineInfoMain;
-   
+
     if (!ImGui_ImplVulkan_Init(&init_info)) {
         return -1;
     }
 
+    // -----------------------------------------------------------------------
+    vkDevice->SetOverlayRenderCallback([](VkCommandBuffer cmd) {
+        if (ImGui::GetCurrentContext() && ImGui::GetDrawData()) {
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+        }
+    });
+
     return 0;
+
 }
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
@@ -119,6 +155,7 @@ void Editor::OnImGuiRender() {
 void Editor::OnRender() {
     // 这里放置场景提交逻辑 (由 Engine 循环调用)
     Application::OnRender();
+    OnImGuiRender();
 }
 
 void Editor::OnShutdown() {
@@ -127,6 +164,9 @@ void Editor::OnShutdown() {
     if (auto renderSystem = Engine::Get().GetRenderSystem()) {
         if (renderSystem->GetDevice()) {
             renderSystem->GetDevice()->WaitForIdle();
+            if (m_imguiDescriptorPool != VK_NULL_HANDLE) {
+                vkDestroyDescriptorPool(renderSystem->GetDevice()->GetVkDevice(), m_imguiDescriptorPool, nullptr);
+            }
         }
     }
 

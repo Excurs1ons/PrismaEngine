@@ -502,7 +502,9 @@ std::shared_ptr<ITexture> RenderResourceManager::LoadTextureSync(const std::stri
     TextureDesc desc;
     std::vector<uint8_t> data;
     if (LoadImageFromFile(filename, data, desc)) {
-        desc.mipLevels = generateMips ? 0 : 1;
+        // ValidateTextureDesc 要求 mipLevels > 0。
+        // 当 generateMips=true 时暂使用 1，待 mip 生成管线实现后再改为完整层数计算。
+        desc.mipLevels = 1;
         auto texture = m_device->GetResourceFactory()->CreateTextureFromMemory(data.data(), data.size(), desc);
         return std::shared_ptr<ITexture>(std::move(texture));
     }

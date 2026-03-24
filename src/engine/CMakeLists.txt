@@ -222,9 +222,7 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     if(TARGET vk-bootstrap::vk-bootstrap)
         target_link_libraries(Engine PUBLIC vk-bootstrap::vk-bootstrap)
     endif()
-    if(TARGET imgui)
-        target_link_libraries(Engine PUBLIC imgui)
-    endif()
+
 endif()
 
 target_include_directories(Engine

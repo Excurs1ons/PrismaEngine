@@ -9,7 +9,6 @@
 #include "graphic/Shader.h"
 #include "SceneManager.h"
 #include "PhysicsSystem.h"
-#include <imgui.h>
 
 namespace Prisma {
 
@@ -139,14 +138,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
             
             // 2. 渲染流程
             if (GetRenderSystem()) {
-                // 同步 ImGui 上下文 (跨 DLL 必备)
-                if (auto ctx = (ImGuiContext*)m_CurrentApp->GetImGuiContext()) {
-                    ImGui::SetCurrentContext(ctx);
-                }
-
                 GetRenderSystem()->BeginFrame();
                 m_CurrentApp->OnRender(); 
-                m_CurrentApp->OnImGuiRender();
                 GetRenderSystem()->EndFrame();
                 GetRenderSystem()->Present();
             }
