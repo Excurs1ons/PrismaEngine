@@ -48,27 +48,32 @@ int Editor::OnInitialize() {
 }
 
 int Editor::OnImGuiInitialize() {
+    LOG_INFO("Editor", "OnImGuiInitialize: Starting...");
     IMGUI_CHECKVERSION();
+    LOG_INFO("Editor", "OnImGuiInitialize: CreateContext...");
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;  // 禁用多视口
-    ImGui::StyleColorsDark();
-
+    // ...
     auto& engine      = Engine::Get();
     auto renderSystem = engine.GetRenderSystem();
     auto device       = renderSystem->GetDevice();
     auto* vkDevice    = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(device);
+    
+    LOG_INFO("Editor", "OnImGuiInitialize: Binding SDL3...");
     // 绑定后端
     auto& window          = engine.GetWindow();
     SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
+    if (!sdlWindow) {
+        LOG_ERROR("Editor", "Native window is null!");
+        return -1;
+    }
+    
     if (!ImGui_ImplSDL3_InitForVulkan(sdlWindow)) {
-
+        LOG_ERROR("Editor", "ImGui_ImplSDL3_InitForVulkan failed!");
         return -1;
     }
 
+    LOG_INFO("Editor", "OnImGuiInitialize: Initializing Vulkan backend...");
     ImGui_ImplVulkan_InitInfo init_info = {};
 
     // [修复] ApiVersion 必须与创建 VkInstance 时使用的 Vulkan API 版本一致。
@@ -119,7 +124,12 @@ int Editor::OnImGuiInitialize() {
     }
 
     // -----------------------------------------------------------------------
-    vkDevice->SetOverlayRenderCallback([](VkCommandBuffer cmd) {
+    vkDevice->SetOverlayRenderCallback([this](VkCommandBuffer cmd) {
+        // [修复] 必须在渲染前设置正确的 Context
+        // 原因：虽然 Engine 调用了此回调，但 ImGui 的静态状态存在于 PrismaEditor.dll 中。
+        //         通过在此显式设置，确保渲染逻辑看到的是 Editor 初始化的状态。
+        ImGui::SetCurrentContext((ImGuiContext*)this->GetImGuiContext());
+        
         if (ImGui::GetCurrentContext() && ImGui::GetDrawData()) {
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         }
