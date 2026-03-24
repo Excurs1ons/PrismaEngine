@@ -46,9 +46,11 @@ int main(int argc, char* argv[]) {
     };
 
     for (int i = 1; i < argc; ++i) {
-        if (argv[i] != nullptr && argv[i][0] != '\0') {
-            libNames.insert(libNames.begin(), argv[i]);
+        std::string arg = argv[i];
+        if (arg.empty() || arg[0] == '-') {
+            continue;
         }
+        libNames.insert(libNames.begin(), arg);
     }
 
     for (const auto& name : libNames) {

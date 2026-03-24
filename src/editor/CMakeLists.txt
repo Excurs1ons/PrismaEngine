@@ -53,6 +53,9 @@ target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 # 链接依赖
 target_link_libraries(Editor PRIVATE Engine imgui::imgui)
 
+# 显式添加 SDL3 头文件目录 (因为 Engine 是 PRIVATE 链接的，或者我们需要确保头文件可见)
+target_include_directories(Editor PRIVATE "${PROJECT_SOURCE_DIR}/.dependencies/SDL3-src/include")
+
 # 2. 创建编辑器启动器 (EXE)
 add_executable(PrismaEditor main.cpp)
 
@@ -81,21 +84,7 @@ if(MSVC)
     )
 endif()
 
-# ========== 跨平台依赖 ==========
-
-if(TARGET SDL3::SDL3-static)
-    target_link_libraries(Editor PRIVATE SDL3::SDL3-static)
-elseif(TARGET SDL3-static)
-    target_link_libraries(Editor PRIVATE SDL3-static)
-elseif(TARGET SDL3::SDL3-shared)
-    target_link_libraries(Editor PRIVATE SDL3::SDL3-shared)
-elseif(TARGET SDL3)
-    target_link_libraries(Editor PRIVATE SDL3)
-endif()
-
 # Windows 平台特定
 if(WIN32)
     target_link_libraries(Editor PRIVATE dwmapi.lib)
-    # 添加入口点类型 (图形界面)
-    # set_target_properties(PrismaEditor PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()

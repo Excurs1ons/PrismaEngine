@@ -19,6 +19,7 @@ endif()
 # ========== 收集核心源文件 (所有平台共用) ==========
 set(CORE_SOURCES
     CommandLineParser.cpp
+    DynamicLoader.cpp
     Engine.cpp
     Application.cpp
     JobSystem.cpp
@@ -196,16 +197,17 @@ target_link_libraries(Engine
         nlohmann_json::nlohmann_json
         stb
         tinyxml2
+        imgui::imgui
 )
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
-    # SDL3库链接 - 优先使用静态库
-    if(TARGET SDL3-static)
-        target_link_libraries(Engine PUBLIC SDL3-static)
-    elseif(TARGET SDL3::SDL3-static)
-        target_link_libraries(Engine PUBLIC SDL3::SDL3-static)
-    elseif(TARGET SDL3-shared)
+    # SDL3库链接 - 优先使用共享库（解决插件架构下的全局状态冲突）
+    if(TARGET SDL3-shared)
         target_link_libraries(Engine PUBLIC SDL3-shared)
+    elseif(TARGET SDL3::SDL3-shared)
+        target_link_libraries(Engine PUBLIC SDL3::SDL3-shared)
+    elseif(TARGET SDL3-static)
+        target_link_libraries(Engine PUBLIC SDL3-static)
     elseif(TARGET SDL3)
         target_link_libraries(Engine PUBLIC SDL3)
     endif()
