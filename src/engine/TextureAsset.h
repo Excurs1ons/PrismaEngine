@@ -41,6 +41,7 @@ public:
 protected:
 
     TextureAsset(VulkanContext* context);
+    static std::shared_ptr<TextureAsset> createWhiteFallback(VulkanContext* vulkanContext);
 
     VulkanContext* context_;
     VkImage image_ = VK_NULL_HANDLE;
