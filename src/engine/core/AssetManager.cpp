@@ -7,7 +7,13 @@ namespace Prisma {
 struct AssetManager::Impl {
     std::filesystem::path projectRoot;
     std::vector<std::filesystem::path> searchPaths;
-    std::unordered_map<Core::StringHash::HashType, std::shared_ptr<Asset>> assets;
+    
+    struct AssetEntry {
+        std::shared_ptr<Asset> asset;
+        std::filesystem::file_time_type lastWriteTime;
+    };
+    
+    std::unordered_map<Core::StringHash::HashType, AssetEntry> assets;
     bool initialized = false;
 };
 
@@ -41,19 +47,26 @@ void AssetManager::Shutdown() {
 }
 
 void AssetManager::Update(Timestep ts) {
-    m_lastCleanupTime += ts;
+    m_lastCleanupTime += ts.GetSeconds();
 
-    // 每 30 秒进行一次资源缓存清理
-    if (m_lastCleanupTime >= 30.0f) {
-        LOG_TRACE("AssetManager", "Starting periodic cleanup...");
-        auto it = m_Impl->assets.begin();
-        while (it != m_Impl->assets.end()) {
-            // 如果只有 AssetManager 自己持有该资源的 shared_ptr，说明它没被其他人使用了
-            if (it->second.use_count() == 1) {
-                LOG_TRACE("AssetManager", "Cleaning up unused asset: {0}", it->second->GetName());
-                it = m_Impl->assets.erase(it);
-            } else {
-                ++it;
+    // 每 2 秒检查一次热重载 (Hot Reloading)
+    if (m_lastCleanupTime >= 2.0f) {
+        for (auto& [hash, entry] : m_Impl->assets) {
+            if (!entry.asset || entry.asset->GetPath().empty()) continue;
+
+            const auto& path = entry.asset->GetPath();
+            if (std::filesystem::exists(path)) {
+                auto currentWriteTime = std::filesystem::last_write_time(path);
+                if (currentWriteTime > entry.lastWriteTime) {
+                    LOG_INFO("AssetManager", "Detected change in asset: {0}. Reloading...", entry.asset->GetName());
+                    entry.asset->Unload();
+                    if (entry.asset->Load(path)) {
+                        entry.lastWriteTime = currentWriteTime;
+                        LOG_INFO("AssetManager", "Asset reloaded successfully.");
+                    } else {
+                        LOG_ERROR("AssetManager", "Failed to reload asset: {0}", entry.asset->GetName());
+                    }
+                }
             }
         }
         m_lastCleanupTime = 0.0f;
@@ -90,13 +103,18 @@ bool AssetManager::IsInitialized() const {
 std::shared_ptr<Asset> AssetManager::GetAssetFromCache(Core::StringHash::HashType hash) {
     auto it = m_Impl->assets.find(hash);
     if (it != m_Impl->assets.end()) {
-        return it->second;
+        return it->second.asset;
     }
     return nullptr;
 }
 
 void AssetManager::RegisterAsset(Core::StringHash::HashType hash, std::shared_ptr<Asset> asset) {
-    m_Impl->assets[hash] = asset;
+    AssetManager::Impl::AssetEntry entry;
+    entry.asset = asset;
+    if (std::filesystem::exists(asset->GetPath())) {
+        entry.lastWriteTime = std::filesystem::last_write_time(asset->GetPath());
+    }
+    m_Impl->assets[hash] = entry;
 }
 
 } // namespace Prisma

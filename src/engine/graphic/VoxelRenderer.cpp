@@ -17,8 +17,7 @@ VoxelRenderer::~VoxelRenderer() {
 void VoxelRenderer::Initialize() {
     LOG_INFO("VoxelRenderer", "初始化 Voxel 渲染器");
 }
-
-void VoxelRenderer::Update(Timestep ts) {
+void VoxelRenderer::Update(Timestep /*ts*/) {
     // 遍历所有区块，检查是否需要重建网格
     for (auto& [key, chunk] : m_chunks) {
         if (chunk->dirty) {

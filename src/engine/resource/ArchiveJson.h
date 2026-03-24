@@ -30,6 +30,7 @@ public:
     void Write(const std::string& key, float value) override { (*m_stack.top())[key] = value; }
     void Write(const std::string& key, int32_t value) override { (*m_stack.top())[key] = value; }
     void Write(const std::string& key, uint32_t value) override { (*m_stack.top())[key] = value; }
+    void Write(const std::string& key, uint64_t value) override { (*m_stack.top())[key] = value; }
     void Write(const std::string& key, bool value) override { (*m_stack.top())[key] = value; }
     void Write(const std::string& key, const std::string& value) override { (*m_stack.top())[key] = value; }
     
@@ -94,6 +95,14 @@ public:
     bool Read(const std::string& key, uint32_t& value) override {
         if (m_stack.top()->contains(key)) {
             value = m_stack.top()->at(key).get<uint32_t>();
+            return true;
+        }
+        return false;
+    }
+
+    bool Read(const std::string& key, uint64_t& value) override {
+        if (m_stack.top()->contains(key)) {
+            value = m_stack.top()->at(key).get<uint64_t>();
             return true;
         }
         return false;

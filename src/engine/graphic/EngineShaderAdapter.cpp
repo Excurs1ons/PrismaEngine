@@ -69,24 +69,24 @@ const ShaderResource* EngineShaderAdapter::FindResource(const std::string& name)
     return nullptr;
 }
 
-const ShaderResource* EngineShaderAdapter::FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const {
+const ShaderResource* EngineShaderAdapter::FindResourceByBindPoint(uint32_t /*bindPoint*/, uint32_t /*space*/) const {
     // Not implemented in engine shader yet
     return nullptr;
 }
 
-bool EngineShaderAdapter::Recompile(const ShaderCompileOptions* options, std::string& errors) {
+bool EngineShaderAdapter::Recompile(const ShaderCompileOptions* /*options*/, std::string& /*errors*/) {
     return false;
 }
 
-bool EngineShaderAdapter::RecompileFromSource(const std::string& source, const ShaderCompileOptions* options, std::string& errors) {
+bool EngineShaderAdapter::RecompileFromSource(const std::string& /*source*/, const ShaderCompileOptions* /*options*/, std::string& /*errors*/) {
     return false;
 }
 
-bool EngineShaderAdapter::ReloadFromFile(std::string& errors) {
+bool EngineShaderAdapter::ReloadFromFile(std::string& /*errors*/) {
     return false;
 }
 
-void EngineShaderAdapter::EnableHotReload(bool enable) {
+void EngineShaderAdapter::EnableHotReload(bool /*enable*/) {
 }
 
 bool EngineShaderAdapter::IsFileModified() const {
@@ -121,7 +121,7 @@ std::string EngineShaderAdapter::Disassemble() const {
     return "";
 }
 
-bool EngineShaderAdapter::DebugSaveToFile(const std::string& filename, bool includeDisassembly, bool includeReflection) const {
+bool EngineShaderAdapter::DebugSaveToFile(const std::string& /*filename*/, bool /*includeDisassembly*/, bool /*includeReflection*/) const {
     return false;
 }
 

@@ -1,5 +1,6 @@
 #include "VulkanPipelineState.h"
 #include "VulkanShader.h"
+#include <functional>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -139,18 +140,25 @@ uint32_t VulkanPipelineState::GetSampleQuality() const {
 }
 
 bool VulkanPipelineState::Create(IRenderDevice* device) {
-    (void)device;
-    // TODO: Implement actual Vulkan pipeline creation
-    // This requires:
-    // 1. Creating VkShaderModules from shaders
-    // 2. Creating VkPipelineVertexInputStateCreateInfo from input layout
-    // 3. Creating VkPipelineInputAssemblyStateCreateInfo from topology
-    // 4. Creating VkPipelineRasterizationStateCreateInfo from rasterizer state
-    // 5. Creating VkPipelineColorBlendStateCreateInfo from blend state
-    // 6. Creating VkPipelineDepthStencilStateCreateInfo from depth stencil state
-    // 7. Creating VkGraphicsPipelineCreateInfo and calling vkCreateGraphicsPipelines
+    if (device != nullptr) {
+        m_device = device->GetVkDevice();
+    }
+
+    std::string validationErrors;
+    if (!Validate(device, validationErrors)) {
+        m_errors = std::move(validationErrors);
+        m_isValid = false;
+        return false;
+    }
+
+    if (m_device == VK_NULL_HANDLE) {
+        m_errors = "Vulkan device is not available";
+        m_isValid = false;
+        return false;
+    }
+
+    m_errors = "Graphics pipeline creation is not implemented yet";
     m_isValid = false;
-    m_errors = "Pipeline creation not fully implemented";
     return false;
 }
 
@@ -176,8 +184,43 @@ bool VulkanPipelineState::Validate(IRenderDevice* device, std::string& errors) c
 }
 
 uint64_t VulkanPipelineState::GetCacheKey() const {
-    // TODO: Implement proper cache key calculation
-    return 0;
+    auto hashCombine = [](uint64_t& seed, uint64_t value) {
+        seed ^= value + 0x9e3779b97f4a7c15ull + (seed << 6) + (seed >> 2);
+    };
+
+    uint64_t seed = 0;
+    hashCombine(seed, static_cast<uint64_t>(m_type));
+    hashCombine(seed, static_cast<uint64_t>(m_topology));
+    hashCombine(seed, static_cast<uint64_t>(m_sampleCount));
+    hashCombine(seed, static_cast<uint64_t>(m_sampleQuality));
+    hashCombine(seed, static_cast<uint64_t>(m_depthStencilFormat));
+    hashCombine(seed, static_cast<uint64_t>(m_blendState.blendEnable));
+    hashCombine(seed, static_cast<uint64_t>(m_blendState.logicOpEnable));
+    hashCombine(seed, static_cast<uint64_t>(m_blendState.writeMask));
+    hashCombine(seed, static_cast<uint64_t>(m_rasterizerState.fillMode));
+    hashCombine(seed, static_cast<uint64_t>(m_rasterizerState.cullMode));
+    hashCombine(seed, static_cast<uint64_t>(m_depthStencilState.depthEnable));
+    hashCombine(seed, static_cast<uint64_t>(m_depthStencilState.depthWriteEnable));
+    hashCombine(seed, static_cast<uint64_t>(m_depthStencilState.depthFunc));
+
+    for (const auto& attribute : m_inputAttributes) {
+        hashCombine(seed, std::hash<std::string>{}(attribute.semanticName));
+        hashCombine(seed, attribute.semanticIndex);
+        hashCombine(seed, static_cast<uint64_t>(attribute.format));
+        hashCombine(seed, attribute.inputSlot);
+        hashCombine(seed, attribute.alignedByteOffset);
+    }
+
+    for (const auto format : m_renderTargetFormats) {
+        hashCombine(seed, static_cast<uint64_t>(format));
+    }
+
+    for (const auto& [shaderType, shader] : m_shaders) {
+        hashCombine(seed, static_cast<uint64_t>(shaderType));
+        hashCombine(seed, reinterpret_cast<uint64_t>(shader.get()));
+    }
+
+    return seed;
 }
 
 bool VulkanPipelineState::LoadFromCache(IRenderDevice* device, uint64_t cacheKey) {

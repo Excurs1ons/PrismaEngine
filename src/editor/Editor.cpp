@@ -53,7 +53,6 @@ int Editor::OnImGuiInitialize() {
     auto& engine      = Engine::Get();
     auto renderSystem = engine.GetRenderSystem();
     auto device       = renderSystem->GetDevice();
-    auto vkInstance   = device->GetVkInstance();
     // 绑定后端
     auto& window          = engine.GetWindow();
     SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());

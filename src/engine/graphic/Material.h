@@ -30,7 +30,7 @@ public:
     // Asset 接口
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
-    bool IsLoaded() const override { return m_Shader != nullptr; }
+    bool IsLoaded() const override { return m_IsLoaded; }
     Prisma::AssetType GetType() const override { return Prisma::AssetType::Material; }
 
     // 参数设置

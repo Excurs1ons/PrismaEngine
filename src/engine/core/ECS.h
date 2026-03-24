@@ -66,10 +66,10 @@ public:
     ComponentManager& GetComponentManager() { static ComponentManager cm; return cm; }
 
     template<typename T>
-    T* GetComponent(EntityID entity) { return nullptr; }
+    T* GetComponent(EntityID entity) { (void)entity; return nullptr; }
 
     template<typename T>
-    T* AddComponent(EntityID entity) { return nullptr; }
+    T* AddComponent(EntityID entity) { (void)entity; return nullptr; }
 
 private:
     std::vector<std::shared_ptr<ISystem>> m_systems;

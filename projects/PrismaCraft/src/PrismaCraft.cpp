@@ -1,4 +1,5 @@
 #include "../engine/Application.h"
+#include "../engine/Engine.h"
 #include "../engine/core/Layer.h"
 #include "../engine/Logger.h"
 #include "../engine/core/Timestep.h"

@@ -26,7 +26,7 @@ protected:
 
 public:
     WaveformGenerator(float sampleRate = 44100.0f)
-        : sampleRate(sampleRate), frequency(440.0f), volume(0.5f), phase(0.0f) {}
+        : frequency(440.0f), volume(0.5f), phase(0.0f), sampleRate(sampleRate) {}
 
     void SetFrequency(float freq) override { frequency = freq; }
     void SetVolume(float vol) override { volume = vol; }
