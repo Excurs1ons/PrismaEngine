@@ -166,6 +166,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
         GetRenderSystem()->GetDevice()->WaitForIdle();
     }
 
+    // Application/Layer 可能仍持有 ITexture/IBuffer 等 GPU 资源。
+    // 必须在 RenderSystem/VMA allocator 关闭前释放它们，避免资源晚于 allocator 析构。
+    m_CurrentApp.reset();
+
     return 0;
 }
 
@@ -178,9 +182,24 @@ void Engine::Shutdown() {
     if (!m_Initialized) return;
     
     LOG_INFO("Engine", "Shutting down engine...");
-    for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) (*it)->Shutdown();
+
+    // RenderSystem 必须最后关闭。
+    // 其他系统、场景对象以及 Application/Layer 可能还持有 GPU 资源，
+    // 若先销毁 VMA allocator，会在这些资源稍后析构时触发未释放断言。
+    for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) {
+        if (it->get() == m_RenderSystem) {
+            continue;
+        }
+        (*it)->Shutdown();
+    }
+
+    if (m_RenderSystem) {
+        m_RenderSystem->Shutdown();
+    }
+
     m_Systems.clear();
     
+    m_CurrentApp = nullptr;
     m_AssetManager = nullptr;
     m_InputManager = nullptr;
     m_RenderSystem = nullptr;
