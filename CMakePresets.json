@@ -14,6 +14,8 @@
       "environment": {},
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
+        "PRISMA_BUILD_ENGINE": "ON",
+        "PRISMA_BUILD_RUNTIME": "ON",
         "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_ENABLE_RENDER_DX12": "OFF",
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "ON",
