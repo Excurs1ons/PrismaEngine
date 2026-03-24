@@ -144,6 +144,9 @@ private:
     DeviceDesc m_desc;
     bool m_initialized = false;
     uint32_t m_currentFrameIndex = 0;
+    uint32_t m_pendingPresentImageIndex = 0;
+    bool m_frameActive = false;
+    bool m_hasPendingPresent = false;
 };
 
 }  // namespace Prisma::Graphic::Vulkan

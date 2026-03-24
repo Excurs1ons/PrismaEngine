@@ -242,7 +242,7 @@ std::vector<CollisionShape> TmxParser::ParseCollisionShapes(void* tileElement) {
             float y = objElem->FloatAttribute("y", 0.0f);
             float w = objElem->FloatAttribute("width", 0.0f);
             float h = objElem->FloatAttribute("height", 0.0f);
-            shape.points = {{0.0f, 0.0f}, {w, 0.0f}, {w, h}, {0.0f, h}};
+            shape.points = {{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}};
         }
 
         shapes.push_back(shape);
@@ -718,7 +718,7 @@ std::unique_ptr<TilemapLayer> TmxParser::ParseLayer(
                 tileLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(tileLayerImpl);
+            return tileLayerImpl;
         }
 
         case LayerType::ObjectLayer: {
@@ -758,7 +758,7 @@ std::unique_ptr<TilemapLayer> TmxParser::ParseLayer(
                 objLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(objLayerImpl);
+            return objLayerImpl;
         }
 
         case LayerType::ImageLayer: {
@@ -789,7 +789,7 @@ std::unique_ptr<TilemapLayer> TmxParser::ParseLayer(
                 imgLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(imgLayerImpl);
+            return imgLayerImpl;
         }
 
         case LayerType::GroupLayer: {
@@ -826,7 +826,7 @@ std::unique_ptr<TilemapLayer> TmxParser::ParseLayer(
                 groupLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(groupLayerImpl);
+            return groupLayerImpl;
         }
 
         default:

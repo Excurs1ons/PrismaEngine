@@ -11,6 +11,7 @@
 #include <vector>
 #include <functional>
 #include <memory>
+#include <mutex>
 
 #if PRISMA_ENABLE_IMGUI_DEBUG && PRISMA_DEBUG
 
@@ -174,19 +175,97 @@ private:
 // 非Debug构建时，定义为空操作
 namespace Prisma {
 struct DebugOverlay {
-    static void AddMessage(const std::string&, int = 0, float = 5.0f) {}
-    static void Log(const std::string&) {}
-    static void Warning(const std::string&) {}
-    static void Error(const std::string&) {}
-    static void Success(const std::string&) {}
-    static void WatchVar(const std::string&, const float*) {}
-    static void WatchVar(const std::string&, const int*) {}
-    static void WatchVar(const std::string&, const bool*) {}
-    static void WatchVar(const std::string&, const std::string*) {}
-    static void UnwatchVar(const std::string&) {}
-    static void AddStat(const std::string&, const std::function<std::string()>&) {}
-    static void SetStat(const std::string&, const std::string&) {}
-    static void RemoveStat(const std::string&) {}
+    struct MessageEntry {
+        std::string text;
+        int type = 0;
+        float duration = 5.0f;
+    };
+
+    struct WatchEntry {
+        std::string name;
+        const void* value = nullptr;
+        std::string typeName;
+    };
+
+    struct StatEntry {
+        std::string name;
+        std::string value;
+    };
+
+    static std::vector<MessageEntry>& Messages() {
+        static std::vector<MessageEntry> messages;
+        return messages;
+    }
+
+    static std::vector<WatchEntry>& Watches() {
+        static std::vector<WatchEntry> watches;
+        return watches;
+    }
+
+    static std::vector<StatEntry>& Stats() {
+        static std::vector<StatEntry> stats;
+        return stats;
+    }
+
+    static std::mutex& Mutex() {
+        static std::mutex mutex;
+        return mutex;
+    }
+
+    static void AddMessage(const std::string& text, int type = 0, float duration = 5.0f) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        Messages().push_back({text, type, duration});
+    }
+    static void Log(const std::string& text) { AddMessage(text, 0); }
+    static void Warning(const std::string& text) { AddMessage(text, 1); }
+    static void Error(const std::string& text) { AddMessage(text, 2); }
+    static void Success(const std::string& text) { AddMessage(text, 3); }
+    static void WatchVar(const std::string& name, const float* value) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        Watches().push_back({name, value, "float"});
+    }
+    static void WatchVar(const std::string& name, const int* value) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        Watches().push_back({name, value, "int"});
+    }
+    static void WatchVar(const std::string& name, const bool* value) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        Watches().push_back({name, value, "bool"});
+    }
+    static void WatchVar(const std::string& name, const std::string* value) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        Watches().push_back({name, value, "string"});
+    }
+    static void UnwatchVar(const std::string& name) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        auto& watches = Watches();
+        watches.erase(
+            std::remove_if(watches.begin(), watches.end(), [&](const WatchEntry& entry) { return entry.name == name; }),
+            watches.end()
+        );
+    }
+    static void AddStat(const std::string& name, const std::function<std::string()>& getter) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        Stats().push_back({name, getter ? getter() : std::string()});
+    }
+    static void SetStat(const std::string& name, const std::string& value) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        for (auto& entry : Stats()) {
+            if (entry.name == name) {
+                entry.value = value;
+                return;
+            }
+        }
+        Stats().push_back({name, value});
+    }
+    static void RemoveStat(const std::string& name) {
+        std::lock_guard<std::mutex> lock(Mutex());
+        auto& stats = Stats();
+        stats.erase(
+            std::remove_if(stats.begin(), stats.end(), [&](const StatEntry& entry) { return entry.name == name; }),
+            stats.end()
+        );
+    }
 };
 }
 

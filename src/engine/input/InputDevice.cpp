@@ -60,14 +60,17 @@ void InputDevice::Update() {
 }
 
 std::unique_ptr<IInputDriver> InputDevice::CreateDriver(InputDriverType type) {
-
-    #if defined(PRISMA_ENABLE_INPUT_SDL3)
-        if (type == InputDriverType::Auto || type == InputDriverType::SDL3) {
+    switch (type) {
+        case InputDriverType::Auto:
+        case InputDriverType::SDL3:
+        #if defined(PRISMA_ENABLE_INPUT_SDL3)
             return std::unique_ptr<IInputDriver>(CreateSDL3InputDriver());
-        }
-    #endif
-
-    return nullptr;
+        #else
+            return nullptr;
+        #endif
+        default:
+            return nullptr;
+    }
 }
 
 // ========== 键盘查询 ==========

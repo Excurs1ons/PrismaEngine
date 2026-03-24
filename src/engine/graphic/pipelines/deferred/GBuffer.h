@@ -4,6 +4,7 @@
 #include "interfaces/IDeviceContext.h"
 #include "math/MathTypes.h"
 #include <memory>
+#include <array>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
@@ -54,16 +55,19 @@ public:
     uint32_t GetHeight() const override { return m_height; }
     bool IsInitialized() const override { return m_created; }
 
-    ITextureRenderTarget* GetTarget(GBufferTarget target) override { return nullptr; }
-    IDepthStencil* GetDepthStencil() override { return nullptr; }
-    void GetColorTargets(ITextureRenderTarget** targets, uint32_t count) override {}
+    ITextureRenderTarget* GetTarget(GBufferTarget target) override;
+    IDepthStencil* GetDepthStencil() override;
+    void GetColorTargets(ITextureRenderTarget** targets, uint32_t count) override;
     uint32_t GetColorTargetCount() const override { return 4; }
-    TextureFormat GetTargetFormat(GBufferTarget target) const override { return TextureFormat::Unknown; }
+    TextureFormat GetTargetFormat(GBufferTarget target) const override;
 
     bool InitializeVulkanResources(uint32_t width, uint32_t height);
     void DestroyVulkanResources();
 
 private:
+    class RenderTargetProxy;
+    class DepthStencilProxy;
+
     struct VulkanResource {
         VkImage image = VK_NULL_HANDLE;
         VkImageView imageView = VK_NULL_HANDLE;
@@ -79,6 +83,8 @@ private:
     uint32_t m_width = 0;
     uint32_t m_height = 0;
     bool m_created = false;
+    std::array<std::unique_ptr<RenderTargetProxy>, 4> m_colorTargetViews;
+    std::unique_ptr<DepthStencilProxy> m_depthStencilView;
 };
 
 } // namespace Prisma::Graphic

@@ -57,8 +57,7 @@ public:
 
     /// @brief 设置当前设备（如果支持）
     /// @param deviceName 设备名称
-    virtual bool SetDevice(const std::string& deviceName) {
-        (void)deviceName;
+    virtual bool SetDevice(const std::string&) {
         return false;
     }
 
@@ -199,16 +198,13 @@ public:
     /// @param effectType 音效类型
     /// @param params 音效参数
     /// @return 是否成功
-    virtual bool ApplyEffect(AudioVoiceId voiceId, EffectType effectType, const void* params) {
-        (void)params;
-        (void)voiceId;
-        (void)effectType;
+    virtual bool ApplyEffect(AudioVoiceId, EffectType, const void*) {
         return false;
     }
 
     /// @brief 移除音频源的所有音效
     /// @param voiceId 音频Voice ID
-    virtual void RemoveEffects(AudioVoiceId voiceId) {}
+    virtual void RemoveEffects(AudioVoiceId) {}
 
     // ========== 事件系统 ==========
 

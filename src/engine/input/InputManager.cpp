@@ -17,6 +17,7 @@ struct InputManager::Impl {
     PrismaMath::vec2 mousePosition{0.0f, 0.0f};
     PrismaMath::vec2 lastMousePosition{0.0f, 0.0f};
     PrismaMath::vec2 mouseDelta{0.0f, 0.0f};
+    float frameDeltaSeconds = 0.0f;
 };
 
 InputManager::InputManager() : m_impl(std::make_unique<Impl>()) {}
@@ -35,6 +36,8 @@ void InputManager::Shutdown() {
 }
 
 void InputManager::Update(Timestep ts) {
+    m_impl->frameDeltaSeconds = ts;
+
     // 每一帧清空 "Just" 状态
     m_impl->justPressedKeys.clear();
     m_impl->justReleasedKeys.clear();
@@ -47,8 +50,32 @@ void InputManager::Update(Timestep ts) {
 }
 
 void InputManager::OnEvent(Event& e) {
-    // 这里的逻辑可以根据你的 EventSystem 实现来写。
-    // 关键是：这是实例方法，不是静态方法！
+    EventDispatcher dispatcher(e);
+
+    dispatcher.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& event) {
+        SetKeyState((KeyCode)event.GetKeyCode(), true);
+        return false;
+    });
+
+    dispatcher.Dispatch<KeyReleasedEvent>([this](KeyReleasedEvent& event) {
+        SetKeyState((KeyCode)event.GetKeyCode(), false);
+        return false;
+    });
+
+    dispatcher.Dispatch<MouseButtonPressedEvent>([this](MouseButtonPressedEvent& event) {
+        SetMouseButtonState((MouseButton)event.GetMouseButton(), true);
+        return false;
+    });
+
+    dispatcher.Dispatch<MouseButtonReleasedEvent>([this](MouseButtonReleasedEvent& event) {
+        SetMouseButtonState((MouseButton)event.GetMouseButton(), false);
+        return false;
+    });
+
+    dispatcher.Dispatch<MouseMovedEvent>([this](MouseMovedEvent& event) {
+        SetMousePosition({event.GetX(), event.GetY()});
+        return false;
+    });
 }
 
 bool InputManager::IsKeyPressed(KeyCode key) const {

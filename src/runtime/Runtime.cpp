@@ -45,6 +45,12 @@ int main(int argc, char* argv[]) {
 #endif
     };
 
+    for (int i = 1; i < argc; ++i) {
+        if (argv[i] != nullptr && argv[i][0] != '\0') {
+            libNames.insert(libNames.begin(), argv[i]);
+        }
+    }
+
     for (const auto& name : libNames) {
         try {
             if (loader.Load(name)) {

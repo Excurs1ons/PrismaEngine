@@ -2,10 +2,12 @@
 
 #include "../engine/core/Layer.h"
 #include "../engine/Application.h"
+#include "../engine/Engine.h"
 #include "../engine/graphic/RenderSystem.h"
 #include "../engine/SceneManager.h"
 #include "../engine/Scene.h"
 #include "../engine/Camera.h"
+#include "../engine/physics/PhysicsComponents.h"
 #include <filesystem>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
@@ -209,7 +211,7 @@ public:
                 for (auto& obj : objects) {
                     ImGuiTreeNodeFlags flags = ((m_selectedEntity == obj) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow;
                     flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
-                    bool opened = ImGui::TreeNodeEx((void*)(uint64_t)obj.get(), flags, obj->name.c_str());
+                    bool opened = ImGui::TreeNodeEx((void*)(uint64_t)obj.get(), flags, "%s", obj->name.c_str());
                     if (ImGui::IsItemClicked()) {
                         m_selectedEntity = obj;
                     }
@@ -271,6 +273,36 @@ public:
                         camera->SetPerspectiveProjection(glm::radians(fov), camera->GetAspectRatio(), camera->GetNearPlane(), camera->GetFarPlane());
                     }
                 }
+            }
+
+            // RigidBody Component display
+            auto rb = m_selectedEntity->GetComponent<RigidBodyComponent>();
+            if (rb) {
+                if (ImGui::CollapsingHeader("RigidBody", ImGuiTreeNodeFlags_DefaultOpen)) {
+                    Vector3 vel = rb->GetVelocity();
+                    if (ImGui::DragFloat3("Velocity", &vel.x, 0.1f)) {
+                        rb->SetVelocity(vel);
+                    }
+                }
+            }
+            
+            // Add Component button
+            ImGui::Spacing();
+            ImGui::Separator();
+            if (ImGui::Button("Add Component...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                ImGui::OpenPopup("AddComponentPopup");
+            }
+            
+            if (ImGui::BeginPopup("AddComponentPopup")) {
+                if (ImGui::MenuItem("Camera")) {
+                    if (!m_selectedEntity->GetComponent<Graphic::Camera>())
+                        m_selectedEntity->AddComponent<Graphic::Camera>();
+                }
+                if (ImGui::MenuItem("RigidBody")) {
+                    if (!m_selectedEntity->GetComponent<RigidBodyComponent>())
+                        m_selectedEntity->AddComponent<RigidBodyComponent>();
+                }
+                ImGui::EndPopup();
             }
         } else {
             ImGui::Text("Select an entity to view properties");

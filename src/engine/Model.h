@@ -34,11 +34,11 @@ public:
         return vertices_.data();
     }
 
-    inline const size_t getVertexCount() const {
+    inline size_t getVertexCount() const {
         return vertices_.size();
     }
 
-    inline const size_t getIndexCount() const {
+    inline size_t getIndexCount() const {
         return indices_.size();
     }
 

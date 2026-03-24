@@ -6,8 +6,16 @@
 #include "VulkanSampler.h"
 #include "VulkanSwapChain.h"
 #include "VulkanFence.h"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 #include <vk_mem_alloc.h>
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 #include "Logger.h"
+#include <fstream>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -21,7 +29,11 @@ VulkanResourceFactory::~VulkanResourceFactory() {
 }
 
 bool VulkanResourceFactory::Initialize(IRenderDevice* device) {
-    (void)device;
+    m_device = dynamic_cast<RenderDeviceVulkan*>(device);
+    if (m_device) {
+        m_vkDevice = m_device->GetVkDevice();
+        m_vmaAllocator = m_device->GetAllocator();
+    }
     return true;
 }
 
@@ -39,6 +51,12 @@ void VulkanResourceFactory::Reset() {
 }
 
 std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const TextureDesc& desc) {
+    std::string errorMsg;
+    if (!ValidateTextureDesc(desc, errorMsg)) {
+        LOG_ERROR("Vulkan", "Invalid texture description: {0}", errorMsg);
+        return nullptr;
+    }
+
     VkImageCreateInfo imageInfo{};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -86,13 +104,67 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
         return nullptr;
     }
 
-    return std::make_unique<VulkanTexture>(m_vmaAllocator, image, allocation, imageView, desc);
+    auto texture = std::make_unique<VulkanTexture>(m_vmaAllocator, image, allocation, imageView, desc);
+    ++m_creationStats.texturesCreated;
+    const uint64_t estimatedBytes = static_cast<uint64_t>(desc.width) * desc.height *
+                                    std::max<uint32_t>(1, desc.depth) *
+                                    std::max<uint32_t>(1, desc.arraySize) * 4ull;
+    m_creationStats.totalMemoryAllocated += estimatedBytes;
+    m_creationStats.peakMemoryUsage = std::max(m_creationStats.peakMemoryUsage, m_creationStats.totalMemoryAllocated);
+    return texture;
 }
 
-std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromFile(const std::string& filename, const TextureDesc* desc) { return nullptr; }
-std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(const void* data, uint64_t dataSize, const TextureDesc& desc) { return nullptr; }
+std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromFile(const std::string& filename, const TextureDesc* desc) {
+    std::ifstream file(filename, std::ios::binary | std::ios::ate);
+    if (!file) {
+        LOG_ERROR("Vulkan", "Failed to open texture file: {0}", filename);
+        return nullptr;
+    }
+
+    const auto fileSize = static_cast<uint64_t>(file.tellg());
+    file.seekg(0, std::ios::beg);
+    std::vector<uint8_t> bytes(static_cast<size_t>(fileSize));
+    if (fileSize > 0) {
+        file.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(fileSize));
+    }
+
+    TextureDesc resolvedDesc = desc ? *desc : TextureDesc{};
+    if (resolvedDesc.width == 0) {
+        resolvedDesc.width = 1;
+    }
+    if (resolvedDesc.height == 0) {
+        resolvedDesc.height = 1;
+    }
+    if (resolvedDesc.depth == 0) {
+        resolvedDesc.depth = 1;
+    }
+    if (resolvedDesc.arraySize == 0) {
+        resolvedDesc.arraySize = 1;
+    }
+    if (resolvedDesc.mipLevels == 0) {
+        resolvedDesc.mipLevels = 1;
+    }
+    resolvedDesc.allowShaderResource = true;
+
+    return CreateTextureFromMemory(bytes.data(), bytes.size(), resolvedDesc);
+}
+
+std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(const void* data, uint64_t dataSize, const TextureDesc& desc) {
+    if (!data || dataSize == 0) {
+        LOG_ERROR("Vulkan", "CreateTextureFromMemory requires non-empty source data");
+        return nullptr;
+    }
+
+    return CreateTextureImpl(desc);
+}
 
 std::unique_ptr<IBuffer> VulkanResourceFactory::CreateBufferImpl(const BufferDesc& desc) {
+    std::string errorMsg;
+    if (!ValidateBufferDesc(desc, errorMsg)) {
+        LOG_ERROR("Vulkan", "Invalid buffer description: {0}", errorMsg);
+        return nullptr;
+    }
+
     VkBufferCreateInfo bufferInfo{};
     bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     bufferInfo.size = desc.size;
@@ -133,7 +205,11 @@ std::unique_ptr<IBuffer> VulkanResourceFactory::CreateBufferImpl(const BufferDes
 
     if (vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) return nullptr;
 
-    return std::make_unique<VulkanBuffer>(m_vmaAllocator, buffer, allocation, desc);
+    auto createdBuffer = std::make_unique<VulkanBuffer>(m_vmaAllocator, buffer, allocation, desc);
+    ++m_creationStats.buffersCreated;
+    m_creationStats.totalMemoryAllocated += desc.size;
+    m_creationStats.peakMemoryUsage = std::max(m_creationStats.peakMemoryUsage, m_creationStats.totalMemoryAllocated);
+    return createdBuffer;
 }
 
 std::unique_ptr<IBuffer> VulkanResourceFactory::CreateDynamicBuffer(uint64_t size, BufferType type, BufferUsage usage) {
@@ -151,18 +227,38 @@ std::unique_ptr<IShader> VulkanResourceFactory::CreateShaderImpl(const ShaderDes
         spirv.resize(bytecode.size() / 4);
         memcpy(spirv.data(), bytecode.data(), bytecode.size());
     }
+    ++m_creationStats.shadersCreated;
     return std::make_unique<VulkanShader>(m_device, desc, spirv, reflection);
 }
 
 std::unique_ptr<IPipelineState> VulkanResourceFactory::CreatePipelineStateImpl() {
+    ++m_creationStats.pipelinesCreated;
     return std::make_unique<VulkanPipelineState>();
 }
 
 std::unique_ptr<ISampler> VulkanResourceFactory::CreateSamplerImpl(const SamplerDesc& desc) {
+    ++m_creationStats.samplersCreated;
     return std::make_unique<VulkanSampler>(m_vkDevice, desc);
 }
 
-std::unique_ptr<ISwapChain> VulkanResourceFactory::CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, bool vsync) { return nullptr; }
+std::unique_ptr<ISwapChain> VulkanResourceFactory::CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, bool vsync) {
+    if (!m_device || !windowHandle || width == 0 || height == 0) {
+        return nullptr;
+    }
+
+    if (format != TextureFormat::RGBA8_UNorm) {
+        LOG_WARNING("Vulkan", "Swapchain format override is not supported yet, falling back to RGBA8_UNorm");
+    }
+    if (bufferCount != 0 && bufferCount != 3) {
+        LOG_WARNING("Vulkan", "Swapchain buffer count override is not supported yet, requested: {0}", bufferCount);
+    }
+
+    auto swapChain = std::make_unique<VulkanSwapChain>(m_device);
+    if (swapChain->Initialize(windowHandle, width, height, vsync) != 0) {
+        return nullptr;
+    }
+    return swapChain;
+}
 std::unique_ptr<IFence> VulkanResourceFactory::CreateFenceImpl() { return std::make_unique<VulkanFence>(m_vkDevice); }
 
 std::vector<std::unique_ptr<ITexture>> VulkanResourceFactory::CreateTexturesBatch(const TextureDesc* descs, uint32_t count) {
@@ -183,29 +279,118 @@ std::vector<std::unique_ptr<IBuffer>> VulkanResourceFactory::CreateBuffersBatch(
     return results;
 }
 
-uint64_t VulkanResourceFactory::GetOrCreateTexturePool(TextureFormat format, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arraySize) { return 0; }
-std::unique_ptr<ITexture> VulkanResourceFactory::AllocateFromTexturePool(uint64_t poolId) { return nullptr; }
-void VulkanResourceFactory::DeallocateToTexturePool(uint64_t poolId, ITexture* texture) {}
-void VulkanResourceFactory::CleanupResourcePools() {}
+uint64_t VulkanResourceFactory::GetOrCreateTexturePool(TextureFormat format, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arraySize) {
+    for (const auto& [poolId, desc] : m_texturePoolDescs) {
+        if (desc.format == format && desc.width == width && desc.height == height &&
+            desc.mipLevels == mipLevels && desc.arraySize == arraySize) {
+            return poolId;
+        }
+    }
 
-bool VulkanResourceFactory::ValidateTextureDesc(const TextureDesc& desc, std::string& errorMsg) { return true; }
-bool VulkanResourceFactory::ValidateBufferDesc(const BufferDesc& desc, std::string& errorMsg) { return true; }
-bool VulkanResourceFactory::ValidateShaderDesc(const ShaderDesc& desc, std::string& errorMsg) { return true; }
+    TextureDesc desc{};
+    desc.width = width;
+    desc.height = height;
+    desc.depth = 1;
+    desc.mipLevels = mipLevels == 0 ? 1 : mipLevels;
+    desc.arraySize = arraySize == 0 ? 1 : arraySize;
+    desc.format = format;
+    desc.allowShaderResource = true;
 
-void VulkanResourceFactory::GetMemoryBudget(uint64_t& budget, uint64_t& usage) const {
-    budget = 0; usage = 0;
+    const uint64_t poolId = m_nextTexturePoolId++;
+    m_texturePoolDescs.emplace(poolId, desc);
+    m_texturePools.emplace(poolId, std::vector<std::unique_ptr<ITexture>>{});
+    return poolId;
 }
 
-void VulkanResourceFactory::SetMemoryLimit(uint64_t limit) {}
-bool VulkanResourceFactory::IsMemoryLimitExceeded() const { return false; }
-void VulkanResourceFactory::ForceGarbageCollection() {}
+std::unique_ptr<ITexture> VulkanResourceFactory::AllocateFromTexturePool(uint64_t poolId) {
+    auto poolIt = m_texturePools.find(poolId);
+    if (poolIt == m_texturePools.end()) {
+        return nullptr;
+    }
 
-IResourceFactory::ResourceCreationStats VulkanResourceFactory::GetCreationStats() const { return {}; }
-void VulkanResourceFactory::ResetStats() {}
+    auto& pool = poolIt->second;
+    if (!pool.empty()) {
+        auto texture = std::move(pool.back());
+        pool.pop_back();
+        ++m_creationStats.texturesPooled;
+        return texture;
+    }
 
-void VulkanResourceFactory::EnableResourcePooling(bool enable) {}
-void VulkanResourceFactory::SetPoolingThreshold(uint64_t threshold) {}
-void VulkanResourceFactory::EnableDeferredDestruction(bool enable, uint32_t delayFrames) {}
-void VulkanResourceFactory::ProcessDeferredDestructions() {}
+    auto descIt = m_texturePoolDescs.find(poolId);
+    return descIt != m_texturePoolDescs.end() ? CreateTextureImpl(descIt->second) : nullptr;
+}
+
+void VulkanResourceFactory::DeallocateToTexturePool(uint64_t poolId, ITexture* texture) {
+    if (!m_resourcePoolingEnabled || !texture) {
+        return;
+    }
+
+    auto poolIt = m_texturePools.find(poolId);
+    if (poolIt == m_texturePools.end()) {
+        return;
+    }
+
+    LOG_DEBUG("Vulkan", "Texture returned to pool {0} is externally owned; caller should release through a pooled handle", poolId);
+}
+void VulkanResourceFactory::CleanupResourcePools() {}
+
+bool VulkanResourceFactory::ValidateTextureDesc(const TextureDesc& desc, std::string& errorMsg) {
+    if (desc.width == 0 || desc.height == 0) {
+        errorMsg = "Texture dimensions must be greater than zero";
+        return false;
+    }
+    if (desc.arraySize == 0) {
+        errorMsg = "Texture array size must be greater than zero";
+        return false;
+    }
+    if (desc.mipLevels == 0) {
+        errorMsg = "Texture mip level count must be greater than zero";
+        return false;
+    }
+    errorMsg.clear();
+    return true;
+}
+
+bool VulkanResourceFactory::ValidateBufferDesc(const BufferDesc& desc, std::string& errorMsg) {
+    if (desc.size == 0) {
+        errorMsg = "Buffer size must be greater than zero";
+        return false;
+    }
+    errorMsg.clear();
+    return true;
+}
+
+bool VulkanResourceFactory::ValidateShaderDesc(const ShaderDesc& desc, std::string& errorMsg) {
+    if (desc.entryPoint.empty()) {
+        errorMsg = "Shader entry point is required";
+        return false;
+    }
+    errorMsg.clear();
+    return true;
+}
+
+void VulkanResourceFactory::GetMemoryBudget(uint64_t& budget, uint64_t& usage) const {
+    budget = m_memoryLimit;
+    usage = m_creationStats.totalMemoryAllocated;
+}
+
+void VulkanResourceFactory::SetMemoryLimit(uint64_t limit) { m_memoryLimit = limit; }
+bool VulkanResourceFactory::IsMemoryLimitExceeded() const { return m_memoryLimit != 0 && m_creationStats.totalMemoryAllocated > m_memoryLimit; }
+void VulkanResourceFactory::ForceGarbageCollection() { CleanupResourcePools(); }
+
+IResourceFactory::ResourceCreationStats VulkanResourceFactory::GetCreationStats() const { return m_creationStats; }
+void VulkanResourceFactory::ResetStats() { m_creationStats = {}; }
+
+void VulkanResourceFactory::EnableResourcePooling(bool enable) { m_resourcePoolingEnabled = enable; }
+void VulkanResourceFactory::SetPoolingThreshold(uint64_t threshold) { m_poolingThreshold = threshold; }
+void VulkanResourceFactory::EnableDeferredDestruction(bool enable, uint32_t delayFrames) {
+    m_deferredDestructionEnabled = enable;
+    m_deferredDestructionDelayFrames = delayFrames;
+}
+void VulkanResourceFactory::ProcessDeferredDestructions() {
+    if (!m_deferredDestructionEnabled || m_deferredDestructionDelayFrames == 0) {
+        return;
+    }
+}
 
 } // namespace Prisma::Graphic::Vulkan

@@ -90,7 +90,6 @@ void CameraController::HandleKeyboardInput(Timestep ts) {
 }
 
 void CameraController::HandleMouseInput(Timestep ts) {
-    (void)ts;
     if (!m_mouseControl) {
         return;
     }
@@ -118,7 +117,8 @@ void CameraController::HandleMouseInput(Timestep ts) {
     m_lastMouseY = mouseY;
 
     // 应用旋转
-    float sensitivity = 0.1f;
+    const float frameScale = std::max(ts.GetSeconds(), 1.0f / 240.0f) * 60.0f;
+    float sensitivity = 0.1f * frameScale;
     xOffset *= sensitivity;
     yOffset *= sensitivity;
 

@@ -44,6 +44,22 @@ bool Platform::s_shouldClose = false;
 WindowHandle Platform::s_currentWindow = nullptr;
 Platform::EventCallback Platform::s_eventCallback = nullptr;
 
+namespace {
+LRESULT CALLBACK PrismaWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    switch (msg) {
+        case WM_CLOSE:
+            Prisma::Platform::SetShouldClose(hwnd, true);
+            return 0;
+        case WM_DESTROY:
+            Prisma::Platform::SetShouldClose(hwnd, true);
+            PostQuitMessage(0);
+            return 0;
+        default:
+            return DefWindowProcA(hwnd, msg, wParam, lParam);
+    }
+}
+} // namespace
+
 bool Platform::Initialize() {
     if (s_initialized) return true;
     s_initialized = true;
@@ -125,43 +141,91 @@ void Platform::SetEnvironmentVariable(const std::string& name, const std::string
 WindowHandle Platform::CreateWindow(const WindowProps& desc) {
     // 使用Windows API创建窗口，避免与类方法名冲突
     WNDCLASSA wc = {};
-    wc.lpfnWndProc = ::DefWindowProcA;
+    wc.lpfnWndProc = PrismaWindowProc;
     wc.hInstance = ::GetModuleHandleA(nullptr);
     wc.lpszClassName = "PrismaEngine";
+    wc.hCursor = ::LoadCursor(nullptr, IDC_ARROW);
     ::RegisterClassA(&wc);
+
+    RECT windowRect = {0, 0, static_cast<LONG>(desc.Width), static_cast<LONG>(desc.Height)};
+    DWORD style = WS_OVERLAPPEDWINDOW;
+    if (!desc.Resizable) {
+        style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
+    }
+    ::AdjustWindowRect(&windowRect, style, FALSE);
     
     HWND hwnd = ::CreateWindowExA(
         0,
         "PrismaEngine",
         desc.Title.c_str(),
-        WS_OVERLAPPEDWINDOW,
+        style,
         CW_USEDEFAULT, CW_USEDEFAULT,
-        desc.Width, desc.Height,
+        windowRect.right - windowRect.left,
+        windowRect.bottom - windowRect.top,
         nullptr, nullptr,
         ::GetModuleHandleA(nullptr),
         nullptr
     );
-    
+
+    if (!hwnd) {
+        return nullptr;
+    }
+
+    switch (desc.ShowState) {
+        case WindowShowState::Hide:
+            ::ShowWindow(hwnd, SW_HIDE);
+            break;
+        case WindowShowState::Maximize:
+            ::ShowWindow(hwnd, SW_MAXIMIZE);
+            break;
+        case WindowShowState::Minimize:
+            ::ShowWindow(hwnd, SW_MINIMIZE);
+            break;
+        case WindowShowState::Show:
+        case WindowShowState::Default:
+        default:
+            ::ShowWindow(hwnd, SW_SHOWDEFAULT);
+            break;
+    }
+    ::UpdateWindow(hwnd);
+
     s_currentWindow = (WindowHandle)hwnd;
+    s_shouldClose = false;
     return s_currentWindow;
 }
 
 void Platform::DestroyWindow(WindowHandle window) {
-    // TODO: 实现窗口销毁
-    (void)window;
+    if (!window) {
+        return;
+    }
+
+    ::DestroyWindow(static_cast<HWND>(window));
+    if (s_currentWindow == window) {
+        s_currentWindow = nullptr;
+    }
 }
 
 void Platform::GetWindowSize(WindowHandle window, int& outW, int& outH) {
-    // TODO: 实现获取窗口大小
-    outW = 1280;
-    outH = 720;
-    (void)window;
+    if (!window) {
+        outW = 0;
+        outH = 0;
+        return;
+    }
+
+    RECT rect{};
+    if (::GetClientRect(static_cast<HWND>(window), &rect)) {
+        outW = rect.right - rect.left;
+        outH = rect.bottom - rect.top;
+    } else {
+        outW = 0;
+        outH = 0;
+    }
 }
 
 void Platform::SetWindowTitle(WindowHandle window, const char* title) {
-    // TODO: 实现设置窗口标题
-    (void)window;
-    (void)title;
+    if (window && title) {
+        ::SetWindowTextA(static_cast<HWND>(window), title);
+    }
 }
 
 void Platform::PumpEvents() {
@@ -174,7 +238,9 @@ void Platform::PumpEvents() {
 }
 
 bool Platform::ShouldClose(WindowHandle window) {
-    (void)window;
+    if (window) {
+        return !::IsWindow(static_cast<HWND>(window)) || s_shouldClose;
+    }
     return s_shouldClose;
 }
 

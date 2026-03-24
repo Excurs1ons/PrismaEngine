@@ -125,10 +125,19 @@ void TilemapRenderer::SetTile(int x, int y, uint32_t gid) {
         return;
     }
 
-    const TileMap* map = m_tilemap->GetMap();
+    TileMap* map = m_tilemap->GetMap();
     if (!map) return;
 
-    // map->SetTile(x, y, gid);
+    for (TileLayer* layer : map->GetTileLayers()) {
+        if (!layer) {
+            continue;
+        }
+
+        if (x >= 0 && y >= 0 && x < layer->tileData.width && y < layer->tileData.height) {
+            layer->tileData.SetGid(x, y, gid);
+            break;
+        }
+    }
 
     m_geometryDirty = true;
 }
@@ -141,7 +150,17 @@ uint32_t TilemapRenderer::GetTile(int x, int y) const {
     const TileMap* map = m_tilemap->GetMap();
     if (!map) return 0;
 
-    // return map->GetTile(x, y);
+    for (const TileLayer* layer : map->GetTileLayers()) {
+        if (!layer) {
+            continue;
+        }
+
+        uint32_t gid = layer->tileData.GetGid(x, y);
+        if (gid != 0) {
+            return gid;
+        }
+    }
+
     return 0;
 }
 
@@ -160,7 +179,7 @@ void TilemapRenderer::RefreshGeometry() {
 // ============================================================================
 
 void TilemapRenderer::Render(Graphic::RenderCommandContext* context) {
-    if (!m_tilemap || !m_tilemap->IsLoaded()) {
+    if (!context || !m_tilemap || !m_tilemap->IsLoaded()) {
         return;
     }
 
@@ -169,7 +188,27 @@ void TilemapRenderer::Render(Graphic::RenderCommandContext* context) {
         CreateMaterial();
     }
 
-    // 实际渲染命令需要在渲染管线完善后实现
+    if (m_geometryDirty) {
+        BuildGeometry();
+    }
+
+    if (m_vertices.empty() || m_indices.empty()) {
+        return;
+    }
+
+    context->BeginDebugMarker("TilemapRenderer");
+    context->SetVertexData(
+        m_vertices.data(),
+        static_cast<uint32_t>(m_vertices.size() * sizeof(TileVertex)),
+        sizeof(TileVertex)
+    );
+    context->SetIndexData(
+        m_indices.data(),
+        static_cast<uint32_t>(m_indices.size() * sizeof(uint32_t)),
+        true
+    );
+    context->DrawIndexed(static_cast<uint32_t>(m_indices.size()));
+    context->EndDebugMarker();
 }
 
 // ============================================================================

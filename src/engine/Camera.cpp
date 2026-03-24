@@ -6,8 +6,8 @@ namespace Prisma {
 namespace Graphic {
 
 Camera::Camera()
-    : m_fov(Prisma::PI / 4.0f), m_aspectRatio(16.0f / 9.0f), m_nearPlane(0.1f), m_farPlane(1000.0f),
-      m_clearColor(0.0f, 0.0f, 0.0f, 1.0f), m_isViewDirty(true), m_isProjectionDirty(true) {
+    : m_clearColor(0.0f, 0.0f, 0.0f, 1.0f), m_fov(Prisma::PI / 4.0f), m_aspectRatio(16.0f / 9.0f),
+      m_nearPlane(0.1f), m_farPlane(1000.0f), m_isViewDirty(true), m_isProjectionDirty(true) {
     // 初始化缓存向量
     m_forward = PrismaMath::vec3(0.0f, 0.0f, 1.0f);
     m_up      = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
@@ -32,7 +32,10 @@ void Camera::Initialize() {
 }
 
 void Camera::Update(Timestep ts) {
-    (void)ts;
+    if (ts.GetSeconds() > 0.0f && m_farPlane < m_nearPlane) {
+        std::swap(m_farPlane, m_nearPlane);
+        m_isProjectionDirty = true;
+    }
     // 更新视图矩阵（如果需要）
     UpdateViewMatrix();
 }

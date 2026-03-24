@@ -19,7 +19,26 @@ void OpaquePass::Update(Prisma::Timestep ts) {
 }
 
 void OpaquePass::Execute(const PassExecutionContext& context) {
-    // New IPass implementation
+    if (!context.deviceContext) {
+        return;
+    }
+
+    if (context.renderTarget && context.depthStencil) {
+        context.deviceContext->SetRenderTarget(context.renderTarget, context.depthStencil);
+    } else if (context.renderTarget) {
+        context.deviceContext->SetRenderTarget(context.renderTarget);
+    }
+
+    if (context.sceneData) {
+        context.deviceContext->SetViewport(
+            0.0f,
+            0.0f,
+            static_cast<float>(context.sceneData->viewport.width),
+            static_cast<float>(context.sceneData->viewport.height)
+        );
+    }
+
+    context.deviceContext->MemoryBarrier();
 }
 
 void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {

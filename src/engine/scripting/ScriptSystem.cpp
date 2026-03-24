@@ -2,6 +2,7 @@
 #include "Logger.h"
 #include "core/ECS.h"
 #include <algorithm>
+#include <filesystem>
 
 namespace Prisma {
 namespace Scripting {
@@ -90,6 +91,8 @@ void ScriptSystem::AddScript(Prisma::Core::ECS::EntityID entity, const std::stri
     auto managedScript = MonoRuntime::Get().CreateScript(scriptPath);
     if (managedScript.IsValid()) {
         scriptComp->scriptPaths.push_back(scriptPath);
+        scriptComp->scriptInstances.push_back(std::make_shared<ManagedObject>(std::move(managedScript)));
+        scriptComp->initialized = false;
         LOG_INFO("ScriptSystem", "为实体 {0} 添加脚本: {1}", entity, scriptPath);
     }
 }
@@ -101,31 +104,97 @@ void ScriptSystem::RemoveScript(Prisma::Core::ECS::EntityID entity, const std::s
 
     auto it = std::find(scriptComp->scriptPaths.begin(), scriptComp->scriptPaths.end(), scriptPath);
     if (it != scriptComp->scriptPaths.end()) {
-        (void)std::distance(scriptComp->scriptPaths.begin(), it);
+        const auto index = static_cast<size_t>(std::distance(scriptComp->scriptPaths.begin(), it));
         scriptComp->scriptPaths.erase(it);
+        if (index < scriptComp->scriptInstances.size()) {
+            scriptComp->scriptInstances.erase(scriptComp->scriptInstances.begin() + static_cast<std::ptrdiff_t>(index));
+        }
+        scriptComp->initialized = false;
     }
 }
 
 void ScriptSystem::ReloadScripts() {
     LOG_INFO("ScriptSystem", "重新加载所有脚本");
+
+    auto* pool = Prisma::Core::ECS::World::Get().GetComponentManager().GetPool<ScriptComponent>();
+    if (!pool) {
+        return;
+    }
+
+    auto& components = pool->GetData();
+    for (auto& script : components) {
+        script.scriptInstances.clear();
+        for (const auto& scriptPath : script.scriptPaths) {
+            auto managedScript = MonoRuntime::Get().CreateScript(scriptPath);
+            if (managedScript.IsValid()) {
+                script.scriptInstances.push_back(std::make_shared<ManagedObject>(std::move(managedScript)));
+            } else {
+                LOG_WARNING("ScriptSystem", "重新创建脚本实例失败: {0}", scriptPath);
+            }
+        }
+        script.initialized = false;
+    }
 }
 
 bool ScriptSystem::CompileScripts(const std::string& projectPath) {
-    LOG_WARNING("ScriptSystem", "脚本编译功能尚未实现: {0}", projectPath);
-    return false;
+    namespace fs = std::filesystem;
+
+    const fs::path root(projectPath);
+    if (!fs::exists(root)) {
+        LOG_ERROR("ScriptSystem", "脚本项目路径不存在: {0}", projectPath);
+        return false;
+    }
+
+    bool foundCompilableInput = false;
+    for (const auto& entry : fs::recursive_directory_iterator(root)) {
+        if (!entry.is_regular_file()) {
+            continue;
+        }
+
+        const auto extension = entry.path().extension().string();
+        if (extension == ".dll") {
+            foundCompilableInput = LoadAssembly(entry.path().string()) || foundCompilableInput;
+            continue;
+        }
+
+        if (extension == ".cs" || extension == ".csproj" || extension == ".sln") {
+            foundCompilableInput = true;
+        }
+    }
+
+    if (!foundCompilableInput) {
+        LOG_WARNING("ScriptSystem", "脚本项目目录下没有可用的程序集或源码: {0}", projectPath);
+        return false;
+    }
+
+    LOG_INFO("ScriptSystem", "脚本项目扫描完成: {0}", projectPath);
+    return true;
 }
 
 void ScriptSystem::ProcessScriptAwake(ScriptComponent& script) {
-    (void)script;
+    for (auto& instance : script.scriptInstances) {
+        if (instance && instance->IsValid()) {
+            instance->InvokeMethod("OnAwake");
+        }
+    }
 }
 
 void ScriptSystem::ProcessScriptStart(ScriptComponent& script) {
-    (void)script;
+    for (auto& instance : script.scriptInstances) {
+        if (instance && instance->IsValid()) {
+            instance->InvokeMethod("OnStart");
+        }
+    }
 }
 
 void ScriptSystem::ProcessScriptUpdate(ScriptComponent& script, Prisma::Timestep ts) {
-    (void)script;
-    (void)ts;
+    for (auto& instance : script.scriptInstances) {
+        if (instance && instance->IsValid()) {
+            // 传参 DeltaTime
+            float dt = ts.GetSeconds();
+            instance->InvokeMethod("OnUpdate", &dt);
+        }
+    }
 }
 
 }  // namespace Scripting

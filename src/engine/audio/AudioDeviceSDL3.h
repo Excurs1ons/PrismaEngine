@@ -6,6 +6,7 @@
 #include <array>
 #include <mutex>
 #include <atomic>
+#include <chrono>
 
 namespace Prisma::Audio {
 
@@ -83,6 +84,13 @@ private:
         bool looping;
         bool isActive;
         float position[3];
+        float velocity[3] = {0.0f, 0.0f, 0.0f};
+        float direction[3] = {0.0f, 0.0f, 1.0f};
+        Audio3DAttributes spatial;
+        float playbackPosition = 0.0f;
+        float duration = 0.0f;
+        size_t clipStartOffset = 0;
+        size_t clipEndOffset = 0;
         
         // SDL3 Specific
         SDL_AudioSpec spec;
@@ -92,6 +100,9 @@ private:
     void UpdateVoiceStates();
     void TriggerEvent(AudioEventType type, AudioVoiceId voiceId);
     void ResetStreamPosition(PlayingVoice& voice);
+    void ApplyVoiceSettings(PlayingVoice& voice);
+    float ComputeVoiceAttenuation(const PlayingVoice& voice) const;
+    static float ComputeBytesPerSecond(const AudioClip& clip);
 
     bool m_initialized = false;
     SDL_AudioDeviceID m_deviceId = 0;
@@ -99,6 +110,11 @@ private:
     float m_masterVolume = 1.0f;
     AudioListener m_listener;
     AudioStats m_stats;
+    DistanceModel m_distanceModel = DistanceModel::InverseClamped;
+    float m_dopplerFactor = 1.0f;
+    float m_speedOfSound = 343.3f;
+    std::chrono::steady_clock::time_point m_profileStart;
+    bool m_profileActive = false;
 
     // 正在播放的Voices
     std::unordered_map<AudioVoiceId, PlayingVoice> m_playingVoices;

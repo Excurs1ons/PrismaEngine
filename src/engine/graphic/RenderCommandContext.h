@@ -4,6 +4,7 @@
 #include "math/MathTypes.h"
 #include <string>
 #include <map>
+#include <vector>
 
 namespace Prisma::Graphic {
 
@@ -124,6 +125,16 @@ private:
 
     // 命名资源缓存（用于兼容旧 API）
     std::map<std::string, void*> m_namedResources;
+    std::vector<uint8_t> m_dynamicVertexData;
+    std::vector<uint8_t> m_dynamicIndexData;
+    std::vector<std::vector<uint8_t>> m_dynamicConstantData = std::vector<std::vector<uint8_t>>(16);
+    std::vector<std::string> m_debugMarkers;
+    float m_lastClearColor[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    float m_lastDepthValue = 1.0f;
+    uint8_t m_lastStencilValue = 0;
+    uint32_t m_lastVertexStride = 0;
+    bool m_lastIndexBufferIs32Bit = true;
+    uint32_t m_drawCallCount = 0;
 };
 
 } // namespace Prisma::Graphic

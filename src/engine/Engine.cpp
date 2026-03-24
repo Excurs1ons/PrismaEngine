@@ -8,6 +8,7 @@
 #include "graphic/RenderSystem.h"
 #include "graphic/Shader.h"
 #include "SceneManager.h"
+#include "PhysicsSystem.h"
 #include <imgui.h>
 
 namespace Prisma {
@@ -40,6 +41,7 @@ int Engine::Initialize() {
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
     m_SceneManager = AddSystem<SceneManager>();
+    m_PhysicsSystem = AddSystem<PhysicsSystem>();
     
     // 新增：ShaderLibrary 子系统
     AddSystem<Graphic::ShaderLibrary>();
@@ -146,6 +148,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 m_CurrentApp->OnRender(); 
                 m_CurrentApp->OnImGuiRender();
                 GetRenderSystem()->EndFrame();
+                GetRenderSystem()->Present();
             }
         } else {
             Platform::SleepMilliseconds(10);
@@ -189,6 +192,7 @@ void Engine::Shutdown() {
     m_InputManager = nullptr;
     m_RenderSystem = nullptr;
     m_SceneManager = nullptr;
+    m_PhysicsSystem = nullptr;
     m_JobSystem = nullptr;
     m_Initialized = false;
     m_Running = false;
