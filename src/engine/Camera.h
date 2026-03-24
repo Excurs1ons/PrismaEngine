@@ -1,12 +1,12 @@
 #pragma once
 
-#include "Camera.h"
+#include "Export.h"
 #include "math/MathTypes.h"
 #include "Component.h"
 #include "graphic/ICamera.h"
 namespace Prisma::Graphic {
 
-    class Camera : public Component, public Prisma::Graphic::ICamera {
+    class ENGINE_API Camera : public Component, public Prisma::Graphic::ICamera {
     public:
         // 设置和获取清除颜色
         void SetClearColor(float r, float g, float b, float a = 1.0f) override;

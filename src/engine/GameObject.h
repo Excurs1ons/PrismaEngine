@@ -1,4 +1,5 @@
 #pragma once
+#include "Export.h"
 #include "Transform.h"
 #include <memory>
 #include <string>
@@ -8,7 +9,7 @@ namespace Prisma {
 
 class Component;
 
-class GameObject : public std::enable_shared_from_this<GameObject>
+class ENGINE_API GameObject : public std::enable_shared_from_this<GameObject>
 {
 public:
     std::string name;
