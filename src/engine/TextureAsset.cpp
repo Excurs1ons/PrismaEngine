@@ -1,7 +1,11 @@
 #ifdef PRISMA_ENABLE_RENDER_VULKAN
 #include "TextureAsset.h"
+#include "Logger.h"
 #include <array>
+#include <cmath>
+#include <cstring>
 #include <mutex>
+#include <stb_image.h>
 #include <vector>
 
 // 全局白色 fallback 纹理（单例）
@@ -194,13 +198,13 @@ std::shared_ptr<TextureAsset> TextureAsset::createWhiteFallback(VulkanContext* v
 
     texture->sampler_ = createTextureSampler(vulkanContext, mipLevels);
 
-    aout << "Created white fallback texture (1x1)" << std::endl;
+    LOG_INFO("TextureAsset", "Created white fallback texture (1x1)");
 
     return texture;
 }
 
 // 获取或创建全局白色 fallback 纹理（单例模式）
-std::shared_ptr<TextureAsset> TextureAsset::getOrCreateWhiteFallback(VulkanContext* vulkanContext) {
+std::shared_ptr<TextureAsset> TextureAsset::getWhiteFallback(VulkanContext* vulkanContext) {
     if (!vulkanContext) {
         return nullptr;
     }
@@ -219,110 +223,89 @@ std::shared_ptr<TextureAsset> TextureAsset::getOrCreateWhiteFallback(VulkanConte
 std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
         const std::string& assetPath,
         VulkanContext* vulkanContext) {
-    LOG_ERROR("TextureAsset", "loadAsset not implemented for non-Android platforms yet");
-    return nullptr;
-}
+    if (!vulkanContext) {
+        LOG_WARNING("TextureAsset", "Cannot load texture without a Vulkan context: {}", assetPath);
+        return nullptr;
+    }
 
-    AImageDecoder* pAndroidDecoder = nullptr;
-    auto result = AImageDecoder_createFromAAsset(pAndroidRobotPng, &pAndroidDecoder);
-    assert(result == ANDROID_IMAGE_DECODER_SUCCESS);
+    int width = 0;
+    int height = 0;
+    int channels = 0;
+    stbi_set_flip_vertically_on_load(false);
+    stbi_uc* imageData = stbi_load(assetPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    if (!imageData) {
+        LOG_WARNING("TextureAsset", "Failed to load texture {}, falling back to white texture", assetPath);
+        return getWhiteFallback(vulkanContext);
+    }
 
-    AImageDecoder_setAndroidBitmapFormat(pAndroidDecoder, ANDROID_BITMAP_FORMAT_RGBA_8888);
-
-    const AImageDecoderHeaderInfo* pAndroidHeader =
-            AImageDecoder_getHeaderInfo(pAndroidDecoder);
-
-    auto width = AImageDecoderHeaderInfo_getWidth(pAndroidHeader);
-    auto height = AImageDecoderHeaderInfo_getHeight(pAndroidHeader);
-    auto stride = AImageDecoder_getMinimumStride(pAndroidDecoder);
-
-    auto upAndroidImageData = std::make_unique<std::vector<uint8_t>>(height * stride);
-    auto decodeResult = AImageDecoder_decodeImage(
-            pAndroidDecoder,
-            upAndroidImageData->data(),
-            stride,
-            upAndroidImageData->size());
-    assert(decodeResult == ANDROID_IMAGE_DECODER_SUCCESS);
-
-    // 清理解码器
-    AImageDecoder_delete(pAndroidDecoder);
-    AAsset_close(pAndroidRobotPng);
-
-    // 2. 创建 Vulkan 纹理
     auto texture = std::shared_ptr<TextureAsset>(new TextureAsset(vulkanContext));
-    texture->size_ = glm::uvec2(width, height);
+    texture->size_ = glm::uvec2(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
     texture->mipLevels_ = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
 
-    if (vulkanContext) {
-        // 创建暂存缓冲区并复制数据
-        VkBuffer stagingBuffer;
-        VkDeviceMemory stagingBufferMemory;
-        VkDeviceSize imageSize = width * height * 4; // RGBA
+    VkBuffer stagingBuffer = VK_NULL_HANDLE;
+    VkDeviceMemory stagingBufferMemory = VK_NULL_HANDLE;
+    const VkDeviceSize imageSize = static_cast<VkDeviceSize>(width) * static_cast<VkDeviceSize>(height) * 4;
 
-        vulkanContext->createBuffer(
-                imageSize,
-                VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                stagingBuffer,
-                stagingBufferMemory);
+    vulkanContext->createBuffer(
+            imageSize,
+            VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+            stagingBuffer,
+            stagingBufferMemory);
 
-        void* data;
-        vkMapMemory(vulkanContext->device, stagingBufferMemory, 0, imageSize, 0, &data);
-        memcpy(data, upAndroidImageData->data(), static_cast<size_t>(imageSize));
-        vkUnmapMemory(vulkanContext->device, stagingBufferMemory);
+    void* mappedData = nullptr;
+    vkMapMemory(vulkanContext->device, stagingBufferMemory, 0, imageSize, 0, &mappedData);
+    std::memcpy(mappedData, imageData, static_cast<size_t>(imageSize));
+    vkUnmapMemory(vulkanContext->device, stagingBufferMemory);
+    stbi_image_free(imageData);
 
-        // 3. 创建 Vulkan 图像
-        createVulkanImage(
-                vulkanContext,
-                width,
-                height,
-                texture->mipLevels_,
-                texture->format_,
-                VK_IMAGE_TILING_OPTIMAL,
-                VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                texture->image_,
-                texture->imageMemory_);
+    createVulkanImage(
+            vulkanContext,
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height),
+            texture->mipLevels_,
+            texture->format_,
+            VK_IMAGE_TILING_OPTIMAL,
+            VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+            texture->image_,
+            texture->imageMemory_);
 
-        // 4. 转换图像布局并复制数据
-        vulkanContext->transitionImageLayout(
-                texture->image_,
-                texture->format_,
-                VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                texture->mipLevels_);
+    vulkanContext->transitionImageLayout(
+            texture->image_,
+            texture->format_,
+            VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            texture->mipLevels_);
 
-        vulkanContext->copyBufferToImage(
-                stagingBuffer,
-                texture->image_,
-                static_cast<uint32_t>(width),
-                static_cast<uint32_t>(height));
+    vulkanContext->copyBufferToImage(
+            stagingBuffer,
+            texture->image_,
+            static_cast<uint32_t>(width),
+            static_cast<uint32_t>(height));
 
-        // 5. 生成 Mipmaps
-        vulkanContext->generateMipmaps(
-                texture->image_,
-                texture->format_,
-                width,
-                height,
-                texture->mipLevels_);
+    vulkanContext->generateMipmaps(
+            texture->image_,
+            texture->format_,
+            width,
+            height,
+            texture->mipLevels_);
 
-        // 6. 清理暂存缓冲区
-        vkDestroyBuffer(vulkanContext->device, stagingBuffer, nullptr);
-        vkFreeMemory(vulkanContext->device, stagingBufferMemory, nullptr);
+    vkDestroyBuffer(vulkanContext->device, stagingBuffer, nullptr);
+    vkFreeMemory(vulkanContext->device, stagingBufferMemory, nullptr);
 
-        // 7. 创建图像视图和采样器
-        texture->imageView_ = createImageView(
-                vulkanContext,
-                texture->image_,
-                texture->format_,
-                VK_IMAGE_ASPECT_COLOR_BIT,
-                texture->mipLevels_);
-
-        texture->sampler_ = createTextureSampler(vulkanContext, texture->mipLevels_);
-    }
+    texture->imageView_ = createImageView(
+            vulkanContext,
+            texture->image_,
+            texture->format_,
+            VK_IMAGE_ASPECT_COLOR_BIT,
+            texture->mipLevels_);
+    texture->sampler_ = createTextureSampler(vulkanContext, texture->mipLevels_);
 
     return texture;
 }
+
+TextureAsset::TextureAsset() : context_(nullptr) {}
 
 TextureAsset::TextureAsset(VulkanContext* context) : context_(context) {}
 
@@ -332,10 +315,24 @@ TextureAsset::~TextureAsset() {
 
 void TextureAsset::Unload() {
     if (context_) {
-        vkDestroySampler(context_->device, sampler_, nullptr);
-        vkDestroyImageView(context_->device, imageView_, nullptr);
-        vkDestroyImage(context_->device, image_, nullptr);
-        vkFreeMemory(context_->device, imageMemory_, nullptr);
+        if (sampler_ != VK_NULL_HANDLE) {
+            vkDestroySampler(context_->device, sampler_, nullptr);
+            sampler_ = VK_NULL_HANDLE;
+        }
+        if (imageView_ != VK_NULL_HANDLE) {
+            vkDestroyImageView(context_->device, imageView_, nullptr);
+            imageView_ = VK_NULL_HANDLE;
+        }
+        if (image_ != VK_NULL_HANDLE) {
+            vkDestroyImage(context_->device, image_, nullptr);
+            image_ = VK_NULL_HANDLE;
+        }
+        if (imageMemory_ != VK_NULL_HANDLE) {
+            vkFreeMemory(context_->device, imageMemory_, nullptr);
+            imageMemory_ = VK_NULL_HANDLE;
+        }
     }
+    size_ = {0, 0};
+    mipLevels_ = 1;
 }
 #endif
