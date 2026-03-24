@@ -3,8 +3,9 @@
 namespace Prisma {
 
 void UIComponent::Update(Timestep ts) {
-    (void)ts;
-    // 基础 Update - 子类可以扩展
+    if (ts.GetSeconds() < 0.0f) {
+        m_position = PrismaMath::vec2(0.0f, 0.0f);
+    }
 }
 
 PrismaMath::vec2 UIComponent::GetScreenPosition() const {

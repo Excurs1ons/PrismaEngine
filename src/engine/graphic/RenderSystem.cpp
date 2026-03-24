@@ -73,7 +73,14 @@ int RenderSystem::InitializeRenderPipelines() {
 }
 
 void RenderSystem::Update(Timestep ts) {
-    // 渲染循环逻辑
+    if (!m_device) {
+        return;
+    }
+
+    if (m_renderResourceManager) {
+        m_renderResourceManager->Update(ts);
+        m_renderResourceManager->GarbageCollect();
+    }
 }
 
 void RenderSystem::Shutdown() {
@@ -103,6 +110,26 @@ void RenderSystem::Resize(uint32_t width, uint32_t height) {
     if (m_device) m_device->Resize(width, height);
 }
 
+void RenderSystem::SetMainPipeline(std::shared_ptr<IPipeline> pipeline) {
+    if (m_mainRenderPipeline == pipeline) {
+        return;
+    }
+
+    if (m_mainRenderPipeline) {
+        m_mainRenderPipeline->Shutdown();
+    }
+
+    m_mainRenderPipeline = std::move(pipeline);
+
+    if (m_mainRenderPipeline && m_device) {
+        const int result = m_mainRenderPipeline->Initialize(m_device.get());
+        if (result != 0) {
+            LOG_ERROR("RenderSystem", "Failed to initialize new main pipeline: {0}", result);
+            m_mainRenderPipeline.reset();
+        }
+    }
+}
+
 void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera) {
     if (!scene || !camera) {
         LOG_WARNING("RenderSystem", "Attempting to render with null scene or camera");
@@ -110,8 +137,23 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
     }
 
     if (m_mainRenderPipeline) {
-        m_mainRenderPipeline->Render(scene, camera);
+        // 构建 RenderContext
+        RenderContext ctx;
+        ctx.device = m_device.get();
+        ctx.camera.viewMatrix = camera->GetViewMatrix();
+        ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
+        ctx.camera.position = camera->GetPosition();
+        ctx.camera.nearPlane = camera->GetNearPlane();
+        ctx.camera.farPlane = camera->GetFarPlane();
+        ctx.frameIndex = m_device ? m_device->GetCurrentFrameIndex() : 0;
+        ctx.width = m_desc.width;
+        ctx.height = m_desc.height;
+        ctx.lights.clear();
+
+        m_mainRenderPipeline->Execute(ctx);
     } else {
         LOG_ERROR("RenderSystem", "No active pipeline to render the scene");
     }
 }
+
+} // namespace Prisma::Graphic

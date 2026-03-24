@@ -6,9 +6,11 @@
 #include "graphic/interfaces/IPipeline.h"
 #include "graphic/interfaces/ISampler.h"
 #include "graphic/interfaces/IResourceFactory.h"
+#include "graphic/pipelines/forward/ForwardPipeline.h"
 #include <chrono>
 #include <fstream>
 #include <algorithm>
+#include <stb_image.h>
 
 namespace Prisma::Graphic {
 
@@ -161,28 +163,194 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShader(const std::string& fi
 }
 
 std::shared_ptr<IShader> RenderResourceManager::CreateShader(const std::string& source, const ShaderDesc& desc) {
-    (void)source; (void)desc; 
-    return nullptr;
+    if (!m_device || !m_device->GetResourceFactory()) {
+        return nullptr;
+    }
+
+    ShaderDesc resolvedDesc = desc;
+    resolvedDesc.source = source;
+    resolvedDesc.compileTimestamp = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::system_clock::now().time_since_epoch()
+        ).count()
+    );
+
+    if (!resolvedDesc.filename.empty()) {
+        auto shader = LoadShaderSync(
+            resolvedDesc.filename,
+            resolvedDesc.entryPoint,
+            resolvedDesc.target,
+            resolvedDesc.defines
+        );
+        if (shader) {
+            RegisterResource(shader, resolvedDesc.filename);
+        }
+        return shader;
+    }
+
+    if (resolvedDesc.language != ShaderLanguage::SPIRV || resolvedDesc.source.empty()) {
+        LOG_ERROR("RenderResourceManager", "Only precompiled SPIR-V shader creation is supported without an external compiler");
+        return nullptr;
+    }
+
+    if (resolvedDesc.source.size() % sizeof(uint32_t) != 0) {
+        LOG_ERROR("RenderResourceManager", "SPIR-V shader source size must be 4-byte aligned");
+        return nullptr;
+    }
+
+    std::vector<uint8_t> bytecode(resolvedDesc.source.begin(), resolvedDesc.source.end());
+    auto shader = m_device->GetResourceFactory()->CreateShaderImpl(resolvedDesc, bytecode, ShaderReflection{});
+    if (!shader) {
+        return nullptr;
+    }
+
+    std::shared_ptr<IShader> sharedShader = std::move(shader);
+    RegisterResource(sharedShader, resolvedDesc.filename);
+    return sharedShader;
 }
 
 bool RenderResourceManager::CompileShader(const ShaderDesc& desc, std::string* errors) {
-    (void)desc; (void)errors;
+    if (desc.entryPoint.empty()) {
+        if (errors) {
+            *errors = "Shader entry point is required";
+        }
+        return false;
+    }
+
+    if (!desc.filename.empty()) {
+        if (!std::filesystem::exists(desc.filename)) {
+            if (errors) {
+                *errors = "Shader file not found: " + desc.filename;
+            }
+            return false;
+        }
+
+        if (std::filesystem::path(desc.filename).extension() == ".spv") {
+            if (errors) {
+                errors->clear();
+            }
+            return true;
+        }
+    }
+
+    if (errors) {
+        *errors = "Runtime shader compilation is not available; provide precompiled SPIR-V (.spv)";
+    }
     return false;
 }
 
 std::shared_ptr<IPipeline> RenderResourceManager::CreatePipeline(const PipelineDesc& desc) {
-    (void)desc;
-    return nullptr;
+    if (!desc.name.empty()) {
+        LOG_INFO("RenderResourceManager", "Creating pipeline: {0}", desc.name);
+    }
+
+    if (desc.computeShader && !desc.vertexShader && !desc.pixelShader) {
+        LOG_WARNING("RenderResourceManager", "Compute-only pipeline requests are not mapped to a high-level IPipeline yet");
+        return nullptr;
+    }
+
+    auto pipeline = std::make_shared<ForwardPipeline>();
+    if (pipeline->Initialize(m_device) != 0) {
+        return nullptr;
+    }
+    return pipeline;
 }
 
 std::shared_ptr<IPipelineState> RenderResourceManager::CreatePipelineState(const PipelineStateDesc& desc) {
-    (void)desc;
-    return nullptr;
+    if (!m_device || !m_device->GetResourceFactory()) {
+        return nullptr;
+    }
+
+    auto pipelineState = m_device->GetResourceFactory()->CreatePipelineStateImpl();
+    if (!pipelineState) {
+        return nullptr;
+    }
+
+    pipelineState->SetPrimitiveTopology(desc.primitiveTopology);
+    pipelineState->SetShader(ShaderType::Vertex, desc.vertexShader);
+    pipelineState->SetShader(ShaderType::Pixel, desc.pixelShader);
+    pipelineState->SetShader(ShaderType::Geometry, desc.geometryShader);
+    pipelineState->SetShader(ShaderType::Hull, desc.hullShader);
+    pipelineState->SetShader(ShaderType::Domain, desc.domainShader);
+    pipelineState->SetShader(ShaderType::Compute, desc.computeShader);
+
+    BlendState blendState;
+    blendState.blendEnable = desc.blendState.blendEnable;
+    blendState.logicOpEnable = desc.blendState.logicOpEnable;
+    blendState.writeMask = desc.blendState.writeMask;
+    blendState.blendOp = desc.blendState.blendOp;
+    blendState.srcBlend = desc.blendState.srcBlend;
+    blendState.destBlend = desc.blendState.destBlend;
+    blendState.blendOpAlpha = desc.blendState.blendOpAlpha;
+    blendState.srcBlendAlpha = desc.blendState.srcBlendAlpha;
+    blendState.destBlendAlpha = desc.blendState.destBlendAlpha;
+    pipelineState->SetBlendState(blendState);
+
+    RasterizerState rasterizerState;
+    rasterizerState.cullEnable = desc.rasterizerState.cullEnable;
+    rasterizerState.frontCounterClockwise = desc.rasterizerState.frontCounterClockwise;
+    rasterizerState.depthClipEnable = desc.rasterizerState.depthClipEnable;
+    rasterizerState.fillMode = desc.rasterizerState.fillMode;
+    rasterizerState.cullMode = desc.rasterizerState.cullMode;
+    rasterizerState.depthBias = static_cast<int>(desc.rasterizerState.depthBias);
+    rasterizerState.depthBiasClamp = desc.rasterizerState.depthBiasClamp;
+    rasterizerState.slopeScaledDepthBias = desc.rasterizerState.slopeScaledDepthBias;
+    pipelineState->SetRasterizerState(rasterizerState);
+
+    DepthStencilState depthStencilState;
+    depthStencilState.depthEnable = desc.depthStencilState.depthEnable;
+    depthStencilState.depthWriteEnable = desc.depthStencilState.depthWriteEnable;
+    depthStencilState.stencilEnable = desc.depthStencilState.stencilEnable;
+    depthStencilState.depthFunc = desc.depthStencilState.depthFunc;
+    depthStencilState.stencilReadMask = desc.depthStencilState.stencilReadMask;
+    depthStencilState.stencilWriteMask = desc.depthStencilState.stencilWriteMask;
+    depthStencilState.frontFace.failOp = desc.depthStencilState.frontFaceFail;
+    depthStencilState.frontFace.depthFailOp = desc.depthStencilState.frontFaceDepthFail;
+    depthStencilState.frontFace.passOp = desc.depthStencilState.frontFacePass;
+    depthStencilState.frontFace.func = desc.depthStencilState.frontFaceFunc;
+    depthStencilState.backFace.failOp = desc.depthStencilState.backFaceFail;
+    depthStencilState.backFace.depthFailOp = desc.depthStencilState.backFaceDepthFail;
+    depthStencilState.backFace.passOp = desc.depthStencilState.backFacePass;
+    depthStencilState.backFace.func = desc.depthStencilState.backFaceFunc;
+    pipelineState->SetDepthStencilState(depthStencilState);
+
+    std::vector<VertexInputAttribute> inputLayout;
+    inputLayout.reserve(desc.inputLayout.size());
+    for (const auto& attribute : desc.inputLayout) {
+        VertexInputAttribute converted;
+        converted.semanticName = attribute.semanticName;
+        converted.semanticIndex = attribute.semanticIndex;
+        converted.format = attribute.format;
+        converted.inputSlot = attribute.inputSlot;
+        converted.alignedByteOffset = attribute.alignedByteOffset;
+        converted.inputSlotClass = attribute.isPerInstance ? 1u : 0u;
+        converted.instanceDataStepRate = attribute.instanceDataStepRate;
+        inputLayout.push_back(converted);
+    }
+    pipelineState->SetInputLayout(inputLayout);
+
+    std::vector<TextureFormat> renderTargetFormats;
+    for (uint32_t i = 0; i < desc.numRenderTargets; ++i) {
+        renderTargetFormats.push_back(desc.renderTargetFormats[i]);
+    }
+    pipelineState->SetRenderTargetFormats(renderTargetFormats);
+    pipelineState->SetDepthStencilFormat(desc.depthStencilFormat);
+    pipelineState->SetSampleCount(desc.sampleCount, desc.sampleQuality);
+    pipelineState->SetDebugName(desc.name);
+
+    if (!pipelineState->Create(m_device)) {
+        LOG_ERROR("RenderResourceManager", "Failed to create pipeline state: {0}", pipelineState->GetErrors());
+        return nullptr;
+    }
+
+    std::shared_ptr<IPipelineState> sharedPipelineState = std::move(pipelineState);
+    return sharedPipelineState;
 }
 
 std::shared_ptr<IPipeline> RenderResourceManager::LoadPipeline(const std::string& filename) {
-    (void)filename;
-    return nullptr;
+    PipelineDesc desc;
+    desc.name = filename;
+    return CreatePipeline(desc);
 }
 
 std::shared_ptr<ISampler> RenderResourceManager::CreateSampler(const SamplerDesc& desc) {
@@ -348,10 +516,21 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
     std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     
     ShaderDesc desc;
+    desc.filename = filename;
+    desc.source = source;
     desc.entryPoint = entryPoint;
     desc.target = target;
     desc.defines = defines;
-    return nullptr;
+    desc.language = ShaderLanguage::SPIRV;
+
+    if (std::filesystem::path(filename).extension() != ".spv") {
+        LOG_WARNING("RenderResourceManager", "Only precompiled SPIR-V shader loading is supported: {0}", filename);
+        return nullptr;
+    }
+
+    std::vector<uint8_t> bytecode(source.begin(), source.end());
+    auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, ShaderReflection{});
+    return shader ? std::shared_ptr<IShader>(std::move(shader)) : nullptr;
 }
 
 void RenderResourceManager::UpdateResourceStats() const {
@@ -381,17 +560,75 @@ void RenderResourceManager::CheckFileModifications() {
 }
 
 bool RenderResourceManager::LoadFromCache(const std::string& filename, std::vector<uint8_t>& data) {
-    (void)filename; (void)data;
-    return false; 
+    const std::filesystem::path cachePath = std::filesystem::path(m_cacheDirectory) / (std::filesystem::path(filename).filename().string() + ".cache");
+    if (!std::filesystem::exists(cachePath)) {
+        return false;
+    }
+
+    std::ifstream file(cachePath, std::ios::binary);
+    if (!file.is_open()) {
+        return false;
+    }
+
+    data.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+    return !data.empty();
 }
 
 void RenderResourceManager::SaveToCache(const std::string& filename, const void* data, size_t size) {
-    (void)filename; (void)data; (void)size;
+    if (!data || size == 0) {
+        return;
+    }
+
+    std::filesystem::create_directories(m_cacheDirectory);
+    const std::filesystem::path cachePath = std::filesystem::path(m_cacheDirectory) / (std::filesystem::path(filename).filename().string() + ".cache");
+    std::ofstream file(cachePath, std::ios::binary | std::ios::trunc);
+    if (!file.is_open()) {
+        return;
+    }
+
+    file.write(static_cast<const char*>(data), static_cast<std::streamsize>(size));
 }
 
 bool RenderResourceManager::LoadImageFromFile(const std::string& filename, std::vector<uint8_t>& data, TextureDesc& desc) {
-    (void)filename; (void)data; (void)desc;
-    return false;
+    std::vector<uint8_t> cachedData;
+    if (LoadFromCache(filename, cachedData)) {
+        data = std::move(cachedData);
+    } else {
+        int width = 0;
+        int height = 0;
+        int channels = 0;
+        stbi_uc* imageData = stbi_load(filename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+        if (!imageData) {
+            return false;
+        }
+
+        data.assign(imageData, imageData + static_cast<size_t>(width) * static_cast<size_t>(height) * 4u);
+        stbi_image_free(imageData);
+        SaveToCache(filename, data.data(), data.size());
+        desc.width = static_cast<uint64_t>(width);
+        desc.height = static_cast<uint64_t>(height);
+    }
+
+    if (desc.width == 0 || desc.height == 0) {
+        int width = 0;
+        int height = 0;
+        int channels = 0;
+        stbi_uc* imageData = stbi_load(filename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+        if (!imageData) {
+            return false;
+        }
+        desc.width = static_cast<uint64_t>(width);
+        desc.height = static_cast<uint64_t>(height);
+        data.assign(imageData, imageData + static_cast<size_t>(width) * static_cast<size_t>(height) * 4u);
+        stbi_image_free(imageData);
+    }
+
+    desc.depth = 1;
+    desc.arraySize = 1;
+    desc.format = TextureFormat::RGBA8_UNorm;
+    desc.allowShaderResource = true;
+    desc.filename = filename;
+    return !data.empty();
 }
 
 } // namespace Prisma::Graphic

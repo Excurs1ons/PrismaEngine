@@ -7,6 +7,7 @@
 #include "interfaces/IResourceManager.h"
 #include "interfaces/RenderTypes.h"
 #include "ICamera.h"
+#include "RenderResourceManager.h"
 #include <functional>
 #include <memory>
 #include <string>
@@ -19,7 +20,6 @@ namespace Prisma {
 namespace Prisma::Graphic {
 
 class ForwardPipeline;
-
 struct RenderSystemDesc {
     RenderAPIType backendType  = RenderAPIType::Vulkan;
     void* windowHandle         = nullptr;
@@ -77,7 +77,7 @@ private:
 
     RenderSystemDesc m_desc;
     std::unique_ptr<IRenderDevice> m_device;
-    std::unique_ptr<IRenderResourceManager> m_renderResourceManager;
+    std::unique_ptr<RenderResourceManager> m_renderResourceManager;
     std::shared_ptr<IPipeline> m_mainRenderPipeline;
 };
 

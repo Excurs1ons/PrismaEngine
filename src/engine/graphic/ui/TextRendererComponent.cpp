@@ -23,6 +23,11 @@ void TextRendererComponent::Initialize()
 
 void TextRendererComponent::Update(Timestep ts)
 {
+    if (ts < 0.0f) {
+        LOG_WARNING("UI", "TextRendererComponent received a negative timestep");
+        return;
+    }
+
     if (m_dirty) {
         RebuildMesh();
         m_dirty = false;
@@ -61,15 +66,26 @@ void TextRendererComponent::RebuildMesh()
     float xCursor = 0.0f;
     uint32_t vertexOffset = 0;
 
+    float lineHeight = m_fontSize;
+    float maxLineWidth = 0.0f;
+    float yCursor = 0.0f;
+
     for (char c : m_text) {
-        float charWidth = m_fontSize * 0.5f;
+        if (c == '\n') {
+            maxLineWidth = std::max(maxLineWidth, xCursor);
+            xCursor = 0.0f;
+            yCursor += lineHeight;
+            continue;
+        }
+
+        float charWidth = (c == ' ' || c == '\t') ? (m_fontSize * 0.35f) : (m_fontSize * 0.5f);
         float charHeight = m_fontSize;
 
         Graphic::Vertex v0, v1, v2, v3;
-        v0.position = { xCursor, 0.0f, 0.0f, 1.0f };
-        v1.position = { xCursor + charWidth, 0.0f, 0.0f, 1.0f };
-        v2.position = { xCursor + charWidth, charHeight, 0.0f, 1.0f };
-        v3.position = { xCursor, charHeight, 0.0f, 1.0f };
+        v0.position = { xCursor, yCursor, 0.0f, 1.0f };
+        v1.position = { xCursor + charWidth, yCursor, 0.0f, 1.0f };
+        v2.position = { xCursor + charWidth, yCursor + charHeight, 0.0f, 1.0f };
+        v3.position = { xCursor, yCursor + charHeight, 0.0f, 1.0f };
 
         v0.color = m_color;
         v1.color = m_color;
@@ -92,8 +108,9 @@ void TextRendererComponent::RebuildMesh()
         vertexOffset += 4;
     }
 
-    m_textWidth = xCursor;
-    m_textHeight = m_fontSize;
+    maxLineWidth = std::max(maxLineWidth, xCursor);
+    m_textWidth = maxLineWidth;
+    m_textHeight = yCursor + lineHeight;
 }
 
 } // namespace Prisma

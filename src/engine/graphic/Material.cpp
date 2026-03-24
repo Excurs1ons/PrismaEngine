@@ -2,23 +2,98 @@
 #include "Shader.h"
 #include "interfaces/ICommandBuffer.h"
 #include "Logger.h"
-#include <unordered_map>
-#include <format>
+#include <fstream>
+#include <nlohmann/json.hpp>
 
 namespace Prisma::Graphic {
 
 Material::Material(std::shared_ptr<Shader> shader) : m_Shader(std::move(shader)) {
+    m_IsLoaded = (m_Shader != nullptr);
 }
 
 bool Material::Load(const std::filesystem::path& path) {
-    (void)path;
-    // TODO: 从 .mat 文件加载材质数据
+    std::ifstream file(path);
+    if (!file.is_open()) {
+        LOG_ERROR("Material", "Failed to open material file: {0}", path.string());
+        return false;
+    }
+
+    nlohmann::json root;
+    try {
+        file >> root;
+    } catch (const std::exception& ex) {
+        LOG_ERROR("Material", "Failed to parse material file {0}: {1}", path.string(), ex.what());
+        return false;
+    }
+
+    m_Params.clear();
+    SetPath(path);
+
+    if (root.contains("name") && root["name"].is_string()) {
+        SetName(root["name"].get<std::string>());
+    } else {
+        SetName(path.stem().string());
+    }
+
+    if (root.contains("shader") && root["shader"].is_string()) {
+        auto shader = std::make_shared<Shader>();
+        const std::string shaderName = root["shader"].get<std::string>();
+        shader->SetName(shaderName);
+        shader->SetPath(shaderName);
+        if (shader->Load(shaderName)) {
+            m_Shader = std::move(shader);
+        }
+    }
+
+    if (root.contains("properties") && root["properties"].is_object()) {
+        const auto& properties = root["properties"];
+
+        if (properties.contains("albedo") && properties["albedo"].is_array() && properties["albedo"].size() >= 4) {
+            SetBaseColor(
+                properties["albedo"][0].get<float>(),
+                properties["albedo"][1].get<float>(),
+                properties["albedo"][2].get<float>(),
+                properties["albedo"][3].get<float>());
+        }
+        if (properties.contains("metallic")) {
+            SetMetallic(properties["metallic"].get<float>());
+        }
+        if (properties.contains("roughness")) {
+            SetRoughness(properties["roughness"].get<float>());
+        }
+        if (properties.contains("emissive") && properties["emissive"].is_array() && properties["emissive"].size() >= 3) {
+            SetParam("Emissive", PrismaMath::vec3(
+                properties["emissive"][0].get<float>(),
+                properties["emissive"][1].get<float>(),
+                properties["emissive"][2].get<float>()));
+        }
+        if (properties.contains("emissiveIntensity")) {
+            SetParam("EmissiveIntensity", properties["emissiveIntensity"].get<float>());
+        }
+        if (properties.contains("tiling") && properties["tiling"].is_array() && properties["tiling"].size() >= 2) {
+            SetParam("Tiling", PrismaMath::vec4(
+                properties["tiling"][0].get<float>(),
+                properties["tiling"][1].get<float>(),
+                0.0f,
+                0.0f));
+        }
+        if (properties.contains("offset") && properties["offset"].is_array() && properties["offset"].size() >= 2) {
+            SetParam("Offset", PrismaMath::vec4(
+                properties["offset"][0].get<float>(),
+                properties["offset"][1].get<float>(),
+                0.0f,
+                0.0f));
+        }
+    }
+
+    m_IsLoaded = true;
     return true;
 }
 
 void Material::Unload() {
     m_Shader = nullptr;
     m_Params.clear();
+    m_IsLoaded = false;
 }
 
 void Material::SetParam(const std::string& name, const MaterialParamValue& value) {
@@ -32,7 +107,9 @@ const MaterialParamValue* Material::GetParam(const std::string& name) const {
 
 std::shared_ptr<Material> Material::CreateDefault() {
     // 默认创建一个不带 Shader 的材质 (或者应该找一个内置的默认 Shader)
-    return std::make_shared<Material>(nullptr);
+    auto material = std::make_shared<Material>(nullptr);
+    material->m_IsLoaded = true;
+    return material;
 }
 
 void Material::SetBaseColor(float r, float g, float b, float a) {

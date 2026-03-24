@@ -2,6 +2,7 @@
 #include "RenderDeviceVulkan.h"
 #include <fstream>
 #include <filesystem>
+#include <sstream>
 
 namespace Prisma {
     namespace Graphic {
@@ -102,8 +103,10 @@ namespace Prisma {
                     errors = "No device or file path available";
                     return false;
                 }
-                errors = "Shader recompilation requires shader compiler integration";
-                return false;
+                if (options) {
+                    m_desc.compileOptions = *options;
+                }
+                return ReloadFromFile(errors);
             }
 
             bool VulkanShader::RecompileFromSource(const std::string &source,
@@ -113,8 +116,19 @@ namespace Prisma {
                     errors = "No device available";
                     return false;
                 }
-                errors = "Shader recompilation requires shader compiler integration";
-                return false;
+                if (source.empty()) {
+                    errors = "Shader source is empty";
+                    return false;
+                }
+
+                if (options) {
+                    m_desc.compileOptions = *options;
+                }
+
+                m_desc.source = source;
+                m_compileLog = "Shader source updated; existing SPIR-V module reused until external compiler integration is added";
+                errors.clear();
+                return CreateShaderModule();
             }
 
             bool VulkanShader::ReloadFromFile(std::string &errors) {
@@ -126,8 +140,18 @@ namespace Prisma {
                     errors = "File not found: " + m_filePath;
                     return false;
                 }
-                errors = "Shader reload requires shader compiler integration";
-                return false;
+                std::ifstream file(m_filePath, std::ios::binary);
+                if (!file) {
+                    errors = "Failed to open shader file: " + m_filePath;
+                    return false;
+                }
+
+                std::ostringstream buffer;
+                buffer << file.rdbuf();
+                m_desc.source = buffer.str();
+                m_compileLog = "Shader source reloaded from file; SPIR-V recompilation is pending external compiler integration";
+                errors.clear();
+                return !m_desc.source.empty();
             }
 
             void VulkanShader::EnableHotReload(bool enable) {
@@ -194,6 +218,22 @@ namespace Prisma {
                 file.write(reinterpret_cast<const char *>(m_spirv.data()),
                            m_spirv.size() * sizeof(uint32_t));
 
+                if (includeDisassembly) {
+                    const std::string disassembly = "\n-- disassembly --\n" + Disassemble() + "\n";
+                    file.write(disassembly.data(), static_cast<std::streamsize>(disassembly.size()));
+                }
+
+                if (includeReflection) {
+                    std::ostringstream reflectionStream;
+                    reflectionStream << "\n-- reflection --\n";
+                    for (const auto& resource : m_reflection.Resources) {
+                        reflectionStream << resource.Name << " set=" << resource.Set
+                                         << " binding=" << resource.Binding << '\n';
+                    }
+                    const std::string reflectionText = reflectionStream.str();
+                    file.write(reflectionText.data(), static_cast<std::streamsize>(reflectionText.size()));
+                }
+
                 return true;
             }
 
@@ -233,43 +273,42 @@ namespace Prisma {
                     return false;
                 }
 
+                DestroyShaderModule();
+
                 VkShaderModuleCreateInfo createInfo{};
                 createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
                 createInfo.codeSize = m_spirv.size() * sizeof(uint32_t);
                 createInfo.pCode = m_spirv.data();
 
-//                VkResult result = vkCreateShaderModule(
-//                        m_device->GetDevice(),
-//                        &createInfo,
-//                        nullptr,
-//                        &m_shaderModule
-//                );
-//
-//                if (result != VK_SUCCESS) {
-//                    m_compileLog =
-//                            "Failed to create Vulkan shader module: " + std::to_string(result);
-//                    return false;
-//                }
+                VkResult result = vkCreateShaderModule(
+                        m_device->GetVkDevice(),
+                        &createInfo,
+                        nullptr,
+                        &m_shaderModule
+                );
+
+                if (result != VK_SUCCESS) {
+                    m_compileLog =
+                            "Failed to create Vulkan shader module: " + std::to_string(result);
+                    return false;
+                }
 
                 return true;
             }
 
             void VulkanShader::DestroyShaderModule() {
-//                if (m_shaderModule != VK_NULL_HANDLE && m_device) {
-//                    vkDestroyShaderModule(
-//                            m_device->GetDevice(),
-//                            m_shaderModule,
-//                            nullptr
-//                    );
-//                    m_shaderModule = VK_NULL_HANDLE;
-//                }
+                if (m_shaderModule != VK_NULL_HANDLE && m_device) {
+                    vkDestroyShaderModule(
+                            m_device->GetVkDevice(),
+                            m_shaderModule,
+                            nullptr
+                    );
+                    m_shaderModule = VK_NULL_HANDLE;
+                }
             }
 
             VkDevice VulkanShader::GetNativeDevice() const {
-                return
-                //m_device ?
-                //m_device->GetDevice() :
-                VK_NULL_HANDLE;
+                return m_device ? m_device->GetVkDevice() : VK_NULL_HANDLE;
             }
 
         }

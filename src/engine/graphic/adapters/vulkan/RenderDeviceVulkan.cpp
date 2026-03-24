@@ -1,12 +1,25 @@
 #define IMGUI_IMPL_VULKAN_USE_LOADER
 #include "RenderDeviceVulkan.h"
 #include "Logger.h"
+#include "VulkanFence.h"
 #include "VulkanResourceFactory.h"
 #include "VulkanSwapChain.h"
 #include <iostream>
 
 #define VMA_IMPLEMENTATION
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wunused-but-set-variable"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+#pragma GCC diagnostic ignored "-Wsign-compare"
+#endif
 #include <vk_mem_alloc.h>
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 #include <imgui_impl_vulkan.h>
 #include <SDL3/SDL_vulkan.h>
 
@@ -109,8 +122,10 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         m_renderFinishedSemaphores.resize(3); // 这里后面会根据交换链调整
         m_inFlightFences.resize(3);
 
-        VkSemaphoreCreateInfo semaphoreInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-        VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
         for (size_t i = 0; i < 3; i++) {
@@ -162,17 +177,21 @@ void RenderDeviceVulkan::BeginFrame() {
     if (!m_initialized) return;
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
     
-    if (!m_swapChain->AcquireNextImage(m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE)) return;
+    if (!m_swapChain->AcquireNextImage(m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE)) {
+        return;
+    }
     
     vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
 
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
     vkResetCommandBuffer(cmd, 0);
 
-    VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vkBeginCommandBuffer(cmd, &beginInfo);
 
-    VkRenderPassBeginInfo rpInfo = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+    VkRenderPassBeginInfo rpInfo{};
+    rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rpInfo.renderPass = m_swapChain->GetRenderPass();
     rpInfo.framebuffer = m_swapChain->GetCurrentFramebuffer();
     rpInfo.renderArea.extent = m_swapChain->GetExtent();
@@ -181,10 +200,13 @@ void RenderDeviceVulkan::BeginFrame() {
     rpInfo.pClearValues = &clearColor;
 
     vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+    m_currentFrameIndex = m_currentFrame;
+    m_frameActive = true;
+    m_hasPendingPresent = false;
 }
 
 void RenderDeviceVulkan::EndFrame() {
-    if (!m_initialized) return;
+    if (!m_initialized || !m_frameActive) return;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
     
     if (ImGui::GetCurrentContext() && ImGui::GetDrawData()) {
@@ -194,7 +216,8 @@ void RenderDeviceVulkan::EndFrame() {
     vkCmdEndRenderPass(cmd);
     vkEndCommandBuffer(cmd);
 
-    VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
     submitInfo.waitSemaphoreCount = 1;
     submitInfo.pWaitSemaphores = &m_imageAvailableSemaphores[m_currentFrame];
@@ -207,31 +230,87 @@ void RenderDeviceVulkan::EndFrame() {
     submitInfo.pSignalSemaphores = &m_renderFinishedSemaphores[imageIndex];
 
     vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]);
-    m_swapChain->Present(m_renderFinishedSemaphores[imageIndex]);
-
-    m_currentFrame = (m_currentFrame + 1) % 3;
+    m_pendingPresentImageIndex = imageIndex;
+    m_hasPendingPresent = true;
+    m_frameActive = false;
 }
 
-void RenderDeviceVulkan::Present() {}
+void RenderDeviceVulkan::Present() {
+    if (!m_initialized || !m_hasPendingPresent || !m_swapChain) {
+        return;
+    }
+
+    if (!m_swapChain->Present(m_renderFinishedSemaphores[m_pendingPresentImageIndex])) {
+        LOG_WARNING("Vulkan", "Swapchain present returned suboptimal or out-of-date");
+    }
+
+    m_hasPendingPresent = false;
+    m_currentFrame = (m_currentFrame + 1) % static_cast<uint32_t>(m_commandBuffers.size());
+}
 void RenderDeviceVulkan::Resize(uint32_t width, uint32_t height) {
     if (m_device) vkDeviceWaitIdle(m_device);
-    if (m_swapChain) m_swapChain->Resize(width, height);
+    if (m_swapChain) {
+        m_swapChain->Resize(width, height);
+    }
+    m_frameActive = false;
+    m_hasPendingPresent = false;
 }
 
-std::unique_ptr<ICommandBuffer> RenderDeviceVulkan::CreateCommandBuffer(CommandBufferType type) { return nullptr; }
-void RenderDeviceVulkan::SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fence) {}
-void RenderDeviceVulkan::SubmitCommandBuffers(const std::vector<ICommandBuffer*>& cmdBuffers, const std::vector<IFence*>& fences) {}
+std::unique_ptr<ICommandBuffer> RenderDeviceVulkan::CreateCommandBuffer(CommandBufferType type) {
+    LOG_WARNING("Vulkan", "CreateCommandBuffer is not implemented for command buffer type: {0}", static_cast<int>(type));
+    return nullptr;
+}
+void RenderDeviceVulkan::SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fence) {
+    if (!cmdBuffer) {
+        LOG_WARNING("Vulkan", "SubmitCommandBuffer called with null command buffer");
+        return;
+    }
+
+    LOG_WARNING("Vulkan", "Standalone command buffer submission is not implemented; use the frame command buffer path");
+    if (fence) {
+        fence->Signal(1);
+    }
+}
+void RenderDeviceVulkan::SubmitCommandBuffers(const std::vector<ICommandBuffer*>& cmdBuffers, const std::vector<IFence*>& fences) {
+    for (auto* cmdBuffer : cmdBuffers) {
+        SubmitCommandBuffer(cmdBuffer, nullptr);
+    }
+    for (auto* fence : fences) {
+        if (fence) {
+            fence->Signal(1);
+        }
+    }
+}
 void RenderDeviceVulkan::WaitForIdle() { if (m_device) vkDeviceWaitIdle(m_device); }
-std::unique_ptr<IFence> RenderDeviceVulkan::CreateFence() { return nullptr; }
-void RenderDeviceVulkan::WaitForFence(IFence* fence) {}
+std::unique_ptr<IFence> RenderDeviceVulkan::CreateFence() {
+    if (m_device == VK_NULL_HANDLE) {
+        return nullptr;
+    }
+    return std::make_unique<VulkanFence>(m_device);
+}
+void RenderDeviceVulkan::WaitForFence(IFence* fence) {
+    if (fence) {
+        fence->Wait(1);
+    }
+}
 IResourceFactory* RenderDeviceVulkan::GetResourceFactory() const { return m_resourceFactory.get(); }
-std::unique_ptr<ISwapChain> RenderDeviceVulkan::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync) { return nullptr; }
+std::unique_ptr<ISwapChain> RenderDeviceVulkan::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync) {
+    auto swapChain = std::make_unique<VulkanSwapChain>(this);
+    if (swapChain->Initialize(windowHandle, width, height, vsync) != 0) {
+        return nullptr;
+    }
+    return swapChain;
+}
 ISwapChain* RenderDeviceVulkan::GetSwapChain() const { return m_swapChain.get(); }
 IRenderDevice::GPUMemoryInfo RenderDeviceVulkan::GetGPUMemoryInfo() const { return {}; }
 IRenderDevice::RenderStats RenderDeviceVulkan::GetRenderStats() const { return m_stats; }
-void RenderDeviceVulkan::BeginDebugMarker(const std::string& name) {}
+void RenderDeviceVulkan::BeginDebugMarker(const std::string& name) {
+    LOG_DEBUG("Vulkan", "Begin debug marker: {0}", name);
+}
 void RenderDeviceVulkan::EndDebugMarker() {}
-void RenderDeviceVulkan::SetDebugMarker(const std::string& name) {}
+void RenderDeviceVulkan::SetDebugMarker(const std::string& name) {
+    LOG_DEBUG("Vulkan", "Set debug marker: {0}", name);
+}
 std::string RenderDeviceVulkan::GetName() const { return "Vulkan Device"; }
 std::string RenderDeviceVulkan::GetAPIName() const { return "Vulkan"; }
 VkRenderPass RenderDeviceVulkan::GetImGuiRenderPass() const { return m_swapChain ? m_swapChain->GetRenderPass() : VK_NULL_HANDLE; }

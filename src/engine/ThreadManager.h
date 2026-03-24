@@ -3,6 +3,7 @@
 #include <functional>
 #include <map>
 #include <mutex>
+#include <unordered_map>
 #include <string>
 #include <thread>
 #include <vector>
@@ -28,8 +29,15 @@ public:
     ~ThreadManager() override;
 
 private:
+    struct ThreadMetadata {
+        std::string name;
+        uint32_t affinityMask = 0;
+        int priority = 0;
+        bool finished = false;
+    };
+
     std::map<std::thread::id, std::thread> m_threads;
-    std::map<std::thread::id, std::string> m_threadNames;
+    std::unordered_map<std::thread::id, ThreadMetadata> m_threadMetadata;
     mutable std::mutex m_mutex;
 };
 }  // namespace Prisma

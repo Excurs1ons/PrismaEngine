@@ -22,7 +22,7 @@ public:
     // Asset 接口
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
-    bool IsLoaded() const override { return !m_Bytecode.empty(); }
+    bool IsLoaded() const override { return m_IsLoaded; }
     Prisma::AssetType GetType() const override { return Prisma::AssetType::Shader; }
 
     // 访问器
@@ -47,7 +47,7 @@ class ShaderLibrary : public Prisma::ISubSystem {
 public:
     int Initialize() override { return 0; }
     void Shutdown() override { m_Shaders.clear(); }
-    void Update(Prisma::Timestep ts) override { m_accumulatedTime += ts; }
+    void Update(Prisma::Timestep ts) override;
 
     std::shared_ptr<Shader> Load(const std::string& name, const std::filesystem::path& path);
     std::shared_ptr<Shader> Get(const std::string& name);
@@ -55,6 +55,7 @@ public:
 private:
     float m_accumulatedTime = 0.0f;
     std::unordered_map<std::string, std::shared_ptr<Shader>> m_Shaders;
+    std::unordered_map<std::string, std::filesystem::file_time_type> m_lastWriteTimes;
 };
 
 } // namespace Prisma::Graphic

@@ -11,6 +11,8 @@
 #include "VulkanResources.h"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <unordered_map>
+#include <vector>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -68,6 +70,15 @@ private:
     RenderDeviceVulkan* m_device = nullptr;
     VkDevice m_vkDevice = VK_NULL_HANDLE;
     VmaAllocator m_vmaAllocator = VK_NULL_HANDLE;
+    ResourceCreationStats m_creationStats;
+    uint64_t m_memoryLimit = 0;
+    bool m_resourcePoolingEnabled = true;
+    uint64_t m_poolingThreshold = 0;
+    bool m_deferredDestructionEnabled = false;
+    uint32_t m_deferredDestructionDelayFrames = 0;
+    uint64_t m_nextTexturePoolId = 1;
+    std::unordered_map<uint64_t, TextureDesc> m_texturePoolDescs;
+    std::unordered_map<uint64_t, std::vector<std::unique_ptr<ITexture>>> m_texturePools;
 };
 
 } // namespace Prisma::Graphic::Vulkan

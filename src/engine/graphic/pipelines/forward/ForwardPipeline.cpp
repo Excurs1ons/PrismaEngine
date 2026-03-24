@@ -4,6 +4,7 @@
 #include "TransparentPass.h"
 #include "../SkyboxRenderPass.h"
 #include "graphic/Renderer.h"
+#include "graphic/RenderCommandContext.h"
 #include "Logger.h"
 
 namespace Prisma::Graphic {
@@ -33,38 +34,55 @@ void ForwardPipeline::Shutdown() {
 void ForwardPipeline::Execute(const RenderContext& ctx) {
     if (!m_device) return;
 
-    // 1. 获取指令队列
     const auto& commands = Renderer::GetCommandQueue();
-    
-    // 2. 设置全局渲染状态
     auto view = ctx.camera.viewMatrix;
     auto proj = ctx.camera.projectionMatrix;
+    const PrismaMath::mat4 viewProjection = proj * view;
 
-    // 3. 顺序执行 Pass
+    RenderCommandContext fallbackContext;
+    IDeviceContext* deviceContext = &fallbackContext;
+
+    SceneData sceneData;
+    sceneData.camera.view = view;
+    sceneData.camera.projection = proj;
+    sceneData.camera.viewProjection = viewProjection;
+    sceneData.camera.position = ctx.camera.position;
+    sceneData.camera.nearPlane = ctx.camera.nearPlane;
+    sceneData.camera.farPlane = ctx.camera.farPlane;
+    sceneData.time.ts = ctx.deltaTime;
+    sceneData.viewport.width = ctx.width;
+    sceneData.viewport.height = ctx.height;
+
+    PassExecutionContext passContext;
+    passContext.deviceContext = deviceContext;
+    passContext.sceneData = &sceneData;
+
     if (m_depthPrePass) {
         m_depthPrePass->SetViewMatrix(view);
         m_depthPrePass->SetProjectionMatrix(proj);
-        // Execute needs PassExecutionContext, this is a placeholder
-        // m_depthPrePass->Execute(...);
+        m_depthPrePass->Execute(passContext);
     }
 
     if (m_opaquePass) {
         m_opaquePass->SetViewMatrix(view);
         m_opaquePass->SetProjectionMatrix(proj);
         m_opaquePass->SetLights(ctx.lights);
-        m_opaquePass->Execute(ctx.commandBuffer, commands);
+        m_opaquePass->Execute(passContext);
+        if (ctx.commandBuffer) {
+            m_opaquePass->Execute(ctx.commandBuffer, commands);
+        }
     }
 
     if (m_skyboxPass) {
         m_skyboxPass->SetViewMatrix(view);
         m_skyboxPass->SetProjectionMatrix(proj);
-        // m_skyboxPass->Execute(...);
+        m_skyboxPass->Execute(passContext);
     }
 
     if (m_transparentPass) {
         m_transparentPass->SetViewMatrix(view);
         m_transparentPass->SetProjectionMatrix(proj);
-        // m_transparentPass->Execute(...);
+        m_transparentPass->Execute(passContext);
     }
 }
 

@@ -153,11 +153,16 @@ void Platform::PumpEvents() {
 }
 
 bool Platform::ShouldClose(WindowHandle window) {
+    if (window && window != s_currentWindow) {
+        return true;
+    }
     return s_shouldClose;
 }
 
 void Platform::SetShouldClose(WindowHandle window, bool shouldClose) {
-    s_shouldClose = shouldClose;
+    if (!window || window == s_currentWindow) {
+        s_shouldClose = shouldClose;
+    }
 }
 
 WindowHandle Platform::GetCurrentWindow() {
