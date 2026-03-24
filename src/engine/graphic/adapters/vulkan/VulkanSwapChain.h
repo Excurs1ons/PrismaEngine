@@ -3,6 +3,10 @@
 #include "interfaces/ISwapChain.h"
 #include <vulkan/vulkan.h>
 #include <Logger.h>
+#include <chrono>
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -21,11 +25,11 @@ public:
     uint32_t GetWidth() const override { return m_extent.width; }
     uint32_t GetHeight() const override { return m_extent.height; }
     TextureFormat GetFormat() const override { return TextureFormat::RGBA8_UNorm; }
-    SwapChainMode GetMode() const override { return SwapChainMode::VSync; }
-    bool IsHDR() const override { return false; }
+    SwapChainMode GetMode() const override { return m_mode; }
+    bool IsHDR() const override { return m_hdrEnabled; }
 
-    ITexture* GetRenderTarget(uint32_t /*bufferIndex*/ = 0) override { return nullptr; }
-    ITexture* GetCurrentRenderTarget() override { return nullptr; }
+    ITexture* GetRenderTarget(uint32_t bufferIndex = 0) override;
+    ITexture* GetCurrentRenderTarget() override;
 
     // 获取用于 ImGui 的 RenderPass
     VkRenderPass GetRenderPass() const { return m_renderPass; }
@@ -35,24 +39,24 @@ public:
     bool AcquireNextImage(VkSemaphore semaphore, VkFence fence);
     bool Present(VkSemaphore waitSemaphore);
 
-    bool Present() override { return false; } // 使用带信号量的版本
-    bool SetMode(SwapChainMode /*mode*/) override { return true; }
+    bool Present() override;
+    bool SetMode(SwapChainMode mode) override;
     bool Resize(uint32_t width, uint32_t height) override;
-    bool SetHDR(bool /*enable*/) override { return true; }
+    bool SetHDR(bool enable) override;
 
-    const char* GetColorSpace() const override { return "sRGB"; }
-    bool SetColorSpace(const char* /*colorSpace*/) override { return true; }
+    const char* GetColorSpace() const override { return m_colorSpace.c_str(); }
+    bool SetColorSpace(const char* colorSpace) override;
 
-    float GetFrameRate() const override { return 60.0f; }
-    float GetFrameTime() const override { return 16.6f; }
-    PresentStats GetPresentStats() const override { return {}; }
-    void ResetStats() override {}
+    float GetFrameRate() const override { return m_presentStats.frameRate; }
+    float GetFrameTime() const override { return m_presentStats.executionTime; }
+    PresentStats GetPresentStats() const override { return m_presentStats; }
+    void ResetStats() override;
 
-    bool IsFullscreen() const override { return false; }
-    bool SetFullscreen(bool /*fullscreen*/) override { return true; }
+    bool IsFullscreen() const override { return m_fullscreen; }
+    bool SetFullscreen(bool fullscreen) override;
 
-    bool Screenshot(const std::string& /*filename*/, uint32_t /*bufferIndex*/ = 0) override { return true; }
-    void EnableDebugLayer(bool /*enable*/) override {}
+    bool Screenshot(const std::string& filename, uint32_t bufferIndex = 0) override;
+    void EnableDebugLayer(bool enable) override { m_debugLayerEnabled = enable; }
 
 private:
     RenderDeviceVulkan* m_device;
@@ -62,8 +66,16 @@ private:
     std::vector<VkImage> m_images;
     std::vector<VkImageView> m_imageViews;
     std::vector<VkFramebuffer> m_framebuffers;
+    std::vector<std::unique_ptr<ITexture>> m_renderTargets;
     VkRenderPass m_renderPass = VK_NULL_HANDLE;
     uint32_t m_currentImageIndex = 0;
+    SwapChainMode m_mode = SwapChainMode::VSync;
+    bool m_hdrEnabled = false;
+    bool m_fullscreen = false;
+    bool m_debugLayerEnabled = false;
+    PresentStats m_presentStats{};
+    std::chrono::steady_clock::time_point m_lastPresentTime{};
+    std::string m_colorSpace = "sRGB";
 };
 
 } // namespace Prisma::Graphic::Vulkan

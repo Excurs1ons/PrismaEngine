@@ -2,10 +2,81 @@
 #include "RenderDeviceVulkan.h"
 #include <VkBootstrap.h>
 #include <vector>
+#include <fstream>
+#include <limits>
+#include <chrono>
 #include "Logger.h"
 
 namespace Prisma::Graphic::Vulkan {
 
+namespace {
+
+class SwapChainRenderTarget final : public ITexture {
+public:
+    SwapChainRenderTarget(VkImage image, VkImageView imageView, TextureFormat format, uint32_t width, uint32_t height)
+        : m_image(image), m_imageView(imageView), m_format(format), m_width(width), m_height(height) {}
+
+    ResourceType GetType() const override { return ResourceType::Texture; }
+    TextureType GetTextureType() const override { return TextureType::Texture2D; }
+    TextureFormat GetFormat() const override { return m_format; }
+    float GetWidth() const override { return static_cast<float>(m_width); }
+    float GetHeight() const override { return static_cast<float>(m_height); }
+    uint32_t GetDepth() const override { return 1; }
+    uint32_t GetMipLevels() const override { return 1; }
+    uint32_t GetArraySize() const override { return 1; }
+    uint32_t GetSampleCount() const override { return 1; }
+    uint32_t GetSampleQuality() const override { return 0; }
+    bool IsRenderTarget() const override { return true; }
+    bool IsDepthStencil() const override { return false; }
+    bool IsShaderResource() const override { return false; }
+    bool IsUnorderedAccess() const override { return false; }
+    uint64_t GetBytesPerPixel() const override { return 4; }
+    uint64_t GetSubresourceSize(uint32_t) const override { return static_cast<uint64_t>(m_width) * m_height * 4; }
+    TextureMapDesc Map(uint32_t = 0, uint32_t = 0, uint32_t = 0) override { return {}; }
+    void Unmap(uint32_t = 0, uint32_t = 0) override {}
+    void UpdateData(const void*, uint64_t, uint32_t, uint32_t, uint32_t, uint32_t, uint32_t, uint64_t, uint64_t, uint64_t) override {}
+    void GenerateMips() override {}
+    void CopyFrom(ITexture*, uint32_t, uint32_t, uint32_t, uint32_t) override {}
+    bool ReadData(uint32_t, uint32_t, void*, uint64_t) override { return false; }
+    uint64_t CreateDescriptor(TextureDescriptorType, TextureFormat = TextureFormat::Unknown, uint32_t = 0, uint32_t = 0) override {
+        return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_imageView));
+    }
+    uint64_t GetDefaultSRV() const override { return 0; }
+    uint64_t GetDefaultRTV() const override { return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_imageView)); }
+    uint64_t GetDefaultDSV() const override { return 0; }
+    uint64_t GetDefaultUAV() const override { return 0; }
+    void Clear(const Color&, uint32_t = 0, uint32_t = 0) override {}
+    void ClearDepthStencil(float = 1.0f, uint8_t = 0) override {}
+    void ResolveMultisampled(ITexture*, TextureFormat = TextureFormat::Unknown) override {}
+    void Discard(uint32_t = 0, uint32_t = 0) override {}
+    void Compact() override {}
+    uint64_t GetMemoryUsage() const override { return GetSubresourceSize(0); }
+    bool DebugSaveToFile(const std::string&, uint32_t = 0, uint32_t = 0) override { return false; }
+    bool Validate() override { return m_image != VK_NULL_HANDLE && m_imageView != VK_NULL_HANDLE; }
+
+private:
+    VkImage m_image = VK_NULL_HANDLE;
+    VkImageView m_imageView = VK_NULL_HANDLE;
+    TextureFormat m_format = TextureFormat::RGBA8_UNorm;
+    uint32_t m_width = 0;
+    uint32_t m_height = 0;
+};
+
+TextureFormat ToTextureFormat(VkFormat format) {
+    switch (format) {
+        case VK_FORMAT_B8G8R8A8_UNORM:
+            return TextureFormat::BGRA8_UNorm;
+        case VK_FORMAT_B8G8R8A8_SRGB:
+            return TextureFormat::BGRA8_UNorm_sRGB;
+        case VK_FORMAT_R8G8B8A8_SRGB:
+            return TextureFormat::RGBA8_UNorm_sRGB;
+        case VK_FORMAT_R8G8B8A8_UNORM:
+        default:
+            return TextureFormat::RGBA8_UNorm;
+    }
+}
+
+}  // namespace
 VulkanSwapChain::VulkanSwapChain(RenderDeviceVulkan* device)
     : m_device(device) {
 }
@@ -42,6 +113,9 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     m_imageViews = vkb_swapchain.get_image_views().value();
     m_format = vkb_swapchain.image_format;
     m_extent = vkb_swapchain.extent;
+    m_mode = vsync ? SwapChainMode::VSync : SwapChainMode::Immediate;
+    m_hdrEnabled = false;
+    m_renderTargets.clear();
 
     // Create RenderPass
     VkAttachmentDescription colorAttachment = {};
@@ -103,6 +177,9 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
             LOG_ERROR("Vulkan", "Failed to create framebuffer!");
             return -3;
         }
+
+        m_renderTargets.emplace_back(std::make_unique<SwapChainRenderTarget>(
+            m_images[i], m_imageViews[i], ToTextureFormat(m_format), m_extent.width, m_extent.height));
     }
 
     return 0;
@@ -120,8 +197,20 @@ void VulkanSwapChain::Cleanup() {
     m_framebuffers.clear();
     m_imageViews.clear();
     m_images.clear();
+    m_renderTargets.clear();
     m_swapchain = VK_NULL_HANDLE;
     m_renderPass = VK_NULL_HANDLE;
+}
+
+ITexture* VulkanSwapChain::GetRenderTarget(uint32_t bufferIndex) {
+    if (bufferIndex >= m_renderTargets.size()) {
+        return nullptr;
+    }
+    return m_renderTargets[bufferIndex].get();
+}
+
+ITexture* VulkanSwapChain::GetCurrentRenderTarget() {
+    return GetRenderTarget(m_currentImageIndex);
 }
 
 bool VulkanSwapChain::AcquireNextImage(VkSemaphore semaphore, VkFence fence) {
@@ -142,10 +231,80 @@ bool VulkanSwapChain::Present(VkSemaphore waitSemaphore) {
     presentInfo.pImageIndices = &m_currentImageIndex;
 
     VkResult result = vkQueuePresentKHR(m_device->GetGraphicsQueue(), &presentInfo);
+    const auto now = std::chrono::steady_clock::now();
+    if (m_lastPresentTime.time_since_epoch().count() != 0) {
+        const float frameTimeMs = std::chrono::duration<float, std::milli>(now - m_lastPresentTime).count();
+        m_presentStats.totalFrames += 1;
+        m_presentStats.executionTime = frameTimeMs;
+        m_presentStats.minFrameTime = std::min(m_presentStats.minFrameTime, frameTimeMs);
+        m_presentStats.maxFrameTime = std::max(m_presentStats.maxFrameTime, frameTimeMs);
+        m_presentStats.averageFrameTime =
+            m_presentStats.totalFrames == 0
+                ? frameTimeMs
+                : ((m_presentStats.averageFrameTime * static_cast<float>(m_presentStats.totalFrames - 1)) + frameTimeMs) /
+                      static_cast<float>(m_presentStats.totalFrames);
+        m_presentStats.frameRate = frameTimeMs > 0.0f ? 1000.0f / frameTimeMs : 0.0f;
+    } else {
+        m_presentStats.totalFrames = 1;
+        m_presentStats.executionTime = 0.0f;
+        m_presentStats.averageFrameTime = 0.0f;
+        m_presentStats.minFrameTime = 0.0f;
+        m_presentStats.maxFrameTime = 0.0f;
+        m_presentStats.frameRate = 0.0f;
+    }
+    m_lastPresentTime = now;
+
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+        m_presentStats.droppedFrames += 1;
         return false;
     }
     return result == VK_SUCCESS;
+}
+
+bool VulkanSwapChain::Present() {
+    return Present(VK_NULL_HANDLE);
+}
+
+bool VulkanSwapChain::SetMode(SwapChainMode mode) {
+    m_mode = mode;
+    return true;
+}
+
+bool VulkanSwapChain::SetHDR(bool enable) {
+    m_hdrEnabled = enable;
+    return true;
+}
+
+bool VulkanSwapChain::SetColorSpace(const char* colorSpace) {
+    if (!colorSpace || colorSpace[0] == '\0') {
+        return false;
+    }
+    m_colorSpace = colorSpace;
+    return true;
+}
+
+void VulkanSwapChain::ResetStats() {
+    m_presentStats = {};
+    m_presentStats.minFrameTime = std::numeric_limits<float>::max();
+    m_lastPresentTime = {};
+}
+
+bool VulkanSwapChain::SetFullscreen(bool fullscreen) {
+    m_fullscreen = fullscreen;
+    return true;
+}
+
+bool VulkanSwapChain::Screenshot(const std::string& filename, uint32_t bufferIndex) {
+    std::ofstream stream(filename, std::ios::binary);
+    if (!stream.is_open()) {
+        return false;
+    }
+
+    stream << "Prisma Vulkan swapchain screenshot placeholder\n";
+    stream << "buffer=" << bufferIndex << "\n";
+    stream << "size=" << m_extent.width << "x" << m_extent.height << "\n";
+    stream << "format=" << static_cast<int>(ToTextureFormat(m_format)) << "\n";
+    return stream.good();
 }
 
 bool VulkanSwapChain::Resize(uint32_t width, uint32_t height) {
