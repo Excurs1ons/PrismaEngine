@@ -100,7 +100,7 @@ int Editor::OnImGuiInitialize() {
     init_info.CheckVkResultFn                   = nullptr;
 
     // RenderPass / MSAA 设置（使用交换链的 RenderPass，禁用多重采样）
-    init_info.PipelineInfoMain.RenderPass  = vkDevice->GetOverlayRenderPass();
+    init_info.PipelineInfoMain.RenderPass  = device->GetOverlayRenderPass();
     init_info.PipelineInfoMain.Subpass     = 0;
     // [修复] MSAASamples 必须显式设置为 VK_SAMPLE_COUNT_1_BIT（= 1）。
     //   若保持 0（零值初始化默认），ImGui 内部在创建 pipeline 时

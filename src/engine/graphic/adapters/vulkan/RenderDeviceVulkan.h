@@ -94,7 +94,7 @@ public:
     uint32_t GetCurrentFrameIndex() const override { return m_currentFrameIndex; }
 
     // 获取用于附加渲染(UI等)的RenderPass（从交换链获取）
-    VkRenderPass GetOverlayRenderPass() const;
+    VkRenderPass GetOverlayRenderPass() const override;
 
     // -----------------------------------------------------------------------
     // [修复] ImGui 跨 DLL 渲染回调
