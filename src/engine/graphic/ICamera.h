@@ -1,6 +1,7 @@
 #pragma once
 
 #include "math/MathTypes.h"
+#include "core/Timestep.h"
 
 namespace Prisma {
 namespace Graphic {
@@ -69,4 +70,4 @@ public:
 };
 
 } // namespace Graphic
-} // namespace Engine
+} // namespace Prisma
