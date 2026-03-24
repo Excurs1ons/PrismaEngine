@@ -189,6 +189,9 @@ public:
     virtual bool IsInitialized() const = 0;
     /// @brief 获取当前帧索引
     virtual uint32_t GetCurrentFrameIndex() const = 0;
+
+    /// @brief 获取附加渲染(UI等)的 RenderPass
+    virtual VkRenderPass GetOverlayRenderPass() const = 0;
 };
 
 }  // namespace Prisma::Graphic
