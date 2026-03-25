@@ -30,8 +30,12 @@ public:
     int OnImGuiInitialize() override;
 
     void* GetImGuiContext() override;
-    
+
     void OpenProjectSettings() { m_showProjectSettings = true; }
+
+    // 获取 ImGui DescriptorPool 和 Sampler
+    VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
+    VkSampler GetImGuiSampler() const { return m_imguiSampler; }
 
 private:
     // Editor Windows
@@ -39,6 +43,7 @@ private:
     bool m_showProjectSettings = false;
 
     VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
+    VkSampler m_imguiSampler = VK_NULL_HANDLE;
 };
 
 } // namespace Prisma

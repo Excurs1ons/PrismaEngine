@@ -16,6 +16,7 @@
 
 // 访问具体的 Vulkan 设备类型，以注册 ImGui 渲染回调
 #include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
+#include "graphic/adapters/vulkan/VulkanResources.h"
 
 
 // [修复] 移除 IMGUI_IMPL_VULKAN_USE_LOADER 定义
@@ -103,6 +104,21 @@ int Editor::OnImGuiInitialize() {
     pool_info.poolSizeCount = 1;
     pool_info.pPoolSizes = pool_sizes;
     vkCreateDescriptorPool(device->GetVkDevice(), &pool_info, nullptr, &m_imguiDescriptorPool);
+
+    // 创建 ImGui 使用的 Sampler
+    VkSamplerCreateInfo samplerInfo{};
+    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter = VK_FILTER_LINEAR;
+    samplerInfo.minFilter = VK_FILTER_LINEAR;
+    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+    samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+    vkCreateSampler(device->GetVkDevice(), &samplerInfo, nullptr, &m_imguiSampler);
+
+    // 初始化 ImGui Vulkan 资源管理器
+    Prisma::Graphic::Vulkan::ImGuiVulkanResourceManager::Get().Initialize(device->GetVkDevice());
 
     init_info.DescriptorPool = m_imguiDescriptorPool;
     init_info.PipelineCache  = VK_NULL_HANDLE;
