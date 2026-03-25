@@ -12,7 +12,12 @@
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <SDL3/SDL.h>
+#include <vulkan/vulkan.h>
 #include "Editor.h"
+
+// Vulkan 后端支持
+#include "../engine/graphic/adapters/vulkan/RenderDeviceVulkan.h"
+#include "../engine/graphic/adapters/vulkan/VulkanResources.h"
 
 namespace Prisma {
 
@@ -170,25 +175,26 @@ public:
                         desc.allowShaderResource = true;
                         
                         m_viewportTexture = resourceManager->CreateTexture(desc);
+
+                        // 创建 ImGui descriptor set
+                        m_viewportDescriptorSet = VK_NULL_HANDLE;
+                        auto editor = static_cast<Editor&>(Application::Get());
+                        auto texture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
+                        if (texture) {
+                            m_viewportDescriptorSet = texture->GetOrCreateImGuiDescriptorSet(
+                                editor.GetImGuiDescriptorPool(),
+                                editor.GetImGuiSampler()
+                            );
+                        }
                     }
                 }
             }
         }
 
         // Draw Framebuffer image
-        if (m_viewportTexture) {
-            // [TODO] 在 Vulkan 后端，ImTextureID 期望的是 VkDescriptorSet。
-            // 目前 GetDefaultSRV() 返回的是 VkImageView，直接传递会导致渲染错误。
-            // 暂时显示占位符以避免崩溃。
-            /*
-            void* textureID = (void*)m_viewportTexture->GetDefaultSRV();
-            if (textureID) {
-                ImGui::Image((ImTextureID)textureID, ImVec2{ m_viewportSize.x, m_viewportSize.y });
-            } else {
-                ImGui::TextColored(ImVec4(1, 0, 0, 1), "Viewport texture handle invalid");
-            }
-            */
-            ImGui::Text("Viewport rendering active (Texture ID pending descriptor set...)");
+        if (m_viewportTexture && m_viewportDescriptorSet) {
+            // 使用 descriptor set 显示纹理
+            ImGui::Image((ImTextureID)m_viewportDescriptorSet, ImVec2{ m_viewportSize.x, m_viewportSize.y });
         } else {
             // Draw a placeholder background
             ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -400,6 +406,7 @@ private:
     float m_cameraSensitivity = 0.1f;
 
     std::shared_ptr<Graphic::ITexture> m_viewportTexture = nullptr;
+    VkDescriptorSet m_viewportDescriptorSet = VK_NULL_HANDLE;
 };
 
 } // namespace Prisma

@@ -235,7 +235,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
         return nullptr;
     }
 
-    auto texture = std::make_unique<VulkanTexture>(m_vmaAllocator, image, allocation, imageView, desc);
+    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, desc);
     ++m_creationStats.texturesCreated;
     const uint64_t estimatedBytes = static_cast<uint64_t>(desc.width) * desc.height *
                                     std::max<uint32_t>(1, desc.depth) *
