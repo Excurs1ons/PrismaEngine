@@ -53,7 +53,11 @@ int Editor::OnImGuiInitialize() {
     LOG_INFO("Editor", "OnImGuiInitialize: CreateContext...");
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    // ...
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+    ImGui::StyleColorsDark();
+
     auto& engine      = Engine::Get();
     auto renderSystem = engine.GetRenderSystem();
     auto device       = renderSystem->GetDevice();
@@ -103,7 +107,7 @@ int Editor::OnImGuiInitialize() {
     init_info.DescriptorPool = m_imguiDescriptorPool;
     init_info.PipelineCache  = VK_NULL_HANDLE;
     init_info.MinImageCount  = 2;    // Vulkan 规范要求 >= 2
-    init_info.ImageCount     = 3;    // 与交换链缓冲数对齐
+    init_info.ImageCount     = vkDevice->GetSwapChain()->GetBufferCount();    // 与交换链缓冲数对齐
     init_info.UseDynamicRendering               = false;
     init_info.Allocator           = nullptr;
     init_info.CheckVkResultFn                   = nullptr;

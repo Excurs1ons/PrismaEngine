@@ -177,12 +177,18 @@ public:
 
         // Draw Framebuffer image
         if (m_viewportTexture) {
+            // [TODO] 在 Vulkan 后端，ImTextureID 期望的是 VkDescriptorSet。
+            // 目前 GetDefaultSRV() 返回的是 VkImageView，直接传递会导致渲染错误。
+            // 暂时显示占位符以避免崩溃。
+            /*
             void* textureID = (void*)m_viewportTexture->GetDefaultSRV();
             if (textureID) {
                 ImGui::Image((ImTextureID)textureID, ImVec2{ m_viewportSize.x, m_viewportSize.y });
             } else {
                 ImGui::TextColored(ImVec4(1, 0, 0, 1), "Viewport texture handle invalid");
             }
+            */
+            ImGui::Text("Viewport rendering active (Texture ID pending descriptor set...)");
         } else {
             // Draw a placeholder background
             ImDrawList* drawList = ImGui::GetWindowDrawList();
