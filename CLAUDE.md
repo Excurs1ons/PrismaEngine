@@ -15,21 +15,26 @@ Prisma Engine（原 YAGE - Yet Another Game Engine）是一个使用现代 C++20
 ### Windows Builds
 Using CMake presets (recommended):
 ```bash
-# Configure and build x64 Debug
-cmake --preset windows-x64-debug
-cmake --build --preset windows-x64-debug
+# Engine only (no editor, no runtime app)
+cmake --preset engine-windows-x64-debug
+cmake --build --preset engine-windows-x64-debug
 
-# Configure and build x64 Release
-cmake --preset windows-x64-release
-cmake --build --preset windows-x64-release
+cmake --preset engine-windows-x64-release
+cmake --build --preset engine-windows-x64-release
 
-# x86 builds (32-bit)
-cmake --preset windows-x86-debug
-cmake --build --preset windows-x86-debug
+# Editor (includes ImGui debug UI and Vulkan)
+cmake --preset editor-windows-x64-debug
+cmake --build --preset editor-windows-x64-debug
 
-# ARM64 builds (native ARM64 Windows or VS Enterprise only)
-cmake --preset windows-arm64-debug
-cmake --build --preset windows-arm64-debug
+cmake --preset editor-windows-x64-release
+cmake --build --preset editor-windows-x64-release
+
+# Runtime
+cmake --preset runtime-windows-x64-debug
+cmake --build --preset runtime-windows-x64-debug
+
+cmake --preset runtime-windows-x64-release
+cmake --build --preset runtime-windows-x64-release
 ```
 
 Using Visual Studio:
@@ -38,17 +43,55 @@ Using Visual Studio:
 3. Build solution (Ctrl+Shift+B)
 
 ### Linux Builds
+Using CMake presets:
 ```bash
-# Note: No preset defined yet, use direct CMake commands
-cmake -B build/linux-x64-debug -DCMAKE_BUILD_TYPE=Debug \
-      -DPRISMA_ENABLE_RENDER_VULKAN=ON \
-      -DPRISMA_ENABLE_RENDER_OPENGL=ON
-cmake --build build/linux-x64-debug
+# Engine
+cmake --preset engine-linux-x64-debug
+cmake --build --preset engine-linux-x64-debug
+
+cmake --preset engine-linux-x64-release
+cmake --build --preset engine-linux-x64-release
+
+# Engine ARM64
+cmake --preset engine-linux-arm64-debug
+cmake --build --preset engine-linux-arm64-debug
+
+# Editor
+cmake --preset editor-linux-x64-debug
+cmake --build --preset editor-linux-x64-debug
+
+cmake --preset editor-linux-arm64-debug
+cmake --build --preset editor-linux-arm64-debug
+
+# Runtime
+cmake --preset runtime-linux-x64-debug
+cmake --build --preset runtime-linux-x64-debug
+
+cmake --preset runtime-linux-x64-release
+cmake --build --preset runtime-linux-x64-release
 ```
 
 ### Android Builds
+Using CMake presets:
 ```bash
-# Using Gradle (in projects/android/PrismaAndroid)
+# Engine
+cmake --preset engine-android-arm64-debug
+cmake --build --preset engine-android-arm64-debug
+
+cmake --preset engine-android-arm64-release
+cmake --build --preset engine-android-arm64-release
+
+# Runtime
+cmake --preset runtime-android-arm64-debug
+cmake --build --preset runtime-android-arm64-debug
+
+cmake --preset runtime-android-arm64-release
+cmake --build --preset runtime-android-arm64-release
+```
+
+Using Gradle:
+```bash
+# In projects/android/PrismaAndroid
 ./gradlew assembleDebug
 
 # Or using Android Studio
@@ -332,7 +375,7 @@ auto texture = TextureAsset::loadAsset(
 - XAudio2 backend disabled pending interface refactoring / XAudio2 后端暂时禁用，等待接口重构
 - Script system (Mono) not fully implemented / 脚本系统（Mono）未完全实现
 - Physics engine integration pending / 物理引擎集成待定
-- Linux CMake presets not defined (use manual CMake commands) / Linux CMake 预设未定义（需手动使用 CMake 命令）
+- Linux CMake presets defined but not fully tested / Linux CMake 预设已定义但未充分测试
 
 ## Related Documentation / 相关文档
 - [Rendering System](docs/RenderingSystem.md)
