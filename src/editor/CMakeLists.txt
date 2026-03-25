@@ -51,11 +51,14 @@ add_library(Editor SHARED
 target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 
 # 链接依赖
-target_link_libraries(Editor PRIVATE Engine imgui::imgui)
-
-# 显式添加 SDL3 头文件目录 (因为 Engine 是 PRIVATE 链接的，或者我们需要确保头文件可见)
-target_include_directories(Editor PRIVATE "${PROJECT_SOURCE_DIR}/.dependencies/SDL3-src/include")
-
+# 注意：同时链接 Engine 和 SDL3-shared 是安全的，因为它们共享同一个 SDL3.dll 状态。
+# 虽然 Engine 内部也链接了 SDL3，但由于其使用 PRIVATE 链接进行封装，
+# Editor 必须显式链接 SDL3-shared 以自动获取 SDL3 的包含目录（头文件路径）并声明其直接依赖。
+target_link_libraries(Editor PRIVATE 
+    Engine 
+    imgui::imgui
+    SDL3-shared
+)
 # 2. 创建编辑器启动器 (EXE)
 add_executable(PrismaEditor main.cpp)
 
