@@ -201,15 +201,19 @@ target_link_libraries(Engine
 )
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
-    # SDL3库链接 - 优先使用共享库（解决插件架构下的全局状态冲突）
+    # SDL3 库链接
+    # 此处使用 PRIVATE 链接，原因如下：
+    # 1. 封装性：SDL3 是 Engine 的内部实现细节，外界（如游戏逻辑）应通过 Engine 接口操作窗口/音频。
+    # 2. 避免污染：防止所有链接 Engine 的目标自动获得 SDL3 的所有符号，保持依赖链简洁。
+    # 3. 符号一致性：插件（如 Editor）若需直接调用 SDL，应自行显式链接 SDL3-shared 目标以确保正确解析头文件路径。
     if(TARGET SDL3-shared)
-        target_link_libraries(Engine PUBLIC SDL3-shared)
+        target_link_libraries(Engine PRIVATE SDL3-shared)
     elseif(TARGET SDL3::SDL3-shared)
-        target_link_libraries(Engine PUBLIC SDL3::SDL3-shared)
+        target_link_libraries(Engine PRIVATE SDL3::SDL3-shared)
     elseif(TARGET SDL3-static)
-        target_link_libraries(Engine PUBLIC SDL3-static)
+        target_link_libraries(Engine PRIVATE SDL3-static)
     elseif(TARGET SDL3)
-        target_link_libraries(Engine PUBLIC SDL3)
+        target_link_libraries(Engine PRIVATE SDL3)
     endif()
 endif()
 

@@ -72,6 +72,11 @@ set(SDL_ALSA OFF CACHE BOOL "" FORCE)
 set(NLOHMANN_ADD_NATVIS OFF CACHE BOOL "" FORCE)
 set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+# [重要] SDL3 链接配置
+# 在 Windows 的插件化架构（多 DLL）中，必须使用 SHARED (DLL) 链接。
+# 原因：SDL3 内部维护了大量的全局状态（如窗口句柄、事件队列、视频驱动上下文）。
+#       如果使用静态链接，Engine.dll 和 Editor.dll 各自会持有一份 SDL3 副本，
+#       导致状态分裂，跨 DLL 传递 SDL 指针时会因句柄找不到而闪退。
 set(SDL_SHARED ON CACHE BOOL "" FORCE)
 set(SDL_STATIC OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
