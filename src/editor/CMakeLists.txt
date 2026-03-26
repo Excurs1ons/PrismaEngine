@@ -26,9 +26,10 @@ set(EDITOR_SOURCES
         CommandLineParser.cpp
         CommandLineEditor.cpp
         Environment.cpp
+        graphic/ImGuiVulkanResourceManager.cpp
         # ImGui 后端
         ${IMGUI_BACKENDS}
-)
+ "EditorLayer.cpp")
 
 # 头文件
 set(EDITOR_HEADERS
@@ -39,6 +40,7 @@ set(EDITOR_HEADERS
         CommandLineEditor.h
         Environment.h
         Export.h
+        graphic/ImGuiVulkanResourceManager.h
 )
 
 # 1. 创建编辑器主逻辑动态库

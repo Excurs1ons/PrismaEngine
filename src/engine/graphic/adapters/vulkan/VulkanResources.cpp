@@ -1,5 +1,7 @@
+#pragma once
 #include "VulkanResources.h"
 #include <algorithm>
+#include "Export.h"
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -47,106 +49,6 @@ VulkanBuffer::~VulkanBuffer() {
     if (m_allocator != VK_NULL_HANDLE && m_buffer != VK_NULL_HANDLE && m_allocation != VK_NULL_HANDLE) {
         vmaDestroyBuffer(m_allocator, m_buffer, m_allocation);
     }
-}
-
-// === ImGuiVulkanResourceManager 实现 ===
-
-void ImGuiVulkanResourceManager::Initialize(VkDevice device) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_device != VK_NULL_HANDLE) {
-        return; // 已经初始化
-    }
-
-    m_device = device;
-
-    // 创建 descriptor set layout（ImGui 需要的单一采样器纹理绑定）
-    VkDescriptorSetLayoutBinding binding{};
-    binding.binding = 0;
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    binding.descriptorCount = 1;
-    binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    VkDescriptorSetLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layoutInfo.bindingCount = 1;
-    layoutInfo.pBindings = &binding;
-
-    vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_descriptorSetLayout);
-}
-
-void ImGuiVulkanResourceManager::Shutdown(VkDevice device) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-    if (m_descriptorSetLayout != VK_NULL_HANDLE) {
-        vkDestroyDescriptorSetLayout(device, m_descriptorSetLayout, nullptr);
-        m_descriptorSetLayout = VK_NULL_HANDLE;
-    }
-    m_device = VK_NULL_HANDLE;
-}
-
-VkDescriptorSet ImGuiVulkanResourceManager::CreateDescriptorSet(VkDevice device, VkDescriptorPool pool,
-                                                                VkImageView imageView, VkSampler sampler) {
-    if (pool == VK_NULL_HANDLE || imageView == VK_NULL_HANDLE || sampler == VK_NULL_HANDLE) {
-        return VK_NULL_HANDLE;
-    }
-
-    // 分配 descriptor set
-    VkDescriptorSetAllocateInfo allocInfo{};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = pool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &m_descriptorSetLayout;
-
-    VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-    if (vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet) != VK_SUCCESS) {
-        return VK_NULL_HANDLE;
-    }
-
-    // 更新 descriptor set
-    VkDescriptorImageInfo imageInfo{};
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    imageInfo.imageView = imageView;
-    imageInfo.sampler = sampler;
-
-    VkWriteDescriptorSet write{};
-    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstSet = descriptorSet;
-    write.dstBinding = 0;
-    write.dstArrayElement = 0;
-    write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    write.descriptorCount = 1;
-    write.pImageInfo = &imageInfo;
-
-    vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
-
-    return descriptorSet;
-}
-
-// === VulkanTexture ImGui 支持 ===
-
-VkDescriptorSet VulkanTexture::GetOrCreateImGuiDescriptorSet(VkDescriptorPool pool, VkSampler sampler) {
-    std::lock_guard<std::mutex> lock(m_descriptorSetMutex);
-
-    // 如果已经有缓存的 descriptor set，直接返回
-    if (m_imguiDescriptorSet != VK_NULL_HANDLE) {
-        return m_imguiDescriptorSet;
-    }
-
-    // 确保资源管理器已初始化
-    auto& resourceManager = ImGuiVulkanResourceManager::Get();
-    if (resourceManager.GetDescriptorSetLayout() == VK_NULL_HANDLE) {
-        // 需要外部调用 Initialize，这里暂时返回 null
-        return VK_NULL_HANDLE;
-    }
-
-    // 创建新的 descriptor set
-    m_imguiDescriptorSet = resourceManager.CreateDescriptorSet(
-        m_device,
-        pool,
-        m_imageView,
-        sampler
-    );
-
-    return m_imguiDescriptorSet;
 }
 
 } // namespace Prisma::Graphic::Vulkan
