@@ -8,6 +8,7 @@
 #include "CommandLineEditor.h"
 #include "CommandLineParser.h"
 #include "Environment.h"
+#include "graphic/ImGuiVulkanResourceManager.h"
 
 // ImGui
 #include <imgui.h>
@@ -118,7 +119,8 @@ int Editor::OnImGuiInitialize() {
     vkCreateSampler(device->GetVkDevice(), &samplerInfo, nullptr, &m_imguiSampler);
 
     // 初始化 ImGui Vulkan 资源管理器
-    Prisma::Graphic::Vulkan::ImGuiVulkanResourceManager::Get().Initialize(device->GetVkDevice());
+    m_imguiResourceManager = std::make_unique<ImGuiVulkanResourceManager>();
+    m_imguiResourceManager->Initialize(device->GetVkDevice());
 
     init_info.DescriptorPool = m_imguiDescriptorPool;
     init_info.PipelineCache  = VK_NULL_HANDLE;
@@ -197,9 +199,19 @@ void Editor::OnShutdown() {
 
     if (auto renderSystem = Engine::Get().GetRenderSystem()) {
         if (renderSystem->GetDevice()) {
+            VkDevice vkDev = renderSystem->GetDevice()->GetVkDevice();
             renderSystem->GetDevice()->WaitForIdle();
+            
+            if (m_imguiResourceManager) {
+                m_imguiResourceManager->Shutdown();
+                m_imguiResourceManager.reset();
+            }
+
             if (m_imguiDescriptorPool != VK_NULL_HANDLE) {
-                vkDestroyDescriptorPool(renderSystem->GetDevice()->GetVkDevice(), m_imguiDescriptorPool, nullptr);
+                vkDestroyDescriptorPool(vkDev, m_imguiDescriptorPool, nullptr);
+            }
+            if (m_imguiSampler != VK_NULL_HANDLE) {
+                vkDestroySampler(vkDev, m_imguiSampler, nullptr);
             }
         }
     }

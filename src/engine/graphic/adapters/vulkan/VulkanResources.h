@@ -10,39 +10,12 @@
 #include <cstring>
 #include <fstream>
 #include <vector>
-#include <unordered_map>
-#include <mutex>
+
+#include "Export.h"
 
 namespace Prisma::Graphic::Vulkan {
 
-// 全局 ImGui Vulkan 资源管理器
-class ImGuiVulkanResourceManager {
-public:
-    static ImGuiVulkanResourceManager& Get() {
-        static ImGuiVulkanResourceManager instance;
-        return instance;
-    }
-
-    // 初始化 descriptor set layout
-    void Initialize(VkDevice device);
-    void Shutdown(VkDevice device);
-
-    // 为纹理创建 descriptor set
-    VkDescriptorSet CreateDescriptorSet(VkDevice device, VkDescriptorPool pool, VkImageView imageView, VkSampler sampler);
-
-    // 获取 descriptor set layout
-    VkDescriptorSetLayout GetDescriptorSetLayout() const { return m_descriptorSetLayout; }
-
-private:
-    ImGuiVulkanResourceManager() = default;
-    ~ImGuiVulkanResourceManager() = default;
-
-    VkDevice m_device = VK_NULL_HANDLE;
-    VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
-    std::mutex m_mutex;
-};
-
-class VulkanTexture : public ITexture {
+class ENGINE_API VulkanTexture : public ITexture {
 public:
     VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, const TextureDesc& desc);
     ~VulkanTexture() override;
@@ -290,9 +263,6 @@ public:
     VkImage GetVkImage() const { return m_image; }
     VkImageView GetVkImageView() const { return m_imageView; }
 
-    // ImGui 支持：为纹理创建或获取 DescriptorSet
-    VkDescriptorSet GetOrCreateImGuiDescriptorSet(VkDescriptorPool pool, VkSampler sampler);
-
 private:
     // 存储分配器和分配信息以实现析构时的自动资源销毁
     VkDevice m_device = VK_NULL_HANDLE;
@@ -307,13 +277,9 @@ private:
     uint32_t m_lastDescriptorMipLevel = 0;
     uint32_t m_lastDescriptorArraySize = 0;
     uint32_t m_lastTextureMapType = 0;
-
-    // ImGui descriptor set 缓存
-    VkDescriptorSet m_imguiDescriptorSet = VK_NULL_HANDLE;
-    std::mutex m_descriptorSetMutex;
 };
 
-class VulkanBuffer : public IBuffer {
+class ENGINE_API VulkanBuffer : public IBuffer {
 public:
     VulkanBuffer(VmaAllocator allocator, VkBuffer buffer, VmaAllocation allocation, const BufferDesc& desc);
     ~VulkanBuffer() override;
