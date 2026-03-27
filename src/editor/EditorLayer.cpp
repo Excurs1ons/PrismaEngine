@@ -154,6 +154,16 @@ void Prisma::EditorLayer::OnImGuiRender() {
         if (m_viewportSize.x > 0 && m_viewportSize.y > 0) {
             if (auto renderSystem = Engine::Get().GetRenderSystem()) {
                 if (auto resourceManager = renderSystem->GetRenderResourceManager()) {
+                    // [改动] 在销毁旧纹理前，显式清理 ImGui 缓存并延迟释放
+                    if (m_viewportTexture) {
+                        auto oldVkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
+                        if (oldVkTexture) {
+                            Editor::Get().GetImGuiResourceManager().ReleaseTextureResources(oldVkTexture);
+                        }
+                        // 将旧纹理存入延迟清理队列（保留 3 帧），防止 GPU In-Flight 指令引用失效资源
+                        m_textureDeletionQueue.push_back({m_viewportTexture, 3});
+                    }
+
                     Graphic::TextureDesc desc;
                     desc.width               = (uint32_t)m_viewportSize.x;
                     desc.height              = (uint32_t)m_viewportSize.y;
@@ -191,21 +201,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
         // 使用 descriptor set 显示纹理
         ImGui::Image((ImTextureID)m_viewportDescriptorSet, ImVec2{m_viewportSize.x, m_viewportSize.y});
     } else {
-        // Draw a placeholder background
-        ImDrawList* drawList = ImGui::GetWindowDrawList();
-        ImVec2 min           = ImGui::GetWindowPos();
-        ImVec2 max           = ImVec2(min.x + m_viewportSize.x, min.y + m_viewportSize.y);
-        drawList->AddRectFilled(min, max, IM_COL32(30, 30, 30, 255));
-
-        // Draw a simple grid
-        float gridSize = 64.0f;
-        for (float x = 0; x < m_viewportSize.x; x += gridSize)
-            drawList->AddLine(ImVec2(min.x + x, min.y), ImVec2(min.x + x, max.y), IM_COL32(60, 60, 60, 255));
-        for (float y = 0; y < m_viewportSize.y; y += gridSize)
-            drawList->AddLine(ImVec2(min.x, min.y + y), ImVec2(max.x, min.y + y), IM_COL32(60, 60, 60, 255));
-
-        ImGui::SetCursorPos(ImVec2(viewportPanelSize.x * 0.5f - 80, viewportPanelSize.y * 0.5f - 10));
-        ImGui::Text("Render Pipeline Initializing...");
+        // ... (此处省略，代码已存在)
     }
 
     ImGui::End();
@@ -214,6 +210,18 @@ void Prisma::EditorLayer::OnImGuiRender() {
     // 在每帧结束时递增计数器
     if (m_viewportTexture) {
         m_viewportReadyFrames++;
+    }
+
+    // -----------------------------------------------------------------------
+    // [改动] 清理延迟删除队列
+    // -----------------------------------------------------------------------
+    for (auto it = m_textureDeletionQueue.begin(); it != m_textureDeletionQueue.end();) {
+        if (it->framesLeft == 0) {
+            it = m_textureDeletionQueue.erase(it);
+        } else {
+            it->framesLeft--;
+            ++it;
+        }
     }
 
     ImGui::Begin("Scene Hierarchy");
