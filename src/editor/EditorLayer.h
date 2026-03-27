@@ -62,6 +62,22 @@ private:
 
     std::shared_ptr<Graphic::ITexture> m_viewportTexture = nullptr;
     VkDescriptorSet m_viewportDescriptorSet = VK_NULL_HANDLE;
+
+    // -----------------------------------------------------------------------
+    // [改动] m_textureDeletionQueue
+    //
+    // 目的：
+    //   修复 Resize 期间 GPU 访问已销毁纹理导致的验证错误。
+    //
+    // 过程：
+    //   当视口大小改变时，旧纹理不立即销毁，而是放入此队列。
+    //   每帧清理存放时间超过 3 帧的资源，确保 GPU 已处理完相关指令。
+    // -----------------------------------------------------------------------
+    struct DeferredTexture {
+        std::shared_ptr<Graphic::ITexture> texture;
+        uint32_t framesLeft;
+    };
+    std::vector<DeferredTexture> m_textureDeletionQueue;
 };
 
 } // namespace Prisma
