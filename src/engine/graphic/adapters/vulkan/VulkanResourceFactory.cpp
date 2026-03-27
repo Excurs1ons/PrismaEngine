@@ -235,7 +235,86 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
         return nullptr;
     }
 
-    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, desc);
+    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, imageInfo.format, desc);
+
+    // -----------------------------------------------------------------------
+    // [改动] 初始布局转换
+    //
+    // 目的：
+    //   解决新创建纹理处于 UNDEFINED 布局。若 ImGui 立即尝试采样绘制，会触发
+    //   VUID-vkCmdDraw-None-09600 验证报错。
+    //
+    // 过程：
+    //   1. 检查纹理是否允许作为着色器资源（ShaderResource）。
+    //   2. 创建一个临时、即时提交的命令缓冲区（Command Buffer）。
+    //   3. 插入一个 ImageMemoryBarrier，将布局从 UNDEFINED 转换为 GENERAL。
+    //   4. 提交命令并调用 vkQueueWaitIdle 确保转换完成。
+    //   虽然此操作涉及同步等待，但纹理创建（如视口 Resize）是低频操作，
+    //   以此换取验证层稳定性和程序正确性是值得的。
+    // -----------------------------------------------------------------------
+    if (desc.allowShaderResource) {
+        VkCommandPool tempPool;
+        VkCommandPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        poolInfo.queueFamilyIndex = m_device->GetGraphicsQueueFamily();
+        poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+        
+        if (vkCreateCommandPool(m_vkDevice, &poolInfo, nullptr, &tempPool) == VK_SUCCESS) {
+            VkCommandBufferAllocateInfo allocInfo{};
+            allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+            allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+            allocInfo.commandPool = tempPool;
+            allocInfo.commandBufferCount = 1;
+
+            VkCommandBuffer commandBuffer;
+            if (vkAllocateCommandBuffers(m_vkDevice, &allocInfo, &commandBuffer) == VK_SUCCESS) {
+                VkCommandBufferBeginInfo beginInfo{};
+                beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+                vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+                VkImageMemoryBarrier barrier{};
+                barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+                barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+                barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL; // 使用 GENERAL 以确保最大的兼容性
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.image = image;
+                barrier.subresourceRange.aspectMask = desc.allowDepthStencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = imageInfo.mipLevels;
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = desc.arraySize;
+                barrier.srcAccessMask = 0;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                vkCmdPipelineBarrier(
+                    commandBuffer,
+                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                    0,
+                    0, nullptr,
+                    0, nullptr,
+                    1, &barrier
+                );
+
+                vkEndCommandBuffer(commandBuffer);
+
+                VkSubmitInfo submitInfo{};
+                submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                submitInfo.commandBufferCount = 1;
+                submitInfo.pCommandBuffers = &commandBuffer;
+
+                vkQueueSubmit(m_device->GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+                vkQueueWaitIdle(m_device->GetGraphicsQueue());
+
+                vkFreeCommandBuffers(m_vkDevice, tempPool, 1, &commandBuffer);
+            }
+            vkDestroyCommandPool(m_vkDevice, tempPool, nullptr);
+        }
+    }
+
     ++m_creationStats.texturesCreated;
     const uint64_t estimatedBytes = static_cast<uint64_t>(desc.width) * desc.height *
                                     std::max<uint32_t>(1, desc.depth) *

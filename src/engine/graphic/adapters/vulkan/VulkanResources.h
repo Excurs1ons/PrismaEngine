@@ -17,7 +17,7 @@ namespace Prisma::Graphic::Vulkan {
 
 class ENGINE_API VulkanTexture : public ITexture {
 public:
-    VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, const TextureDesc& desc);
+    VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc);
     ~VulkanTexture() override;
 
     ResourceType GetType() const override { return ResourceType::Texture; }
@@ -262,6 +262,19 @@ public:
 
     VkImage GetVkImage() const { return m_image; }
     VkImageView GetVkImageView() const { return m_imageView; }
+    VkFormat GetVkFormat() const { return m_vkFormat; }
+
+    // -----------------------------------------------------------------------
+    // [改动] SetDebugName
+    //
+    // 目的：
+    //   为 Vulkan 资源设置调试名称，以便在验证层报错时能够精准识别对象。
+    //
+    // 过程：
+    //   通过 vkGetDeviceProcAddr 动态加载 vkSetDebugUtilsObjectNameEXT，
+    //   如果成功，则同时为 VkImage 和 VkImageView 绑定传入的字符串。
+    // -----------------------------------------------------------------------
+    void SetDebugName(const std::string& name);
 
 private:
     // 存储分配器和分配信息以实现析构时的自动资源销毁
@@ -270,6 +283,18 @@ private:
     VkImage m_image = VK_NULL_HANDLE;
     VmaAllocation m_allocation = VK_NULL_HANDLE;
     VkImageView m_imageView = VK_NULL_HANDLE;
+
+    // -----------------------------------------------------------------------
+    // [改动] m_vkFormat
+    //
+    // 目的：
+    //   存储纹理的原始 VkFormat，用于布局转换（Layout Transition）操作。
+    //
+    // 过程：
+    //   在构造函数中接收并初始化，避免后续频繁调用映射函数。
+    // -----------------------------------------------------------------------
+    VkFormat m_vkFormat = VK_FORMAT_UNDEFINED;
+
     TextureDesc m_desc;
     std::vector<uint8_t> m_shadowData;
     TextureDescriptorType m_lastDescriptorType = TextureDescriptorType::ShaderResourceView;

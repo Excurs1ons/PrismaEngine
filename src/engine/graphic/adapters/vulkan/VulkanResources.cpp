@@ -5,8 +5,17 @@
 
 namespace Prisma::Graphic::Vulkan {
 
-VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, const TextureDesc& desc)
-    : m_device(device), m_allocator(allocator), m_image(image), m_allocation(allocation), m_imageView(imageView), m_desc(desc) {
+// -----------------------------------------------------------------------
+// [改动] VulkanTexture 构造函数
+//
+// 目的：
+//   接收并存储纹理的原始 VkFormat。
+//
+// 过程：
+//   初始化列表中新增 m_vkFormat(vkFormat)。
+// -----------------------------------------------------------------------
+VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc)
+    : m_device(device), m_allocator(allocator), m_image(image), m_allocation(allocation), m_imageView(imageView), m_vkFormat(vkFormat), m_desc(desc) {
     // 构造函数现在接收并存储 VMA 相关对象，以便在析构时能够正确释放资源。
 }
 
@@ -15,6 +24,37 @@ VulkanTexture::~VulkanTexture() {
         // 在销毁 Texture 资源时，通过 VMA 释放关联的 VkImage 和内存。
         if (m_image != VK_NULL_HANDLE && m_allocation != VK_NULL_HANDLE) {
             vmaDestroyImage(m_allocator, m_image, m_allocation);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------
+// [改动] SetDebugName
+//
+// 目的：
+//   利用 Vulkan 调试扩展为资源命名，辅助定位 Validation Layer 报错。
+//
+// 过程：
+//   1. 动态加载 vkSetDebugUtilsObjectNameEXT。
+//   2. 填充 VkDebugUtilsObjectNameInfoEXT 结构体。
+//   3. 分别为底层 VkImage 和绑定的 VkImageView 设置名称。
+// -----------------------------------------------------------------------
+void VulkanTexture::SetDebugName(const std::string& name) {
+    if (m_device == VK_NULL_HANDLE || m_image == VK_NULL_HANDLE) return;
+
+    auto func = (PFN_vkSetDebugUtilsObjectNameEXT)vkGetDeviceProcAddr(m_device, "vkSetDebugUtilsObjectNameEXT");
+    if (func) {
+        VkDebugUtilsObjectNameInfoEXT nameInfo{};
+        nameInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+        nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
+        nameInfo.objectHandle = (uint64_t)m_image;
+        nameInfo.pObjectName = name.c_str();
+        func(m_device, &nameInfo);
+
+        if (m_imageView != VK_NULL_HANDLE) {
+            nameInfo.objectType = VK_OBJECT_TYPE_IMAGE_VIEW;
+            nameInfo.objectHandle = (uint64_t)m_imageView;
+            func(m_device, &nameInfo);
         }
     }
 }

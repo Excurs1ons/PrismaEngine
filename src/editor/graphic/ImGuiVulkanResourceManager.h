@@ -11,6 +11,20 @@ namespace Prisma::Graphic::Vulkan {
 
 namespace Prisma {
 
+/**
+ * @brief ImGui Vulkan 资源管理器
+ * 
+ * [改动] 新增此类。
+ * 
+ * 目的：
+ *   负责管理引擎纹理（VulkanTexture）到 ImGui 描述符集（VkDescriptorSet）的映射。
+ *   将 UI 框架相关的资源管理从引擎核心剥离，归属于编辑器模块。
+ * 
+ * 过程：
+ *   1. 维护一个内部缓存 map (VulkanTexture* -> VkDescriptorSet)。
+ *   2. 提供 GetDescriptorSet 接口，自动处理描述符集的分配与更新。
+ *   3. 生命周期与 Editor 实例绑定，确保在 Vulkan 设备销毁前安全释放。
+ */
 class EDITOR_API ImGuiVulkanResourceManager {
 public:
     ImGuiVulkanResourceManager();
