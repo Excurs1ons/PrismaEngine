@@ -162,6 +162,11 @@ void Prisma::EditorLayer::OnImGuiRender() {
                     desc.allowShaderResource = true;
 
                     m_viewportTexture = resourceManager->CreateTexture(desc);
+                    auto vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
+                    if (vkTexture) {
+                        // [改动] 为纹理设置调试名称
+                        vkTexture->SetDebugName("Viewport Texture");
+                    }
 
                     // 创建 ImGui descriptor set
                     m_viewportDescriptorSet = VK_NULL_HANDLE;
@@ -171,13 +176,18 @@ void Prisma::EditorLayer::OnImGuiRender() {
                         m_viewportDescriptorSet = editor.GetImGuiResourceManager().GetDescriptorSet(
                             texture, editor.GetImGuiDescriptorPool(), editor.GetImGuiSampler());
                     }
+                    
+                    // [改动] 重置计数器
+                    // 目的：延迟纹理显示，规避初次采样时的布局错误。
+                    m_viewportReadyFrames = 0;
                 }
             }
         }
     }
 
-    // Draw Framebuffer image
-    if (m_viewportTexture && m_viewportDescriptorSet) {
+    // [改动] 增加计数器判定
+    // Draw Framebuffer image (只有当计数器达到足够值时才显示，确保 GPU 已完成布局转换)
+    if (m_viewportTexture && m_viewportDescriptorSet && m_viewportReadyFrames >= 3) {
         // 使用 descriptor set 显示纹理
         ImGui::Image((ImTextureID)m_viewportDescriptorSet, ImVec2{m_viewportSize.x, m_viewportSize.y});
     } else {
@@ -200,6 +210,11 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
     ImGui::End();
     ImGui::PopStyleVar();
+
+    // 在每帧结束时递增计数器
+    if (m_viewportTexture) {
+        m_viewportReadyFrames++;
+    }
 
     ImGui::Begin("Scene Hierarchy");
     if (auto sceneManager = Engine::Get().GetSceneManager()) {

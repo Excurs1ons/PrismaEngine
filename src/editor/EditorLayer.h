@@ -37,6 +37,19 @@ private:
     bool m_showDemoWindow = false;
     bool m_viewportFocused = false;
     bool m_viewportHovered = false;
+
+    // -----------------------------------------------------------------------
+    // [改动] m_viewportReadyFrames
+    //
+    // 目的：
+    //   解决视口纹理 Resize 后的初次采样导致 VK_IMAGE_LAYOUT_UNDEFINED 验证错误。
+    //
+    // 过程：
+    //   通过帧计数器延迟视口纹理在 ImGui 中的显示。确保 GPU 有足够的时间
+    //   执行初次布局转换并在命令队列中完成提交。
+    // -----------------------------------------------------------------------
+    uint32_t m_viewportReadyFrames = 0;
+
     struct { float x = 0.0f; float y = 0.0f; } m_viewportSize;
 
     std::shared_ptr<GameObject> m_selectedEntity = nullptr;

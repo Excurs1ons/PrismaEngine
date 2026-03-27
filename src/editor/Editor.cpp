@@ -148,11 +148,10 @@ int Editor::OnImGuiInitialize() {
     // -----------------------------------------------------------------------
     vkDevice->SetOverlayRenderCallback([this](VkCommandBuffer cmd) {
         // [修复] 必须在渲染前设置正确的 Context
-        // 原因：虽然 Engine 调用了此回调，但 ImGui 的静态状态存在于 PrismaEditor.dll 中。
-        //         通过在此显式设置，确保渲染逻辑看到的是 Editor 初始化的状态。
         ImGui::SetCurrentContext((ImGuiContext*)this->GetImGuiContext());
         
         if (ImGui::GetCurrentContext() && ImGui::GetDrawData()) {
+            // 这里可以添加对特定纹理的布局转换逻辑（如果需要）
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         }
     });
@@ -194,13 +193,41 @@ void Editor::OnRender() {
     OnImGuiRender();
 }
 
+// -----------------------------------------------------------------------
+// [改动] OnShutdown
+//
+// 目的：
+//   修复程序退出时偶发的 0xc0000005 崩溃和 Vulkan 验证层严重错误。
+//
+// 过程：
+//   1. 显式清除 OverlayRenderCallback 为 nullptr，断开引擎渲染循环与
+//      即将销毁的编辑器 DLL 逻辑（捕捉了 this 的 Lambda）之间的联系。
+//   2. 调整销毁顺序：必须先调用 ImGui_ImplVulkan_Shutdown，
+//      再手动销毁我们自己创建的 DescriptorPool 和 Sampler。
+//      因为 ImGui 后端内部可能在销毁过程中仍持有这些资源的句柄。
+// -----------------------------------------------------------------------
 void Editor::OnShutdown() {
     LOG_INFO("Editor", "Shutting down Editor...");
 
+    // 1. 立即停止渲染回调，防止后续帧进入
     if (auto renderSystem = Engine::Get().GetRenderSystem()) {
         if (renderSystem->GetDevice()) {
-            VkDevice vkDev = renderSystem->GetDevice()->GetVkDevice();
-            renderSystem->GetDevice()->WaitForIdle();
+            auto* vkDevice = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+            vkDevice->SetOverlayRenderCallback(nullptr);
+            vkDevice->WaitForIdle();
+        }
+    }
+
+    // 2. 首先关闭 ImGui 后端（它可能正在引用下面的 Pool 或 Sampler）
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
+    ImGui::DestroyContext();
+
+    // 3. 然后再安全地销毁我们自己管理的资源
+    if (auto renderSystem = Engine::Get().GetRenderSystem()) {
+        if (renderSystem->GetDevice()) {
+            auto* vkDevice = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+            VkDevice vkDev = vkDevice->GetVkDevice();
             
             if (m_imguiResourceManager) {
                 m_imguiResourceManager->Shutdown();
@@ -209,16 +236,14 @@ void Editor::OnShutdown() {
 
             if (m_imguiDescriptorPool != VK_NULL_HANDLE) {
                 vkDestroyDescriptorPool(vkDev, m_imguiDescriptorPool, nullptr);
+                m_imguiDescriptorPool = VK_NULL_HANDLE;
             }
             if (m_imguiSampler != VK_NULL_HANDLE) {
                 vkDestroySampler(vkDev, m_imguiSampler, nullptr);
+                m_imguiSampler = VK_NULL_HANDLE;
             }
         }
     }
-
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
 }
 
 }  // namespace Prisma
