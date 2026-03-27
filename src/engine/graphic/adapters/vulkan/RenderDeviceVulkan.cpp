@@ -147,8 +147,24 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
 void RenderDeviceVulkan::Shutdown() {
     if (!m_initialized)
         return;
-    vkDeviceWaitIdle(m_device);
+    
+    // 确保 GPU 已完成所有工作
+    if (m_device != VK_NULL_HANDLE) {
+        vkDeviceWaitIdle(m_device);
+    }
 
+    // 1. 先销毁由此设备管理的子资源
+    if (m_resourceFactory) {
+        m_resourceFactory->Shutdown();
+        m_resourceFactory.reset();
+    }
+
+    if (m_swapChain) {
+        m_swapChain->Cleanup();
+        m_swapChain.reset();
+    }
+
+    // 2. 销毁同步对象和命令池
     for (auto s : m_imageAvailableSemaphores)
         vkDestroySemaphore(m_device, s, nullptr);
     for (auto s : m_renderFinishedSemaphores)
@@ -159,15 +175,23 @@ void RenderDeviceVulkan::Shutdown() {
     if (m_commandPool)
         vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 
-    if (m_swapChain)
-        m_swapChain->Cleanup();
-    if (m_allocator)
+    // 3. 销毁基础组件
+    if (m_allocator) {
         vmaDestroyAllocator(m_allocator);
-    if (m_surface)
-        vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+        m_allocator = VK_NULL_HANDLE;
+    }
 
+    if (m_surface) {
+        vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+        m_surface = VK_NULL_HANDLE;
+    }
+
+    // 4. 最后销毁设备和实例
     vkb::destroy_device(m_vkbDevice);
     vkb::destroy_instance(m_vkbInstance);
+    
+    m_device = VK_NULL_HANDLE;
+    m_instance = VK_NULL_HANDLE;
     m_initialized = false;
 }
 

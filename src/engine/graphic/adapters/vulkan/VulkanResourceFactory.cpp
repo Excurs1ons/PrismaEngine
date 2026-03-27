@@ -120,12 +120,20 @@ bool VulkanResourceFactory::Initialize(IRenderDevice* device) {
 
 void VulkanResourceFactory::Shutdown() {
     if (m_vkDevice != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(m_vkDevice);
+        // [修复] 检查设备是否仍有效
+        // 原因：如果 RenderDeviceVulkan 已先行销毁了 VkDevice，
+        //       此处的 vkDeviceWaitIdle 会触发 Invalid Device 错误。
+        //       虽然现在我们已通过在 RenderDeviceVulkan::Shutdown 中显式重置 Factory 来解决，
+        //       但此处增加检查可进一步增强鲁棒性。
+        
+        // 我们无法简单检查 handle 释放，但可以依赖 m_device 的状态
+        if (m_device && m_device->GetVkDevice() != VK_NULL_HANDLE) {
+            vkDeviceWaitIdle(m_vkDevice);
+        }
     }
     m_device = nullptr;
     m_vkDevice = VK_NULL_HANDLE;
-    // 不建议在这里将 m_vmaAllocator 置为 NULL，因为由它分配的资源（如 VulkanBuffer）
-    // 可能会在此之后才执行析构函数（例如被 Application 成员引用）。
+    m_vmaAllocator = VK_NULL_HANDLE;
 }
 
 void VulkanResourceFactory::Reset() {

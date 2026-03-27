@@ -84,12 +84,28 @@ void RenderSystem::Update(Timestep ts) {
 }
 
 void RenderSystem::Shutdown() {
+    if (!m_device) {
+        return;
+    }
+
     LOG_INFO("Renderer", "Shutting down renderer...");
-    if (m_mainRenderPipeline)
+    
+    // 1. 先销毁依赖设备的管线和资源管理器
+    if (m_mainRenderPipeline) {
+        m_mainRenderPipeline->Shutdown();
         m_mainRenderPipeline.reset();
-    if (m_renderResourceManager)
+    }
+
+    if (m_renderResourceManager) {
+        m_renderResourceManager->Shutdown();
         m_renderResourceManager.reset();
-    if (m_device) m_device->Shutdown();
+    }
+
+    // 2. 最后关闭设备并置空，确保此函数是幂等的
+    if (m_device) {
+        m_device->Shutdown();
+        m_device.reset();
+    }
 }
 
 void RenderSystem::BeginFrame() {
