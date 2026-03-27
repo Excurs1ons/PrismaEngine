@@ -20,6 +20,17 @@ VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage im
 }
 
 VulkanTexture::~VulkanTexture() {
+    if (m_device != VK_NULL_HANDLE) {
+        // [修复] 必须显式销毁 ImageView
+        // 原因：ImageView 是由 vkCreateImageView 创建的独立句柄，
+        //       VMA 只管理 Image 和 Memory，不会自动销毁 View。
+        //       漏掉此步骤会导致 vkDestroyDevice 时报资源泄露错误。
+        if (m_imageView != VK_NULL_HANDLE) {
+            vkDestroyImageView(m_device, m_imageView, nullptr);
+            m_imageView = VK_NULL_HANDLE;
+        }
+    }
+
     if (m_allocator) {
         // 在销毁 Texture 资源时，通过 VMA 释放关联的 VkImage 和内存。
         if (m_image != VK_NULL_HANDLE && m_allocation != VK_NULL_HANDLE) {
