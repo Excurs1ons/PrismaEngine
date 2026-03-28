@@ -185,6 +185,7 @@ private:
 
     // 离屏渲染支持
     bool m_skipSwapChainRenderPass = false;
+    bool m_isDefaultRenderPassActive = false;
 };
 
 }  // namespace Prisma::Graphic::Vulkan

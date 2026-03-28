@@ -213,6 +213,11 @@ void RenderDeviceVulkan::BeginFrame() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vkBeginCommandBuffer(cmd, &beginInfo);
 
+    // [改动] 统一保持 m_frameActive 为 true
+    // 目的：即使跳过了默认 RenderPass，命令缓冲区依然在录制（由调用方负责开启自己的 RenderPass），
+    //       必须保持活动状态以确保 EndFrame 能够执行提交。
+    m_frameActive = true;
+
     // 如果不跳过交换链RenderPass，则开始它
     if (!m_skipSwapChainRenderPass) {
         VkRenderPassBeginInfo rpInfo{};
@@ -225,11 +230,11 @@ void RenderDeviceVulkan::BeginFrame() {
         rpInfo.pClearValues      = &clearColor;
 
         vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-        m_frameActive = true;
+        m_isDefaultRenderPassActive = true;
     } else {
         // 重置标志，下一帧恢复默认行为
         m_skipSwapChainRenderPass = false;
-        m_frameActive = false;  // 没有活动的RenderPass
+        m_isDefaultRenderPassActive = false;
     }
     m_currentFrameIndex = m_currentFrame;
     m_hasPendingPresent = false;
@@ -240,11 +245,34 @@ void RenderDeviceVulkan::EndFrame() {
         return;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
 
+    // [修复] 如果还没有开启 RenderPass (说明之前被跳过了)，现在为了 Overlay 开启它。
+    // 这样可以确保 ImGui 的绘制指令处于合法的 RenderPass 中，
+    // 同时通过 RenderPass 的 finalLayout 自动将交换链图像转换到 PRESENT_SRC_KHR 布局，
+    // 彻底解决 VUID-vkCmdDrawIndexed-renderpass 和 VUID-VkPresentInfoKHR-pImageIndices-01430。
+    if (!m_isDefaultRenderPassActive) {
+        VkRenderPassBeginInfo rpInfo{};
+        rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpInfo.renderPass        = m_swapChain->GetRenderPass();
+        rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
+        rpInfo.renderArea.extent = m_swapChain->GetExtent();
+        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        rpInfo.clearValueCount   = 1;
+        rpInfo.pClearValues      = &clearColor;
+
+        vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+        m_isDefaultRenderPassActive = true;
+    }
+
     if (m_overlayRenderCallback) {
         m_overlayRenderCallback(cmd);
     }
 
-    vkCmdEndRenderPass(cmd);
+    // 无论如何都要结束活动中的默认 RenderPass
+    if (m_isDefaultRenderPassActive) {
+        vkCmdEndRenderPass(cmd);
+        m_isDefaultRenderPassActive = false;
+    }
+
     vkEndCommandBuffer(cmd);
 
     VkSubmitInfo submitInfo{};

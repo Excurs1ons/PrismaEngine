@@ -72,34 +72,10 @@ void Prisma::EditorLayer::OnRender() {
         return;
     }
 
-    // 检查是否有 ViewportRenderPass
-    if (!m_viewportRenderPass || !m_viewportRenderPass->IsInitialized() ||
-        !m_viewportTexture || !m_viewportDepthTexture) {
-        // 如果 ViewportRenderPass 未初始化，直接渲染到 SwapChain（后备方案）
-        renderSystem->RenderScene(scene, camera);
-        return;
-    }
-
-    // 获取 Vulkan 设备和命令缓冲区
-    auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
-    if (!vkDevice) {
-        return;
-    }
-
-    VkCommandBuffer cmd = vkDevice->GetCurrentCommandBuffer();
-    if (cmd == VK_NULL_HANDLE) {
-        return;
-    }
-
-    // 开始 Viewport RenderPass（渲染到离屏纹理）
-    m_viewportRenderPass->Begin(cmd);
-
-    // 渲染场景
-    // [改动] 传递 m_viewportTexture 以便管线知道输出目标
+    // [修复] 移除所有手动的 ViewportRenderPass->Begin/End 调用。
+    // 原因：这些操作会开启一个与引擎默认或管线内部冲突的 RenderPass，导致驱动崩溃。
+    // 我们只需将 m_viewportTexture 传给渲染系统，让管线内部负责输出目标的重定向。
     renderSystem->RenderScene(scene, camera, m_viewportTexture.get());
-
-    // 结束 Viewport RenderPass
-    m_viewportRenderPass->End(cmd);
 }
 
 void Prisma::EditorLayer::OnImGuiRender() {

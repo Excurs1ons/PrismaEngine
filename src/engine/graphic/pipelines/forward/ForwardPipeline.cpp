@@ -7,10 +7,9 @@
 #include "graphic/RenderCommandContext.h"
 #include "Logger.h"
 
-// Vulkan 特定代码，用于渲染到纹理
+// Vulkan 特定代码支持
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "adapters/vulkan/VulkanResources.h"
-#include <vulkan/vulkan.h>
 
 namespace Prisma::Graphic {
 
@@ -39,69 +38,15 @@ void ForwardPipeline::Shutdown() {
 void ForwardPipeline::Execute(const RenderContext& ctx) {
     if (!m_device) return;
 
-    // 调试：检查是否有目标纹理
+    // -----------------------------------------------------------------------
+    // [修复] 处理目标重定向
+    // -----------------------------------------------------------------------
     if (ctx.targetTexture) {
-        LOG_INFO("ForwardPipeline", "Rendering to target texture: {}x{}", ctx.width, ctx.height);
-
-        // 尝试获取Vulkan设备并设置跳过交换链RenderPass
         auto vulkanDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(ctx.device);
-        auto vulkanTexture = dynamic_cast<Vulkan::VulkanTexture*>(ctx.targetTexture);
-        if (vulkanDevice && vulkanTexture) {
+        if (vulkanDevice) {
+            // 确保不开启默认交换链 Pass
             vulkanDevice->SetSkipSwapChainRenderPass(true);
-            LOG_INFO("ForwardPipeline", "Set skip swapchain render pass");
-
-            // 尝试创建离屏渲染
-            VkCommandBuffer cmd = vulkanDevice->GetCurrentCommandBuffer();
-            if (cmd != VK_NULL_HANDLE) {
-                // 获取交换链的RenderPass（可能不兼容，但先尝试）
-                VkRenderPass renderPass = vulkanDevice->GetOverlayRenderPass();
-                VkImageView imageView = vulkanTexture->GetVkImageView();
-
-                if (renderPass != VK_NULL_HANDLE && imageView != VK_NULL_HANDLE) {
-                    // 创建Framebuffer
-                    VkFramebufferCreateInfo fbInfo = {};
-                    fbInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-                    fbInfo.renderPass = renderPass;
-                    fbInfo.attachmentCount = 1;
-                    fbInfo.pAttachments = &imageView;
-                    fbInfo.width = static_cast<uint32_t>(ctx.width);
-                    fbInfo.height = static_cast<uint32_t>(ctx.height);
-                    fbInfo.layers = 1;
-
-                    VkFramebuffer framebuffer = VK_NULL_HANDLE;
-                    VkResult result = vkCreateFramebuffer(vulkanDevice->GetVkDevice(), &fbInfo, nullptr, &framebuffer);
-                    if (result == VK_SUCCESS) {
-                        // 开始RenderPass
-                        VkRenderPassBeginInfo rpInfo = {};
-                        rpInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-                        rpInfo.renderPass = renderPass;
-                        rpInfo.framebuffer = framebuffer;
-                        rpInfo.renderArea.extent = { static_cast<uint32_t>(ctx.width), static_cast<uint32_t>(ctx.height) };
-                        VkClearValue clearColor = {{{0.0f, 0.5f, 1.0f, 1.0f}}}; // 蓝色
-                        rpInfo.clearValueCount = 1;
-                        rpInfo.pClearValues = &clearColor;
-
-                        vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-                        // 这里可以添加实际的渲染命令
-                        // 暂时只是清除颜色
-
-                        vkCmdEndRenderPass(cmd);
-
-                        // 销毁Framebuffer（应该缓存，但先这样）
-                        vkDestroyFramebuffer(vulkanDevice->GetVkDevice(), framebuffer, nullptr);
-
-                        LOG_INFO("ForwardPipeline", "Created offscreen render pass and cleared texture");
-                    } else {
-                        LOG_ERROR("ForwardPipeline", "Failed to create framebuffer: {}", (int)result);
-                    }
-                }
-            }
-        } else {
-            LOG_WARNING("ForwardPipeline", "Cannot render to texture: device or texture is not Vulkan");
         }
-    } else {
-        LOG_INFO("ForwardPipeline", "Rendering to swapchain: {}x{}", ctx.width, ctx.height);
     }
 
     const auto& commands = Renderer::GetCommandQueue();
@@ -126,6 +71,10 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
     PassExecutionContext passContext;
     passContext.deviceContext = deviceContext;
     passContext.sceneData = &sceneData;
+
+    // TODO: 目前各 Pass 内部仍硬编码了对交换链 RenderPass 的依赖。
+    // 在后续重构中，需要将 targetTexture 传入 Pass 内部。
+    // 暂时保持逻辑链路畅通，修复嵌套崩溃。
 
     if (m_depthPrePass) {
         m_depthPrePass->SetViewMatrix(view);
