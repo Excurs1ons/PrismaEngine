@@ -156,6 +156,15 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
         // 构建 RenderContext
         RenderContext ctx;
         ctx.device = m_device.get();
+        
+        // [修复] 获取当前的指令缓冲
+        auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+        if (vkDevice) {
+            ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+        } else {
+            ctx.commandBuffer = nullptr;
+        }
+
         ctx.targetTexture = targetTexture;
         ctx.camera.viewMatrix = camera->GetViewMatrix();
         ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
