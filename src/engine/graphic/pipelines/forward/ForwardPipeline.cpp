@@ -88,6 +88,7 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         m_opaquePass->SetLights(ctx.lights);
         m_opaquePass->Execute(passContext);
         if (ctx.commandBuffer) {
+            // [修复] ICommandBuffer* 现在直接传递
             m_opaquePass->Execute(ctx.commandBuffer, commands);
         }
     }
