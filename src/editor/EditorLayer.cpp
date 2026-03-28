@@ -67,6 +67,7 @@ void Prisma::EditorLayer::OnRender() {
             camera = mainCamera.get();
         }
     }
+
     if (!camera) {
         return;
     }
@@ -93,23 +94,9 @@ void Prisma::EditorLayer::OnRender() {
     // 开始 Viewport RenderPass（渲染到离屏纹理）
     m_viewportRenderPass->Begin(cmd);
 
-    // 构建 RenderContext
-    Graphic::RenderContext ctx;
-    ctx.device = renderSystem->GetDevice();
-    ctx.camera.viewMatrix = camera->GetViewMatrix();
-    ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
-    ctx.camera.position = camera->GetPosition();
-    ctx.camera.nearPlane = camera->GetNearPlane();
-    ctx.camera.farPlane = camera->GetFarPlane();
-    ctx.frameIndex = vkDevice->GetCurrentFrameIndex();
-    ctx.width = static_cast<uint32_t>(m_viewportSize.x);
-    ctx.height = static_cast<uint32_t>(m_viewportSize.y);
-    ctx.lights.clear();
-
-    // 使用 ForwardPipeline 渲染
-    if (auto pipeline = renderSystem->GetMainPipeline()) {
-        pipeline->Execute(ctx);
-    }
+    // 渲染场景
+    // [改动] 传递 m_viewportTexture 以便管线知道输出目标
+    renderSystem->RenderScene(scene, camera, m_viewportTexture.get());
 
     // 结束 Viewport RenderPass
     m_viewportRenderPass->End(cmd);

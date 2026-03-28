@@ -213,18 +213,25 @@ void RenderDeviceVulkan::BeginFrame() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vkBeginCommandBuffer(cmd, &beginInfo);
 
-    VkRenderPassBeginInfo rpInfo{};
-    rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpInfo.renderPass        = m_swapChain->GetRenderPass();
-    rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
-    rpInfo.renderArea.extent = m_swapChain->GetExtent();
-    VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
-    rpInfo.clearValueCount   = 1;
-    rpInfo.pClearValues      = &clearColor;
+    // 如果不跳过交换链RenderPass，则开始它
+    if (!m_skipSwapChainRenderPass) {
+        VkRenderPassBeginInfo rpInfo{};
+        rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpInfo.renderPass        = m_swapChain->GetRenderPass();
+        rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
+        rpInfo.renderArea.extent = m_swapChain->GetExtent();
+        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        rpInfo.clearValueCount   = 1;
+        rpInfo.pClearValues      = &clearColor;
 
-    vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+        vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+        m_frameActive = true;
+    } else {
+        // 重置标志，下一帧恢复默认行为
+        m_skipSwapChainRenderPass = false;
+        m_frameActive = false;  // 没有活动的RenderPass
+    }
     m_currentFrameIndex = m_currentFrame;
-    m_frameActive       = true;
     m_hasPendingPresent = false;
 }
 

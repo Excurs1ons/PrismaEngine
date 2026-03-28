@@ -96,6 +96,9 @@ public:
     // 获取用于附加渲染(UI等)的RenderPass（从交换链获取）
     VkRenderPass GetOverlayRenderPass() const override;
 
+    // 离屏渲染支持
+    void SetSkipSwapChainRenderPass(bool skip) { m_skipSwapChainRenderPass = skip; }
+
     // 获取当前帧的命令缓冲区（供 Viewport 渲染使用）
     VkCommandBuffer GetCurrentCommandBuffer() const {
         return m_frameActive ? m_commandBuffers[m_currentFrame] : VK_NULL_HANDLE;
@@ -179,6 +182,9 @@ private:
 
     // 覆盖层渲染回调（指向 PrismaEditor.dll 的实际渲染函数）
     OverlayRenderCallback m_overlayRenderCallback;
+
+    // 离屏渲染支持
+    bool m_skipSwapChainRenderPass = false;
 };
 
 }  // namespace Prisma::Graphic::Vulkan

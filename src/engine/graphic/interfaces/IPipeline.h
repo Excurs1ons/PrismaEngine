@@ -22,12 +22,18 @@ struct CameraData {
     float farPlane;
 };
 
+class ITexture;
+
 /**
  * @brief 强类型渲染上下文
  */
 struct RenderContext {
     IRenderDevice* device = nullptr;
     ICommandBuffer* commandBuffer = nullptr;
+    
+    // [改动] 目标纹理
+    // 目的：支持离屏渲染（如编辑器视口）。若为 nullptr，则默认渲染到交换链。
+    ITexture* targetTexture = nullptr;
     
     // 基础管线必须显式包含这些
     CameraData camera;
