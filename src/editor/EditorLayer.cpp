@@ -1,5 +1,6 @@
 #include "EditorLayer.h"
 #include "graphic/ImGuiVulkanResourceManager.h"
+#include "graphic/ViewportRenderPass.h"
 
 Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
     m_editorCameraObject = std::make_shared<GameObject>("Editor Camera");
@@ -48,24 +49,70 @@ void Prisma::EditorLayer::OnUpdate(Timestep ts) {
 
 void Prisma::EditorLayer::OnRender() {
     auto renderSystem = Engine::Get().GetRenderSystem();
-
-    // 渲染场景
     auto sceneManager = Engine::Get().GetSceneManager();
 
-    if (sceneManager) {
-        auto* scene = sceneManager->GetCurrentScene();
-        if (scene) {
-            // Use editor camera if available
-            if (m_editorCamera) {
-                renderSystem->RenderScene(scene, m_editorCamera.get());
-            } else {
-                auto camera = scene->GetMainCamera();
-                if (camera) {
-                    renderSystem->RenderScene(scene, camera.get());
-                }
-            }
+    if (!sceneManager) {
+        return;
+    }
+
+    auto* scene = sceneManager->GetCurrentScene();
+    if (!scene) {
+        return;
+    }
+
+    Graphic::ICamera* camera = m_editorCamera.get();
+    if (!camera) {
+        auto mainCamera = scene->GetMainCamera();
+        if (mainCamera) {
+            camera = mainCamera.get();
         }
     }
+    if (!camera) {
+        return;
+    }
+
+    // 检查是否有 ViewportRenderPass
+    if (!m_viewportRenderPass || !m_viewportRenderPass->IsInitialized() ||
+        !m_viewportTexture || !m_viewportDepthTexture) {
+        // 如果 ViewportRenderPass 未初始化，直接渲染到 SwapChain（后备方案）
+        renderSystem->RenderScene(scene, camera);
+        return;
+    }
+
+    // 获取 Vulkan 设备和命令缓冲区
+    auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+    if (!vkDevice) {
+        return;
+    }
+
+    VkCommandBuffer cmd = vkDevice->GetCurrentCommandBuffer();
+    if (cmd == VK_NULL_HANDLE) {
+        return;
+    }
+
+    // 开始 Viewport RenderPass（渲染到离屏纹理）
+    m_viewportRenderPass->Begin(cmd);
+
+    // 构建 RenderContext
+    Graphic::RenderContext ctx;
+    ctx.device = renderSystem->GetDevice();
+    ctx.camera.viewMatrix = camera->GetViewMatrix();
+    ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
+    ctx.camera.position = camera->GetPosition();
+    ctx.camera.nearPlane = camera->GetNearPlane();
+    ctx.camera.farPlane = camera->GetFarPlane();
+    ctx.frameIndex = vkDevice->GetCurrentFrameIndex();
+    ctx.width = static_cast<uint32_t>(m_viewportSize.x);
+    ctx.height = static_cast<uint32_t>(m_viewportSize.y);
+    ctx.lights.clear();
+
+    // 使用 ForwardPipeline 渲染
+    if (auto pipeline = renderSystem->GetMainPipeline()) {
+        pipeline->Execute(ctx);
+    }
+
+    // 结束 Viewport RenderPass
+    m_viewportRenderPass->End(cmd);
 }
 
 void Prisma::EditorLayer::OnImGuiRender() {
@@ -150,7 +197,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
     if (m_viewportSize.x != viewportPanelSize.x || m_viewportSize.y != viewportPanelSize.y) {
         m_viewportSize = {viewportPanelSize.x, viewportPanelSize.y};
 
-        // Recreate Framebuffer texture when viewport resizes
+    // Recreate Framebuffer texture when viewport resizes
         if (m_viewportSize.x > 0 && m_viewportSize.y > 0) {
             if (auto renderSystem = Engine::Get().GetRenderSystem()) {
                 if (auto resourceManager = renderSystem->GetRenderResourceManager()) {
@@ -163,30 +210,62 @@ void Prisma::EditorLayer::OnImGuiRender() {
                         // 将旧纹理存入延迟清理队列（保留 3 帧），防止 GPU In-Flight 指令引用失效资源
                         m_textureDeletionQueue.push_back({m_viewportTexture, 3});
                     }
+                    if (m_viewportDepthTexture) {
+                        m_textureDeletionQueue.push_back({m_viewportDepthTexture, 3});
+                    }
 
-                    Graphic::TextureDesc desc;
-                    desc.width               = (uint32_t)m_viewportSize.x;
-                    desc.height              = (uint32_t)m_viewportSize.y;
-                    desc.format              = Graphic::TextureFormat::RGBA8_UNorm;
-                    desc.allowRenderTarget   = true;
-                    desc.allowShaderResource = true;
+                    // 创建颜色纹理
+                    Graphic::TextureDesc colorDesc;
+                    colorDesc.width               = (uint32_t)m_viewportSize.x;
+                    colorDesc.height              = (uint32_t)m_viewportSize.y;
+                    colorDesc.format              = Graphic::TextureFormat::RGBA8_UNorm;
+                    colorDesc.allowRenderTarget   = true;
+                    colorDesc.allowShaderResource = true;
 
-                    m_viewportTexture = resourceManager->CreateTexture(desc);
+                    m_viewportTexture = resourceManager->CreateTexture(colorDesc);
                     auto vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
                     if (vkTexture) {
-                        // [改动] 为纹理设置调试名称
-                        vkTexture->SetDebugName("Viewport Texture");
+                        vkTexture->SetDebugName("Viewport Color Texture");
+                    }
+
+                    // 创建深度纹理
+                    Graphic::TextureDesc depthDesc;
+                    depthDesc.width              = (uint32_t)m_viewportSize.x;
+                    depthDesc.height             = (uint32_t)m_viewportSize.y;
+                    depthDesc.format              = Graphic::TextureFormat::D32_Float;
+                    depthDesc.allowDepthStencil   = true;
+                    depthDesc.allowRenderTarget   = false;
+                    depthDesc.allowShaderResource = false;
+
+                    m_viewportDepthTexture = resourceManager->CreateTexture(depthDesc);
+                    auto vkDepthTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportDepthTexture.get());
+                    if (vkDepthTexture) {
+                        vkDepthTexture->SetDebugName("Viewport Depth Texture");
+                    }
+
+                    // 创建 Viewport RenderPass
+                    if (vkTexture && vkDepthTexture) {
+                        auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+                        if (vkDevice) {
+                            m_viewportRenderPass = std::make_shared<Graphic::Vulkan::ViewportRenderPass>();
+                            m_viewportRenderPass->Initialize(
+                                vkDevice->GetVkDevice(),
+                                vkTexture->GetVkImageView(),
+                                vkDepthTexture->GetVkImageView(),
+                                (uint32_t)m_viewportSize.x,
+                                (uint32_t)m_viewportSize.y
+                            );
+                        }
                     }
 
                     // 创建 ImGui descriptor set
                     m_viewportDescriptorSet = VK_NULL_HANDLE;
-                    auto& editor            = Editor::Get();
-                    auto texture            = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
-                    if (texture) {
+                    auto& editor = Editor::Get();
+                    if (vkTexture) {
                         m_viewportDescriptorSet = editor.GetImGuiResourceManager().GetDescriptorSet(
-                            texture, editor.GetImGuiDescriptorPool(), editor.GetImGuiSampler());
+                            vkTexture, editor.GetImGuiDescriptorPool(), editor.GetImGuiSampler());
                     }
-                    
+
                     // [改动] 重置计数器
                     // 目的：延迟纹理显示，规避初次采样时的布局错误。
                     m_viewportReadyFrames = 0;

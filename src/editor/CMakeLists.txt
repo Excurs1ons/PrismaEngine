@@ -27,9 +27,10 @@ set(EDITOR_SOURCES
         CommandLineEditor.cpp
         Environment.cpp
         graphic/ImGuiVulkanResourceManager.cpp
+        graphic/ViewportRenderPass.cpp
         # ImGui 后端
         ${IMGUI_BACKENDS}
- "EditorLayer.cpp")
+"EditorLayer.cpp")
 
 # 头文件
 set(EDITOR_HEADERS
@@ -41,6 +42,7 @@ set(EDITOR_HEADERS
         Environment.h
         Export.h
         graphic/ImGuiVulkanResourceManager.h
+        graphic/ViewportRenderPass.h
 )
 
 # 1. 创建编辑器主逻辑动态库
@@ -56,8 +58,8 @@ target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 # 注意：同时链接 Engine 和 SDL3-shared 是安全的，因为它们共享同一个 SDL3.dll 状态。
 # 虽然 Engine 内部也链接了 SDL3，但由于其使用 PRIVATE 链接进行封装，
 # Editor 必须显式链接 SDL3-shared 以自动获取 SDL3 的包含目录（头文件路径）并声明其直接依赖。
-target_link_libraries(Editor PRIVATE 
-    Engine 
+target_link_libraries(Editor PRIVATE
+    Engine
     imgui::imgui
     SDL3-shared
 )
