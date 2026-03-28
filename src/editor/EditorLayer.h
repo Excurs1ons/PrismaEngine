@@ -18,6 +18,7 @@
 // Vulkan 后端支持
 #include "../engine/graphic/adapters/vulkan/RenderDeviceVulkan.h"
 #include "../engine/graphic/adapters/vulkan/VulkanResources.h"
+#include "graphic/ViewportRenderPass.h"
 
 namespace Prisma {
 
@@ -61,7 +62,9 @@ private:
     float m_cameraSensitivity = 0.1f;
 
     std::shared_ptr<Graphic::ITexture> m_viewportTexture = nullptr;
+    std::shared_ptr<Graphic::ITexture> m_viewportDepthTexture = nullptr;
     VkDescriptorSet m_viewportDescriptorSet = VK_NULL_HANDLE;
+    std::shared_ptr<Graphic::Vulkan::ViewportRenderPass> m_viewportRenderPass;
 
     // -----------------------------------------------------------------------
     // [改动] m_textureDeletionQueue
