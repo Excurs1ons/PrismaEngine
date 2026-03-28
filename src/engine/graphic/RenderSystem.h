@@ -68,7 +68,7 @@ public:
     IPipeline* GetMainPipeline() const { return m_mainRenderPipeline.get(); }
 
     // === 场景渲染 ===
-    void RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera);
+    void RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera, ITexture* targetTexture = nullptr);
 
 private:
     int InitializeDevice();

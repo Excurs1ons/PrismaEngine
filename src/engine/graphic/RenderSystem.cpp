@@ -146,7 +146,7 @@ void RenderSystem::SetMainPipeline(std::shared_ptr<IPipeline> pipeline) {
     }
 }
 
-void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera) {
+void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera, ITexture* targetTexture) {
     if (!scene || !camera) {
         LOG_WARNING("RenderSystem", "Attempting to render with null scene or camera");
         return;
@@ -156,6 +156,7 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
         // 构建 RenderContext
         RenderContext ctx;
         ctx.device = m_device.get();
+        ctx.targetTexture = targetTexture;
         ctx.camera.viewMatrix = camera->GetViewMatrix();
         ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
         ctx.camera.position = camera->GetPosition();
