@@ -172,8 +172,16 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
         ctx.camera.nearPlane = camera->GetNearPlane();
         ctx.camera.farPlane = camera->GetFarPlane();
         ctx.frameIndex = m_device ? m_device->GetCurrentFrameIndex() : 0;
-        ctx.width = m_desc.width;
-        ctx.height = m_desc.height;
+        
+        // [修复] 如果有目标纹理，使用纹理的尺寸，否则使用窗口尺寸
+        if (targetTexture) {
+            ctx.width = static_cast<uint32_t>(targetTexture->GetWidth());
+            ctx.height = static_cast<uint32_t>(targetTexture->GetHeight());
+        } else {
+            ctx.width = m_desc.width;
+            ctx.height = m_desc.height;
+        }
+        
         ctx.lights.clear();
 
         m_mainRenderPipeline->Execute(ctx);

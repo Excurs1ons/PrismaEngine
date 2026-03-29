@@ -77,8 +77,6 @@ public:
     }
 
 private:
-    void Update(Timestep ts);
-    
     EngineSpecification m_Spec;
     std::vector<std::unique_ptr<ISubSystem>> m_Systems;
     std::unique_ptr<Application> m_CurrentApp;

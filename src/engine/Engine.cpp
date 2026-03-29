@@ -41,9 +41,22 @@ int Engine::Initialize() {
     m_InputManager = AddSystem<Input::InputManager>();
     m_SceneManager = AddSystem<SceneManager>();
     m_PhysicsSystem = AddSystem<PhysicsSystem>();
-    
-    // 新增：ShaderLibrary 子系统
     AddSystem<Graphic::ShaderLibrary>();
+
+    // [架构调整] 渲染系统初始化
+    // 如果不是纯 Headless 模式（如编辑器需要 Viewport），或者即便 Headless 但需要离屏渲染
+    if (!m_Spec.Headless) {
+        // 原有的窗口模式初始化逻辑移到了这里，但编辑器目前走下面的路径
+    } else {
+        // 在编辑器模式下，我们虽然设为 Headless（因为不想要引擎自带窗口），
+        // 但我们仍然需要 RenderSystem 来支持离屏渲染。
+        Graphic::RenderSystemDesc rDesc;
+        rDesc.windowHandle = nullptr; // 离屏渲染不需要窗口
+        rDesc.width = 1280;
+        rDesc.height = 720;
+        
+        m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
+    }
     
     // 初始化所有子系统
     for (auto& sys : m_Systems) {
@@ -84,8 +97,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
     m_CurrentApp = std::move(app);
     m_Running = true;
 
-    // 1. 初始化窗口与渲染系统 (非 Headless)
-    if (!m_Spec.Headless) {
+    // 1. 初始化窗口 (如果不是 Headless 且尚未创建)
+    if (!m_Spec.Headless && !m_Window) {
         WindowProps props;
         auto& appSpec = m_CurrentApp->GetSpecification();
         props.Title = appSpec.Name;
@@ -98,39 +111,33 @@ int Engine::Run(std::unique_ptr<Application> app) {
             return -1;
         }
 
-        Graphic::RenderSystemDesc rDesc;
-        rDesc.windowHandle = m_Window->GetNativeWindow();
-        rDesc.width = m_Window->GetWidth();
-        rDesc.height = m_Window->GetHeight();
-        
-        m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
-        if (m_RenderSystem->Initialize() != 0) {
-            LOG_FATAL("Engine", "Failed to initialize RenderSystem!");
-            return -1;
+        // 如果在 Run 阶段创建了窗口，我们需要重新配置或创建一个带窗口的 RenderSystem
+        // 但目前主线逻辑已移至独立 Editor，这里保持向后兼容
+        if (!m_RenderSystem) {
+            Graphic::RenderSystemDesc rDesc;
+            rDesc.windowHandle = m_Window->GetNativeWindow();
+            rDesc.width = m_Window->GetWidth();
+            rDesc.height = m_Window->GetHeight();
+            m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
+            m_RenderSystem->Initialize();
         }
 
-        // 2. 窗口事件统一分发 (Engine 级处理)
+        // 2. 窗口事件统一分发
         m_Window->SetEventCallback([this](Event& e) {
             EventDispatcher dispatcher(e);
-            
             dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
-                LOG_INFO("Engine", "Window close requested (Event: {0})", event.GetName());
                 m_Running = false;
                 return true;
             });
-
             dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
                 if (event.GetWidth() == 0 || event.GetHeight() == 0) {
-                    LOG_INFO("Engine", "Window minimized: {0}x{1}", event.GetWidth(), event.GetHeight());
                     m_Minimized = true;
                     return false;
                 }
-                LOG_INFO("Engine", "Window resized to {0}x{1}", event.GetWidth(), event.GetHeight());
                 m_Minimized = false;
                 if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
                 return false;
             });
-
             if (m_CurrentApp) m_CurrentApp->OnEvent(e);
         });
     }
@@ -139,25 +146,17 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
     double lastFrameTime = Platform::GetTimeSeconds();
 
-    // --- 核心主循环 ---
     while (m_Running && m_CurrentApp->IsRunning()) {
         double time = Platform::GetTimeSeconds();
         float deltaTime = static_cast<float>(time - lastFrameTime);
         lastFrameTime = time;
 
-        // A. 事件泵送 (如果是非 Headless 模式)
-        if (m_Window) {
-            m_Window->OnUpdate();
-        }
+        if (m_Window) m_Window->OnUpdate();
         
         if (!m_Running) break;
 
-        // B. 逻辑与渲染更新
         if (m_Spec.Headless || !m_Minimized) {
-            // 1. 逻辑更新 (Subsystems & App)
             Update(Timestep(std::min(deltaTime, 0.1f)));
-            
-            // 2. 渲染流程
             if (GetRenderSystem()) {
                 BeginFrame();
                 Render(); 
@@ -168,7 +167,6 @@ int Engine::Run(std::unique_ptr<Application> app) {
             Platform::SleepMilliseconds(10);
         }
 
-        // C. FPS 帧同步控制
         if (m_Spec.MaxFPS > 0) {
             float targetFrameTime = 1.0f / m_Spec.MaxFPS;
             while (Platform::GetTimeSeconds() - time < targetFrameTime) {
@@ -180,41 +178,22 @@ int Engine::Run(std::unique_ptr<Application> app) {
     }
 
     m_CurrentApp->OnShutdown();
-    
-    // 确保在销毁应用程序（及其中资源，如被析构的 VulkanBuffer/Texture）之前，GPU 已完成所有工作。
-    // 这可以防止触发 VUID-vkDestroyBuffer-buffer-00922 等验证错误。
     if (GetRenderSystem() && GetRenderSystem()->GetDevice()) {
         GetRenderSystem()->GetDevice()->WaitForIdle();
     }
-
-    // Application/Layer 可能仍持有 ITexture/IBuffer 等 GPU 资源。
-    // 必须在 RenderSystem/VMA allocator 关闭前释放它们，避免资源晚于 allocator 析构。
     m_CurrentApp.reset();
-
     return 0;
 }
 
 void Engine::Shutdown() {
     if (!m_Initialized) return;
-    
     LOG_INFO("Engine", "Shutting down engine...");
-
-    // RenderSystem 必须最后关闭。
-    // 其他系统、场景对象以及 Application/Layer 可能还持有 GPU 资源，
-    // 若先销毁 VMA allocator，会在这些资源稍后析构时触发未释放断言。
     for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) {
-        if (it->get() == m_RenderSystem) {
-            continue;
-        }
+        if (it->get() == m_RenderSystem) continue;
         (*it)->Shutdown();
     }
-
-    if (m_RenderSystem) {
-        m_RenderSystem->Shutdown();
-    }
-
+    if (m_RenderSystem) m_RenderSystem->Shutdown();
     m_Systems.clear();
-    
     m_CurrentApp = nullptr;
     m_AssetManager = nullptr;
     m_InputManager = nullptr;
