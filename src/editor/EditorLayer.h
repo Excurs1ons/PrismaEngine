@@ -63,24 +63,24 @@ private:
 
     std::shared_ptr<Graphic::ITexture> m_viewportTexture = nullptr;
     std::shared_ptr<Graphic::ITexture> m_viewportDepthTexture = nullptr;
-    VkDescriptorSet m_viewportDescriptorSet = VK_NULL_HANDLE;
+    
+    // [改动] 使用 SDL_Texture 替代 VkDescriptorSet 
+    // 目的：支持在非 Vulkan 的 ImGui 后端（SDL_Renderer）中显示视口内容。
+    SDL_Texture* m_viewportSDLTexture = nullptr;
+
     std::shared_ptr<Graphic::Vulkan::ViewportRenderPass> m_viewportRenderPass;
 
     // -----------------------------------------------------------------------
-    // [改动] m_textureDeletionQueue
+    // [改动] m_deferredDeletionQueue
     //
     // 目的：
-    //   修复 Resize 期间 GPU 访问已销毁纹理导致的验证错误。
-    //
-    // 过程：
-    //   当视口大小改变时，旧纹理不立即销毁，而是放入此队列。
-    //   每帧清理存放时间超过 3 帧的资源，确保 GPU 已处理完相关指令。
+    //   修复资源（纹理、Pass、FB）在 GPU 尚在使用时被析构导致的崩溃。
     // -----------------------------------------------------------------------
-    struct DeferredTexture {
-        std::shared_ptr<Graphic::ITexture> texture;
+    struct DeferredResource {
+        std::shared_ptr<void> resource;
         uint32_t framesLeft;
     };
-    std::vector<DeferredTexture> m_textureDeletionQueue;
+    std::vector<DeferredResource> m_deferredDeletionQueue;
 };
 
 } // namespace Prisma

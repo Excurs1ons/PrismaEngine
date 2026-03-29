@@ -57,6 +57,27 @@ int Engine::Initialize() {
     return 0;
 }
 
+void Engine::BeginFrame() {
+    if (m_RenderSystem) m_RenderSystem->BeginFrame();
+}
+
+void Engine::Render() {
+    if (m_CurrentApp) m_CurrentApp->OnRender();
+}
+
+void Engine::EndFrame() {
+    if (m_RenderSystem) m_RenderSystem->EndFrame();
+}
+
+void Engine::Present() {
+    if (m_RenderSystem) m_RenderSystem->Present();
+}
+
+void Engine::Update(Timestep ts) {
+    for (auto& sys : m_Systems) sys->Update(ts);
+    if (m_CurrentApp) m_CurrentApp->OnUpdate(ts);
+}
+
 int Engine::Run(std::unique_ptr<Application> app) {
     if (!m_Initialized || !app) return -1;
     
@@ -138,10 +159,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
             
             // 2. 渲染流程
             if (GetRenderSystem()) {
-                GetRenderSystem()->BeginFrame();
-                m_CurrentApp->OnRender(); 
-                GetRenderSystem()->EndFrame();
-                GetRenderSystem()->Present();
+                BeginFrame();
+                Render(); 
+                EndFrame();
+                Present();
             }
         } else {
             Platform::SleepMilliseconds(10);
@@ -171,11 +192,6 @@ int Engine::Run(std::unique_ptr<Application> app) {
     m_CurrentApp.reset();
 
     return 0;
-}
-
-void Engine::Update(Timestep ts) {
-    for (auto& sys : m_Systems) sys->Update(ts);
-    if (m_CurrentApp) m_CurrentApp->OnUpdate(ts);
 }
 
 void Engine::Shutdown() {

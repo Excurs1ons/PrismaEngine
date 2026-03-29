@@ -44,6 +44,13 @@ public:
     int Run(std::unique_ptr<Application> app);
     void Shutdown();
 
+    // --- 外部驱动接口 (External Driving Interface) ---
+    void BeginFrame();
+    void Update(Timestep ts);
+    void Render();
+    void EndFrame();
+    void Present();
+
     static Engine& Get() { return *s_Instance; }
     
     // --- Window Management ---

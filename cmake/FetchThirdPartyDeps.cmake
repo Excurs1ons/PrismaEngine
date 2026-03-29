@@ -153,6 +153,11 @@ if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
         list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
     endif()
 
+    # SDL_Renderer3 后端
+    if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
+        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
+    endif()
+
     if(NOT TARGET imgui)
         add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
         target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)

@@ -1,64 +1,76 @@
 #pragma once
 
 #include "Export.h"
-#include "Application.h"
-#include "Logger.h"
-#include "Platform.h"
+#include "../engine/Engine.h"
+#include "../engine/Logger.h"
+#include "../engine/core/Timestep.h"
 #include "ProjectSettingsWindow.h"
-#include "Singleton.h"
-#include "ManagerBase.h"
 
 // 显式包含 SDL3
 #include <SDL3/SDL.h>
-#include <vulkan/vulkan.h>
 #include <memory>
-
-namespace Prisma::Graphic::Vulkan {
-class VulkanTexture;
-}
+#include <vector>
 
 namespace Prisma {
 
+class EditorLayer;
 class ImGuiVulkanResourceManager;
 
-class EDITOR_API Editor : public Application {
+/**
+ * @brief 编辑器主应用程序
+ * 
+ * [架构重构] 编辑器现在是系统的 Master，它持有 Engine 实例并驱动主循环。
+ */
+class EDITOR_API Editor {
 public:
     Editor();
-    ~Editor() override;
+    ~Editor();
 
-    static Editor& Get() { return static_cast<Editor&>(Application::Get()); }
+    int Initialize();
+    void Run();
+    void Shutdown();
 
-    // 被动初始化接口，仅负责应用层自身的逻辑
-    int OnInitialize() override;
-    void OnShutdown() override;
+    static Editor& Get() { return *s_Instance; }
 
-    void OnUpdate(Timestep ts) override;
-    void OnRender() override;
-    void OnImGuiRender() override;
-
-    int OnImGuiInitialize() override;
-
-    void* GetImGuiContext() override;
+    // 获取引擎实例
+    Engine& GetEngine() { return *m_Engine; }
+    
+    // 获取 SDL 渲染器 (用于 UI)
+    SDL_Renderer* GetRenderer() { return m_Renderer; }
+    
+    // 获取 ImGui 资源管理器 (用于视口纹理转换)
+    ImGuiVulkanResourceManager& GetImGuiResourceManager() { return *m_imguiResourceManager; }
 
     void OpenProjectSettings() { m_showProjectSettings = true; }
 
-    // 获取 ImGui DescriptorPool 和 Sampler
-    VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
-    VkSampler GetImGuiSampler() const { return m_imguiSampler; }
+private:
+    void OnUpdate(Timestep ts);
+    void OnRender();
+    void OnImGuiRender();
 
-    // 获取 ImGui 资源管理器
-    ImGuiVulkanResourceManager& GetImGuiResourceManager() { return *m_imguiResourceManager; }
+    // 事件处理
+    void OnEvent(SDL_Event& event);
 
 private:
-    // Editor Windows
+    static Editor* s_Instance;
+
+    std::unique_ptr<Engine> m_Engine;
+    bool m_Running = false;
+
+    // SDL 资源 (用于 UI 渲染)
+    SDL_Window* m_Window = nullptr;
+    SDL_Renderer* m_Renderer = nullptr; // 用于 UI
+
+    // 编辑器状态
     ProjectSettingsWindow m_projectSettingsWindow;
     bool m_showProjectSettings = false;
-
-    VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
-    VkSampler m_imguiSampler = VK_NULL_HANDLE;
+    bool m_showDemoWindow = true;
 
     // ImGui 资源管理器
     std::unique_ptr<ImGuiVulkanResourceManager> m_imguiResourceManager;
+    
+    // 编辑器层 (原来的 Application 逻辑移到这里)
+    std::vector<std::unique_ptr<EditorLayer>> m_Layers;
 };
 
 } // namespace Prisma

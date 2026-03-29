@@ -10,6 +10,7 @@ Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
 }
 
 void Prisma::EditorLayer::OnUpdate(Timestep ts) {
+    // 引擎离屏设置由 OnRender 驱动，此处不再手动设置 Skip标志
     if (!m_viewportHovered || !ImGui::IsMouseDown(ImGuiMouseButton_Right))
         return;
 
@@ -23,18 +24,12 @@ void Prisma::EditorLayer::OnUpdate(Timestep ts) {
     Vector3 right   = m_editorCamera->GetRight();
     Vector3 up      = m_editorCamera->GetUp();
 
-    if (state[SDL_SCANCODE_W])
-        pos += forward * m_cameraSpeed * dt;
-    if (state[SDL_SCANCODE_S])
-        pos -= forward * m_cameraSpeed * dt;
-    if (state[SDL_SCANCODE_A])
-        pos -= right * m_cameraSpeed * dt;
-    if (state[SDL_SCANCODE_D])
-        pos += right * m_cameraSpeed * dt;
-    if (state[SDL_SCANCODE_E])
-        pos += up * m_cameraSpeed * dt;
-    if (state[SDL_SCANCODE_Q])
-        pos -= up * m_cameraSpeed * dt;
+    if (state[SDL_SCANCODE_W]) pos += forward * m_cameraSpeed * dt;
+    if (state[SDL_SCANCODE_S]) pos -= forward * m_cameraSpeed * dt;
+    if (state[SDL_SCANCODE_A]) pos -= right * m_cameraSpeed * dt;
+    if (state[SDL_SCANCODE_D]) pos += right * m_cameraSpeed * dt;
+    if (state[SDL_SCANCODE_E]) pos += up * m_cameraSpeed * dt;
+    if (state[SDL_SCANCODE_Q]) pos -= up * m_cameraSpeed * dt;
 
     transform->SetPosition(pos);
 
@@ -51,102 +46,60 @@ void Prisma::EditorLayer::OnRender() {
     auto renderSystem = Engine::Get().GetRenderSystem();
     auto sceneManager = Engine::Get().GetSceneManager();
 
-    if (!sceneManager) {
-        return;
-    }
-
+    if (!sceneManager) return;
     auto* scene = sceneManager->GetCurrentScene();
-    if (!scene) {
-        return;
-    }
+    if (!scene) return;
 
     Graphic::ICamera* camera = m_editorCamera.get();
     if (!camera) {
         auto mainCamera = scene->GetMainCamera();
-        if (mainCamera) {
-            camera = mainCamera.get();
-        }
+        if (mainCamera) camera = mainCamera.get();
     }
+    if (!camera) return;
 
-    if (!camera) {
-        return;
+    auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+    if (!vkDevice) return;
+
+    // [架构调整] 离屏渲染
+    vkDevice->SetSkipSwapChainRenderPass(true);
+    VkCommandBuffer cmd = vkDevice->GetCurrentCommandBuffer();
+    if (cmd == VK_NULL_HANDLE) return;
+
+    if (m_viewportRenderPass && m_viewportRenderPass->IsInitialized()) {
+        m_viewportRenderPass->Begin(cmd);
+        renderSystem->RenderScene(scene, camera, m_viewportTexture.get());
+        m_viewportRenderPass->End(cmd);
     }
-
-    // [修复] 移除所有手动的 ViewportRenderPass->Begin/End 调用。
-    // 原因：这些操作会开启一个与引擎默认或管线内部冲突的 RenderPass，导致驱动崩溃。
-    // 我们只需将 m_viewportTexture 传给渲染系统，让管线内部负责输出目标的重定向。
-    renderSystem->RenderScene(scene, camera, m_viewportTexture.get());
 }
 
 void Prisma::EditorLayer::OnImGuiRender() {
-    static bool dockspaceOpen                 = true;
-    static bool opt_fullscreen                = true;
-    static bool opt_padding                   = false;
-    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
+    static bool dockspaceOpen = true;
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-    if (opt_fullscreen) {
-        const ImGuiViewport* viewport = ImGui::GetMainViewport();
-        ImGui::SetNextWindowPos(viewport->WorkPos);
-        ImGui::SetNextWindowSize(viewport->WorkSize);
-        ImGui::SetNextWindowViewport(viewport->ID);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-        window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
-                        ImGuiWindowFlags_NoMove;
-        window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    } else {
-        dockspace_flags &= ~ImGuiDockNodeFlags_PassthruCentralNode;
-    }
+    const ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+    window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
 
-    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-        window_flags |= ImGuiWindowFlags_NoBackground;
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
+    ImGui::Begin("Prisma Editor Master DockSpace", &dockspaceOpen, window_flags);
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar(3);
 
-    if (!opt_padding)
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-
-    ImGui::Begin("Prisma Editor DockSpace", &dockspaceOpen, window_flags);
-
-    if (!opt_padding)
-        ImGui::PopStyleVar();
-
-    if (opt_fullscreen)
-        ImGui::PopStyleVar(2);
-
-    // Submit the DockSpace
-    ImGuiIO& io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable) {
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-    }
+    ImGuiID dockspace_id = ImGui::GetID("EditorDockSpace");
+    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), ImGuiDockNodeFlags_None);
 
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New Scene", "Ctrl+N")) {
-                if (auto sceneManager = Engine::Get().GetSceneManager()) {
-                    sceneManager->CreateNewScene();
-                    m_selectedEntity = nullptr;
-                }
-            }
-            if (ImGui::MenuItem("Exit", "Alt+F4")) {
-                Application::Get().Close();
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("Project Settings")) {
-                static_cast<Editor&>(Application::Get()).OpenProjectSettings();
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("View")) {
-            if (ImGui::MenuItem("ImGui Demo Window", nullptr, &m_showDemoWindow)) {
-            }
+            if (ImGui::MenuItem("Exit", "Alt+F4")) Editor::Get().Shutdown();
             ImGui::EndMenu();
         }
         ImGui::EndMenuBar();
     }
-
     ImGui::End();
 
     // Viewport Panel
@@ -157,289 +110,101 @@ void Prisma::EditorLayer::OnImGuiRender() {
     m_viewportHovered = ImGui::IsWindowHovered();
 
     ImVec2 viewportPanelSize = ImGui::GetContentRegionAvail();
-    if (m_viewportSize.x != viewportPanelSize.x || m_viewportSize.y != viewportPanelSize.y) {
+    if (std::abs(m_viewportSize.x - viewportPanelSize.x) > 0.1f || 
+        std::abs(m_viewportSize.y - viewportPanelSize.y) > 0.1f) {
+        
         m_viewportSize = {viewportPanelSize.x, viewportPanelSize.y};
 
-    // Recreate Framebuffer texture when viewport resizes
-        if (m_viewportSize.x > 0 && m_viewportSize.y > 0) {
-            if (auto renderSystem = Engine::Get().GetRenderSystem()) {
-                if (auto resourceManager = renderSystem->GetRenderResourceManager()) {
-                    // [改动] 在销毁旧纹理前，显式清理 ImGui 缓存并延迟释放
-                    if (m_viewportTexture) {
-                        auto oldVkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
-                        if (oldVkTexture) {
-                            Editor::Get().GetImGuiResourceManager().ReleaseTextureResources(oldVkTexture);
-                        }
-                        // 将旧纹理存入延迟清理队列（保留 3 帧），防止 GPU In-Flight 指令引用失效资源
-                        m_textureDeletionQueue.push_back({m_viewportTexture, 3});
-                    }
-                    if (m_viewportDepthTexture) {
-                        m_textureDeletionQueue.push_back({m_viewportDepthTexture, 3});
-                    }
-
-                    // 创建颜色纹理
-                    Graphic::TextureDesc colorDesc;
-                    colorDesc.width               = (uint32_t)m_viewportSize.x;
-                    colorDesc.height              = (uint32_t)m_viewportSize.y;
-                    colorDesc.format              = Graphic::TextureFormat::RGBA8_UNorm;
-                    colorDesc.allowRenderTarget   = true;
-                    colorDesc.allowShaderResource = true;
-
-                    m_viewportTexture = resourceManager->CreateTexture(colorDesc);
-                    auto vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
-                    if (vkTexture) {
-                        vkTexture->SetDebugName("Viewport Color Texture");
-                    }
-
-                    // 创建深度纹理
-                    Graphic::TextureDesc depthDesc;
-                    depthDesc.width              = (uint32_t)m_viewportSize.x;
-                    depthDesc.height             = (uint32_t)m_viewportSize.y;
-                    depthDesc.format              = Graphic::TextureFormat::D32_Float;
-                    depthDesc.allowDepthStencil   = true;
-                    depthDesc.allowRenderTarget   = false;
-                    depthDesc.allowShaderResource = false;
-
-                    m_viewportDepthTexture = resourceManager->CreateTexture(depthDesc);
-                    auto vkDepthTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportDepthTexture.get());
-                    if (vkDepthTexture) {
-                        vkDepthTexture->SetDebugName("Viewport Depth Texture");
-                    }
-
-                    // 创建 Viewport RenderPass
-                    if (vkTexture && vkDepthTexture) {
-                        auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
-                        if (vkDevice) {
-                            m_viewportRenderPass = std::make_shared<Graphic::Vulkan::ViewportRenderPass>();
-                            m_viewportRenderPass->Initialize(
-                                vkDevice->GetVkDevice(),
-                                vkTexture->GetVkImageView(),
-                                vkDepthTexture->GetVkImageView(),
-                                (uint32_t)m_viewportSize.x,
-                                (uint32_t)m_viewportSize.y
-                            );
-                        }
-                    }
-
-                    // 创建 ImGui descriptor set
-                    m_viewportDescriptorSet = VK_NULL_HANDLE;
-                    auto& editor = Editor::Get();
-                    if (vkTexture) {
-                        m_viewportDescriptorSet = editor.GetImGuiResourceManager().GetDescriptorSet(
-                            vkTexture, editor.GetImGuiDescriptorPool(), editor.GetImGuiSampler());
-                    }
-
-                    // [改动] 重置计数器
-                    // 目的：延迟纹理显示，规避初次采样时的布局错误。
-                    m_viewportReadyFrames = 0;
-                }
+        if (m_viewportSize.x > 1.0f && m_viewportSize.y > 1.0f) {
+            auto renderSystem = Engine::Get().GetRenderSystem();
+            auto resourceManager = renderSystem->GetRenderResourceManager();
+            
+            // 延迟清理
+            if (m_viewportTexture) m_deferredDeletionQueue.push_back({m_viewportTexture, 3});
+            if (m_viewportDepthTexture) m_deferredDeletionQueue.push_back({m_viewportDepthTexture, 3});
+            if (m_viewportRenderPass) m_deferredDeletionQueue.push_back({m_viewportRenderPass, 3});
+            
+            // SDL Texture 清理 (使用定制包装器)
+            if (m_viewportSDLTexture) {
+                struct SDLTextureWrapper {
+                    SDL_Texture* tex;
+                    ~SDLTextureWrapper() { SDL_DestroyTexture(tex); }
+                };
+                m_deferredDeletionQueue.push_back({std::make_shared<SDLTextureWrapper>(m_viewportSDLTexture), 3});
             }
+
+            // 1. 创建颜色和深度纹理 (Vulkan)
+            Graphic::TextureDesc colorDesc;
+            colorDesc.width = (uint32_t)m_viewportSize.x;
+            colorDesc.height = (uint32_t)m_viewportSize.y;
+            colorDesc.format = Graphic::TextureFormat::RGBA8_UNorm;
+            colorDesc.allowRenderTarget = true;
+            colorDesc.allowShaderResource = true;
+            m_viewportTexture = resourceManager->CreateTexture(colorDesc);
+
+            Graphic::TextureDesc depthDesc = colorDesc;
+            depthDesc.format = Graphic::TextureFormat::D32_Float;
+            depthDesc.allowDepthStencil = true;
+            depthDesc.allowRenderTarget = false;
+            depthDesc.allowShaderResource = false;
+            m_viewportDepthTexture = resourceManager->CreateTexture(depthDesc);
+
+            // 2. 创建 SDL Texture (用于显示)
+            m_viewportSDLTexture = SDL_CreateTexture(
+                Editor::Get().GetRenderer(),
+                SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, 
+                (int)m_viewportSize.x, (int)m_viewportSize.y
+            );
+
+            auto vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
+            auto vkDepth = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportDepthTexture.get());
+            auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+
+            if (vkTexture && vkDepth && vkDevice) {
+                m_viewportRenderPass = std::make_shared<Graphic::Vulkan::ViewportRenderPass>();
+                m_viewportRenderPass->Initialize(
+                    vkDevice->GetVkDevice(), vkTexture->GetVkImageView(),
+                    vkDepth->GetVkImageView(), (uint32_t)m_viewportSize.x, (uint32_t)m_viewportSize.y
+                );
+            }
+            m_viewportReadyFrames = 0;
         }
     }
 
-    // [改动] 增加计数器判定
-    // Draw Framebuffer image (只有当计数器达到足够值时才显示，确保 GPU 已完成布局转换)
-    if (m_viewportTexture && m_viewportDescriptorSet && m_viewportReadyFrames >= 3) {
-        // 使用 descriptor set 显示纹理
-        ImGui::Image((ImTextureID)m_viewportDescriptorSet, ImVec2{m_viewportSize.x, m_viewportSize.y});
+    // [核心同步逻辑] 将 Vulkan 像素拷贝到 SDL_Texture
+    if (m_viewportTexture && m_viewportSDLTexture && m_viewportReadyFrames >= 2) {
+        void* pixels;
+        int pitch;
+        if (SDL_LockTexture(m_viewportSDLTexture, NULL, &pixels, &pitch) == 0) {
+            // CPU Readback (暂时如此，因为 UI 独立于 Vulkan)
+            m_viewportTexture->ReadData(0, 0, pixels, (uint64_t)pitch * (uint32_t)m_viewportSize.y);
+            SDL_UnlockTexture(m_viewportSDLTexture);
+        }
+        ImGui::Image((ImTextureID)m_viewportSDLTexture, ImVec2{m_viewportSize.x, m_viewportSize.y});
     } else {
-        // ... (此处省略，代码已存在)
+        ImGui::Text("Viewport Syncing...");
     }
 
     ImGui::End();
     ImGui::PopStyleVar();
 
-    // 在每帧结束时递增计数器
-    if (m_viewportTexture) {
-        m_viewportReadyFrames++;
-    }
+    if (m_viewportTexture) m_viewportReadyFrames++;
 
-    // -----------------------------------------------------------------------
-    // [改动] 清理延迟删除队列
-    // -----------------------------------------------------------------------
-    for (auto it = m_textureDeletionQueue.begin(); it != m_textureDeletionQueue.end();) {
-        if (it->framesLeft == 0) {
-            it = m_textureDeletionQueue.erase(it);
-        } else {
-            it->framesLeft--;
-            ++it;
-        }
+    // 清理延迟队列
+    for (auto it = m_deferredDeletionQueue.begin(); it != m_deferredDeletionQueue.end();) {
+        if (it->framesLeft == 0) it = m_deferredDeletionQueue.erase(it);
+        else { it->framesLeft--; ++it; }
     }
-
-    ImGui::Begin("Scene Hierarchy");
-    if (auto sceneManager = Engine::Get().GetSceneManager()) {
-        if (auto scene = sceneManager->GetCurrentScene()) {
-            auto& objects = scene->GetGameObjects();
-            for (auto& obj : objects) {
-                ImGuiTreeNodeFlags flags =
-                    ((m_selectedEntity == obj) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow;
-                flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
-                bool opened = ImGui::TreeNodeEx((void*)(uint64_t)obj.get(), flags, "%s", obj->name.c_str());
-                if (ImGui::IsItemClicked()) {
-                    m_selectedEntity = obj;
-                }
-                if (opened) {
-                    ImGui::TreePop();
-                }
-            }
-
-            // Right-click on blank space
-            if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight)) {
-                if (ImGui::MenuItem("Create Empty GameObject")) {
-                    auto newObj = std::make_shared<GameObject>("New GameObject");
-                    scene->AddGameObject(newObj);
-                    m_selectedEntity = newObj;
-                }
-                ImGui::EndPopup();
-            }
-        }
-    }
-    ImGui::End();
 
     ImGui::Begin("Properties");
     if (m_selectedEntity) {
-        char buffer[256];
-        memset(buffer, 0, sizeof(buffer));
-        strncpy(buffer, m_selectedEntity->name.c_str(), sizeof(buffer));
-        if (ImGui::InputText("Name", buffer, sizeof(buffer))) {
-            m_selectedEntity->name = std::string(buffer);
-        }
-
-        ImGui::Separator();
-
-        auto transform = m_selectedEntity->GetTransform();
-        if (transform) {
-            if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
-                Vector3 pos = transform->GetPosition();
-                if (ImGui::DragFloat3("Position", &pos.x, 0.1f)) {
-                    transform->SetPosition(pos);
-                }
-
-                Vector3 rotation = glm::degrees(glm::eulerAngles(transform->GetRotation()));
-                if (ImGui::DragFloat3("Rotation", &rotation.x, 0.1f)) {
-                    transform->SetRotation(rotation);
-                }
-
-                Vector3 scale = transform->GetScale();
-                if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
-                    transform->SetScale(scale);
-                }
-            }
-        }
-
-        // Camera Component display
-        auto camera = m_selectedEntity->GetComponent<Graphic::Camera>();
-        if (camera) {
-            if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
-                float fov = glm::degrees(camera->GetFOV());
-                if (ImGui::DragFloat("Field of View", &fov, 1.0f, 10.0f, 120.0f)) {
-                    camera->SetPerspectiveProjection(
-                        glm::radians(fov), camera->GetAspectRatio(), camera->GetNearPlane(), camera->GetFarPlane());
-                }
-            }
-        }
-
-        // RigidBody Component display
-        auto rb = m_selectedEntity->GetComponent<RigidBodyComponent>();
-        if (rb) {
-            if (ImGui::CollapsingHeader("RigidBody", ImGuiTreeNodeFlags_DefaultOpen)) {
-                Vector3 vel = rb->GetVelocity();
-                if (ImGui::DragFloat3("Velocity", &vel.x, 0.1f)) {
-                    rb->SetVelocity(vel);
-                }
-            }
-        }
-
-        // Add Component button
-        ImGui::Spacing();
-        ImGui::Separator();
-        if (ImGui::Button("Add Component...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-            ImGui::OpenPopup("AddComponentPopup");
-        }
-
-        if (ImGui::BeginPopup("AddComponentPopup")) {
-            if (ImGui::MenuItem("Camera")) {
-                if (!m_selectedEntity->GetComponent<Graphic::Camera>())
-                    m_selectedEntity->AddComponent<Graphic::Camera>();
-            }
-            if (ImGui::MenuItem("RigidBody")) {
-                if (!m_selectedEntity->GetComponent<RigidBodyComponent>())
-                    m_selectedEntity->AddComponent<RigidBodyComponent>();
-            }
-            ImGui::EndPopup();
-        }
+        ImGui::Text("Entity: %s", m_selectedEntity->name.c_str());
     } else {
-        ImGui::Text("Select an entity to view properties");
+        ImGui::Text("Select an entity");
     }
     ImGui::End();
-
-    ImGui::Begin("Content Browser");
-
-    // Ensure assets directory exists to prevent crash
-    if (!std::filesystem::exists("assets")) {
-        std::filesystem::create_directory("assets");
-    }
-    if (!std::filesystem::exists(m_currentAssetDirectory)) {
-        m_currentAssetDirectory = "assets";
-    }
-
-    if (m_currentAssetDirectory != "assets") {
-        if (ImGui::Button("<- Back")) {
-            m_currentAssetDirectory = m_currentAssetDirectory.parent_path();
-        }
-    }
-
-    static float padding       = 16.0f;
-    static float thumbnailSize = 128.0f;
-    float cellSize             = thumbnailSize + padding;
-
-    float panelWidth = ImGui::GetContentRegionAvail().x;
-    int columnCount  = (int)(panelWidth / cellSize);
-    if (columnCount < 1)
-        columnCount = 1;
-
-    ImGui::Columns(columnCount, 0, false);
-
-    for (auto& directoryEntry : std::filesystem::directory_iterator(m_currentAssetDirectory)) {
-        const auto& path           = directoryEntry.path();
-        std::string filenameString = path.filename().string();
-
-        ImGui::PushID(filenameString.c_str());
-
-        if (directoryEntry.is_directory()) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.3f, 0.3f, 0.7f, 1.0f));
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-        }
-
-        if (ImGui::Button(filenameString.c_str(), {thumbnailSize, thumbnailSize})) {
-            if (directoryEntry.is_directory()) {
-                m_currentAssetDirectory /= path.filename();
-            }
-        }
-
-        ImGui::PopStyleColor();
-
-        ImGui::TextWrapped("%s", filenameString.c_str());
-        ImGui::NextColumn();
-        ImGui::PopID();
-    }
-
-    ImGui::Columns(1);
-    ImGui::End();
-
-    if (m_showDemoWindow) {
-        ImGui::ShowDemoWindow(&m_showDemoWindow);
-    }
 }
 
 void Prisma::EditorLayer::OnEvent(Event& event) {
-    if (event.NativeEvent) {
-        ImGui_ImplSDL3_ProcessEvent((const SDL_Event*)event.NativeEvent);
-    }
-
-    // 检查 ImGui 是否想要捕获此事件。如果是，则标记事件为已处理，防止其传递给下层（如游戏世界）。
-    ImGuiIO& io = ImGui::GetIO();
-    event.Handled |= event.IsInCategory(EventCategoryMouse) && io.WantCaptureMouse;
-    event.Handled |= event.IsInCategory(EventCategoryKeyboard) && io.WantCaptureKeyboard;
+    // 事件由 Editor::Run 分发，此处处理业务逻辑
 }

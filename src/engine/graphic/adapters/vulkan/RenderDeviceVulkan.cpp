@@ -47,16 +47,26 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         m_vkbInstance = inst_ret.value();
         m_instance    = m_vkbInstance.instance;
 
-        auto& window          = Engine::Get().GetWindow();
-        SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
-        if (!SDL_Vulkan_CreateSurface(sdlWindow, m_instance, nullptr, &m_surface)) {
-            return -1;
+        // [修复] 处理 Headless 模式：如果没有窗口，则不创建 Surface
+        if (Engine::Get().GetSpecification().Headless) {
+            LOG_INFO("Vulkan", "Headless mode detected, skipping surface creation.");
+            m_surface = VK_NULL_HANDLE;
+        } else {
+            auto& window          = Engine::Get().GetWindow();
+            SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
+            if (!sdlWindow || !SDL_Vulkan_CreateSurface(sdlWindow, m_instance, nullptr, &m_surface)) {
+                LOG_ERROR("Vulkan", "Failed to create Vulkan surface!");
+                return -1;
+            }
         }
 
         // 2. 选择物理设备
         vkb::PhysicalDeviceSelector selector{m_vkbInstance};
-        auto phys_ret = selector.set_surface(m_surface)
-                            .set_minimum_version(1, 3)
+        if (m_surface != VK_NULL_HANDLE) {
+            selector.set_surface(m_surface);
+        }
+        
+        auto phys_ret = selector.set_minimum_version(1, 3)
                             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
                             .select();
         if (!phys_ret)
@@ -225,7 +235,8 @@ void RenderDeviceVulkan::BeginFrame() {
         rpInfo.renderPass        = m_swapChain->GetRenderPass();
         rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
         rpInfo.renderArea.extent = m_swapChain->GetExtent();
-        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        // [修复] 将背景色设为全黑
+        VkClearValue clearColor  = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
         rpInfo.clearValueCount   = 1;
         rpInfo.pClearValues      = &clearColor;
 
@@ -255,7 +266,8 @@ void RenderDeviceVulkan::EndFrame() {
         rpInfo.renderPass        = m_swapChain->GetRenderPass();
         rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
         rpInfo.renderArea.extent = m_swapChain->GetExtent();
-        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        // [修复] 将背景色设为全黑
+        VkClearValue clearColor  = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
         rpInfo.clearValueCount   = 1;
         rpInfo.pClearValues      = &clearColor;
 
