@@ -9,6 +9,12 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PrismaCraft/CMakeLists.txt)
     message(STATUS "  Added project: PrismaCraft")
 endif()
 
+# 2. PacManGame
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PacManGame/CMakeLists.txt)
+    add_subdirectory(PacManGame)
+    message(STATUS "  Added project: PacManGame")
+endif()
+
 # 2. 其他平台特定项目 (可选)
 # if(WIN32 AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/windows/Game/CMakeLists.txt)
 #     add_subdirectory(windows/Game)

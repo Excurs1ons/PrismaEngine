@@ -127,44 +127,42 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
 endif()
 
 # ImGui 静态库创建
-if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG)
-    FetchContent_MakeAvailable(imgui)
+FetchContent_MakeAvailable(imgui)
+
+set(IMGUI_CORE_SOURCES
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+)
+
+# Windows 后端
+if(WIN32)
+    list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
+endif()
+
+# Vulkan 后端 - 跨平台
+if(PRISMA_ENABLE_RENDER_VULKAN)
+    list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
+endif()
+
+# SDL3 后端 - 跨平台（包括 Windows）
+if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+    list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+endif()
+
+if(NOT TARGET imgui)
+    add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
+    target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
     
-    set(IMGUI_CORE_SOURCES
-        ${imgui_SOURCE_DIR}/imgui.cpp
-        ${imgui_SOURCE_DIR}/imgui_draw.cpp
-        ${imgui_SOURCE_DIR}/imgui_tables.cpp
-        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    # 强力注入包含路径
+    target_include_directories(imgui SYSTEM PUBLIC 
+        "${PRISMA_GLOBAL_DEPS_DIR}/SDL3-src/include"
+        "${PRISMA_GLOBAL_DEPS_DIR}/Vulkan-Headers-src/include"
     )
 
-    # Windows 后端
-    if(WIN32)
-        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
-    endif()
-
-    # Vulkan 后端 - 跨平台
-    if(PRISMA_ENABLE_RENDER_VULKAN)
-        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
-    endif()
-
-    # SDL3 后端 - 跨平台（包括 Windows）
-    if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-    endif()
-
-    if(NOT TARGET imgui)
-        add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
-        target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
-        
-        # 强力注入包含路径
-        target_include_directories(imgui SYSTEM PUBLIC 
-            "${PRISMA_GLOBAL_DEPS_DIR}/SDL3-src/include"
-            "${PRISMA_GLOBAL_DEPS_DIR}/Vulkan-Headers-src/include"
-        )
-
-        add_library(imgui::imgui ALIAS imgui)
-    endif()
+    add_library(imgui::imgui ALIAS imgui)
 endif()
 
 if(WIN32 AND PRISMA_BUILD_EDITOR)

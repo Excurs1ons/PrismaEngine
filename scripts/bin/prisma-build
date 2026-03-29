@@ -36,7 +36,7 @@ BUILD_TYPE="debug"
 CLEAN_BUILD=false
 QUIET_MODE=false
 VERBOSE_MODE=false
-PARALLEL_JOBS="4"
+PARALLEL_JOBS="2"
 PRESET=""
 SHOW_HELP=false
 
@@ -56,7 +56,7 @@ function show_help() {
     echo "  --clean, -c                清理构建目录"
     echo "  --quiet, -q                静默模式 (减少输出)"
     echo "  --verbose, -v              详细输出"
-    echo "  --jobs, -j <N>             并行任务数 (默认: 4)"
+    echo "  --jobs, -j <N>             并行任务数 (默认: 2)"
     echo "  --help, -h                 显示此帮助"
     echo ""
     echo -e "${PRISMA_COLOR_CYAN}示例:${PRISMA_COLOR_NC}"

@@ -31,7 +31,7 @@ cmake --preset $Preset -DPRISMA_BUILD_SDK=ON -DCMAKE_INSTALL_PREFIX=$InstallDir
 
 # 2. 构建 Engine 和 PrismaCraft
 Write-Host "`n[2/4] Building Engine and PrismaCraft..." -ForegroundColor Yellow
-cmake --build $BuildDir --config $Config --parallel
+cmake --build $BuildDir --config $Config --parallel 2
 
 # 3. 手动打包 (不使用复杂的 export)
 Write-Host "`n[3/4] Packaging SDK..." -ForegroundColor Yellow
