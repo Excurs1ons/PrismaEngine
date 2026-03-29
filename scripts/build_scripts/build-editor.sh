@@ -23,7 +23,7 @@ PRESET=""
 CLEAN_BUILD=false
 QUIET_MODE=false
 VERBOSE_MODE=false
-PARALLEL_JOBS="4"  # 默认使用 4 个并行任务，避免内存不足
+PARALLEL_JOBS="2"  # 默认使用 2 个并行任务，避免内存不足
 
 # Parse arguments - 先解析选项，最后才是 preset
 while [[ $# -gt 0 ]]; do
@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
             echo "  --quiet, -q            Reduce output"
             echo "  --verbose, -v          Show full build output"
             echo "  --clean                Clean build directory before building"
-            echo "  --jobs, -j <N>         Number of parallel jobs (default: 4)"
+            echo "  --jobs, -j <N>         Number of parallel jobs (default: 2)"
             echo "  --help, -h             Show this help message"
             echo ""
             echo "Examples:"

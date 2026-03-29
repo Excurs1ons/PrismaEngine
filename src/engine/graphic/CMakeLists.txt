@@ -79,7 +79,12 @@ set(ENGINE_GRAPHIC_SOURCES
     graphic/Material.cpp
     graphic/Mesh.cpp
     graphic/MeshRenderer.cpp
+    graphic/OrthographicCamera.cpp
+    graphic/SpriteRenderer.cpp
+    graphic/SpriteAnimation.cpp
     graphic/stb_impl.cpp
+    graphic/Renderer.cpp
+    graphic/Renderer2D.cpp
     graphic/RenderResourceManager.cpp
     graphic/interfaces/IPipelineState.cpp
     ${EXTRA_PASS_SOURCES}
@@ -105,10 +110,14 @@ set(ENGINE_GRAPHIC_HEADERS
     graphic/Material.h
     graphic/Mesh.h
     graphic/MeshRenderer.h
+    graphic/OrthographicCamera.h
+    graphic/SpriteRenderer.h
+    graphic/SpriteAnimation.h
     graphic/DefaultShader.h
     graphic/FrustumCulling.h
     graphic/ICamera.h
-    graphic/RenderDesc.h
+    graphic/Renderer.h
+    graphic/Renderer2D.h
     graphic/RenderErrorHandling.h
     graphic/RenderException.h
     graphic/SubMesh.h

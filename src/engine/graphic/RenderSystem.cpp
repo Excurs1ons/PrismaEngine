@@ -6,6 +6,7 @@
 #include "../Camera.h"
 #include "../Engine.h"
 #include "RenderResourceManager.h"
+#include "Renderer2D.h"
 
 namespace Prisma::Graphic {
 RenderSystem::RenderSystem(const RenderSystemDesc& desc)
@@ -37,6 +38,10 @@ int RenderSystem::Initialize() {
         return pipeline_init_result;
     }
     LOG_INFO("Renderer", "Pipelines initialized successfully.");
+
+    // 初始化 2D 渲染器
+    Renderer2D::Initialize();
+    LOG_INFO("Renderer", "Renderer2D initialized successfully.");
 
     LOG_INFO("Renderer", "RenderSystem initialized successfully.");
     return 0;
@@ -90,6 +95,9 @@ void RenderSystem::Shutdown() {
 
     LOG_INFO("Renderer", "Shutting down renderer...");
     
+    // 关闭 2D 渲染器
+    Renderer2D::Shutdown();
+
     // 1. 先销毁依赖设备的管线和资源管理器
     if (m_mainRenderPipeline) {
         m_mainRenderPipeline->Shutdown();

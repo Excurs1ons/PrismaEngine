@@ -295,7 +295,7 @@ function Build-Abi {
 
     # 构建
     Write-Info "开始编译..."
-    $result = ninja -v Engine 2>&1
+    $result = ninja -j2 -v Engine 2>&1
     $buildOutput = $result -join "`n"
     Write-Host $buildOutput
 
