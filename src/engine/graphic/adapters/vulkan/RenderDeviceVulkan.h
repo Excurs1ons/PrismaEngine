@@ -35,6 +35,7 @@ public:
 
     // ========== IRenderDevice接口实现 ==========
     int Initialize(const DeviceDesc& desc) override;
+    int InitializeExternalVulkan(const ExternalVulkanInitInfo& info) override;
     void Shutdown() override;
     std::string GetName() const override;
     std::string GetAPIName() const override;
@@ -186,6 +187,7 @@ private:
     // 离屏渲染支持
     bool m_skipSwapChainRenderPass = false;
     bool m_isDefaultRenderPassActive = false;
+    bool m_isExternalDevice = false;
 };
 
 }  // namespace Prisma::Graphic::Vulkan

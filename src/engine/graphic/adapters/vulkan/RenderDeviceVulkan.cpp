@@ -64,6 +64,9 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         vkb::PhysicalDeviceSelector selector{m_vkbInstance};
         if (m_surface != VK_NULL_HANDLE) {
             selector.set_surface(m_surface);
+        } else {
+            // [修复] 在没有 Surface 的情况下，必须显式允许没有 Presentation 支持的设备
+            selector.defer_surface_initialization();
         }
         
         auto phys_ret = selector.set_minimum_version(1, 3)
@@ -134,17 +137,21 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
             vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]);
         }
 
-        // 9. SwapChain
-        m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.vsync);
+        // 9. SwapChain (仅在有 Surface 的情况下初始化)
+        if (m_surface != VK_NULL_HANDLE) {
+            m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.vsync);
 
-        // 确保 renderFinishedSemaphores 足够大
-        uint32_t imageCount = m_swapChain->GetBufferCount();
-        if (m_renderFinishedSemaphores.size() < imageCount) {
-            size_t oldSize = m_renderFinishedSemaphores.size();
-            m_renderFinishedSemaphores.resize(imageCount);
-            for (size_t i = oldSize; i < imageCount; i++) {
-                vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+            // 确保 renderFinishedSemaphores 足够大
+            uint32_t imageCount = m_swapChain->GetBufferCount();
+            if (m_renderFinishedSemaphores.size() < imageCount) {
+                size_t oldSize = m_renderFinishedSemaphores.size();
+                m_renderFinishedSemaphores.resize(imageCount);
+                for (size_t i = oldSize; i < imageCount; i++) {
+                    vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+                }
             }
+        } else {
+            LOG_INFO("Vulkan", "No surface provided, skipping SwapChain initialization. Operating in Offscreen mode.");
         }
 
         m_initialized = true;
@@ -152,6 +159,80 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     } catch (...) {
         return -999;
     }
+}
+
+int RenderDeviceVulkan::InitializeExternalVulkan(const ExternalVulkanInitInfo& info) {
+    LOG_INFO("Vulkan", "使用外部 Vulkan 资源初始化设备...");
+    
+    m_instance = info.instance;
+    m_physicalDevice = info.physicalDevice;
+    m_device = info.device;
+    m_graphicsQueue = info.graphicsQueue;
+    m_graphicsQueueFamily = info.graphicsQueueFamily;
+    m_isExternalDevice = true;
+
+    // [修复] 即使是外部设备，引擎也需要自己的 VMA 分配器来管理它创建的资源
+    if (info.allocator == VK_NULL_HANDLE) {
+        VmaAllocatorCreateInfo allocatorInfo = {};
+        allocatorInfo.vulkanApiVersion       = VK_API_VERSION_1_3;
+        allocatorInfo.physicalDevice         = m_physicalDevice;
+        allocatorInfo.device                 = m_device;
+        allocatorInfo.instance               = m_instance;
+        if (vmaCreateAllocator(&allocatorInfo, &m_allocator) != VK_SUCCESS) {
+            return -5;
+        }
+    } else {
+        m_allocator = info.allocator;
+    }
+
+    // 初始化命令池和缓冲
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_info.queueFamilyIndex        = m_graphicsQueueFamily;
+    cmd_pool_info.flags                   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    vkCreateCommandPool(m_device, &cmd_pool_info, nullptr, &m_commandPool);
+
+    m_commandBuffers.resize(3);
+    VkCommandBufferAllocateInfo cmd_alloc_info = {};
+    cmd_alloc_info.sType                       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmd_alloc_info.commandPool                 = m_commandPool;
+    cmd_alloc_info.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmd_alloc_info.commandBufferCount          = 3;
+    vkAllocateCommandBuffers(m_device, &cmd_alloc_info, m_commandBuffers.data());
+
+    // 初始化同步对象
+    m_imageAvailableSemaphores.resize(3);
+    m_renderFinishedSemaphores.resize(3);
+    m_inFlightFences.resize(3);
+
+    VkSemaphoreCreateInfo semaphoreInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+    VkFenceCreateInfo fenceInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (size_t i = 0; i < 3; i++) {
+        vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]);
+        vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+        vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]);
+    }
+
+    if (m_resourceFactory) {
+        m_resourceFactory->Initialize(this);
+    }
+
+    // [修复] 处理外部窗口：如果传入了窗口句柄，则创建 Surface 和 Swapchain
+    if (info.windowHandle != nullptr) {
+        LOG_INFO("Vulkan", "正在为外部注入的设备创建 Surface 和 Swapchain...");
+        if (!SDL_Vulkan_CreateSurface(static_cast<SDL_Window*>(info.windowHandle), m_instance, nullptr, &m_surface)) {
+            LOG_ERROR("Vulkan", "Failed to create Surface for external window!");
+            return -1;
+        }
+        
+        // 初始化交换链
+        m_swapChain->Initialize(m_surface, 1600, 900, true);
+    }
+
+    m_initialized = true;
+    return 0;
 }
 
 void RenderDeviceVulkan::Shutdown() {
@@ -185,20 +266,23 @@ void RenderDeviceVulkan::Shutdown() {
     if (m_commandPool)
         vkDestroyCommandPool(m_device, m_commandPool, nullptr);
 
-    // 3. 销毁基础组件
-    if (m_allocator) {
-        vmaDestroyAllocator(m_allocator);
-        m_allocator = VK_NULL_HANDLE;
-    }
+    // [改动] 仅当设备由引擎创建时，才销毁核心组件、设备和实例
+    if (!m_isExternalDevice) {
+        // 3. 销毁基础组件
+        if (m_allocator) {
+            vmaDestroyAllocator(m_allocator);
+            m_allocator = VK_NULL_HANDLE;
+        }
 
-    if (m_surface) {
-        vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
-        m_surface = VK_NULL_HANDLE;
-    }
+        if (m_surface) {
+            vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+            m_surface = VK_NULL_HANDLE;
+        }
 
-    // 4. 最后销毁设备和实例
-    vkb::destroy_device(m_vkbDevice);
-    vkb::destroy_instance(m_vkbInstance);
+        // 4. 最后销毁设备和实例
+        vkb::destroy_device(m_vkbDevice);
+        vkb::destroy_instance(m_vkbInstance);
+    }
     
     m_device = VK_NULL_HANDLE;
     m_instance = VK_NULL_HANDLE;
@@ -208,6 +292,23 @@ void RenderDeviceVulkan::Shutdown() {
 void RenderDeviceVulkan::BeginFrame() {
     if (!m_initialized)
         return;
+
+    // [修复] 处理 Headless 模式：不涉及交换链操作
+    if (Engine::Get().GetSpecification().Headless) {
+        VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+        vkResetCommandBuffer(cmd, 0);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(cmd, &beginInfo);
+
+        m_frameActive = true;
+        m_currentFrameIndex = m_currentFrame;
+        m_hasPendingPresent = false;
+        m_isDefaultRenderPassActive = false;
+        return;
+    }
+
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 
     if (!m_swapChain->AcquireNextImage(m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE)) {
@@ -255,6 +356,24 @@ void RenderDeviceVulkan::EndFrame() {
     if (!m_initialized || !m_frameActive)
         return;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+
+    // [修复] 处理 Headless 模式：仅提交指令，不触碰交换链
+    if (Engine::Get().GetSpecification().Headless) {
+        vkEndCommandBuffer(cmd);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &cmd;
+
+        // 无窗口模式下通常不需要等待信号量
+        vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+        // 为了稳定，离屏渲染每帧同步一次 (TODO: 优化)
+        vkQueueWaitIdle(m_graphicsQueue);
+
+        m_frameActive = false;
+        return;
+    }
 
     // [修复] 如果还没有开启 RenderPass (说明之前被跳过了)，现在为了 Overlay 开启它。
     // 这样可以确保 ImGui 的绘制指令处于合法的 RenderPass 中，
