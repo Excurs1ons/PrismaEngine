@@ -17,7 +17,8 @@ namespace Prisma::Graphic::Vulkan {
 
 class ENGINE_API VulkanTexture : public ITexture {
 public:
-    VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc);
+    VulkanTexture(VkDevice device, VmaAllocator allocator, VkQueue graphicsQueue, uint32_t graphicsQueueIndex, 
+                  VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc);
     ~VulkanTexture() override;
 
     ResourceType GetType() const override { return ResourceType::Texture; }
@@ -138,12 +139,17 @@ public:
             return false;
         }
 
-        TextureMapDesc mapDesc = Map(mipLevel, arraySlice, 2);
-        if (!mapDesc.data || bufferSize < mapDesc.size) {
+        // [修复] 直接从影子缓冲读取
+        // 原因：Map() 逻辑对于 GPU-Only 的视口纹理可能是无效的。
+        //       在独立 UI 架构下，我们通过 DownloadFromGPU 同步到 m_shadowData。
+        uint64_t subresourceSize = GetSubresourceSize(mipLevel);
+        uint64_t offset = (static_cast<uint64_t>(arraySlice) * m_desc.mipLevels + mipLevel) * subresourceSize;
+        
+        if (offset + subresourceSize > m_shadowData.size() || bufferSize < subresourceSize) {
             return false;
         }
 
-        std::memcpy(dstBuffer, mapDesc.data, static_cast<size_t>(mapDesc.size));
+        std::memcpy(dstBuffer, m_shadowData.data() + offset, static_cast<size_t>(subresourceSize));
         return true;
     }
 
@@ -276,6 +282,10 @@ public:
     // -----------------------------------------------------------------------
     void SetDebugName(const std::string& name);
 
+    // [改动] 从 GPU 下载数据到 CPU 影子缓冲
+    // 目的：支持跨 API（如 SDL_Renderer）显示 Vulkan 渲染的内容。
+    void DownloadFromGPU();
+
 private:
     // 存储分配器和分配信息以实现析构时的自动资源销毁
     VkDevice m_device = VK_NULL_HANDLE;
@@ -283,6 +293,8 @@ private:
     VkImage m_image = VK_NULL_HANDLE;
     VmaAllocation m_allocation = VK_NULL_HANDLE;
     VkImageView m_imageView = VK_NULL_HANDLE;
+    VkQueue m_graphicsQueue = VK_NULL_HANDLE;
+    uint32_t m_graphicsQueueIndex = 0;
 
     // -----------------------------------------------------------------------
     // [改动] m_vkFormat

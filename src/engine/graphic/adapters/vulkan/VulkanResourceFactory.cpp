@@ -243,7 +243,17 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
         return nullptr;
     }
 
-    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, imageInfo.format, desc);
+    auto texture = std::make_unique<VulkanTexture>(
+        m_vkDevice, 
+        m_vmaAllocator, 
+        m_device->GetGraphicsQueue(), 
+        m_device->GetGraphicsQueueFamily(),
+        image, 
+        allocation, 
+        imageView, 
+        imageInfo.format, 
+        desc
+    );
 
     // -----------------------------------------------------------------------
     // [改动] 初始布局转换
@@ -285,7 +295,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
                 VkImageMemoryBarrier barrier{};
                 barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
                 barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL; // 使用 GENERAL 以确保最大的兼容性
+                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // 统一使用只读优化布局
                 barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 barrier.image = image;
