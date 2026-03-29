@@ -1,16 +1,33 @@
 #include "EditorLayer.h"
 #include "graphic/ImGuiVulkanResourceManager.h"
 #include "graphic/ViewportRenderPass.h"
+#include "Editor.h"
 
-Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
+// ImGui
+#include <imgui.h>
+#include <imgui_impl_sdl3.h>
+#include <imgui_impl_vulkan.h>
+
+// 访问具体的 Vulkan 类型
+#include "graphic/adapters/vulkan/VulkanResources.h"
+#include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
+
+namespace Prisma {
+
+EditorLayer::EditorLayer() : Layer("EditorLayer") {
     m_editorCameraObject = std::make_shared<GameObject>("Editor Camera");
     m_editorCamera       = m_editorCameraObject->AddComponent<Graphic::Camera>();
     m_editorCamera->SetPerspectiveProjection(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 1000.0f);
     m_editorCameraObject->GetTransform()->SetPosition({0, 2, 5});
 }
 
-void Prisma::EditorLayer::OnUpdate(Timestep ts) {
-    // 引擎离屏设置由 OnRender 驱动，此处不再手动设置 Skip标志
+void EditorLayer::OnUpdate(Timestep ts) {
+    // 提前告知引擎跳过本帧默认 Pass
+    auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(Engine::Get().GetRenderSystem()->GetDevice());
+    if (vkDevice) {
+        vkDevice->SetSkipSwapChainRenderPass(true);
+    }
+
     if (!m_viewportHovered || !ImGui::IsMouseDown(ImGuiMouseButton_Right))
         return;
 
@@ -42,7 +59,7 @@ void Prisma::EditorLayer::OnUpdate(Timestep ts) {
     }
 }
 
-void Prisma::EditorLayer::OnRender() {
+void EditorLayer::OnRender() {
     auto renderSystem = Engine::Get().GetRenderSystem();
     auto sceneManager = Engine::Get().GetSceneManager();
 
@@ -60,11 +77,10 @@ void Prisma::EditorLayer::OnRender() {
     auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
     if (!vkDevice) return;
 
-    // [架构调整] 离屏渲染
-    vkDevice->SetSkipSwapChainRenderPass(true);
     VkCommandBuffer cmd = vkDevice->GetCurrentCommandBuffer();
     if (cmd == VK_NULL_HANDLE) return;
 
+    // [手动接管离屏 RenderPass]
     if (m_viewportRenderPass && m_viewportRenderPass->IsInitialized()) {
         m_viewportRenderPass->Begin(cmd);
         renderSystem->RenderScene(scene, camera, m_viewportTexture.get());
@@ -72,13 +88,14 @@ void Prisma::EditorLayer::OnRender() {
     }
 }
 
-void Prisma::EditorLayer::OnImGuiRender() {
+void EditorLayer::OnImGuiRender() {
     static bool dockspaceOpen = true;
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
     const ImGuiViewport* viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(viewport->WorkPos);
     ImGui::SetNextWindowSize(viewport->WorkSize);
     ImGui::SetNextWindowViewport(viewport->ID);
+    
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
@@ -86,7 +103,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));
-    ImGui::Begin("Prisma Editor Master DockSpace", &dockspaceOpen, window_flags);
+    ImGui::Begin("Prisma Editor DockSpace", &dockspaceOpen, window_flags);
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(3);
 
@@ -118,22 +135,14 @@ void Prisma::EditorLayer::OnImGuiRender() {
         if (m_viewportSize.x > 1.0f && m_viewportSize.y > 1.0f) {
             auto renderSystem = Engine::Get().GetRenderSystem();
             auto resourceManager = renderSystem->GetRenderResourceManager();
+            auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
             
-            // 延迟清理
+            // 延迟清理旧资源
             if (m_viewportTexture) m_deferredDeletionQueue.push_back({m_viewportTexture, 3});
             if (m_viewportDepthTexture) m_deferredDeletionQueue.push_back({m_viewportDepthTexture, 3});
             if (m_viewportRenderPass) m_deferredDeletionQueue.push_back({m_viewportRenderPass, 3});
-            
-            // SDL Texture 清理 (使用定制包装器)
-            if (m_viewportSDLTexture) {
-                struct SDLTextureWrapper {
-                    SDL_Texture* tex;
-                    ~SDLTextureWrapper() { SDL_DestroyTexture(tex); }
-                };
-                m_deferredDeletionQueue.push_back({std::make_shared<SDLTextureWrapper>(m_viewportSDLTexture), 3});
-            }
 
-            // 1. 创建颜色和深度纹理 (Vulkan)
+            // 1. 创建离屏颜色纹理
             Graphic::TextureDesc colorDesc;
             colorDesc.width = (uint32_t)m_viewportSize.x;
             colorDesc.height = (uint32_t)m_viewportSize.y;
@@ -142,6 +151,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
             colorDesc.allowShaderResource = true;
             m_viewportTexture = resourceManager->CreateTexture(colorDesc);
 
+            // 2. 创建离屏深度纹理
             Graphic::TextureDesc depthDesc = colorDesc;
             depthDesc.format = Graphic::TextureFormat::D32_Float;
             depthDesc.allowDepthStencil = true;
@@ -149,38 +159,31 @@ void Prisma::EditorLayer::OnImGuiRender() {
             depthDesc.allowShaderResource = false;
             m_viewportDepthTexture = resourceManager->CreateTexture(depthDesc);
 
-            // 2. 创建 SDL Texture (用于显示)
-            m_viewportSDLTexture = SDL_CreateTexture(
-                Editor::Get().GetRenderer(),
-                SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, 
-                (int)m_viewportSize.x, (int)m_viewportSize.y
-            );
-
             auto vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
             auto vkDepth = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportDepthTexture.get());
-            auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
 
             if (vkTexture && vkDepth && vkDevice) {
+                vkTexture->SetDebugName("Viewport Color");
+                
+                // 3. 创建 Viewport RenderPass (针对离屏纹理)
                 m_viewportRenderPass = std::make_shared<Graphic::Vulkan::ViewportRenderPass>();
                 m_viewportRenderPass->Initialize(
                     vkDevice->GetVkDevice(), vkTexture->GetVkImageView(),
                     vkDepth->GetVkImageView(), (uint32_t)m_viewportSize.x, (uint32_t)m_viewportSize.y
                 );
+                
+                // 4. 创建 ImGui DescriptorSet (GPU 零拷贝)
+                auto& editor = Editor::Get();
+                m_viewportDescriptorSet = editor.GetImGuiResourceManager().GetDescriptorSet(
+                    vkTexture, editor.GetImGuiDescriptorPool(), editor.GetImGuiSampler());
             }
             m_viewportReadyFrames = 0;
         }
     }
 
-    // [核心同步逻辑] 将 Vulkan 像素拷贝到 SDL_Texture
-    if (m_viewportTexture && m_viewportSDLTexture && m_viewportReadyFrames >= 2) {
-        void* pixels;
-        int pitch;
-        if (SDL_LockTexture(m_viewportSDLTexture, NULL, &pixels, &pitch) == 0) {
-            // CPU Readback (暂时如此，因为 UI 独立于 Vulkan)
-            m_viewportTexture->ReadData(0, 0, pixels, (uint64_t)pitch * (uint32_t)m_viewportSize.y);
-            SDL_UnlockTexture(m_viewportSDLTexture);
-        }
-        ImGui::Image((ImTextureID)m_viewportSDLTexture, ImVec2{m_viewportSize.x, m_viewportSize.y});
+    // [零拷贝 GPU 显示]
+    if (m_viewportTexture && m_viewportDescriptorSet && m_viewportReadyFrames >= 2) {
+        ImGui::Image((ImTextureID)m_viewportDescriptorSet, ImVec2{m_viewportSize.x, m_viewportSize.y});
     } else {
         ImGui::Text("Viewport Syncing...");
     }
@@ -200,11 +203,13 @@ void Prisma::EditorLayer::OnImGuiRender() {
     if (m_selectedEntity) {
         ImGui::Text("Entity: %s", m_selectedEntity->name.c_str());
     } else {
-        ImGui::Text("Select an entity");
+        ImGui::Text("Select an entity to view properties");
     }
     ImGui::End();
 }
 
-void Prisma::EditorLayer::OnEvent(Event& event) {
-    // 事件由 Editor::Run 分发，此处处理业务逻辑
+void EditorLayer::OnEvent(Event& event) {
+    // 逻辑分发
 }
+
+} // namespace Prisma

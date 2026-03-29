@@ -8,6 +8,7 @@
 
 // 显式包含 SDL3
 #include <SDL3/SDL.h>
+#include <vulkan/vulkan.h>
 #include <memory>
 #include <vector>
 
@@ -19,7 +20,8 @@ class ImGuiVulkanResourceManager;
 /**
  * @brief 编辑器主应用程序
  * 
- * [架构重构] 编辑器现在是系统的 Master，它持有 Engine 实例并驱动主循环。
+ * [架构重构] 编辑器现在是系统的 Master，持有并驱动 Engine。
+ * UI 渲染使用 ImGui Vulkan 后端，与引擎视口共享 GPU 设备。
  */
 class EDITOR_API Editor {
 public:
@@ -35,13 +37,14 @@ public:
     // 获取引擎实例
     Engine& GetEngine() { return *m_Engine; }
     
-    // 获取 SDL 渲染器 (用于 UI)
-    SDL_Renderer* GetRenderer() { return m_Renderer; }
-    
     // 获取 ImGui 资源管理器 (用于视口纹理转换)
     ImGuiVulkanResourceManager& GetImGuiResourceManager() { return *m_imguiResourceManager; }
 
     void OpenProjectSettings() { m_showProjectSettings = true; }
+
+    // 获取 ImGui 所需的 Vulkan 资源句柄
+    VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
+    VkSampler GetImGuiSampler() const { return m_imguiSampler; }
 
 private:
     void OnUpdate(Timestep ts);
@@ -57,9 +60,12 @@ private:
     std::unique_ptr<Engine> m_Engine;
     bool m_Running = false;
 
-    // SDL 资源 (用于 UI 渲染)
+    // 窗口资源 (由编辑器管理)
     SDL_Window* m_Window = nullptr;
-    SDL_Renderer* m_Renderer = nullptr; // 用于 UI
+
+    // ImGui Vulkan 资源
+    VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
+    VkSampler m_imguiSampler = VK_NULL_HANDLE;
 
     // 编辑器状态
     ProjectSettingsWindow m_projectSettingsWindow;
@@ -69,7 +75,7 @@ private:
     // ImGui 资源管理器
     std::unique_ptr<ImGuiVulkanResourceManager> m_imguiResourceManager;
     
-    // 编辑器层 (原来的 Application 逻辑移到这里)
+    // 编辑器层
     std::vector<std::unique_ptr<EditorLayer>> m_Layers;
 };
 
