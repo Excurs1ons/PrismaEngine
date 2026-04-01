@@ -33,7 +33,7 @@ public:
     template<typename T>
     T GetFunction(const std::string& functionName) {
         if (!m_handle) {
-            LOG_ERROR("DynamicLoader", "Library not loaded");
+            LOG_ERROR("DynamicLoader", "库未加载");
             throw std::runtime_error("Library not loaded");
         }
         
@@ -41,14 +41,14 @@ public:
         FARPROC func = GetProcAddress((HMODULE)m_handle, functionName.c_str());
         if (!func) {
             DWORD error = GetLastError();
-            LOG_ERROR("DynamicLoader", "Cannot get function: {0}, error: {1}", functionName.c_str(), error);
+            LOG_ERROR("DynamicLoader", "无法获取函数: {0}，错误码: {1}", functionName.c_str(), error);
             throw std::runtime_error("Failed to get function: " + functionName);
         }
         return reinterpret_cast<T>(func);
 #else
         void* func = dlsym(m_handle, functionName.c_str());
         if (!func) {
-            LOG_ERROR("DynamicLoader", "Cannot get function: {0}, error: {1}", functionName.c_str(), dlerror());
+            LOG_ERROR("DynamicLoader", "无法获取函数: {0}，错误: {1}", functionName.c_str(), dlerror());
             throw std::runtime_error("Failed to get function: " + functionName);
         }
         return reinterpret_cast<T>(func);
@@ -58,18 +58,18 @@ public:
     template<typename T>
     bool TryGetFunction(const std::string& functionName, T& outFunc) {
         if (!m_handle) {
-            LOG_FATAL("DynamicLoader", "Library not loaded");
+            LOG_FATAL("DynamicLoader", "库未加载");
             return false;
         }
         try {
             outFunc = GetFunction<T>(functionName);
         }
         catch (const std::exception& e) {
-            LOG_FATAL("DynamicLoader", "Cannot get function: {0}, error: {1}", functionName.c_str(), e.what());
+            LOG_FATAL("DynamicLoader", "无法获取函数: {0}，错误: {1}", functionName.c_str(), e.what());
             return false;
         }
         if (!outFunc) {
-            LOG_FATAL("DynamicLoader", "Cannot get function: {0}, error: nullptr", functionName.c_str());
+            LOG_FATAL("DynamicLoader", "无法获取函数: {0}，错误: 空指针", functionName.c_str());
             return false;
         }
         return true;

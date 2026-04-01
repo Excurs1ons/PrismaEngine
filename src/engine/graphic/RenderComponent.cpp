@@ -110,7 +110,7 @@ std::shared_ptr<Material> RenderComponent::GetOrCreateMaterial() {
 }
 
 void RenderComponent::Initialize() {
-    LOG_DEBUG("RenderComponent", "RenderComponent initialized for GameObject: {0}",
+    LOG_DEBUG("RenderComponent", "游戏对象 '{0}' 的渲染组件已初始化",
               GetOwner() ? GetOwner()->name : "Unknown");
 }
 

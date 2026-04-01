@@ -14,7 +14,7 @@ Material::Material(std::shared_ptr<Shader> shader) : m_Shader(std::move(shader))
 bool Material::Load(const std::filesystem::path& path) {
     std::ifstream file(path);
     if (!file.is_open()) {
-        LOG_ERROR("Material", "Failed to open material file: {0}", path.string());
+        LOG_ERROR("Material", "无法打开材质文件: {0}", path.string());
         return false;
     }
 
@@ -22,7 +22,7 @@ bool Material::Load(const std::filesystem::path& path) {
     try {
         file >> root;
     } catch (const std::exception& ex) {
-        LOG_ERROR("Material", "Failed to parse material file {0}: {1}", path.string(), ex.what());
+        LOG_ERROR("Material", "解析材质文件 {0} 失败: {1}", path.string(), ex.what());
         return false;
     }
 
@@ -140,7 +140,7 @@ void Material::Bind(class ICommandBuffer* cmd) {
         auto it = m_Params.find(resource.Name);
         if (it == m_Params.end()) {
             // 记录缺失的参数，方便调试
-            LOG_WARN("Material", "Missing required parameter: {0} for shader binding.", resource.Name);
+            LOG_WARN("Material", "着色器绑定缺失所需参数: {0}。", resource.Name);
             continue;
         }
 

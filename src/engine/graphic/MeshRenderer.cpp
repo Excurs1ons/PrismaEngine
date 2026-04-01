@@ -54,19 +54,19 @@ void MeshRenderer::Update(Timestep ts) {
 
 void MeshRenderer::Initialize() {
     if (!GetOwner()) {
-        LOG_ERROR("Renderer", "MeshRenderer initialized without an owner!");
+        LOG_ERROR("Renderer", "MeshRenderer 初始化时没有所有者！");
         return;
     }
     
     if (!GetOwner()->GetTransform()) {
-        LOG_WARNING("Renderer", "MeshRenderer owner '{0}' has no Transform component. Rendering may fail.", GetOwner()->name);
+        LOG_WARNING("Renderer", "MeshRenderer 的所有者 '{0}' 没有变换 (Transform) 组件。渲染可能会失败。", GetOwner()->name);
     }
     
-    LOG_TRACE("Renderer", "MeshRenderer initialized for object '{0}'", GetOwner()->name);
+    LOG_TRACE("Renderer", "已为对象 '{0}' 初始化 MeshRenderer", GetOwner()->name);
 }
 
 void MeshRenderer::Shutdown() {
-    LOG_TRACE("Renderer", "MeshRenderer shutting down for object '{0}'", GetOwner() ? GetOwner()->name : "Unknown");
+    LOG_TRACE("Renderer", "正在为对象 '{0}' 关闭 MeshRenderer", GetOwner() ? GetOwner()->name : "未知");
     m_mesh.reset();
     m_material.reset();
 }

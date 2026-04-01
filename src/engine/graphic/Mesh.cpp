@@ -10,7 +10,7 @@ bool Mesh::Load(const std::filesystem::path& path)
 {
     std::ifstream file(path);
     if (!file.is_open()) {
-        LOG_ERROR("Mesh", "Failed to open mesh file: {0}", path.string());
+        LOG_ERROR("Mesh", "无法打开网格文件: {0}", path.string());
         return false;
     }
 
@@ -59,7 +59,7 @@ bool Mesh::Load(const std::filesystem::path& path)
             const int rawIndex = std::stoi(vertexToken);
             const uint32_t resolvedIndex = resolveIndex(rawIndex, positions.size());
             if (resolvedIndex == std::numeric_limits<uint32_t>::max() || resolvedIndex >= positions.size()) {
-                LOG_WARNING("Mesh", "Skipping invalid face index {0} in mesh {1}", rawIndex, path.string());
+                LOG_WARNING("Mesh", "跳过网格 {1} 中的无效面索引 {0}", rawIndex, path.string());
                 faceIndices.clear();
                 break;
             }
@@ -78,7 +78,7 @@ bool Mesh::Load(const std::filesystem::path& path)
     }
 
     if (positions.empty() || indices.empty()) {
-        LOG_ERROR("Mesh", "Mesh file does not contain usable geometry: {0}", path.string());
+        LOG_ERROR("Mesh", "网格文件不包含可用的几何数据: {0}", path.string());
         return false;
     }
 

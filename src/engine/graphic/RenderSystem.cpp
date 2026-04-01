@@ -17,39 +17,39 @@ RenderSystem::~RenderSystem() {
 }
 
 int RenderSystem::Initialize() {
-    LOG_INFO("Renderer", "Initializing RenderSystem backend: {0}", (int)m_desc.backendType);
+    LOG_INFO("Renderer", "正在初始化渲染系统后端: {0}", (int)m_desc.backendType);
     int dev_init_result = InitializeDevice();
     if (dev_init_result != 0) {
-        LOG_ERROR("Renderer", "RenderDevice initializing failed! {0}", dev_init_result);
+        LOG_ERROR("Renderer", "渲染设备初始化失败！ {0}", dev_init_result);
         return dev_init_result;
     }
-    LOG_INFO("Renderer", "RenderDevice initialized successfully: {0} ({1})", m_device->GetName(), m_device->GetAPIName());
+    LOG_INFO("Renderer", "渲染设备初始化成功: {0} ({1})", m_device->GetName(), m_device->GetAPIName());
 
     int res_manager_init_result = InitializeRenderResourceManager();
     if (res_manager_init_result != 0) {
-        LOG_ERROR("Renderer", "Render Resource Manager initializing failed! {0}", res_manager_init_result);
+        LOG_ERROR("Renderer", "渲染资源管理器初始化失败！ {0}", res_manager_init_result);
         return res_manager_init_result;
     }
-    LOG_INFO("Renderer", "Render Resource Manager initialized successfully.");
+    LOG_INFO("Renderer", "渲染资源管理器初始化成功。");
 
     int pipeline_init_result = InitializeRenderPipelines();
     if (pipeline_init_result != 0) {
-        LOG_ERROR("Renderer", "Render Pipelines initializing failed! {0}", pipeline_init_result);
+        LOG_ERROR("Renderer", "渲染管线初始化失败！ {0}", pipeline_init_result);
         return pipeline_init_result;
     }
-    LOG_INFO("Renderer", "Pipelines initialized successfully.");
+    LOG_INFO("Renderer", "管线初始化成功。");
 
     // 初始化 2D 渲染器
     Renderer2D::Initialize();
-    LOG_INFO("Renderer", "Renderer2D initialized successfully.");
+    LOG_INFO("Renderer", "2D 渲染器初始化成功。");
 
-    LOG_INFO("Renderer", "RenderSystem initialized successfully.");
+    LOG_INFO("Renderer", "渲染系统初始化成功。");
     return 0;
 }
 
 int RenderSystem::InitializeDevice() {
     if (m_desc.backendType == RenderAPIType::Vulkan) {
-        LOG_INFO("Renderer", "Creating Vulkan RenderDevice...");
+        LOG_INFO("Renderer", "正在创建 Vulkan 渲染设备...");
         m_device = std::make_unique<Vulkan::RenderDeviceVulkan>();
 
         DeviceDesc devDesc;
@@ -61,7 +61,7 @@ int RenderSystem::InitializeDevice() {
         
         return m_device->Initialize(devDesc); 
     }
-    LOG_ERROR("Renderer", "Unsupported RenderAPIType: {0}", (int)m_desc.backendType);
+    LOG_ERROR("Renderer", "不支持的渲染 API 类型: {0}", (int)m_desc.backendType);
     return -1;
 }
 
@@ -93,7 +93,7 @@ void RenderSystem::Shutdown() {
         return;
     }
 
-    LOG_INFO("Renderer", "Shutting down renderer...");
+    LOG_INFO("Renderer", "正在关闭渲染器...");
     
     // 关闭 2D 渲染器
     Renderer2D::Shutdown();
@@ -148,7 +148,7 @@ void RenderSystem::SetMainPipeline(std::shared_ptr<IPipeline> pipeline) {
     if (m_mainRenderPipeline && m_device) {
         const int result = m_mainRenderPipeline->Initialize(m_device.get());
         if (result != 0) {
-            LOG_ERROR("RenderSystem", "Failed to initialize new main pipeline: {0}", result);
+            LOG_ERROR("RenderSystem", "初始化新的主管线失败: {0}", result);
             m_mainRenderPipeline.reset();
         }
     }
@@ -156,7 +156,7 @@ void RenderSystem::SetMainPipeline(std::shared_ptr<IPipeline> pipeline) {
 
 void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera, ITexture* targetTexture) {
     if (!scene || !camera) {
-        LOG_WARNING("RenderSystem", "Attempting to render with null scene or camera");
+        LOG_WARNING("RenderSystem", "尝试使用空的场景或相机进行渲染");
         return;
     }
 
@@ -186,7 +186,7 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
 
         m_mainRenderPipeline->Execute(ctx);
     } else {
-        LOG_ERROR("RenderSystem", "No active pipeline to render the scene");
+        LOG_ERROR("RenderSystem", "没有处于活动状态的管线来进行场景渲染");
     }
 }
 

@@ -8,7 +8,7 @@ using namespace Serialization;
 
 bool TextureAsset::Load(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
-        LOG_ERROR("TextureAsset", "Texture file does not exist: {0}", path.string());
+        LOG_ERROR("TextureAsset", "纹理文件不存在: {0}", path.string());
         return false;
     }
 

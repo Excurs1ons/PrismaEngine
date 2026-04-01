@@ -379,11 +379,11 @@ IRenderDevice::RenderStats RenderDeviceVulkan::GetRenderStats() const {
     return m_stats;
 }
 void RenderDeviceVulkan::BeginDebugMarker(const std::string& name) {
-    LOG_DEBUG("Vulkan", "Begin debug marker: {0}", name);
+    LOG_DEBUG("Vulkan", "开始调试标记: {0}", name);
 }
 void RenderDeviceVulkan::EndDebugMarker() {}
 void RenderDeviceVulkan::SetDebugMarker(const std::string& name) {
-    LOG_DEBUG("Vulkan", "Set debug marker: {0}", name);
+    LOG_DEBUG("Vulkan", "设置调试标记: {0}", name);
 }
 std::string RenderDeviceVulkan::GetName() const {
     return "Vulkan Device";

@@ -22,13 +22,13 @@ bool DynamicLoader::Load(const std::string& libraryPath) {
     m_handle = LoadLibraryA(libraryPath.c_str());
     if (m_handle == nullptr) {
         DWORD error = GetLastError();
-        LOG_ERROR("DynamicLoader", "Failed to load library: {0}, error: {1}", libraryPath.c_str(), error);
+        LOG_ERROR("DynamicLoader", "无法加载库: {0}，错误码: {1}", libraryPath.c_str(), error);
         throw std::runtime_error("Failed to load library: " + libraryPath);
     }
 #else
     m_handle = dlopen(libraryPath.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (m_handle == nullptr) {
-        LOG_ERROR("DynamicLoader", "Failed to load library: {0}, error: {1}", libraryPath.c_str(), dlerror());
+        LOG_ERROR("DynamicLoader", "无法加载库: {0}，错误: {1}", libraryPath.c_str(), dlerror());
         throw std::runtime_error("Failed to load library: " + libraryPath);
     }
 #endif
@@ -38,7 +38,7 @@ bool DynamicLoader::Load(const std::string& libraryPath) {
 bool DynamicLoader::TryLoad(const std::string& libraryPath) {
     std::string tempPath = CopyToTempFile(libraryPath);
     if (tempPath.empty()) {
-        LOG_FATAL("DynamicLoader", "Failed to create temp DLL: {0}", libraryPath.c_str());
+        LOG_FATAL("DynamicLoader", "无法创建临时 DLL: {0}", libraryPath.c_str());
         return false;
     }
     
@@ -48,7 +48,7 @@ bool DynamicLoader::TryLoad(const std::string& libraryPath) {
     m_handle = LoadLibraryA(m_tempPath.c_str());
     if (!m_handle) {
         DWORD error = GetLastError();
-        LOG_FATAL("DynamicLoader", "Failed to load library: {0}, error: {1}", libraryPath.c_str(), error);
+        LOG_FATAL("DynamicLoader", "无法加载库: {0}，错误码: {1}", libraryPath.c_str(), error);
         DeleteFileA(m_tempPath.c_str());
         m_tempPath = "";
         return false;
@@ -56,7 +56,7 @@ bool DynamicLoader::TryLoad(const std::string& libraryPath) {
 #else
     m_handle = dlopen(m_tempPath.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (!m_handle) {
-        LOG_FATAL("DynamicLoader", "Failed to load library: {0}, error: {1}", libraryPath.c_str(), dlerror());
+        LOG_FATAL("DynamicLoader", "无法加载库: {0}，错误: {1}", libraryPath.c_str(), dlerror());
         std::filesystem::remove(m_tempPath);
         m_tempPath = "";
         return false;
@@ -94,7 +94,7 @@ std::string DynamicLoader::CopyToTempFile(const std::string& sourcePathStr) {
     auto sourceAbsolutePath = exe_path / sourcePath;
     
     if (!std::filesystem::exists(sourceAbsolutePath)) {
-        LOG_FATAL("DynamicLoader", "Source file not found: {0}", sourceAbsolutePath.string());
+        LOG_FATAL("DynamicLoader", "未找到源文件: {0}", sourceAbsolutePath.string());
         return "";
     }
     
@@ -102,12 +102,12 @@ std::string DynamicLoader::CopyToTempFile(const std::string& sourcePathStr) {
     char tempFileName[MAX_PATH];
     
     if (GetTempPathA(MAX_PATH, tempPath) == 0) {
-        LOG_FATAL("DynamicLoader", "Cannot get temp path");
+        LOG_FATAL("DynamicLoader", "无法获取临时路径");
         return "";
     }
 
     if (GetTempFileNameA(tempPath, "dll_", 0, tempFileName) == 0) {
-        LOG_FATAL("DynamicLoader", "Cannot create temp file");
+        LOG_FATAL("DynamicLoader", "无法创建临时文件");
         return "";
     }
     
@@ -117,7 +117,7 @@ std::string DynamicLoader::CopyToTempFile(const std::string& sourcePathStr) {
     newTempFileName += ".dll";
     
     if (!CopyFileA(sourceAbsolutePath.string().c_str(), newTempFileName.c_str(), FALSE)) {
-        LOG_FATAL("DynamicLoader", "Cannot copy file: {0} -> {1}", sourceAbsolutePath.string(), newTempFileName);
+        LOG_FATAL("DynamicLoader", "无法复制文件: {0} -> {1}", sourceAbsolutePath.string(), newTempFileName);
         return "";
     }
     return newTempFileName;
@@ -130,7 +130,7 @@ std::string DynamicLoader::CopyToTempFile(const std::string& sourcePathStr) {
     auto sourceAbsolutePath = exe_path / sourcePath;
 
     if (!std::filesystem::exists(sourceAbsolutePath)) {
-        LOG_FATAL("DynamicLoader", "Source file not found: {0}", sourceAbsolutePath.string());
+        LOG_FATAL("DynamicLoader", "未找到源文件: {0}", sourceAbsolutePath.string());
         return "";
     }
 
@@ -139,7 +139,7 @@ std::string DynamicLoader::CopyToTempFile(const std::string& sourcePathStr) {
     try {
         std::filesystem::copy_file(sourceAbsolutePath, newTempFileName, std::filesystem::copy_options::overwrite_existing);
     } catch (const std::exception& e) {
-        LOG_FATAL("DynamicLoader", "Cannot copy file: {0} -> {1}", sourceAbsolutePath.string(), newTempFileName);
+        LOG_FATAL("DynamicLoader", "无法复制文件: {0} -> {1}", sourceAbsolutePath.string(), newTempFileName);
         return "";
     }
     return newTempFileName;

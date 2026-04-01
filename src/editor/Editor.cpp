@@ -9,6 +9,7 @@
 #include "CommandLineParser.h"
 #include "Environment.h"
 #include "graphic/ImGuiVulkanResourceManager.h"
+#include <filesystem>
 
 // ImGui
 #include <imgui.h>
@@ -33,26 +34,26 @@ Editor::Editor() : Application(ApplicationSpecification{"Prisma Editor", 1280, 7
 Editor::~Editor() {}
 
 int Editor::OnInitialize() {
-    LOG_INFO("Editor", "Initializing Editor Plugin (Pure Mode)...");
+    LOG_INFO("Editor", "正在初始化编辑器插件 (纯净模式)...");
 
     // 1. 初始化 ImGui
     int result = OnImGuiInitialize();
     if (result != 0) {
-        LOG_ERROR("Editor", "ImGui initialization failed");
+        LOG_ERROR("Editor", "ImGui 初始化失败");
         return result;
     }
 
     // 2. 推送编辑器层
     PushLayer(new EditorLayer());
 
-    LOG_INFO("Editor", "Editor Plugin initialized successfully.");
+    LOG_INFO("Editor", "编辑器插件初始化成功。");
     return 0;
 }
 
 int Editor::OnImGuiInitialize() {
-    LOG_INFO("Editor", "OnImGuiInitialize: Starting...");
+    LOG_INFO("Editor", "OnImGuiInitialize: 正在启动...");
     IMGUI_CHECKVERSION();
-    LOG_INFO("Editor", "OnImGuiInitialize: CreateContext...");
+    LOG_INFO("Editor", "OnImGuiInitialize: 创建上下文...");
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
@@ -60,26 +61,50 @@ int Editor::OnImGuiInitialize() {
     io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
     ImGui::StyleColorsDark();
 
+    // [改动] 加载中文字体以解决编辑器无法显示中文的问题
+    ImFont* font = nullptr;
+    std::vector<std::string> fontPaths = {
+        "C:/Windows/Fonts/msyh.ttc",   // Microsoft YaHei
+        "C:/Windows/Fonts/msyh.ttf",
+        "C:/Windows/Fonts/simsun.ttc", // SimSun
+        "assets/fonts/msyh.ttc"
+    };
+
+    for (const auto& path : fontPaths) {
+        if (std::filesystem::exists(path)) {
+            // 使用 GetGlyphRangesChineseSimplifiedCommon() 获取常用中文字符集
+            font = io.Fonts->AddFontFromFileTTF(path.c_str(), 18.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+            if (font) {
+                LOG_INFO("Editor", "成功加载中文字体: %s", path.c_str());
+                break;
+            }
+        }
+    }
+
+    if (!font) {
+        LOG_WARN("Editor", "加载中文字体失败。将使用 ImGui 默认字体。");
+    }
+
     auto& engine      = Engine::Get();
     auto renderSystem = engine.GetRenderSystem();
     auto device       = renderSystem->GetDevice();
     auto* vkDevice    = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(device);
     
-    LOG_INFO("Editor", "OnImGuiInitialize: Binding SDL3...");
+    LOG_INFO("Editor", "OnImGuiInitialize: 正在绑定 SDL3...");
     // 绑定后端
     auto& window          = engine.GetWindow();
     SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
     if (!sdlWindow) {
-        LOG_ERROR("Editor", "Native window is null!");
+        LOG_ERROR("Editor", "原生窗口为空！");
         return -1;
     }
     
     if (!ImGui_ImplSDL3_InitForVulkan(sdlWindow)) {
-        LOG_ERROR("Editor", "ImGui_ImplSDL3_InitForVulkan failed!");
+        LOG_ERROR("Editor", "ImGui_ImplSDL3_InitForVulkan 失败！");
         return -1;
     }
 
-    LOG_INFO("Editor", "OnImGuiInitialize: Initializing Vulkan backend...");
+    LOG_INFO("Editor", "OnImGuiInitialize: 正在初始化 Vulkan 后端...");
     ImGui_ImplVulkan_InitInfo init_info = {};
 
     // [修复] ApiVersion 必须与创建 VkInstance 时使用的 Vulkan API 版本一致。
@@ -161,6 +186,27 @@ int Editor::OnImGuiInitialize() {
 }
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
+
+    // 更新窗口标题
+    static std::string lastTitle = "";
+    std::string projectName = m_projectSettingsWindow.GetSettings().productName;
+    if (m_IsProjectDirty) projectName += "*";
+
+    std::string sceneName = "None";
+    bool sceneDirty = false;
+    if (auto sceneManager = Engine::Get().GetSceneManager()) {
+        if (auto scene = sceneManager->GetCurrentScene()) {
+            sceneName = scene->GetName();
+            sceneDirty = scene->IsDirty();
+        }
+    }
+    if (sceneDirty) sceneName += "*";
+
+    std::string title = projectName + " - " + sceneName + " - Prisma Engine (Vulkan)";
+    if (title != lastTitle) {
+        Engine::Get().GetWindow().SetTitle(title);
+        lastTitle = title;
+    }
 }
 
 void* Editor::GetImGuiContext() {
@@ -207,7 +253,7 @@ void Editor::OnRender() {
 //      因为 ImGui 后端内部可能在销毁过程中仍持有这些资源的句柄。
 // -----------------------------------------------------------------------
 void Editor::OnShutdown() {
-    LOG_INFO("Editor", "Shutting down Editor...");
+    LOG_INFO("Editor", "正在关闭编辑器...");
 
     // 1. 立即停止渲染回调，防止后续帧进入
     if (auto renderSystem = Engine::Get().GetRenderSystem()) {

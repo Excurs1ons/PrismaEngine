@@ -369,7 +369,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromFile(const std
 
 std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(const void* data, uint64_t dataSize, const TextureDesc& desc) {
     if (!data || dataSize == 0) {
-        LOG_ERROR("Vulkan", "CreateTextureFromMemory requires non-empty source data");
+        LOG_ERROR("Vulkan", "CreateTextureFromMemory 要求源数据不能为空");
         return nullptr;
     }
 
@@ -379,7 +379,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(const v
 std::unique_ptr<IBuffer> VulkanResourceFactory::CreateBufferImpl(const BufferDesc& desc) {
     std::string errorMsg;
     if (!ValidateBufferDesc(desc, errorMsg)) {
-        LOG_ERROR("Vulkan", "Invalid buffer description: {0}", errorMsg);
+        LOG_ERROR("Vulkan", "无效的缓冲区描述: {0}", errorMsg);
         return nullptr;
     }
 
@@ -548,7 +548,7 @@ void VulkanResourceFactory::DeallocateToTexturePool(uint64_t poolId, ITexture* t
         return;
     }
 
-    LOG_DEBUG("Vulkan", "Texture returned to pool {0} is externally owned; caller should release through a pooled handle", poolId);
+    LOG_DEBUG("Vulkan", "返回到池 {0} 的纹理是外部拥有的；调用者应通过池化句柄释放", poolId);
 }
 void VulkanResourceFactory::CleanupResourcePools() {}
 

@@ -26,6 +26,11 @@ public:
     // 更新场景中的所有对象
     void Update(Timestep ts);
     
+    // 场景名称与脏标记
+    void SetName(const std::string& name) { m_Name = name; }
+    const std::string& GetName() const { return m_Name; }
+    void SetDirty(bool dirty) { m_IsDirty = dirty; }
+    bool IsDirty() const { return m_IsDirty; }
       
     // 获取场景中的所有游戏对象
     const std::vector<std::shared_ptr<GameObject>>& GetGameObjects() const;
@@ -37,6 +42,8 @@ public:
     void SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera);
 
 private:
+    std::string m_Name = "Untitled";
+    bool m_IsDirty = false;
     std::vector<std::shared_ptr<GameObject>> m_gameObjects;
     std::shared_ptr<Prisma::Graphic::ICamera> m_mainCamera;
 };

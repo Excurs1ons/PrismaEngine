@@ -97,7 +97,7 @@ void ThreadManager::Update(Timestep ts) {
     }
 
     if (ts > 0.0f && !m_threadMetadata.empty()) {
-        LOG_DEBUG("Thread", "Thread manager update: {} tracked threads", m_threadMetadata.size());
+        LOG_DEBUG("Thread", "线程管理器更新：{} 个已跟踪线程", m_threadMetadata.size());
     }
 }
 

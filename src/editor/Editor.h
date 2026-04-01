@@ -42,6 +42,9 @@ public:
 
     void OpenProjectSettings() { m_showProjectSettings = true; }
 
+    bool IsProjectDirty() const { return m_IsProjectDirty; }
+    void SetProjectDirty(bool dirty) { m_IsProjectDirty = dirty; }
+
     // 获取 ImGui DescriptorPool 和 Sampler
     VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
     VkSampler GetImGuiSampler() const { return m_imguiSampler; }
@@ -59,6 +62,7 @@ private:
 
     // ImGui 资源管理器
     std::unique_ptr<ImGuiVulkanResourceManager> m_imguiResourceManager;
+    bool m_IsProjectDirty = false;
 };
 
 } // namespace Prisma

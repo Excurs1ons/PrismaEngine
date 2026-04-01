@@ -92,7 +92,7 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     }
     Cleanup();
 
-    LOG_INFO("Vulkan", "Initializing SwapChain: {0}x{1}, vsync: {2}", width, height, vsync);
+    LOG_INFO("Vulkan", "正在初始化交换链: {0}x{1}, 垂直同步: {2}", width, height, vsync);
 
     // 修正：按照 (VkPhysicalDevice, VkDevice, VkSurfaceKHR) 的顺序传递
     vkb::SwapchainBuilder swapchain_builder{m_device->GetPhysicalDevice(), m_device->GetVkDevice(), (VkSurfaceKHR)windowHandle};
@@ -103,7 +103,7 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
         .build();
 
     if (!vkb_swap_ret) {
-        LOG_ERROR("Vulkan", "Failed to create swapchain: {0}", vkb_swap_ret.error().message());
+        LOG_ERROR("Vulkan", "创建交换链失败: {0}", vkb_swap_ret.error().message());
         return -1;
     }
 
@@ -155,7 +155,7 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     renderPassInfo.pDependencies = &dependency;
 
     if (vkCreateRenderPass(m_device->GetVkDevice(), &renderPassInfo, nullptr, &m_renderPass) != VK_SUCCESS) {
-        LOG_ERROR("Vulkan", "Failed to create render pass!");
+        LOG_ERROR("Vulkan", "创建渲染通道失败！");
         return -2;
     }
 
@@ -174,7 +174,7 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
         framebufferInfo.layers = 1;
 
         if (vkCreateFramebuffer(m_device->GetVkDevice(), &framebufferInfo, nullptr, &m_framebuffers[i]) != VK_SUCCESS) {
-            LOG_ERROR("Vulkan", "Failed to create framebuffer!");
+            LOG_ERROR("Vulkan", "创建帧缓冲区失败！");
             return -3;
         }
 
@@ -312,4 +312,4 @@ bool VulkanSwapChain::Resize(uint32_t width, uint32_t height) {
     return Initialize(m_device->GetVkSurface(), width, height, true) == 0; // 暂时写死 vsync
 }
 
-}
+} // namespace Prisma::Graphic::Vulkan

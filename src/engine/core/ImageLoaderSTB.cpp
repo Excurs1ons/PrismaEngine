@@ -16,8 +16,8 @@ ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
 
     if (!isFormatSupported(extension)) {
         result.success = false;
-        result.error = "Unsupported image format: " + extension;
-        LOG_ERROR("ImageLoader", "Unsupported format: {}", extension);
+        result.error = "不支持的图像格式: " + extension;
+        LOG_ERROR("ImageLoader", "不支持的格式: {}", extension);
         return result;
     }
 
@@ -26,8 +26,8 @@ ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
 
     if (!data) {
         result.success = false;
-        result.error = "Failed to load image: " + std::string(stbi_failure_reason());
-        LOG_ERROR("ImageLoader", "Failed to load {}: {}", filePath, stbi_failure_reason());
+        result.error = "加载图像失败: " + std::string(stbi_failure_reason());
+        LOG_ERROR("ImageLoader", "无法加载 {}: {}", filePath, stbi_failure_reason());
         return result;
     }
 
@@ -40,7 +40,7 @@ ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
     result.data.resize(dataSize);
     std::memcpy(result.data.data(), data, dataSize);
 
-    LOG_INFO("ImageLoader", "Loaded image: {} ({}x{}x{} ch)", 
+    LOG_INFO("ImageLoader", "已加载图像: {} ({}x{}x{} 通道)", 
               filePath, width, height, channels);
 
     stbi_image_free(data);
@@ -57,7 +57,7 @@ ImageLoadResult ImageLoaderSTB::loadFromMemory(const uint8_t* data, size_t size)
 
     if (!imageData) {
         result.success = false;
-        result.error = "Failed to load image from memory";
+        result.error = "无法从内存加载图像";
         return result;
     }
 
