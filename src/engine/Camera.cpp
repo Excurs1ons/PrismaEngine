@@ -21,7 +21,7 @@ Camera::Camera()
 Camera::~Camera() {}
 
 void Camera::Initialize() {
-    LOG_INFO("Camera3D", "Camera3D component initialized for GameObject '{0}'", GetOwner()->name);
+    LOG_INFO("Camera3D", "GameObject '{0}' 的 Camera3D 组件已初始化", GetOwner()->name);
 
     // 初始化Transform的旋转（相机默认看向-Z方向）
     if (auto transform = GetOwner()->GetTransform()) {

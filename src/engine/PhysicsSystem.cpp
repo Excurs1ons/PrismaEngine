@@ -8,12 +8,12 @@
 namespace Prisma {
 
 int PhysicsSystem::Initialize() {
-    LOG_INFO("Physics", "Prisma Physics Subsystem Initializing...");
+    LOG_INFO("Physics", "Prisma 物理子系统正在初始化...");
     return 0;
 }
 
 void PhysicsSystem::Shutdown() {
-    LOG_INFO("Physics", "Physics system shutting down.");
+    LOG_INFO("Physics", "物理子系统正在关闭。");
 }
 
 void PhysicsSystem::Update(Timestep ts) {

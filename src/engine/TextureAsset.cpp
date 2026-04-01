@@ -41,7 +41,7 @@ static void createVulkanImage(
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
     if (vkCreateImage(context->device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image!");
+        throw std::runtime_error("无法创建图像！");
     }
 
     VkMemoryRequirements memRequirements;
@@ -54,7 +54,7 @@ static void createVulkanImage(
             memRequirements.memoryTypeBits, properties);
 
     if (vkAllocateMemory(context->device, &allocInfo, nullptr, &imageMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate image memory!");
+        throw std::runtime_error("无法分配图像内存！");
     }
 
     vkBindImageMemory(context->device, image, imageMemory, 0);
@@ -81,7 +81,7 @@ static VkImageView createImageView(
 
     VkImageView imageView;
     if (vkCreateImageView(context->device, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture image view!");
+        throw std::runtime_error("无法创建纹理图像视图！");
     }
 
     return imageView;
@@ -109,7 +109,7 @@ static VkSampler createTextureSampler(VulkanContext* context, uint32_t mipLevels
 
     VkSampler sampler;
     if (vkCreateSampler(context->device, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture sampler!");
+        throw std::runtime_error("无法创建纹理采样器！");
     }
     return sampler;
 }
@@ -198,7 +198,7 @@ std::shared_ptr<TextureAsset> TextureAsset::createWhiteFallback(VulkanContext* v
 
     texture->sampler_ = createTextureSampler(vulkanContext, mipLevels);
 
-    LOG_INFO("TextureAsset", "Created white fallback texture (1x1)");
+    LOG_INFO("TextureAsset", "已创建白色回退纹理 (1x1)");
 
     return texture;
 }
@@ -224,7 +224,7 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
         const std::string& assetPath,
         VulkanContext* vulkanContext) {
     if (!vulkanContext) {
-        LOG_WARNING("TextureAsset", "Cannot load texture without a Vulkan context: {}", assetPath);
+        LOG_WARNING("TextureAsset", "无法在没有 Vulkan 上下文的情况下加载纹理: {}", assetPath);
         return nullptr;
     }
 
@@ -234,7 +234,7 @@ std::shared_ptr<TextureAsset> TextureAsset::loadAsset(
     stbi_set_flip_vertically_on_load(false);
     stbi_uc* imageData = stbi_load(assetPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
     if (!imageData) {
-        LOG_WARNING("TextureAsset", "Failed to load texture {}, falling back to white texture", assetPath);
+        LOG_WARNING("TextureAsset", "加载纹理 {} 失败，正在回退到白色纹理", assetPath);
         return getWhiteFallback(vulkanContext);
     }
 

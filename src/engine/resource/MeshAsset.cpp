@@ -12,7 +12,7 @@ using namespace Serialization;
 bool MeshAsset::Load(const std::filesystem::path& path) {
     try {
         if (!std::filesystem::exists(path)) {
-            LOG_ERROR("MeshAsset", "Mesh file does not exist: {0}", path.string());
+            LOG_ERROR("MeshAsset", "网格文件不存在: {0}", path.string());
             return false;
         }
 
@@ -33,7 +33,7 @@ bool MeshAsset::Load(const std::filesystem::path& path) {
         SetLoaded(true);
         return true;
     } catch (const std::exception& e) {
-        LOG_ERROR("MeshAsset", "Exception while loading mesh: {0}", e.what());
+        LOG_ERROR("MeshAsset", "加载网格时发生异常: {0}", e.what());
         return false;
     }
 }

@@ -11,7 +11,7 @@ bool Shader::Load(const std::filesystem::path& path) {
     SetPath(path);
 
     // 1. 加载 SPIR-V 字节码 (这里简化处理，实际应读取文件)
-    LOG_INFO("Shader", "Loading shader bytecode from: {0}", path.string());
+    LOG_INFO("Shader", "正在从以下路径加载着色器字节码: {0}", path.string());
     if (std::filesystem::exists(path)) {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (file.is_open()) {
@@ -73,7 +73,7 @@ const ShaderResource* Shader::FindResource(const std::string& name) const {
 
 std::shared_ptr<Shader> ShaderLibrary::Load(const std::string& name, const std::filesystem::path& path) {
     if (m_Shaders.find(name) != m_Shaders.end()) {
-        LOG_WARNING("Shader", "Shader already exists in library: {0}", name);
+        LOG_WARNING("Shader", "着色器已存在于库中: {0}", name);
         return m_Shaders[name];
     }
 
@@ -87,13 +87,13 @@ std::shared_ptr<Shader> ShaderLibrary::Load(const std::string& name, const std::
         return shader;
     }
 
-    LOG_ERROR("Shader", "Failed to load shader: {0}", path.string());
+    LOG_ERROR("Shader", "加载着色器失败: {0}", path.string());
     return nullptr;
 }
 
 std::shared_ptr<Shader> ShaderLibrary::Get(const std::string& name) {
     if (m_Shaders.find(name) == m_Shaders.end()) {
-        LOG_ERROR("Shader", "Shader not found in library: {0}", name);
+        LOG_ERROR("Shader", "在库中未找到着色器: {0}", name);
         return nullptr;
     }
     return m_Shaders[name];
@@ -110,13 +110,13 @@ void ShaderLibrary::Update(Prisma::Timestep ts) {
 
             auto currentWriteTime = std::filesystem::last_write_time(path);
             if (currentWriteTime > m_lastWriteTimes[name]) {
-                LOG_INFO("Shader", "Detected change in shader: {0}. Reloading...", name);
+                LOG_INFO("Shader", "检测到着色器变动: {0}。正在重新加载...", name);
                 shader->Unload();
                 if (shader->Load(path)) {
                     m_lastWriteTimes[name] = currentWriteTime;
-                    LOG_INFO("Shader", "Shader reloaded successfully.");
+                    LOG_INFO("Shader", "着色器重新加载成功。");
                 } else {
-                    LOG_ERROR("Shader", "Failed to reload shader: {0}", name);
+                    LOG_ERROR("Shader", "重新加载着色器失败: {0}", name);
                 }
             }
         }

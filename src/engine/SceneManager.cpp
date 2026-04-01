@@ -7,7 +7,7 @@ namespace Prisma {
 int SceneManager::Initialize() {
     TriangleExample example;
     m_currentScene = example.CreateExampleScene();
-    LOG_INFO("Scene", "Example scene created.");
+    LOG_INFO("Scene", "示例场景已创建。");
     return 0;
 }
 
@@ -22,8 +22,10 @@ void SceneManager::Update(Timestep ts) {
 }
 
 void SceneManager::CreateNewScene() {
-    LOG_INFO("Scene", "Creating new empty scene...");
+    LOG_INFO("Scene", "正在创建新的空场景...");
     m_currentScene = std::make_shared<Scene>();
+    m_currentScene->SetName("未命名场景");
+    m_currentScene->SetDirty(false);
 }
 
 Scene* SceneManager::GetCurrentScene() const {

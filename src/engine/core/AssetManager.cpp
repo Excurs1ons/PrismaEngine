@@ -36,7 +36,7 @@ bool AssetManager::Initialize(const std::filesystem::path& projectRoot) {
     m_Impl->searchPaths.push_back(projectRoot / "assets");
 
     m_Impl->initialized = true;
-    LOG_INFO("AssetManager", "AssetManager initialized with root: {0}", projectRoot.string());
+    LOG_INFO("AssetManager", "资源管理器已初始化，根目录: {0}", projectRoot.string());
     return true;
 }
 
@@ -58,13 +58,13 @@ void AssetManager::Update(Timestep ts) {
             if (std::filesystem::exists(path)) {
                 auto currentWriteTime = std::filesystem::last_write_time(path);
                 if (currentWriteTime > entry.lastWriteTime) {
-                    LOG_INFO("AssetManager", "Detected change in asset: {0}. Reloading...", entry.asset->GetName());
+                    LOG_INFO("AssetManager", "检测到资源变动: {0}。正在重新加载...", entry.asset->GetName());
                     entry.asset->Unload();
                     if (entry.asset->Load(path)) {
                         entry.lastWriteTime = currentWriteTime;
-                        LOG_INFO("AssetManager", "Asset reloaded successfully.");
+                        LOG_INFO("AssetManager", "资源重新加载成功。");
                     } else {
-                        LOG_ERROR("AssetManager", "Failed to reload asset: {0}", entry.asset->GetName());
+                        LOG_ERROR("AssetManager", "重新加载资源失败: {0}", entry.asset->GetName());
                     }
                 }
             }

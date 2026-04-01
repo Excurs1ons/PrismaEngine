@@ -1,5 +1,7 @@
 #include "UUID.h"
 #include <random>
+#include <sstream>
+#include <iomanip>
 
 namespace Prisma {
 
@@ -12,5 +14,19 @@ UUID::UUID()
 
 UUID::UUID(uint64_t uuid)
     : m_UUID(uuid) {}
+
+std::string UUID::ToString() const {
+    std::stringstream ss;
+    ss << std::hex << std::setw(16) << std::setfill('0') << m_UUID;
+    return ss.str();
+}
+
+UUID UUID::FromString(const std::string& str) {
+    uint64_t value = 0;
+    std::stringstream ss;
+    ss << std::hex << str;
+    ss >> value;
+    return UUID(value);
+}
 
 } // namespace Prisma

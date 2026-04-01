@@ -7,7 +7,7 @@ namespace Prisma {
 class Packaging {
 public:
     static bool PackageProject(const std::filesystem::path& targetDir) {
-        LOG_INFO("Packaging", "Starting project packaging to {0}...", targetDir.string());
+        LOG_INFO("Packaging", "正在开始项目打包到 {0}...", targetDir.string());
         
         try {
             if (!std::filesystem::exists(targetDir)) {
@@ -25,10 +25,10 @@ public:
                 std::filesystem::copy("assets", targetDir / "assets", std::filesystem::copy_options::recursive | std::filesystem::copy_options::overwrite_existing);
             }
 
-            LOG_INFO("Packaging", "Project packaged successfully!");
+            LOG_INFO("Packaging", "项目打包成功！");
             return true;
         } catch (const std::exception& e) {
-            LOG_ERROR("Packaging", "Packaging failed: {0}", e.what());
+            LOG_ERROR("Packaging", "打包失败: {0}", e.what());
             return false;
         }
     }

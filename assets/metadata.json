@@ -1,0 +1,56 @@
+{
+    "assets/materials/ground.mat.json": {
+        "customData": null,
+        "guid": "c52fafd81f230dc5",
+        "hash": "ae0f76baf64bcac8cff63012c014ad35",
+        "lastModified": 134100819476385044,
+        "lastSize": 655,
+        "path": "assets/materials/ground.mat.json",
+        "type": ".json"
+    },
+    "assets/materials/player.mat.json": {
+        "customData": null,
+        "guid": "d07ef38eab3e45eb",
+        "hash": "1594836b22e94b2b4746ba24a5a8f2fe",
+        "lastModified": 134100819476385044,
+        "lastSize": 629,
+        "path": "assets/materials/player.mat.json",
+        "type": ".json"
+    },
+    "assets/scenes/demo.scene.json": {
+        "customData": null,
+        "guid": "37aa97c45638e6b4",
+        "hash": "a468f6660af21d57429289c4f5037687",
+        "lastModified": 134100819476390048,
+        "lastSize": 2903,
+        "path": "assets/scenes/demo.scene.json",
+        "type": ".json"
+    },
+    "assets/shaders/Skybox.hlsl": {
+        "customData": null,
+        "guid": "b243163ee0abb0eb",
+        "hash": "d049ae33f3ce42880e64a1124bbafd37",
+        "lastModified": 134098560828233432,
+        "lastSize": 1573,
+        "path": "assets/shaders/Skybox.hlsl",
+        "type": ".hlsl"
+    },
+    "assets/shaders/Text.hlsl": {
+        "customData": null,
+        "guid": "e429ac47e3410835",
+        "hash": "a11c78602b0f7f9b1c1ef0d3b77b0032",
+        "lastModified": 134114872135169143,
+        "lastSize": 1147,
+        "path": "assets/shaders/Text.hlsl",
+        "type": ".hlsl"
+    },
+    "assets/shaders/default.hlsl": {
+        "customData": null,
+        "guid": "9d45a63513d8642e",
+        "hash": "55de2d7a14064576f2e99e32a6dad8e5",
+        "lastModified": 134100889474227086,
+        "lastSize": 906,
+        "path": "assets/shaders/default.hlsl",
+        "type": ".hlsl"
+    }
+}

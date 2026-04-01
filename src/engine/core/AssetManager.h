@@ -52,7 +52,7 @@ public:
 
         auto fullPath = FindResource(relativePath);
         if (!fullPath) {
-            LOG_ERROR("AssetManager", "Asset not found: {0}", relativePath);
+            LOG_ERROR("AssetManager", "未找到资源: {0}", relativePath);
             return AssetHandle<T>();
         }
 
@@ -61,7 +61,7 @@ public:
         asset->Path = *fullPath;
         
         if (!asset->Load(*fullPath)) {
-            LOG_ERROR("AssetManager", "Failed to load asset: {0}", relativePath);
+            LOG_ERROR("AssetManager", "加载资源失败: {0}", relativePath);
             return AssetHandle<T>();
         }
 
@@ -81,7 +81,7 @@ public:
 
         auto fullPath = FindResource(relativePath);
         if (!fullPath) {
-            LOG_ERROR("AssetManager", "Asset not found: {0}", relativePath);
+            LOG_ERROR("AssetManager", "未找到资源: {0}", relativePath);
             if (callback) callback(AssetHandle<T>());
             return;
         }
@@ -95,7 +95,7 @@ public:
             asset->Path = path;
 
             if (!asset->Load(path)) {
-                LOG_ERROR("AssetManager", "Async load failed: {0}", relativePath);
+                LOG_ERROR("AssetManager", "异步加载失败: {0}", relativePath);
                 if (callback) callback(AssetHandle<T>());
                 return;
             }

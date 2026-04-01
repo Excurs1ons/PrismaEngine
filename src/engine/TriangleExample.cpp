@@ -17,17 +17,20 @@ std::shared_ptr<Scene> TriangleExample::CreateExampleScene()
 {
     // 创建场景
     auto scene = std::make_shared<Scene>();
+    scene->SetName("示例场景");
+    scene->SetDirty(false);
     
     // 创建相机
     auto cameraObj = CreateCamera("MainCamera", {0.0f, 0.0f, -0.0f}, {});
     scene->AddGameObject(cameraObj);
     
     // 获取相机组件并设置为场景的主相机
-    auto camera = cameraObj->GetComponent<Prisma::Graphic::ICamera>();
+    auto camera = cameraObj->GetComponent<Prisma::Graphic::Camera>();
     if (camera) {
         scene->SetMainCamera(camera);
-        LOG_INFO("TriangleExample", "Main camera set for scene");
+        LOG_INFO("TriangleExample", "已为场景设置主相机");
     }
+
 
     // 创建几个三角形
     auto triangle1 = CreateTriangle("Triangle1", {-0.7f, 0.0f, 1.0f}, {0.0f,1.0f, 0.0f,1.0f}); // 红色
@@ -98,7 +101,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateTriangle(const std::string& n
     // material->SetName(name + "_Material"); // Material类没有SetName方法，暂时注释
     renderComponent->SetMaterial(material);
     
-    LOG_DEBUG("TriangleExample", "Created triangle '{0}' at position ({1}, {2}) with color ({3}, {4}, {5}, {6})", 
+    LOG_DEBUG("TriangleExample", "已在位置 ({1}, {2}) 创建三角形 '{0}'，颜色为 ({3}, {4}, {5}, {6})", 
         name, pos.x, pos.y, color.x, color.y, color.z, color.w);
     
     return gameObject;
@@ -295,7 +298,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateCamera(const std::string& nam
     camera_controller->SetMoveSpeed(5.0f);      // 设置移动速度
     camera_controller->SetRotationSpeed(90.0f);  // 设置旋转速度
 
-    LOG_DEBUG("TriangleExample", "Created 3D camera '{0}' at position ({1}, {2}, {3})", name, pos.x, pos.y, pos.z);
+    LOG_DEBUG("TriangleExample", "已在位置 ({1}, {2}, {3}) 创建 3D 相机 '{0}'", name, pos.x, pos.y, pos.z);
 
     return game_object;
 }
@@ -319,7 +322,7 @@ std::shared_ptr<GameObject> TriangleExample::CreateDebugText(const std::string& 
     // 添加 FPS 计数器组件
     auto fpsCounter = gameObject->AddComponent<FPSCounter>();
 
-    LOG_DEBUG("TriangleExample", "Created debug text '{0}' at screen center", name);
+    LOG_DEBUG("TriangleExample", "已创建调试文本 '{0}'，位于屏幕中央", name);
 
     return gameObject;
 }

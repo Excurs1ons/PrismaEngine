@@ -1,18 +1,21 @@
 #include "ProjectSettingsWindow.h"
+#include "UIStrings.h"
 #include <imgui.h>
 #include <fstream>
 #include <nlohmann/json.hpp>
 #include "../engine/resource/ArchiveJson.h"
 #include <cstring> // for strncpy
-
+#include "Editor.h"
 using json = nlohmann::json;
+
+using namespace Prisma;
 
 ProjectSettingsWindow::ProjectSettingsWindow() {
     LoadSettings();
 }
 
 void ProjectSettingsWindow::Draw(bool* p_open) {
-    if (!ImGui::Begin("Project Settings", p_open)) {
+    if (!ImGui::Begin(UI::WINDOW_PROJECT_SETTINGS, p_open)) {
         ImGui::End();
         return;
     }
@@ -25,32 +28,44 @@ void ProjectSettingsWindow::Draw(bool* p_open) {
         buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Company Name", buffer, sizeof(buffer))) {
             m_settings.companyName = buffer;
+            Editor::Get().SetProjectDirty(true);
         }
 
         strncpy(buffer, m_settings.productName.c_str(), sizeof(buffer) - 1);
         buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Product Name", buffer, sizeof(buffer))) {
             m_settings.productName = buffer;
+            Editor::Get().SetProjectDirty(true);
         }
 
         strncpy(buffer, m_settings.version.c_str(), sizeof(buffer) - 1);
         buffer[sizeof(buffer) - 1] = '\0';
         if (ImGui::InputText("Version", buffer, sizeof(buffer))) {
             m_settings.version = buffer;
+            Editor::Get().SetProjectDirty(true);
         }
     }
 
     // Resolution & Presentation
     if (ImGui::CollapsingHeader("Resolution and Presentation", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::InputInt("Default Screen Width", &m_settings.screenWidth);
-        ImGui::InputInt("Default Screen Height", &m_settings.screenHeight);
-        ImGui::Checkbox("Fullscreen Mode", &m_settings.fullscreen);
-        ImGui::Checkbox("Resizable Window", &m_settings.resizable);
+        if (ImGui::InputInt("Default Screen Width", &m_settings.screenWidth)) {
+            Editor::Get().SetProjectDirty(true);
+        }
+        if (ImGui::InputInt("Default Screen Height", &m_settings.screenHeight)) {
+            Editor::Get().SetProjectDirty(true);
+        }
+        if (ImGui::Checkbox("Fullscreen Mode", &m_settings.fullscreen)) {
+            Editor::Get().SetProjectDirty(true);
+        }
+        if (ImGui::Checkbox("Resizable Window", &m_settings.resizable)) {
+            Editor::Get().SetProjectDirty(true);
+        }
     }
 
     // Save Button
-    if (ImGui::Button("Save Settings")) {
+    if (ImGui::Button(UI::ITEM_SAVE_SETTINGS)) {
         SaveSettings();
+        Editor::Get().SetProjectDirty(false);
     }
 
     ImGui::End();

@@ -87,7 +87,7 @@ MonoRuntime& MonoRuntime::Get() {
 
 bool MonoRuntime::Initialize(const std::string& configPath) {
 #ifdef PRISMA_ENABLE_MONO
-    LOG_INFO("MonoRuntime", "Initializing Mono with config: {0}", configPath);
+    LOG_INFO("MonoRuntime", "正在使用配置初始化 Mono: {0}", configPath);
     m_initialized = true;
     return true;
 #else
@@ -267,7 +267,7 @@ void MonoRuntime::UnloadDomain(MonoDomain* domain) {
                                        [domain](const auto& ownedDomain) { return ownedDomain.get() == domain; }),
                         m_domains.end());
         if (m_domains.size() != oldSize) {
-            LOG_INFO("MonoRuntime", "Unloading domain");
+            LOG_INFO("MonoRuntime", "正在卸载域");
         }
     }
 }
@@ -293,15 +293,15 @@ void MonoRuntime::SetSearchPaths(const std::vector<std::string>& paths) {
 }
 
 void MonoRuntime::RegisterInternalCall(const std::string& signature, void* function) {
-    LOG_DEBUG("MonoRuntime", "Registering internal call: {0}", signature);
+    LOG_DEBUG("MonoRuntime", "正在注册内部调用: {0}", signature);
     if (!function) {
-        LOG_WARNING("MonoRuntime", "Internal call {0} was registered with a null function pointer", signature);
+        LOG_WARNING("MonoRuntime", "内部调用 {0} 已注册，但函数指针为空", signature);
     }
     m_internalCalls.push_back(signature);
 }
 
 void MonoRuntime::CollectGarbage() {
-    LOG_DEBUG("MonoRuntime", "Garbage collection triggered");
+    LOG_DEBUG("MonoRuntime", "触发垃圾回收");
 #ifdef PRISMA_ENABLE_MONO
     if (m_initialized) {
         mono_gc_collect(mono_gc_max_generation());
@@ -310,7 +310,7 @@ void MonoRuntime::CollectGarbage() {
 }
 
 ManagedObject MonoRuntime::CreateScript(const std::string& scriptPath) {
-    LOG_INFO("MonoRuntime", "Creating script object for: {0}", scriptPath);
+    LOG_INFO("MonoRuntime", "正在为以下路径创建脚本对象: {0}", scriptPath);
     const auto scriptFile = std::filesystem::path(scriptPath);
     const std::string className = scriptFile.stem().empty() ? scriptPath : scriptFile.stem().string();
 

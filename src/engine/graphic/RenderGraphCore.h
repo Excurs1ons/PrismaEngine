@@ -236,7 +236,7 @@ RenderPassBuilder RenderGraph::addPass(const std::string& name) {
     m_passes.push_back(pass);
     m_passNameToIndex[name] = passIndex;
 
-    LOG_DEBUG("RenderGraph", "Added pass: {0} (index: {1})", name, passIndex);
+    LOG_DEBUG("RenderGraph", "已添加渲染 Pass: {0} (索引: {1})", name, passIndex);
 
     return RenderPassBuilder(this, passIndex);
 }

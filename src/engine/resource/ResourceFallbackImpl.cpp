@@ -9,7 +9,7 @@ namespace Prisma {
 namespace Resource {
 
 std::shared_ptr<Asset> CreateDefaultMesh(const std::string& relativePath) {
-    LOG_INFO("ResourceFallback", "Creating default mesh placeholder for: {}", relativePath);
+    LOG_INFO("ResourceFallback", "正在为以下路径创建默认网格占位符: {}", relativePath);
 
     auto mesh = std::make_shared<MeshAsset>();
     mesh->SetName(std::filesystem::path(relativePath).stem().string().empty() ? "DefaultMesh" : std::filesystem::path(relativePath).stem().string());
@@ -31,7 +31,7 @@ std::shared_ptr<Asset> CreateDefaultMesh(const std::string& relativePath) {
 }
 
 std::shared_ptr<Asset> CreateDefaultShader(const std::string& relativePath) {
-    LOG_INFO("ResourceFallback", "Creating default shader placeholder for: {}", relativePath);
+    LOG_INFO("ResourceFallback", "正在为以下路径创建默认着色器占位符: {}", relativePath);
 
     auto shader = std::make_shared<Graphic::Shader>();
     shader->SetName(std::filesystem::path(relativePath).stem().string().empty() ? "DefaultShader" : std::filesystem::path(relativePath).stem().string());
@@ -41,7 +41,7 @@ std::shared_ptr<Asset> CreateDefaultShader(const std::string& relativePath) {
 }
 
 std::shared_ptr<Asset> CreateDefaultMaterial(const std::string& relativePath) {
-    LOG_INFO("ResourceFallback", "Creating default material placeholder for: {}", relativePath);
+    LOG_INFO("ResourceFallback", "正在为以下路径创建默认材质占位符: {}", relativePath);
 
     auto shader = std::dynamic_pointer_cast<Graphic::Shader>(CreateDefaultShader(relativePath));
     auto material = std::make_shared<Graphic::Material>(shader);
@@ -56,3 +56,4 @@ std::shared_ptr<Asset> CreateDefaultMaterial(const std::string& relativePath) {
 
 } // namespace Resource
 } // namespace Prisma
+

@@ -42,10 +42,12 @@ set(CORE_SOURCES
     SoundSynthesizer.cpp
     TriangleExample.cpp
     pch.cpp
+    math/MurmurHash3.cpp
     graphic/Renderer.cpp
     scripting/MonoRuntime.cpp
     scripting/ScriptSystem.cpp
     core/AssetManager.cpp
+    core/AssetDatabase.cpp
     core/ECS.cpp
     core/Layer.cpp
     core/LayerStack.cpp
@@ -72,18 +74,6 @@ set(CORE_SOURCES
     tilemap/renderer/TilemapRenderer.cpp
 )
 
-# ========== 平台特定源文件 ==========
-if(WIN32)
-    list(APPEND CORE_SOURCES
-        PlatformWindows.cpp
-        PlatformSDLWindow.cpp
-    )
-elseif(LINUX)
-    list(APPEND CORE_SOURCES
-        PlatformLinux.cpp
-        PlatformSDLWindow.cpp
-    )
-endif()
 
 # ========== 收集核心头文件 ==========
 set(CORE_HEADERS

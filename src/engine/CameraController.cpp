@@ -22,9 +22,9 @@ void CameraController::Initialize() {
     // 获取同一GameObject上的Camera组件
     m_camera = GetOwner()->GetComponent<Camera>();
     if (!m_camera) {
-        LOG_WARNING("CameraController", "No Camera component found on GameObject '{0}'", GetOwner()->name);
+        LOG_WARNING("CameraController", "在 GameObject '{0}' 上未找到 Camera 组件", GetOwner()->name);
     } else {
-        LOG_INFO("CameraController", "CameraController initialized for GameObject '{0}'", GetOwner()->name);
+        LOG_INFO("CameraController", "GameObject '{0}' 的 CameraController 已初始化", GetOwner()->name);
     }
 
     // 获取初始鼠标位置

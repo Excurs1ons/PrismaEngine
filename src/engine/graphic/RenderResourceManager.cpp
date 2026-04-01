@@ -47,7 +47,7 @@ int RenderResourceManager::Initialize(IRenderDevice* device) {
     m_loadingThread = std::thread(&RenderResourceManager::LoadingThreadFunction, this);
     
     m_initialized = true;
-    LOG_INFO("RenderResourceManager", "Resource manager initialized.");
+    LOG_INFO("RenderResourceManager", "资源管理器已初始化。");
     return 0;
 }
 
@@ -189,12 +189,12 @@ std::shared_ptr<IShader> RenderResourceManager::CreateShader(const std::string& 
     }
 
     if (resolvedDesc.language != ShaderLanguage::SPIRV || resolvedDesc.source.empty()) {
-        LOG_ERROR("RenderResourceManager", "Only precompiled SPIR-V shader creation is supported without an external compiler");
+        LOG_ERROR("RenderResourceManager", "在没有外部编译器的情况下，仅支持创建预编译的 SPIR-V 着色器");
         return nullptr;
     }
 
     if (resolvedDesc.source.size() % sizeof(uint32_t) != 0) {
-        LOG_ERROR("RenderResourceManager", "SPIR-V shader source size must be 4-byte aligned");
+        LOG_ERROR("RenderResourceManager", "SPIR-V 着色器源文件大小必须 4 字节对齐");
         return nullptr;
     }
 
@@ -212,7 +212,7 @@ std::shared_ptr<IShader> RenderResourceManager::CreateShader(const std::string& 
 bool RenderResourceManager::CompileShader(const ShaderDesc& desc, std::string* errors) {
     if (desc.entryPoint.empty()) {
         if (errors) {
-            *errors = "Shader entry point is required";
+            *errors = "着色器入口点是必需的";
         }
         return false;
     }
@@ -220,7 +220,7 @@ bool RenderResourceManager::CompileShader(const ShaderDesc& desc, std::string* e
     if (!desc.filename.empty()) {
         if (!std::filesystem::exists(desc.filename)) {
             if (errors) {
-                *errors = "Shader file not found: " + desc.filename;
+                *errors = "未找到着色器文件: " + desc.filename;
             }
             return false;
         }
@@ -234,18 +234,18 @@ bool RenderResourceManager::CompileShader(const ShaderDesc& desc, std::string* e
     }
 
     if (errors) {
-        *errors = "Runtime shader compilation is not available; provide precompiled SPIR-V (.spv)";
+        *errors = "运行时着色器编译不可用；请提供预编译的 SPIR-V (.spv)";
     }
     return false;
 }
 
 std::shared_ptr<IPipeline> RenderResourceManager::CreatePipeline(const PipelineDesc& desc) {
     if (!desc.name.empty()) {
-        LOG_INFO("RenderResourceManager", "Creating pipeline: {0}", desc.name);
+        LOG_INFO("RenderResourceManager", "正在创建管线: {0}", desc.name);
     }
 
     if (desc.computeShader && !desc.vertexShader && !desc.pixelShader) {
-        LOG_WARNING("RenderResourceManager", "Compute-only pipeline requests are not mapped to a high-level IPipeline yet");
+        LOG_WARNING("RenderResourceManager", "仅计算管线的请求尚未映射到高级 IPipeline");
         return nullptr;
     }
 
@@ -339,7 +339,7 @@ std::shared_ptr<IPipelineState> RenderResourceManager::CreatePipelineState(const
     pipelineState->SetDebugName(desc.name);
 
     if (!pipelineState->Create(m_device)) {
-        LOG_ERROR("RenderResourceManager", "Failed to create pipeline state: {0}", pipelineState->GetErrors());
+        LOG_ERROR("RenderResourceManager", "创建管线状态失败: {0}", pipelineState->GetErrors());
         return nullptr;
     }
 
@@ -493,7 +493,7 @@ void RenderResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
         if (!task.name.empty()) m_nameToId[task.name] = task.id;
         m_statsDirty = true;
     } else {
-        LOG_ERROR("RenderResourceManager", "Failed to load resource asynchronously: {0}", task.path);
+        LOG_ERROR("RenderResourceManager", "异步加载资源失败: {0}", task.path);
     }
 }
 
@@ -526,7 +526,7 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
     desc.language = ShaderLanguage::SPIRV;
 
     if (std::filesystem::path(filename).extension() != ".spv") {
-        LOG_WARNING("RenderResourceManager", "Only precompiled SPIR-V shader loading is supported: {0}", filename);
+        LOG_WARNING("RenderResourceManager", "仅支持加载预编译的 SPIR-V 着色器: {0}", filename);
         return nullptr;
     }
 

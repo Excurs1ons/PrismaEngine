@@ -1,4 +1,5 @@
 #include "EditorLayer.h"
+#include "UIStrings.h"
 #include "graphic/ImGuiVulkanResourceManager.h"
 #include "graphic/ViewportRenderPass.h"
 
@@ -105,7 +106,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
     if (!opt_padding)
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 
-    ImGui::Begin("Prisma Editor DockSpace", &dockspaceOpen, window_flags);
+    ImGui::Begin(UI::WINDOW_DOCKSPACE, &dockspaceOpen, window_flags);
 
     if (!opt_padding)
         ImGui::PopStyleVar();
@@ -121,26 +122,64 @@ void Prisma::EditorLayer::OnImGuiRender() {
     }
 
     if (ImGui::BeginMenuBar()) {
-        if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New Scene", "Ctrl+N")) {
-                if (auto sceneManager = Engine::Get().GetSceneManager()) {
-                    sceneManager->CreateNewScene();
-                    m_selectedEntity = nullptr;
+        if (ImGui::BeginMenu(UI::MENU_FILE)) {
+            if (ImGui::BeginMenu(UI::MENU_PROJECT)) {
+                if (ImGui::MenuItem(UI::ITEM_OPEN_PROJECT, "Ctrl+O")) {
+                    ImGui::OpenPopup(UI::POPUP_OPEN_PROJECT);
                 }
+                if (ImGui::MenuItem(UI::ITEM_NEW_PROJECT, "Ctrl+N")) {
+                    ImGui::OpenPopup(UI::POPUP_NEW_PROJECT);
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem(UI::ITEM_SAVE_PROJECT, "Ctrl+S")) {
+                    LOG_INFO("Editor", "项目已保存 (暂存实现)");
+                    Editor::Get().SetProjectDirty(false);
+                }
+                if (ImGui::MenuItem(UI::ITEM_SAVE_PROJECT_AS, "Ctrl+Shift+S")) {
+                    ImGui::OpenPopup(UI::POPUP_SAVE_PROJECT_AS);
+                }
+                ImGui::EndMenu();
             }
-            if (ImGui::MenuItem("Exit", "Alt+F4")) {
+            if (ImGui::BeginMenu(UI::MENU_SCENE)) {
+                if (ImGui::MenuItem(UI::ITEM_NEW_SCENE, "Ctrl+L")) {
+                    if (auto sceneManager = Engine::Get().GetSceneManager()) {
+                        sceneManager->CreateNewScene();
+                        m_selectedEntity = nullptr;
+                        LOG_INFO("Editor", "新场景已创建");
+                    }
+                }
+                if (ImGui::MenuItem(UI::ITEM_OPEN_SCENE, "Ctrl+Shift+O")) {
+                    ImGui::OpenPopup(UI::POPUP_OPEN_SCENE);
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem(UI::ITEM_SAVE_SCENE, "Ctrl+Alt+S")) {
+                    LOG_INFO("Editor", "场景已保存 (暂存实现)");
+                    if (auto sceneManager = Engine::Get().GetSceneManager()) {
+                        if (auto scene = sceneManager->GetCurrentScene()) {
+                            scene->SetDirty(false);
+                        }
+                    }
+                }
+                if (ImGui::MenuItem(UI::ITEM_SAVE_SCENE_AS, "Ctrl+Alt+Shift+S")) {
+                    ImGui::OpenPopup(UI::POPUP_SAVE_SCENE_AS);
+                }
+                ImGui::EndMenu();
+            }
+
+            ImGui::Separator();
+            if (ImGui::MenuItem(UI::ITEM_EXIT, "Alt+F4")) {
                 Application::Get().Close();
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Edit")) {
-            if (ImGui::MenuItem("Project Settings")) {
+        if (ImGui::BeginMenu(UI::MENU_EDIT)) {
+            if (ImGui::MenuItem(UI::ITEM_PROJECT_SETTINGS)) {
                 static_cast<Editor&>(Application::Get()).OpenProjectSettings();
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("View")) {
-            if (ImGui::MenuItem("ImGui Demo Window", nullptr, &m_showDemoWindow)) {
+        if (ImGui::BeginMenu(UI::MENU_VIEW)) {
+            if (ImGui::MenuItem(UI::ITEM_IMGUI_DEMO, nullptr, &m_showDemoWindow)) {
             }
             ImGui::EndMenu();
         }
@@ -151,7 +190,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
     // Viewport Panel
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
-    ImGui::Begin("Viewport");
+    ImGui::Begin(UI::WINDOW_VIEWPORT);
 
     m_viewportFocused = ImGui::IsWindowFocused();
     m_viewportHovered = ImGui::IsWindowHovered();
@@ -266,7 +305,18 @@ void Prisma::EditorLayer::OnImGuiRender() {
         }
     }
 
-    ImGui::Begin("Scene Hierarchy");
+    // -----------------------------------------------------------------------
+    // Scene Hierarchy
+    // -----------------------------------------------------------------------
+    std::string hierarchyTitle = UI::WINDOW_HIERARCHY;
+    if (auto sceneManager = Engine::Get().GetSceneManager()) {
+        if (auto scene = sceneManager->GetCurrentScene()) {
+            hierarchyTitle += " - " + scene->GetName();
+            if (scene->IsDirty()) hierarchyTitle += "*";
+        }
+    }
+    ImGui::Begin(hierarchyTitle.c_str());
+
     if (auto sceneManager = Engine::Get().GetSceneManager()) {
         if (auto scene = sceneManager->GetCurrentScene()) {
             auto& objects = scene->GetGameObjects();
@@ -296,13 +346,15 @@ void Prisma::EditorLayer::OnImGuiRender() {
     }
     ImGui::End();
 
-    ImGui::Begin("Properties");
+    ImGui::Begin(UI::WINDOW_PROPERTIES);
     if (m_selectedEntity) {
+        auto scene = Engine::Get().GetSceneManager()->GetCurrentScene();
         char buffer[256];
         memset(buffer, 0, sizeof(buffer));
         strncpy(buffer, m_selectedEntity->name.c_str(), sizeof(buffer));
         if (ImGui::InputText("Name", buffer, sizeof(buffer))) {
             m_selectedEntity->name = std::string(buffer);
+            if (scene) scene->SetDirty(true);
         }
 
         ImGui::Separator();
@@ -313,16 +365,19 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 Vector3 pos = transform->GetPosition();
                 if (ImGui::DragFloat3("Position", &pos.x, 0.1f)) {
                     transform->SetPosition(pos);
+                    if (scene) scene->SetDirty(true);
                 }
 
                 Vector3 rotation = glm::degrees(glm::eulerAngles(transform->GetRotation()));
                 if (ImGui::DragFloat3("Rotation", &rotation.x, 0.1f)) {
                     transform->SetRotation(rotation);
+                    if (scene) scene->SetDirty(true);
                 }
 
                 Vector3 scale = transform->GetScale();
                 if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
                     transform->SetScale(scale);
+                    if (scene) scene->SetDirty(true);
                 }
             }
         }
@@ -335,6 +390,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 if (ImGui::DragFloat("Field of View", &fov, 1.0f, 10.0f, 120.0f)) {
                     camera->SetPerspectiveProjection(
                         glm::radians(fov), camera->GetAspectRatio(), camera->GetNearPlane(), camera->GetFarPlane());
+                    if (scene) scene->SetDirty(true);
                 }
             }
         }
@@ -346,6 +402,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 Vector3 vel = rb->GetVelocity();
                 if (ImGui::DragFloat3("Velocity", &vel.x, 0.1f)) {
                     rb->SetVelocity(vel);
+                    if (scene) scene->SetDirty(true);
                 }
             }
         }
@@ -354,17 +411,17 @@ void Prisma::EditorLayer::OnImGuiRender() {
         ImGui::Spacing();
         ImGui::Separator();
         if (ImGui::Button("Add Component...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
-            ImGui::OpenPopup("AddComponentPopup");
+            ImGui::OpenPopup(UI::POPUP_ADD_COMPONENT);
         }
 
-        if (ImGui::BeginPopup("AddComponentPopup")) {
+        if (ImGui::BeginPopup(UI::POPUP_ADD_COMPONENT)) {
             if (ImGui::MenuItem("Camera")) {
                 if (!m_selectedEntity->GetComponent<Graphic::Camera>())
                     m_selectedEntity->AddComponent<Graphic::Camera>();
             }
             if (ImGui::MenuItem("RigidBody")) {
                 if (!m_selectedEntity->GetComponent<RigidBodyComponent>())
-                    m_selectedEntity->AddComponent<RigidBodyComponent>();
+                    m_selectedEntity->AddComponent<Graphic::Camera>();
             }
             ImGui::EndPopup();
         }
@@ -373,7 +430,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
     }
     ImGui::End();
 
-    ImGui::Begin("Content Browser");
+    ImGui::Begin(UI::WINDOW_CONTENT_BROWSER);
 
     // Ensure assets directory exists to prevent crash
     if (!std::filesystem::exists("assets")) {
@@ -430,6 +487,72 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
+    }
+
+    // -----------------------------------------------------------------------
+    // 文件操作弹窗 (Stubs)
+    // -----------------------------------------------------------------------
+    auto center = ImGui::GetMainViewport()->GetCenter();
+    ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    if (ImGui::BeginPopupModal(UI::POPUP_OPEN_PROJECT, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("打开项目 (演示)");
+        ImGui::Separator();
+        static char projectPath[256] = "assets/projects/Default.prisma";
+        ImGui::InputText("路径", projectPath, IM_ARRAYSIZE(projectPath));
+        if (ImGui::Button("确定", ImVec2(120, 0))) {
+            LOG_INFO("Editor", "正在打开项目: %s", projectPath);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal(UI::POPUP_NEW_PROJECT, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("新建项目");
+        ImGui::Separator();
+        static char newProjectName[64] = "NewPrismaProject";
+        ImGui::InputText("名称", newProjectName, IM_ARRAYSIZE(newProjectName));
+        if (ImGui::Button("创建", ImVec2(120, 0))) {
+            LOG_INFO("Editor", "正在创建项目: %s", newProjectName);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal(UI::POPUP_OPEN_SCENE, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("打开场景");
+        ImGui::Separator();
+        static char scenePath[256] = "assets/scenes/Main.scene";
+        ImGui::InputText("路径", scenePath, IM_ARRAYSIZE(scenePath));
+        if (ImGui::Button("加载", ImVec2(120, 0))) {
+            LOG_INFO("Editor", "正在加载场景: %s", scenePath);
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal(UI::POPUP_SAVE_PROJECT_AS, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("项目另存为");
+        ImGui::Separator();
+        if (ImGui::Button("保存", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::SameLine();
+        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginPopupModal(UI::POPUP_SAVE_SCENE_AS, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+        ImGui::Text("场景另存为");
+        ImGui::Separator();
+        if (ImGui::Button("保存", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::SameLine();
+        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        ImGui::EndPopup();
     }
 }
 

@@ -39,6 +39,9 @@ public:
     virtual bool IsLoaded() const { return m_IsLoaded; }
     void SetLoaded(bool loaded) { m_IsLoaded = loaded; }
 
+    bool IsDirty() const { return m_IsDirty; }
+    void SetDirty(bool dirty) { m_IsDirty = dirty; }
+
     UUID GetHandle() const { return m_Handle; }
     void SetHandle(UUID handle) { m_Handle = handle; }
 
@@ -62,6 +65,7 @@ protected:
     std::filesystem::path m_Path;
     std::string m_Name;
     bool m_IsLoaded = false;
+    bool m_IsDirty  = false;
 };
 
 /**

@@ -6,7 +6,7 @@ namespace Prisma {
 
 bool TilemapAsset::Load(const std::filesystem::path& path) {
     if (!std::filesystem::exists(path)) {
-        LOG_ERROR("TilemapAsset", "Tilemap file does not exist: {0}", path.string());
+        LOG_ERROR("TilemapAsset", "瓦片地图文件不存在: {0}", path.string());
         return false;
     }
 
