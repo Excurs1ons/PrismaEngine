@@ -6,10 +6,7 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
-
-#if defined(_WIN32)
-#include <Windows.h>
-#endif
+#include <SDL3/SDL.h>
 
 namespace Prisma {
 
@@ -84,19 +81,6 @@ bool Logger::Initialize(const LogConfig& config) {
         m_FileStream.open(logFilePath, std::ios::app);
     }
 
-#if defined(_WIN32)
-    SetConsoleOutputCP(CP_UTF8);
-    SetConsoleCP(CP_UTF8);
-    if (m_Config.enableColors) {
-        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-        DWORD mode      = 0;
-        if (GetConsoleMode(hConsole, &mode)) {
-            mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-            SetConsoleMode(hConsole, mode);
-        }
-    }
-#endif
-
     if (m_Config.asyncMode) {
         m_Running      = true;
         m_WorkerThread = std::make_unique<std::thread>(&Logger::ProcessQueue, this);
@@ -144,19 +128,6 @@ void Logger::LogInternal(LogLevel level, const std::string& category, const std:
             WriteEntry(entry);
         }
     }
-}
-
-std::string Logger::WStringToString(const std::wstring& wstr) {
-    if (wstr.empty())
-        return std::string();
-#if defined(_WIN32)
-    int size_needed = WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), NULL, 0, NULL, NULL);   
-    std::string strTo(size_needed, 0);
-    WideCharToMultiByte(CP_UTF8, 0, &wstr[0], (int)wstr.size(), &strTo[0], size_needed, NULL, NULL);      
-    return strTo;
-#else
-    return std::filesystem::path(wstr).string();
-#endif
 }
 
 void Logger::Flush() {

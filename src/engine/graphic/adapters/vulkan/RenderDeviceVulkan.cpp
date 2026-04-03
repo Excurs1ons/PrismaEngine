@@ -292,6 +292,7 @@ void RenderDeviceVulkan::EndFrame() {
     m_pendingPresentImageIndex = imageIndex;
     m_hasPendingPresent        = true;
     m_frameActive              = false;
+    m_skipSwapChainRenderPass  = false;
 }
 
 void RenderDeviceVulkan::Present() {

@@ -73,10 +73,19 @@ void Prisma::EditorLayer::OnRender() {
         return;
     }
 
-    // [修复] 移除所有手动的 ViewportRenderPass->Begin/End 调用。
-    // 原因：这些操作会开启一个与引擎默认或管线内部冲突的 RenderPass，导致驱动崩溃。
-    // 我们只需将 m_viewportTexture 传给渲染系统，让管线内部负责输出目标的重定向。
-    renderSystem->RenderScene(scene, camera, m_viewportTexture.get());
+    // [修复] 获取当前的指令缓冲
+    auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+    VkCommandBuffer cmd = vkDevice->GetCurrentCommandBuffer();
+
+    if (cmd && m_viewportRenderPass) {
+        // [改动] 必须先通知 RenderDevice 跳过这一帧的默认交换链 Pass，
+        // 否则 Viewport RenderPass 会被错误地嵌套在默认 Pass 内部。
+        vkDevice->SetSkipSwapChainRenderPass(true);
+
+        m_viewportRenderPass->Begin(cmd);
+        renderSystem->RenderScene(scene, camera, m_viewportTexture.get());
+        m_viewportRenderPass->End(cmd);
+    }
 }
 
 void Prisma::EditorLayer::OnImGuiRender() {
@@ -416,12 +425,16 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
         if (ImGui::BeginPopup(UI::POPUP_ADD_COMPONENT)) {
             if (ImGui::MenuItem("Camera")) {
-                if (!m_selectedEntity->GetComponent<Graphic::Camera>())
+                if (!m_selectedEntity->GetComponent<Graphic::Camera>()) {
                     m_selectedEntity->AddComponent<Graphic::Camera>();
+                    if (scene) scene->SetDirty(true);
+                }
             }
             if (ImGui::MenuItem("RigidBody")) {
-                if (!m_selectedEntity->GetComponent<RigidBodyComponent>())
-                    m_selectedEntity->AddComponent<Graphic::Camera>();
+                if (!m_selectedEntity->GetComponent<RigidBodyComponent>()) {
+                    m_selectedEntity->AddComponent<RigidBodyComponent>();
+                    if (scene) scene->SetDirty(true);
+                }
             }
             ImGui::EndPopup();
         }

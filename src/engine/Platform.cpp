@@ -10,25 +10,6 @@
 #include <filesystem>
 #include <ctime>
 
-#ifdef _WIN32
-    #include <Windows.h>
-    #include <process.h>
-    #include <shlobj.h>
-    
-    // Undefine conflicting Win32 macros
-    #undef GetEnvironmentVariable
-    #undef SetEnvironmentVariable
-    #undef CreateWindow
-    #undef CreateMutex
-    #undef DestroyWindow
-    #undef GetMessage
-#else
-    #include <unistd.h>
-    #include <sys/types.h>
-    #include <sys/stat.h>
-    #include <limits.h>
-#endif
-
 namespace Prisma {
 
 bool Platform::s_initialized     = false;
@@ -60,30 +41,10 @@ bool Platform::IsInitialized() {
 }
 
 void Platform::DebugPrint(const char* message) {
-#ifdef _WIN32
-    OutputDebugStringA(message);
-#else
-    std::cout << message;
-#endif
+    SDL_Log("%s", message);
 }
 
 void Platform::SetConsoleColor(LogLevel level) {
-#ifdef _WIN32
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole == INVALID_HANDLE_VALUE) return;
-
-    WORD attr = 0;
-    switch (level) {
-        case LogLevel::Trace:   attr = FOREGROUND_INTENSITY; break;
-        case LogLevel::Debug:   attr = FOREGROUND_GREEN | FOREGROUND_BLUE; break;
-        case LogLevel::Info:    attr = FOREGROUND_GREEN; break;
-        case LogLevel::Warning: attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_INTENSITY; break;
-        case LogLevel::Error:   attr = FOREGROUND_RED | FOREGROUND_INTENSITY; break;
-        case LogLevel::Fatal:   attr = BACKGROUND_RED | FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE | FOREGROUND_INTENSITY; break;
-        default:                attr = FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE; break;
-    }
-    SetConsoleTextAttribute(hConsole, attr);
-#else
     switch (level) {
         case LogLevel::Trace:   std::cout << "\033[90m"; break; // Gray
         case LogLevel::Debug:   std::cout << "\033[36m"; break; // Cyan
@@ -93,36 +54,24 @@ void Platform::SetConsoleColor(LogLevel level) {
         case LogLevel::Fatal:   std::cout << "\033[41m\033[37m"; break; // White on Red
         default: break;
     }
-#endif
 }
 
 void Platform::ResetConsoleColor() {
-#ifdef _WIN32
-    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
-    if (hConsole != INVALID_HANDLE_VALUE) {
-        SetConsoleTextAttribute(hConsole, FOREGROUND_RED | FOREGROUND_GREEN | FOREGROUND_BLUE);
-    }
-#else
     std::cout << "\033[0m";
-#endif
 }
 
 uint32_t Platform::GetProcessId() {
-#ifdef _WIN32
-    return (uint32_t)GetCurrentProcessId();
-#else
-    return (uint32_t)getpid();
-#endif
+    return 0; 
 }
 
 std::tm Platform::GetLocalTime(std::time_t time) {
-    std::tm tm;
+    std::tm tm_struct;
 #ifdef _WIN32
-    localtime_s(&tm, &time);
+    localtime_s(&tm_struct, &time);
 #else
-    localtime_r(&time, &tm);
+    localtime_r(&time, &tm_struct);
 #endif
-    return tm;
+    return tm_struct;
 }
 
 void Platform::ShowMessageBox(const std::string& title, const std::string& message) {
@@ -130,21 +79,11 @@ void Platform::ShowMessageBox(const std::string& title, const std::string& messa
 }
 
 bool Platform::HasDisplaySupport() {
-#ifdef _WIN32
-    return GetSystemMetrics(SM_REMOTESESSION) == 0;
-#else
-    return true; // Assume true for Linux if initialized
-#endif
+    return SDL_WasInit(SDL_INIT_VIDEO) != 0;
 }
 
 bool Platform::IsRunningInTerminal() {
-#ifdef _WIN32
-    DWORD processCount;
-    if (GetConsoleProcessList(&processCount, 1) == 0) return false;
-    return processCount > 1;
-#else
-    return isatty(STDOUT_FILENO);
-#endif
+    return true; 
 }
 
 std::string Platform::GetEnvironmentVariable(const std::string& name) {
@@ -153,11 +92,7 @@ std::string Platform::GetEnvironmentVariable(const std::string& name) {
 }
 
 void Platform::SetEnvironmentVariable(const std::string& name, const std::string& value) {
-#ifdef _WIN32
-    _putenv_s(name.c_str(), value.c_str());
-#else
-    setenv(name.c_str(), value.c_str(), 1);
-#endif
+    SDL_SetEnvironmentVariable(SDL_GetEnvironment(), name.c_str(), value.c_str(), 1);
 }
 
 // ------------------------------------------------------------
@@ -191,7 +126,7 @@ WindowHandle Platform::CreateWindow(const WindowProps& desc) {
     if (desc.Resizable) window_flags |= SDL_WINDOW_RESIZABLE;
     
     if (desc.fullScreenMode == FullScreenMode::FullScreen) window_flags |= SDL_WINDOW_FULLSCREEN;
-    else if (desc.fullScreenMode == FullScreenMode::ExclusiveFullScreen) window_flags |= SDL_WINDOW_FULLSCREEN; // SDL3 simplified fullscreen
+    else if (desc.fullScreenMode == FullScreenMode::ExclusiveFullScreen) window_flags |= SDL_WINDOW_FULLSCREEN;
 
     if (desc.ShowState == WindowShowState::Hide) window_flags |= SDL_WINDOW_HIDDEN;
     else if (desc.ShowState == WindowShowState::Maximize) window_flags |= SDL_WINDOW_MAXIMIZED;
@@ -227,11 +162,6 @@ void Platform::SetWindowTitle(WindowHandle window, const char* title) {
 void Platform::PumpEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (s_eventCallback) {
-            // 这里应该转换 SDL Event 到 Engine Event
-            // 暂时只处理退出
-        }
-        
         if (event.type == SDL_EVENT_QUIT) {
             s_shouldClose = true;
         }
@@ -285,38 +215,21 @@ size_t Platform::ReadFile(const char* path, void* dst, size_t maxBytes) {
 
 const char* Platform::GetExecutablePath() {
     static std::string path;
-    char buffer[1024];
-#ifdef _WIN32
-    GetModuleFileNameA(nullptr, buffer, sizeof(buffer));
-    path = buffer;
-#else
-    ssize_t len = readlink("/proc/self/exe", buffer, sizeof(buffer) - 1);
-    if (len != -1) {
-        buffer[len] = '\0';
-        path = buffer;
+    const char* base_path_ptr = SDL_GetBasePath();
+    if (base_path_ptr) {
+        path = base_path_ptr;
+        SDL_free(const_cast<char*>(base_path_ptr));
     }
-#endif
     return path.c_str();
 }
 
 const char* Platform::GetPersistentPath() {
     static std::string path;
-#ifdef _WIN32
-    char buffer[MAX_PATH];
-    if (SHGetFolderPathA(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, buffer) == S_OK) {
-        path = std::string(buffer) + "\\PrismaEngine";
-    } else {
-        path = ".";
+    const char* pref_path_ptr = SDL_GetPrefPath("Prisma", "Engine");
+    if (pref_path_ptr) {
+        path = pref_path_ptr;
+        SDL_free(const_cast<char*>(pref_path_ptr));
     }
-#else
-    const char* home = getenv("HOME");
-    if (home) {
-        path = std::string(home) + "/.local/share/PrismaEngine";
-    } else {
-        path = ".";
-    }
-#endif
-    std::filesystem::create_directories(path);
     return path.c_str();
 }
 
@@ -329,7 +242,6 @@ const char* Platform::GetTemporaryPath() {
 // 线程和同步 (使用 SDL3 API)
 // ------------------------------------------------------------
 PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
-    // SDL_CreateThread 需要一个名称
     return (PlatformThreadHandle)SDL_CreateThread((SDL_ThreadFunction)entry, "PrismaThread", userData);
 }
 

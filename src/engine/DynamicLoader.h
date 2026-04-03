@@ -1,81 +1,70 @@
 #pragma once
 
-#include "Logger.h"
 #include "Export.h"
-#include <filesystem>
+#include "Logger.h"
 #include <string>
 #include <vector>
+#include <map>
 #include <stdexcept>
-
-#ifdef _WIN32
-    #ifndef WIN32_LEAN_AND_MEAN
-        #define WIN32_LEAN_AND_MEAN
-    #endif
-    #include <windows.h>
-#else
-    #include <dlfcn.h>
-#endif
+#include <filesystem>
 
 namespace Prisma {
 
+/**
+ * @brief 动态库加载器
+ * 使用 SDL3 实现跨平台 DLL/Shared Object 加载。
+ */
 class ENGINE_API DynamicLoader {
 public:
     DynamicLoader();
     ~DynamicLoader();
-    
+
+    /**
+     * @brief 加载动态库
+     * @param libraryPath 库文件路径
+     * @return 是否加载成功
+     */
     bool Load(const std::string& libraryPath);
+
+    /**
+     * @brief 尝试加载库（会先复制到临时文件，防止锁定）
+     * @param libraryPath 库文件路径
+     * @return 是否加载成功
+     */
     bool TryLoad(const std::string& libraryPath);
+
+    /**
+     * @brief 卸载库
+     */
     void Unload();
+
+    /**
+     * @brief 获取符号地址
+     * @param symbolName 符号名称
+     * @return 符号地址
+     */
+    void* GetSymbol(const std::string& symbolName);
+
+    /**
+     * @brief 获取库中指定类型的函数
+     * @tparam T 函数类型
+     * @param symbolName 符号名称
+     * @return 函数指针
+     */
+    template<typename T>
+    T GetFunction(const std::string& symbolName) {
+        return reinterpret_cast<T>(GetSymbol(symbolName));
+    }
+
+    /**
+     * @brief 是否已加载
+     * @return 是否已加载
+     */
     bool IsLoaded() const;
-    
-    std::string CopyToTempFile(const std::string& sourcePathStr);
-    
-    template<typename T>
-    T GetFunction(const std::string& functionName) {
-        if (!m_handle) {
-            LOG_ERROR("DynamicLoader", "库未加载");
-            throw std::runtime_error("Library not loaded");
-        }
-        
-#ifdef _WIN32
-        FARPROC func = GetProcAddress((HMODULE)m_handle, functionName.c_str());
-        if (!func) {
-            DWORD error = GetLastError();
-            LOG_ERROR("DynamicLoader", "无法获取函数: {0}，错误码: {1}", functionName.c_str(), error);
-            throw std::runtime_error("Failed to get function: " + functionName);
-        }
-        return reinterpret_cast<T>(func);
-#else
-        void* func = dlsym(m_handle, functionName.c_str());
-        if (!func) {
-            LOG_ERROR("DynamicLoader", "无法获取函数: {0}，错误: {1}", functionName.c_str(), dlerror());
-            throw std::runtime_error("Failed to get function: " + functionName);
-        }
-        return reinterpret_cast<T>(func);
-#endif
-    }
-    
-    template<typename T>
-    bool TryGetFunction(const std::string& functionName, T& outFunc) {
-        if (!m_handle) {
-            LOG_FATAL("DynamicLoader", "库未加载");
-            return false;
-        }
-        try {
-            outFunc = GetFunction<T>(functionName);
-        }
-        catch (const std::exception& e) {
-            LOG_FATAL("DynamicLoader", "无法获取函数: {0}，错误: {1}", functionName.c_str(), e.what());
-            return false;
-        }
-        if (!outFunc) {
-            LOG_FATAL("DynamicLoader", "无法获取函数: {0}，错误: 空指针", functionName.c_str());
-            return false;
-        }
-        return true;
-    }
-    
+
 private:
+    std::string CopyToTempFile(const std::string& sourcePath);
+
     void* m_handle;
     std::string m_tempPath;
 };

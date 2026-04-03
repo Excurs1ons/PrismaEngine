@@ -10,8 +10,46 @@
 // Vulkan 特定代码支持
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "adapters/vulkan/VulkanResources.h"
+#include "graphic/interfaces/IRenderTarget.h"
 
 namespace Prisma::Graphic {
+
+/**
+ * @brief 内部渲染目标代理
+ * 用于将 ITexture 包装为 IRenderTarget，以便传递给 Pass。
+ */
+class TextureRenderTargetProxy final : public ITextureRenderTarget {
+public:
+    TextureRenderTargetProxy(ITexture* texture) : m_texture(texture) {}
+
+    uint32_t GetWidth() const override { return m_texture ? static_cast<uint32_t>(m_texture->GetWidth()) : 0; }
+    uint32_t GetHeight() const override { return m_texture ? static_cast<uint32_t>(m_texture->GetHeight()) : 0; }
+    TextureFormat GetFormat() const override { return m_texture ? m_texture->GetFormat() : TextureFormat::Unknown; }
+    TextureType GetType() const override { return m_texture ? m_texture->GetTextureType() : TextureType::Texture2D; }
+    
+    void* GetNativeHandle() const override {
+        if (!m_texture) return nullptr;
+        auto vkTexture = dynamic_cast<Vulkan::VulkanTexture*>(m_texture);
+        if (vkTexture) {
+            return reinterpret_cast<void*>(vkTexture->GetVkImageView());
+        }
+        return nullptr;
+    }
+
+    bool IsSwapChain() const override { return false; }
+    void Clear(const float color[4]) override {
+        if (m_texture) {
+            m_texture->Clear(Color(color[0], color[1], color[2], color[3]));
+        }
+    }
+
+    uint32_t GetMipLevels() const override { return m_texture ? m_texture->GetMipLevels() : 0; }
+    uint32_t GetArraySize() const override { return m_texture ? m_texture->GetArraySize() : 0; }
+    ITexture* GetTexture() override { return m_texture; }
+
+private:
+    ITexture* m_texture;
+};
 
 ForwardPipeline::ForwardPipeline() = default;
 
@@ -49,6 +87,8 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         }
     }
 
+    TextureRenderTargetProxy proxy(ctx.targetTexture);
+
     const auto& commands = Renderer::GetCommandQueue();
     auto view = ctx.camera.viewMatrix;
     auto proj = ctx.camera.projectionMatrix;
@@ -71,6 +111,7 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
     PassExecutionContext passContext;
     passContext.deviceContext = deviceContext;
     passContext.sceneData = &sceneData;
+    passContext.renderTarget = ctx.targetTexture ? &proxy : nullptr;
 
     // TODO: 目前各 Pass 内部仍硬编码了对交换链 RenderPass 的依赖。
     // 在后续重构中，需要将 targetTexture 传入 Pass 内部。
