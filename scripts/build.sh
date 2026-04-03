@@ -18,7 +18,7 @@ Usage: ./scripts/build.sh [options]
 One-click build with auto platform/arch preset selection.
 
 Options:
-  -t, --target <engine|editor|runtime>  Build target (default: engine)
+  -t, --target <engine|editor|runtime|pacman>  Build target (default: engine)
   -c, --config <debug|release>          Build config (default: debug)
   -p, --preset <name>                   Explicit preset (skip auto detect)
       --clean                           Remove selected build directory first
@@ -92,7 +92,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "${TARGET}" in
-    engine|editor|runtime) ;;
+    engine|editor|runtime|pacman) ;;
     *) echo "Invalid --target: ${TARGET}" >&2; exit 1 ;;
 esac
 

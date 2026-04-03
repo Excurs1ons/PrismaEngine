@@ -117,6 +117,19 @@
       }
     },
     {
+      "name": "linux-pacman-base",
+      "hidden": true,
+      "inherits": "linux-base",
+      "description": "Base Linux PacMan configuration",
+      "cacheVariables": {
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_RUNTIME": "OFF",
+        "PRISMA_BUILD_PROJECT_PRISMACRAFT": "OFF",
+        "PRISMA_BUILD_PROJECT_PACMAN": "ON",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
+      }
+    },
+    {
       "name": "engine-windows-x64-debug",
       "displayName": "Engine Windows x64 Debug",
       "inherits": "windows-engine-base",
@@ -355,6 +368,48 @@
         "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
+    },
+    {
+      "name": "pacman-linux-x64-debug",
+      "displayName": "PacMan Linux x64 Debug",
+      "inherits": "linux-pacman-base",
+      "description": "Debug build for PacManGame on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "pacman-linux-x64-release",
+      "displayName": "PacMan Linux x64 Release",
+      "inherits": "linux-pacman-base",
+      "description": "Release build for PacManGame on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "pacman-linux-arm64-debug",
+      "displayName": "PacMan Linux ARM64 Debug",
+      "inherits": "linux-pacman-base",
+      "description": "Debug build for PacManGame on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-arm64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "pacman-linux-arm64-release",
+      "displayName": "PacMan Linux ARM64 Release",
+      "inherits": "linux-pacman-base",
+      "description": "Release build for PacManGame on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-arm64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
     }
   ],
   "buildPresets": [
@@ -456,6 +511,26 @@
     {
       "name": "runtime-linux-x64-release",
       "configurePreset": "runtime-linux-x64-release",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-x64-debug",
+      "configurePreset": "pacman-linux-x64-debug",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-x64-release",
+      "configurePreset": "pacman-linux-x64-release",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-arm64-debug",
+      "configurePreset": "pacman-linux-arm64-debug",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-arm64-release",
+      "configurePreset": "pacman-linux-arm64-release",
       "jobs": 2
     }
   ]
