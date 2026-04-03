@@ -103,6 +103,7 @@ public:
      * @brief 获取剩余豆子数量
      */
     int GetRemainingPellets() const { return m_remainingPellets; }
+    int GetTotalPellets() const { return m_totalPellets; }
 
     /**
      * @brief 检查是否所有豆子都被吃掉

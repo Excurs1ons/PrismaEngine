@@ -9,8 +9,37 @@
 #include <vector>
 #include <filesystem>
 #include <ctime>
+#include <memory>
+#include <cstdlib>
 
+#ifdef _WIN32
+    #include <process.h>
+#else
+    #include <unistd.h>
+#endif
 namespace Prisma {
+
+namespace {
+struct ThreadStartContext {
+    ThreadFunc entry;
+    void* userData;
+};
+
+int SDLThreadEntryPoint(void* rawContext) {
+    std::unique_ptr<ThreadStartContext> context(static_cast<ThreadStartContext*>(rawContext));
+    if (!context || !context->entry) {
+        return -1;
+    }
+
+    context->entry(context->userData);
+    return 0;
+}
+
+std::mutex& LocalTimeMutex() {
+    static std::mutex mutex;
+    return mutex;
+}
+} // namespace
 
 bool Platform::s_initialized     = false;
 bool Platform::s_shouldClose     = false;
@@ -41,7 +70,7 @@ bool Platform::IsInitialized() {
 }
 
 void Platform::DebugPrint(const char* message) {
-    SDL_Log("%s", message);
+    SDL_Log("%s", message ? message : "");
 }
 
 void Platform::SetConsoleColor(LogLevel level) {
@@ -61,17 +90,20 @@ void Platform::ResetConsoleColor() {
 }
 
 uint32_t Platform::GetProcessId() {
-    return 0; 
+#ifdef _WIN32
+    return (uint32_t)_getpid();
+#else
+    return (uint32_t)getpid();
+#endif
 }
 
 std::tm Platform::GetLocalTime(std::time_t time) {
-    std::tm tm_struct;
-#ifdef _WIN32
-    localtime_s(&tm_struct, &time);
-#else
-    localtime_r(&time, &tm_struct);
-#endif
-    return tm_struct;
+    std::tm tm{};
+    std::lock_guard<std::mutex> lock(LocalTimeMutex());
+    if (const std::tm* local = std::localtime(&time)) {
+        tm = *local;
+    }
+    return tm;
 }
 
 void Platform::ShowMessageBox(const std::string& title, const std::string& message) {
@@ -79,20 +111,30 @@ void Platform::ShowMessageBox(const std::string& title, const std::string& messa
 }
 
 bool Platform::HasDisplaySupport() {
-    return SDL_WasInit(SDL_INIT_VIDEO) != 0;
+    if (SDL_GetCurrentVideoDriver() == nullptr) {
+        return false;
+    }
+
+    int displayCount = 0;
+    SDL_DisplayID* displays = SDL_GetDisplays(&displayCount);
+    if (displays) {
+        SDL_free(displays);
+    }
+    return displayCount > 0;
 }
 
 bool Platform::IsRunningInTerminal() {
-    return true; 
+    // SDL does not expose a direct tty query; keep behavior predictable in prune branch.
+    return true;
 }
 
 std::string Platform::GetEnvironmentVariable(const std::string& name) {
-    const char* val = SDL_getenv(name.c_str());
+    const char* val = SDL_GetEnvironmentVariable(SDL_GetEnvironment(), name.c_str());
     return val ? std::string(val) : "";
 }
 
 void Platform::SetEnvironmentVariable(const std::string& name, const std::string& value) {
-    SDL_SetEnvironmentVariable(SDL_GetEnvironment(), name.c_str(), value.c_str(), 1);
+    SDL_SetEnvironmentVariable(SDL_GetEnvironment(), name.c_str(), value.c_str(), true);
 }
 
 // ------------------------------------------------------------
@@ -215,21 +257,26 @@ size_t Platform::ReadFile(const char* path, void* dst, size_t maxBytes) {
 
 const char* Platform::GetExecutablePath() {
     static std::string path;
-    const char* base_path_ptr = SDL_GetBasePath();
-    if (base_path_ptr) {
-        path = base_path_ptr;
-        SDL_free(const_cast<char*>(base_path_ptr));
+    const char* basePath = SDL_GetBasePath();
+    if (basePath && *basePath) {
+        path = basePath;
+    }
+    if (path.empty()) {
+        path = ".";
     }
     return path.c_str();
 }
 
 const char* Platform::GetPersistentPath() {
     static std::string path;
-    const char* pref_path_ptr = SDL_GetPrefPath("Prisma", "Engine");
-    if (pref_path_ptr) {
-        path = pref_path_ptr;
-        SDL_free(const_cast<char*>(pref_path_ptr));
+    char* prefPath = SDL_GetPrefPath("Prisma", "PrismaEngine");
+    if (prefPath && *prefPath) {
+        path = prefPath;
+        SDL_free(prefPath);
+    } else {
+        path = ".";
     }
+    std::filesystem::create_directories(path);
     return path.c_str();
 }
 
@@ -242,7 +289,13 @@ const char* Platform::GetTemporaryPath() {
 // 线程和同步 (使用 SDL3 API)
 // ------------------------------------------------------------
 PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
-    return (PlatformThreadHandle)SDL_CreateThread((SDL_ThreadFunction)entry, "PrismaThread", userData);
+    auto* context = new ThreadStartContext{entry, userData};
+    SDL_Thread* thread = SDL_CreateThread(SDLThreadEntryPoint, "PrismaThread", context);
+    if (!thread) {
+        delete context;
+        return nullptr;
+    }
+    return (PlatformThreadHandle)thread;
 }
 
 void Platform::JoinThread(PlatformThreadHandle thread) {

@@ -68,7 +68,7 @@ void GameBoard::LoadMap(const std::vector<std::vector<TileType>>& mapData) {
     for (int y = 0; y < m_height; y++) {
         for (int x = 0; x < m_width; x++) {
             TileType tile = GetTile(x, y);
-            if (tile == TileType::Pellet) {
+            if (tile == TileType::Pellet || tile == TileType::PowerPellet) {
                 m_totalPellets++;
                 m_remainingPellets++;
             } else if (tile == TileType::PacmanSpawn) {
@@ -92,7 +92,7 @@ void GameBoard::LoadDefaultMap() {
             int rawType = CLASSIC_MAZE[y][x];
             m_mapData[y][x] = static_cast<TileType>(rawType);
 
-            if (rawType == 2) {
+            if (rawType == 2 || rawType == 3) {
                 m_totalPellets++;
                 m_remainingPellets++;
             } else if (rawType == 5) {
@@ -173,6 +173,7 @@ int GameBoard::EatPellet(int x, int y) {
 int GameBoard::EatPowerPellet(int x, int y) {
     if (IsPowerPellet(x, y)) {
         SetTile(x, y, TileType::Empty);
+        m_remainingPellets--;
         return POWER_PELLET_SCORE;
     }
     return 0;

@@ -21,6 +21,7 @@ set(CORE_SOURCES
     CommandLineParser.cpp
     DynamicLoader.cpp
     Engine.cpp
+    EngineLauncher.cpp
     Application.cpp
     JobSystem.cpp
     Logger.cpp
@@ -80,6 +81,7 @@ set(CORE_HEADERS
     CommandLineParser.h
     Common.h
     Engine.h
+    EngineLauncher.h
     Application.h
     JobSystem.h
     Logger.h

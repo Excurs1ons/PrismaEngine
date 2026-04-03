@@ -84,9 +84,10 @@ enum class GameState : int {
 
 // ========== 游戏配置 ==========
 
-constexpr float PACMAN_SPEED = 2.0f;
-constexpr float GHOST_SPEED = 1.5f;
-constexpr float GHOST_SCARED_SPEED = 0.8f;
+// 像素/秒（32px 一个格子）
+constexpr float PACMAN_SPEED = 120.0f;
+constexpr float GHOST_SPEED = 95.0f;
+constexpr float GHOST_SCARED_SPEED = 65.0f;
 
 constexpr int PELLET_SCORE = 10;
 constexpr int POWER_PELLET_SCORE = 50;

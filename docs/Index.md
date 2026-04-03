@@ -4,6 +4,7 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 
 ## 🚀 Getting Started
 - [Main README](../README.md) - Project overview and quick start
+- [Game Development Guide](GameDevelopmentGuide.md) - Practical guide from real pitfalls (build, loop, input, troubleshooting)
 - [Directory Structure](DirectoryStructure.md) - Understanding the codebase organization
 - [Requirements](Requirements.md) - System requirements and dependencies
 

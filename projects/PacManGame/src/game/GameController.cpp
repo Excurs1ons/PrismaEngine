@@ -1,7 +1,10 @@
 #include "GameController.h"
 #include "graphic/Renderer2D.h"
+#include "Engine.h"
+#include <SDL3/SDL_scancode.h>
 #include <iostream>
 #include <algorithm>
+#include <sstream>
 
 namespace PacMan {
 
@@ -43,6 +46,12 @@ void GameController::InitializeGhosts() {
 }
 
 void GameController::Update(Prisma::Timestep ts) {
+    m_uiRefreshAccumulator += static_cast<float>(ts);
+    if (m_uiRefreshAccumulator >= 0.15f) {
+        m_uiRefreshAccumulator = 0.0f;
+        UpdateUI();
+    }
+
     if (m_gameState != GameState::Playing) {
         return;
     }
@@ -93,6 +102,9 @@ void GameController::SetGameState(GameState state) {
 }
 
 void GameController::StartGame() {
+    if (m_gameState == GameState::Menu || m_gameState == GameState::GameOver || m_gameState == GameState::Victory) {
+        ResetGame();
+    }
     m_gameState = GameState::Playing;
 }
 
@@ -110,7 +122,7 @@ void GameController::ResumeGame() {
 
 void GameController::ResetGame() {
     Initialize();
-    StartGame();
+    m_gameState = GameState::Playing;
 }
 
 void GameController::AddScore(int score) {
@@ -173,11 +185,9 @@ void GameController::CheckPelletCollision() {
     TileType tile = m_board.GetTile(gridPos.x, gridPos.y);
 
     if (tile == TileType::Pellet) {
-        m_board.SetTile(gridPos.x, gridPos.y, TileType::Empty);
-        AddScore(PELLET_SCORE);
+        AddScore(m_board.EatPellet(gridPos.x, gridPos.y));
     } else if (tile == TileType::PowerPellet) {
-        m_board.SetTile(gridPos.x, gridPos.y, TileType::Empty);
-        AddScore(POWER_PELLET_SCORE);
+        AddScore(m_board.EatPowerPellet(gridPos.x, gridPos.y));
         ActivatePowerMode();
     }
 }
@@ -206,7 +216,7 @@ void GameController::CheckGhostCollision() {
 
 void GameController::CheckLevelComplete() {
     if (m_board.GetRemainingPellets() == 0) {
-        NextLevel();
+        m_gameState = GameState::Victory;
     }
 }
 
@@ -225,23 +235,37 @@ void GameController::NextLevel() {
 }
 
 void GameController::OnKeyPress(int keyCode) {
-    // 映射键盘到方向
-    // 假设这些是标准键码，或者由 PacManGame 传递
-    // 这里暂时使用一个通用的映射逻辑
+    if (keyCode == SDL_SCANCODE_RETURN || keyCode == SDL_SCANCODE_KP_ENTER) {
+        if (m_gameState == GameState::Menu || m_gameState == GameState::GameOver || m_gameState == GameState::Victory) {
+            StartGame();
+        }
+        return;
+    }
+
+    if (keyCode == SDL_SCANCODE_R) {
+        ResetGame();
+        return;
+    }
+
     switch (keyCode) {
-        case 0: // Up
+        case SDL_SCANCODE_UP:
+        case SDL_SCANCODE_W:
             m_pacman.SetNextDirection(Direction::Up);
             break;
-        case 1: // Down
+        case SDL_SCANCODE_DOWN:
+        case SDL_SCANCODE_S:
             m_pacman.SetNextDirection(Direction::Down);
             break;
-        case 2: // Left
+        case SDL_SCANCODE_LEFT:
+        case SDL_SCANCODE_A:
             m_pacman.SetNextDirection(Direction::Left);
             break;
-        case 3: // Right
+        case SDL_SCANCODE_RIGHT:
+        case SDL_SCANCODE_D:
             m_pacman.SetNextDirection(Direction::Right);
             break;
-        case 4: // Pause/P
+        case SDL_SCANCODE_P:
+        case SDL_SCANCODE_SPACE:
             if (m_gameState == GameState::Playing) PauseGame();
             else if (m_gameState == GameState::Paused) ResumeGame();
             break;
@@ -252,7 +276,70 @@ void GameController::OnKeyRelease(int /*keyCode*/) {
 }
 
 void GameController::RenderUI() {
-    // TODO: 实现 UI 渲染（得分、生命等）
+    // Render simple in-game HUD using quads so gameplay feedback is visible
+    // even without text rendering support.
+    Prisma::Graphic::Renderer2D::BeginScene(m_camera);
+
+    const float panelHeight = 18.0f;
+    const float panelWidth = BOARD_WIDTH * TILE_SIZE - 16.0f;
+    const glm::vec2 panelPos(8.0f, 8.0f);
+    Prisma::Graphic::Renderer2D::DrawQuad(panelPos, glm::vec2(panelWidth, panelHeight), Prisma::Color(0.05f, 0.05f, 0.08f, 0.8f));
+
+    Prisma::Color stateColor(0.2f, 0.2f, 0.2f, 0.95f);
+    if (m_gameState == GameState::Playing) stateColor = Prisma::Color(0.1f, 0.55f, 0.2f, 0.95f);
+    else if (m_gameState == GameState::Paused) stateColor = Prisma::Color(0.8f, 0.65f, 0.1f, 0.95f);
+    else if (m_gameState == GameState::GameOver) stateColor = Prisma::Color(0.7f, 0.12f, 0.12f, 0.95f);
+    else if (m_gameState == GameState::Victory) stateColor = Prisma::Color(0.2f, 0.35f, 0.9f, 0.95f);
+    Prisma::Graphic::Renderer2D::DrawQuad(glm::vec2(10.0f, 10.0f), glm::vec2(90.0f, 14.0f), stateColor);
+
+    // Lives indicator
+    for (int i = 0; i < std::max(0, m_lives); ++i) {
+        Prisma::Graphic::Renderer2D::DrawQuad(glm::vec2(110.0f + i * 16.0f, 10.0f), glm::vec2(12.0f, 12.0f), Prisma::Color(1.0f, 0.95f, 0.15f, 1.0f));
+    }
+
+    // Pellet progress bar
+    const int totalPellets = std::max(1, m_board.GetTotalPellets());
+    const int eatenPellets = std::max(0, totalPellets - m_board.GetRemainingPellets());
+    const float progress = static_cast<float>(eatenPellets) / static_cast<float>(totalPellets);
+    const glm::vec2 barBgPos(200.0f, 10.0f);
+    const glm::vec2 barSize(220.0f, 12.0f);
+    Prisma::Graphic::Renderer2D::DrawQuad(barBgPos, barSize, Prisma::Color(0.15f, 0.15f, 0.2f, 0.95f));
+    Prisma::Graphic::Renderer2D::DrawQuad(barBgPos, glm::vec2(barSize.x * progress, barSize.y), Prisma::Color(0.2f, 0.7f, 1.0f, 0.95f));
+
+    // Power mode indicator
+    if (m_powerModeActive) {
+        Prisma::Graphic::Renderer2D::DrawQuad(glm::vec2(430.0f, 10.0f), glm::vec2(120.0f, 12.0f), Prisma::Color(0.05f, 0.05f, 0.2f, 0.95f));
+        const float ratio = std::clamp(m_powerModeTimer / m_powerModeDuration, 0.0f, 1.0f);
+        Prisma::Graphic::Renderer2D::DrawQuad(glm::vec2(430.0f, 10.0f), glm::vec2(120.0f * ratio, 12.0f), Prisma::Color(0.35f, 0.35f, 1.0f, 0.95f));
+    }
+
+    Prisma::Graphic::Renderer2D::EndScene();
+
+    UpdateUI();
+}
+
+void GameController::UpdateUI() {
+    if (!Prisma::Engine::Get().IsRunning()) return;
+
+    const char* state = "MENU";
+    switch (m_gameState) {
+        case GameState::Playing: state = "PLAYING"; break;
+        case GameState::Paused: state = "PAUSED"; break;
+        case GameState::GameOver: state = "GAME OVER"; break;
+        case GameState::Victory: state = "VICTORY"; break;
+        case GameState::Menu: default: state = "MENU"; break;
+    }
+
+    std::ostringstream oss;
+    oss << "Pac-Man | State: " << state
+        << " | Score: " << m_score
+        << " | High: " << m_highScore
+        << " | Lives: " << m_lives
+        << " | Level: " << m_currentLevel
+        << " | Pellets: " << m_board.GetRemainingPellets() << "/" << m_board.GetTotalPellets()
+        << " | Controls: WASD/Arrows Move, P Pause, Enter Start, R Reset, Esc Exit";
+
+    Prisma::Engine::Get().GetWindow().SetTitle(oss.str());
 }
 
 } // namespace PacMan
