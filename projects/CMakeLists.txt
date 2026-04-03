@@ -3,16 +3,23 @@ cmake_minimum_required(VERSION 3.20)
 
 message(STATUS "=== Loading Projects ===")
 
+option(PRISMA_BUILD_PROJECT_PRISMACRAFT "Build PrismaCraft project" ON)
+option(PRISMA_BUILD_PROJECT_PACMAN "Build PacManGame project" ON)
+
 # 1. PrismaCraft 核心逻辑库
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PrismaCraft/CMakeLists.txt)
+if(PRISMA_BUILD_PROJECT_PRISMACRAFT AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PrismaCraft/CMakeLists.txt)
     add_subdirectory(PrismaCraft)
     message(STATUS "  Added project: PrismaCraft")
+elseif(NOT PRISMA_BUILD_PROJECT_PRISMACRAFT)
+    message(STATUS "  Skipped project: PrismaCraft")
 endif()
 
 # 2. PacManGame
-if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PacManGame/CMakeLists.txt)
+if(PRISMA_BUILD_PROJECT_PACMAN AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/PacManGame/CMakeLists.txt)
     add_subdirectory(PacManGame)
     message(STATUS "  Added project: PacManGame")
+elseif(NOT PRISMA_BUILD_PROJECT_PACMAN)
+    message(STATUS "  Skipped project: PacManGame")
 endif()
 
 # 2. 其他平台特定项目 (可选)
