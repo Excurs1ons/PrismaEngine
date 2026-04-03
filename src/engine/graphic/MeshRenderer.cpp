@@ -3,6 +3,7 @@
 #include "GameObject.h"
 #include "Logger.h"
 #include "RenderCommandContext.h"
+#include "Renderer.h"
 #include <cassert>
 #include <cmath>
 
@@ -49,6 +50,11 @@ void MeshRenderer::Update(Timestep ts) {
         const float pulse = 0.5f + 0.5f * std::sin(ts.GetSeconds());
         m_material->SetParam("ObjectPosition", PrismaMath::vec3(position.x, position.y, position.z));
         m_material->SetParam("FramePulse", pulse);
+
+        // [新增] 提交渲染指令
+        if (m_mesh) {
+            Renderer::Submit(m_mesh.get(), m_material.get(), GetOwner()->GetTransform()->GetMatrix());
+        }
     }
 }
 

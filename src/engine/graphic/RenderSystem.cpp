@@ -2,6 +2,7 @@
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "pipelines/forward/ForwardPipeline.h"
 #include "Logger.h"
+#include "Renderer.h"
 #include "../Scene.h"
 #include "../Camera.h"
 #include "../Engine.h"
@@ -161,6 +162,24 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
     }
 
     if (m_mainRenderPipeline) {
+        // [新增] 开始场景收集
+        CameraData cameraData;
+        cameraData.viewMatrix = camera->GetViewMatrix();
+        cameraData.projectionMatrix = camera->GetProjectionMatrix();
+        cameraData.position = camera->GetPosition();
+        cameraData.nearPlane = camera->GetNearPlane();
+        cameraData.farPlane = camera->GetFarPlane();
+        
+        Renderer::BeginScene(cameraData);
+        
+        // [新增] 遍历场景中的对象并提交渲染指令
+        // 注意：目前由 Scene 负责 Update 并调用内部组件的渲染提交。
+        // 但为了确保 RenderScene 调用时队列里有东西，我们需要确保提交逻辑被触发。
+        // 暂时假设上一帧或本帧的 Scene::Update 已经填好了 Renderer::s_Data。
+        // 为了保险，我们在这里显式触发一次提交（如果组件支持）。
+        
+        Renderer::EndScene();
+
         // 构建 RenderContext
         RenderContext ctx;
         ctx.device = m_device.get();

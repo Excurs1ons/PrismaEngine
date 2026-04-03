@@ -1,13 +1,7 @@
 #include "DynamicLoader.h"
+#include <SDL3/SDL.h>
+#include <filesystem>
 #include <iostream>
-
-#ifdef _WIN32
-    #include <windows.h>
-#else
-    #include <dlfcn.h>
-    #include <unistd.h>
-    #include <limits.h>
-#endif
 
 namespace Prisma {
 
@@ -18,136 +12,103 @@ DynamicLoader::~DynamicLoader() {
 }
 
 bool DynamicLoader::Load(const std::string& libraryPath) {
-#ifdef _WIN32
-    m_handle = LoadLibraryA(libraryPath.c_str());
+    m_handle = reinterpret_cast<void*>(SDL_LoadObject(libraryPath.c_str()));
     if (m_handle == nullptr) {
-        DWORD error = GetLastError();
-        LOG_ERROR("DynamicLoader", "无法加载库: {0}，错误码: {1}", libraryPath.c_str(), error);
-        throw std::runtime_error("Failed to load library: " + libraryPath);
+        LOG_ERROR("DynamicLoader", "无法加载库: {0}，错误: {1}", libraryPath.c_str(), SDL_GetError());
+        throw std::runtime_error("Failed to load library: " + libraryPath + " Error: " + SDL_GetError());
     }
-#else
-    m_handle = dlopen(libraryPath.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (m_handle == nullptr) {
-        LOG_ERROR("DynamicLoader", "无法加载库: {0}，错误: {1}", libraryPath.c_str(), dlerror());
-        throw std::runtime_error("Failed to load library: " + libraryPath);
-    }
-#endif
     return true;
 }
 
 bool DynamicLoader::TryLoad(const std::string& libraryPath) {
+    // SDL3 handles platform-specific loading, but the temporary file logic 
+    // is often used to avoid locking the original file.
     std::string tempPath = CopyToTempFile(libraryPath);
     if (tempPath.empty()) {
-        LOG_FATAL("DynamicLoader", "无法创建临时 DLL: {0}", libraryPath.c_str());
+        LOG_FATAL("DynamicLoader", "无法创建临时库文件: {0}", libraryPath.c_str());
         return false;
     }
     
     m_tempPath = tempPath;
+    m_handle = reinterpret_cast<void*>(SDL_LoadObject(m_tempPath.c_str()));
     
-#ifdef _WIN32
-    m_handle = LoadLibraryA(m_tempPath.c_str());
     if (!m_handle) {
-        DWORD error = GetLastError();
-        LOG_FATAL("DynamicLoader", "无法加载库: {0}，错误码: {1}", libraryPath.c_str(), error);
-        DeleteFileA(m_tempPath.c_str());
+        LOG_FATAL("DynamicLoader", "无法加载库: {0}，错误: {1}", libraryPath.c_str(), SDL_GetError());
+        std::error_code ec;
+        std::filesystem::remove(m_tempPath, ec);
         m_tempPath = "";
         return false;
     }
-#else
-    m_handle = dlopen(m_tempPath.c_str(), RTLD_NOW | RTLD_LOCAL);
-    if (!m_handle) {
-        LOG_FATAL("DynamicLoader", "无法加载库: {0}，错误: {1}", libraryPath.c_str(), dlerror());
-        std::filesystem::remove(m_tempPath);
-        m_tempPath = "";
-        return false;
-    }
-#endif
     return true;
 }
 
 void DynamicLoader::Unload() {
     if (m_handle) {
-#ifdef _WIN32
-        FreeLibrary((HMODULE)m_handle);
+        SDL_UnloadObject(reinterpret_cast<SDL_SharedObject*>(m_handle));
         if (!m_tempPath.empty()) {
-            DeleteFileA(m_tempPath.c_str());
+            std::error_code ec;
+            std::filesystem::remove(m_tempPath, ec);
             m_tempPath = "";
         }
-#else
-        dlclose(m_handle);
-        if (!m_tempPath.empty()) {
-            std::filesystem::remove(m_tempPath);
-            m_tempPath = "";
-        }
-#endif
         m_handle = nullptr;
     }
 }
 
 std::string DynamicLoader::CopyToTempFile(const std::string& sourcePathStr) {
     std::filesystem::path sourcePath(sourcePathStr);
-
+    
+    // Using SDL_GetBasePath for portable path resolution
+    const char* base_path_ptr = SDL_GetBasePath();
+    std::filesystem::path exe_path = base_path_ptr ? std::filesystem::path(base_path_ptr) : std::filesystem::current_path();
+    // In SDL3, SDL_GetBasePath returns a const char* that does NOT need to be freed? 
+    // Wait, let me check SDL3 documentation or common usage.
+    // Actually SDL3 SDL_GetBasePath returns a const string that should be freed with SDL_free.
+    // But the return type is const char*.
+    if (base_path_ptr) SDL_free(const_cast<char*>(base_path_ptr));
+    
+    auto sourceAbsolutePath = exe_path / sourcePath;
+    
+    if (!std::filesystem::exists(sourceAbsolutePath)) {
+        // Try current working directory as fallback
+        sourceAbsolutePath = std::filesystem::current_path() / sourcePath;
+        if (!std::filesystem::exists(sourceAbsolutePath)) {
+            LOG_FATAL("DynamicLoader", "未找到源文件: {0}", sourcePathStr.c_str());
+            return "";
+        }
+    }
+    
+    // Create a unique temporary filename
+    std::string extension = sourcePath.extension().string();
+    if (extension.empty()) {
 #ifdef _WIN32
-    char exe_path_str[MAX_PATH];
-    GetModuleFileNameA(nullptr, exe_path_str, MAX_PATH);
-    auto exe_path = std::filesystem::path(exe_path_str).parent_path();
-    auto sourceAbsolutePath = exe_path / sourcePath;
-    
-    if (!std::filesystem::exists(sourceAbsolutePath)) {
-        LOG_FATAL("DynamicLoader", "未找到源文件: {0}", sourceAbsolutePath.string());
-        return "";
-    }
-    
-    char tempPath[MAX_PATH];
-    char tempFileName[MAX_PATH];
-    
-    if (GetTempPathA(MAX_PATH, tempPath) == 0) {
-        LOG_FATAL("DynamicLoader", "无法获取临时路径");
-        return "";
-    }
-
-    if (GetTempFileNameA(tempPath, "dll_", 0, tempFileName) == 0) {
-        LOG_FATAL("DynamicLoader", "无法创建临时文件");
-        return "";
-    }
-    
-    DeleteFileA(tempFileName);
-    
-    std::string newTempFileName(tempFileName);
-    newTempFileName += ".dll";
-    
-    if (!CopyFileA(sourceAbsolutePath.string().c_str(), newTempFileName.c_str(), FALSE)) {
-        LOG_FATAL("DynamicLoader", "无法复制文件: {0} -> {1}", sourceAbsolutePath.string(), newTempFileName);
-        return "";
-    }
-    return newTempFileName;
+        extension = ".dll";
+#elif defined(__APPLE__)
+        extension = ".dylib";
 #else
-    char exe_path_str[PATH_MAX];
-    ssize_t count = readlink("/proc/self/exe", exe_path_str, PATH_MAX);
-    if (count == -1) return "";
-    std::string exe_path_s(exe_path_str, count);
-    auto exe_path = std::filesystem::path(exe_path_s).parent_path();
-    auto sourceAbsolutePath = exe_path / sourcePath;
-
-    if (!std::filesystem::exists(sourceAbsolutePath)) {
-        LOG_FATAL("DynamicLoader", "未找到源文件: {0}", sourceAbsolutePath.string());
-        return "";
-    }
-
-    std::string newTempFileName = (std::filesystem::temp_directory_path() / ("lib_" + std::to_string(std::rand()) + ".so")).string();
-    
-    try {
-        std::filesystem::copy_file(sourceAbsolutePath, newTempFileName, std::filesystem::copy_options::overwrite_existing);
-    } catch (const std::exception& e) {
-        LOG_FATAL("DynamicLoader", "无法复制文件: {0} -> {1}", sourceAbsolutePath.string(), newTempFileName);
-        return "";
-    }
-    return newTempFileName;
+        extension = ".so";
 #endif
+    }
+    
+    std::string tempFileName = (std::filesystem::temp_directory_path() / 
+                               ("prisma_lib_" + std::to_string(SDL_GetTicks()) + extension)).string();
+    
+    std::error_code ec;
+    if (std::filesystem::copy_file(sourceAbsolutePath, tempFileName, std::filesystem::copy_options::overwrite_existing, ec)) {
+        return tempFileName;
+    } else {
+        LOG_FATAL("DynamicLoader", "无法复制文件: {0} -> {1}, 错误: {2}", 
+                  sourceAbsolutePath.string().c_str(), tempFileName.c_str(), ec.message().c_str());
+        return "";
+    }
 }
 
 bool DynamicLoader::IsLoaded() const {
     return m_handle != nullptr;
+}
+
+void* DynamicLoader::GetSymbol(const std::string& symbolName) {
+    if (!m_handle) return nullptr;
+    return reinterpret_cast<void*>(SDL_LoadFunction(reinterpret_cast<SDL_SharedObject*>(m_handle), symbolName.c_str()));
 }
 
 } // namespace Prisma
