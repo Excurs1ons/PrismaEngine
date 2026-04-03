@@ -3,11 +3,20 @@
 #include "core/Timestep.h"
 #include "Application.h"
 #include "EngineLauncher.h"
+#include "Platform.h"
 #include "core/Event.h"
 #include <SDL3/SDL_scancode.h>
 #include <iostream>
+#include <string>
+#include <vector>
 
 namespace PacMan {
+
+namespace {
+bool HasGraphicsDeviceAvailable() {
+    return Prisma::Platform::HasDisplaySupport();
+}
+}
 
 /**
  * @brief Pac-Man 具体的应用程序类
@@ -124,6 +133,12 @@ void PacManGame::Run() {
     m_lastRunResult = Prisma::RunApplication(std::move(m_application), spec);
     if (m_lastRunResult != 0) {
         std::cerr << "Pac-Man exited with engine error: " << m_lastRunResult << std::endl;
+        if (!HasGraphicsDeviceAvailable()) {
+            std::cout << "No graphics device detected, switching to console view." << std::endl;
+            if (RunConsoleFallback()) {
+                m_lastRunResult = 0;
+            }
+        }
     }
     m_running = false;
 }
@@ -165,6 +180,98 @@ void PacManGame::OnMouseRelease(int button, int x, int y) {
 }
 
 void PacManGame::OnMouseMove(int x, int y) {
+}
+
+bool PacManGame::RunConsoleFallback() {
+    if (!m_gameController) return false;
+
+    m_gameController->ResetGame();
+    m_running = true;
+
+    std::cout << "\n=== Pac-Man Console View ===\n";
+    std::cout << "Commands: w/a/s/d move, p pause, r restart, q quit\n";
+
+    while (m_running) {
+        RenderConsoleFrame();
+        std::cout << "Input> ";
+
+        std::string line;
+        if (!std::getline(std::cin, line)) {
+            m_running = false;
+            break;
+        }
+
+        char cmd = line.empty() ? ' ' : line[0];
+        HandleConsoleInput(cmd);
+        m_gameController->Update(0.12f);
+    }
+
+    return true;
+}
+
+void PacManGame::RenderConsoleFrame() const {
+    const GameBoard& board = m_gameController->GetGameBoard();
+    std::vector<std::string> rows(board.GetHeight(), std::string(board.GetWidth(), ' '));
+
+    for (int y = 0; y < board.GetHeight(); ++y) {
+        for (int x = 0; x < board.GetWidth(); ++x) {
+            switch (board.GetTile(x, y)) {
+                case TileType::Wall: rows[y][x] = '#'; break;
+                case TileType::Pellet: rows[y][x] = '.'; break;
+                case TileType::PowerPellet: rows[y][x] = 'o'; break;
+                case TileType::GhostHouse: rows[y][x] = '='; break;
+                case TileType::Empty:
+                case TileType::PacmanSpawn:
+                default: rows[y][x] = ' '; break;
+            }
+        }
+    }
+
+    const auto pacPos = m_gameController->GetPacman().GetGridPosition();
+    if (pacPos.x >= 0 && pacPos.x < board.GetWidth() && pacPos.y >= 0 && pacPos.y < board.GetHeight()) {
+        rows[pacPos.y][pacPos.x] = 'P';
+    }
+
+    const auto& ghosts = m_gameController->GetGhosts();
+    for (size_t i = 0; i < ghosts.size(); ++i) {
+        const auto gp = ghosts[i].GetGridPosition();
+        if (gp.x >= 0 && gp.x < board.GetWidth() && gp.y >= 0 && gp.y < board.GetHeight()) {
+            rows[gp.y][gp.x] = static_cast<char>('1' + (i % 9));
+        }
+    }
+
+    std::cout << "\n";
+    for (const auto& row : rows) {
+        std::cout << row << '\n';
+    }
+
+    const char* state = "MENU";
+    switch (m_gameController->GetGameState()) {
+        case GameState::Playing: state = "PLAYING"; break;
+        case GameState::Paused: state = "PAUSED"; break;
+        case GameState::GameOver: state = "GAME OVER"; break;
+        case GameState::Victory: state = "VICTORY"; break;
+        case GameState::Menu: default: break;
+    }
+
+    std::cout << "State: " << state
+              << " | Score: " << m_gameController->GetScore()
+              << " | Lives: " << m_gameController->GetLives()
+              << " | Pellets: " << board.GetRemainingPellets() << "/" << board.GetTotalPellets()
+              << "\n";
+}
+
+void PacManGame::HandleConsoleInput(char command) {
+    switch (command) {
+        case 'w': case 'W': m_gameController->OnKeyPress(SDL_SCANCODE_W); break;
+        case 'a': case 'A': m_gameController->OnKeyPress(SDL_SCANCODE_A); break;
+        case 's': case 'S': m_gameController->OnKeyPress(SDL_SCANCODE_S); break;
+        case 'd': case 'D': m_gameController->OnKeyPress(SDL_SCANCODE_D); break;
+        case 'p': case 'P': m_gameController->OnKeyPress(SDL_SCANCODE_P); break;
+        case 'r': case 'R': m_gameController->OnKeyPress(SDL_SCANCODE_R); break;
+        case 'q': case 'Q': m_running = false; break;
+        default: break;
+    }
 }
 
 } // namespace PacMan

@@ -83,6 +83,9 @@ public:
 private:
     std::unique_ptr<Prisma::Application> m_application;
     std::unique_ptr<GameController> m_gameController;
+    bool RunConsoleFallback();
+    void RenderConsoleFrame() const;
+    void HandleConsoleInput(char command);
 
     bool m_initialized = false;
     bool m_running = false;
