@@ -1,6 +1,6 @@
 #include "GameController.h"
 #include "graphic/Renderer2D.h"
-#include "Engine.h"
+#include "Platform.h"
 #include <SDL3/SDL_scancode.h>
 #include <iostream>
 #include <algorithm>
@@ -319,7 +319,8 @@ void GameController::RenderUI() {
 }
 
 void GameController::UpdateUI() {
-    if (!Prisma::Engine::Get().IsRunning()) return;
+    auto window = Prisma::Platform::GetCurrentWindow();
+    if (!window) return;
 
     const char* state = "MENU";
     switch (m_gameState) {
@@ -339,7 +340,7 @@ void GameController::UpdateUI() {
         << " | Pellets: " << m_board.GetRemainingPellets() << "/" << m_board.GetTotalPellets()
         << " | Controls: WASD/Arrows Move, P Pause, Enter Start, R Reset, Esc Exit";
 
-    Prisma::Engine::Get().GetWindow().SetTitle(oss.str());
+    Prisma::Platform::SetWindowTitle(window, oss.str().c_str());
 }
 
 } // namespace PacMan
