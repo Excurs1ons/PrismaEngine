@@ -2,6 +2,9 @@
 #include "game/GameController.h"
 #include "core/Timestep.h"
 #include "Application.h"
+#include "EngineLauncher.h"
+#include "core/Event.h"
+#include <SDL3/SDL_scancode.h>
 #include <iostream>
 
 namespace PacMan {
@@ -31,7 +34,43 @@ public:
     }
 
     virtual void OnEvent(Prisma::Event& e) override {
-        // TODO: 处理事件 (键盘、鼠标、窗口大小等)
+        Prisma::Application::OnEvent(e);
+
+        Prisma::EventDispatcher dispatcher(e);
+        dispatcher.Dispatch<Prisma::WindowResizeEvent>([this](Prisma::WindowResizeEvent& ev) {
+            m_game->OnWindowResize(static_cast<int>(ev.GetWidth()), static_cast<int>(ev.GetHeight()));
+            return false;
+        });
+
+        dispatcher.Dispatch<Prisma::KeyPressedEvent>([this](Prisma::KeyPressedEvent& ev) {
+            if (ev.IsRepeat()) return false;
+            if (ev.GetKeyCode() == SDL_SCANCODE_ESCAPE) {
+                Close();
+                return true;
+            }
+            m_game->OnKeyPress(ev.GetKeyCode());
+            return false;
+        });
+
+        dispatcher.Dispatch<Prisma::KeyReleasedEvent>([this](Prisma::KeyReleasedEvent& ev) {
+            m_game->OnKeyRelease(ev.GetKeyCode());
+            return false;
+        });
+
+        dispatcher.Dispatch<Prisma::MouseButtonPressedEvent>([this](Prisma::MouseButtonPressedEvent& ev) {
+            m_game->OnMousePress(ev.GetMouseButton(), 0, 0);
+            return false;
+        });
+
+        dispatcher.Dispatch<Prisma::MouseButtonReleasedEvent>([this](Prisma::MouseButtonReleasedEvent& ev) {
+            m_game->OnMouseRelease(ev.GetMouseButton(), 0, 0);
+            return false;
+        });
+
+        dispatcher.Dispatch<Prisma::MouseMovedEvent>([this](Prisma::MouseMovedEvent& ev) {
+            m_game->OnMouseMove(static_cast<int>(ev.GetX()), static_cast<int>(ev.GetY()));
+            return false;
+        });
     }
 
 private:
@@ -56,7 +95,6 @@ void PacManGame::Initialize() {
 
     // 创建 Prisma 应用程序实例
     m_application = std::make_unique<PacManApplication>(this);
-    m_application->OnInitialize();
 
     m_initialized = true;
     std::cout << "Pac-Man Game Initialized." << std::endl;
@@ -77,18 +115,17 @@ void PacManGame::Run() {
     if (!m_initialized) return;
 
     m_running = true;
-    m_gameController->StartGame();
+    Prisma::EngineSpecification spec;
+    spec.Name = "PacManGame";
+    spec.Headless = false;
+    spec.MaxFPS = 144;
+    spec.MinLogLevel = Prisma::LogLevel::Info;
 
-    // 运行主循环 (这里假设 Application 已经管理了循环)
-    // 或者我们手动调用 m_application->Run() 如果它有的话
-    // 在 EntryPoint.h 中，是 engine.Run(std::unique_ptr<Prisma::Application>(app));
-    // 但在 PacManGame::Run 中，我们需要实现循环直到关闭
-    
-    // 注意：由于我们已经在 main.cpp 中手动创建了 PacManGame，
-    // 我们需要一个循环来保持运行，除非 Prisma::Application 负责。
-    
-    // 简单实现一个循环，如果 Application 没有自带循环
-    // 通常引擎会有自己的循环
+    m_lastRunResult = Prisma::RunApplication(std::move(m_application), spec);
+    if (m_lastRunResult != 0) {
+        std::cerr << "Pac-Man exited with engine error: " << m_lastRunResult << std::endl;
+    }
+    m_running = false;
 }
 
 void PacManGame::OnUpdate(Prisma::Timestep ts) {

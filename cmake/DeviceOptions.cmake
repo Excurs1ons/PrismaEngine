@@ -3,7 +3,7 @@
 
 # ========== 剪枝版本配置 ==========
 # 此分支简化引擎架构，仅支持：SDL3 + Vulkan + ImGui
-# 平台限制：Windows x64
+# 平台策略：允许 SDL3 + Vulkan 可适配的平台
 
 # 强制 SDL3 支持（跨平台输入和音频）
 set(PRISMA_ENABLE_SDL3 ON CACHE BOOL "Enable SDL3 support" FORCE)
@@ -30,7 +30,7 @@ option(PRISMA_ENABLE_BINDLESS_RESOURCES "Enable Bindless Resources" OFF)
 message(STATUS "")
 message(STATUS "=== Prisma Engine Configuration (Prune Branch) ===")
 message(STATUS "  Simplified: SDL3 + Vulkan + ImGui only")
-message(STATUS "  Platform: Windows x64 only")
+message(STATUS "  Platform: SDL3 + Vulkan capable targets")
 message(STATUS "")
 message(STATUS "Render Devices:")
 if(PRISMA_ENABLE_RENDER_DX12)

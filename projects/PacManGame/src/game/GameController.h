@@ -214,6 +214,7 @@ private:
 
     // 输入缓存
     Direction m_inputDirection = Direction::None;
+    float m_uiRefreshAccumulator = 0.0f;
 
     // 辅助方法
     void InitializeGhosts();

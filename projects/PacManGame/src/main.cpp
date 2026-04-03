@@ -36,11 +36,12 @@ int main(int argc, char* argv[]) {
 
     // 运行游戏
     g_PacManGame->Run();
+    int runResult = g_PacManGame->GetLastRunResult();
 
     // 关闭游戏
     g_PacManGame->Shutdown();
     delete g_PacManGame;
     g_PacManGame = nullptr;
 
-    return 0;
+    return runResult;
 }

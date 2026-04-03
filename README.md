@@ -6,17 +6,17 @@
 
 ## Prune Branch
 
-此分支是 Prisma Engine 的简化版本，专注于 Windows x64 平台。
+此分支是 Prisma Engine 的简化版本，专注于 SDL3 + Vulkan 渲染路径。
 
 **简化内容：**
-- ✅ 仅支持 **Windows x64** 平台
+- ✅ 支持 **SDL3 + Vulkan** 可适配的平台（按 preset 配置）
 - ✅ 渲染后端：仅启用 **Vulkan**
 - ✅ 音频后端：仅启用 **SDL3**
 - ✅ 编辑器：集成 **ImGui**
 - ❌ 移除 DirectX 12 后端
 - ❌ 移除 OpenGL 后端
 - ❌ 移除 XAudio2 后端
-- ❌ 移除 Linux/Android/WebAssembly 支持
+- ❌ 移除 DirectX12 / OpenGL / XAudio2 路径
 
 **目标：** 简化引擎架构，专注 Vulkan 渲染管线开发。
 
@@ -56,19 +56,21 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 
 ## Quick Start
 
-### Windows x64
+### One-Command Build (Auto Preset)
 
 ```bash
 # Clone repository
 git clone --recursive https://github.com/Excurs1ons/PrismaEngine.git -b prune
 cd PrismaEngine
 
-# Build using CMake Presets
-cmake --preset windows-x64-debug
-cmake --build build/windows-x64-debug --parallel
+# Auto-detect platform + architecture and choose preset
+./scripts/build.sh
 
-# Run Editor
-./build/windows-x64-debug/editor/PrismaEditor.exe
+# Optional: choose target/config explicitly
+./scripts/build.sh --target editor --config release
+
+# Optional: force a specific preset
+./scripts/build.sh --preset editor-linux-arm64-debug --clean
 ```
 
 ## Features (Prune Branch)

@@ -210,7 +210,11 @@ void Ghost::UpdateAI() {
             m_currentDirection = GetBestDirection(m_targetPosition);
         } else {
             // 被吃模式，回到生成点
-            m_currentDirection = GetBestDirection(m_spawnPosition);
+            if (gridPos == m_spawnPosition) {
+                Revive();
+            } else {
+                m_currentDirection = GetBestDirection(m_spawnPosition);
+            }
         }
     }
 }

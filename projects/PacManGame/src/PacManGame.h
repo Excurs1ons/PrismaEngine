@@ -86,6 +86,10 @@ private:
 
     bool m_initialized = false;
     bool m_running = false;
+    int m_lastRunResult = 0;
+
+public:
+    int GetLastRunResult() const { return m_lastRunResult; }
 };
 
 extern PacManGame* g_PacManGame;
