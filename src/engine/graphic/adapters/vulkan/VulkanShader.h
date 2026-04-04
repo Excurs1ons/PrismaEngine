@@ -80,7 +80,7 @@ public:
 
     /// @brief 获取资源类型
     /// @return 资源类型
-    ResourceType GetType() const override;
+    ResourceType GetResourceType() const override;
 
     /// @brief 获取Vulkan着色器模块
     /// @return VkShaderModule句柄

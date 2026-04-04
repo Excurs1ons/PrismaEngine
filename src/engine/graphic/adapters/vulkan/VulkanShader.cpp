@@ -50,7 +50,7 @@ namespace Prisma {
                 return m_bytecode;
             }
 
-            ResourceType VulkanShader::GetType() const {
+            ResourceType VulkanShader::GetResourceType() const {
                 return ResourceType::Shader;
             }
 

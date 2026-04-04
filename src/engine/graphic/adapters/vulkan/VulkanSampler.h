@@ -11,7 +11,7 @@ public:
     VulkanSampler(VkDevice device, const SamplerDesc& desc);
     ~VulkanSampler() override;
 
-    ResourceType GetType() const override { return ResourceType::Sampler; }
+    ResourceType GetResourceType() const override { return ResourceType::Sampler; }
 
     TextureFilter GetFilter() const override { return m_desc.filter; }
     TextureAddressMode GetAddressU() const override { return m_desc.addressU; }

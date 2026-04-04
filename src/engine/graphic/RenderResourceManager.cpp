@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <stb_image.h>
 
+#include "adapters/vulkan/VulkanEmbeddedShaders.h"
+
 namespace Prisma::Graphic {
 
 std::shared_ptr<IRenderResourceManager> RenderResourceManager::Get() {
@@ -511,8 +513,55 @@ std::shared_ptr<ITexture> RenderResourceManager::LoadTextureSync(const std::stri
     return nullptr;
 }
 
+std::shared_ptr<IShader> RenderResourceManager::GetShader(const std::string& name) {
+    std::shared_lock<std::shared_mutex> lock(m_resourceMutex);
+    auto it = m_nameToId.find(name);
+    if (it == m_nameToId.end()) return nullptr;
+
+    auto resIt = m_resources.find(it->second);
+    if (resIt == m_resources.end()) return nullptr;
+
+    return std::dynamic_pointer_cast<IShader>(resIt->second);
+}
+
 std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string& filename, const std::string& entryPoint, const std::string& target, const std::vector<std::string>& defines) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
+
+    // [修复] 优先从缓存获取
+    auto cached = GetShader(filename);
+    if (cached) return cached;
+
+    // [修复] 处理内置默认 Shader
+    if (filename == "Default") {
+        ShaderDesc desc;
+        desc.name = "Default";
+        desc.entryPoint = "main";
+        desc.type = ShaderType::Vertex; // 内部实现会处理成程序组
+        desc.language = ShaderLanguage::SPIRV;
+        
+        // 创建默认反射
+        ShaderReflection reflection;
+        ShaderResource transformRes;
+        transformRes.Name = "Transform";
+        transformRes.ResourceType = ShaderResource::Type::UniformBuffer;
+        transformRes.Set = 0;
+        transformRes.Binding = 0;
+        reflection.Resources.push_back(transformRes);
+
+        // 使用硬编码的字节码
+        std::vector<uint8_t> bytecode(
+            reinterpret_cast<const uint8_t*>(Vulkan::VULKAN_DEFAULT_VERT_SPV),
+            reinterpret_cast<const uint8_t*>(Vulkan::VULKAN_DEFAULT_VERT_SPV) + sizeof(Vulkan::VULKAN_DEFAULT_VERT_SPV)
+        );
+
+        auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, reflection);
+        if (!shader) return nullptr;
+        
+        auto sharedShader = std::shared_ptr<IShader>(std::move(shader));
+        RegisterResource(sharedShader, "Default");
+        return sharedShader;
+    }
+
     std::ifstream file(filename);
     if (!file.is_open()) return nullptr;
     std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());

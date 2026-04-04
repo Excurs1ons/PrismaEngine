@@ -13,7 +13,7 @@ namespace Graphic {
  */
 class ENGINE_API OrthographicCamera : public ICamera {
 public:
-    OrthographicCamera() : OrthographicCamera(0.0f, 1280.0f, 0.0f, 720.0f) {}
+    OrthographicCamera() : OrthographicCamera(-640.0f, 640.0f, -360.0f, 360.0f) {}
     OrthographicCamera(float left, float right, float bottom, float top, float nearPlane = -1.0f, float farPlane = 1.0f);
     virtual ~OrthographicCamera() = default;
 
@@ -68,7 +68,7 @@ public:
     void SetProjection(float left, float right, float bottom, float top);
     
     void SetViewportSize(float width, float height) {
-        SetProjection(0.0f, width, 0.0f, height);
+        SetProjection(-width * 0.5f, width * 0.5f, height * 0.5f, -height * 0.5f);
     }
     
     void SetPosition(const PrismaMath::vec2& position) {

@@ -20,7 +20,7 @@ public:
     VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc);
     ~VulkanTexture() override;
 
-    ResourceType GetType() const override { return ResourceType::Texture; }
+    ResourceType GetResourceType() const override { return ResourceType::Texture; }
     TextureType GetTextureType() const override { return m_desc.type; }
     TextureFormat GetFormat() const override { return m_desc.format; }
     float GetWidth() const override { return static_cast<float>(m_desc.width); }
@@ -309,7 +309,7 @@ public:
     VulkanBuffer(VmaAllocator allocator, VkBuffer buffer, VmaAllocation allocation, const BufferDesc& desc);
     ~VulkanBuffer() override;
 
-    ResourceType GetType() const override { return ResourceType::Buffer; }
+    ResourceType GetResourceType() const override { return ResourceType::Buffer; }
     BufferType GetBufferType() const override { return BufferType::Unknown; }
     uint64_t GetSize() const override { return m_desc.size; }
     BufferUsage GetUsage() const override { return m_desc.usage; }
@@ -333,18 +333,38 @@ public:
     }
     void Unmap(uint64_t offset = 0, uint64_t size = 0) override {
         const uint64_t touchedSize = size == 0 ? (m_desc.size - std::min<uint64_t>(offset, m_desc.size)) : size;
-        if (offset <= m_desc.size && touchedSize <= m_desc.size) {
-            m_lastBufferMapType = 0;
+        const uint64_t clampedOffset = std::min<uint64_t>(offset, m_desc.size);
+        const uint64_t clampedSize = std::min<uint64_t>(touchedSize, m_desc.size - clampedOffset);
+
+        if (clampedSize > 0 && !m_shadowData.empty()) {
+            void* mappedData = nullptr;
+            if (vmaMapMemory(m_allocator, m_allocation, &mappedData) == VK_SUCCESS) {
+                std::memcpy(static_cast<uint8_t*>(mappedData) + clampedOffset, m_shadowData.data() + clampedOffset, static_cast<size_t>(clampedSize));
+                vmaUnmapMemory(m_allocator, m_allocation);
+            }
         }
+        m_lastBufferMapType = 0;
     }
     void UpdateData(const void* data, uint64_t size, uint64_t offset = 0) override {
         if (!data || offset >= m_desc.size) {
             return;
         }
 
-        BufferMapDesc mapDesc = Map(offset, size, 1);
-        if (mapDesc.data && mapDesc.size > 0) {
-            std::memcpy(mapDesc.data, data, static_cast<size_t>(mapDesc.size));
+        const uint64_t clampedSize = std::min<uint64_t>(size, m_desc.size - offset);
+        if (clampedSize == 0) return;
+
+        // 更新阴影内存
+        const uint64_t requiredSize = offset + clampedSize;
+        if (m_shadowData.size() < requiredSize) {
+            m_shadowData.resize(static_cast<size_t>(requiredSize), 0);
+        }
+        std::memcpy(m_shadowData.data() + offset, data, static_cast<size_t>(clampedSize));
+
+        // 同步到 GPU
+        void* mappedData = nullptr;
+        if (vmaMapMemory(m_allocator, m_allocation, &mappedData) == VK_SUCCESS) {
+            std::memcpy(static_cast<uint8_t*>(mappedData) + offset, data, static_cast<size_t>(clampedSize));
+            vmaUnmapMemory(m_allocator, m_allocation);
         }
     }
     bool ReadData(void* dstBuffer, uint64_t size, uint64_t offset = 0) override {
