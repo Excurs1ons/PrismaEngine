@@ -46,6 +46,7 @@ void Window::OnUpdate() {
         // 事件翻译工厂 (Event Translation Factory)
         // 完善了对鼠标、键盘、文本输入及窗口大小变化的事件处理，确保 ImGui 等系统能接收到必要的 NativeEvent。
         switch (event.type) {
+            case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
             case SDL_EVENT_QUIT: {
                 WindowCloseEvent e;
                 e.NativeEvent = &event;

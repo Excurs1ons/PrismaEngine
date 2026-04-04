@@ -76,7 +76,14 @@ public:
     ResourceId LoadShaderAsync(const std::string& filename) override;
     bool IsAsyncLoadingComplete(ResourceId id) override;
 
-    // === 统计与调试 ===
+    std::shared_ptr<IShader> LoadShaderSync(const std::string& filename,
+                                           const std::string& entryPoint = "main",
+                                           const std::string& target = "",
+                                           const std::vector<std::string>& defines = {}) override;
+
+    std::shared_ptr<IShader> GetShader(const std::string& name) override;
+
+    // === 统计信息 ===
     ResourceStats GetResourceStats() const override;
     void EnableHotReload(bool enable) override;
     void CheckAndReloadResources() override;
@@ -98,8 +105,6 @@ public:
             return nullptr;
         }
 
-        // 听着，如果你在这里传错了类型，那是你自己的问题。
-        // 我们用 static_pointer_cast 追求极致速度，不要 RTTI 这种垃圾。
         return std::static_pointer_cast<T>(resIt->second);
     }
     
@@ -111,7 +116,6 @@ private:
     void ProcessLoadTask(const ResourceLoadTask& task);
 
     std::shared_ptr<ITexture> LoadTextureSync(const std::string& filename, bool generateMips);
-    std::shared_ptr<IShader> LoadShaderSync(const std::string& filename, const std::string& entryPoint, const std::string& target, const std::vector<std::string>& defines);
 
     void UpdateResourceStats() const;
     void UpdateFileTimestamps();

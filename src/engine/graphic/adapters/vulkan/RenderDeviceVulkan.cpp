@@ -3,6 +3,7 @@
 //         渲染通过由 PrismaEditor.dll 注册的回调执行，
 //         避免两份独立的编译单元共享状态导致指针崩溃。
 #include "RenderDeviceVulkan.h"
+#include "VulkanCommandBuffer.h"
 #include "Logger.h"
 #include "VulkanFence.h"
 #include "VulkanResourceFactory.h"
@@ -106,6 +107,12 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         cmd_alloc_info.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         cmd_alloc_info.commandBufferCount          = 3;
         vkAllocateCommandBuffers(m_device, &cmd_alloc_info, m_commandBuffers.data());
+
+        // [修复] 包装命令缓冲区
+        m_vulkanCommandBuffers.clear();
+        for (auto cmd : m_commandBuffers) {
+            m_vulkanCommandBuffers.push_back(std::make_unique<VulkanCommandBuffer>(cmd));
+        }
 
         // 8. Sync Objects
         m_imageAvailableSemaphores.resize(3);

@@ -11,7 +11,7 @@ namespace Prisma::Graphic {
 
 class ITexture;
 class IBuffer;
-class Shader;
+class IShader;
 
 /**
  * @brief 材质参数值 (统一存储)
@@ -24,7 +24,7 @@ using MaterialParamValue = std::variant<float, PrismaMath::vec3, PrismaMath::vec
  */
 class ENGINE_API Material : public Prisma::Asset {
 public:
-    Material(std::shared_ptr<Shader> shader);
+    Material(std::shared_ptr<IShader> shader);
     ~Material() override = default;
 
     // Asset 接口
@@ -45,13 +45,13 @@ public:
     void SetRoughness(float roughness);
 
     // 获取 Shader
-    std::shared_ptr<Shader> GetShader() const { return m_Shader; }
+    std::shared_ptr<IShader> GetShader() const { return m_Shader; }
 
     // 状态绑定 (由 OpaquePass 调用)
     void Bind(class ICommandBuffer* cmd);
 
 private:
-    std::shared_ptr<Shader> m_Shader;
+    std::shared_ptr<IShader> m_Shader;
     std::unordered_map<std::string, MaterialParamValue> m_Params;
     
     // 底层 Vulkan Descriptor Set 缓存 (由 RHI 管理)

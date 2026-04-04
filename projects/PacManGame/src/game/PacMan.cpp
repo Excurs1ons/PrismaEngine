@@ -29,6 +29,9 @@ void PacMan::Initialize(const glm::ivec2& spawnPosition, GameBoard* board) {
     m_position = board->GridToPixel(spawnPosition.x, spawnPosition.y);
     m_currentDirection = Direction::None;
     m_nextDirection = Direction::None;
+    m_spriteRenderer.SetPosition(m_position);
+    m_spriteRenderer.SetSize(TILE_SIZE * 0.8f, TILE_SIZE * 0.8f);
+    m_spriteRenderer.SetColor(Prisma::Color(COLOR_PACMAN.r, COLOR_PACMAN.g, COLOR_PACMAN.b, COLOR_PACMAN.a));
 }
 
 void PacMan::Reset() {
@@ -37,6 +40,7 @@ void PacMan::Reset() {
     }
     m_currentDirection = Direction::None;
     m_nextDirection = Direction::None;
+    m_spriteRenderer.SetPosition(m_position);
 }
 
 void PacMan::SetDirection(Direction direction) {
@@ -100,7 +104,12 @@ void PacMan::Update(Prisma::Timestep ts) {
 }
 
 void PacMan::Render() {
-    Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), m_spriteRenderer.GetTexture(), m_spriteRenderer.GetColor());
+    if (auto texture = m_spriteRenderer.GetTexture()) {
+        Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), texture, m_spriteRenderer.GetColor());
+        return;
+    }
+
+    Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), m_spriteRenderer.GetColor());
 }
 
 bool PacMan::IsAtTileCenter() const {

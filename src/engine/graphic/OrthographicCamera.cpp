@@ -29,9 +29,9 @@ void OrthographicCamera::RecalculateMatrices() {
     float centerX = (m_left + m_right) * 0.5f;
     float centerY = (m_bottom + m_top) * 0.5f;
 
-    m_projectionMatrix = glm::orthoRH(centerX - width * 0.5f, centerX + width * 0.5f, 
-                                      centerY - height * 0.5f, centerY + height * 0.5f, 
-                                      m_near, m_far);
+    m_projectionMatrix = glm::orthoRH_ZO(centerX - width * 0.5f, centerX + width * 0.5f,
+                                         centerY - height * 0.5f, centerY + height * 0.5f,
+                                         m_near, m_far);
 
     // 计算视图矩阵 (取反移动)
     m_viewMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(-m_position.x, -m_position.y, 0.0f));

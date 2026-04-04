@@ -114,7 +114,6 @@ set(CORE_SOURCES
     graphic/ShaderFactory.cpp
     graphic/TextureAtlas.cpp
     graphic/VoxelRenderer.cpp
-    graphic/EngineShaderAdapter.cpp
     graphic/GeometryRenderPass.cpp
     graphic/Material.cpp
     graphic/Mesh.cpp
@@ -162,6 +161,7 @@ set(CORE_SOURCES
     graphic/adapters/vulkan/VulkanFence.cpp
     graphic/adapters/vulkan/VulkanSampler.cpp
     graphic/adapters/vulkan/VulkanPipelineState.cpp
+    graphic/adapters/vulkan/VulkanCommandBuffer.cpp
 
     # Precompiled header
     pch.cpp

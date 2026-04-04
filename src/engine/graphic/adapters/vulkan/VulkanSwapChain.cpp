@@ -16,7 +16,7 @@ public:
     SwapChainRenderTarget(VkImage image, VkImageView imageView, TextureFormat format, uint32_t width, uint32_t height)
         : m_image(image), m_imageView(imageView), m_format(format), m_width(width), m_height(height) {}
 
-    ResourceType GetType() const override { return ResourceType::Texture; }
+    ResourceType GetResourceType() const override { return ResourceType::Texture; }
     TextureType GetTextureType() const override { return TextureType::Texture2D; }
     TextureFormat GetFormat() const override { return m_format; }
     float GetWidth() const override { return static_cast<float>(m_width); }

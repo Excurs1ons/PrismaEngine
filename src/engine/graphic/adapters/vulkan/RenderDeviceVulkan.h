@@ -100,8 +100,8 @@ public:
     void SetSkipSwapChainRenderPass(bool skip) { m_skipSwapChainRenderPass = skip; }
 
     // 获取当前帧的命令缓冲区（供 Viewport 渲染使用）
-    VkCommandBuffer GetCurrentCommandBuffer() const {
-        return m_frameActive ? m_commandBuffers[m_currentFrame] : VK_NULL_HANDLE;
+    ICommandBuffer* GetCurrentCommandBuffer() const {
+        return m_frameActive ? (ICommandBuffer*)m_vulkanCommandBuffers[m_currentFrame].get() : nullptr;
     }
 
     // -----------------------------------------------------------------------
@@ -151,6 +151,7 @@ private:
     // 命令控制
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> m_commandBuffers;
+    std::vector<std::unique_ptr<VulkanCommandBuffer>> m_vulkanCommandBuffers;
 
     // 同步
     std::vector<VkSemaphore> m_imageAvailableSemaphores;

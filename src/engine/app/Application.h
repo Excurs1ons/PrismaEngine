@@ -32,6 +32,7 @@ public:
     virtual void OnRender();
     virtual void OnImGuiRender();
     virtual void OnEvent(Event& e);
+    virtual bool ShouldCloseOnWindowClose() const { return true; }
 
     virtual void* GetImGuiContext() { return nullptr; }
 

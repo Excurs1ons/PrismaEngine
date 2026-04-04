@@ -61,6 +61,7 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
     m_device = device;
     m_depthPrePass = std::make_shared<DepthPrePass>();
     m_opaquePass = std::make_shared<OpaquePass>();
+    m_opaquePass->SetDevice(device);
     m_skyboxPass = std::make_shared<SkyboxPass>();
     m_transparentPass = std::make_shared<TransparentPass>();
     return 0;

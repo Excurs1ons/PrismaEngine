@@ -16,7 +16,7 @@ public:
 
     /// @brief 获取资源类型
     /// @return 资源类型
-    virtual ResourceType GetType() const = 0;
+    virtual ResourceType GetResourceType() const = 0;
 
     /// @brief 获取资源ID
     /// @return 资源ID

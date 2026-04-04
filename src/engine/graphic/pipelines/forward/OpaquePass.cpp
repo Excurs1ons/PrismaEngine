@@ -2,13 +2,26 @@
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/interfaces/IPipelineState.h"
+#include "graphic/interfaces/IResourceFactory.h"
 #include "graphic/Mesh.h"
 #include "graphic/Material.h"
+#include "graphic/Shader.h"
+#include "graphic/interfaces/ISwapChain.h"
 #include "Logger.h"
+#include <fstream>
+#include <iterator>
 
 namespace Prisma::Graphic {
 
 OpaquePass::OpaquePass() : ForwardRenderPass("OpaquePass") {}
+
+namespace {
+struct alignas(16) QuadPushConstants {
+    PrismaMath::mat4 mvp;
+    Prisma::Color color;
+};
+}
 
 void OpaquePass::SetLights(const std::vector<Light>& lights) {
     m_Lights = lights;
@@ -42,25 +55,27 @@ void OpaquePass::Execute(const PassExecutionContext& context) {
 }
 
 void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {
-    if (!cmd || commands.empty()) return;
+    if (!cmd || commands.empty() || !m_device) return;
+    if (!EnsureDefaultPipeline()) return;
 
-    Material* lastMaterial = nullptr;
-    Shader* lastShader = nullptr;
+    cmd->SetPipelineState(m_defaultPipelineState.get());
+    float width = 1.0f;
+    float height = 1.0f;
+    if (auto* swapChain = m_device->GetSwapChain()) {
+        width = static_cast<float>(swapChain->GetWidth());
+        height = static_cast<float>(swapChain->GetHeight());
+    }
+    cmd->SetViewport(Viewport{0.0f, 0.0f, width, height, 0.0f, 1.0f});
+    cmd->SetScissorRect(Rect{0, 0, static_cast<int>(width), static_cast<int>(height)});
 
     for (const auto& command : commands) {
-        if (!command.mesh || !command.material) continue;
+        if (!command.mesh) continue;
 
-        Shader* currentShader = command.material->GetShader().get();
-        if (currentShader != lastShader) {
-            lastShader = currentShader;
-        }
-
-        if (command.material != lastMaterial) {
-            command.material->Bind(cmd);
-            lastMaterial = command.material;
-        }
-
-        cmd->PushConstants(ShaderType::Vertex, &command.transform, sizeof(PrismaMath::mat4));
+        QuadPushConstants pushConstants{};
+        pushConstants.mvp = m_projection * m_view * command.transform;
+        pushConstants.color = command.color;
+        cmd->PushConstants(ShaderType::Vertex, &pushConstants, sizeof(pushConstants));
+        cmd->PushConstants(ShaderType::Pixel, &pushConstants, sizeof(pushConstants));
 
         for (const auto& subMesh : command.mesh->GetSubMeshes()) {
             if (subMesh.vertexBuffer && subMesh.indexBuffer) {
@@ -70,6 +85,59 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
             }
         }
     }
+}
+
+bool OpaquePass::EnsureDefaultPipeline() {
+    if (m_defaultPipelineState) {
+        return true;
+    }
+    if (!m_device || !m_device->GetResourceFactory()) {
+        return false;
+    }
+
+    auto loadShader = [this](const char* path, ShaderType type) -> std::shared_ptr<IShader> {
+        std::ifstream file(path, std::ios::binary);
+        if (!file.is_open()) {
+            return nullptr;
+        }
+
+        std::vector<uint8_t> bytecode((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        if (bytecode.empty()) {
+            return nullptr;
+        }
+
+        ShaderDesc desc;
+        desc.filename = path;
+        desc.entryPoint = "main";
+        desc.language = ShaderLanguage::SPIRV;
+        desc.type = type;
+
+        auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, ShaderReflection{});
+        return shader ? std::shared_ptr<IShader>(std::move(shader)) : nullptr;
+    };
+
+    m_defaultVertexShader = loadShader("assets/shaders/Renderer2D.vert.spv", ShaderType::Vertex);
+    m_defaultPixelShader = loadShader("assets/shaders/Renderer2D.frag.spv", ShaderType::Pixel);
+    if (!m_defaultVertexShader || !m_defaultPixelShader) {
+        LOG_ERROR("OpaquePass", "无法加载 Renderer2D SPIR-V 着色器。");
+        return false;
+    }
+
+    auto pso = m_device->GetResourceFactory()->CreatePipelineStateImpl();
+    if (!pso) {
+        return false;
+    }
+
+    pso->SetShader(ShaderType::Vertex, m_defaultVertexShader);
+    pso->SetShader(ShaderType::Pixel, m_defaultPixelShader);
+    pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+    if (!pso->Create(m_device)) {
+        LOG_ERROR("OpaquePass", "创建 Renderer2D 管线失败: {0}", pso->GetErrors());
+        return false;
+    }
+
+    m_defaultPipelineState = std::shared_ptr<IPipelineState>(std::move(pso));
+    return true;
 }
 
 } // namespace Prisma::Graphic

@@ -171,6 +171,15 @@ public:
     /// @return 是否加载完成
     virtual bool IsAsyncLoadingComplete(ResourceId id) = 0;
 
+    /// @brief 同步加载着色器 (内部使用或特殊需求)
+    virtual std::shared_ptr<IShader> LoadShaderSync(const std::string& filename,
+                                                   const std::string& entryPoint = "main",
+                                                   const std::string& target = "",
+                                                   const std::vector<std::string>& defines = {}) = 0;
+
+    /// @brief 根据名称获取已加载的着色器
+    virtual std::shared_ptr<IShader> GetShader(const std::string& name) = 0;
+
     // === 统计信息 ===
 
 

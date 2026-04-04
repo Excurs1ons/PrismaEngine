@@ -16,6 +16,7 @@ struct RenderCommand {
     Material* material;
     PrismaMath::mat4 transform;
     BoundingBox boundingBox;
+    Prisma::Color color;
 };
 
 /**
@@ -34,7 +35,7 @@ public:
     static void EndScene();
 
     // 提交渲染指令
-    static void Submit(Mesh* mesh, Material* material, const PrismaMath::mat4& transform);
+    static void Submit(Mesh* mesh, Material* material, const PrismaMath::mat4& transform, const Prisma::Color& color = Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
 
     // 获取当前的待处理队列 (由 Pipeline 调用)
     static const std::vector<RenderCommand>& GetCommandQueue();

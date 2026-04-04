@@ -101,6 +101,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
             EventDispatcher dispatcher(e);
             
             dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
+                if (m_CurrentApp && !m_CurrentApp->ShouldCloseOnWindowClose()) {
+                    return false;
+                }
                 LOG_INFO("Engine", "收到关闭窗口请求 (事件: {0})", event.GetName());
                 m_Running = false;
                 return true;

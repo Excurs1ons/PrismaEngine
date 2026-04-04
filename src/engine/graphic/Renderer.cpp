@@ -21,7 +21,7 @@ void Renderer::EndScene() {
     });
 }
 
-void Renderer::Submit(Mesh* mesh, Material* material, const PrismaMath::mat4& transform) {
+void Renderer::Submit(Mesh* mesh, Material* material, const PrismaMath::mat4& transform, const Prisma::Color& color) {
     if (!mesh || !material) return;
     
     RenderCommand command;
@@ -29,6 +29,7 @@ void Renderer::Submit(Mesh* mesh, Material* material, const PrismaMath::mat4& tr
     command.material = material;
     command.transform = transform;
     command.boundingBox = mesh->GetBoundingBox(); // 这里的包围盒以后可以预先变换
+    command.color = color;
     
     s_Data.commands.push_back(command);
 }

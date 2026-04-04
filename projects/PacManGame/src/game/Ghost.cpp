@@ -61,6 +61,9 @@ void Ghost::Initialize(GhostType type, const glm::ivec2& spawnPosition, GameBoar
     if (board) {
         m_position = board->GridToPixel(spawnPosition.x, spawnPosition.y);
     }
+    m_spriteRenderer.SetPosition(m_position);
+    m_spriteRenderer.SetSize(TILE_SIZE * 0.8f, TILE_SIZE * 0.8f);
+    m_spriteRenderer.SetColor(Prisma::Color(m_color.r, m_color.g, m_color.b, m_color.a));
 
     // 初始状态
     m_state = GhostState::Scatter;
@@ -74,6 +77,8 @@ void Ghost::Reset() {
     m_state = GhostState::Scatter;
     m_currentDirection = Direction::Left;
     m_frightenedTimer = 0.0f;
+    m_spriteRenderer.SetPosition(m_position);
+    m_spriteRenderer.SetColor(Prisma::Color(m_color.r, m_color.g, m_color.b, m_color.a));
 }
 
 void Ghost::SetType(GhostType type) {
@@ -133,6 +138,7 @@ float Ghost::GetCurrentSpeed() const {
 
 void Ghost::SetColor(const glm::vec4& color) {
     m_color = color;
+    m_spriteRenderer.SetColor(Prisma::Color(color.r, color.g, color.b, color.a));
 }
 
 void Ghost::Update(Prisma::Timestep ts) {
@@ -158,7 +164,12 @@ void Ghost::Update(Prisma::Timestep ts) {
 }
 
 void Ghost::Render() {
-    Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), m_spriteRenderer.GetTexture(), m_spriteRenderer.GetColor());
+    if (auto texture = m_spriteRenderer.GetTexture()) {
+        Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), texture, m_spriteRenderer.GetColor());
+        return;
+    }
+
+    Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), m_spriteRenderer.GetColor());
 }
 
 void Ghost::UpdateMovement(Prisma::Timestep ts) {
