@@ -1,14 +1,14 @@
 #include "Editor.h"
-#include "EditorLayer.h"
-#include "../engine/Engine.h"
-#include "../engine/Platform.h"
-#include "../engine/graphic/RenderSystem.h"
-#include "../engine/SceneManager.h"
-#include "../engine/Scene.h"
+#include "../graphic/ImGuiVulkanResourceManager.h"
+#include "../panels/EditorLayer.h"
 #include "CommandLineEditor.h"
 #include "CommandLineParser.h"
 #include "Environment.h"
-#include "graphic/ImGuiVulkanResourceManager.h"
+#include "app/Engine.h"
+#include "graphic/RenderSystem.h"
+#include "platform/Platform.h"
+#include "scene/Scene.h"
+#include "scene/SceneManager.h"
 #include <filesystem>
 
 // ImGui
@@ -19,7 +19,6 @@
 // 访问具体的 Vulkan 设备类型，以注册 ImGui 渲染回调
 #include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
 #include "graphic/adapters/vulkan/VulkanResources.h"
-
 
 // [修复] 移除 IMGUI_IMPL_VULKAN_USE_LOADER 定义
 // 原因：当定义此宏时，ImGui 会使用动态函数指针调用 Vulkan API。
@@ -62,18 +61,17 @@ int Editor::OnImGuiInitialize() {
     ImGui::StyleColorsDark();
 
     // [改动] 加载中文字体以解决编辑器无法显示中文的问题
-    ImFont* font = nullptr;
-    std::vector<std::string> fontPaths = {
-        "C:/Windows/Fonts/msyh.ttc",   // Microsoft YaHei
-        "C:/Windows/Fonts/msyh.ttf",
-        "C:/Windows/Fonts/simsun.ttc", // SimSun
-        "assets/fonts/msyh.ttc"
-    };
+    ImFont* font                       = nullptr;
+    std::vector<std::string> fontPaths = {"C:/Windows/Fonts/msyh.ttc",  // Microsoft YaHei
+                                          "C:/Windows/Fonts/msyh.ttf",
+                                          "C:/Windows/Fonts/simsun.ttc",  // SimSun
+                                          "assets/fonts/msyh.ttc"};
 
     for (const auto& path : fontPaths) {
         if (std::filesystem::exists(path)) {
             // 使用 GetGlyphRangesChineseSimplifiedCommon() 获取常用中文字符集
-            font = io.Fonts->AddFontFromFileTTF(path.c_str(), 18.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+            font = io.Fonts->AddFontFromFileTTF(
+                path.c_str(), 18.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
             if (font) {
                 LOG_INFO("Editor", "成功加载中文字体: %s", path.c_str());
                 break;
@@ -89,7 +87,7 @@ int Editor::OnImGuiInitialize() {
     auto renderSystem = engine.GetRenderSystem();
     auto device       = renderSystem->GetDevice();
     auto* vkDevice    = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(device);
-    
+
     LOG_INFO("Editor", "OnImGuiInitialize: 正在绑定 SDL3...");
     // 绑定后端
     auto& window          = engine.GetWindow();
@@ -98,7 +96,7 @@ int Editor::OnImGuiInitialize() {
         LOG_ERROR("Editor", "原生窗口为空！");
         return -1;
     }
-    
+
     if (!ImGui_ImplSDL3_InitForVulkan(sdlWindow)) {
         LOG_ERROR("Editor", "ImGui_ImplSDL3_InitForVulkan 失败！");
         return -1;
@@ -114,7 +112,7 @@ int Editor::OnImGuiInitialize() {
     //             其 TexID 留在 ImTextureID_Invalid（即 0xFFFFFFFFFFFFFFFF），
     //             渲染时 vkCmdBindDescriptorSets 读取该无效句柄引发访问冲突崩溃。
     //   过程：设置为与 RenderDeviceVulkan::Initialize 中 require_api_version(1,3,0) 一致的值。
-    init_info.ApiVersion     = VK_API_VERSION_1_3;
+    init_info.ApiVersion = VK_API_VERSION_1_3;
 
     init_info.Instance       = device->GetVkInstance();
     init_info.PhysicalDevice = device->GetPhysicalDevice();
@@ -122,42 +120,42 @@ int Editor::OnImGuiInitialize() {
     init_info.QueueFamily    = device->GetGraphicsQueueFamily();
     init_info.Queue          = device->GetGraphicsQueue();
 
-    VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 } };
+    VkDescriptorPoolSize pool_sizes[]    = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}};
     VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets = 1000;
-    pool_info.poolSizeCount = 1;
-    pool_info.pPoolSizes = pool_sizes;
+    pool_info.sType                      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags                      = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets                    = 1000;
+    pool_info.poolSizeCount              = 1;
+    pool_info.pPoolSizes                 = pool_sizes;
     vkCreateDescriptorPool(device->GetVkDevice(), &pool_info, nullptr, &m_imguiDescriptorPool);
 
     // 创建 ImGui 使用的 Sampler
     VkSamplerCreateInfo samplerInfo{};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    samplerInfo.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    samplerInfo.magFilter    = VK_FILTER_LINEAR;
+    samplerInfo.minFilter    = VK_FILTER_LINEAR;
+    samplerInfo.mipmapMode   = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+    samplerInfo.maxLod       = VK_LOD_CLAMP_NONE;
     vkCreateSampler(device->GetVkDevice(), &samplerInfo, nullptr, &m_imguiSampler);
 
     // 初始化 ImGui Vulkan 资源管理器
     m_imguiResourceManager = std::make_unique<ImGuiVulkanResourceManager>();
     m_imguiResourceManager->Initialize(device->GetVkDevice());
 
-    init_info.DescriptorPool = m_imguiDescriptorPool;
-    init_info.PipelineCache  = VK_NULL_HANDLE;
-    init_info.MinImageCount  = 2;    // Vulkan 规范要求 >= 2
-    init_info.ImageCount     = vkDevice->GetSwapChain()->GetBufferCount();    // 与交换链缓冲数对齐
-    init_info.UseDynamicRendering               = false;
+    init_info.DescriptorPool      = m_imguiDescriptorPool;
+    init_info.PipelineCache       = VK_NULL_HANDLE;
+    init_info.MinImageCount       = 2;                                           // Vulkan 规范要求 >= 2
+    init_info.ImageCount          = vkDevice->GetSwapChain()->GetBufferCount();  // 与交换链缓冲数对齐
+    init_info.UseDynamicRendering = false;
     init_info.Allocator           = nullptr;
-    init_info.CheckVkResultFn                   = nullptr;
+    init_info.CheckVkResultFn     = nullptr;
 
     // RenderPass / MSAA 设置（使用交换链的 RenderPass，禁用多重采样）
-    init_info.PipelineInfoMain.RenderPass  = device->GetOverlayRenderPass();
-    init_info.PipelineInfoMain.Subpass     = 0;
+    init_info.PipelineInfoMain.RenderPass = device->GetOverlayRenderPass();
+    init_info.PipelineInfoMain.Subpass    = 0;
     // [修复] MSAASamples 必须显式设置为 VK_SAMPLE_COUNT_1_BIT（= 1）。
     //   若保持 0（零值初始化默认），ImGui 内部在创建 pipeline 时
     //   vkCreateGraphicsPipelines 会收到无效的采样数，driver 可能返回错误。
@@ -174,7 +172,7 @@ int Editor::OnImGuiInitialize() {
     vkDevice->SetOverlayRenderCallback([this](VkCommandBuffer cmd) {
         // [修复] 必须在渲染前设置正确的 Context
         ImGui::SetCurrentContext((ImGuiContext*)this->GetImGuiContext());
-        
+
         if (ImGui::GetCurrentContext() && ImGui::GetDrawData()) {
             // 这里可以添加对特定纹理的布局转换逻辑（如果需要）
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
@@ -182,25 +180,26 @@ int Editor::OnImGuiInitialize() {
     });
 
     return 0;
-
 }
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
 
     // 更新窗口标题
     static std::string lastTitle = "";
-    std::string projectName = m_projectSettingsWindow.GetSettings().productName;
-    if (m_IsProjectDirty) projectName += "*";
+    std::string projectName      = m_projectSettingsWindow.GetSettings().productName;
+    if (m_IsProjectDirty)
+        projectName += "*";
 
     std::string sceneName = "None";
-    bool sceneDirty = false;
+    bool sceneDirty       = false;
     if (auto sceneManager = Engine::Get().GetSceneManager()) {
         if (auto scene = sceneManager->GetCurrentScene()) {
-            sceneName = scene->GetName();
+            sceneName  = scene->GetName();
             sceneDirty = scene->IsDirty();
         }
     }
-    if (sceneDirty) sceneName += "*";
+    if (sceneDirty)
+        sceneName += "*";
 
     std::string title = projectName + " - " + sceneName + " - Prisma Engine (Vulkan)";
     if (title != lastTitle) {
@@ -274,7 +273,7 @@ void Editor::OnShutdown() {
         if (renderSystem->GetDevice()) {
             auto* vkDevice = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
             VkDevice vkDev = vkDevice->GetVkDevice();
-            
+
             if (m_imguiResourceManager) {
                 m_imguiResourceManager->Shutdown();
                 m_imguiResourceManager.reset();

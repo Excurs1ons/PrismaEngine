@@ -1,11 +1,11 @@
 #include "ProjectSettingsWindow.h"
-#include "UIStrings.h"
-#include <imgui.h>
+#include "../UIStrings.h"
+#include "../core/Editor.h"
+#include "resource/ArchiveJson.h"
+#include <cstring>  // for strncpy
 #include <fstream>
+#include <imgui.h>
 #include <nlohmann/json.hpp>
-#include "../engine/resource/ArchiveJson.h"
-#include <cstring> // for strncpy
-#include "Editor.h"
 using json = nlohmann::json;
 
 using namespace Prisma;

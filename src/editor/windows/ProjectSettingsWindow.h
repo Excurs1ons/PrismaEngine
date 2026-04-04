@@ -1,5 +1,5 @@
 #pragma once
-#include "../engine/core/ProjectSettings.h"
+#include "core/ProjectSettings.h"
 #include <string>
 
 class ProjectSettingsWindow {

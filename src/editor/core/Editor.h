@@ -1,17 +1,17 @@
 #pragma once
 
+#include "../windows/ProjectSettingsWindow.h"
 #include "Export.h"
-#include "Application.h"
-#include "Logger.h"
-#include "Platform.h"
-#include "ProjectSettingsWindow.h"
-#include "Singleton.h"
-#include "ManagerBase.h"
+#include "app/Application.h"
+#include "core/ManagerBase.h"
+#include "core/Singleton.h"
+#include "logger/Logger.h"
+#include "platform/Platform.h"
 
 // 显式包含 SDL3
 #include <SDL3/SDL.h>
-#include <vulkan/vulkan.h>
 #include <memory>
+#include <vulkan/vulkan.h>
 
 namespace Prisma::Graphic::Vulkan {
 class VulkanTexture;
@@ -58,11 +58,11 @@ private:
     bool m_showProjectSettings = false;
 
     VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
-    VkSampler m_imguiSampler = VK_NULL_HANDLE;
+    VkSampler m_imguiSampler               = VK_NULL_HANDLE;
 
     // ImGui 资源管理器
     std::unique_ptr<ImGuiVulkanResourceManager> m_imguiResourceManager;
     bool m_IsProjectDirty = false;
 };
 
-} // namespace Prisma
+}  // namespace Prisma

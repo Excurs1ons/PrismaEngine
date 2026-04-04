@@ -1,9 +1,9 @@
 #include "CommandLineEditor.h"
-#include "../engine/Logger.h"
-#include "../engine/Platform.h"
+#include "logger/Logger.h"
+#include "platform/Platform.h"
 #include <cstdlib>
-#include <iostream>
 #include <filesystem>
+#include <iostream>
 #include <sstream>
 #include <unordered_map>
 
@@ -47,15 +47,12 @@ struct CommandLineEditor::Impl {
     std::unordered_map<std::string, CommandInfo> commands;
 };
 
-CommandLineEditor::CommandLineEditor() 
-    : m_impl(std::make_unique<Impl>())
-{
+CommandLineEditor::CommandLineEditor() : m_impl(std::make_unique<Impl>()) {
     LOG_INFO("CommandLineEditor", "初始化命令行编辑器");
     RegisterBuiltinCommands();
 }
 
-CommandLineEditor::~CommandLineEditor() {
-}
+CommandLineEditor::~CommandLineEditor() {}
 
 void CommandLineEditor::SetArguments(const CommandLineParser::Arguments& args) {
     m_args = args;
@@ -71,13 +68,27 @@ int CommandLineEditor::Initialize() {
         logLevel = LogLevel::Debug;
     } else {
         switch (m_args.logLevel) {
-            case 0: logLevel = LogLevel::Trace; break;
-            case 1: logLevel = LogLevel::Debug; break;
-            case 2: logLevel = LogLevel::Info; break;
-            case 3: logLevel = LogLevel::Warning; break;
-            case 4: logLevel = LogLevel::Error; break;
-            case 5: logLevel = LogLevel::Fatal; break;
-            default: logLevel = LogLevel::Info; break;
+            case 0:
+                logLevel = LogLevel::Trace;
+                break;
+            case 1:
+                logLevel = LogLevel::Debug;
+                break;
+            case 2:
+                logLevel = LogLevel::Info;
+                break;
+            case 3:
+                logLevel = LogLevel::Warning;
+                break;
+            case 4:
+                logLevel = LogLevel::Error;
+                break;
+            case 5:
+                logLevel = LogLevel::Fatal;
+                break;
+            default:
+                logLevel = LogLevel::Info;
+                break;
         }
     }
 
@@ -94,15 +105,14 @@ int CommandLineEditor::Run() {
     return ExecuteCommand();
 }
 
-void CommandLineEditor::Shutdown() {
-}
+void CommandLineEditor::Shutdown() {}
 
 void CommandLineEditor::RegisterCommand(const std::string& name,
                                         const std::string& description,
                                         CommandHandler handler) {
     Impl::CommandInfo info;
-    info.description = description;
-    info.handler = handler;
+    info.description       = description;
+    info.handler           = handler;
     m_impl->commands[name] = info;
 }
 
@@ -125,7 +135,8 @@ int CommandLineEditor::ExecuteCommand() {
         return 1;
     }
 
-    if (!it->second.handler) return 1;
+    if (!it->second.handler)
+        return 1;
 
     try {
         return it->second.handler(m_args.commandArgs);
@@ -144,7 +155,7 @@ void CommandLineEditor::ShowHelp() {
 
 int CommandLineEditor::CommandBuild(const std::vector<std::string>& args) {
     const fs::path projectRoot = ResolveProjectPath(m_args);
-    const fs::path buildDir = ResolveOutputPath(m_args, projectRoot, "build");
+    const fs::path buildDir    = ResolveOutputPath(m_args, projectRoot, "build");
 
     if (!fs::exists(projectRoot / "CMakeLists.txt")) {
         LOG_ERROR("CommandLineEditor", "项目目录缺少 CMakeLists.txt: {}", projectRoot.string());
@@ -174,7 +185,7 @@ int CommandLineEditor::CommandBuild(const std::vector<std::string>& args) {
 
 int CommandLineEditor::CommandClean(const std::vector<std::string>& args) {
     const fs::path projectRoot = ResolveProjectPath(m_args);
-    fs::path cleanTarget = ResolveOutputPath(m_args, projectRoot, "build");
+    fs::path cleanTarget       = ResolveOutputPath(m_args, projectRoot, "build");
     if (!args.empty()) {
         cleanTarget = fs::path(args.front());
     }
@@ -197,8 +208,8 @@ int CommandLineEditor::CommandClean(const std::vector<std::string>& args) {
 
 int CommandLineEditor::CommandExport(const std::vector<std::string>& args) {
     const fs::path projectRoot = ResolveProjectPath(m_args);
-    const fs::path sourceDir = args.empty() ? projectRoot / "assets" : fs::path(args.front());
-    const fs::path outputDir = ResolveOutputPath(m_args, projectRoot, "export");
+    const fs::path sourceDir   = args.empty() ? projectRoot / "assets" : fs::path(args.front());
+    const fs::path outputDir   = ResolveOutputPath(m_args, projectRoot, "export");
 
     if (!fs::exists(sourceDir)) {
         LOG_ERROR("CommandLineEditor", "导出源目录不存在: {}", sourceDir.string());
@@ -225,7 +236,7 @@ int CommandLineEditor::CommandImport(const std::vector<std::string>& args) {
     }
 
     const fs::path projectRoot = ResolveProjectPath(m_args);
-    const fs::path targetDir = ResolveOutputPath(m_args, projectRoot, fs::path("assets") / "imported");
+    const fs::path targetDir   = ResolveOutputPath(m_args, projectRoot, fs::path("assets") / "imported");
     fs::create_directories(targetDir);
 
     for (const auto& arg : args) {
@@ -252,12 +263,11 @@ int CommandLineEditor::CommandImport(const std::vector<std::string>& args) {
 
 int CommandLineEditor::CommandPackage(const std::vector<std::string>& args) {
     const fs::path projectRoot = ResolveProjectPath(m_args);
-    const fs::path packageDir = args.empty() ? ResolveOutputPath(m_args, projectRoot, "package") : fs::path(args.front());
-    const std::vector<std::pair<fs::path, fs::path>> packageItems = {
-        {projectRoot / "build/bin", packageDir / "bin"},
-        {projectRoot / "build/lib", packageDir / "lib"},
-        {projectRoot / "assets", packageDir / "assets"}
-    };
+    const fs::path packageDir =
+        args.empty() ? ResolveOutputPath(m_args, projectRoot, "package") : fs::path(args.front());
+    const std::vector<std::pair<fs::path, fs::path>> packageItems = {{projectRoot / "build/bin", packageDir / "bin"},
+                                                                     {projectRoot / "build/lib", packageDir / "lib"},
+                                                                     {projectRoot / "assets", packageDir / "assets"}};
 
     fs::create_directories(packageDir);
     for (const auto& [sourcePath, destinationPath] : packageItems) {
@@ -267,10 +277,7 @@ int CommandLineEditor::CommandPackage(const std::vector<std::string>& args) {
         }
 
         std::error_code ec;
-        fs::copy(sourcePath,
-                 destinationPath,
-                 fs::copy_options::recursive | fs::copy_options::overwrite_existing,
-                 ec);
+        fs::copy(sourcePath, destinationPath, fs::copy_options::recursive | fs::copy_options::overwrite_existing, ec);
         if (ec) {
             LOG_ERROR("CommandLineEditor", "打包失败: {} ({})", sourcePath.string(), ec.message());
             return 1;
@@ -283,7 +290,7 @@ int CommandLineEditor::CommandPackage(const std::vector<std::string>& args) {
 
 int CommandLineEditor::CommandShowInfo(const std::vector<std::string>& args) {
     const fs::path projectRoot = ResolveProjectPath(m_args);
-    const fs::path buildDir = ResolveOutputPath(m_args, projectRoot, "build");
+    const fs::path buildDir    = ResolveOutputPath(m_args, projectRoot, "build");
     std::cout << "Project: " << projectRoot << "\n";
     std::cout << "Build: " << buildDir << "\n";
     std::cout << "Command: " << m_args.command << "\n";
@@ -302,8 +309,8 @@ int CommandLineEditor::CommandShowInfo(const std::vector<std::string>& args) {
 
 int CommandLineEditor::CommandValidate(const std::vector<std::string>& args) {
     const fs::path projectRoot = ResolveProjectPath(m_args);
-    bool valid = fs::exists(projectRoot) && fs::is_directory(projectRoot);
-    valid = valid && fs::exists(projectRoot / "CMakeLists.txt");
+    bool valid                 = fs::exists(projectRoot) && fs::is_directory(projectRoot);
+    valid                      = valid && fs::exists(projectRoot / "CMakeLists.txt");
 
     for (const auto& arg : args) {
         if (!fs::exists(arg)) {
@@ -326,13 +333,11 @@ int CommandLineEditor::CommandRun(const std::vector<std::string>& args) {
     if (!args.empty()) {
         executablePath = fs::path(args.front());
     } else {
-        const fs::path projectRoot = ResolveProjectPath(m_args);
-        const std::vector<fs::path> candidates = {
-            projectRoot / "build/bin/Prisma",
-            projectRoot / "build/bin/PrismaLauncher",
-            projectRoot / "bin/Prisma",
-            projectRoot / "bin/PrismaLauncher"
-        };
+        const fs::path projectRoot             = ResolveProjectPath(m_args);
+        const std::vector<fs::path> candidates = {projectRoot / "build/bin/Prisma",
+                                                  projectRoot / "build/bin/PrismaLauncher",
+                                                  projectRoot / "bin/Prisma",
+                                                  projectRoot / "bin/PrismaLauncher"};
 
         for (const auto& candidate : candidates) {
             if (fs::exists(candidate)) {
@@ -350,4 +355,4 @@ int CommandLineEditor::CommandRun(const std::vector<std::string>& args) {
     return RunProcess(QuotePath(executablePath));
 }
 
-} // namespace Prisma
+}  // namespace Prisma

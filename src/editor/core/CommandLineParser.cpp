@@ -1,25 +1,22 @@
 #include "CommandLineParser.h"
-#include "../engine/Logger.h"
-#include <iostream>
-#include <sstream>
+#include "logger/Logger.h"
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 
 namespace Prisma {
 
 // 版本信息
 static const char* ENGINE_VERSION = "0.1.0-alpha";
-static const char* BUILD_DATE = __DATE__;
-static const char* BUILD_TIME = __TIME__;
-static const char* GIT_COMMIT = "unknown";
+static const char* BUILD_DATE     = __DATE__;
+static const char* BUILD_TIME     = __TIME__;
+static const char* GIT_COMMIT     = "unknown";
 
-CommandLineParser::CommandLineParser(int argc, char* argv[])
-    : m_argc(argc), m_argv(argv) {
-}
+CommandLineParser::CommandLineParser(int argc, char* argv[]) : m_argc(argc), m_argv(argv) {}
 
 bool CommandLineParser::Parse() {
     if (m_argc < 2) {
-        return true; // 默认 GUI 模式
+        return true;  // 默认 GUI 模式
     }
 
     std::vector<std::string> args;
@@ -59,11 +56,9 @@ bool CommandLineParser::Parse() {
         // 兼容旧写法
         else if (arg == "--cli") {
             m_args.mode = EditorRunMode::CLI;
-        }
-        else if (arg == "--batch") {
+        } else if (arg == "--batch") {
             m_args.mode = EditorRunMode::Batch;
-        }
-        else if (arg == "--server") {
+        } else if (arg == "--server") {
             m_args.mode = EditorRunMode::Server;
         }
         // 命令
@@ -100,7 +95,7 @@ bool CommandLineParser::ParseOption(const std::string& arg) {
     size_t equalPos = optionName.find('=');
     if (equalPos != std::string::npos) {
         optionValue = optionName.substr(equalPos + 1);
-        optionName = optionName.substr(0, equalPos);
+        optionName  = optionName.substr(0, equalPos);
     }
 
     // 布尔选项
@@ -112,33 +107,26 @@ bool CommandLineParser::ParseOption(const std::string& arg) {
 
     // 处理常见选项
     if (optionName == "verbose" || optionName == "v") {
-        m_args.verbose = true;
-        m_args.logLevel = 1; // Debug
-    }
-    else if (optionName == "quiet" || optionName == "q") {
-        m_args.quiet = true;
-        m_args.logLevel = 4; // Error
-    }
-    else if (optionName == "log-level") {
+        m_args.verbose  = true;
+        m_args.logLevel = 1;  // Debug
+    } else if (optionName == "quiet" || optionName == "q") {
+        m_args.quiet    = true;
+        m_args.logLevel = 4;  // Error
+    } else if (optionName == "log-level") {
         if (!optionValue.empty()) {
             m_args.logLevel = std::stoi(optionValue);
         }
-    }
-    else if (optionName == "log-file") {
+    } else if (optionName == "log-file") {
         m_args.logFile = optionValue;
-    }
-    else if (optionName == "output" || optionName == "o") {
+    } else if (optionName == "output" || optionName == "o") {
         m_args.outputPath = optionValue;
-    }
-    else if (optionName == "port") {
+    } else if (optionName == "port") {
         if (!optionValue.empty()) {
             m_args.serverPort = std::stoi(optionValue);
         }
-    }
-    else if (optionName == "script") {
+    } else if (optionName == "script") {
         m_args.scriptFile = optionValue;
-    }
-    else if (optionName == "continue-on-error") {
+    } else if (optionName == "continue-on-error") {
         m_args.continueOnError = true;
     }
 
@@ -148,7 +136,7 @@ bool CommandLineParser::ParseOption(const std::string& arg) {
 std::string CommandLineParser::GetNextValue(size_t& index) {
     // 首先检查当前参数是否包含等号
     std::string currentArg = m_argv[index + 1];
-    size_t equalPos = currentArg.find('=');
+    size_t equalPos        = currentArg.find('=');
     if (equalPos != std::string::npos) {
         return currentArg.substr(equalPos + 1);
     }
@@ -161,12 +149,12 @@ std::string CommandLineParser::GetNextValue(size_t& index) {
 }
 
 void CommandLineParser::RegisterCommand(const std::string& name,
-                                         const std::string& description,
-                                         CommandLineHandler handler) {
+                                        const std::string& description,
+                                        CommandLineHandler handler) {
     CommandInfo info;
-    info.name = name;
+    info.name        = name;
     info.description = description;
-    info.handler = handler;
+    info.handler     = handler;
     m_commands.push_back(info);
 }
 
@@ -271,4 +259,4 @@ const char* CommandLineParser::GetBuildInfo() {
     return buildInfo.c_str();
 }
 
-} // namespace Prisma
+}  // namespace Prisma
