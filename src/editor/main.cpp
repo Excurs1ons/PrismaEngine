@@ -34,6 +34,7 @@ int main(int argc, char* argv[]) {
     // 1. Create Engine (Architecture fix: explicit instantiation on stack)
     Prisma::EngineSpecification spec;
     spec.Name = "Prisma Editor";
+    spec.RefreshAssetDatabaseOnStartup = true;
     Prisma::Engine engine(spec);
 
     // 2. Initialize engine

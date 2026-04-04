@@ -2,27 +2,27 @@
     "assets/materials/ground.mat.json": {
         "customData": null,
         "guid": "c52fafd81f230dc5",
-        "hash": "ae0f76baf64bcac8cff63012c014ad35",
-        "lastModified": 134100819476385044,
-        "lastSize": 655,
+        "hash": "a0ea24a5af2978ba954c7e89104a51ce",
+        "lastModified": -4665315595959836133,
+        "lastSize": 633,
         "path": "assets/materials/ground.mat.json",
         "type": ".json"
     },
     "assets/materials/player.mat.json": {
         "customData": null,
         "guid": "d07ef38eab3e45eb",
-        "hash": "1594836b22e94b2b4746ba24a5a8f2fe",
-        "lastModified": 134100819476385044,
-        "lastSize": 629,
+        "hash": "fc71a02996237166958e092a0b701d84",
+        "lastModified": -4665315595959836133,
+        "lastSize": 607,
         "path": "assets/materials/player.mat.json",
         "type": ".json"
     },
     "assets/scenes/demo.scene.json": {
         "customData": null,
         "guid": "37aa97c45638e6b4",
-        "hash": "a468f6660af21d57429289c4f5037687",
-        "lastModified": 134100819476390048,
-        "lastSize": 2903,
+        "hash": "4aa8061b0fab31741894ddbf32532528",
+        "lastModified": -4665315595959836133,
+        "lastSize": 2770,
         "path": "assets/scenes/demo.scene.json",
         "type": ".json"
     },
@@ -30,7 +30,7 @@
         "customData": null,
         "guid": "b243163ee0abb0eb",
         "hash": "d049ae33f3ce42880e64a1124bbafd37",
-        "lastModified": 134098560828233432,
+        "lastModified": -4665315595959836133,
         "lastSize": 1573,
         "path": "assets/shaders/Skybox.hlsl",
         "type": ".hlsl"
@@ -38,18 +38,18 @@
     "assets/shaders/Text.hlsl": {
         "customData": null,
         "guid": "e429ac47e3410835",
-        "hash": "a11c78602b0f7f9b1c1ef0d3b77b0032",
-        "lastModified": 134114872135169143,
-        "lastSize": 1147,
+        "hash": "a5fc38806ad91cfeb7268a33193d8f7d",
+        "lastModified": -4665315595955836133,
+        "lastSize": 1098,
         "path": "assets/shaders/Text.hlsl",
         "type": ".hlsl"
     },
     "assets/shaders/default.hlsl": {
         "customData": null,
         "guid": "9d45a63513d8642e",
-        "hash": "55de2d7a14064576f2e99e32a6dad8e5",
-        "lastModified": 134100889474227086,
-        "lastSize": 906,
+        "hash": "3b48bccc143582a565fec6875ce098de",
+        "lastModified": -4665315595955836133,
+        "lastSize": 854,
         "path": "assets/shaders/default.hlsl",
         "type": ".hlsl"
     }

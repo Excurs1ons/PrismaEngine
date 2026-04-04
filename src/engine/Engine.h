@@ -25,6 +25,8 @@ class PhysicsSystem;
 struct EngineSpecification {
     std::string Name = "PrismaEngine";
     bool Headless = false;
+    // Runtime/游戏默认只读资源元数据库，避免每次启动改写 assets/metadata.json
+    bool RefreshAssetDatabaseOnStartup = false;
     LogLevel MinLogLevel = LogLevel::Trace;
     uint32_t MaxFPS = 0; 
 };
