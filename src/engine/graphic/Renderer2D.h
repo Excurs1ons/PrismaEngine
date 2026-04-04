@@ -50,6 +50,9 @@ public:
     static void DrawQuad(const Vector2& position, const Vector2& size, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
     static void DrawQuad(const Matrix4& transform, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
 
+    // 绘制文本 (使用内置像素字体或提供的图集)
+    static void DrawString(const std::string& text, const Vector2& position, float scale = 1.0f, const Prisma::Color& color = {1.0f, 1.0f, 1.0f, 1.0f});
+
     // ========== 统计数据 ==========
 
     static void ResetStats();

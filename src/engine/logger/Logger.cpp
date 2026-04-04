@@ -8,6 +8,10 @@
 #include <sstream>
 #include <SDL3/SDL.h>
 
+#ifdef _WIN32
+#include <Windows.h>
+#endif
+
 namespace Prisma {
 
 static Logger* s_loggerInstance = nullptr;
@@ -59,6 +63,11 @@ bool Logger::Initialize(const LogConfig& config) {
     }
     m_Initialized = true;
     m_Config     = config;
+
+#ifdef _WIN32
+    // 设置控制台输出为 UTF-8
+    SetConsoleOutputCP(CP_UTF8);
+#endif
 
     std::string logFilePath = m_Config.logFilePath;
 

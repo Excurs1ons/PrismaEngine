@@ -16,9 +16,16 @@ void GameController::Initialize() {
     m_pacman.Initialize(m_board.GetPacmanSpawnPoint(), &m_board);
     InitializeGhosts();
 
-    // 初始化相机
-    m_camera.SetPosition(glm::vec2(BOARD_WIDTH * TILE_SIZE / 2.0f, BOARD_HEIGHT * TILE_SIZE / 2.0f));
-    m_camera.SetViewportSize(BOARD_WIDTH * TILE_SIZE, BOARD_HEIGHT * TILE_SIZE);
+    // 初始化相机：总高度增加 48 像素作为 HUD 边距
+    // 迷宫尺寸为 448x496
+    const float HUD_HEIGHT_MARGIN = 48.0f;
+    const float BOARD_WIDTH_PX = BOARD_WIDTH * TILE_SIZE;
+    const float BOARD_HEIGHT_PX = BOARD_HEIGHT * TILE_SIZE;
+    
+    // 相机中心下移，使顶部留出 HUD 空间
+    // 逻辑坐标系：HUD 在 y = [-HUD_HEIGHT_MARGIN, 0], 迷宫在 y = [0, BOARD_HEIGHT_PX]
+    m_camera.SetPosition(glm::vec2(BOARD_WIDTH_PX / 2.0f, (BOARD_HEIGHT_PX - HUD_HEIGHT_MARGIN) / 2.0f));
+    m_camera.SetViewportSize(BOARD_WIDTH_PX, BOARD_HEIGHT_PX + HUD_HEIGHT_MARGIN);
 
     m_gameState    = GameState::Playing; // 修改：默认直接开始游戏，方便测试移动
     m_score        = 0;
@@ -87,7 +94,7 @@ void GameController::Update(Prisma::Timestep ts) {
 void GameController::Render() {
     Prisma::Graphic::Renderer2D::BeginScene(m_camera);
 
-    // 渲染游戏板（背景和墙壁）
+    // 渲染游戏 board (背景和墙壁)
     m_board.Render();
 
     // 渲染幽灵
@@ -301,48 +308,39 @@ void GameController::OnKeyPress(int keyCode) {
 void GameController::OnKeyRelease(int /*keyCode*/) {}
 
 void GameController::RenderUI() {
-    // Render simple in-game HUD using quads so gameplay feedback is visible
-    // even without text rendering support.
-    const float panelHeight = 18.0f;
-    const float panelWidth  = BOARD_WIDTH * TILE_SIZE - 16.0f;
-    const glm::vec2 panelPos(8.0f, 8.0f);
-    Prisma::Graphic::Renderer2D::DrawQuad(
-        panelPos, glm::vec2(panelWidth, panelHeight), Prisma::Color(0.05f, 0.05f, 0.08f, 0.8f));
+    // HUD 背景区域 (位于迷宫上方)
+    const float HUD_Y = -40.0f;
+    const float HUD_W = BOARD_WIDTH * TILE_SIZE;
+    Prisma::Graphic::Renderer2D::DrawQuad(glm::vec2(HUD_W / 2.0f, HUD_Y + 16.0f), glm::vec2(HUD_W, 40.0f), Prisma::Color(0.0f, 0.0f, 0.0f, 0.9f));
 
-    Prisma::Color stateColor(0.2f, 0.2f, 0.2f, 0.95f);
-    if (m_gameState == GameState::Playing)
-        stateColor = Prisma::Color(0.1f, 0.55f, 0.2f, 0.95f);
-    else if (m_gameState == GameState::Paused)
-        stateColor = Prisma::Color(0.8f, 0.65f, 0.1f, 0.95f);
-    else if (m_gameState == GameState::GameOver)
-        stateColor = Prisma::Color(0.7f, 0.12f, 0.12f, 0.95f);
-    else if (m_gameState == GameState::Victory)
-        stateColor = Prisma::Color(0.2f, 0.35f, 0.9f, 0.95f);
-    Prisma::Graphic::Renderer2D::DrawQuad(glm::vec2(10.0f, 10.0f), glm::vec2(90.0f, 14.0f), stateColor);
+    // 使用 DrawString 渲染文字信息
+    std::string scoreStr = "SCORE: " + std::to_string(m_score);
+    std::string highStr  = "HIGH: " + std::to_string(m_highScore);
+    std::string levelStr = "LEVEL: " + std::to_string(m_currentLevel);
+    
+    Prisma::Graphic::Renderer2D::DrawString(scoreStr, glm::vec2(10.0f, HUD_Y), 1.5f, Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
+    Prisma::Graphic::Renderer2D::DrawString(highStr,  glm::vec2(150.0f, HUD_Y), 1.5f, Prisma::Color(1.0f, 1.0f, 0.0f, 1.0f));
+    Prisma::Graphic::Renderer2D::DrawString(levelStr, glm::vec2(320.0f, HUD_Y), 1.5f, Prisma::Color(0.0f, 1.0f, 1.0f, 1.0f));
 
-    // Lives indicator
-    for (int i = 0; i < std::max(0, m_lives); ++i) {
-        Prisma::Graphic::Renderer2D::DrawQuad(
-            glm::vec2(110.0f + i * 16.0f, 10.0f), glm::vec2(12.0f, 12.0f), Prisma::Color(1.0f, 0.95f, 0.15f, 1.0f));
+    // 状态指示
+    const char* stateText = "UNKNOWN";
+    Prisma::Color stateColor(1.0f, 1.0f, 1.0f, 1.0f);
+    switch (m_gameState) {
+        case GameState::Playing:  stateText = "READY!";    stateColor = Prisma::Color(0.0f, 1.0f, 0.0f, 1.0f); break;
+        case GameState::Paused:   stateText = "PAUSED";    stateColor = Prisma::Color(1.0f, 0.7f, 0.0f, 1.0f); break;
+        case GameState::GameOver: stateText = "GAME OVER"; stateColor = Prisma::Color(1.0f, 0.0f, 0.0f, 1.0f); break;
+        case GameState::Victory:  stateText = "VICTORY!";  stateColor = Prisma::Color(0.0f, 0.5f, 1.0f, 1.0f); break;
+        default: break;
+    }
+    
+    if (m_gameState != GameState::Playing || (int)(Prisma::Platform::GetTimeSeconds() * 2) % 2 == 0) {
+        Prisma::Graphic::Renderer2D::DrawString(stateText, glm::vec2(HUD_W / 2.0f - 40.0f, 240.0f), 2.5f, stateColor);
     }
 
-    // Pellet progress bar
-    const int totalPellets = std::max(1, m_board.GetTotalPellets());
-    const int eatenPellets = std::max(0, totalPellets - m_board.GetRemainingPellets());
-    const float progress   = static_cast<float>(eatenPellets) / static_cast<float>(totalPellets);
-    const glm::vec2 barBgPos(200.0f, 10.0f);
-    const glm::vec2 barSize(220.0f, 12.0f);
-    Prisma::Graphic::Renderer2D::DrawQuad(barBgPos, barSize, Prisma::Color(0.15f, 0.15f, 0.2f, 0.95f));
-    Prisma::Graphic::Renderer2D::DrawQuad(
-        barBgPos, glm::vec2(barSize.x * progress, barSize.y), Prisma::Color(0.2f, 0.7f, 1.0f, 0.95f));
-
-    // Power mode indicator
-    if (m_powerModeActive) {
+    // 生命周期指示 (小方块)
+    for (int i = 0; i < std::max(0, m_lives); ++i) {
         Prisma::Graphic::Renderer2D::DrawQuad(
-            glm::vec2(430.0f, 10.0f), glm::vec2(120.0f, 12.0f), Prisma::Color(0.05f, 0.05f, 0.2f, 0.95f));
-        const float ratio = std::clamp(m_powerModeTimer / m_powerModeDuration, 0.0f, 1.0f);
-        Prisma::Graphic::Renderer2D::DrawQuad(
-            glm::vec2(430.0f, 10.0f), glm::vec2(120.0f * ratio, 12.0f), Prisma::Color(0.35f, 0.35f, 1.0f, 0.95f));
+            glm::vec2(HUD_W - 20.0f - i * 16.0f, HUD_Y + 8.0f), glm::vec2(12.0f, 12.0f), Prisma::Color(1.0f, 0.9f, 0.0f, 1.0f));
     }
 }
 
