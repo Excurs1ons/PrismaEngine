@@ -1,7 +1,7 @@
 # 运行时可执行程序
 # 统一使用跨平台实现，基于 SDL3 动态加载
 
-set(RUNTIME_SOURCES Runtime.cpp)
+set(RUNTIME_SOURCES core/Runtime.cpp)
 
 # 创建可执行程序
 add_executable(PrismaLauncher

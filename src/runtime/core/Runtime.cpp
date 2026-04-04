@@ -1,11 +1,11 @@
+#include "app/Application.h"
+#include "app/CommandLineParser.h"
+#include "app/Engine.h"
+#include "logger/Logger.h"
+#include "platform/DynamicLoader.h"
 #include <iostream>
 #include <memory>
 #include <vector>
-#include "../engine/Engine.h"
-#include "../engine/DynamicLoader.h"
-#include "../engine/CommandLineParser.h"
-#include "../engine/Application.h"
-#include "../engine/Logger.h"
 
 /**
  * @brief Prisma Launcher (Cross-Platform)
@@ -18,7 +18,7 @@ int main(int argc, char* argv[]) {
 
     // 1. Create Engine (Architecture fix)
     Prisma::EngineSpecification spec;
-    spec.Name = "Prisma Runtime";
+    spec.Name        = "Prisma Runtime";
     spec.MinLogLevel = Prisma::LogLevel::Info;
     Prisma::Engine engine(spec);
 
@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     // 3. Load application plugin
     Prisma::DynamicLoader loader;
     bool loaded = false;
-    
+
     // 跨平台尝试加载动态库
     std::vector<std::string> libNames = {
 #if defined(_WIN32)
@@ -72,11 +72,11 @@ int main(int argc, char* argv[]) {
 
     // 4. Get factory function
     using CreateAppFn = Prisma::Application* (*)();
-    auto create = (CreateAppFn)loader.GetFunction<CreateAppFn>("CreateApplication");
-    
+    auto create       = (CreateAppFn)loader.GetFunction<CreateAppFn>("CreateApplication");
+
     if (create) {
         std::unique_ptr<Prisma::Application> app(create());
-        
+
         // 5. Engine takes full ownership and responsibility
         engine.Run(std::move(app));
     }

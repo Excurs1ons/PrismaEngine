@@ -117,7 +117,7 @@ endif()
 
 # 外部项目模块 (PrismaCraft 等)
 if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt)
-    add_subdirectory(projects EXCLUDE_FROM_ALL)
+    add_subdirectory(projects)
     message(STATUS "已添加 Projects 模块")
 endif()
 

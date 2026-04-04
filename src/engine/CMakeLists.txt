@@ -7,10 +7,6 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
     add_compile_options(/DNOMINMAX /DWIN32_LEAN_AND_MEAN)
 endif()
 
-# 包含子目录逻辑
-include(graphic/CMakeLists.txt)
-include(physics/CMakeLists.txt)
-
 # 寻找 Vulkan
 if(PRISMA_ENABLE_RENDER_VULKAN)
     find_package(Vulkan REQUIRED)
@@ -18,95 +14,272 @@ endif()
 
 # ========== 收集核心源文件 (所有平台共用) ==========
 set(CORE_SOURCES
-    CommandLineParser.cpp
-    DynamicLoader.cpp
-    Engine.cpp
-    EngineLauncher.cpp
-    Application.cpp
-    JobSystem.cpp
-    Logger.cpp
-    LogScope.cpp
-    Object.cpp
-    PhysicsSystem.cpp
-    Platform.cpp
-    Window.cpp
-    Scene.cpp
-    SceneManager.cpp
-    Serializable.cpp
-    ThreadManager.cpp
-    WorkerThread.cpp
-    Camera.cpp
-    CameraController.cpp
-    GameObject.cpp
-    ScriptComponent.cpp
-    Transform.cpp
-    SoundSynthesizer.cpp
-    TriangleExample.cpp
-    pch.cpp
-    math/MurmurHash3.cpp
-    graphic/Renderer.cpp
-    scripting/MonoRuntime.cpp
-    scripting/ScriptSystem.cpp
-    core/AssetManager.cpp
-    core/AssetDatabase.cpp
-    core/ECS.cpp
-    core/Layer.cpp
-    core/LayerStack.cpp
-    core/UUID.cpp
-    ui/UIComponent.cpp
-    ui/UIInputManager.cpp
-    ui/2d/ButtonComponent.cpp
-    ui/2d/CanvasComponent.cpp
+    # App
+    app/CommandLineParser.cpp
+    app/Engine.cpp
+    app/EngineLauncher.cpp
+    app/Application.cpp
+
+    # Threading
+    threading/JobSystem.cpp
+    threading/ThreadManager.cpp
+    threading/WorkerThread.cpp
+
+    # Logger
+    logger/Logger.cpp
+    logger/LogScope.cpp
+
+    # Object
+    object/Object.cpp
+
+    # Platform
+    platform/Platform.cpp
+    platform/DynamicLoader.cpp
+
+    # Window
+    window/Window.cpp
+
+    # Scene
+    scene/Scene.cpp
+    scene/SceneManager.cpp
+    scene/GameObject.cpp
+
+    # Serialization
+    serialization/Serializable.cpp
+    serialization/ScriptComponent.cpp
+
+    # Transform
+    transform/Transform.cpp
+    transform/Camera.cpp
+    transform/CameraController.cpp
+
+    # Audio
+    audio/SoundSynthesizer.cpp
     audio/AudioDeviceNull.cpp
     audio/AudioDeviceSDL3.cpp
     audio/AudioAPI.cpp
+
+    # Input
     input/InputDevice.cpp
     input/InputManager.cpp
+
+    # Physics
+    physics/PhysicsSystem.cpp
+
+    # Resource
     resource/AssetSerializer.cpp
     resource/ArchiveJson.cpp
     resource/MeshAsset.cpp
     resource/ResourceFallback.cpp
     resource/ResourceFallbackImpl.cpp
     resource/TextureAsset.cpp
+
+    # Tilemap
     tilemap/TilemapAsset.cpp
     tilemap/format/TileDataDecoder.cpp
     tilemap/format/TmxParser.cpp
     tilemap/format/TsxParser.cpp
     tilemap/renderer/TilemapRenderer.cpp
+
+    # Scripting
+    scripting/MonoRuntime.cpp
+    scripting/ScriptSystem.cpp
+
+    # Core
+    core/AssetManager.cpp
+    core/AssetDatabase.cpp
+    core/ECS.cpp
+    core/Layer.cpp
+    core/LayerStack.cpp
+    core/UUID.cpp
+
+    # UI
+    ui/UIComponent.cpp
+    ui/UIInputManager.cpp
+    ui/2d/ButtonComponent.cpp
+    ui/2d/CanvasComponent.cpp
+
+    # Math
+    math/MurmurHash3.cpp
+
+    # Graphic
+    graphic/Renderer.cpp
+    graphic/Renderer2D.cpp
+    graphic/RenderSystem.cpp
+    graphic/RenderCommandContext.cpp
+    graphic/RenderComponent.cpp
+    graphic/RenderGraph.cpp
+    graphic/RenderPass.cpp
+    graphic/Shader.cpp
+    graphic/ShaderFactory.cpp
+    graphic/TextureAtlas.cpp
+    graphic/VoxelRenderer.cpp
+    graphic/EngineShaderAdapter.cpp
+    graphic/GeometryRenderPass.cpp
+    graphic/Material.cpp
+    graphic/Mesh.cpp
+    graphic/MeshRenderer.cpp
+    graphic/OrthographicCamera.cpp
+    graphic/SpriteRenderer.cpp
+    graphic/SpriteAnimation.cpp
+    graphic/stb_impl.cpp
+    graphic/RenderResourceManager.cpp
+    graphic/LogicalPass.cpp
+    graphic/LogicalPipeline.cpp
+    graphic/interfaces/IPipelineState.cpp
+
+    # Graphic - Forward Pipeline
+    graphic/pipelines/forward/ForwardPipeline.cpp
+    graphic/pipelines/forward/DepthPrePass.cpp
+    graphic/pipelines/forward/OpaquePass.cpp
+    graphic/pipelines/forward/TransparentPass.cpp
+
+    # Graphic - Deferred Pipeline
+    graphic/pipelines/deferred/DeferredPipeline.cpp
+    graphic/pipelines/deferred/GeometryPass.cpp
+    graphic/pipelines/deferred/LightingPass.cpp
+    graphic/pipelines/deferred/CompositionPass.cpp
+    graphic/pipelines/deferred/GBuffer.cpp
+
+    # Graphic - Skybox
+    graphic/pipelines/SkyboxRenderPass.cpp
+
+    # Graphic - UI
+    graphic/ui/FontAtlas.cpp
+    graphic/ui/TextRendererComponent.cpp
+    graphic/ui/UIPass.cpp
+
+    # Graphic - 2D
+    graphic/2d/Light2D.cpp
+
+    # Graphic - Vulkan Backend
+    graphic/adapters/vulkan/VulkanAdapters.cpp
+    graphic/adapters/vulkan/RenderDeviceVulkan.cpp
+    graphic/adapters/vulkan/VulkanSwapChain.cpp
+    graphic/adapters/vulkan/VulkanShader.cpp
+    graphic/adapters/vulkan/VulkanResources.cpp
+    graphic/adapters/vulkan/VulkanResourceFactory.cpp
+    graphic/adapters/vulkan/VulkanFence.cpp
+    graphic/adapters/vulkan/VulkanSampler.cpp
+    graphic/adapters/vulkan/VulkanPipelineState.cpp
+
+    # Precompiled header
+    pch.cpp
 )
 
 
 # ========== 收集核心头文件 ==========
 set(CORE_HEADERS
-    CommandLineParser.h
-    Common.h
-    Engine.h
-    EngineLauncher.h
-    Application.h
-    JobSystem.h
-    Logger.h
-    LogScope.h
-    Object.h
-    PhysicsSystem.h
-    Platform.h
-    Scene.h
-    SceneManager.h
-    Serializable.h
-    ThreadManager.h
-    WorkerThread.h
-    Camera.h
-    CameraController.h
-    GameObject.h
-    ScriptComponent.h
-    Transform.h
-    CubemapTextureAsset.h
-    TextureAsset.h
-    SoundSynthesizer.h
-    TriangleExample.h
-    pch.h
-    packing/Pipeline.h
+    # App
+    app/CommandLineParser.h
+    app/Engine.h
+    app/EngineLauncher.h
+    app/Application.h
+
+    # Threading
+    threading/JobSystem.h
+    threading/ThreadManager.h
+    threading/WorkerThread.h
+
+    # Logger
+    logger/Logger.h
+    logger/LogScope.h
+    logger/LogEntry.h
+    logger/IPlatformLogger.h
+
+    # Object
+    object/Object.h
+    object/Model.h
+    object/MetaData.h
+
+    # Platform
+    platform/Platform.h
+    platform/DynamicLoader.h
+
+    # Window
+    window/Window.h
+
+    # Scene
+    scene/Scene.h
+    scene/SceneManager.h
+    scene/SceneNode.h
+    scene/GameObject.h
+
+    # Serialization
+    serialization/Serializable.h
+    serialization/SerializationVersion.h
+    serialization/ScriptComponent.h
+
+    # Transform
+    transform/Transform.h
+    transform/ITransform.h
+    transform/Camera.h
+    transform/CameraController.h
+    transform/FPSCounter.h
+
+    # Audio
+    audio/SoundSynthesizer.h
+    audio/AudioAPI.h
+    audio/AudioDevice.h
+    audio/AudioDeviceSDL3.h
+    audio/AudioTypes.h
+    audio/IAudioDevice.h
+    audio/core/IAudioDriver.h
+
+    # Input
+    input/InputDevice.h
+    input/InputManager.h
+    input/Input.h
+    input/InputBackend.h
+    input/KeyCode.h
+    input/core/IInputDriver.h
+    input/drivers/InputDriverSDL3.h
+    input/drivers/InputDriverWin32.h
+
+    # Physics
+    physics/PhysicsSystem.h
+    physics/CollisionSystem.h
+    physics/PhysicsComponents.h
+    physics/RigidBody.h
+
+    # Resource
+    resource/AssetSerializer.h
+    resource/MeshAsset.h
+    resource/ResourceFallback.h
+    resource/ResourceSerializer.h
+    resource/TextureAsset.h
+    resource/TilemapAsset.h
+    resource/Archive.h
+    resource/ArchiveBinary.h
+    resource/ArchiveJson.h
+    resource/DefaultShaders.h
+    resource/OBJParser.h
+    resource/ResourceFallbackImpl.h
+    resource/embedded/EmbeddedResources.h
+
+    # Tilemap
+    tilemap/TilemapAsset.h
+    tilemap/core/GroupLayer.h
+    tilemap/core/ImageLayer.h
+    tilemap/core/Map.h
+    tilemap/core/ObjectLayer.h
+    tilemap/core/Tile.h
+    tilemap/core/TileLayer.h
+    tilemap/core/Tileset.h
+    tilemap/core/Types.h
+    tilemap/format/TileDataDecoder.h
+    tilemap/format/TmxParser.h
+    tilemap/format/TsxParser.h
+    tilemap/renderer/AnimatedTileManager.h
+    tilemap/renderer/TileChunk.h
+    tilemap/renderer/TileGeometryBuilder.h
+    tilemap/renderer/TilemapRenderer.h
+
+    # Scripting
     scripting/MonoRuntime.h
     scripting/ScriptSystem.h
+
+    # Core
     core/AssetManager.h
     core/Asset.h
     core/UUID.h
@@ -116,34 +289,43 @@ set(CORE_HEADERS
     core/Layer.h
     core/LayerStack.h
     core/Event.h
+    core/Component.h
+    core/ISubSystem.h
+    core/IWorld.h
+    core/ManagerBase.h
+    core/Singleton.h
+    core/Handle.h
+    core/StringHash.h
+    core/Timestep.h
+    core/IImageLoader.h
+    core/ImageLoaderSTB.h
+    core/HotReloadManager.h
+    core/Packaging.cpp
+
+    # UI
     ui/UIComponent.h
     ui/UIInputManager.h
     ui/2d/ButtonComponent.h
     ui/2d/CanvasComponent.h
-    audio/AudioAPI.h
-    audio/AudioDevice.h
-    audio/AudioDeviceSDL3.h
-    audio/AudioTypes.h
-    audio/IAudioDevice.h
-    input/InputDevice.h
-    input/InputManager.h
-    resource/AssetSerializer.h
-    resource/MeshAsset.h
-    resource/ResourceFallback.h
-    resource/TextureAsset.h
-    resource/TilemapAsset.h
+
+    # Packing
+    packing/Pipeline.h
+
+    # Math
+    math/MathTypes.h
+    math/MatrixUtils.h
+    math/MurmurHash3.h
+
+    # Config
+    config/AudioBackendConfig.h
+    config/EngineConfig.h
+    config/RenderBackendConfig.h
+
+    # PCH
+    pch.h
 )
 
 # ========== 创建引擎库 ==========
-set(ENGINE_SOURCES
-    ${CORE_SOURCES}
-    ${ENGINE_GRAPHIC_SOURCES}
-)
-
-set(ENGINE_HEADERS
-    ${CORE_HEADERS}
-    ${ENGINE_GRAPHIC_HEADERS}
-)
 
 # Linux 下为 LSP 生成 compile_commands.json
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -151,8 +333,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 
 add_library(Engine SHARED
-    ${ENGINE_SOURCES}
-    ${ENGINE_HEADERS}
+    ${CORE_SOURCES}
+    ${CORE_HEADERS}
     pch.h
     pch.cpp
     packing/Pipeline.h
@@ -231,8 +413,23 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/graphic>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/2d>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/input>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tilemap>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/app>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scene>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/object>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/transform>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/threading>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/serialization>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/logger>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/window>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/platform>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scripting>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/packing>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils>
 )
 
 target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/glm-src")
