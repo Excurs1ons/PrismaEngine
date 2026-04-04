@@ -316,6 +316,10 @@ void Renderer2D::DrawString(const std::string& text, const Vector2& position, fl
     }
 }
 
+float Renderer2D::GetStringWidth(const std::string& text, float scale) {
+    return static_cast<float>(text.length()) * 6.0f * scale;
+}
+
 void Renderer2D::ResetStats() {
     if (s_Data) s_Data->Stats = Statistics();
 }

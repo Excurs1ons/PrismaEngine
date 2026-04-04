@@ -27,12 +27,18 @@ void GameController::Initialize() {
     m_camera.SetPosition(glm::vec2(BOARD_WIDTH_PX / 2.0f, (BOARD_HEIGHT_PX - HUD_HEIGHT_MARGIN) / 2.0f));
     m_camera.SetViewportSize(BOARD_WIDTH_PX, BOARD_HEIGHT_PX + HUD_HEIGHT_MARGIN);
 
-    m_gameState    = GameState::Playing; // 修改：默认直接开始游戏，方便测试移动
+    m_gameState    = GameState::Playing; 
+    m_stateTimer   = 2.0f; // READY! 持续 2 秒
     m_score        = 0;
     m_lives        = 3;
     m_currentLevel = 1;
 
-    LOG_INFO("PacMan", "游戏控制器初始化完成，当前状态: PLAYING");
+    // 初始化幽灵模式
+    m_currentGhostMode = GhostState::Scatter;
+    m_ghostModeTimer = 7.0f;
+    m_modeCycleCount = 0;
+
+    LOG_INFO("PacMan", "游戏控制器初始化完成，当前状态: PLAYING (READY phase)");
     UpdateUI();
 }
 
@@ -68,6 +74,42 @@ void GameController::Update(Prisma::Timestep ts) {
 
     if (m_gameState != GameState::Playing) {
         return;
+    }
+
+    // 处理 READY 阶段计时
+    if (m_stateTimer > 0.0f) {
+        m_stateTimer -= static_cast<float>(ts);
+        return; // READY 期间不更新移动逻辑
+    }
+
+    // 更新幽灵模式循环
+    if (!m_powerModeActive) {
+        m_ghostModeTimer -= static_cast<float>(ts);
+        if (m_ghostModeTimer <= 0.0f) {
+            // 切换模式
+            if (m_currentGhostMode == GhostState::Scatter) {
+                m_currentGhostMode = GhostState::Chase;
+                m_modeCycleCount++;
+                // Chase 时长通常为 20s
+                m_ghostModeTimer = 20.0f;
+                LOG_INFO("PacMan", "幽灵进入追逐模式 (Chase)");
+            } else {
+                m_currentGhostMode = GhostState::Scatter;
+                // Scatter 时长随循环次数减少 (7s, 7s, 5s, 5s)
+                m_ghostModeTimer = (m_modeCycleCount < 2) ? 7.0f : 5.0f;
+                if (m_modeCycleCount >= 4) m_ghostModeTimer = 999999.0f; // 永久 Chase (实际上由上一段逻辑控制)
+                LOG_INFO("PacMan", "幽灵进入散开模式 (Scatter)");
+            }
+
+            // 通知所有非惊吓状态的幽灵切换模式
+            for (auto& ghost : m_ghosts) {
+                if (ghost.GetState() != GhostState::Frightened && ghost.GetState() != GhostState::Eaten) {
+                    ghost.SetState(m_currentGhostMode);
+                    // 经典 Pac-Man：模式切换时幽灵立即反向
+                    ghost.SetDirection(ReverseDirection(ghost.GetCurrentDirection()));
+                }
+            }
+        }
     }
 
     // 更新吃豆人
@@ -120,6 +162,7 @@ void GameController::StartGame() {
         ResetGame();
     }
     m_gameState = GameState::Playing;
+    m_stateTimer = 2.0f; 
     LOG_INFO("PacMan", "游戏开始");
 }
 
@@ -140,6 +183,7 @@ void GameController::ResumeGame() {
 void GameController::ResetGame() {
     Initialize();
     m_gameState = GameState::Playing;
+    m_stateTimer = 2.0f;
     LOG_INFO("PacMan", "游戏重置");
 }
 
@@ -170,6 +214,7 @@ void GameController::LoseLife() {
         for (auto& ghost : m_ghosts) {
             ghost.Reset();
         }
+        m_stateTimer = 2.0f; // 重新开始时再次显示 READY!
     }
 }
 
@@ -257,6 +302,7 @@ void GameController::NextLevel() {
     for (auto& ghost : m_ghosts) {
         ghost.Reset();
     }
+    m_stateTimer = 2.0f;
 }
 
 void GameController::OnKeyPress(int keyCode) {
@@ -311,6 +357,7 @@ void GameController::RenderUI() {
     // HUD 背景区域 (位于迷宫上方)
     const float HUD_Y = -40.0f;
     const float HUD_W = BOARD_WIDTH * TILE_SIZE;
+    const float BOARD_H_PX = BOARD_HEIGHT * TILE_SIZE;
     Prisma::Graphic::Renderer2D::DrawQuad(glm::vec2(HUD_W / 2.0f, HUD_Y + 16.0f), glm::vec2(HUD_W, 40.0f), Prisma::Color(0.0f, 0.0f, 0.0f, 0.9f));
 
     // 使用 DrawString 渲染文字信息
@@ -323,18 +370,30 @@ void GameController::RenderUI() {
     Prisma::Graphic::Renderer2D::DrawString(levelStr, glm::vec2(320.0f, HUD_Y), 1.5f, Prisma::Color(0.0f, 1.0f, 1.0f, 1.0f));
 
     // 状态指示
-    const char* stateText = "UNKNOWN";
+    std::string stateText = "";
     Prisma::Color stateColor(1.0f, 1.0f, 1.0f, 1.0f);
-    switch (m_gameState) {
-        case GameState::Playing:  stateText = "READY!";    stateColor = Prisma::Color(0.0f, 1.0f, 0.0f, 1.0f); break;
-        case GameState::Paused:   stateText = "PAUSED";    stateColor = Prisma::Color(1.0f, 0.7f, 0.0f, 1.0f); break;
-        case GameState::GameOver: stateText = "GAME OVER"; stateColor = Prisma::Color(1.0f, 0.0f, 0.0f, 1.0f); break;
-        case GameState::Victory:  stateText = "VICTORY!";  stateColor = Prisma::Color(0.0f, 0.5f, 1.0f, 1.0f); break;
-        default: break;
+    bool shouldShow = true;
+
+    if (m_gameState == GameState::Playing && m_stateTimer > 0.0f) {
+        stateText = "READY!";
+        stateColor = Prisma::Color(1.0f, 1.0f, 0.0f, 1.0f);
+    } else {
+        switch (m_gameState) {
+            case GameState::Paused:   stateText = "PAUSED";    stateColor = Prisma::Color(1.0f, 0.7f, 0.0f, 1.0f); break;
+            case GameState::GameOver: stateText = "GAME OVER"; stateColor = Prisma::Color(1.0f, 0.0f, 0.0f, 1.0f); break;
+            case GameState::Victory:  stateText = "VICTORY!";  stateColor = Prisma::Color(0.0f, 0.5f, 1.0f, 1.0f); break;
+            default: shouldShow = false; break;
+        }
     }
     
-    if (m_gameState != GameState::Playing || (int)(Prisma::Platform::GetTimeSeconds() * 2) % 2 == 0) {
-        Prisma::Graphic::Renderer2D::DrawString(stateText, glm::vec2(HUD_W / 2.0f - 40.0f, 240.0f), 2.5f, stateColor);
+    if (shouldShow) {
+        // 闪烁逻辑
+        if (m_gameState != GameState::Playing || (int)(Prisma::Platform::GetTimeSeconds() * 2) % 2 == 0) {
+            float scale = 2.5f;
+            float textW = Prisma::Graphic::Renderer2D::GetStringWidth(stateText, scale);
+            // 居中显示 (相对于棋盘中心)
+            Prisma::Graphic::Renderer2D::DrawString(stateText, glm::vec2((HUD_W - textW) / 2.0f, BOARD_H_PX / 2.0f), scale, stateColor);
+        }
     }
 
     // 生命周期指示 (小方块)

@@ -9,6 +9,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <ctime>
 
 namespace PacMan {
 
@@ -97,6 +98,9 @@ PacManGame::~PacManGame() {
 
 void PacManGame::Initialize() {
     if (m_initialized) return;
+
+    // 播种随机数
+    std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     // 创建游戏控制器
     m_gameController = std::make_unique<GameController>();

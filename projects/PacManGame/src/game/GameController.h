@@ -215,6 +215,12 @@ private:
     // 输入缓存
     Direction m_inputDirection = Direction::None;
     float m_uiRefreshAccumulator = 0.0f;
+    float m_stateTimer = 0.0f; // 状态计时器
+
+    // 幽灵模式循环 (Scatter/Chase)
+    GhostState m_currentGhostMode = GhostState::Scatter;
+    float m_ghostModeTimer = 0.0f;
+    int m_modeCycleCount = 0;
 
     // 辅助方法
     void InitializeGhosts();
