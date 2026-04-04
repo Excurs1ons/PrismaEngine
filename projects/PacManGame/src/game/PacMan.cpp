@@ -44,10 +44,16 @@ void PacMan::Reset() {
 }
 
 void PacMan::SetDirection(Direction direction) {
-    m_nextDirection = direction;
+    SetNextDirection(direction);
 }
 
 void PacMan::SetNextDirection(Direction direction) {
+    // 允许随时立即反向
+    if (m_currentDirection != Direction::None && direction == ReverseDirection(m_currentDirection)) {
+        m_currentDirection = direction;
+        m_nextDirection = Direction::None;
+        return;
+    }
     m_nextDirection = direction;
 }
 
@@ -69,7 +75,7 @@ void PacMan::SetMouthAnimation(float minAngle, float maxAngle, float speed) {
 }
 
 void PacMan::Update(Prisma::Timestep ts) {
-    // 尝试转向
+    // 尝试转向 (90度转向需在中心)
     TryTurn();
 
     // 更新移动
@@ -80,18 +86,44 @@ void PacMan::Update(Prisma::Timestep ts) {
         // 计算新位置
         glm::vec2 newPosition = m_position + velocity * static_cast<float>(ts);
 
-        // 检查穿墙
+        // 检查是否越过中心并需要处理转向或停止
+        glm::ivec2 currentGrid = m_board->PixelToGrid(m_position);
+        glm::vec2 tileCenter = m_board->GridToPixel(currentGrid.x, currentGrid.y);
+        
+        bool movedPastCenter = false;
+        if (m_currentDirection == Direction::Right && m_position.x <= tileCenter.x && newPosition.x > tileCenter.x) movedPastCenter = true;
+        if (m_currentDirection == Direction::Left  && m_position.x >= tileCenter.x && newPosition.x < tileCenter.x) movedPastCenter = true;
+        if (m_currentDirection == Direction::Down  && m_position.y <= tileCenter.y && newPosition.y > tileCenter.y) movedPastCenter = true;
+        if (m_currentDirection == Direction::Up    && m_position.y >= tileCenter.y && newPosition.y < tileCenter.y) movedPastCenter = true;
+
+        if (movedPastCenter && m_nextDirection != Direction::None) {
+            // 在中心点尝试转向
+            glm::ivec2 nextDirVec = DirectionToVector(m_nextDirection);
+            if (m_board->IsWalkable(currentGrid.x + nextDirVec.x, currentGrid.y + nextDirVec.y)) {
+                m_currentDirection = m_nextDirection;
+                m_nextDirection = Direction::None;
+                m_position = tileCenter; // 锁死在中心
+                return; // 下一帧再按新方向移动
+            }
+        }
+
+        // 检查穿墙 (隧道)
         glm::vec2 tunnelPosition;
         if (m_board->CheckTunnel(newPosition, tunnelPosition)) {
             m_position = tunnelPosition;
         } else {
-            // 检查碰撞
-            glm::ivec2 gridPos = m_board->PixelToGrid(newPosition);
-            if (m_board->IsWalkable(gridPos.x, gridPos.y)) {
+            // 检查前方碰撞
+            glm::ivec2 nextGrid = currentGrid + dir;
+            if (m_board->IsWalkable(nextGrid.x, nextGrid.y)) {
                 m_position = newPosition;
             } else {
-                // 如果不能移动，尝试转向
-                TryTurn();
+                // 前方是墙，如果已经到达或超过中心，则停在中心
+                if (movedPastCenter || glm::distance(newPosition, tileCenter) < 1.0f) {
+                    m_position = tileCenter;
+                    m_currentDirection = Direction::None;
+                } else {
+                    m_position = newPosition;
+                }
             }
         }
 
@@ -137,15 +169,17 @@ void PacMan::TryTurn() {
         return;
     }
 
-    // 检查是否在格子中心附近
+    // 立即反向逻辑已在 SetNextDirection 中处理，这里处理 90 度转向
     if (IsAtTileCenter()) {
         glm::ivec2 gridPos = GetGridPosition();
         glm::ivec2 nextDir = DirectionToVector(m_nextDirection);
         glm::ivec2 nextPos = gridPos + nextDir;
 
-        // 检查目标格子是否可通行
         if (m_board->IsWalkable(nextPos.x, nextPos.y)) {
             m_currentDirection = m_nextDirection;
+            m_nextDirection = Direction::None;
+            // 对齐到中心
+            m_position = m_board->GridToPixel(gridPos.x, gridPos.y);
         }
     }
 }

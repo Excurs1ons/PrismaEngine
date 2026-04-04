@@ -183,18 +183,40 @@ void Ghost::UpdateMovement(Prisma::Timestep ts) {
     // 计算新位置
     glm::vec2 newPosition = m_position + glm::vec2(dir.x * speed, dir.y * speed) * static_cast<float>(ts);
 
-    // 检查穿墙
+    // 检查中心点越过逻辑 (用于 AI 决策和碰撞停止)
+    glm::ivec2 currentGrid = m_board->PixelToGrid(m_position);
+    glm::vec2 tileCenter = m_board->GridToPixel(currentGrid.x, currentGrid.y);
+
+    bool movedPastCenter = false;
+    if (m_currentDirection == Direction::Right && m_position.x <= tileCenter.x && newPosition.x > tileCenter.x) movedPastCenter = true;
+    if (m_currentDirection == Direction::Left  && m_position.x >= tileCenter.x && newPosition.x < tileCenter.x) movedPastCenter = true;
+    if (m_currentDirection == Direction::Down  && m_position.y <= tileCenter.y && newPosition.y > tileCenter.y) movedPastCenter = true;
+    if (m_currentDirection == Direction::Up    && m_position.y >= tileCenter.y && newPosition.y < tileCenter.y) movedPastCenter = true;
+
+    if (movedPastCenter) {
+        // 到达中心，触发 AI 更新
+        UpdateAI();
+        // 更新方向后重新计算 velocity
+        dir = DirectionToVector(m_currentDirection);
+    }
+
+    // 检查穿墙 (隧道)
     glm::vec2 tunnelPosition;
     if (m_board->CheckTunnel(newPosition, tunnelPosition)) {
         m_position = tunnelPosition;
     } else {
-        // 检查碰撞
-        glm::ivec2 gridPos = m_board->PixelToGrid(newPosition);
-        if (m_board->IsWalkable(gridPos.x, gridPos.y)) {
+        // 检查前方碰撞
+        glm::ivec2 nextGrid = currentGrid + dir;
+        if (m_board->IsWalkable(nextGrid.x, nextGrid.y)) {
             m_position = newPosition;
         } else {
-            // 碰撞，选择新方向
-            ChooseNextDirection();
+            // 前方是墙，如果已经到达中心，则停在中心并选择新方向
+            if (movedPastCenter || glm::distance(newPosition, tileCenter) < 1.0f) {
+                m_position = tileCenter;
+                ChooseNextDirection();
+            } else {
+                m_position = newPosition;
+            }
         }
     }
 
@@ -203,29 +225,19 @@ void Ghost::UpdateMovement(Prisma::Timestep ts) {
 }
 
 void Ghost::UpdateAI() {
-    // 在格子中心时更新目标
-    glm::ivec2 gridPos = GetGridPosition();
-    glm::vec2 tileCenter;
+    // 幽灵 AI 通常在格子中心决定下一步
+    m_targetPosition = CalculateTargetPosition();
 
-    if (m_board) {
-        tileCenter = m_board->GridToPixel(gridPos.x, gridPos.y);
-    }
-
-    float distance = glm::length(m_position - tileCenter);
-    if (distance < 2.0f) {
-        // 在格子中心，计算目标位置
-        m_targetPosition = CalculateTargetPosition();
-
-        // 选择最佳方向
-        if (m_state != GhostState::Eaten) {
-            m_currentDirection = GetBestDirection(m_targetPosition);
+    // 选择最佳方向
+    if (m_state != GhostState::Eaten) {
+        m_currentDirection = GetBestDirection(m_targetPosition);
+    } else {
+        // 被吃模式，回到生成点
+        glm::ivec2 gridPos = GetGridPosition();
+        if (gridPos == m_spawnPosition) {
+            Revive();
         } else {
-            // 被吃模式，回到生成点
-            if (gridPos == m_spawnPosition) {
-                Revive();
-            } else {
-                m_currentDirection = GetBestDirection(m_spawnPosition);
-            }
+            m_currentDirection = GetBestDirection(m_spawnPosition);
         }
     }
 }
