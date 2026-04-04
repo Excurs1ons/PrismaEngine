@@ -104,6 +104,13 @@ esac
 PLATFORM="$(normalize_platform)"
 ARCH="$(normalize_arch)"
 
+# ARM 平台统一限制并行度，避免内存/温度压力导致构建不稳定
+if [[ "${ARCH}" == "arm64" || "${ARCH}" == "armv7" ]]; then
+    if [[ "${JOBS}" -gt 4 ]]; then
+        JOBS=4
+    fi
+fi
+
 if [[ -n "${PRESET_OVERRIDE}" ]]; then
     PRESET="${PRESET_OVERRIDE}"
 else
@@ -129,6 +136,7 @@ echo "Selected target   : ${TARGET}"
 echo "Selected config   : ${CONFIG}"
 echo "Selected preset   : ${PRESET}"
 echo "Output directory  : ${BUILD_DIR}"
+echo "Build jobs        : ${JOBS}"
 
 if [[ ${CLEAN} -eq 1 ]]; then
     echo "Cleaning ${BUILD_DIR}"

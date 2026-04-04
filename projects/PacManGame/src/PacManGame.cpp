@@ -127,6 +127,7 @@ void PacManGame::Run() {
     Prisma::EngineSpecification spec;
     spec.Name = "PacManGame";
     spec.Headless = false;
+    spec.RefreshAssetDatabaseOnStartup = false;
     spec.MaxFPS = 144;
     spec.MinLogLevel = Prisma::LogLevel::Info;
 

@@ -38,7 +38,9 @@ int Engine::Initialize() {
 
     // 初始化全局资源数据库
     AssetDatabase::Get().Load("assets/metadata.json");
-    AssetDatabase::Get().Refresh("assets");
+    if (m_Spec.RefreshAssetDatabaseOnStartup) {
+        AssetDatabase::Get().Refresh("assets");
+    }
 
     // 显式注册核心系统
     m_JobSystem = AddSystem<JobSystem>();

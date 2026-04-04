@@ -73,6 +73,28 @@ cd PrismaEngine
 ./scripts/build.sh --preset editor-linux-arm64-debug --clean
 ```
 
+### PacMan Build / Run / Package
+
+```bash
+# Build PacMan only (isolated output path)
+./scripts/build.sh --target pacman --config debug
+
+# Build + run PacMan
+./scripts/run-pacman.sh --config debug
+
+# Build + package (tar.gz)
+./scripts/package-pacman.sh --config release
+```
+
+PacMan standalone output path:
+- `build/pacman-linux-x64-{debug|release}/bin/PacManGame`
+- `build/pacman-linux-arm64-{debug|release}/bin/PacManGame`
+
+说明：
+- PacMan 已从 Editor 构建目录拆分，不再输出到 editor 的构建路径。
+- 在无图形设备环境下，PacMan 会自动切换到 console view（文本交互）。
+- ARM 平台编译并行度固定上限 `-j4`（脚本自动限制）。
+
 ## Features (Prune Branch)
 
 - **Modern C++20**: Utilizing concepts, coroutines, and designated initializers.
