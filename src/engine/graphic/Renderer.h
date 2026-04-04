@@ -1,9 +1,9 @@
 #pragma once
 
-#include "Mesh.h"
 #include "Material.h"
-#include "interfaces/RenderTypes.h"
+#include "Mesh.h"
 #include "interfaces/IPipeline.h"
+#include "interfaces/RenderTypes.h"
 
 namespace Prisma::Graphic {
 
@@ -24,6 +24,11 @@ struct RenderCommand {
  */
 class ENGINE_API Renderer {
 public:
+    struct SceneData {
+        CameraData camera;
+        std::vector<RenderCommand> commands;
+    };
+
     // 渲染生命周期
     static void BeginScene(const CameraData& camera);
     static void EndScene();
@@ -34,16 +39,14 @@ public:
     // 获取当前的待处理队列 (由 Pipeline 调用)
     static const std::vector<RenderCommand>& GetCommandQueue();
 
+    // 获取当前场景数据
+    static const SceneData& GetSceneData();
+
     // 清空队列
     static void ClearQueue();
 
 private:
-    struct SceneData {
-        CameraData camera;
-        std::vector<RenderCommand> commands;
-    };
-
     static SceneData s_Data;
 };
 
-} // namespace Prisma::Graphic
+}  // namespace Prisma::Graphic

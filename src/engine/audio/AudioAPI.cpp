@@ -1,19 +1,18 @@
 #include "AudioAPI.h"
 #include "AudioDeviceNull.h"
-#include <SDL3/SDL.h>
 #include "AudioDeviceSDL3.h"
+#include <SDL3/SDL.h>
 
-#include "../Logger.h"
+#include "../logger/Logger.h"
+#include <algorithm>
 #include <cstdlib>
 #include <fstream>
-#include <sstream>
-#include <algorithm>
 #include <iterator>
+#include <sstream>
 
 namespace Prisma::Audio {
 
-std::unique_ptr<IAudioDevice> AudioAPI::CreateDevice(AudioDeviceType deviceType,
-                                                       const AudioDesc& desc) {
+std::unique_ptr<IAudioDevice> AudioAPI::CreateDevice(AudioDeviceType deviceType, const AudioDesc& desc) {
     if (!IsDeviceSupported(deviceType)) {
         return CreateBestDevice(desc);
     }
@@ -107,7 +106,7 @@ bool AudioAPI::TestDeviceAvailability(AudioDeviceType deviceType) {
     }
 
     AudioDesc testDesc;
-    testDesc.maxVoices = 1;
+    testDesc.maxVoices  = 1;
     testDesc.bufferSize = 256;
 
     auto device = CreateDevice(deviceType, testDesc);
@@ -148,8 +147,10 @@ AudioDeviceType AudioAPI::GetDeviceFromEnvironment() {
     std::string device(envVar);
     std::transform(device.begin(), device.end(), device.begin(), ::tolower);
 
-    if (device == "sdl3" || device == "sdl") return AudioDeviceType::SDL3;
-    if (device == "null" || device == "none") return AudioDeviceType::Null;
+    if (device == "sdl3" || device == "sdl")
+        return AudioDeviceType::SDL3;
+    if (device == "null" || device == "none")
+        return AudioDeviceType::Null;
 
     return AudioDeviceType::Auto;
 }
@@ -163,4 +164,4 @@ AudioDeviceType AudioAPI::GetDeviceFromConfig() {
     return AudioDeviceType::Auto;
 }
 
-} // namespace Prisma::Audio
+}  // namespace Prisma::Audio

@@ -37,6 +37,10 @@ const std::vector<RenderCommand>& Renderer::GetCommandQueue() {
     return s_Data.commands;
 }
 
+const Renderer::SceneData& Renderer::GetSceneData() {
+    return s_Data;
+}
+
 void Renderer::ClearQueue() {
     s_Data.commands.clear();
 }

@@ -29,6 +29,7 @@ int Engine::Initialize() {
     if (m_Initialized) return 0;
     
     // 基础系统先行
+    Logger::Get().Initialize();
     Logger::Get().SetMinLevel(m_Spec.MinLogLevel);
     LOG_INFO("Engine", "Prisma 引擎正在初始化: {0}", m_Spec.Name);
 

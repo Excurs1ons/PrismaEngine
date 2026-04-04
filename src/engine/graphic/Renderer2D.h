@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "math/MathTypes.h"
 #include "interfaces/RenderTypes.h"
 #include <memory>
@@ -16,7 +17,7 @@ class OrthographicCamera;
  * @brief 2D 渲染器 (静态接口)
  * 提供高性能的 2D 形状和精灵渲染功能，支持批处理
  */
-class Renderer2D {
+class ENGINE_API Renderer2D {
 public:
     struct Statistics {
         uint32_t DrawCalls = 0;
@@ -57,6 +58,9 @@ public:
 private:
     static void StartBatch();
     static void NextBatch();
+
+    struct Renderer2DData;
+    static Renderer2DData* s_Data;
 };
 
 } // namespace Graphic
