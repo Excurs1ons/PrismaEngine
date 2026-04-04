@@ -27,6 +27,10 @@ public:
     const std::vector<SubMeshBuffer>& GetSubMeshes() const { return m_SubMeshes; }
     const BoundingBox& GetBoundingBox() const { return m_BoundingBox; }
 
+    // 修改器
+    void AddSubMesh(const SubMeshBuffer& subMesh) { m_SubMeshes.push_back(subMesh); }
+    void SetBoundingBox(const BoundingBox& boundingBox) { m_BoundingBox = boundingBox; }
+
 private:
     std::vector<SubMeshBuffer> m_SubMeshes;
     BoundingBox m_BoundingBox;

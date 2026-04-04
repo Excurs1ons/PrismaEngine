@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../Export.h"
-#include "../ISubSystem.h" // 继承自这个，干净利索
+#include "../core/ISubSystem.h"  // 继承自这个，干净利索
 #include "math/MathTypes.h"
 #include <functional>
 #include <memory>
@@ -18,13 +18,71 @@ namespace Input {
 
 // 按键码定义 (省略详细内容以节省篇幅，实际文件中保留)
 enum class KeyCode : uint32_t {
-    A = 65, B = 66, C = 67, D = 68, E = 69, F = 70, G = 71, H = 72, I = 73, J = 74, K = 75, L = 76, M = 77, N = 78, O = 79, P = 80, Q = 81, R = 82, S = 83, T = 84, U = 85, V = 86, W = 87, X = 88, Y = 89, Z = 90,
-    Num0 = 48, Num1 = 49, Num2 = 50, Num3 = 51, Num4 = 52, Num5 = 53, Num6 = 54, Num7 = 55, Num8 = 56, Num9 = 57,
-    F1 = 290, F2 = 291, F3 = 292, F4 = 293, F5 = 294, F6 = 295, F7 = 296, F8 = 297, F9 = 298, F10 = 299, F11 = 300, F12 = 301,
-    Space = 32, Enter = 257, Tab = 258, Backspace = 259, Delete = 261, Escape = 256,
-    ArrowLeft = 263, ArrowRight = 262, ArrowUp = 265, ArrowDown = 264,
-    LeftShift = 340, RightShift = 344, LeftCtrl = 341, RightCtrl = 345, LeftAlt = 342, RightAlt = 346,
-    Unknown = 0
+    A          = 65,
+    B          = 66,
+    C          = 67,
+    D          = 68,
+    E          = 69,
+    F          = 70,
+    G          = 71,
+    H          = 72,
+    I          = 73,
+    J          = 74,
+    K          = 75,
+    L          = 76,
+    M          = 77,
+    N          = 78,
+    O          = 79,
+    P          = 80,
+    Q          = 81,
+    R          = 82,
+    S          = 83,
+    T          = 84,
+    U          = 85,
+    V          = 86,
+    W          = 87,
+    X          = 88,
+    Y          = 89,
+    Z          = 90,
+    Num0       = 48,
+    Num1       = 49,
+    Num2       = 50,
+    Num3       = 51,
+    Num4       = 52,
+    Num5       = 53,
+    Num6       = 54,
+    Num7       = 55,
+    Num8       = 56,
+    Num9       = 57,
+    F1         = 290,
+    F2         = 291,
+    F3         = 292,
+    F4         = 293,
+    F5         = 294,
+    F6         = 295,
+    F7         = 296,
+    F8         = 297,
+    F9         = 298,
+    F10        = 299,
+    F11        = 300,
+    F12        = 301,
+    Space      = 32,
+    Enter      = 257,
+    Tab        = 258,
+    Backspace  = 259,
+    Delete     = 261,
+    Escape     = 256,
+    ArrowLeft  = 263,
+    ArrowRight = 262,
+    ArrowUp    = 265,
+    ArrowDown  = 264,
+    LeftShift  = 340,
+    RightShift = 344,
+    LeftCtrl   = 341,
+    RightCtrl  = 345,
+    LeftAlt    = 342,
+    RightAlt   = 346,
+    Unknown    = 0
 };
 
 // 鼠标按钮
@@ -57,7 +115,7 @@ public:
     bool IsMouseButtonPressed(MouseButton button) const;
     bool IsMouseButtonJustPressed(MouseButton button) const;
     bool IsMouseButtonJustReleased(MouseButton button) const;
-    
+
     // 之前叫 vec2，现在建议加上命名空间前缀
     PrismaMath::vec2 GetMousePosition() const;
     PrismaMath::vec2 GetMouseDelta() const;

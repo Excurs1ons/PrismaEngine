@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "ICamera.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -10,7 +11,7 @@ namespace Graphic {
 /**
  * @brief 2D 正交相机实现
  */
-class OrthographicCamera : public ICamera {
+class ENGINE_API OrthographicCamera : public ICamera {
 public:
     OrthographicCamera() : OrthographicCamera(0.0f, 1280.0f, 0.0f, 720.0f) {}
     OrthographicCamera(float left, float right, float bottom, float top, float nearPlane = -1.0f, float farPlane = 1.0f);

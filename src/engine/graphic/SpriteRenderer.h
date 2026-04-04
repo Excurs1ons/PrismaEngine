@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "Component.h"
 #include "math/MathTypes.h"
 #include <memory>
@@ -13,7 +14,7 @@ class RenderCommandContext;
 /**
  * @brief 2D 精灵渲染组件
  */
-class SpriteRenderer : public Component {
+class ENGINE_API SpriteRenderer : public Component {
 public:
     SpriteRenderer();
     virtual ~SpriteRenderer() = default;

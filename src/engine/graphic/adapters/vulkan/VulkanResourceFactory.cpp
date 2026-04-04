@@ -423,6 +423,17 @@ std::unique_ptr<IBuffer> VulkanResourceFactory::CreateBufferImpl(const BufferDes
 
     if (vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) return nullptr;
 
+    // [修复] 处理初始数据上传
+    if (desc.initialData && desc.size > 0) {
+        void* mappedData = nullptr;
+        if (vmaMapMemory(m_vmaAllocator, allocation, &mappedData) == VK_SUCCESS) {
+            memcpy(mappedData, desc.initialData, desc.size);
+            vmaUnmapMemory(m_vmaAllocator, allocation);
+        } else {
+            LOG_ERROR("Vulkan", "无法映射内存以进行初始数据上传");
+        }
+    }
+
     auto createdBuffer = std::make_unique<VulkanBuffer>(m_vmaAllocator, buffer, allocation, desc);
     ++m_creationStats.buffersCreated;
     m_creationStats.totalMemoryAllocated += desc.size;

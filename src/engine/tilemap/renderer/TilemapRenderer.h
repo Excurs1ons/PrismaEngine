@@ -1,13 +1,13 @@
 #pragma once
 
-#include "../core/Map.h"
-#include "../TilemapAsset.h"
-#include "../../Component.h"
+#include "../../core/Component.h"
 #include "../../graphic/RenderComponent.h"
 #include "../../graphic/interfaces/RenderTypes.h"
+#include "../TilemapAsset.h"
+#include "../core/Map.h"
 #include <memory>
-#include <vector>
 #include <unordered_map>
+#include <vector>
 
 namespace Prisma {
 
@@ -18,17 +18,17 @@ class ITexture;
 class IPipeline;
 class IMaterial;
 class ICamera;
-}
+}  // namespace Graphic
 
 // ============================================================================
 // 瓦片顶点
 // ============================================================================
 
 struct TileVertex {
-    float x, y;          // 位置
-    float u, v;          // 纹理坐标
-    float texIndex;      // 纹理数组索引
-    float r, g, b, a;    // 颜色 (用于淡入淡出)
+    float x, y;        // 位置
+    float u, v;        // 纹理坐标
+    float texIndex;    // 纹理数组索引
+    float r, g, b, a;  // 颜色 (用于淡入淡出)
 
     TileVertex() = default;
 
@@ -50,9 +50,9 @@ struct TileChange {
 // ============================================================================
 
 enum class TilemapRenderMode {
-    Static,      // 静态模式 - 一次性构建所有几何体
-    Dynamic,     // 动态模式 - 每帧重建
-    Chunked      // 分块模式 - 分块渲染 (推荐用于大地图)
+    Static,   // 静态模式 - 一次性构建所有几何体
+    Dynamic,  // 动态模式 - 每帧重建
+    Chunked   // 分块模式 - 分块渲染 (推荐用于大地图)
 };
 
 // ============================================================================
@@ -85,11 +85,17 @@ public:
     Graphic::ICamera* GetCamera() const { return m_camera; }
 
     // 设置渲染模式
-    void SetRenderMode(TilemapRenderMode mode) { m_renderMode = mode; m_geometryDirty = true; }
+    void SetRenderMode(TilemapRenderMode mode) {
+        m_renderMode    = mode;
+        m_geometryDirty = true;
+    }
     TilemapRenderMode GetRenderMode() const { return m_renderMode; }
 
     // 设置块大小 (仅 Chunked 模式)
-    void SetChunkSize(int size) { m_chunkSize = size; m_geometryDirty = true; }
+    void SetChunkSize(int size) {
+        m_chunkSize     = size;
+        m_geometryDirty = true;
+    }
     int GetChunkSize() const { return m_chunkSize; }
 
     // =====================================================================
@@ -192,7 +198,7 @@ private:
 
     // 渲染接口
     Graphic::IRenderDevice* m_device = nullptr;
-    Graphic::ICamera* m_camera = nullptr;
+    Graphic::ICamera* m_camera       = nullptr;
 
     // 材质
     std::shared_ptr<Graphic::Material> m_material;
@@ -207,7 +213,7 @@ private:
     std::shared_ptr<Graphic::IBuffer> m_vertexBuffer;
     std::shared_ptr<Graphic::IBuffer> m_indexBuffer;
     uint32_t m_vertexCount = 0;
-    uint32_t m_indexCount = 0;
+    uint32_t m_indexCount  = 0;
 
     // 分块渲染数据
     static constexpr int MAX_CHUNKS = 256;
@@ -217,9 +223,9 @@ private:
         std::shared_ptr<Graphic::IBuffer> vertexBuffer;
         std::shared_ptr<Graphic::IBuffer> indexBuffer;
         uint32_t vertexCount = 0;
-        uint32_t indexCount = 0;
-        bool dirty = true;
-        bool hasData = false;
+        uint32_t indexCount  = 0;
+        bool dirty           = true;
+        bool hasData         = false;
     };
     Chunk m_chunks[MAX_CHUNKS];
     int m_chunksX = 0;
@@ -227,14 +233,14 @@ private:
 
     // 层状态
     struct LayerState {
-        bool visible = true;
+        bool visible  = true;
         float opacity = 1.0f;
     };
     std::vector<LayerState> m_layerStates;
 
     // 渲染模式
     TilemapRenderMode m_renderMode = TilemapRenderMode::Chunked;
-    int m_chunkSize = 32;
+    int m_chunkSize                = 32;
 
     // 几何体状态
     bool m_geometryDirty = true;
@@ -252,4 +258,4 @@ private:
     std::vector<AnimatedTileInfo> m_animatedTiles;
 };
 
-} // namespace Prisma
+}  // namespace Prisma

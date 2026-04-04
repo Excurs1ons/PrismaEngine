@@ -1,17 +1,16 @@
 #include "RenderSystem.h"
+#include "../app/Engine.h"
+#include "../logger/Logger.h"
+#include "../scene/Scene.h"
+#include "../transform/Camera.h"
+#include "RenderResourceManager.h"
+#include "Renderer.h"
+#include "Renderer2D.h"
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "pipelines/forward/ForwardPipeline.h"
-#include "Logger.h"
-#include "Renderer.h"
-#include "../Scene.h"
-#include "../Camera.h"
-#include "../Engine.h"
-#include "RenderResourceManager.h"
-#include "Renderer2D.h"
 
 namespace Prisma::Graphic {
-RenderSystem::RenderSystem(const RenderSystemDesc& desc)
-    : m_desc(desc) {}
+RenderSystem::RenderSystem(const RenderSystemDesc& desc) : m_desc(desc) {}
 
 RenderSystem::~RenderSystem() {
     Shutdown();
@@ -54,13 +53,13 @@ int RenderSystem::InitializeDevice() {
         m_device = std::make_unique<Vulkan::RenderDeviceVulkan>();
 
         DeviceDesc devDesc;
-        devDesc.name = m_desc.name;
-        devDesc.width = m_desc.width;
-        devDesc.height = m_desc.height;
-        devDesc.vsync = m_desc.enableVSync;
-        devDesc.enableValidation = true; // For debug
-        
-        return m_device->Initialize(devDesc); 
+        devDesc.name             = m_desc.name;
+        devDesc.width            = m_desc.width;
+        devDesc.height           = m_desc.height;
+        devDesc.vsync            = m_desc.enableVSync;
+        devDesc.enableValidation = true;  // For debug
+
+        return m_device->Initialize(devDesc);
     }
     LOG_ERROR("Renderer", "不支持的渲染 API 类型: {0}", (int)m_desc.backendType);
     return -1;
@@ -95,7 +94,7 @@ void RenderSystem::Shutdown() {
     }
 
     LOG_INFO("Renderer", "正在关闭渲染器...");
-    
+
     // 关闭 2D 渲染器
     Renderer2D::Shutdown();
 
@@ -118,21 +117,62 @@ void RenderSystem::Shutdown() {
 }
 
 void RenderSystem::BeginFrame() {
-    if (m_device) m_device->BeginFrame();
+    if (m_device)
+        m_device->BeginFrame();
 }
 
 void RenderSystem::EndFrame() {
-    if (m_device) m_device->EndFrame();
+    if (m_device && m_mainRenderPipeline) {
+        // [修复] 如果本帧没有通过 RenderScene 进行渲染，
+        // 则在 EndFrame 时尝试执行一次管线，处理全局提交的指令（如 Renderer2D 提交的）。
+
+        // 只有当队列不为空时才执行管线，或者根据需要调整判断条件
+        auto& commands = Renderer::GetCommandQueue();
+        if (!commands.empty()) {
+            RenderContext ctx;
+            ctx.device = m_device.get();
+
+            auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+            if (vkDevice) {
+                ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+            } else {
+                ctx.commandBuffer = nullptr;
+            }
+
+            // 获取默认相机数据（可能来自最后的 BeginScene）
+            const auto& sceneData       = Renderer::GetSceneData();
+            ctx.camera.viewMatrix       = sceneData.camera.viewMatrix;
+            ctx.camera.projectionMatrix = sceneData.camera.projectionMatrix;
+            ctx.camera.position         = sceneData.camera.position;
+            ctx.camera.nearPlane        = sceneData.camera.nearPlane;
+            ctx.camera.farPlane         = sceneData.camera.farPlane;
+
+            ctx.frameIndex = m_device->GetCurrentFrameIndex();
+            ctx.width      = m_desc.width;
+            ctx.height     = m_desc.height;
+            ctx.deltaTime  = 0.016f;  // TODO: 传递真实 DeltaTime
+
+            m_mainRenderPipeline->Execute(ctx);
+
+            // 执行完后清空队列，准备下一帧
+            Renderer::ClearQueue();
+        }
+    }
+
+    if (m_device)
+        m_device->EndFrame();
 }
 
 void RenderSystem::Present() {
-    if (m_device) m_device->Present();
+    if (m_device)
+        m_device->Present();
 }
 
 void RenderSystem::Resize(uint32_t width, uint32_t height) {
-    m_desc.width = width;
+    m_desc.width  = width;
     m_desc.height = height;
-    if (m_device) m_device->Resize(width, height);
+    if (m_device)
+        m_device->Resize(width, height);
 }
 
 void RenderSystem::SetMainPipeline(std::shared_ptr<IPipeline> pipeline) {
@@ -164,26 +204,26 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
     if (m_mainRenderPipeline) {
         // [新增] 开始场景收集
         CameraData cameraData;
-        cameraData.viewMatrix = camera->GetViewMatrix();
+        cameraData.viewMatrix       = camera->GetViewMatrix();
         cameraData.projectionMatrix = camera->GetProjectionMatrix();
-        cameraData.position = camera->GetPosition();
-        cameraData.nearPlane = camera->GetNearPlane();
-        cameraData.farPlane = camera->GetFarPlane();
-        
+        cameraData.position         = camera->GetPosition();
+        cameraData.nearPlane        = camera->GetNearPlane();
+        cameraData.farPlane         = camera->GetFarPlane();
+
         Renderer::BeginScene(cameraData);
-        
+
         // [新增] 遍历场景中的对象并提交渲染指令
         // 注意：目前由 Scene 负责 Update 并调用内部组件的渲染提交。
         // 但为了确保 RenderScene 调用时队列里有东西，我们需要确保提交逻辑被触发。
         // 暂时假设上一帧或本帧的 Scene::Update 已经填好了 Renderer::s_Data。
         // 为了保险，我们在这里显式触发一次提交（如果组件支持）。
-        
+
         Renderer::EndScene();
 
         // 构建 RenderContext
         RenderContext ctx;
         ctx.device = m_device.get();
-        
+
         // [修复] 获取当前的指令缓冲
         auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
         if (vkDevice) {
@@ -192,15 +232,15 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
             ctx.commandBuffer = nullptr;
         }
 
-        ctx.targetTexture = targetTexture;
-        ctx.camera.viewMatrix = camera->GetViewMatrix();
+        ctx.targetTexture           = targetTexture;
+        ctx.camera.viewMatrix       = camera->GetViewMatrix();
         ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
-        ctx.camera.position = camera->GetPosition();
-        ctx.camera.nearPlane = camera->GetNearPlane();
-        ctx.camera.farPlane = camera->GetFarPlane();
-        ctx.frameIndex = m_device ? m_device->GetCurrentFrameIndex() : 0;
-        ctx.width = m_desc.width;
-        ctx.height = m_desc.height;
+        ctx.camera.position         = camera->GetPosition();
+        ctx.camera.nearPlane        = camera->GetNearPlane();
+        ctx.camera.farPlane         = camera->GetFarPlane();
+        ctx.frameIndex              = m_device ? m_device->GetCurrentFrameIndex() : 0;
+        ctx.width                   = m_desc.width;
+        ctx.height                  = m_desc.height;
         ctx.lights.clear();
 
         m_mainRenderPipeline->Execute(ctx);
@@ -209,4 +249,4 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
     }
 }
 
-} // namespace Prisma::Graphic
+}  // namespace Prisma::Graphic

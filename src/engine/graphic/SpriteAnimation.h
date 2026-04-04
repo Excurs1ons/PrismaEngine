@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "core/Timestep.h"
 #include "math/MathTypes.h"
 #include "Component.h"
@@ -15,7 +16,7 @@ namespace Graphic {
 /**
  * @brief 精灵动画帧
  */
-struct AnimationFrame {
+struct ENGINE_API AnimationFrame {
     Vector4 spriteRect;  // x, y, width, height
     float duration;      // 帧持续时间（秒）
 
@@ -27,7 +28,7 @@ struct AnimationFrame {
 /**
  * @brief 精灵动画
  */
-class SpriteAnimation {
+class ENGINE_API SpriteAnimation {
 public:
     SpriteAnimation();
     ~SpriteAnimation() = default;
@@ -73,7 +74,7 @@ private:
 /**
  * @brief 精灵动画组件
  */
-class SpriteAnimationComponent : public Component {
+class ENGINE_API SpriteAnimationComponent : public Component {
 public:
     SpriteAnimationComponent();
     virtual ~SpriteAnimationComponent() = default;

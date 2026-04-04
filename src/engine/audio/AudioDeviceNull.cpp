@@ -1,8 +1,8 @@
 #include "AudioDeviceNull.h"
-#include "../Logger.h"
+#include "../logger/Logger.h"
 #include <algorithm>
-#include <cstring>
 #include <cmath>
+#include <cstring>
 
 namespace Prisma::Audio {
 
@@ -26,12 +26,12 @@ bool AudioDeviceNull::Initialize(const AudioDesc& desc) {
     }
 
     // 保存配置
-    m_masterVolume = 1.0f;
+    m_masterVolume  = 1.0f;
     m_distanceModel = desc.distanceModel;
-    m_listener = AudioListener{};
+    m_listener      = AudioListener{};
 
     // 重置统计
-    m_stats = AudioStats{};
+    m_stats              = AudioStats{};
     m_stats.activeVoices = 0;
 
     m_initialized = true;
@@ -68,21 +68,21 @@ AudioVoiceId AudioDeviceNull::PlayClip(const AudioClip& clip, const PlayDesc& de
 
     AudioVoiceId voiceId = GenerateVoiceId();
     InternalVoiceState voice;
-    voice.id = voiceId;
-    voice.playing = true;
-    voice.paused = false;
-    voice.looping = desc.loop;
-    voice.volume = desc.volume;
-    voice.pitch = desc.pitch;
-    voice.position = 0.0f;
-    voice.duration = clip.duration;
-    voice.velocity[0] = 0.0f;
-    voice.velocity[1] = 0.0f;
-    voice.velocity[2] = 0.0f;
+    voice.id           = voiceId;
+    voice.playing      = true;
+    voice.paused       = false;
+    voice.looping      = desc.loop;
+    voice.volume       = desc.volume;
+    voice.pitch        = desc.pitch;
+    voice.position     = 0.0f;
+    voice.duration     = clip.duration;
+    voice.velocity[0]  = 0.0f;
+    voice.velocity[1]  = 0.0f;
+    voice.velocity[2]  = 0.0f;
     voice.direction[0] = 0.0f;
     voice.direction[1] = 0.0f;
     voice.direction[2] = 1.0f;
-    voice.desc = desc;
+    voice.desc         = desc;
 
     m_voices[voiceId] = voice;
 
@@ -94,9 +94,9 @@ AudioVoiceId AudioDeviceNull::PlayClip(const AudioClip& clip, const PlayDesc& de
     // 触发事件
     if (m_eventCallback) {
         AudioEvent event;
-        event.type = AudioEventType::VoiceStarted;
-        event.voiceId = voiceId;
-        event.timestamp = 0; // 实际应该使用真实时间戳
+        event.type      = AudioEventType::VoiceStarted;
+        event.voiceId   = voiceId;
+        event.timestamp = 0;  // 实际应该使用真实时间戳
         m_eventCallback(event);
     }
 
@@ -115,8 +115,8 @@ void AudioDeviceNull::Stop(AudioVoiceId voiceId) {
     if (it != m_voices.end()) {
         if (m_eventCallback && it->second.playing) {
             AudioEvent event;
-            event.type = AudioEventType::VoiceStopped;
-            event.voiceId = voiceId;
+            event.type      = AudioEventType::VoiceStopped;
+            event.voiceId   = voiceId;
             event.timestamp = 0;
             m_eventCallback(event);
         }
@@ -136,8 +136,8 @@ void AudioDeviceNull::Pause(AudioVoiceId voiceId) {
 
         if (m_eventCallback) {
             AudioEvent event;
-            event.type = AudioEventType::VoicePaused;
-            event.voiceId = voiceId;
+            event.type      = AudioEventType::VoicePaused;
+            event.voiceId   = voiceId;
             event.timestamp = 0;
             m_eventCallback(event);
         }
@@ -155,8 +155,8 @@ void AudioDeviceNull::Resume(AudioVoiceId voiceId) {
 
         if (m_eventCallback) {
             AudioEvent event;
-            event.type = AudioEventType::VoiceResumed;
-            event.voiceId = voiceId;
+            event.type      = AudioEventType::VoiceResumed;
+            event.voiceId   = voiceId;
             event.timestamp = 0;
             m_eventCallback(event);
         }
@@ -175,8 +175,8 @@ void AudioDeviceNull::PauseAll() {
 
             if (m_eventCallback) {
                 AudioEvent event;
-                event.type = AudioEventType::VoicePaused;
-                event.voiceId = voice.id;
+                event.type      = AudioEventType::VoicePaused;
+                event.voiceId   = voice.id;
                 event.timestamp = 0;
                 m_eventCallback(event);
             }
@@ -196,8 +196,8 @@ void AudioDeviceNull::ResumeAll() {
 
             if (m_eventCallback) {
                 AudioEvent event;
-                event.type = AudioEventType::VoiceResumed;
-                event.voiceId = voice.id;
+                event.type      = AudioEventType::VoiceResumed;
+                event.voiceId   = voice.id;
                 event.timestamp = 0;
                 m_eventCallback(event);
             }
@@ -213,8 +213,8 @@ void AudioDeviceNull::StopAll() {
     for (auto& pair : m_voices) {
         if (m_eventCallback && pair.second.playing) {
             AudioEvent event;
-            event.type = AudioEventType::VoiceStopped;
-            event.voiceId = pair.first;
+            event.type      = AudioEventType::VoiceStopped;
+            event.voiceId   = pair.first;
             event.timestamp = 0;
             m_eventCallback(event);
         }
@@ -368,7 +368,7 @@ VoiceState AudioDeviceNull::GetVoiceState(AudioVoiceId voiceId) {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     VoiceState state = VoiceState::Stopped;
-    auto voice = FindVoice(voiceId);
+    auto voice       = FindVoice(voiceId);
     if (voice) {
         if (voice->playing && !voice->paused) {
             state = VoiceState::Playing;
@@ -388,19 +388,19 @@ IAudioDevice::DeviceInfo AudioDeviceNull::GetDeviceInfo() const {
     std::lock_guard<std::mutex> lock(m_mutex);
 
     IAudioDevice::DeviceInfo info;
-    info.name = "Null Audio Device";
-    info.driver = "Null Driver";
-    info.version = "1.0";
-    info.isDefault = true;
-    info.maxVoices = 1024;
-    info.supports3D = false;
+    info.name            = "Null Audio Device";
+    info.driver          = "Null Driver";
+    info.version         = "1.0";
+    info.isDefault       = true;
+    info.maxVoices       = 1024;
+    info.supports3D      = false;
     info.supportsEffects = false;
 
     return info;
 }
 
 std::vector<IAudioDevice::DeviceInfo> AudioDeviceNull::GetAvailableDevices() const {
-    return { GetDeviceInfo() };
+    return {GetDeviceInfo()};
 }
 
 bool AudioDeviceNull::SetDevice(const std::string& deviceName) {
@@ -429,14 +429,14 @@ AudioStats AudioDeviceNull::GetStats() const {
 
 void AudioDeviceNull::ResetStats() {
     std::lock_guard<std::mutex> lock(m_mutex);
-    m_stats.activeVoices = static_cast<uint32_t>(m_voices.size());
-    m_stats.totalVoicesCreated = 0;
+    m_stats.activeVoices        = static_cast<uint32_t>(m_voices.size());
+    m_stats.totalVoicesCreated  = 0;
     m_stats.maxConcurrentVoices = m_stats.activeVoices;
-    m_stats.memoryUsage = 0;
-    m_stats.cpuUsage = 0.0f;
-    m_stats.averageLatency = 0.0f;
-    m_stats.dropouts = 0;
-    m_stats.underruns = 0;
+    m_stats.memoryUsage         = 0;
+    m_stats.cpuUsage            = 0.0f;
+    m_stats.averageLatency      = 0.0f;
+    m_stats.dropouts            = 0;
+    m_stats.underruns           = 0;
 }
 
 void AudioDeviceNull::BeginProfile() {
@@ -478,8 +478,8 @@ void AudioDeviceNull::Update(Prisma::Timestep ts) {
 
                     if (m_eventCallback) {
                         AudioEvent event;
-                        event.type = AudioEventType::VoiceLooped;
-                        event.voiceId = voice.id;
+                        event.type      = AudioEventType::VoiceLooped;
+                        event.voiceId   = voice.id;
                         event.timestamp = 0;
                         m_eventCallback(event);
                     }
@@ -487,13 +487,13 @@ void AudioDeviceNull::Update(Prisma::Timestep ts) {
                     // 播放完毕，移除
                     if (m_eventCallback) {
                         AudioEvent event;
-                        event.type = AudioEventType::VoiceStopped;
-                        event.voiceId = voice.id;
+                        event.type      = AudioEventType::VoiceStopped;
+                        event.voiceId   = voice.id;
                         event.timestamp = 0;
                         m_eventCallback(event);
                     }
 
-                    it = m_voices.erase(it);
+                    it                   = m_voices.erase(it);
                     m_stats.activeVoices = static_cast<uint32_t>(m_voices.size());
                     continue;
                 }
@@ -516,4 +516,4 @@ AudioDeviceNull::InternalVoiceState* AudioDeviceNull::FindVoice(AudioVoiceId voi
     return (it != m_voices.end()) ? &it->second : nullptr;
 }
 
-} // namespace Engine::Audio
+}  // namespace Prisma::Audio

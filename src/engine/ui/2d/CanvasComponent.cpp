@@ -1,5 +1,5 @@
 #include "CanvasComponent.h"
-#include "../Platform.h"
+#include "../platform/Platform.h"
 #include <algorithm>
 
 namespace Prisma {
@@ -14,7 +14,7 @@ void CanvasComponent::Initialize() {
         w = 1920;
         h = 1080;
     }
-    m_size = {static_cast<float>(w), static_cast<float>(h)};
+    m_size     = {static_cast<float>(w), static_cast<float>(h)};
     m_position = {0.0f, 0.0f};
 }
 
@@ -38,4 +38,4 @@ void CanvasComponent::RemoveChild(UIComponent* child) {
     m_children.erase(it, m_children.end());
 }
 
-} // namespace Prisma
+}  // namespace Prisma

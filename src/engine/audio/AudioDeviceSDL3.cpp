@@ -1,9 +1,9 @@
 #include "AudioDeviceSDL3.h"
-#include "../Logger.h"
+#include "../logger/Logger.h"
 #include <algorithm>
-#include <cstring>
-#include <cmath>
 #include <chrono>
+#include <cmath>
+#include <cstring>
 
 namespace Prisma::Audio {
 
@@ -25,11 +25,11 @@ bool AudioDeviceSDL3::Initialize(const AudioDesc& desc) {
     }
 
     LOG_INFO("Audio", "初始化SDL3音频设备");
-    m_desc = desc;
+    m_desc          = desc;
     m_distanceModel = desc.distanceModel;
     m_dopplerFactor = desc.dopplerFactor;
-    m_speedOfSound = desc.speedOfSound;
-    m_listener = AudioListener{};
+    m_speedOfSound  = desc.speedOfSound;
+    m_listener      = AudioListener{};
     ResetStats();
 
     if (SDL_Init(SDL_INIT_AUDIO) != 0) {
@@ -38,9 +38,9 @@ bool AudioDeviceSDL3::Initialize(const AudioDesc& desc) {
     }
 
     SDL_AudioSpec spec;
-    spec.freq = desc.outputFormat.sampleRate != 0 ? (int)desc.outputFormat.sampleRate : 44100;
+    spec.freq     = desc.outputFormat.sampleRate != 0 ? (int)desc.outputFormat.sampleRate : 44100;
     spec.channels = desc.outputFormat.channels != 0 ? (int)desc.outputFormat.channels : 2;
-    spec.format = SDL_AUDIO_F32;
+    spec.format   = SDL_AUDIO_F32;
 
     m_deviceId = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec);
     if (m_deviceId == 0) {
@@ -91,7 +91,7 @@ void AudioDeviceSDL3::Update(Prisma::Timestep ts) {
     ++m_framesProcessed;
     UpdateVoiceStates();
     m_stats.activeVoices = static_cast<uint32_t>(m_playingVoices.size());
-    m_stats.memoryUsage = 0;
+    m_stats.memoryUsage  = 0;
     for (const auto& [id, voice] : m_playingVoices) {
         if (voice.clip) {
             m_stats.memoryUsage += voice.clip->data.size();
@@ -101,17 +101,17 @@ void AudioDeviceSDL3::Update(Prisma::Timestep ts) {
 
 IAudioDevice::DeviceInfo AudioDeviceSDL3::GetDeviceInfo() const {
     DeviceInfo info;
-    info.name = m_desc.deviceName.empty() ? "Default Playback Device" : m_desc.deviceName;
-    info.driver = "SDL3";
-    info.version = SDL_GetRevision();
-    info.isDefault = true;
-    info.maxVoices = m_desc.maxVoices;
+    info.name       = m_desc.deviceName.empty() ? "Default Playback Device" : m_desc.deviceName;
+    info.driver     = "SDL3";
+    info.version    = SDL_GetRevision();
+    info.isDefault  = true;
+    info.maxVoices  = m_desc.maxVoices;
     info.supports3D = true;
     return info;
 }
 
 std::vector<IAudioDevice::DeviceInfo> AudioDeviceSDL3::GetAvailableDevices() const {
-    return { GetDeviceInfo() };
+    return {GetDeviceInfo()};
 }
 
 bool AudioDeviceSDL3::SetDevice(const std::string& deviceName) {
@@ -122,7 +122,8 @@ bool AudioDeviceSDL3::SetDevice(const std::string& deviceName) {
         return true;
     }
 
-    LOG_WARNING("Audio", "SDL3 backend currently supports only the default playback device, requested: {0}", deviceName);
+    LOG_WARNING(
+        "Audio", "SDL3 backend currently supports only the default playback device, requested: {0}", deviceName);
     return false;
 }
 
@@ -136,12 +137,13 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
     AudioVoiceId voiceId = m_nextVoiceId.fetch_add(1);
 
     SDL_AudioSpec inputSpec;
-    inputSpec.freq = (int)clip.format.sampleRate;
+    inputSpec.freq     = (int)clip.format.sampleRate;
     inputSpec.channels = (int)clip.format.channels;
-    inputSpec.format = clip.format.bitsPerSample == 32 ? SDL_AUDIO_F32 : SDL_AUDIO_S16;
+    inputSpec.format   = clip.format.bitsPerSample == 32 ? SDL_AUDIO_F32 : SDL_AUDIO_S16;
 
     SDL_AudioStream* stream = SDL_CreateAudioStream(&inputSpec, nullptr);
-    if (!stream) return INVALID_VOICE_ID;
+    if (!stream)
+        return INVALID_VOICE_ID;
 
     SDL_BindAudioStream(m_deviceId, stream);
 
@@ -151,23 +153,25 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
     }
 
     PlayingVoice voice;
-    voice.id = voiceId;
-    voice.clip = &clip;
-    voice.stream = stream;
-    voice.state = VoiceState::Playing;
-    voice.volume = desc.volume;
-    voice.pitch = desc.pitch;
-    voice.looping = desc.loop;
+    voice.id       = voiceId;
+    voice.clip     = &clip;
+    voice.stream   = stream;
+    voice.state    = VoiceState::Playing;
+    voice.volume   = desc.volume;
+    voice.pitch    = desc.pitch;
+    voice.looping  = desc.loop;
     voice.isActive = true;
-    voice.spatial = desc.spatial;
+    voice.spatial  = desc.spatial;
     std::memcpy(voice.position, desc.spatial.position, sizeof(voice.position));
     std::memcpy(voice.velocity, desc.spatial.velocity, sizeof(voice.velocity));
     std::memcpy(voice.direction, desc.spatial.direction, sizeof(voice.direction));
     voice.spec = inputSpec;
 
-    const size_t bytesPerFrame = static_cast<size_t>(clip.format.channels) * static_cast<size_t>(clip.format.bitsPerSample / 8);
+    const size_t bytesPerFrame =
+        static_cast<size_t>(clip.format.channels) * static_cast<size_t>(clip.format.bitsPerSample / 8);
     const size_t totalFrames = clip.GetFrameCount();
-    const size_t startFrame = std::min(totalFrames, static_cast<size_t>(std::max(0.0f, desc.startTime) * clip.format.sampleRate));
+    const size_t startFrame =
+        std::min(totalFrames, static_cast<size_t>(std::max(0.0f, desc.startTime) * clip.format.sampleRate));
     size_t endFrame = totalFrames;
     if (desc.endTime > 0.0f) {
         endFrame = std::min(endFrame, static_cast<size_t>(desc.endTime * clip.format.sampleRate));
@@ -176,7 +180,7 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
         endFrame = startFrame;
     }
     voice.clipStartOffset = startFrame * bytesPerFrame;
-    voice.clipEndOffset = endFrame * bytesPerFrame;
+    voice.clipEndOffset   = endFrame * bytesPerFrame;
     voice.duration = static_cast<float>(voice.clipEndOffset - voice.clipStartOffset) / ComputeBytesPerSecond(clip);
 
     SDL_ClearAudioStream(stream);
@@ -190,7 +194,7 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
     ApplyVoiceSettings(voice);
 
     m_playingVoices[voiceId] = voice;
-    m_stats.activeVoices = static_cast<uint32_t>(m_playingVoices.size());
+    m_stats.activeVoices     = static_cast<uint32_t>(m_playingVoices.size());
     ++m_stats.totalVoicesCreated;
     m_stats.maxConcurrentVoices = std::max(m_stats.maxConcurrentVoices, m_stats.activeVoices);
     TriggerEvent(AudioEventType::VoiceStarted, voiceId);
@@ -282,18 +286,15 @@ void AudioDeviceSDL3::SetPlaybackPosition(AudioVoiceId voiceId, float time) {
         return;
     }
 
-    PlayingVoice& voice = it->second;
+    PlayingVoice& voice        = it->second;
     const float bytesPerSecond = ComputeBytesPerSecond(*voice.clip);
-    const size_t offsetBytes = static_cast<size_t>(std::clamp(time, 0.0f, voice.duration) * bytesPerSecond);
-    const size_t clampedStart = std::min(voice.clipStartOffset + offsetBytes, voice.clipEndOffset);
+    const size_t offsetBytes   = static_cast<size_t>(std::clamp(time, 0.0f, voice.duration) * bytesPerSecond);
+    const size_t clampedStart  = std::min(voice.clipStartOffset + offsetBytes, voice.clipEndOffset);
 
     SDL_ClearAudioStream(voice.stream);
     if (clampedStart < voice.clipEndOffset) {
         SDL_PutAudioStreamData(
-            voice.stream,
-            voice.clip->data.data() + clampedStart,
-            static_cast<int>(voice.clipEndOffset - clampedStart)
-        );
+            voice.stream, voice.clip->data.data() + clampedStart, static_cast<int>(voice.clipEndOffset - clampedStart));
     }
 
     voice.playbackPosition = static_cast<float>(clampedStart - voice.clipStartOffset) / bytesPerSecond;
@@ -424,9 +425,9 @@ float AudioDeviceSDL3::GetPlaybackPosition(AudioVoiceId voiceId) {
         return -1.0f;
     }
 
-    const float bytesPerSecond = ComputeBytesPerSecond(*it->second.clip);
-    const float queuedSeconds = static_cast<float>(SDL_GetAudioStreamQueued(it->second.stream)) / bytesPerSecond;
-    const float position = std::max(0.0f, it->second.duration - queuedSeconds);
+    const float bytesPerSecond  = ComputeBytesPerSecond(*it->second.clip);
+    const float queuedSeconds   = static_cast<float>(SDL_GetAudioStreamQueued(it->second.stream)) / bytesPerSecond;
+    const float position        = std::max(0.0f, it->second.duration - queuedSeconds);
     it->second.playbackPosition = std::clamp(position, 0.0f, it->second.duration);
     return it->second.playbackPosition;
 }
@@ -442,19 +443,27 @@ VoiceState AudioDeviceSDL3::GetVoiceState(AudioVoiceId voiceId) {
     auto it = m_playingVoices.find(voiceId);
     return it != m_playingVoices.end() ? it->second.state : VoiceState::Stopped;
 }
-uint32_t AudioDeviceSDL3::GetPlayingVoiceCount() const { return (uint32_t)m_playingVoices.size(); }
+uint32_t AudioDeviceSDL3::GetPlayingVoiceCount() const {
+    return (uint32_t)m_playingVoices.size();
+}
 
-void AudioDeviceSDL3::SetEventCallback(AudioEventCallback callback) { m_eventCallback = callback; }
-void AudioDeviceSDL3::RemoveEventCallback() { m_eventCallback = nullptr; }
+void AudioDeviceSDL3::SetEventCallback(AudioEventCallback callback) {
+    m_eventCallback = callback;
+}
+void AudioDeviceSDL3::RemoveEventCallback() {
+    m_eventCallback = nullptr;
+}
 
-AudioStats AudioDeviceSDL3::GetStats() const { return m_stats; }
+AudioStats AudioDeviceSDL3::GetStats() const {
+    return m_stats;
+}
 void AudioDeviceSDL3::ResetStats() {
-    m_stats = {};
+    m_stats              = {};
     m_stats.activeVoices = static_cast<uint32_t>(m_playingVoices.size());
 }
 
 void AudioDeviceSDL3::BeginProfile() {
-    m_profileStart = std::chrono::steady_clock::now();
+    m_profileStart  = std::chrono::steady_clock::now();
     m_profileActive = true;
 }
 
@@ -463,9 +472,9 @@ std::string AudioDeviceSDL3::EndProfile() {
         return "Audio profile inactive";
     }
 
-    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - m_profileStart
-    ).count();
+    const auto elapsed =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - m_profileStart)
+            .count();
     m_profileActive = false;
     return "Audio profile duration: " + std::to_string(elapsed) + " ms";
 }
@@ -488,8 +497,8 @@ void AudioDeviceSDL3::UpdateVoiceStates() {
     for (auto& [id, voice] : m_playingVoices) {
         if (voice.clip) {
             const float bytesPerSecond = ComputeBytesPerSecond(*voice.clip);
-            const float queuedSeconds = static_cast<float>(SDL_GetAudioStreamQueued(voice.stream)) / bytesPerSecond;
-            voice.playbackPosition = std::clamp(voice.duration - queuedSeconds, 0.0f, voice.duration);
+            const float queuedSeconds  = static_cast<float>(SDL_GetAudioStreamQueued(voice.stream)) / bytesPerSecond;
+            voice.playbackPosition     = std::clamp(voice.duration - queuedSeconds, 0.0f, voice.duration);
         }
 
         if (SDL_GetAudioStreamQueued(voice.stream) == 0) {
@@ -513,22 +522,20 @@ void AudioDeviceSDL3::TriggerEvent(AudioEventType type, AudioVoiceId voiceId) {
     }
 
     AudioEvent event;
-    event.type = type;
-    event.voiceId = voiceId;
-    event.timestamp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now().time_since_epoch()
-    ).count());
+    event.type      = type;
+    event.voiceId   = voiceId;
+    event.timestamp = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
+            .count());
     m_eventCallback(event);
 }
 
 void AudioDeviceSDL3::ResetStreamPosition(PlayingVoice& voice) {
     SDL_ClearAudioStream(voice.stream);
     if (voice.clipEndOffset > voice.clipStartOffset) {
-        SDL_PutAudioStreamData(
-            voice.stream,
-            voice.clip->data.data() + voice.clipStartOffset,
-            static_cast<int>(voice.clipEndOffset - voice.clipStartOffset)
-        );
+        SDL_PutAudioStreamData(voice.stream,
+                               voice.clip->data.data() + voice.clipStartOffset,
+                               static_cast<int>(voice.clipEndOffset - voice.clipStartOffset));
     }
     voice.playbackPosition = 0.0f;
     ApplyVoiceSettings(voice);
@@ -540,13 +547,13 @@ void AudioDeviceSDL3::ApplyVoiceSettings(PlayingVoice& voice) {
 }
 
 float AudioDeviceSDL3::ComputeVoiceAttenuation(const PlayingVoice& voice) const {
-    const float dx = voice.position[0] - m_listener.position[0];
-    const float dy = voice.position[1] - m_listener.position[1];
-    const float dz = voice.position[2] - m_listener.position[2];
-    const float distance = std::sqrt(dx * dx + dy * dy + dz * dz);
+    const float dx          = voice.position[0] - m_listener.position[0];
+    const float dy          = voice.position[1] - m_listener.position[1];
+    const float dz          = voice.position[2] - m_listener.position[2];
+    const float distance    = std::sqrt(dx * dx + dy * dy + dz * dz);
     const float minDistance = std::max(0.001f, voice.spatial.minDistance);
     const float maxDistance = std::max(minDistance, voice.spatial.maxDistance);
-    const float rolloff = std::max(0.0f, voice.spatial.rolloffFactor) * std::max(0.0f, m_dopplerFactor);
+    const float rolloff     = std::max(0.0f, voice.spatial.rolloffFactor) * std::max(0.0f, m_dopplerFactor);
 
     switch (m_distanceModel) {
         case DistanceModel::None:
@@ -571,8 +578,7 @@ float AudioDeviceSDL3::ComputeVoiceAttenuation(const PlayingVoice& voice) const 
 float AudioDeviceSDL3::ComputeBytesPerSecond(const AudioClip& clip) {
     const uint32_t bytesPerSample = std::max<uint32_t>(1, clip.format.bitsPerSample / 8);
     return static_cast<float>(std::max<uint32_t>(1, clip.format.sampleRate) *
-                              std::max<uint32_t>(1, clip.format.channels) *
-                              bytesPerSample);
+                              std::max<uint32_t>(1, clip.format.channels) * bytesPerSample);
 }
 
-} // namespace Prisma::Audio
+}  // namespace Prisma::Audio
