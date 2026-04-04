@@ -21,28 +21,31 @@ set(IMGUI_BACKENDS)
 
 # 源文件
 set(EDITOR_SOURCES
-        Editor.cpp
-        ProjectSettingsWindow.cpp
-        CommandLineParser.cpp
-        CommandLineEditor.cpp
-        Environment.cpp
+        core/Editor.cpp
+        core/Environment.cpp
+        core/CommandLineParser.cpp
+        core/CommandLineEditor.cpp
+        core/main.cpp
+        panels/EditorLayer.cpp
+        windows/ProjectSettingsWindow.cpp
         graphic/ImGuiVulkanResourceManager.cpp
         graphic/ViewportRenderPass.cpp
         # ImGui 后端
         ${IMGUI_BACKENDS}
-"EditorLayer.cpp")
+)
 
 # 头文件
 set(EDITOR_HEADERS
-        Editor.h
-        EditorLayer.h
-        ProjectSettingsWindow.h
-        CommandLineParser.h
-        CommandLineEditor.h
-        Environment.h
+        core/Editor.h
+        core/Environment.h
+        core/CommandLineParser.h
+        core/CommandLineEditor.h
+        panels/EditorLayer.h
+        windows/ProjectSettingsWindow.h
         Export.h
         graphic/ImGuiVulkanResourceManager.h
         graphic/ViewportRenderPass.h
+        UIStrings.h
 )
 
 # 1. 创建编辑器主逻辑动态库
@@ -64,7 +67,7 @@ target_link_libraries(Editor PRIVATE
     SDL3-shared
 )
 # 2. 创建编辑器启动器 (EXE)
-add_executable(PrismaEditor main.cpp)
+add_executable(PrismaEditor core/main.cpp)
 
 # 链接到编辑器 DLL 和 引擎 DLL
 target_link_libraries(PrismaEditor PRIVATE Editor Engine)
