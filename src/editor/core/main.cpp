@@ -1,7 +1,7 @@
+#include "app/Application.h"
+#include "app/Engine.h"
+#include "logger/Logger.h"
 #include <memory>
-#include "../engine/Engine.h"
-#include "../engine/Application.h"
-#include "../engine/Logger.h"
 
 extern "C" Prisma::Application* CreateApplication();
 
@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
 
     // 1. Create Engine (Architecture fix: explicit instantiation on stack)
     Prisma::EngineSpecification spec;
-    spec.Name = "Prisma Editor";
+    spec.Name                          = "Prisma Editor";
     spec.RefreshAssetDatabaseOnStartup = true;
     Prisma::Engine engine(spec);
 

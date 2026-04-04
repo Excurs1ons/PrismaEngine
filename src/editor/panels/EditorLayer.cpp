@@ -1,7 +1,7 @@
 #include "EditorLayer.h"
-#include "UIStrings.h"
-#include "graphic/ImGuiVulkanResourceManager.h"
-#include "graphic/ViewportRenderPass.h"
+#include "../UIStrings.h"
+#include "../graphic/ImGuiVulkanResourceManager.h"
+#include "../graphic/ViewportRenderPass.h"
 
 Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
     m_editorCameraObject = std::make_shared<GameObject>("Editor Camera");
@@ -74,7 +74,7 @@ void Prisma::EditorLayer::OnRender() {
     }
 
     // [修复] 获取当前的指令缓冲
-    auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
+    auto vkDevice       = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
     VkCommandBuffer cmd = vkDevice->GetCurrentCommandBuffer();
 
     if (cmd && m_viewportRenderPass) {
@@ -208,7 +208,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
     if (m_viewportSize.x != viewportPanelSize.x || m_viewportSize.y != viewportPanelSize.y) {
         m_viewportSize = {viewportPanelSize.x, viewportPanelSize.y};
 
-    // Recreate Framebuffer texture when viewport resizes
+        // Recreate Framebuffer texture when viewport resizes
         if (m_viewportSize.x > 0 && m_viewportSize.y > 0) {
             if (auto renderSystem = Engine::Get().GetRenderSystem()) {
                 if (auto resourceManager = renderSystem->GetRenderResourceManager()) {
@@ -234,15 +234,15 @@ void Prisma::EditorLayer::OnImGuiRender() {
                     colorDesc.allowShaderResource = true;
 
                     m_viewportTexture = resourceManager->CreateTexture(colorDesc);
-                    auto vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
+                    auto vkTexture    = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(m_viewportTexture.get());
                     if (vkTexture) {
                         vkTexture->SetDebugName("Viewport Color Texture");
                     }
 
                     // 创建深度纹理
                     Graphic::TextureDesc depthDesc;
-                    depthDesc.width              = (uint32_t)m_viewportSize.x;
-                    depthDesc.height             = (uint32_t)m_viewportSize.y;
+                    depthDesc.width               = (uint32_t)m_viewportSize.x;
+                    depthDesc.height              = (uint32_t)m_viewportSize.y;
                     depthDesc.format              = Graphic::TextureFormat::D32_Float;
                     depthDesc.allowDepthStencil   = true;
                     depthDesc.allowRenderTarget   = false;
@@ -259,19 +259,17 @@ void Prisma::EditorLayer::OnImGuiRender() {
                         auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
                         if (vkDevice) {
                             m_viewportRenderPass = std::make_shared<Graphic::Vulkan::ViewportRenderPass>();
-                            m_viewportRenderPass->Initialize(
-                                vkDevice->GetVkDevice(),
-                                vkTexture->GetVkImageView(),
-                                vkDepthTexture->GetVkImageView(),
-                                (uint32_t)m_viewportSize.x,
-                                (uint32_t)m_viewportSize.y
-                            );
+                            m_viewportRenderPass->Initialize(vkDevice->GetVkDevice(),
+                                                             vkTexture->GetVkImageView(),
+                                                             vkDepthTexture->GetVkImageView(),
+                                                             (uint32_t)m_viewportSize.x,
+                                                             (uint32_t)m_viewportSize.y);
                         }
                     }
 
                     // 创建 ImGui descriptor set
                     m_viewportDescriptorSet = VK_NULL_HANDLE;
-                    auto& editor = Editor::Get();
+                    auto& editor            = Editor::Get();
                     if (vkTexture) {
                         m_viewportDescriptorSet = editor.GetImGuiResourceManager().GetDescriptorSet(
                             vkTexture, editor.GetImGuiDescriptorPool(), editor.GetImGuiSampler());
@@ -321,7 +319,8 @@ void Prisma::EditorLayer::OnImGuiRender() {
     if (auto sceneManager = Engine::Get().GetSceneManager()) {
         if (auto scene = sceneManager->GetCurrentScene()) {
             hierarchyTitle += " - " + scene->GetName();
-            if (scene->IsDirty()) hierarchyTitle += "*";
+            if (scene->IsDirty())
+                hierarchyTitle += "*";
         }
     }
     ImGui::Begin(hierarchyTitle.c_str());
@@ -363,7 +362,8 @@ void Prisma::EditorLayer::OnImGuiRender() {
         strncpy(buffer, m_selectedEntity->name.c_str(), sizeof(buffer));
         if (ImGui::InputText("Name", buffer, sizeof(buffer))) {
             m_selectedEntity->name = std::string(buffer);
-            if (scene) scene->SetDirty(true);
+            if (scene)
+                scene->SetDirty(true);
         }
 
         ImGui::Separator();
@@ -374,19 +374,22 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 Vector3 pos = transform->GetPosition();
                 if (ImGui::DragFloat3("Position", &pos.x, 0.1f)) {
                     transform->SetPosition(pos);
-                    if (scene) scene->SetDirty(true);
+                    if (scene)
+                        scene->SetDirty(true);
                 }
 
                 Vector3 rotation = glm::degrees(glm::eulerAngles(transform->GetRotation()));
                 if (ImGui::DragFloat3("Rotation", &rotation.x, 0.1f)) {
                     transform->SetRotation(rotation);
-                    if (scene) scene->SetDirty(true);
+                    if (scene)
+                        scene->SetDirty(true);
                 }
 
                 Vector3 scale = transform->GetScale();
                 if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
                     transform->SetScale(scale);
-                    if (scene) scene->SetDirty(true);
+                    if (scene)
+                        scene->SetDirty(true);
                 }
             }
         }
@@ -399,7 +402,8 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 if (ImGui::DragFloat("Field of View", &fov, 1.0f, 10.0f, 120.0f)) {
                     camera->SetPerspectiveProjection(
                         glm::radians(fov), camera->GetAspectRatio(), camera->GetNearPlane(), camera->GetFarPlane());
-                    if (scene) scene->SetDirty(true);
+                    if (scene)
+                        scene->SetDirty(true);
                 }
             }
         }
@@ -411,7 +415,8 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 Vector3 vel = rb->GetVelocity();
                 if (ImGui::DragFloat3("Velocity", &vel.x, 0.1f)) {
                     rb->SetVelocity(vel);
-                    if (scene) scene->SetDirty(true);
+                    if (scene)
+                        scene->SetDirty(true);
                 }
             }
         }
@@ -427,13 +432,15 @@ void Prisma::EditorLayer::OnImGuiRender() {
             if (ImGui::MenuItem("Camera")) {
                 if (!m_selectedEntity->GetComponent<Graphic::Camera>()) {
                     m_selectedEntity->AddComponent<Graphic::Camera>();
-                    if (scene) scene->SetDirty(true);
+                    if (scene)
+                        scene->SetDirty(true);
                 }
             }
             if (ImGui::MenuItem("RigidBody")) {
                 if (!m_selectedEntity->GetComponent<RigidBodyComponent>()) {
                     m_selectedEntity->AddComponent<RigidBodyComponent>();
-                    if (scene) scene->SetDirty(true);
+                    if (scene)
+                        scene->SetDirty(true);
                 }
             }
             ImGui::EndPopup();
@@ -518,7 +525,9 @@ void Prisma::EditorLayer::OnImGuiRender() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("取消", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 
@@ -532,7 +541,9 @@ void Prisma::EditorLayer::OnImGuiRender() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("取消", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 
@@ -546,25 +557,35 @@ void Prisma::EditorLayer::OnImGuiRender() {
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
-        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("取消", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 
     if (ImGui::BeginPopupModal(UI::POPUP_SAVE_PROJECT_AS, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("项目另存为");
         ImGui::Separator();
-        if (ImGui::Button("保存", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("保存", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::SameLine();
-        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("取消", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 
     if (ImGui::BeginPopupModal(UI::POPUP_SAVE_SCENE_AS, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("场景另存为");
         ImGui::Separator();
-        if (ImGui::Button("保存", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("保存", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::SameLine();
-        if (ImGui::Button("取消", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button("取消", ImVec2(120, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         ImGui::EndPopup();
     }
 }

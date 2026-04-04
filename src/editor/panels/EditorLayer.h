@@ -1,24 +1,24 @@
 #pragma once
 
-#include "../engine/core/Layer.h"
-#include "../engine/Application.h"
-#include "../engine/Engine.h"
-#include "../engine/graphic/RenderSystem.h"
-#include "../engine/SceneManager.h"
-#include "../engine/Scene.h"
-#include "../engine/Camera.h"
-#include "../engine/physics/PhysicsComponents.h"
+#include "../core/Editor.h"
+#include "app/Application.h"
+#include "app/Engine.h"
+#include "core/Layer.h"
+#include "graphic/RenderSystem.h"
+#include "physics/PhysicsComponents.h"
+#include "scene/Scene.h"
+#include "scene/SceneManager.h"
+#include "transform/Camera.h"
+#include <SDL3/SDL.h>
 #include <filesystem>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
-#include <SDL3/SDL.h>
 #include <vulkan/vulkan.h>
-#include "Editor.h"
 
 // Vulkan 后端支持
-#include "../engine/graphic/adapters/vulkan/RenderDeviceVulkan.h"
-#include "../engine/graphic/adapters/vulkan/VulkanResources.h"
-#include "graphic/ViewportRenderPass.h"
+#include "../graphic/ViewportRenderPass.h"
+#include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
+#include "graphic/adapters/vulkan/VulkanResources.h"
 
 namespace Prisma {
 
@@ -35,7 +35,7 @@ public:
     void OnEvent(Event& event) override;
 
 private:
-    bool m_showDemoWindow = false;
+    bool m_showDemoWindow  = false;
     bool m_viewportFocused = false;
     bool m_viewportHovered = false;
 
@@ -51,19 +51,22 @@ private:
     // -----------------------------------------------------------------------
     uint32_t m_viewportReadyFrames = 0;
 
-    struct { float x = 0.0f; float y = 0.0f; } m_viewportSize;
+    struct {
+        float x = 0.0f;
+        float y = 0.0f;
+    } m_viewportSize;
 
-    std::shared_ptr<GameObject> m_selectedEntity = nullptr;
+    std::shared_ptr<GameObject> m_selectedEntity  = nullptr;
     std::filesystem::path m_currentAssetDirectory = "assets";
 
     std::shared_ptr<GameObject> m_editorCameraObject = nullptr;
-    std::shared_ptr<Graphic::Camera> m_editorCamera = nullptr;
-    float m_cameraSpeed = 5.0f;
-    float m_cameraSensitivity = 0.1f;
+    std::shared_ptr<Graphic::Camera> m_editorCamera  = nullptr;
+    float m_cameraSpeed                              = 5.0f;
+    float m_cameraSensitivity                        = 0.1f;
 
-    std::shared_ptr<Graphic::ITexture> m_viewportTexture = nullptr;
+    std::shared_ptr<Graphic::ITexture> m_viewportTexture      = nullptr;
     std::shared_ptr<Graphic::ITexture> m_viewportDepthTexture = nullptr;
-    VkDescriptorSet m_viewportDescriptorSet = VK_NULL_HANDLE;
+    VkDescriptorSet m_viewportDescriptorSet                   = VK_NULL_HANDLE;
     std::shared_ptr<Graphic::Vulkan::ViewportRenderPass> m_viewportRenderPass;
 
     // -----------------------------------------------------------------------
@@ -83,4 +86,4 @@ private:
     std::vector<DeferredTexture> m_textureDeletionQueue;
 };
 
-} // namespace Prisma
+}  // namespace Prisma

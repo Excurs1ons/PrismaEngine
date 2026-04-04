@@ -1,6 +1,6 @@
 #include "Environment.h"
-#include "../engine/Platform.h"
-#include "../engine/Logger.h"
+#include "logger/Logger.h"
+#include "platform/Platform.h"
 
 namespace Prisma {
 
@@ -19,4 +19,4 @@ bool Environment::IsRunningInTerminal() {
     return Platform::IsRunningInTerminal();
 }
 
-} // namespace Prisma
+}  // namespace Prisma
