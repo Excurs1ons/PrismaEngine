@@ -1,5 +1,5 @@
 #pragma once
-#include "ISubSystem.h"
+#include "../core/ISubSystem.h"
 #include "Scene.h"
 #include <memory>
 
@@ -7,7 +7,7 @@ namespace Prisma {
 
 class ENGINE_API SceneManager : public ISubSystem {
 public:
-    SceneManager() = default;
+    SceneManager()           = default;
     ~SceneManager() override = default;
 
     int Initialize() override;
