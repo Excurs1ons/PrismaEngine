@@ -1,13 +1,11 @@
 #include "SceneManager.h"
-#include "TriangleExample.h"
-#include "Logger.h"
+#include "logger/Logger.h"
 
 namespace Prisma {
 
 int SceneManager::Initialize() {
-    TriangleExample example;
-    m_currentScene = example.CreateExampleScene();
-    LOG_INFO("Scene", "示例场景已创建。");
+    CreateNewScene();
+    LOG_INFO("Scene", "场景管理器已初始化。");
     return 0;
 }
 
@@ -32,4 +30,4 @@ Scene* SceneManager::GetCurrentScene() const {
     return m_currentScene.get();
 }
 
-} // namespace Prisma
+}  // namespace Prisma
