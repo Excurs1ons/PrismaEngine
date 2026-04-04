@@ -286,7 +286,8 @@ Direction Ghost::GetBestDirection(const glm::ivec2& target) {
     Direction bestDirection = m_currentDirection;
     float bestDistance = std::numeric_limits<float>::max();
 
-    // 尝试所有可能的方向（除了反方向）
+    // 尝试所有可能的方向（通常不允许立即反向）
+    std::vector<Direction> validDirs;
     for (int i = 1; i <= 4; i++) {
         Direction dir = static_cast<Direction>(i);
         if (dir == ReverseDirection(m_currentDirection)) {
@@ -295,13 +296,22 @@ Direction Ghost::GetBestDirection(const glm::ivec2& target) {
 
         glm::ivec2 nextPos = gridPos + DirectionToVector(dir);
         if (m_board->IsWalkable(nextPos.x, nextPos.y)) {
-            // 计算距离目标的距离
             float distance = glm::length(glm::vec2(target - nextPos));
+            
+            // 增加微小随机扰动，防止在对称路径上反复横跳
+            distance += (std::rand() % 100) * 0.001f;
+
             if (distance < bestDistance) {
                 bestDistance = distance;
                 bestDirection = dir;
             }
+            validDirs.push_back(dir);
         }
+    }
+
+    // 如果没有不反向的可行路径，则被迫反向
+    if (validDirs.empty()) {
+        return ReverseDirection(m_currentDirection);
     }
 
     return bestDirection;
@@ -364,16 +374,16 @@ glm::ivec2 Ghost::GetChaseTarget() {
 }
 
 glm::ivec2 Ghost::GetScatterTarget() {
-    // 每个幽灵有不同的散开目标
+    // 每个幽灵有不同的散开目标 (调整为迷宫内的四个角落)
     switch (m_type) {
         case GhostType::Blinky:
-            return glm::ivec2(BOARD_WIDTH - 2, BOARD_HEIGHT - 2);  // 右下角
+            return glm::ivec2(BOARD_WIDTH - 2, 1);  // 右上角 (进迷宫内一格)
         case GhostType::Pinky:
-            return glm::ivec2(2, BOARD_HEIGHT - 2);  // 左下角
+            return glm::ivec2(1, 1);  // 左上角
         case GhostType::Inky:
-            return glm::ivec2(BOARD_WIDTH - 2, 2);  // 右上角
+            return glm::ivec2(BOARD_WIDTH - 2, BOARD_HEIGHT - 2);  // 右下角
         case GhostType::Clyde:
-            return glm::ivec2(2, 2);  // 左上角
+            return glm::ivec2(1, BOARD_HEIGHT - 2);  // 左下角
         default:
             return glm::ivec2(BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
     }

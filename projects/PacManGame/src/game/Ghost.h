@@ -61,6 +61,11 @@ public:
     Direction GetCurrentDirection() const { return m_currentDirection; }
 
     /**
+     * @brief 设置方向
+     */
+    void SetDirection(Direction direction) { m_currentDirection = direction; }
+
+    /**
      * @brief 设置目标位置（AI导航目标）
      */
     void SetTargetPosition(const glm::ivec2& position);

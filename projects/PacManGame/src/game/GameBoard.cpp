@@ -146,16 +146,14 @@ void GameBoard::Render() {
     for (int y = 0; y < m_height; ++y) {
         for (int x = 0; x < m_width; ++x) {
             TileType tile = GetTile(x, y);
-            glm::vec2 pos = GridToPixelCorner(x, y);
+            glm::vec2 pos = GridToPixel(x, y); // 改为使用中心点
             
             if (tile == TileType::Wall) {
                 Prisma::Graphic::Renderer2D::DrawQuad(pos, glm::vec2(TILE_SIZE, TILE_SIZE), Prisma::Color(0.0f, 0.0f, 1.0f, 1.0f));
             } else if (tile == TileType::Pellet) {
-                glm::vec2 pelletPos = pos + glm::vec2(TILE_SIZE * 0.4f);
-                Prisma::Graphic::Renderer2D::DrawQuad(pelletPos, glm::vec2(TILE_SIZE * 0.2f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
+                Prisma::Graphic::Renderer2D::DrawQuad(pos, glm::vec2(TILE_SIZE * 0.2f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
             } else if (tile == TileType::PowerPellet) {
-                glm::vec2 pelletPos = pos + glm::vec2(TILE_SIZE * 0.3f);
-                Prisma::Graphic::Renderer2D::DrawQuad(pelletPos, glm::vec2(TILE_SIZE * 0.4f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
+                Prisma::Graphic::Renderer2D::DrawQuad(pos, glm::vec2(TILE_SIZE * 0.4f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
             }
         }
     }

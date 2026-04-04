@@ -52,6 +52,7 @@ public:
 
     // 绘制文本 (使用内置像素字体或提供的图集)
     static void DrawString(const std::string& text, const Vector2& position, float scale = 1.0f, const Prisma::Color& color = {1.0f, 1.0f, 1.0f, 1.0f});
+    static float GetStringWidth(const std::string& text, float scale = 1.0f);
 
     // ========== 统计数据 ==========
 
