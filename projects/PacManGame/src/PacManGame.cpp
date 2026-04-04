@@ -129,8 +129,14 @@ void PacManGame::Run() {
     spec.Headless = false;
     spec.RefreshAssetDatabaseOnStartup = false;
     spec.MaxFPS = 144;
-    spec.MinLogLevel = Prisma::LogLevel::Info;
-
+    spec.MinLogLevel = Prisma::LogLevel::Debug;
+    // 使用相对工程根目录的路径，或者绝对路径
+    // 强制输出到工程根目录下的 logs/pacman.log
+    // 注意：这里的路径逻辑取决于 Engine 内部如何处理 logFilePath
+    // 如果是相对路径，通常是相对于 CWD。
+    // 我们在这里尝试使用一个显眼的名称。
+    // spec.LogFilePath = "logs/pacman.log"; // 如果 EngineSpecification 支持这个字段
+    
     m_lastRunResult = Prisma::RunApplication(std::move(m_application), spec);
     if (m_lastRunResult != 0) {
         std::cerr << "Pac-Man exited with engine error: " << m_lastRunResult << std::endl;
