@@ -1,16 +1,31 @@
 #pragma once
-#include "Export.h"
+
+// Ensure ENGINE_API is defined
+#ifndef ENGINE_API
+#if defined(_WIN32) || defined(_MSC_VER)
+#if defined(ENGINE_EXPORTS) || defined(PRISMA_ENGINE_EXPORTS) || defined(PrismaEngine_EXPORTS)
+#define ENGINE_API __declspec(dllexport)
+#else
+#define ENGINE_API __declspec(dllimport)
+#endif
+#else
+#define ENGINE_API __attribute__((visibility("default")))
+#endif
+#endif
+
 #include "LogEntry.h"
 #include "LogScope.h"
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
+#include <format>
 #include <fstream>
 #include <mutex>
 #include <queue>
 #include <source_location>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <type_traits>
 #include <vector>
@@ -105,7 +120,7 @@ public:
 private:
     Logger() = default;
 
-    bool m_Initialized                              = false;
+    bool m_Initialized                = false;
     IPlatformLogger* m_PlatformLogger = nullptr;
     void EnqueueEntry(LogEntry&& entry);
     void ProcessQueue();
@@ -135,31 +150,49 @@ private:
     std::mutex m_WriteMutex;
 };
 
-} // namespace Prisma
+}  // namespace Prisma
 
 #define LOG_TRACE(category, fmt, ...)                                                                                  \
-    ::Prisma::Logger::Get().LogFormat(                                                                                 \
-        ::Prisma::LogLevel::Trace, category, ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+    ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Trace,                                                       \
+                                      category,                                                                        \
+                                      ::Prisma::SourceLocation(__FILE__, __LINE__, __func__),                          \
+                                      fmt,                                                                             \
+                                      ##__VA_ARGS__)
 
 #define LOG_DEBUG(category, fmt, ...)                                                                                  \
-    ::Prisma::Logger::Get().LogFormat(                                                                                 \
-        ::Prisma::LogLevel::Debug, category, ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+    ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Debug,                                                       \
+                                      category,                                                                        \
+                                      ::Prisma::SourceLocation(__FILE__, __LINE__, __func__),                          \
+                                      fmt,                                                                             \
+                                      ##__VA_ARGS__)
 
 #define LOG_INFO(category, fmt, ...)                                                                                   \
-    ::Prisma::Logger::Get().LogFormat(                                                                                 \
-        ::Prisma::LogLevel::Info, category, ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+    ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Info,                                                        \
+                                      category,                                                                        \
+                                      ::Prisma::SourceLocation(__FILE__, __LINE__, __func__),                          \
+                                      fmt,                                                                             \
+                                      ##__VA_ARGS__)
 
 #define LOG_WARNING(category, fmt, ...)                                                                                \
-    ::Prisma::Logger::Get().LogFormat(                                                                                 \
-        ::Prisma::LogLevel::Warning, category, ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+    ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Warning,                                                     \
+                                      category,                                                                        \
+                                      ::Prisma::SourceLocation(__FILE__, __LINE__, __func__),                          \
+                                      fmt,                                                                             \
+                                      ##__VA_ARGS__)
 
 #define LOG_ERROR(category, fmt, ...)                                                                                  \
-    ::Prisma::Logger::Get().LogFormat(                                                                                 \
-        ::Prisma::LogLevel::Error, category, ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+    ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Error,                                                       \
+                                      category,                                                                        \
+                                      ::Prisma::SourceLocation(__FILE__, __LINE__, __func__),                          \
+                                      fmt,                                                                             \
+                                      ##__VA_ARGS__)
 
 #define LOG_FATAL(category, fmt, ...)                                                                                  \
-    ::Prisma::Logger::Get().LogFormat(                                                                                 \
-        ::Prisma::LogLevel::Fatal, category, ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), fmt, ##__VA_ARGS__)
+    ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Fatal,                                                       \
+                                      category,                                                                        \
+                                      ::Prisma::SourceLocation(__FILE__, __LINE__, __func__),                          \
+                                      fmt,                                                                             \
+                                      ##__VA_ARGS__)
 
 #define LOG_WARN LOG_WARNING
 #define LOG_ERR LOG_ERROR
