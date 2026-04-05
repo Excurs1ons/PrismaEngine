@@ -66,8 +66,12 @@ int RenderSystem::InitializeDevice() {
 }
 
 int RenderSystem::InitializeRenderResourceManager() {
-    // 资源管理器需要设备指针
-    m_renderResourceManager = std::make_unique<RenderResourceManager>();
+    // 使用单例实例并进行初始化，确保全局访问一致性
+    m_renderResourceManager = std::dynamic_pointer_cast<RenderResourceManager>(RenderResourceManager::Get());
+    if (!m_renderResourceManager) {
+        LOG_ERROR("Renderer", "获取全局渲染资源管理器失败！");
+        return -1;
+    }
     return m_renderResourceManager->Initialize(m_device.get());
 }
 

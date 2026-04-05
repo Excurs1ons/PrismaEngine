@@ -23,6 +23,9 @@ endif()
 if(WIN32)
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
     add_compile_options(/DNOMINMAX /DWIN32_LEAN_AND_MEAN)
+    if(MSVC)
+        add_compile_options(/utf-8)
+    endif()
 endif()
 
 # ========== 编译选项 ==========

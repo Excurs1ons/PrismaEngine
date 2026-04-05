@@ -1,6 +1,7 @@
 #pragma once
 
 #include "interfaces/IPipelineState.h"
+#include "interfaces/IDescriptorSet.h"
 #include <vulkan/vulkan.h>
 #include <memory>
 #include <unordered_map>
@@ -70,6 +71,7 @@ public:
 private:
     VkPipeline m_pipeline = VK_NULL_HANDLE;
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+    std::vector<std::shared_ptr<IDescriptorSetLayout>> m_descriptorSetLayouts;
     VkDevice m_device = VK_NULL_HANDLE;
     std::unordered_map<ShaderType, std::shared_ptr<IShader>> m_shaders;
 

@@ -44,6 +44,9 @@ public:
     std::vector<std::unique_ptr<ITexture>> CreateTexturesBatch(const TextureDesc* descs, uint32_t count) override;
     std::vector<std::unique_ptr<IBuffer>> CreateBuffersBatch(const BufferDesc* descs, uint32_t count) override;
 
+    std::shared_ptr<IDescriptorSet> CreateDescriptorSet(IDescriptorSetLayout* layout) override;
+    std::shared_ptr<IDescriptorSetLayout> CreateDescriptorSetLayout(const std::vector<ShaderResource>& resources) override;
+
     uint64_t GetOrCreateTexturePool(TextureFormat format, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arraySize) override;
     std::unique_ptr<ITexture> AllocateFromTexturePool(uint64_t poolId) override;
     void DeallocateToTexturePool(uint64_t poolId, ITexture* texture) override;

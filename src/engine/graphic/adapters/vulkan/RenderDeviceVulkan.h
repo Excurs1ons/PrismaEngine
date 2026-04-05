@@ -88,6 +88,7 @@ public:
     VkDevice GetVkDevice() const override { return m_device; }
     VkQueue GetGraphicsQueue() const override { return m_graphicsQueue; }
     uint32_t GetGraphicsQueueFamily() const override { return m_graphicsQueueFamily; }
+    VkDescriptorPool GetVkDescriptorPool() const { return m_descriptorPool; }
     VmaAllocator GetVmaAllocator() const override { return m_allocator; }
     VmaAllocator GetAllocator() const { return m_allocator; }
     bool IsInitialized() const override { return m_initialized; }
@@ -147,6 +148,9 @@ private:
     VkQueue m_graphicsQueue        = VK_NULL_HANDLE;
     VkQueue m_presentQueue         = VK_NULL_HANDLE;
     uint32_t m_graphicsQueueFamily = 0;
+
+    // 描述符池
+    VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
 
     // 命令控制
     VkCommandPool m_commandPool = VK_NULL_HANDLE;

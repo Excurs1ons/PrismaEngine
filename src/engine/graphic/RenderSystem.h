@@ -77,7 +77,7 @@ private:
 
     RenderSystemDesc m_desc;
     std::unique_ptr<IRenderDevice> m_device;
-    std::unique_ptr<RenderResourceManager> m_renderResourceManager;
+    std::shared_ptr<RenderResourceManager> m_renderResourceManager;
     std::shared_ptr<IPipeline> m_mainRenderPipeline;
 };
 

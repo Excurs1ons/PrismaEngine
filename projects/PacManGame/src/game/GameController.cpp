@@ -1,6 +1,7 @@
 #include "GameController.h"
 #include "Platform.h"
 #include "Logger.h"
+#include "../core/GameResourceManager.h"
 #include "graphic/Renderer2D.h"
 #include <SDL3/SDL_scancode.h>
 #include <algorithm>
@@ -158,12 +159,18 @@ void GameController::SetGameState(GameState state) {
 }
 
 void GameController::StartGame() {
-    if (m_gameState == GameState::Menu || m_gameState == GameState::GameOver || m_gameState == GameState::Victory) {
+    if (m_gameState == GameState::Menu || m_gameState == GameState::GameOver) {
         ResetGame();
+    } else if (m_gameState == GameState::Victory) {
+        NextLevel();
     }
+    
     m_gameState = GameState::Playing;
     m_stateTimer = 2.0f; 
     LOG_INFO("PacMan", "游戏开始");
+
+    // 播放开始音效
+    GameResourceManager::Get().PlayAudio("Beginning");
 }
 
 void GameController::PauseGame() {
@@ -205,6 +212,10 @@ void GameController::SetLives(int lives) {
 void GameController::LoseLife() {
     m_lives--;
     LOG_INFO("PacMan", "失去一条生命，剩余: {}", m_lives);
+
+    // 播放死亡音效
+    GameResourceManager::Get().PlayAudio("Death");
+
     if (m_lives <= 0) {
         m_gameState = GameState::GameOver;
         LOG_INFO("PacMan", "游戏结束 (Game Over)");
@@ -253,9 +264,12 @@ void GameController::CheckPelletCollision() {
 
     if (tile == TileType::Pellet) {
         AddScore(m_board.EatPellet(gridPos.x, gridPos.y));
+        // 播放吃豆音效
+        GameResourceManager::Get().PlayAudio("Chomp", false, 0.5f);
     } else if (tile == TileType::PowerPellet) {
         AddScore(m_board.EatPowerPellet(gridPos.x, gridPos.y));
         ActivatePowerMode();
+        GameResourceManager::Get().PlayAudio("Chomp", false, 0.8f);
     }
 }
 
@@ -273,6 +287,8 @@ void GameController::CheckGhostCollision() {
                 ghost.SetState(GhostState::Eaten);
                 AddScore(GHOST_EAT_SCORE);
                 LOG_INFO("PacMan", "吃到幽灵！得分 +{}", GHOST_EAT_SCORE);
+                // 播放吃幽灵音效
+                GameResourceManager::Get().PlayAudio("EatGhost");
             } else if (ghost.GetState() != GhostState::Eaten) {
                 // 碰到正常幽灵，死亡
                 OnPacmanDeath();

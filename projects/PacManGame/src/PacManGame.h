@@ -2,6 +2,7 @@
 
 #include "game/GameController.h"
 #include "graphic/OrthographicCamera.h"
+#include "audio/IAudioDevice.h"
 #include <memory>
 
 namespace Prisma {
@@ -80,9 +81,11 @@ public:
      */
     void OnMouseMove(int x, int y);
 
-private:
     std::unique_ptr<Prisma::Application> m_application;
     std::unique_ptr<GameController> m_gameController;
+    std::unique_ptr<Prisma::Audio::IAudioDevice> m_audioDevice;
+
+private:
     bool RunConsoleFallback();
     void RenderConsoleFrame() const;
     void HandleConsoleInput(char command);
@@ -93,6 +96,10 @@ private:
 
 public:
     int GetLastRunResult() const { return m_lastRunResult; }
+    
+    // 获取游戏系统引用
+    GameController& GetGameController() { return *m_gameController; }
+    Prisma::Audio::IAudioDevice* GetAudioDevice() { return m_audioDevice.get(); }
 };
 
 extern PacManGame* g_PacManGame;

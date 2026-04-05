@@ -9,15 +9,21 @@
 #include <vector>
 #include <string>
 
+class CommandLineParser;
+
 namespace Prisma {
 
 class Application;
 class AssetManager;
 class JobSystem;
+class AssetDatabase;
 namespace Input { class InputManager; }
-namespace Graphic { class RenderSystem; }
+namespace Graphic { class RenderSystem; class IRenderResourceManager; }
+namespace Scripting { class MonoRuntime; }
+namespace Core::ECS { class World; }
 class SceneManager;
 class PhysicsSystem;
+class ThreadManager;
 
 /**
  * @brief 引擎配置规范
@@ -53,11 +59,31 @@ public:
     bool IsMinimized() const { return m_Minimized; }
 
     // --- Fast Track Access ---
+    AssetManager* GetAssetManager() { return m_AssetManager; }
     Input::InputManager* GetInputManager() { return m_InputManager; }
     Graphic::RenderSystem* GetRenderSystem() { return m_RenderSystem; }
+    Graphic::IRenderResourceManager* GetRenderResourceManager();
     SceneManager* GetSceneManager() { return m_SceneManager; }
     PhysicsSystem* GetPhysicsSystem() { return m_PhysicsSystem; }
     JobSystem* GetJobSystem() { return m_JobSystem; }
+    Scripting::MonoRuntime& GetMonoRuntime();
+    Core::ECS::World& GetWorld();
+    ThreadManager& GetThreadManager();
+    CommandLineParser& GetCommandLineParser();
+    
+    // 通用系统获取
+    template<typename T>
+    T* GetSystem() {
+        for (auto& system : m_Systems) {
+            T* ptr = dynamic_cast<T*>(system.get());
+            if (ptr) return ptr;
+        }
+        return nullptr;
+    }
+    
+    // --- Global Managers ---
+    Logger& GetLogger() { return Logger::Get(); }
+    AssetDatabase& GetAssetDatabase();
 
     const EngineSpecification& GetSpecification() const { return m_Spec; }
     bool IsRunning() const { return m_Running; }

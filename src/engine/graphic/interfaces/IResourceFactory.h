@@ -3,6 +3,7 @@
 #include "RenderTypes.h"
 #include "IResourceManager.h"
 #include "IPipelineState.h"
+#include "IDescriptorSet.h"
 #include <memory>
 
 namespace Prisma::Graphic {
@@ -111,6 +112,10 @@ public:
     /// @brief 创建围栏
     /// @return 围栏智能指针
     virtual std::unique_ptr<IFence> CreateFenceImpl() = 0;
+
+    // === 描述符集创建 ===
+    virtual std::shared_ptr<IDescriptorSet> CreateDescriptorSet(IDescriptorSetLayout* layout) = 0;
+    virtual std::shared_ptr<IDescriptorSetLayout> CreateDescriptorSetLayout(const std::vector<ShaderResource>& resources) = 0;
 
     // === 批量创建 ===
 

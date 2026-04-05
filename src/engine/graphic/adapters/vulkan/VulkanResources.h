@@ -2,6 +2,8 @@
 
 #include "interfaces/ITexture.h"
 #include "interfaces/IBuffer.h"
+#include "interfaces/IDescriptorSet.h"
+#include "interfaces/ISampler.h"
 #include "RenderDesc.h"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
@@ -537,6 +539,40 @@ private:
     BufferViewDesc m_lastBufferViewDesc{};
     uint64_t m_dynamicOffset = 0;
     uint32_t m_lastBufferMapType = 0;
+};
+
+class ENGINE_API VulkanDescriptorSetLayout : public IDescriptorSetLayout {
+public:
+    VulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout) : m_device(device), m_layout(layout) {}
+    ~VulkanDescriptorSetLayout() override { if (m_layout) vkDestroyDescriptorSetLayout(m_device, m_layout, nullptr); }
+    void* GetNativeHandle() const override { return (void*)m_layout; }
+    VkDescriptorSetLayout GetVkLayout() const { return m_layout; }
+private:
+    VkDevice m_device;
+    VkDescriptorSetLayout m_layout;
+};
+
+class ENGINE_API VulkanDescriptorSet : public IDescriptorSet {
+public:
+    VulkanDescriptorSet(VkDevice device, VkDescriptorSet set) : m_device(device), m_set(set) {}
+    ~VulkanDescriptorSet() override {} // Pool manages destruction
+
+    void BindTexture(uint32_t binding, ITexture* texture, ISampler* sampler) override;
+    void BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size) override;
+    void* GetNativeHandle() const override { return (void*)m_set; }
+    void Update() override;
+
+private:
+    VkDevice m_device;
+    VkDescriptorSet m_set;
+    struct WriteInfo {
+        uint32_t binding;
+        VkDescriptorType type;
+        VkDescriptorImageInfo imageInfo;
+        VkDescriptorBufferInfo bufferInfo;
+        bool isImage;
+    };
+    std::vector<WriteInfo> m_writes;
 };
 
 } // namespace Prisma::Graphic::Vulkan

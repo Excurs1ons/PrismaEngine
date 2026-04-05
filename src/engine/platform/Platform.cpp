@@ -235,24 +235,40 @@ double Platform::GetTimeSeconds() {
 }
 
 // ------------------------------------------------------------
-// 文件系统
+// 文件系统 (优先使用 SDL3 API)
 // ------------------------------------------------------------
 bool Platform::FileExists(const char* path) {
-    return std::filesystem::exists(path) && !std::filesystem::is_directory(path);
+    SDL_PathInfo info;
+    return SDL_GetPathInfo(path, &info);
 }
 
 size_t Platform::FileSize(const char* path) {
-    if (!std::filesystem::exists(path)) return 0;
-    return (size_t)std::filesystem::file_size(path);
+    SDL_PathInfo info;
+    if (SDL_GetPathInfo(path, &info)) {
+        return (size_t)info.size;
+    }
+    return 0;
 }
 
 size_t Platform::ReadFile(const char* path, void* dst, size_t maxBytes) {
-    FILE* file = fopen(path, "rb");
-    if (!file) return 0;
-    
-    size_t read = fread(dst, 1, maxBytes, file);
-    fclose(file);
-    return read;
+    size_t size = 0;
+    void* data = SDL_LoadFile(path, &size);
+    if (!data) return 0;
+
+    size_t toCopy = std::min(size, maxBytes);
+    std::memcpy(dst, data, toCopy);
+    SDL_free(data);
+    return toCopy;
+}
+
+bool Platform::SetCurrentDirectory(const char* path) {
+    if (!path) return false;
+    try {
+        std::filesystem::current_path(path);
+        return true;
+    } catch (...) {
+        return false;
+    }
 }
 
 const char* Platform::GetExecutablePath() {

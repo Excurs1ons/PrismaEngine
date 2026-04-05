@@ -1,6 +1,7 @@
 #pragma once
 
 #include "input/InputManager.h"
+#include "app/Engine.h"
 
 namespace Prisma {
 
@@ -10,16 +11,19 @@ namespace Prisma {
  */
 class ENGINE_API Input {
 public:
-    static bool IsKeyPressed(Input::KeyCode key) {
-        return Input::InputManager::Get()->IsKeyPressed(key);
+    static bool IsKeyPressed(Prisma::Input::KeyCode key) {
+        auto* im = Engine::Get().GetInputManager();
+        return im ? im->IsKeyPressed(key) : false;
     }
 
     static bool IsMouseButtonPressed(Input::MouseButton button) {
-        return Input::InputManager::Get()->IsMouseButtonPressed(button);
+        auto* im = Engine::Get().GetInputManager();
+        return im ? im->IsMouseButtonPressed(button) : false;
     }
 
     static PrismaMath::vec2 GetMousePosition() {
-        return Input::InputManager::Get()->GetMousePosition();
+        auto* im = Engine::Get().GetInputManager();
+        return im ? im->GetMousePosition() : PrismaMath::vec2(0.0f);
     }
 
     static float GetMouseX() {

@@ -44,6 +44,50 @@ std::unique_ptr<IAudioDevice> AudioAPI::CreateBestDevice(const AudioDesc& desc) 
     return CreateSDL3Device(desc);
 }
 
+std::shared_ptr<AudioClip> AudioAPI::LoadClip(const std::string& path) {
+    // 根据后缀选择加载器，目前仅支持 WAV
+    if (path.find(".wav") != std::string::npos || path.find(".WAV") != std::string::npos) {
+        return LoadWAV(path);
+    }
+
+    LOG_ERROR("Audio", "不支持的音频格式: {0}", path);
+    return nullptr;
+}
+
+std::shared_ptr<AudioClip> AudioAPI::LoadWAV(const std::string& path) {
+    SDL_AudioSpec spec;
+    Uint8* data = nullptr;
+    Uint32 len = 0;
+
+    if (!SDL_LoadWAV(path.c_str(), &spec, &data, &len)) {
+        LOG_ERROR("Audio", "加载 WAV 失败: {0}, Error: {1}", path, SDL_GetError());
+        return nullptr;
+    }
+
+    auto clip = std::make_shared<AudioClip>();
+    clip->path = path;
+    clip->format.sampleRate = static_cast<uint32_t>(spec.freq);
+    clip->format.channels = static_cast<uint32_t>(spec.channels);
+    
+    // SDL3 spec.format 转换
+    if (spec.format == SDL_AUDIO_F32) {
+        clip->format.bitsPerSample = 32;
+    } else if (spec.format == SDL_AUDIO_S16) {
+        clip->format.bitsPerSample = 16;
+    } else {
+        clip->format.bitsPerSample = 16;
+    }
+
+    clip->data.assign(data, data + len);
+    
+    uint32_t bytesPerSecond = clip->format.sampleRate * clip->format.channels * (clip->format.bitsPerSample / 8);
+    clip->duration = static_cast<float>(len) / static_cast<float>(std::max<uint32_t>(1, bytesPerSecond));
+
+    SDL_free(data);
+    LOG_INFO("Audio", "成功加载音频: {0} ({1}s)", path, clip->duration);
+    return clip;
+}
+
 std::vector<AudioDeviceType> AudioAPI::GetSupportedDevices() {
     std::vector<AudioDeviceType> devices;
     devices.push_back(AudioDeviceType::Null);

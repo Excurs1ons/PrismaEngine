@@ -8,7 +8,7 @@
 #include "graphic/Material.h"
 #include "graphic/Shader.h"
 #include "graphic/interfaces/ISwapChain.h"
-#include "Logger.h"
+#include "logger/Logger.h"
 #include <fstream>
 #include <iterator>
 
@@ -71,6 +71,10 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
     for (const auto& command : commands) {
         if (!command.mesh) continue;
 
+        if (command.material) {
+            command.material->Bind(cmd);
+        }
+
         QuadPushConstants pushConstants{};
         pushConstants.mvp = m_projection * m_view * command.transform;
         pushConstants.color = command.color;
@@ -112,7 +116,17 @@ bool OpaquePass::EnsureDefaultPipeline() {
         desc.language = ShaderLanguage::SPIRV;
         desc.type = type;
 
-        auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, ShaderReflection{});
+        ShaderReflection reflection;
+        if (type == ShaderType::Pixel) {
+            ShaderResource albedoMap;
+            albedoMap.Name = "u_AlbedoMap";
+            albedoMap.ResourceType = ShaderResource::Type::Sampler2D;
+            albedoMap.Binding = 0;
+            albedoMap.Set = 0;
+            reflection.Resources.push_back(albedoMap);
+        }
+
+        auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, reflection);
         return shader ? std::shared_ptr<IShader>(std::move(shader)) : nullptr;
     };
 

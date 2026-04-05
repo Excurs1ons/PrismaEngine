@@ -7,9 +7,14 @@
 #include "core/AssetDatabase.h"
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
+#include "graphic/interfaces/IResourceManager.h"
 #include "graphic/Shader.h"
 #include "SceneManager.h"
 #include "PhysicsSystem.h"
+#include "scripting/MonoRuntime.h"
+#include "core/ECS.h"
+#include "threading/ThreadManager.h"
+#include "app/CommandLineParser.h"
 
 namespace Prisma {
 
@@ -182,6 +187,30 @@ int Engine::Run(std::unique_ptr<Application> app) {
     m_CurrentApp.reset();
 
     return 0;
+}
+
+Graphic::IRenderResourceManager* Engine::GetRenderResourceManager() {
+    return m_RenderSystem ? m_RenderSystem->GetRenderResourceManager() : nullptr;
+}
+
+Scripting::MonoRuntime& Engine::GetMonoRuntime() {
+    return Scripting::MonoRuntime::Get();
+}
+
+AssetDatabase& Engine::GetAssetDatabase() {
+    return AssetDatabase::Get();
+}
+
+Core::ECS::World& Engine::GetWorld() {
+    return Core::ECS::World::Get();
+}
+
+ThreadManager& Engine::GetThreadManager() {
+    return *ThreadManager::Get();
+}
+
+CommandLineParser& Engine::GetCommandLineParser() {
+    return CommandLineParser::Get();
 }
 
 void Engine::Update(Timestep ts) {
