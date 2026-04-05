@@ -102,4 +102,57 @@ VulkanBuffer::~VulkanBuffer() {
     }
 }
 
+void VulkanDescriptorSet::BindTexture(uint32_t binding, ITexture* texture, ISampler* sampler) {
+    auto vkTex = dynamic_cast<VulkanTexture*>(texture);
+    if (!vkTex) return;
+
+    WriteInfo write{};
+    write.binding = binding;
+    write.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write.imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    write.imageInfo.imageView = vkTex->GetVkImageView();
+    if (sampler) {
+        write.imageInfo.sampler = (VkSampler)sampler->GetHandle();
+    }
+    write.isImage = true;
+    m_writes.push_back(write);
+}
+
+void VulkanDescriptorSet::BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size) {
+    auto vkBuf = dynamic_cast<VulkanBuffer*>(buffer);
+    if (!vkBuf) return;
+
+    WriteInfo write{};
+    write.binding = binding;
+    write.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write.bufferInfo.buffer = vkBuf->GetVkBuffer();
+    write.bufferInfo.offset = offset;
+    write.bufferInfo.range = size;
+    write.isImage = false;
+    m_writes.push_back(write);
+}
+
+void VulkanDescriptorSet::Update() {
+    if (m_writes.empty()) return;
+
+    std::vector<VkWriteDescriptorSet> vkWrites;
+    for (auto& write : m_writes) {
+        VkWriteDescriptorSet vkWrite{};
+        vkWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        vkWrite.dstSet = m_set;
+        vkWrite.dstBinding = write.binding;
+        vkWrite.descriptorCount = 1;
+        vkWrite.descriptorType = write.type;
+        if (write.isImage) {
+            vkWrite.pImageInfo = &write.imageInfo;
+        } else {
+            vkWrite.pBufferInfo = &write.bufferInfo;
+        }
+        vkWrites.push_back(vkWrite);
+    }
+
+    vkUpdateDescriptorSets(m_device, static_cast<uint32_t>(vkWrites.size()), vkWrites.data(), 0, nullptr);
+    m_writes.clear();
+}
+
 } // namespace Prisma::Graphic::Vulkan

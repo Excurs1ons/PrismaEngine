@@ -28,7 +28,7 @@ bool InputDriverSDL3::Initialize() {
     // SDL3 应该在外部初始化，这里只检查
     if (!SDL_WasInit(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         // 初始化 SDL 子系统
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) < 0) {
+        if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
             return false;
         }
     }

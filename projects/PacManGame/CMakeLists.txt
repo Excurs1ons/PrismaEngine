@@ -23,6 +23,7 @@ set(PACMAN_SOURCES
     src/game/GameController.cpp
     src/game/Pellet.cpp
     src/game/PowerPellet.cpp
+    src/core/GameResourceManager.cpp
 )
 
 set(PACMAN_HEADERS
@@ -35,6 +36,7 @@ set(PACMAN_HEADERS
     src/game/PowerPellet.h
     src/core/GameConfig.h
     src/core/GameConstants.h
+    src/core/GameResourceManager.h
 )
 
 # ========== 可执行文件 ==========
@@ -46,9 +48,9 @@ add_executable(${PROJECT_NAME}
 
 # ========== 链接引擎 ==========
 
-target_link_libraries(${PROJECT_NAME}
-    PRIVATE
-        Engine
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    Engine
+    SDL3::SDL3
 )
 
 # ========== 包含目录 ==========
@@ -80,17 +82,20 @@ endif()
 
 # ========== 复制资源文件 ==========
 
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E make_directory
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
-    COMMENT "Creating assets directory"
-)
-
+# 1. 复制 PacMan 项目自身的资源 (sprites, audios 等)
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-        ${CMAKE_SOURCE_DIR}/assets
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
-    COMMENT "Copying assets"
+    COMMENT "Copying PacMan project assets"
+)
+
+# 2. 复制引擎必备的着色器资源 (Renderer2D 等)
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets/shaders
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/shaders
+    COMMENT "Copying engine shaders to project output"
 )
 
 # ========== 输出信息 ==========

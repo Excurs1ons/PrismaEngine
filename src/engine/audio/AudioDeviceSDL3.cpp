@@ -32,8 +32,8 @@ bool AudioDeviceSDL3::Initialize(const AudioDesc& desc) {
     m_listener      = AudioListener{};
     ResetStats();
 
-    if (SDL_Init(SDL_INIT_AUDIO) != 0) {
-        LOG_ERROR("Audio", "SDL音频初始化失败: {0}", SDL_GetError());
+    if (!SDL_InitSubSystem(SDL_INIT_AUDIO)) {
+        LOG_ERROR("Audio", "SDL音频子系统初始化失败: {0}", SDL_GetError());
         return false;
     }
 

@@ -1,5 +1,6 @@
 #include "PacMan.h"
 #include "GameBoard.h"
+#include "../core/GameResourceManager.h"
 #include "graphic/Renderer2D.h"
 #include <cmath>
 
@@ -136,11 +137,26 @@ void PacMan::Update(Prisma::Timestep ts) {
 }
 
 void PacMan::Render() {
-    if (auto texture = m_spriteRenderer.GetTexture()) {
+    auto& res = GameResourceManager::Get();
+    std::shared_ptr<Prisma::Graphic::ITexture> texture;
+
+    // 嘴巴动画对应的纹理切换
+    // 0-15 度用闭嘴 (Pacman3), 15-30 度半开 (Pacman2), 30-45 全开 (Pacman1)
+    if (m_mouthAngle < 15.0f) {
+        texture = res.GetTexture("Pacman3");
+    } else if (m_mouthAngle < 30.0f) {
+        texture = res.GetTexture("Pacman2");
+    } else {
+        texture = res.GetTexture("Pacman1");
+    }
+
+    if (texture) {
+        // 根据方向旋转 (这里简化处理，只绘制纹理)
         Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), texture, m_spriteRenderer.GetColor());
         return;
     }
 
+    // 降级方案
     Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), m_spriteRenderer.GetColor());
 }
 

@@ -1,6 +1,7 @@
 #include "Ghost.h"
 #include "GameBoard.h"
 #include "PacMan.h"
+#include "../core/GameResourceManager.h"
 #include "graphic/Renderer2D.h"
 #include "../core/GameConfig.h"
 #include <cmath>
@@ -164,11 +165,29 @@ void Ghost::Update(Prisma::Timestep ts) {
 }
 
 void Ghost::Render() {
-    if (auto texture = m_spriteRenderer.GetTexture()) {
+    auto& res = GameResourceManager::Get();
+    std::shared_ptr<Prisma::Graphic::ITexture> texture;
+
+    if (m_state == GhostState::Frightened) {
+        texture = res.GetTexture("GhostScared");
+    } else if (m_state == GhostState::Eaten) {
+        // TODO: 眼睛贴图，暂时显示半透明
+        texture = res.GetTexture("GhostScared");
+    } else {
+        switch (m_type) {
+            case GhostType::Blinky: texture = res.GetTexture("GhostBlinky"); break;
+            case GhostType::Pinky:  texture = res.GetTexture("GhostPinky");  break;
+            case GhostType::Inky:   texture = res.GetTexture("GhostInky");   break;
+            case GhostType::Clyde:  texture = res.GetTexture("GhostClyde");  break;
+        }
+    }
+
+    if (texture) {
         Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), texture, m_spriteRenderer.GetColor());
         return;
     }
 
+    // 降级
     Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), m_spriteRenderer.GetColor());
 }
 

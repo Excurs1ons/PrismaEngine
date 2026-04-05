@@ -1,5 +1,7 @@
 #include "PacManGame.h"
 #include "game/GameController.h"
+#include "core/GameResourceManager.h"
+#include "audio/AudioAPI.h"
 #include "core/Timestep.h"
 #include "Application.h"
 #include "EngineLauncher.h"
@@ -31,7 +33,36 @@ public:
     }
 
     virtual int OnInitialize() override {
-        std::cout << "Pac-Man Application Initialized." << std::endl;
+        std::cout << "Pac-Man Application Initializing Assets..." << std::endl;
+        
+        // 1. 初始化音频设备 (确保引擎已启动)
+        m_game->m_audioDevice = Prisma::Audio::AudioAPI::CreateBestDevice();
+        GameResourceManager::Get().InitializeAudio(m_game->m_audioDevice.get());
+
+        // 2. 加载资源 (此时 RenderDevice 已由 Engine 创建并传给 RenderResourceManager)
+        auto& res = GameResourceManager::Get();
+        
+        // 纹理加载
+        res.LoadTexture("Pacman1", "assets/sprites/pacman-right/1.png");
+        res.LoadTexture("Pacman2", "assets/sprites/pacman-right/2.png");
+        res.LoadTexture("Pacman3", "assets/sprites/pacman-right/3.png");
+        
+        res.LoadTexture("GhostBlinky", "assets/sprites/ghosts/blinky.png");
+        res.LoadTexture("GhostPinky",  "assets/sprites/ghosts/pinky.png");
+        res.LoadTexture("GhostInky",   "assets/sprites/ghosts/inky.png");
+        res.LoadTexture("GhostClyde",  "assets/sprites/ghosts/clyde.png");
+        res.LoadTexture("GhostScared", "assets/sprites/ghosts/blue_ghost.png");
+
+        // 音频加载
+        res.LoadAudio("Beginning", "assets/audios/pacman_beginning.wav");
+        res.LoadAudio("Chomp",     "assets/audios/pacman_chomp.wav");
+        res.LoadAudio("Death",     "assets/audios/pacman_death.wav");
+        res.LoadAudio("EatGhost",  "assets/audios/pacman_eatghost.wav");
+
+        // 3. 初始化游戏控制器 (地图等)
+        m_game->m_gameController->Initialize();
+
+        std::cout << "Pac-Man Application Initialized with Assets." << std::endl;
         return 0;
     }
 
@@ -99,18 +130,24 @@ PacManGame::~PacManGame() {
 void PacManGame::Initialize() {
     if (m_initialized) return;
 
+    // 优先切换工作目录
+    const char* exePath = Prisma::Platform::GetExecutablePath();
+    if (exePath && *exePath) {
+        Prisma::Platform::SetCurrentDirectory(exePath);
+        std::cout << "Engine switched working directory to: " << exePath << std::endl;
+    }
+
     // 播种随机数
     std::srand(static_cast<unsigned int>(std::time(nullptr)));
 
     // 创建游戏控制器
     m_gameController = std::make_unique<GameController>();
-    m_gameController->Initialize();
 
     // 创建 Prisma 应用程序实例
     m_application = std::make_unique<PacManApplication>(this);
 
     m_initialized = true;
-    std::cout << "Pac-Man Game Initialized." << std::endl;
+    std::cout << "Pac-Man Game Scaffolding Initialized." << std::endl;
 }
 
 void PacManGame::Shutdown() {
@@ -157,6 +194,9 @@ void PacManGame::Run() {
 void PacManGame::OnUpdate(Prisma::Timestep ts) {
     if (m_gameController) {
         m_gameController->Update(ts);
+    }
+    if (m_audioDevice) {
+        m_audioDevice->Update(ts);
     }
 }
 

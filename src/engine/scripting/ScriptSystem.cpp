@@ -1,6 +1,6 @@
 #include "ScriptSystem.h"
-#include "Logger.h"
-#include "core/ECS.h"
+#include "logger/Logger.h"
+#include "app/Engine.h"
 #include <algorithm>
 #include <filesystem>
 
@@ -11,7 +11,7 @@ void ScriptSystem::Initialize() {
     LOG_INFO("ScriptSystem", "初始化脚本系统");
 
     // 初始化Mono运行时
-    if (!MonoRuntime::Get().Initialize()) {
+    if (!Engine::Get().GetMonoRuntime().Initialize()) {
         LOG_ERROR("ScriptSystem", "无法初始化Mono运行时");
         return;
     }
@@ -27,7 +27,7 @@ void ScriptSystem::Update(Prisma::Timestep ts) {
     if (!m_initialized)
         return;
 
-    auto* pool = Prisma::Core::ECS::World::Get().GetComponentManager().GetPool<ScriptComponent>();
+    auto* pool = Engine::Get().GetWorld().GetComponentManager().GetPool<ScriptComponent>();
     if (!pool)
         return;
 
@@ -49,19 +49,19 @@ void ScriptSystem::Update(Prisma::Timestep ts) {
     static float gcTimer = 0.0f;
     gcTimer += ts;
     if (gcTimer > 5.0f) {
-        MonoRuntime::Get().CollectGarbage();
+        Engine::Get().GetMonoRuntime().CollectGarbage();
         gcTimer = 0.0f;
     }
 }
 
 void ScriptSystem::Shutdown() {
     LOG_INFO("ScriptSystem", "关闭脚本系统");
-    MonoRuntime::Get().Shutdown();
+    Engine::Get().GetMonoRuntime().Shutdown();
     m_initialized = false;
 }
 
 bool ScriptSystem::LoadAssembly(const std::string& assemblyPath) {
-    auto& runtime = MonoRuntime::Get();
+    auto& runtime = Engine::Get().GetMonoRuntime();
     if (runtime.LoadAssembly("assembly", assemblyPath)) {
         m_loadedAssemblies.push_back(assemblyPath);
         LOG_INFO("ScriptSystem", "成功加载程序集: {0}", assemblyPath);
@@ -75,10 +75,10 @@ void ScriptSystem::AddScript(Prisma::Core::ECS::EntityID entity, const std::stri
     if (!m_initialized)
         return;
 
-    auto* world      = &Prisma::Core::ECS::World::Get();
-    auto* scriptComp = world->GetComponent<ScriptComponent>(entity);
+    auto& world      = Engine::Get().GetWorld();
+    auto* scriptComp = world.GetComponent<ScriptComponent>(entity);
     if (!scriptComp) {
-        scriptComp = world->AddComponent<ScriptComponent>(entity);
+        scriptComp = world.AddComponent<ScriptComponent>(entity);
     }
 
     // 检查是否已存在
@@ -88,7 +88,7 @@ void ScriptSystem::AddScript(Prisma::Core::ECS::EntityID entity, const std::stri
     }
 
     // 创建新脚本实例
-    auto managedScript = MonoRuntime::Get().CreateScript(scriptPath);
+    auto managedScript = Engine::Get().GetMonoRuntime().CreateScript(scriptPath);
     if (managedScript.IsValid()) {
         scriptComp->scriptPaths.push_back(scriptPath);
         scriptComp->scriptInstances.push_back(std::make_shared<ManagedObject>(std::move(managedScript)));
@@ -98,7 +98,7 @@ void ScriptSystem::AddScript(Prisma::Core::ECS::EntityID entity, const std::stri
 }
 
 void ScriptSystem::RemoveScript(Prisma::Core::ECS::EntityID entity, const std::string& scriptPath) {
-    auto* scriptComp = Prisma::Core::ECS::World::Get().GetComponent<ScriptComponent>(entity);
+    auto* scriptComp = Engine::Get().GetWorld().GetComponent<ScriptComponent>(entity);
     if (!scriptComp)
         return;
 
@@ -116,7 +116,7 @@ void ScriptSystem::RemoveScript(Prisma::Core::ECS::EntityID entity, const std::s
 void ScriptSystem::ReloadScripts() {
     LOG_INFO("ScriptSystem", "重新加载所有脚本");
 
-    auto* pool = Prisma::Core::ECS::World::Get().GetComponentManager().GetPool<ScriptComponent>();
+    auto* pool = Engine::Get().GetWorld().GetComponentManager().GetPool<ScriptComponent>();
     if (!pool) {
         return;
     }
@@ -125,7 +125,7 @@ void ScriptSystem::ReloadScripts() {
     for (auto& script : components) {
         script.scriptInstances.clear();
         for (const auto& scriptPath : script.scriptPaths) {
-            auto managedScript = MonoRuntime::Get().CreateScript(scriptPath);
+            auto managedScript = Engine::Get().GetMonoRuntime().CreateScript(scriptPath);
             if (managedScript.IsValid()) {
                 script.scriptInstances.push_back(std::make_shared<ManagedObject>(std::move(managedScript)));
             } else {

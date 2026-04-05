@@ -2,8 +2,9 @@
 #include "VulkanShader.h"
 #include "RenderDeviceVulkan.h"
 #include "VulkanSwapChain.h"
-#include "Engine.h"
-#include "RenderSystem.h"
+#include "app/Engine.h"
+#include "graphic/RenderSystem.h"
+#include "graphic/interfaces/IDescriptorSet.h"
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -153,6 +154,8 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
         m_device = device->GetVkDevice();
     }
 
+    auto deviceVulkan = dynamic_cast<RenderDeviceVulkan*>(Engine::Get().GetRenderSystem()->GetDevice());
+
     std::string validationErrors;
     if (!Validate(device, validationErrors)) {
         m_errors = std::move(validationErrors);
@@ -176,18 +179,40 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     }
 
     // [修复] 配置 Push Constant Range 供 2D 变换使用
-    VkPushConstantRange pushConstantRange{};
-    pushConstantRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    pushConstantRange.offset = 0;
-    pushConstantRange.size = 128; // 足够存一个 mat4 + 额外数据
+    std::vector<VkDescriptorSetLayout> descriptorSetLayoutHandles;
+    std::vector<VkPushConstantRange> pushConstantRanges;
+
+    // 默认推流常量 (mat4 MVP + vec4 Color)
+    VkPushConstantRange defaultPushConstant{};
+    defaultPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    defaultPushConstant.offset = 0;
+    defaultPushConstant.size = 128; 
+    pushConstantRanges.push_back(defaultPushConstant);
+
+    m_descriptorSetLayouts.clear();
+    for (const auto& [type, shaderRes] : m_shaders) {
+        auto vkShader = std::dynamic_pointer_cast<VulkanShader>(shaderRes);
+        if (!vkShader) continue;
+
+        const auto& reflection = vkShader->GetReflection();
+        
+        // 处理 Descriptor Sets (目前简化，仅处理 Set 0)
+        if (!reflection.Resources.empty()) {
+            auto layout = deviceVulkan->GetResourceFactory()->CreateDescriptorSetLayout(reflection.Resources);
+            if (layout) {
+                m_descriptorSetLayouts.push_back(layout);
+                descriptorSetLayoutHandles.push_back((VkDescriptorSetLayout)layout->GetNativeHandle());
+            }
+        }
+    }
 
     VkPipelineLayoutCreateInfo layoutInfo{};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutInfo.pushConstantRangeCount = 1;
-    layoutInfo.pPushConstantRanges = &pushConstantRange;
+    layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
+    layoutInfo.pPushConstantRanges = pushConstantRanges.data();
+    layoutInfo.setLayoutCount = static_cast<uint32_t>(descriptorSetLayoutHandles.size());
+    layoutInfo.pSetLayouts = descriptorSetLayoutHandles.data();
     
-    // TODO: 这里需要从 Shader 反射信息中提取并设置 DescriptorSetLayouts
-    // 目前暂时使用空 Layout 以支持常量推送
     if (vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         m_errors = "Failed to create Vulkan pipeline layout";
         m_isValid = false;
@@ -286,7 +311,6 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     dynamicState.pDynamicStates = dynamicStates.data();
 
     // 需要一个有效的 RenderPass
-    auto deviceVulkan = dynamic_cast<RenderDeviceVulkan*>(Engine::Get().GetRenderSystem()->GetDevice());
     if (!deviceVulkan || !deviceVulkan->GetSwapChain()) {
         m_errors = "RenderPass required for pipeline creation";
         return false;

@@ -33,8 +33,8 @@ void Renderer2D::Initialize() {
 
     // 创建一个简单的 Quad Mesh
     s_Data->QuadMesh = std::make_shared<Mesh>();
-    
-    // 顶点数据 (Position, Color, UV)
+    // 创建 Quad 网格
+    // 顶点格式: Position(vec4), Color(vec4), UV(vec4)
     std::vector<Vertex> vertices = {
         { { -0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } },
         { {  0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } },

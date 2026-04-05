@@ -11,12 +11,24 @@ namespace Prisma::Audio {
 class AudioDeviceSDL3;
 class AudioDeviceNull;
 
-class AudioAPI {
+class ENGINE_API AudioAPI {
 public:
     static std::unique_ptr<IAudioDevice> CreateDevice(AudioDeviceType deviceType,
                                                       const AudioDesc& desc = {});
 
     static std::unique_ptr<IAudioDevice> CreateBestDevice(const AudioDesc& desc = {});
+
+    /**
+     * @brief 从文件加载音频剪辑
+     * @param path 文件路径
+     * @return 加载成功返回 AudioClip 指针，失败返回 nullptr
+     */
+    static std::shared_ptr<AudioClip> LoadClip(const std::string& path);
+
+    /**
+     * @brief 专门加载 WAV 格式 (引擎内部使用或直接调用)
+     */
+    static std::shared_ptr<AudioClip> LoadWAV(const std::string& path);
 
     static std::vector<AudioDeviceType> GetSupportedDevices();
 

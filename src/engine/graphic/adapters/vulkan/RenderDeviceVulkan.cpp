@@ -4,7 +4,7 @@
 //         避免两份独立的编译单元共享状态导致指针崩溃。
 #include "RenderDeviceVulkan.h"
 #include "VulkanCommandBuffer.h"
-#include "Logger.h"
+#include "logger/Logger.h"
 #include "VulkanFence.h"
 #include "VulkanResourceFactory.h"
 #include "VulkanSwapChain.h"
@@ -15,7 +15,7 @@
 #include <vk_mem_alloc.h>
 
 
-#include "Engine.h"
+#include "app/Engine.h"
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -92,6 +92,21 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         }
 
 
+
+        // 6. 初始化描述符池
+        std::array<VkDescriptorPoolSize, 2> poolSizes{};
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[0].descriptorCount = 1000;
+        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].descriptorCount = 1000;
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.maxSets = 1000;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
 
         // 7. Command Pool & Buffers
         VkCommandPoolCreateInfo cmd_pool_info = {};

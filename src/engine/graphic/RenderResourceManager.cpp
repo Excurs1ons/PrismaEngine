@@ -1,5 +1,5 @@
 #include "RenderResourceManager.h"
-#include "Logger.h"
+#include "logger/Logger.h"
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IShader.h"
 #include "graphic/interfaces/IBuffer.h"
@@ -644,12 +644,23 @@ bool RenderResourceManager::LoadImageFromFile(const std::string& filename, std::
     std::vector<uint8_t> cachedData;
     if (LoadFromCache(filename, cachedData)) {
         data = std::move(cachedData);
+        // 我们还需要获取宽度和高度，缓存中应该保存这些信息，但目前简化处理
+        // 如果缓存命中，暂时通过 stbi_info 获取基本信息而不完全解码
+        int width = 0, height = 0, channels = 0;
+        if (stbi_info(filename.c_str(), &width, &height, &channels)) {
+            desc.width = static_cast<uint64_t>(width);
+            desc.height = static_cast<uint64_t>(height);
+        } else {
+            LOG_ERROR("RenderResourceManager", "无法获取缓存文件的元数据: {0}", filename);
+            return false;
+        }
     } else {
         int width = 0;
         int height = 0;
         int channels = 0;
         stbi_uc* imageData = stbi_load(filename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
         if (!imageData) {
+            LOG_ERROR("RenderResourceManager", "stbi_load 失败: {0}, 原因: {1}", filename, stbi_failure_reason());
             return false;
         }
 
@@ -661,17 +672,8 @@ bool RenderResourceManager::LoadImageFromFile(const std::string& filename, std::
     }
 
     if (desc.width == 0 || desc.height == 0) {
-        int width = 0;
-        int height = 0;
-        int channels = 0;
-        stbi_uc* imageData = stbi_load(filename.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-        if (!imageData) {
-            return false;
-        }
-        desc.width = static_cast<uint64_t>(width);
-        desc.height = static_cast<uint64_t>(height);
-        data.assign(imageData, imageData + static_cast<size_t>(width) * static_cast<size_t>(height) * 4u);
-        stbi_image_free(imageData);
+        LOG_ERROR("RenderResourceManager", "图像尺寸无效 (0): {0}", filename);
+        return false;
     }
 
     desc.depth = 1;

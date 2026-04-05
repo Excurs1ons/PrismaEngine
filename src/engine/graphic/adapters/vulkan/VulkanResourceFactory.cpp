@@ -14,7 +14,7 @@
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #endif
-#include "Logger.h"
+#include "logger/Logger.h"
 #include <fstream>
 
 namespace Prisma::Graphic::Vulkan {
@@ -506,6 +506,61 @@ std::vector<std::unique_ptr<IBuffer>> VulkanResourceFactory::CreateBuffersBatch(
         if (buffer) results.push_back(std::move(buffer));
     }
     return results;
+}
+
+std::shared_ptr<Prisma::Graphic::IDescriptorSet> VulkanResourceFactory::CreateDescriptorSet(Prisma::Graphic::IDescriptorSetLayout* layout) {
+    auto* vkLayout = dynamic_cast<VulkanDescriptorSetLayout*>(layout);
+    if (!vkLayout || !m_device) return nullptr;
+
+    VkDescriptorSetLayout layouts[] = { vkLayout->GetVkLayout() };
+    VkDescriptorSetAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocInfo.descriptorPool = m_device->GetVkDescriptorPool();
+    allocInfo.descriptorSetCount = 1;
+    allocInfo.pSetLayouts = layouts;
+
+    VkDescriptorSet set;
+    if (vkAllocateDescriptorSets(m_vkDevice, &allocInfo, &set) != VK_SUCCESS) {
+        return nullptr;
+    }
+
+    return std::make_shared<VulkanDescriptorSet>(m_vkDevice, set);
+}
+
+std::shared_ptr<Prisma::Graphic::IDescriptorSetLayout> VulkanResourceFactory::CreateDescriptorSetLayout(const std::vector<Prisma::Graphic::ShaderResource>& resources) {
+    std::vector<VkDescriptorSetLayoutBinding> bindings;
+    for (const auto& res : resources) {
+        VkDescriptorSetLayoutBinding binding{};
+        binding.binding = res.Binding;
+        binding.descriptorCount = 1;
+        binding.stageFlags = VK_SHADER_STAGE_ALL;
+        
+        switch (res.ResourceType) {
+            case Prisma::Graphic::ShaderResource::Type::Sampler2D:
+            case Prisma::Graphic::ShaderResource::Type::SamplerCube:
+            case Prisma::Graphic::ShaderResource::Type::Image2D:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                break;
+            case Prisma::Graphic::ShaderResource::Type::UniformBuffer:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                break;
+            default:
+                continue;
+        }
+        bindings.push_back(binding);
+    }
+
+    VkDescriptorSetLayoutCreateInfo layoutInfo{};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+    layoutInfo.pBindings = bindings.data();
+
+    VkDescriptorSetLayout layout;
+    if (vkCreateDescriptorSetLayout(m_vkDevice, &layoutInfo, nullptr, &layout) != VK_SUCCESS) {
+        return nullptr;
+    }
+
+    return std::make_shared<VulkanDescriptorSetLayout>(m_vkDevice, layout);
 }
 
 uint64_t VulkanResourceFactory::GetOrCreateTexturePool(TextureFormat format, uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arraySize) {
