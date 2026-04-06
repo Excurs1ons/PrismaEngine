@@ -158,6 +158,17 @@ PYTHON_EOF
           cp build/lib/libPrisma.so* "$SDK_DIR/lib/linux/" 2>/dev/null || true
           cp build/lib/*.a "$SDK_DIR/lib/linux/" 2>/dev/null || true
 
+          # Copy SDL3 library
+          cp build/lib/libSDL3.so* "$SDK_DIR/lib/linux/" 2>/dev/null || true
+
+          # Copy third-party headers
+          mkdir -p "$SDK_DIR/third_party"
+          cp -r .dependencies/glm-src/glm "$SDK_DIR/third_party/" 2>/dev/null || true
+          cp -r .dependencies/stb-src/* "$SDK_DIR/third_party/" 2>/dev/null || true
+          cp -r .dependencies/nlohmann_json-src/single_include/nlohmann "$SDK_DIR/third_party/" 2>/dev/null || true
+          mkdir -p "$SDK_DIR/third_party/SDL3"
+          cp -r .dependencies/SDL3-src/include/SDL3/* "$SDK_DIR/third_party/SDL3/" 2>/dev/null || true
+
           # Create CMake config files
           cat > "$SDK_DIR/cmake/PrismaEngineConfig.cmake" << 'CONFIG_EOF'
 include(CMakeFindDependencyMacro)
@@ -207,16 +218,14 @@ project(MyGame VERSION 0.1.0 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Download PrismaEngine SDK
 set(PRISMA_SDK_VERSION "@SDK_VERSION@")
 set(PRISMA_SDK_URL "https://github.com/Excurs1ons/PrismaEngine/releases/download/v${PRISMA_SDK_VERSION}-sdk/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64.tar.gz")
 
 set(PRISMA_SDK_DIR "${CMAKE_BINARY_DIR}/PrismaEngine-SDK")
 if(NOT EXISTS "${PRISMA_SDK_DIR}/cmake/PrismaEngineConfig.cmake")
-    message(STATUS "Downloading PrismaEngine SDK v${PRISMA_SDK_VERSION}...")
+    message(STATUS "Downloading PrismaEngine SDK...")
     file(DOWNLOAD "${PRISMA_SDK_URL}" "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz" SHOW_PROGRESS)
-    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz"
-                    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz" WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
     file(REMOVE "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz")
     file(RENAME "${CMAKE_BINARY_DIR}/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64" "${PRISMA_SDK_DIR}")
 endif()
@@ -230,6 +239,7 @@ add_executable(${PROJECT_NAME} ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${PRISMA_SDK_DIR}/include
+    ${PRISMA_SDK_DIR}/third_party
     src
 )
 
@@ -245,6 +255,24 @@ TEMPLATE_CMAKE_EOF
 
 Prisma::Application* PrismaCreateApplication() {
     return new DeepSpaceApp();
+}
+
+int main(int argc, char** argv) {
+    Prisma::EngineSpecification spec;
+    spec.Name = "MyGame";
+    
+    Prisma::Engine engine(spec);
+    
+    if (engine.Initialize() != 0) {
+        return -1;
+    }
+
+    auto* app = PrismaCreateApplication();
+    int result = engine.Run(std::unique_ptr<Prisma::Application>(app));
+
+    engine.Shutdown();
+
+    return result;
 }
 TEMPLATE_MAIN_EOF
 
