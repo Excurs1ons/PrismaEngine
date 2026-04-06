@@ -54,6 +54,74 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 
 **Overall: ~70%**
 
+## SDK Usage
+
+Use PrismaEngine SDK to build your game without embedding the engine source code.
+
+### One-Click Project Setup
+
+```bash
+# Replace VERSION with SDK version (e.g., 1.0.1)
+SDK_VERSION=1.0.1
+
+# Download SDK with project template
+curl -sL https://github.com/Excurs1ons/PrismaEngine/releases/download/v${SDK_VERSION}-sdk/PrismaEngine-SDK-${SDK_VERSION}-linux-arm64.tar.gz | tar xz
+
+# Move template to your project directory
+mv PrismaEngine-SDK-${SDK_VERSION}-linux-arm64/template/* .
+mv PrismaEngine-SDK-${SDK_VERSION}-linux-arm64/template/.* . 2>/dev/null || true
+rm -rf PrismaEngine-SDK-${SDK_VERSION}-linux-arm64
+
+# Build your game
+cmake -B build
+cmake --build build
+
+# Run
+./build/MyGame
+```
+
+### Manual Integration
+
+If you prefer to set up manually:
+
+```cmake
+cmake_minimum_required(VERSION 3.20)
+project(MyGame VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Download PrismaEngine SDK
+set(PRISMA_SDK_VERSION "1.0.1")
+set(PRISMA_SDK_URL "https://github.com/Excurs1ons/PrismaEngine/releases/download/v${PRISMA_SDK_VERSION}-sdk/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64.tar.gz")
+
+set(PRISMA_SDK_DIR "${CMAKE_BINARY_DIR}/PrismaEngine-SDK")
+if(NOT EXISTS "${PRISMA_SDK_DIR}/cmake/PrismaEngineConfig.cmake")
+    message(STATUS "Downloading PrismaEngine SDK...")
+    file(DOWNLOAD "${PRISMA_SDK_URL}" "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz" SHOW_PROGRESS)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz"
+                    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+    file(REMOVE "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz")
+    file(RENAME "${CMAKE_BINARY_DIR}/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64" "${PRISMA_SDK_DIR}")
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH "${PRISMA_SDK_DIR}")
+find_package(PrismaEngine REQUIRED)
+
+add_executable(MyGame src/main.cpp src/MyApp.h)
+target_include_directories(MyGame PRIVATE ${PRISMA_SDK_DIR}/include src)
+target_link_libraries(MyGame PRIVATE PrismaEngine::Engine)
+target_link_directories(MyGame PRIVATE "${PRISMA_SDK_DIR}/lib/linux")
+```
+
+### SDK Requirements
+
+- CMake 3.20+
+- C++20 compiler
+- Vulkan SDK (`libvulkan-dev` on Ubuntu/Debian)
+
+---
+
 ## Quick Start
 
 ### One-Command Build (Auto Preset)
