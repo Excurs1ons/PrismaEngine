@@ -49,7 +49,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ninja-build \
-            pkg-config libssl-dev libvulkan-dev vulkan-tools patchelf
+            pkg-config libssl-dev libvulkan-dev vulkan-tools patchelf \
+            libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev \
+            libxi-dev libxext-dev libxkbcommon-dev libwayland-dev \
+            wayland-protocols libegl-dev
 
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2.0
