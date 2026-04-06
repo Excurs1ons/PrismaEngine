@@ -58,7 +58,9 @@ jobs:
             bash -c '
               set -e
               apt-get update
-              apt-get install -y cmake ninja-build git wget curl unzip \
+              wget -q https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-aarch64.sh -O /tmp/cmake.sh
+              chmod +x /tmp/cmake.sh && /tmp/cmake.sh --skip-license --prefix=/usr/local
+              apt-get install -y ninja-build git curl unzip \
                 gcc g++ pkg-config libssl-dev libvulkan-dev vulkan-tools \
                 libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev \
                 libxi-dev libxext-dev libxkbcommon-dev \
