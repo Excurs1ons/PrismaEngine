@@ -77,7 +77,7 @@ jobs:
             -DPRISMA_USE_FETCHCONTENT=ON
 
       - name: Build Engine
-        run: cmake --build build/engine-linux-arm64-release --target Engine --parallel 2
+        run: rm -rf build/engine-linux-arm64-release && cmake --build build/engine-linux-arm64-release --target Engine --parallel 2
 
       - name: Package SDK
         shell: bash
