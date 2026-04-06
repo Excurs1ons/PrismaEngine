@@ -91,7 +91,9 @@ jobs:
           mkdir -p "$SDK_DIR/include/PrismaEngine"
           mkdir -p "$SDK_DIR/lib/linux"
           mkdir -p "$SDK_DIR/cmake"
+          mkdir -p "$SDK_DIR/template"
 
+          # Copy engine headers
           for subdir in app core window logger transform scene graphic input audio physics platform utils math object resource serialization threading tilemap ui config packing; do
             if [ -d "src/engine/$subdir" ]; then cp -r "src/engine/$subdir" "$SDK_DIR/include/PrismaEngine/"; fi
           done
@@ -100,14 +102,161 @@ jobs:
             if [ -f "src/engine/$h" ]; then cp "src/engine/$h" "$SDK_DIR/include/PrismaEngine/"; fi
           done
 
+          # Fix include paths in all headers - add PrismaEngine/ prefix to relative includes
+          find "$SDK_DIR/include" -name "*.h" -exec sed -i \
+            -e 's|#include "\([^"]*\)\.h"|#include "PrismaEngine/\1.h"|g' \
+            {} \;
+
+          # Copy library files
           cp build/lib/libPrisma.so* "$SDK_DIR/lib/linux/" 2>/dev/null || true
           cp build/lib/*.a "$SDK_DIR/lib/linux/" 2>/dev/null || true
 
-          echo "aW5jbHVkZShDTWFrZUZpbmREZXBlbmRlbmN5TWFjcm8pCnNldChQUklTTUFFTkdJTkVfSU5DTFVERV9ESVIgIiR7Q01BS0VfQ1VSUkVOVF9MSVNUX0RJUn0vLi4vaW5jbHVkZSIpCnNldChQUklTTUFFTkdJTkVfQ01BS0VfRElSICIke0NNQUtFX0NVUlJFTlRfTElTVF9ESVJ9IikKc2V0KFBSSVNNQUVOR0lORV9MSUJfRElSICIke0NNQUtFX0NVUlJFTlRfTElTVF9ESVJ9Ly4uL2xpYi9saW51eCIpCnNldChQUklTTUFFTkdJTkVfRk9VTkQgVFJVRSkKc2V0KFBSSVNNQUVOR0lORV9WRVJTSU9OICJWRVJTSU9OUExBQ0VIT0xERVIiKQpzZXQoUFJJU01BRU5HSU5FX1ZFUlNJT05fTUFKT1IgMSkKc2V0KFBSSVNNQUVOR0lORV9WRVJTSU9OX01JTk9SIDApCnNldChQUklTTUFFTkdJTkVfVkVSU0lPTl9QQVRDSCAwKQpmaW5kX3BhY2thZ2UoVnVsa2FuIFFVSUVUKQppbmNsdWRlKCIke0NNQUtFX0NVUlJFTlRfTElTVF9ESVJ9L1ByaXNtYUVuZ2luZVRhcmdldHMuY21ha2UiKQo=" | base64 -d > "$SDK_DIR/cmake/PrismaEngineConfig.cmake"
-          echo "YWRkX2xpYnJhcnkoUHJpc21hRW5naW5lOjpFbmdpbmUgU0hBUkVEIElNUE9SVEVEKQpzZXRfdGFyZ2V0X3Byb3BlcnRpZXMoUHJpc21hRW5naW5lOjpFbmdpbmUgUFJPUEVSVElFUwogICAgSU1QT1JURURfTE9DQVRJT04gIiR7UFJJU01BRU5HSU5FX0xJQl9ESVJ9L2xpYlByaXNtYS5zbyIKICAgIElOVEVSRkFDRV9JTkNMVURFX0RJUkVDVE9SSUVTICIke1BSSVNNQUVOR0lORV9JTkNMVURFX0RJUn0iCikK" | base64 -d > "$SDK_DIR/cmake/PrismaEngineTargets.cmake"
-          echo "I3ByYWdtYSBvbmNlCiNpbmNsdWRlICJQcmlzbWFFbmdpbmUvRW50cnlQb2ludC5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2FwcC9BcHBsaWNhdGlvbi5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2FwcC9FbmdpbmUuaCIKI2luY2x1ZGUgIlByaXNtYUVuZ2luZS9jb3JlL1RpbWVzdGVwLmgiCiNpbmNsdWRlICJQcmlzbWFFbmdpbmUvY29yZS9FdmVudC5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2NvcmUvTGF5ZXJTdGFjay5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2NvcmUvTGF5ZXIuaCIKI2luY2x1ZGUgIlByaXNtYUVuZ2luZS93aW5kb3cvV2luZG93LmgiCiNpbmNsdWRlICJQcmlzbWFFbmdpbmUvbG9nZ2VyL0xvZ2dlci5oIgojZGVmaW5lIFBSSVNNQV9UUkFDRSguLi4pIDo6UHJpc21hOjpMb2dnZXI6OkdldCgpLkxvZ0Zvcm1hdCg6OlByaXNtYTo6TG9nTGV2ZWw6OlRyYWNlLCAiQXBwIiwgOjpQcmlzbWE6OlNvdXJjZUxvY2F0aW9uKF9fRklMRV9fLCBfX0xJTkVfXywgX19mdW5jX18pLCBfX1ZBX0FSR1NfXykKI2RlZmluZSBQUklTTUFfSU5GTyguLi4pIDo6UHJpc21hOjpMb2dnZXI6OkdldCgpLkxvZ0Zvcm1hdCg6OlByaXNtYTo6TG9nTGV2ZWw6OkluZm8sICJBcHAiLCA6OlByaXNtYTo6U291cmNlTG9jYXRpb24oX19GSUxFX18sIF9fTElORV9fLCBfX2Z1bmNfXyksIF9fVkFfQVJHU19fKQo=" | base64 -d > "$SDK_DIR/include/PrismaEngine.h"
+          # Create CMake config files
+          cat > "$SDK_DIR/cmake/PrismaEngineConfig.cmake" << 'CONFIG_EOF'
+include(CMakeFindDependencyMacro)
+set(PRISMAENGINE_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/../include")
+set(PRISMAENGINE_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}")
+set(PRISMAENGINE_LIB_DIR "${CMAKE_CURRENT_LIST_DIR}/../lib/linux")
+set(PRISMAENGINE_FOUND TRUE)
+set(PRISMAENGINE_VERSION "VERSIONPLACEHOLDER")
+set(PRISMAENGINE_VERSION_MAJOR 1)
+set(PRISMAENGINE_VERSION_MINOR 0)
+set(PRISMAENGINE_VERSION_PATCH 1)
+find_dependency(Vulkan REQUIRED)
+include("${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
+CONFIG_EOF
+
+          cat > "$SDK_DIR/cmake/PrismaEngineTargets.cmake" << 'TARGETS_EOF'
+add_library(PrismaEngine::Engine SHARED IMPORTED)
+set_target_properties(PrismaEngine::Engine PROPERTIES
+    IMPORTED_LOCATION "${PRISMAENGINE_LIB_DIR}/libPrisma.so"
+    INTERFACE_INCLUDE_DIRECTORIES "${PRISMAENGINE_INCLUDE_DIR}"
+)
+TARGETS_EOF
 
           sed -i "s/VERSIONPLACEHOLDER/$SDK_VERSION/" "$SDK_DIR/cmake/PrismaEngineConfig.cmake"
+
+          # Create PrismaEngine.h wrapper header
+          cat > "$SDK_DIR/include/PrismaEngine.h" << 'WRAPPER_EOF'
+#pragma once
+#include "PrismaEngine/EntryPoint.h"
+#include "PrismaEngine/app/Application.h"
+#include "PrismaEngine/app/Engine.h"
+#include "PrismaEngine/core/Timestep.h"
+#include "PrismaEngine/core/Event.h"
+#include "PrismaEngine/core/LayerStack.h"
+#include "PrismaEngine/core/Layer.h"
+#include "PrismaEngine/window/Window.h"
+#include "PrismaEngine/logger/Logger.h"
+#define PRISMA_TRACE(...) ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Trace, "App", ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), __VA_ARGS__)
+#define PRISMA_INFO(...) ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Info, "App", ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), __VA_ARGS__)
+WRAPPER_EOF
+
+          # Create project template
+          cat > "$SDK_DIR/template/CMakeLists.txt" << 'TEMPLATE_CMAKE_EOF'
+cmake_minimum_required(VERSION 3.20)
+project(MyGame VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+# Download PrismaEngine SDK
+set(PRISMA_SDK_VERSION "@SDK_VERSION@")
+set(PRISMA_SDK_URL "https://github.com/Excurs1ons/PrismaEngine/releases/download/v${PRISMA_SDK_VERSION}-sdk/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64.tar.gz")
+
+set(PRISMA_SDK_DIR "${CMAKE_BINARY_DIR}/PrismaEngine-SDK")
+if(NOT EXISTS "${PRISMA_SDK_DIR}/cmake/PrismaEngineConfig.cmake")
+    message(STATUS "Downloading PrismaEngine SDK v${PRISMA_SDK_VERSION}...")
+    file(DOWNLOAD "${PRISMA_SDK_URL}" "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz" SHOW_PROGRESS)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz"
+                    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+    file(REMOVE "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz")
+    file(RENAME "${CMAKE_BINARY_DIR}/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64" "${PRISMA_SDK_DIR}")
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH "${PRISMA_SDK_DIR}")
+find_package(PrismaEngine REQUIRED)
+
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${PRISMA_SDK_DIR}/include
+    src
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE PrismaEngine::Engine)
+target_link_directories(${PROJECT_NAME} PRIVATE "${PRISMA_SDK_DIR}/lib/linux")
+
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+TEMPLATE_CMAKE_EOF
+
+          cat > "$SDK_DIR/template/src/main.cpp" << 'TEMPLATE_MAIN_EOF'
+#include "DeepSpaceApp.h"
+#include <PrismaEngine/EntryPoint.h>
+
+Prisma::Application* PrismaCreateApplication() {
+    return new DeepSpaceApp();
+}
+TEMPLATE_MAIN_EOF
+
+          cat > "$SDK_DIR/template/src/DeepSpaceApp.h" << 'TEMPLATE_APP_H_EOF'
+#pragma once
+#include <PrismaEngine/EntryPoint.h>
+
+class DeepSpaceApp : public Prisma::Application {
+public:
+    DeepSpaceApp() : Application() {}
+    ~DeepSpaceApp() override = default;
+
+    void OnStart() override {
+        PRISMA_INFO("DeepSpace App Started!");
+    }
+
+    void OnUpdate(Prisma::Timestep ts) override {
+        // Update logic here
+    }
+
+    void OnShutdown() override {
+        PRISMA_INFO("DeepSpace App Shutdown!");
+    }
+};
+TEMPLATE_APP_H_EOF
+
+          cat > "$SDK_DIR/template/README.md" << 'TEMPLATE_README_EOF'
+# MyGame
+
+A game built with PrismaEngine.
+
+## Quick Start
+
+```bash
+# Create your project
+mkdir my-game && cd my-game
+curl -sL https://github.com/Excurs1ons/PrismaEngine/releases/download/v@SDK_VERSION@-sdk/PrismaEngine-SDK-@SDK_VERSION@-linux-arm64.tar.gz | tar xz
+mv PrismaEngine-SDK-@SDK_VERSION@-linux-arm64/template/* .
+rm -rf PrismaEngine-SDK-@SDK_VERSION@-linux-arm64
+
+# Build
+cmake -B build
+cmake --build build
+
+# Run
+./build/MyGame
+```
+
+## Requirements
+
+- CMake 3.20+
+- C++20 compiler
+- Vulkan SDK (libvulkan-dev on Ubuntu/Debian)
+TEMPLATE_README_EOF
+
+          sed -i "s/@SDK_VERSION@/$SDK_VERSION/g" "$SDK_DIR/template/CMakeLists.txt"
+          sed -i "s/@SDK_VERSION@/$SDK_VERSION/g" "$SDK_DIR/template/README.md"
+
+          # Set RPATH
           patchelf --set-rpath '$ORIGIN/' "$SDK_DIR/lib/linux/libPrisma.so" 2>/dev/null || true
 
           tar -czf "PrismaEngine-SDK-${SDK_VERSION}-linux-arm64.tar.gz" "$SDK_DIR"
