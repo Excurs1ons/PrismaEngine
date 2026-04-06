@@ -102,10 +102,57 @@ jobs:
             if [ -f "src/engine/$h" ]; then cp "src/engine/$h" "$SDK_DIR/include/PrismaEngine/"; fi
           done
 
-          # Fix include paths in all headers - add PrismaEngine/ prefix to relative includes
-          find "$SDK_DIR/include" -name "*.h" -exec sed -i \
-            -e 's|#include "\([^"]*\)\.h"|#include "PrismaEngine/\1.h"|g' \
-            {} \;
+          python3 << 'PYTHON_EOF'
+import os
+import re
+
+DIR_MAP = {
+    'app': 'PrismaEngine/app', 'core': 'PrismaEngine/core',
+    'window': 'PrismaEngine/window', 'logger': 'PrismaEngine/logger',
+    'transform': 'PrismaEngine/transform', 'scene': 'PrismaEngine/scene',
+    'graphic': 'PrismaEngine/graphic', 'input': 'PrismaEngine/input',
+    'audio': 'PrismaEngine/audio', 'physics': 'PrismaEngine/physics',
+    'platform': 'PrismaEngine/platform', 'utils': 'PrismaEngine/utils',
+    'math': 'PrismaEngine/math', 'object': 'PrismaEngine/object',
+    'resource': 'PrismaEngine/resource', 'serialization': 'PrismaEngine/serialization',
+    'threading': 'PrismaEngine/threading', 'tilemap': 'PrismaEngine/tilemap',
+    'ui': 'PrismaEngine/ui', 'config': 'PrismaEngine/config',
+    'packing': 'PrismaEngine/packing',
+}
+
+def get_module(path):
+    parts = path.split('/')
+    try:
+        idx = parts.index('PrismaEngine')
+        return parts[idx+1] if idx+1 < len(parts) else None
+    except ValueError:
+        return None
+
+def fix_file(path):
+    with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read()
+    if 'PrismaEngine/' in content[:300]:
+        return False
+    module = get_module(path)
+    original = content
+    for subdir, prefix in DIR_MAP.items():
+        if subdir == module:
+            continue
+        content = re.sub(rf'#include "({subdir}/[^"]+)"', rf'#include "{prefix}/\1"', content)
+    if content != original:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return True
+    return False
+
+count = 0
+for root, dirs, files in os.walk('PrismaEngine-SDK-${SDK_VERSION}-linux-arm64/include'):
+    for f in files:
+        if f.endswith(('.h', '.cpp')):
+            if fix_file(os.path.join(root, f)):
+                count += 1
+print(f"Fixed {count} files")
+PYTHON_EOF
 
           # Copy library files
           cp build/lib/libPrisma.so* "$SDK_DIR/lib/linux/" 2>/dev/null || true
