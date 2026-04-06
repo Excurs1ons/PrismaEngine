@@ -1,0 +1,143 @@
+name: Release SDK (Linux ARM64)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  CMAKE_VERSION: '3.31.0'
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  get-version:
+    name: Get Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  release-linux-arm64-sdk:
+    name: Linux ARM64 SDK
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      - name: Install cross-compilation toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ninja-build \
+            pkg-config libssl-dev libvulkan-dev vulkan-tools patchelf
+
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v2.0
+        with:
+          cmake-version: ${{ env.CMAKE_VERSION }}
+
+      - name: Configure ARM64 cross-compile
+        shell: bash
+        run: |
+          cmake -B build/engine-linux-arm64-release -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_SYSTEM_NAME=Linux \
+            -DCMAKE_SYSTEM_PROCESSOR=aarch64 \
+            -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
+            -DCMAKE_FIND_ROOT_PATH=/usr/aarch64-linux-gnu \
+            -DPRISMA_BUILD_SHARED_LIBS=ON \
+            -DPRISMA_BUILD_EDITOR=OFF \
+            -DPRISMA_BUILD_RUNTIME=OFF \
+            -DPRISMA_ENABLE_RENDER_VULKAN=ON \
+            -DPRISMA_ENABLE_AUDIO_SDL3=ON \
+            -DPRISMA_ENABLE_INPUT_SDL3=ON \
+            -DPRISMA_USE_NATIVE_AUDIO=OFF \
+            -DPRISMA_USE_NATIVE_INPUT=OFF \
+            -DPRISMA_USE_FETCHCONTENT=ON
+
+      - name: Build Engine
+        run: cmake --build build/engine-linux-arm64-release --target Engine --parallel 2
+
+      - name: Package SDK
+        shell: bash
+        env:
+          SDK_VERSION: ${{ needs.get-version.outputs.version }}
+        run: |
+          set -e
+          SDK_DIR="PrismaEngine-SDK-${SDK_VERSION}-linux-arm64"
+          mkdir -p "$SDK_DIR/include/PrismaEngine"
+          mkdir -p "$SDK_DIR/lib/linux"
+          mkdir -p "$SDK_DIR/cmake"
+
+          for subdir in app core window logger transform scene graphic input audio physics platform utils math object resource serialization threading tilemap ui config packing; do
+            if [ -d "src/engine/$subdir" ]; then cp -r "src/engine/$subdir" "$SDK_DIR/include/PrismaEngine/"; fi
+          done
+
+          for h in EntryPoint.h Export.h Common.h Build.h framework.h; do
+            if [ -f "src/engine/$h" ]; then cp "src/engine/$h" "$SDK_DIR/include/PrismaEngine/"; fi
+          done
+
+          cp build/engine-linux-arm64-release/lib/libPrisma.so* "$SDK_DIR/lib/linux/" 2>/dev/null || true
+          cp build/engine-linux-arm64-release/lib/*.a "$SDK_DIR/lib/linux/" 2>/dev/null || true
+
+          echo "aW5jbHVkZShDTWFrZUZpbmREZXBlbmRlbmN5TWFjcm8pCnNldChQUklTTUFFTkdJTkVfSU5DTFVERV9ESVIgIiR7Q01BS0VfQ1VSUkVOVF9MSVNUX0RJUn0vLi4vaW5jbHVkZSIpCnNldChQUklTTUFFTkdJTkVfQ01BS0VfRElSICIke0NNQUtFX0NVUlJFTlRfTElTVF9ESVJ9IikKc2V0KFBSSVNNQUVOR0lORV9MSUJfRElSICIke0NNQUtFX0NVUlJFTlRfTElTVF9ESVJ9Ly4uL2xpYi9saW51eCIpCnNldChQUklTTUFFTkdJTkVfRk9VTkQgVFJVRSkKc2V0KFBSSVNNQUVOR0lORV9WRVJTSU9OICJWRVJTSU9OUExBQ0VIT0xERVIiKQpzZXQoUFJJU01BRU5HSU5FX1ZFUlNJT05fTUFKT1IgMSkKc2V0KFBSSVNNQUVOR0lORV9WRVJTSU9OX01JTk9SIDApCnNldChQUklTTUFFTkdJTkVfVkVSU0lPTl9QQVRDSCAwKQpmaW5kX3BhY2thZ2UoVnVsa2FuIFFVSUVUKQppbmNsdWRlKCIke0NNQUtFX0NVUlJFTlRfTElTVF9ESVJ9L1ByaXNtYUVuZ2luZVRhcmdldHMuY21ha2UiKQo=" | base64 -d > "$SDK_DIR/cmake/PrismaEngineConfig.cmake"
+          echo "YWRkX2xpYnJhcnkoUHJpc21hRW5naW5lOjpFbmdpbmUgU0hBUkVEIElNUE9SVEVEKQpzZXRfdGFyZ2V0X3Byb3BlcnRpZXMoUHJpc21hRW5naW5lOjpFbmdpbmUgUFJPUEVSVElFUwogICAgSU1QT1JURURfTE9DQVRJT04gIiR7UFJJU01BRU5HSU5FX0xJQl9ESVJ9L2xpYlByaXNtYS5zbyIKICAgIElOVEVSRkFDRV9JTkNMVURFX0RJUkVDVE9SSUVTICIke1BSSVNNQUVOR0lORV9JTkNMVURFX0RJUn0iCikK" | base64 -d > "$SDK_DIR/cmake/PrismaEngineTargets.cmake"
+          echo "I3ByYWdtYSBvbmNlCiNpbmNsdWRlICJQcmlzbWFFbmdpbmUvRW50cnlQb2ludC5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2FwcC9BcHBsaWNhdGlvbi5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2FwcC9FbmdpbmUuaCIKI2luY2x1ZGUgIlByaXNtYUVuZ2luZS9jb3JlL1RpbWVzdGVwLmgiCiNpbmNsdWRlICJQcmlzbWFFbmdpbmUvY29yZS9FdmVudC5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2NvcmUvTGF5ZXJTdGFjay5oIgojaW5jbHVkZSAiUHJpc21hRW5naW5lL2NvcmUvTGF5ZXIuaCIKI2luY2x1ZGUgIlByaXNtYUVuZ2luZS93aW5kb3cvV2luZG93LmgiCiNpbmNsdWRlICJQcmlzbWFFbmdpbmUvbG9nZ2VyL0xvZ2dlci5oIgojZGVmaW5lIFBSSVNNQV9UUkFDRSguLi4pIDo6UHJpc21hOjpMb2dnZXI6OkdldCgpLkxvZ0Zvcm1hdCg6OlByaXNtYTo6TG9nTGV2ZWw6OlRyYWNlLCAiQXBwIiwgOjpQcmlzbWE6OlNvdXJjZUxvY2F0aW9uKF9fRklMRV9fLCBfX0xJTkVfXywgX19mdW5jX18pLCBfX1ZBX0FSR1NfXykKI2RlZmluZSBQUklTTUFfSU5GTyguLi4pIDo6UHJpc21hOjpMb2dnZXI6OkdldCgpLkxvZ0Zvcm1hdCg6OlByaXNtYTo6TG9nTGV2ZWw6OkluZm8sICJBcHAiLCA6OlByaXNtYTo6U291cmNlTG9jYXRpb24oX19GSUxFX18sIF9fTElORV9fLCBfX2Z1bmNfXyksIF9fVkFfQVJHU19fKQo=" | base64 -d > "$SDK_DIR/include/PrismaEngine.h"
+
+          sed -i "s/VERSIONPLACEHOLDER/$SDK_VERSION/" "$SDK_DIR/cmake/PrismaEngineConfig.cmake"
+          patchelf --set-rpath '$ORIGIN/' "$SDK_DIR/lib/linux/libPrisma.so" 2>/dev/null || true
+
+          tar -czf "PrismaEngine-SDK-${SDK_VERSION}-linux-arm64.tar.gz" "$SDK_DIR"
+          echo "=== SDK Package ==="
+          ls -lh "PrismaEngine-SDK-${SDK_VERSION}-linux-arm64.tar.gz"
+
+      - name: Upload SDK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrismaEngine-SDK-linux-arm64-${{ needs.get-version.outputs.version }}
+          path: PrismaEngine-SDK-${{ needs.get-version.outputs.version }}-linux-arm64.tar.gz
+          retention-days: 5
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.get-version.outputs.version }}
+          name: PrismaEngine SDK v${{ needs.get-version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: PrismaEngine-SDK-${{ needs.get-version.outputs.version }}-linux-arm64.tar.gz
+          body: |
+            PrismaEngine SDK v${{ needs.get-version.outputs.version }} for Linux ARM64
+
+            Contents:
+            - include/PrismaEngine/ - Engine public API headers (no bundled 3rd-party)
+            - lib/linux/libPrisma.so - Prebuilt engine library (ARM64)
+            - cmake/ - CMake find_package configuration
+
+            Requirements:
+            - CMake 3.20+, C++20
+            - Vulkan SDK (libvulkan-dev on Ubuntu/Debian)
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
