@@ -58,13 +58,14 @@ jobs:
             bash -c '
               set -e
               apt-get update
-              wget -q https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-aarch64.sh -O /tmp/cmake.sh
-              chmod +x /tmp/cmake.sh && /tmp/cmake.sh --skip-license --prefix=/usr/local
-              apt-get install -y ninja-build git curl unzip \
+              apt-get install -y curl ninja-build git unzip \
                 gcc g++ pkg-config libssl-dev libvulkan-dev vulkan-tools \
                 libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev \
                 libxi-dev libxext-dev libxkbcommon-dev \
                 libwayland-dev wayland-protocols libegl-dev libgl-dev patchelf
+              curl -sLO https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-aarch64.sh
+              chmod +x cmake-3.31.0-linux-aarch64.sh
+              ./cmake-3.31.0-linux-aarch64.sh --skip-license --prefix=/usr/local
               rm -rf build
               cmake -B build -G Ninja \
                 -DCMAKE_BUILD_TYPE=Release \
