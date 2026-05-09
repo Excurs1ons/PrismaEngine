@@ -1,5 +1,6 @@
 #include "app/Application.h"
 #include "app/Engine.h"
+#include "app/CommandLineParser.h"
 #include "logger/Logger.h"
 #include <memory>
 
@@ -9,7 +10,10 @@ extern "C" Prisma::Application* CreateApplication();
  * @brief Prisma Editor Launcher
  */
 int main(int argc, char* argv[]) {
-    // 0. Eyes open first
+    // 0. Parse command line
+    CommandLineParser::Get().Parse(argc, argv);
+
+    // 1. Eyes open first
     Prisma::LogConfig logConfig;
     logConfig.target = Prisma::LogTarget::Both;
     Prisma::Logger::Get().Initialize(logConfig);
@@ -31,7 +35,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    // 1. Create Engine (Architecture fix: explicit instantiation on stack)
+    // 2. Create Engine (Architecture fix: explicit instantiation on stack)
     Prisma::EngineSpecification spec;
     spec.Name                          = "Prisma Editor";
     spec.RefreshAssetDatabaseOnStartup = true;
