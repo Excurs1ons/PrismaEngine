@@ -37,12 +37,17 @@ public:
         
         // 1. 初始化音频设备 (确保引擎已启动)
         m_game->m_audioDevice = Prisma::Audio::AudioAPI::CreateBestDevice();
+        if (m_game->m_audioDevice) {
+            m_game->m_audioDevice->SetMasterVolume(0.2f);
+            std::cout << "Audio device initialized and master volume set to 0.2." << std::endl;
+        }
         GameResourceManager::Get().InitializeAudio(m_game->m_audioDevice.get());
 
         // 2. 加载资源 (此时 RenderDevice 已由 Engine 创建并传给 RenderResourceManager)
         auto& res = GameResourceManager::Get();
         
         // 纹理加载
+        std::cout << "Loading textures..." << std::endl;
         res.LoadTexture("Pacman1", "assets/sprites/pacman-right/1.png");
         res.LoadTexture("Pacman2", "assets/sprites/pacman-right/2.png");
         res.LoadTexture("Pacman3", "assets/sprites/pacman-right/3.png");
@@ -54,6 +59,7 @@ public:
         res.LoadTexture("GhostScared", "assets/sprites/ghosts/blue_ghost.png");
 
         // 音频加载
+        std::cout << "Loading audios..." << std::endl;
         res.LoadAudio("Beginning", "assets/audios/pacman_beginning.wav");
         res.LoadAudio("Chomp",     "assets/audios/pacman_chomp.wav");
         res.LoadAudio("Death",     "assets/audios/pacman_death.wav");

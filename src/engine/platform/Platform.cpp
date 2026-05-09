@@ -204,7 +204,7 @@ void Platform::SetWindowTitle(WindowHandle window, const char* title) {
 void Platform::PumpEvents() {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) {
+        if (event.type == SDL_EVENT_QUIT || event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED) {
             s_shouldClose = true;
         }
     }

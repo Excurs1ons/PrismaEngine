@@ -1,5 +1,6 @@
 #include "RenderSystem.h"
 #include "../app/Engine.h"
+#include "../platform/Platform.h"
 #include "../logger/Logger.h"
 #include "../scene/Scene.h"
 #include "../transform/Camera.h"
@@ -127,11 +128,18 @@ void RenderSystem::BeginFrame() {
 
 void RenderSystem::EndFrame() {
     if (m_device && m_mainRenderPipeline) {
-        // [修复] 如果本帧没有通过 RenderScene 进行渲染，
-        // 则在 EndFrame 时尝试执行一次管线，处理全局提交的指令（如 Renderer2D 提交的）。
-
-        // 只有当队列不为空时才执行管线，或者根据需要调整判断条件
         auto& commands = Renderer::GetCommandQueue();
+        size_t cmdCount = commands.size();
+
+        // 每 5 秒真实时间记录一次 EndFrame 队列状态
+        static double lastLogTime = 0.0;
+        double now = Platform::GetTimeSeconds();
+        if (now - lastLogTime >= 5.0) {
+            LOG_INFO("RenderSystem", "EndFrame: {} 条命令, 管线已初始化={}, device={}",
+                     cmdCount, m_mainRenderPipeline != nullptr, m_device != nullptr);
+            lastLogTime = now;
+        }
+
         if (!commands.empty()) {
             RenderContext ctx;
             ctx.device = m_device.get();
@@ -139,11 +147,8 @@ void RenderSystem::EndFrame() {
             auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
             if (vkDevice) {
                 ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
-            } else {
-                ctx.commandBuffer = nullptr;
             }
 
-            // 获取默认相机数据（可能来自最后的 BeginScene）
             const auto& sceneData       = Renderer::GetSceneData();
             ctx.camera.viewMatrix       = sceneData.camera.viewMatrix;
             ctx.camera.projectionMatrix = sceneData.camera.projectionMatrix;
@@ -154,11 +159,9 @@ void RenderSystem::EndFrame() {
             ctx.frameIndex = m_device->GetCurrentFrameIndex();
             ctx.width      = m_desc.width;
             ctx.height     = m_desc.height;
-            ctx.deltaTime  = 0.016f;  // TODO: 传递真实 DeltaTime
+            ctx.deltaTime  = 0.016f;
 
             m_mainRenderPipeline->Execute(ctx);
-
-            // 执行完后清空队列，准备下一帧
             Renderer::ClearQueue();
         }
     }

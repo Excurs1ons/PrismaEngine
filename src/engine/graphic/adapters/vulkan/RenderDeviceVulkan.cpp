@@ -55,9 +55,13 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         }
 
         // 2. 选择物理设备
+        VkPhysicalDeviceFeatures features{};
+        features.samplerAnisotropy = VK_TRUE;
+
         vkb::PhysicalDeviceSelector selector{m_vkbInstance};
         auto phys_ret = selector.set_surface(m_surface)
                             .set_minimum_version(1, 3)
+                            .set_required_features(features)
                             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
                             .select();
         if (!phys_ret)

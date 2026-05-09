@@ -21,6 +21,7 @@
 #include "mcp/tools/SceneTools.h"
 #include "mcp/tools/ECSTools.h"
 #include "mcp/tools/EngineTools.h"
+#include "mcp/transport/TransportTCP.h"
 #endif
 
 namespace Prisma {
@@ -152,9 +153,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
             
             dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
                 if (m_CurrentApp && !m_CurrentApp->ShouldCloseOnWindowClose()) {
+                    LOG_INFO("Engine", "应用拒绝关闭窗口请求");
                     return false;
                 }
-                LOG_INFO("Engine", "收到关闭窗口请求 (事件: {0})", event.GetName());
+                LOG_INFO("Engine", "收到关闭窗口请求，设置 m_Running=false");
                 m_Running = false;
                 return true;
             });
@@ -188,6 +190,12 @@ int Engine::Run(std::unique_ptr<Application> app) {
         // A. 事件泵送 (如果是非 Headless 模式)
         if (m_Window) {
             m_Window->OnUpdate();
+        } else {
+            Platform::PumpEvents();
+            if (Platform::ShouldClose(nullptr)) {
+                LOG_INFO("Engine", "平台层收到关闭请求");
+                m_Running = false;
+            }
         }
         
         if (!m_Running) break;
@@ -280,6 +288,13 @@ void Engine::Shutdown() {
 
     if (m_RenderSystem) {
         m_RenderSystem->Shutdown();
+    }
+
+    // 显式销毁渲染窗口，避免 SDL_DestroyWindow 推迟到 Engine 析构
+    // 在 Vulkan 下，若 VMA/Device 已 shutdown 后仍持有窗口，窗口关闭可能无响应
+    if (m_Window) {
+        m_Window->Shutdown();
+        m_Window.reset();
     }
 
     m_Systems.clear();

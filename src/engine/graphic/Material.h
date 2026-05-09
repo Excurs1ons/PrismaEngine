@@ -12,6 +12,8 @@ namespace Prisma::Graphic {
 class ITexture;
 class IBuffer;
 class IShader;
+class IDescriptorSet;
+class IDescriptorSetLayout;
 
 /**
  * @brief 材质参数值 (统一存储)
@@ -54,8 +56,9 @@ private:
     std::shared_ptr<IShader> m_Shader;
     std::unordered_map<std::string, MaterialParamValue> m_Params;
     
-    // 底层 Vulkan Descriptor Set 缓存 (由 RHI 管理)
-    void* m_DescriptorSetHandle = nullptr; 
+    // 底层描述符集缓存
+    std::shared_ptr<IDescriptorSet> m_DescriptorSet;
+    std::shared_ptr<IDescriptorSetLayout> m_DescriptorSetLayout;
 };
 
 } // namespace Prisma::Graphic

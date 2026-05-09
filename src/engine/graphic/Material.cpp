@@ -2,6 +2,7 @@
 #include "graphic/interfaces/IShader.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IResourceManager.h"
+#include "graphic/interfaces/IDescriptorSet.h"
 #include "RenderResourceManager.h"
 #include "app/Engine.h"
 #include "graphic/RenderSystem.h"
@@ -127,7 +128,7 @@ void Material::Bind(ICommandBuffer* cmd) {
         auto texture = std::get<std::shared_ptr<ITexture>>(it->second);
         if (texture) {
             // 获取或创建描述符集
-            if (!m_DescriptorSetHandle) {
+            if (!m_DescriptorSet) {
                 auto* engine = &Engine::Get();
                 auto* rf = engine->GetRenderSystem()->GetDevice()->GetResourceFactory();
                 
@@ -135,23 +136,26 @@ void Material::Bind(ICommandBuffer* cmd) {
                 const ShaderResource* resInfo = m_Shader->FindResourceByBindPoint(0, 0);
                 if (resInfo) {
                     std::vector<ShaderResource> resources = { *resInfo };
-                    auto layout = rf->CreateDescriptorSetLayout(resources);
-                    auto ds = rf->CreateDescriptorSet(layout.get());
                     
-                    // 这里由于接口限制，暂时通过强转缓存句柄
-                    // 生产环境下应该有更好的 DescriptorSet 管理器
-                    m_DescriptorSetHandle = ds.get();
-                    // 增加引用计数以防销毁 (这是一个 HACK，为了演示)
-                    static std::vector<std::shared_ptr<IDescriptorSet>> s_KeepAlive;
-                    s_KeepAlive.push_back(ds);
+                    // [改动] 直接使用成员变量管理生命周期
+                    // 目的：摆脱 void* 强转和全局静态变量 s_KeepAlive。
+                    // 过程：创建布局和描述符集并存入成员 shared_ptr。
+                    m_DescriptorSetLayout = rf->CreateDescriptorSetLayout(resources);
+                    m_DescriptorSet = rf->CreateDescriptorSet(m_DescriptorSetLayout.get());
+                    
+                    if (m_DescriptorSet) {
+                        // [修复] 仅在创建时绑定并更新一次
+                        // 原因：频繁调用 Update (vkUpdateDescriptorSets) 会导致描述符集在录制期间失效。
+                        //       对于静态材质参数，初始化一次即可。
+                        auto defaultSampler = Engine::Get().GetRenderResourceManager()->GetDefaultSampler();
+                        m_DescriptorSet->BindTexture(0, texture.get(), defaultSampler.get());
+                        m_DescriptorSet->Update();
+                    }
                 }
             }
 
-            if (m_DescriptorSetHandle) {
-                auto* ds = static_cast<IDescriptorSet*>(m_DescriptorSetHandle);
-                ds->BindTexture(0, texture.get(), nullptr);
-                ds->Update();
-                cmd->BindDescriptorSet(0, ds);
+            if (m_DescriptorSet) {
+                cmd->BindDescriptorSet(0, m_DescriptorSet.get());
             }
         }
     }
