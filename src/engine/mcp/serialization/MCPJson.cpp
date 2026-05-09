@@ -20,7 +20,7 @@ std::optional<MCPRequest> MCPRequest::fromJson(const nlohmann::json& j) {
     req.jsonrpc = j.value("jsonrpc", "2.0");
     req.method  = j["method"].get<std::string>();
     req.params  = j.value("params", nlohmann::json::object());
-    req.id      = j.value("id", nullptr);
+    req.id      = j.value("id", nlohmann::json());  // nullptr deduces nullptr_t - use json() instead
     return req;
 }
 

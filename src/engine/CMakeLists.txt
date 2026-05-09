@@ -487,6 +487,45 @@ if(PRISMA_ENABLE_MCP)
     )
 
     # xxhash for hash-based delta tracking
-    FetchContent_MakeAvailable(xxhash)
-    target_link_libraries(Engine PRIVATE xxhash::xxhash)
+    # Manually create xxhash target (CMakeLists.txt in cmake_unofficial/ is incompatible with CMake 3.31+)
+    add_library(xxhash STATIC "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src/xxhash.c")
+    target_include_directories(xxhash PUBLIC "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src")
+    set_target_properties(xxhash PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(Engine PRIVATE xxhash)
+
+    # TransportTCP 需要 Winsock2 (Windows)
+    if(WIN32)
+        target_link_libraries(Engine PRIVATE ws2_32)
+    endif()
+
+    # MCP 自测工具 (可选)
+    option(PRISMA_BUILD_MCP_TESTS "Build MCP self-test" ON)
+    if(PRISMA_BUILD_MCP_TESTS)
+        # 直接包含 MCP 源文件，不链接 Engine DLL (避免 Vulkan/SDL 依赖)
+        add_executable(test_mcp_core
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp/test_mcp_core.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPServer.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/serialization/MCPJson.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPTool.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPSession.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/DeltaTracker.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/TokenBudget.cpp"
+        )
+        target_compile_definitions(test_mcp_core PRIVATE
+            PRISMA_ENABLE_MCP=1
+        )
+        target_include_directories(test_mcp_core PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp"  # Logger.h stub (overrides engine Logger.h)
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/logger"
+            "${CMAKE_CURRENT_SOURCE_DIR}/core"
+            "${PRISMA_GLOBAL_DEPS_DIR}/nlohmann_json-src/single_include"
+            "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src"
+        )
+        target_link_libraries(test_mcp_core PRIVATE xxhash)
+        set_target_properties(test_mcp_core PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/mcp"
+        )
+    endif()
 endif()
