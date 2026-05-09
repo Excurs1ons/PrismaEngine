@@ -49,6 +49,13 @@ void DeltaTracker::recomputeRootHash() const {
         {"asset", m_AssetHash},
         {"scene", m_SceneHash}
     };
+
+    // Include entity hashes in root hash calculation
+    for (const auto& [entityId, hash] : m_EntityHashes) {
+        std::string key = "entity_" + std::to_string(entityId);
+        entries.emplace_back(key, hash);
+    }
+
     std::sort(entries.begin(), entries.end());
 
     std::string combined;
@@ -78,7 +85,8 @@ DeltaResult DeltaTracker::ComputeDelta(Hash64 knownRootHash, const std::string& 
 
     for (const auto& [id, hash] : m_EntityHashes) {
         auto prevIt = m_PreviousEntityHashes.find(id);
-        if (prevIt == m_PreviousEntityHashes.end() || prevIt->second != hash) {
+        // Only count as "changed" if we have a meaningful previous hash (not 0)
+        if (prevIt != m_PreviousEntityHashes.end() && prevIt->second != 0 && prevIt->second != hash) {
             changedCount++;
         }
     }
