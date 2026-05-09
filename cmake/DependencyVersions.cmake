@@ -94,6 +94,10 @@ set(PRISMA_DEP_MATRIX_VERSION "1.0.0")
 # 最后验证日期
 set(PRISMA_DEP_LAST_VERIFIED "2025-01-24")
 
+# xxHash - 极快哈希 (MCP 增量追踪)
+# GitHub: https://github.com/Cyan4973/xxHash
+set(PRISMA_DEP_XXHASH_VERSION "v0.8.2")
+
 # 已知问题 / Known Issues
 set(PRISMA_DEP_KNOWN_ISSUES
     "SDL3 3.2.28+: Android 构建需要 NDK r25+"

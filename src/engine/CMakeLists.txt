@@ -440,3 +440,53 @@ target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/vm
 if(LINUX)
     target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/zstd-src/lib")
 endif()
+
+# ========== MCP Server ==========
+
+if(PRISMA_ENABLE_MCP)
+    target_sources(Engine PRIVATE
+        mcp/MCPServer.cpp
+        mcp/MCPServer.h
+        mcp/MCPTool.cpp
+        mcp/MCPTool.h
+        mcp/MCPSubSystem.cpp
+        mcp/MCPSubSystem.h
+        mcp/MCPSession.cpp
+        mcp/MCPSession.h
+        mcp/serialization/MCPJson.cpp
+        mcp/serialization/MCPJson.h
+        mcp/session/DeltaTracker.cpp
+        mcp/session/DeltaTracker.h
+        mcp/session/TokenBudget.h
+        mcp/session/TokenBudget.cpp
+        mcp/transport/Transport.h
+        mcp/transport/TransportStdio.cpp
+        mcp/transport/TransportStdio.h
+        mcp/transport/TransportTCP.cpp
+        mcp/transport/TransportTCP.h
+        mcp/tools/SceneTools.cpp
+        mcp/tools/SceneTools.h
+        mcp/tools/ECSTools.cpp
+        mcp/tools/ECSTools.h
+        mcp/tools/EngineTools.cpp
+        mcp/tools/EngineTools.h
+        mcp/tools/DebugTools.cpp
+        mcp/tools/DebugTools.h
+        mcp/tools/AssetTools.cpp
+        mcp/tools/AssetTools.h
+        mcp/tools/EditorTools.cpp
+        mcp/tools/EditorTools.h
+        mcp/tools/GameTools.cpp
+        mcp/tools/GameTools.h
+    )
+
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_MCP=1)
+
+    target_include_directories(Engine PRIVATE
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/mcp>
+    )
+
+    # xxhash for hash-based delta tracking
+    FetchContent_MakeAvailable(xxhash)
+    target_link_libraries(Engine PRIVATE xxhash::xxhash)
+endif()
