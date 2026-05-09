@@ -22,6 +22,7 @@ private:
 
     uint16_t m_Port;
     std::thread m_AcceptThread;
+    std::thread m_ReadThread;
     std::atomic<bool> m_Running{false};
     MCPMessageHandler m_Handler;
     int m_ServerSocket = -1;
