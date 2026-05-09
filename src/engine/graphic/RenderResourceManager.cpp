@@ -83,14 +83,20 @@ void RenderResourceManager::Update(Timestep ts) {
 }
 
 void RenderResourceManager::Shutdown() {
+    LOG_INFO("RenderResourceManager", "正在关闭渲染资源管理器...");
     m_shouldStopLoading = true;
     m_loadQueueCV.notify_all();
     if (m_loadingThread.joinable()) {
+        LOG_INFO("RenderResourceManager", "等待加载线程结束...");
         m_loadingThread.join();
+        LOG_INFO("RenderResourceManager", "加载线程已结束");
     }
 
+    LOG_INFO("RenderResourceManager", "释放所有 GPU 资源...");
     ReleaseAllResources();
+    m_defaultSampler.reset();  // 在设备销毁前释放默认采样器
     m_initialized = false;
+    LOG_INFO("RenderResourceManager", "渲染资源管理器已关闭");
 }
 
 std::shared_ptr<ITexture> RenderResourceManager::LoadTexture(const std::string& filename, bool generateMips) {

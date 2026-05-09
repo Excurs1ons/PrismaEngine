@@ -2,6 +2,9 @@
 #include <iostream>
 #include <sstream>
 #include <cstdio>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 namespace Prisma {
 namespace MCP {
@@ -20,6 +23,13 @@ bool TransportStdio::Start(MCPMessageHandler handler) {
 void TransportStdio::Stop() {
     m_Running = false;
     if (m_ReadThread.joinable()) {
+#ifdef _WIN32
+        // 取消待决的控制台输入读取，以唤醒因 std::getline(std::cin) 阻塞的读取线程
+        HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
+        if (hStdin != INVALID_HANDLE_VALUE) {
+            CancelIoEx(hStdin, nullptr);
+        }
+#endif
         m_ReadThread.join();
     }
 }

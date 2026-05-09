@@ -95,29 +95,38 @@ void RenderSystem::Update(Timestep ts) {
 
 void RenderSystem::Shutdown() {
     if (!m_device) {
+        LOG_INFO("Renderer", "渲染系统无需关闭（无设备）");
         return;
     }
 
     LOG_INFO("Renderer", "正在关闭渲染器...");
 
     // 关闭 2D 渲染器
+    LOG_INFO("Renderer", "关闭 2D 渲染器...");
     Renderer2D::Shutdown();
+    LOG_INFO("Renderer", "2D 渲染器已关闭");
 
     // 1. 先销毁依赖设备的管线和资源管理器
     if (m_mainRenderPipeline) {
+        LOG_INFO("Renderer", "关闭主渲染管线...");
         m_mainRenderPipeline->Shutdown();
         m_mainRenderPipeline.reset();
+        LOG_INFO("Renderer", "主渲染管线已关闭");
     }
 
     if (m_renderResourceManager) {
+        LOG_INFO("Renderer", "关闭渲染资源管理器...");
         m_renderResourceManager->Shutdown();
         m_renderResourceManager.reset();
+        LOG_INFO("Renderer", "渲染资源管理器已关闭");
     }
 
     // 2. 最后关闭设备并置空，确保此函数是幂等的
     if (m_device) {
+        LOG_INFO("Renderer", "关闭渲染设备...");
         m_device->Shutdown();
         m_device.reset();
+        LOG_INFO("Renderer", "渲染设备已关闭");
     }
 }
 

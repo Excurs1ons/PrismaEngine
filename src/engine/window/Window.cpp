@@ -28,8 +28,10 @@ void Window::Init(const WindowProps& props) {
 
 void Window::Shutdown() {
     if (m_Window) {
+        LOG_INFO("Window", "正在销毁 SDL 窗口...");
         SDL_DestroyWindow(m_Window);
         m_Window = nullptr;
+        LOG_INFO("Window", "SDL 窗口已销毁");
     }
 }
 

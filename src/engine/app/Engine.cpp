@@ -13,6 +13,7 @@
 #include "PhysicsSystem.h"
 #include "scripting/MonoRuntime.h"
 #include "core/ECS.h"
+#include <typeinfo>
 #include "threading/ThreadManager.h"
 #include "app/CommandLineParser.h"
 
@@ -227,17 +228,23 @@ int Engine::Run(std::unique_ptr<Application> app) {
         }
     }
 
+    LOG_INFO("Engine", "应用 OnShutdown...");
     m_CurrentApp->OnShutdown();
+    LOG_INFO("Engine", "应用 OnShutdown 完成");
     
     // 确保在销毁应用程序（及其中资源，如被析构的 VulkanBuffer/Texture）之前，GPU 已完成所有工作。
     // 这可以防止触发 VUID-vkDestroyBuffer-buffer-00922 等验证错误。
+    LOG_INFO("Engine", "等待 GPU 空闲...");
     if (GetRenderSystem() && GetRenderSystem()->GetDevice()) {
         GetRenderSystem()->GetDevice()->WaitForIdle();
     }
+    LOG_INFO("Engine", "GPU 已空闲");
 
     // Application/Layer 可能仍持有 ITexture/IBuffer 等 GPU 资源。
     // 必须在 RenderSystem/VMA allocator 关闭前释放它们，避免资源晚于 allocator 析构。
+    LOG_INFO("Engine", "销毁应用 (释放 GPU 资源)...");
     m_CurrentApp.reset();
+    LOG_INFO("Engine", "应用已销毁，Run() 即将返回");
 
     return 0;
 }
@@ -279,23 +286,35 @@ void Engine::Shutdown() {
     // RenderSystem 必须最后关闭。
     // 其他系统、场景对象以及 Application/Layer 可能还持有 GPU 资源，
     // 若先销毁 VMA allocator，会在这些资源稍后析构时触发未释放断言。
-    for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) {
-        if (it->get() == m_RenderSystem) {
-            continue;
+    {
+        int idx = 0;
+        for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) {
+            const char* name = typeid(**it).name();
+            if (it->get() == m_RenderSystem) {
+                LOG_INFO("Engine", "跳过 RenderSystem ({}) [{}]", idx, name);
+                continue;
+            }
+            LOG_INFO("Engine", "关闭子系统 #{} [{}]...", idx, name);
+            (*it)->Shutdown();
+            LOG_INFO("Engine", "子系统 #{} [{}] 已关闭", idx, name);
+            ++idx;
         }
-        (*it)->Shutdown();
     }
 
+    LOG_INFO("Engine", "正在关闭渲染系统...");
     if (m_RenderSystem) {
         m_RenderSystem->Shutdown();
     }
+    LOG_INFO("Engine", "渲染系统已关闭");
 
     // 显式销毁渲染窗口，避免 SDL_DestroyWindow 推迟到 Engine 析构
     // 在 Vulkan 下，若 VMA/Device 已 shutdown 后仍持有窗口，窗口关闭可能无响应
+    LOG_INFO("Engine", "正在销毁窗口...");
     if (m_Window) {
         m_Window->Shutdown();
         m_Window.reset();
     }
+    LOG_INFO("Engine", "窗口已销毁");
 
     m_Systems.clear();
     
