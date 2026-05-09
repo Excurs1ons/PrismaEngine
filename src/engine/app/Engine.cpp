@@ -67,7 +67,29 @@ int Engine::Initialize() {
 
 #if defined(PRISMA_ENABLE_MCP)
     LOG_INFO("Engine", "MCP 子系统正在初始化");
+
+    // 读取命令行配置 MCP 传输
+    auto& cli = CommandLineParser::Get();
+    std::string transportType = "stdio";
+    uint16_t tcpPort = 3100;
+
+    if (cli.IsOptionSet("mcp-transport")) {
+        transportType = cli.GetOptionValue("mcp-transport");
+    }
+    if (cli.IsOptionSet("mcp-port")) {
+        auto portStr = cli.GetOptionValue("mcp-port");
+        if (!portStr.empty()) tcpPort = static_cast<uint16_t>(std::stoul(portStr));
+    }
+
+    // 创建 MCP 子系统并设置传输
     auto* mcp = AddSystem<MCP::MCPSubSystem>();
+
+    if (transportType == "tcp") {
+        LOG_INFO("MCP", "TCP transport selected (port: {})", tcpPort);
+        mcp->SetTransport(std::make_unique<MCP::TransportTCP>(tcpPort));
+    } else {
+        LOG_INFO("MCP", "Stdio transport selected (default)");
+    }
 
     // 注册引擎核心工具
     mcp->RegisterTool<MCP::SceneHierarchyTool>(this);
