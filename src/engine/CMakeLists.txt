@@ -527,5 +527,33 @@ if(PRISMA_ENABLE_MCP)
         set_target_properties(test_mcp_core PROPERTIES
             RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/mcp"
         )
+
+        # MCP Stdio 集成测试服务器 (被 Python 客户端调用)
+        add_executable(test_mcp_stdio
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp/test_mcp_stdio.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPServer.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/serialization/MCPJson.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPTool.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPSession.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/DeltaTracker.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/TokenBudget.cpp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/transport/TransportStdio.cpp"
+        )
+        target_compile_definitions(test_mcp_stdio PRIVATE
+            PRISMA_ENABLE_MCP=1
+        )
+        target_include_directories(test_mcp_stdio PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp"
+            "${CMAKE_CURRENT_SOURCE_DIR}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mcp"
+            "${CMAKE_CURRENT_SOURCE_DIR}/logger"
+            "${CMAKE_CURRENT_SOURCE_DIR}/core"
+            "${PRISMA_GLOBAL_DEPS_DIR}/nlohmann_json-src/single_include"
+            "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src"
+        )
+        target_link_libraries(test_mcp_stdio PRIVATE xxhash)
+        set_target_properties(test_mcp_stdio PROPERTIES
+            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/mcp"
+        )
     endif()
 endif()
