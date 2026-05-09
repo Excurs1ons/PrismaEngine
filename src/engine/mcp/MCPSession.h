@@ -1,4 +1,5 @@
 #pragma once
+#include "Export.h"
 #include "session/DeltaTracker.h"
 #include "session/TokenBudget.h"
 #include <memory>

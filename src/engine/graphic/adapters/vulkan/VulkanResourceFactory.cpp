@@ -16,6 +16,7 @@
 #endif
 #include "logger/Logger.h"
 #include <fstream>
+#include <cstring>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -373,7 +374,157 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(const v
         return nullptr;
     }
 
-    return CreateTextureImpl(desc);
+    // Step 1: 创建 VkImage + VkImageView + 初始布局转换 → GENERAL
+    auto texture = CreateTextureImpl(desc);
+    if (!texture) {
+        LOG_ERROR("Vulkan", "CreateTextureFromMemory 创建纹理失败");
+        return nullptr;
+    }
+
+    // Step 2: 创建 staging buffer（CPU→GPU，TRANSFER_SRC）
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = dataSize;
+    bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    VmaAllocationCreateInfo allocInfo{};
+    allocInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+
+    VkBuffer stagingBuffer = VK_NULL_HANDLE;
+    VmaAllocation stagingAllocation = VK_NULL_HANDLE;
+    if (vmaCreateBuffer(m_vmaAllocator, &bufferInfo, &allocInfo, &stagingBuffer, &stagingAllocation, nullptr) != VK_SUCCESS) {
+        LOG_ERROR("Vulkan", "CreateTextureFromMemory 创建 staging buffer 失败");
+        return texture; // 返回空纹理，比返回 nullptr 更安全
+    }
+
+    // 拷贝数据到 staging buffer
+    void* mappedData = nullptr;
+    if (vmaMapMemory(m_vmaAllocator, stagingAllocation, &mappedData) == VK_SUCCESS) {
+        std::memcpy(mappedData, data, static_cast<size_t>(dataSize));
+        vmaUnmapMemory(m_vmaAllocator, stagingAllocation);
+    } else {
+        LOG_ERROR("Vulkan", "CreateTextureFromMemory 映射 staging buffer 失败");
+        vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingAllocation);
+        return texture;
+    }
+
+    // Step 3: 临时 command buffer → GENERAL→TRANSFER_DST → vkCmdCopyBufferToImage → TRANSFER_DST→GENERAL
+    auto* vkTexture = static_cast<VulkanTexture*>(texture.get());
+    VkImage image = vkTexture->GetVkImage();
+
+    const uint32_t mipLevels = desc.mipLevels > 0 ? desc.mipLevels : 1;
+    const VkImageAspectFlags aspect = desc.allowDepthStencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
+    VkCommandPool tempPool = VK_NULL_HANDLE;
+    VkCommandPoolCreateInfo poolInfo{};
+    poolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    poolInfo.queueFamilyIndex = m_device->GetGraphicsQueueFamily();
+    poolInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+
+    if (vkCreateCommandPool(m_vkDevice, &poolInfo, nullptr, &tempPool) == VK_SUCCESS) {
+        VkCommandBufferAllocateInfo cmdAllocInfo{};
+        cmdAllocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmdAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmdAllocInfo.commandPool = tempPool;
+        cmdAllocInfo.commandBufferCount = 1;
+
+        VkCommandBuffer cmdBuffer = VK_NULL_HANDLE;
+        if (vkAllocateCommandBuffers(m_vkDevice, &cmdAllocInfo, &cmdBuffer) == VK_SUCCESS) {
+            VkCommandBufferBeginInfo beginInfo{};
+            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            vkBeginCommandBuffer(cmdBuffer, &beginInfo);
+
+            // Barrier 1: GENERAL → TRANSFER_DST_OPTIMAL
+            VkImageMemoryBarrier preBarrier{};
+            preBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            preBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            preBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            preBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            preBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            preBarrier.image = image;
+            preBarrier.subresourceRange.aspectMask = aspect;
+            preBarrier.subresourceRange.baseMipLevel = 0;
+            preBarrier.subresourceRange.levelCount = mipLevels;
+            preBarrier.subresourceRange.baseArrayLayer = 0;
+            preBarrier.subresourceRange.layerCount = desc.arraySize;
+            preBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            preBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+            vkCmdPipelineBarrier(
+                cmdBuffer,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1, &preBarrier
+            );
+
+            // vkCmdCopyBufferToImage
+            VkBufferImageCopy copyRegion{};
+            copyRegion.bufferOffset = 0;
+            copyRegion.bufferRowLength = 0;
+            copyRegion.bufferImageHeight = 0;
+            copyRegion.imageSubresource.aspectMask = aspect;
+            copyRegion.imageSubresource.mipLevel = 0;
+            copyRegion.imageSubresource.baseArrayLayer = 0;
+            copyRegion.imageSubresource.layerCount = desc.arraySize;
+            copyRegion.imageOffset = {0, 0, 0};
+            copyRegion.imageExtent = {
+                static_cast<uint32_t>(desc.width),
+                static_cast<uint32_t>(desc.height),
+                desc.depth > 0 ? static_cast<uint32_t>(desc.depth) : 1u
+            };
+
+            vkCmdCopyBufferToImage(cmdBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copyRegion);
+
+            // Barrier 2: TRANSFER_DST_OPTIMAL → GENERAL（匹配现有的描述符布局期望）
+            VkImageMemoryBarrier postBarrier{};
+            postBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+            postBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            postBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            postBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            postBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            postBarrier.image = image;
+            postBarrier.subresourceRange.aspectMask = aspect;
+            postBarrier.subresourceRange.baseMipLevel = 0;
+            postBarrier.subresourceRange.levelCount = mipLevels;
+            postBarrier.subresourceRange.baseArrayLayer = 0;
+            postBarrier.subresourceRange.layerCount = desc.arraySize;
+            postBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            postBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+            vkCmdPipelineBarrier(
+                cmdBuffer,
+                VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                0,
+                0, nullptr,
+                0, nullptr,
+                1, &postBarrier
+            );
+
+            vkEndCommandBuffer(cmdBuffer);
+
+            VkSubmitInfo submitInfo{};
+            submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &cmdBuffer;
+
+            vkQueueSubmit(m_device->GetGraphicsQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+            vkQueueWaitIdle(m_device->GetGraphicsQueue());
+
+            vkFreeCommandBuffers(m_vkDevice, tempPool, 1, &cmdBuffer);
+        }
+        vkDestroyCommandPool(m_vkDevice, tempPool, nullptr);
+    }
+
+    // 清理 staging buffer
+    vmaDestroyBuffer(m_vmaAllocator, stagingBuffer, stagingAllocation);
+
+    return texture;
 }
 
 std::unique_ptr<IBuffer> VulkanResourceFactory::CreateBufferImpl(const BufferDesc& desc) {
@@ -524,7 +675,7 @@ std::shared_ptr<Prisma::Graphic::IDescriptorSet> VulkanResourceFactory::CreateDe
         return nullptr;
     }
 
-    return std::make_shared<VulkanDescriptorSet>(m_vkDevice, set);
+    return std::make_shared<VulkanDescriptorSet>(m_vkDevice, set, std::static_pointer_cast<VulkanDescriptorSetLayout>(vkLayout->shared_from_this()));
 }
 
 std::shared_ptr<Prisma::Graphic::IDescriptorSetLayout> VulkanResourceFactory::CreateDescriptorSetLayout(const std::vector<Prisma::Graphic::ShaderResource>& resources) {

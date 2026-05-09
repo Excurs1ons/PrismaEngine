@@ -8,6 +8,7 @@
 #include "graphic/interfaces/IResourceFactory.h"
 #include "graphic/pipelines/forward/ForwardPipeline.h"
 #include <chrono>
+#include <filesystem>
 #include <fstream>
 #include <algorithm>
 #include <stb_image.h>
@@ -532,55 +533,150 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
     if (cached) return cached;
 
     // [修复] 处理内置默认 Shader
-    if (filename == "Default") {
+    if (filename == "Default" || filename == "DefaultPixel") {
         ShaderDesc desc;
-        desc.name = "Default";
+        desc.name = filename;
         desc.entryPoint = "main";
-        desc.type = ShaderType::Vertex; // 内部实现会处理成程序组
         desc.language = ShaderLanguage::SPIRV;
         
         // 创建默认反射
         ShaderReflection reflection;
-        ShaderResource transformRes;
-        transformRes.Name = "Transform";
-        transformRes.ResourceType = ShaderResource::Type::UniformBuffer;
-        transformRes.Set = 0;
-        transformRes.Binding = 0;
-        reflection.Resources.push_back(transformRes);
+        
+        const uint32_t* spirv_ptr = nullptr;
+        size_t spirv_size = 0;
+
+        if (filename == "Default") {
+            desc.type = ShaderType::Vertex;
+            spirv_ptr = Vulkan::VULKAN_DEFAULT_VERT_SPV;
+            spirv_size = sizeof(Vulkan::VULKAN_DEFAULT_VERT_SPV);
+            
+            // 保持 Transform 作为备选，或者由 Push Constants 处理
+            ShaderResource transformRes;
+            transformRes.Name = "Transform";
+            transformRes.ResourceType = ShaderResource::Type::UniformBuffer;
+            transformRes.Set = 0;
+            transformRes.Binding = 1; 
+            reflection.Resources.push_back(transformRes);
+        } else {
+            desc.type = ShaderType::Pixel;
+            spirv_ptr = Vulkan::VULKAN_DEFAULT_FRAG_SPV;
+            spirv_size = sizeof(Vulkan::VULKAN_DEFAULT_FRAG_SPV);
+
+            // 2D 渲染主要使用纹理，将其放在 Set 0, Binding 0
+            ShaderResource albedoRes;
+            albedoRes.Name = "AlbedoMap";
+            albedoRes.ResourceType = ShaderResource::Type::Sampler2D;
+            albedoRes.Set = 0;
+            albedoRes.Binding = 0;
+            reflection.Resources.push_back(albedoRes);
+        }
+
+        // === 日志：内嵌 SPIR-V 着色器信息 ===
+        {
+            auto shaderTypeName = (desc.type == ShaderType::Vertex) ? "Vertex" : "Pixel";
+            auto magicHex = static_cast<unsigned long>(spirv_ptr[0]);
+            LOG_INFO("RenderResourceManager", "加载内嵌 SPIR-V: name={0} type={1} | size={2} bytes ({3} words) | magic=0x{4:08X}",
+                filename, shaderTypeName, spirv_size, spirv_size / sizeof(uint32_t), magicHex);
+            if (spirv_ptr[0] != 0x07230203) {
+                LOG_WARNING("RenderResourceManager", "内嵌 SPIR-V magic number 异常: 0x{0:08X} (预期 0x07230203)", magicHex);
+            }
+        }
 
         // 使用硬编码的字节码
         std::vector<uint8_t> bytecode(
-            reinterpret_cast<const uint8_t*>(Vulkan::VULKAN_DEFAULT_VERT_SPV),
-            reinterpret_cast<const uint8_t*>(Vulkan::VULKAN_DEFAULT_VERT_SPV) + sizeof(Vulkan::VULKAN_DEFAULT_VERT_SPV)
+            reinterpret_cast<const uint8_t*>(spirv_ptr),
+            reinterpret_cast<const uint8_t*>(spirv_ptr) + spirv_size
         );
 
         auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, reflection);
         if (!shader) return nullptr;
         
         auto sharedShader = std::shared_ptr<IShader>(std::move(shader));
-        RegisterResource(sharedShader, "Default");
+        RegisterResource(sharedShader, filename);
         return sharedShader;
     }
 
-    std::ifstream file(filename);
-    if (!file.is_open()) return nullptr;
-    std::string source((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    // === 详细日志：记录 SPIR-V 文件的绝对路径、大小和 magic number ===
+    std::error_code ec;
+    auto absPath = std::filesystem::absolute(std::filesystem::path(filename), ec);
+    if (ec) {
+        LOG_WARNING("RenderResourceManager", "无法解析 SPIR-V 文件绝对路径: {0} (err={1})", filename, ec.message());
+    }
+
+    std::ifstream file(filename, std::ios::binary);
+    if (!file.is_open()) {
+        if (!absPath.empty()) {
+            LOG_ERROR("RenderResourceManager", "无法打开 SPIR-V 文件: {0}", absPath.string());
+        } else {
+            LOG_ERROR("RenderResourceManager", "无法打开 SPIR-V 文件: {0}", filename);
+        }
+        return nullptr;
+    }
+    
+    // 获取文件大小
+    file.seekg(0, std::ios::end);
+    std::streamoff rawSize = file.tellg();
+    size_t size = static_cast<size_t>(rawSize);
+    file.seekg(0, std::ios::beg);
+
+    // 读取前 4 字节验证 SPIR-V magic number
+    uint32_t magic = 0;
+    if (size >= 4) {
+        file.read(reinterpret_cast<char*>(&magic), 4);
+        file.seekg(0, std::ios::beg); // 重新定位到文件头
+    }
+
+    {
+        auto magicHex = static_cast<unsigned long>(magic);
+        if (!absPath.empty()) {
+            LOG_INFO("RenderResourceManager", "加载 SPIR-V: {0} | size={1} bytes | magic=0x{2:08X}",
+                absPath.string(), size, magicHex);
+        } else {
+            LOG_INFO("RenderResourceManager", "加载 SPIR-V: {0} | magic=0x{1:08X}", filename, magicHex);
+        }
+
+        if (magic != 0x07230203) {
+            LOG_WARNING("RenderResourceManager", "SPIR-V magic number 异常: 0x{0:08X} (预期 0x07230203)", magicHex);
+        }
+    }
+
+    if (size == 0 || size % 4 != 0) {
+        LOG_ERROR("RenderResourceManager", "SPIR-V 文件大小无效或未 4 字节对齐: {0} ({1} bytes, {2}%4={3})",
+            filename, size, size, size % 4);
+        return nullptr;
+    }
+
+    std::vector<uint8_t> bytecode(size);
+    file.read(reinterpret_cast<char*>(bytecode.data()), size);
+    size_t bytesRead = static_cast<size_t>(file.gcount());
+    if (bytesRead != size) {
+        LOG_ERROR("RenderResourceManager", "SPIR-V 文件读取不完整: 期望 {0} bytes, 实际读取 {1} bytes", size, bytesRead);
+        return nullptr;
+    }
     
     ShaderDesc desc;
     desc.filename = filename;
-    desc.source = source;
     desc.entryPoint = entryPoint;
     desc.target = target;
     desc.defines = defines;
     desc.language = ShaderLanguage::SPIRV;
 
-    if (std::filesystem::path(filename).extension() != ".spv") {
-        LOG_WARNING("RenderResourceManager", "仅支持加载预编译的 SPIR-V 着色器: {0}", filename);
-        return nullptr;
+    // [修复] 为内置的 Renderer2D 着色器提供手动反射信息，
+    // 因为目前引擎还没有自动 SPIR-V 反射解析器。
+    ShaderReflection reflection;
+    if (filename.find("Renderer2D.frag.spv") != std::string::npos) {
+        ShaderResource albedoRes;
+        albedoRes.Name = "AlbedoMap";
+        albedoRes.ResourceType = ShaderResource::Type::Sampler2D;
+        albedoRes.Set = 0;
+        albedoRes.Binding = 0;
+        reflection.Resources.push_back(albedoRes);
+        desc.type = ShaderType::Pixel;
+    } else if (filename.find("Renderer2D.vert.spv") != std::string::npos) {
+        desc.type = ShaderType::Vertex;
     }
 
-    std::vector<uint8_t> bytecode(source.begin(), source.end());
-    auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, ShaderReflection{});
+    auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, reflection);
     return shader ? std::shared_ptr<IShader>(std::move(shader)) : nullptr;
 }
 

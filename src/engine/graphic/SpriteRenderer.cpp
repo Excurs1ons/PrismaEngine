@@ -1,6 +1,8 @@
 #include "SpriteRenderer.h"
 #include "RenderCommandContext.h"
+#include "Renderer2D.h"
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 
 namespace Prisma {
@@ -16,76 +18,50 @@ SpriteRenderer::SpriteRenderer() {
 }
 
 void SpriteRenderer::Render(RenderCommandContext* context) {
-    if (!m_visible || !m_texture || !context) {
+    if (!m_visible || !m_texture) {
         return;
     }
 
-    // 纹理坐标
-    Vector2 texCoords[4];
+    // 【修复】改用 Renderer2D::DrawQuad 替代手动顶点创建
+    // 这确保了 SpriteRenderer 使用统一的 2D 渲染管道（批处理 + OpaquePass 着色器）
+
+    // 计算纹理坐标（支持子矩形和翻转）
+    Vector2 uv[4];
     if (m_useSpriteRect) {
-        texCoords[0] = {m_spriteRect.x, m_spriteRect.y};
-        texCoords[1] = {m_spriteRect.x + m_spriteRect.z, m_spriteRect.y};
-        texCoords[2] = {m_spriteRect.x + m_spriteRect.z, m_spriteRect.y + m_spriteRect.w};
-        texCoords[3] = {m_spriteRect.x, m_spriteRect.y + m_spriteRect.w};
+        uv[0] = {m_spriteRect.x, m_spriteRect.y};
+        uv[1] = {m_spriteRect.x + m_spriteRect.z, m_spriteRect.y};
+        uv[2] = {m_spriteRect.x + m_spriteRect.z, m_spriteRect.y + m_spriteRect.w};
+        uv[3] = {m_spriteRect.x, m_spriteRect.y + m_spriteRect.w};
     } else {
-        texCoords[0] = {0.0f, 0.0f};
-        texCoords[1] = {1.0f, 0.0f};
-        texCoords[2] = {1.0f, 1.0f};
-        texCoords[3] = {0.0f, 1.0f};
+        uv[0] = {0.0f, 0.0f};
+        uv[1] = {1.0f, 0.0f};
+        uv[2] = {1.0f, 1.0f};
+        uv[3] = {0.0f, 1.0f};
     }
 
     // 应用翻转
     if (m_flipX) {
-        std::swap(texCoords[0].x, texCoords[1].x);
-        std::swap(texCoords[2].x, texCoords[3].x);
+        std::swap(uv[0].x, uv[1].x);
+        std::swap(uv[2].x, uv[3].x);
     }
     if (m_flipY) {
-        std::swap(texCoords[0].y, texCoords[3].y);
-        std::swap(texCoords[1].y, texCoords[2].y);
+        std::swap(uv[0].y, uv[3].y);
+        std::swap(uv[1].y, uv[2].y);
     }
 
-    // 顶点位置
-    Vector2 p1 = m_position;
-    Vector2 p2 = m_position + Vector2(m_size.x, 0.0f);
-    Vector2 p3 = m_position + m_size;
-    Vector2 p4 = m_position + Vector2(0.0f, m_size.y);
+    // 构建变换矩阵：Translate(Rotate(Scale))，以精灵中心为原点
+    // Renderer2D 的 Quad Mesh 中心在 (-0.5,-0.5)～(0.5,0.5)
+    Vector2 center = m_position + m_size * 0.5f;
+    Matrix4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(center, 0.0f));
 
-    // 如果有旋转
     if (std::abs(m_rotation) > 0.001f) {
-        float rad = glm::radians(m_rotation);
-        float cosA = std::cos(rad);
-        float sinA = std::sin(rad);
-        Vector2 center = m_position + m_size * 0.5f;
-
-        auto rotate = [&](Vector2 p) -> Vector2 {
-            Vector2 local = p - center;
-            return Vector2(
-                local.x * cosA - local.y * sinA + center.x,
-                local.x * sinA + local.y * cosA + center.y
-            );
-        };
-
-        p1 = rotate(p1);
-        p2 = rotate(p2);
-        p3 = rotate(p3);
-        p4 = rotate(p4);
+        transform = glm::rotate(transform, glm::radians(m_rotation), glm::vec3(0.0f, 0.0f, 1.0f));
     }
 
-    // 设置顶点数据
-    SpriteVertex vertices[4];
-    vertices[0] = {p1, texCoords[0], m_color};
-    vertices[1] = {p2, texCoords[1], m_color};
-    vertices[2] = {p3, texCoords[2], m_color};
-    vertices[3] = {p4, texCoords[3], m_color};
+    transform = glm::scale(transform, glm::vec3(m_size, 1.0f));
 
-    // 索引数据
-    uint32_t indices[] = { 0, 1, 2, 0, 2, 3 };
-
-    // 提交到上下文
-    context->SetTexture(m_texture.get(), 0);
-    context->SetVertexData(vertices, sizeof(vertices), sizeof(SpriteVertex));
-    context->SetIndexData(indices, sizeof(indices), true);
-    context->DrawIndexed(6);
+    // 通过 Renderer2D 的统一管道提交
+    Renderer2D::DrawQuad(transform, m_texture, uv, m_color);
 }
 
 } // namespace Graphic

@@ -1,7 +1,7 @@
-#pragma once
 #include "VulkanResources.h"
 #include <algorithm>
 #include "Export.h"
+#include "logger/Logger.h"
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -106,6 +106,13 @@ void VulkanDescriptorSet::BindTexture(uint32_t binding, ITexture* texture, ISamp
     auto vkTex = dynamic_cast<VulkanTexture*>(texture);
     if (!vkTex) return;
 
+    // [修复] 检查采样器是否有效
+    // 原因：Vulkan 规范要求 COMBINED_IMAGE_SAMPLER 必须包含有效的采样器。
+    //       若 sampler 为 nullptr，将导致驱动在更新描述符集时崩溃。
+    if (!sampler) {
+        LOG_ERROR("Vulkan", "BindTexture called with null sampler at binding {0}. This will likely cause a crash in vkUpdateDescriptorSets.", binding);
+    }
+
     WriteInfo write{};
     write.binding = binding;
     write.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -113,6 +120,8 @@ void VulkanDescriptorSet::BindTexture(uint32_t binding, ITexture* texture, ISamp
     write.imageInfo.imageView = vkTex->GetVkImageView();
     if (sampler) {
         write.imageInfo.sampler = (VkSampler)sampler->GetHandle();
+    } else {
+        write.imageInfo.sampler = VK_NULL_HANDLE;
     }
     write.isImage = true;
     m_writes.push_back(write);
@@ -134,6 +143,12 @@ void VulkanDescriptorSet::BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t
 
 void VulkanDescriptorSet::Update() {
     if (m_writes.empty()) return;
+
+    // [修复] 检查设备是否有效
+    if (m_device == VK_NULL_HANDLE) {
+        LOG_ERROR("Vulkan", "VulkanDescriptorSet::Update called with null device.");
+        return;
+    }
 
     std::vector<VkWriteDescriptorSet> vkWrites;
     for (auto& write : m_writes) {

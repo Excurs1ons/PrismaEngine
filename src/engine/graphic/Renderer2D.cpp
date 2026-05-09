@@ -2,6 +2,7 @@
 #include "OrthographicCamera.h"
 #include "Renderer.h"
 #include "Mesh.h"
+#include "Platform.h"
 #include "Material.h"
 #include "RenderResourceManager.h"
 #include "interfaces/IBuffer.h"
@@ -21,6 +22,7 @@ struct Renderer2D::Renderer2DData {
     std::shared_ptr<Material> DefaultMaterial;
     std::vector<std::shared_ptr<Material>> FrameMaterials;
     PrismaMath::mat4 ViewProjection;
+    CameraData LastCameraData; // 保存上一帧/批的相机数据，用于 Flush 后的重新开始
 };
 
 Renderer2D::Renderer2DData* Renderer2D::s_Data = nullptr;
@@ -83,6 +85,40 @@ void Renderer2D::Initialize() {
     }
 
     s_Data->DefaultMaterial = Material::CreateDefault();
+    
+    // 获取资源管理器
+    auto resourceManager = Engine::Get().GetRenderResourceManager();
+    if (!resourceManager) {
+        LOG_ERROR("Renderer2D", "无法获取资源管理器，2D 渲染器初始化可能不完整。");
+        return;
+    }
+
+    // 创建一个 1x1 的纯白纹理作为默认纹理
+    uint32_t whitePixel = 0xFFFFFFFF;
+    TextureDesc whiteDesc;
+    whiteDesc.width = 1;
+    whiteDesc.height = 1;
+    whiteDesc.format = TextureFormat::RGBA8_UNorm;
+    auto whiteTexture = resourceManager->CreateTextureFromMemory(&whitePixel, sizeof(whitePixel), whiteDesc);
+    if (whiteTexture) {
+        s_Data->DefaultMaterial->SetParam("AlbedoMap", whiteTexture);
+    }
+
+    // 尝试加载支持纹理的专用 2D 片段着色器 (它包含 AlbedoMap 的反射信息)
+    auto spriteShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.frag.spv");
+    if (!spriteShader) {
+        LOG_WARNING("Renderer2D", "无法加载专用 2D 片段着色器，尝试使用内置默认着色器。");
+        spriteShader = resourceManager->LoadShaderSync("DefaultPixel");
+    }
+
+    if (spriteShader) {
+        LOG_INFO("Renderer2D", "已加载 2D 纹理着色器 (Fragment)。");
+        // 复用刚才创建的白色纹理，但改用专用着色器
+        auto newMat = std::make_shared<Material>(spriteShader);
+        if (whiteTexture) newMat->SetParam("AlbedoMap", whiteTexture);
+        s_Data->DefaultMaterial = newMat;
+    }
+    
     LOG_INFO("Renderer2D", "2D 渲染器初始化完成。");
 }
 
@@ -103,31 +139,40 @@ void Renderer2D::BeginScene(const OrthographicCamera& camera) {
     cameraData.nearPlane = camera.GetNearPlane();
     cameraData.farPlane = camera.GetFarPlane();
     
+    s_Data->LastCameraData = cameraData;
     Renderer::BeginScene(cameraData);
     
     StartBatch();
 }
 
 void Renderer2D::EndScene() {
-    Flush();
-    Renderer::EndScene();
+    Flush(); // 排序并完成当前批次（不再重复调用 Renderer::EndScene）
     
     if (s_Data && s_Data->Stats.QuadCount > 0) {
         static bool firstRenderReported = false;
         if (!firstRenderReported) {
-            LOG_INFO("Renderer2D", "首次渲染成功触发，本帧渲染了 {} 个 Quad。", s_Data->Stats.QuadCount);
+            LOG_INFO("Renderer2D", "首次渲染: 本帧提交 {} 个 Quad, {} 次 DrawCall",
+                     s_Data->Stats.QuadCount, s_Data->Stats.DrawCalls);
             firstRenderReported = true;
         }
 
-        // 每一百帧打印一次统计，避免刷屏
-        static int frameCount = 0;
-        if (++frameCount % 100 == 0) {
-            LOG_DEBUG("Renderer2D", "渲染统计: {} 个 Quad。", s_Data->Stats.QuadCount);
+        // 每 5 秒真实时间打印一次统计
+        static double lastLogTime = 0.0;
+        double now = Platform::GetTimeSeconds();
+        if (now - lastLogTime >= 5.0) {
+            LOG_INFO("Renderer2D", "5秒统计: {} 个 Quad, {} 次 DrawCall",
+                     s_Data->Stats.QuadCount, s_Data->Stats.DrawCalls);
+            lastLogTime = now;
         }
     }
 }
 
 void Renderer2D::Flush() {
+    if (!s_Data) return;
+    // 完成当前批次的命令排序（为管线执行做准备）
+    // 注意：不清除命令队列！队列由 RenderSystem::EndFrame() 在管线执行后清除
+    Renderer::EndScene();
+    s_Data->Stats.DrawCalls++;
 }
 
 void Renderer2D::StartBatch() {
@@ -304,10 +349,10 @@ void Renderer2D::DrawString(const std::string& text, const Vector2& position, fl
         int fontIdx = c - 32;
         for (int col = 0; col < 5; ++col) {
             unsigned char colData = g_FontData[fontIdx][col];
+            // [修复] 颠倒文字: 渲染行时翻转 Y 轴方向，使字模高位(bit 6)对应字符底部
             for (int row = 0; row < 8; ++row) {
                 if (colData & (1 << row)) {
-                    // 绘制一个像素点
-                    Vector2 pixelPos = currentPos + Vector2(col * pixelSize, row * pixelSize);
+                    Vector2 pixelPos = currentPos + Vector2(col * pixelSize, (7 - row) * pixelSize);
                     DrawQuad(pixelPos, Vector2(pixelSize, pixelSize), color);
                 }
             }

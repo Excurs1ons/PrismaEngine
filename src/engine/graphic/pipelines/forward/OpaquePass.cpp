@@ -1,9 +1,12 @@
 #include "OpaquePass.h"
+#include "app/Engine.h"
+#include "Platform.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/IDescriptorSet.h"
 #include "graphic/interfaces/IPipelineState.h"
 #include "graphic/interfaces/IResourceFactory.h"
+#include "graphic/interfaces/IResourceManager.h"
 #include "graphic/Mesh.h"
 #include "graphic/Material.h"
 #include "graphic/Shader.h"
@@ -55,8 +58,23 @@ void OpaquePass::Execute(const PassExecutionContext& context) {
 }
 
 void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {
-    if (!cmd || commands.empty() || !m_device) return;
-    if (!EnsureDefaultPipeline()) return;
+    if (!cmd || commands.empty() || !m_device) {
+        LOG_DEBUG("OpaquePass", "跳过 Execute: cmd={} empty={} device={}", (void*)cmd, commands.empty(), (void*)m_device);
+        return;
+    }
+    if (!EnsureDefaultPipeline()) {
+        LOG_ERROR("OpaquePass", "确保默认管线失败，跳过绘制");
+        return;
+    }
+
+    static double lastLog = 0;
+    double now = Platform::GetTimeSeconds();
+    if (now - lastLog >= 5.0) {
+        LOG_INFO("OpaquePass", "绘制 {} 条命令, PSO={}, shaders ok={}",
+                 commands.size(), (void*)m_defaultPipelineState.get(),
+                 m_defaultVertexShader && m_defaultPixelShader);
+        lastLog = now;
+    }
 
     cmd->SetPipelineState(m_defaultPipelineState.get());
     float width = 1.0f;
@@ -99,41 +117,28 @@ bool OpaquePass::EnsureDefaultPipeline() {
         return false;
     }
 
-    auto loadShader = [this](const char* path, ShaderType type) -> std::shared_ptr<IShader> {
-        std::ifstream file(path, std::ios::binary);
-        if (!file.is_open()) {
-            return nullptr;
-        }
+    auto resourceManager = Engine::Get().GetRenderResourceManager();
+    if (!resourceManager) {
+        return false;
+    }
 
-        std::vector<uint8_t> bytecode((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        if (bytecode.empty()) {
-            return nullptr;
-        }
+    // 使用 RenderResourceManager 加载着色器，这会自动处理搜索路径和内置反射
+    m_defaultVertexShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.vert.spv", "main");
+    m_defaultPixelShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.frag.spv", "main");
 
-        ShaderDesc desc;
-        desc.filename = path;
-        desc.entryPoint = "main";
-        desc.language = ShaderLanguage::SPIRV;
-        desc.type = type;
+    // 如果加载失败，尝试使用内置的 Default 着色器作为保底
+    if (!m_defaultVertexShader) {
+        LOG_WARNING("OpaquePass", "无法加载 Renderer2D 顶点着色器，尝试使用内置默认着色器。");
+        m_defaultVertexShader = resourceManager->LoadShaderSync("Default");
+    }
+    
+    if (!m_defaultPixelShader) {
+        LOG_WARNING("OpaquePass", "无法加载 Renderer2D 片段着色器，尝试使用内置默认着色器。");
+        m_defaultPixelShader = resourceManager->LoadShaderSync("DefaultPixel");
+    }
 
-        ShaderReflection reflection;
-        if (type == ShaderType::Pixel) {
-            ShaderResource albedoMap;
-            albedoMap.Name = "u_AlbedoMap";
-            albedoMap.ResourceType = ShaderResource::Type::Sampler2D;
-            albedoMap.Binding = 0;
-            albedoMap.Set = 0;
-            reflection.Resources.push_back(albedoMap);
-        }
-
-        auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, reflection);
-        return shader ? std::shared_ptr<IShader>(std::move(shader)) : nullptr;
-    };
-
-    m_defaultVertexShader = loadShader("assets/shaders/Renderer2D.vert.spv", ShaderType::Vertex);
-    m_defaultPixelShader = loadShader("assets/shaders/Renderer2D.frag.spv", ShaderType::Pixel);
     if (!m_defaultVertexShader || !m_defaultPixelShader) {
-        LOG_ERROR("OpaquePass", "无法加载 Renderer2D SPIR-V 着色器。");
+        LOG_ERROR("OpaquePass", "无法加载必要的着色器资源，OpaquePass 无法正常工作。");
         return false;
     }
 
@@ -145,6 +150,12 @@ bool OpaquePass::EnsureDefaultPipeline() {
     pso->SetShader(ShaderType::Vertex, m_defaultVertexShader);
     pso->SetShader(ShaderType::Pixel, m_defaultPixelShader);
     pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+    
+    // 设置基础状态
+    RasterizerState rs;
+    rs.cullMode = CullMode::None; // 2D 渲染通常不开启裁剪
+    pso->SetRasterizerState(rs);
+
     if (!pso->Create(m_device)) {
         LOG_ERROR("OpaquePass", "创建 Renderer2D 管线失败: {0}", pso->GetErrors());
         return false;

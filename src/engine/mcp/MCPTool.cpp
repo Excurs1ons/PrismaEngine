@@ -5,7 +5,7 @@ namespace MCP {
 
 void ToolRegistry::AddTool(std::unique_ptr<MCPTool> tool) {
     if (tool) {
-        m_Tools[tool->GetName()] = std::move(tool);
+        m_Tools[std::string(tool->GetName())] = std::move(tool);
     }
 }
 

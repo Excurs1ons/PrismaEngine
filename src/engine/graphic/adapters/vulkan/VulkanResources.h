@@ -12,6 +12,7 @@
 #include <cstring>
 #include <fstream>
 #include <vector>
+#include <memory>
 
 #include "Export.h"
 
@@ -541,7 +542,7 @@ private:
     uint32_t m_lastBufferMapType = 0;
 };
 
-class ENGINE_API VulkanDescriptorSetLayout : public IDescriptorSetLayout {
+class ENGINE_API VulkanDescriptorSetLayout : public IDescriptorSetLayout, public std::enable_shared_from_this<VulkanDescriptorSetLayout> {
 public:
     VulkanDescriptorSetLayout(VkDevice device, VkDescriptorSetLayout layout) : m_device(device), m_layout(layout) {}
     ~VulkanDescriptorSetLayout() override { if (m_layout) vkDestroyDescriptorSetLayout(m_device, m_layout, nullptr); }
@@ -554,7 +555,8 @@ private:
 
 class ENGINE_API VulkanDescriptorSet : public IDescriptorSet {
 public:
-    VulkanDescriptorSet(VkDevice device, VkDescriptorSet set) : m_device(device), m_set(set) {}
+    VulkanDescriptorSet(VkDevice device, VkDescriptorSet set, std::shared_ptr<IDescriptorSetLayout> layout) 
+        : m_device(device), m_set(set), m_layout(std::move(layout)) {}
     ~VulkanDescriptorSet() override {} // Pool manages destruction
 
     void BindTexture(uint32_t binding, ITexture* texture, ISampler* sampler) override;
@@ -565,6 +567,7 @@ public:
 private:
     VkDevice m_device;
     VkDescriptorSet m_set;
+    std::shared_ptr<IDescriptorSetLayout> m_layout;
     struct WriteInfo {
         uint32_t binding;
         VkDescriptorType type;

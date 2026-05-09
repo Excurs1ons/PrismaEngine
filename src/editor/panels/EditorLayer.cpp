@@ -2,6 +2,7 @@
 #include "../UIStrings.h"
 #include "../graphic/ImGuiVulkanResourceManager.h"
 #include "../graphic/ViewportRenderPass.h"
+#include "graphic/adapters/vulkan/VulkanCommandBuffer.h"
 
 Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
     m_editorCameraObject = std::make_shared<GameObject>("Editor Camera");
@@ -73,9 +74,11 @@ void Prisma::EditorLayer::OnRender() {
         return;
     }
 
-    // [修复] 获取当前的指令缓冲
+    // [修复] 从 ICommandBuffer* 获取原生 VkCommandBuffer 句柄
     auto vkDevice       = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
-    VkCommandBuffer cmd = vkDevice->GetCurrentCommandBuffer();
+    auto* cmdBuffer     = vkDevice->GetCurrentCommandBuffer();
+    auto* vkCmdBuffer   = dynamic_cast<Graphic::Vulkan::VulkanCommandBuffer*>(cmdBuffer);
+    VkCommandBuffer cmd = vkCmdBuffer ? vkCmdBuffer->GetVkCommandBuffer() : VK_NULL_HANDLE;
 
     if (cmd && m_viewportRenderPass) {
         // [改动] 必须先通知 RenderDevice 跳过这一帧的默认交换链 Pass，

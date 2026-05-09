@@ -129,6 +129,7 @@ bool AudioDeviceSDL3::SetDevice(const std::string& deviceName) {
 
 AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) {
     if (!m_initialized || !clip.IsValid()) {
+        LOG_ERROR("Audio", "无法播放音频: 设备未初始化或剪辑无效");
         return INVALID_VOICE_ID;
     }
 
@@ -142,12 +143,13 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
     inputSpec.format   = clip.format.bitsPerSample == 32 ? SDL_AUDIO_F32 : SDL_AUDIO_S16;
 
     SDL_AudioStream* stream = SDL_CreateAudioStream(&inputSpec, nullptr);
-    if (!stream)
+    if (!stream) {
+        LOG_ERROR("Audio", "创建音频流失败: {0}", SDL_GetError());
         return INVALID_VOICE_ID;
+    }
 
-    SDL_BindAudioStream(m_deviceId, stream);
-
-    if (SDL_PutAudioStreamData(stream, clip.data.data(), (int)clip.data.size()) != 0) {
+    if (!SDL_BindAudioStream(m_deviceId, stream)) {
+        LOG_ERROR("Audio", "绑定音频流失败: {0}", SDL_GetError());
         SDL_DestroyAudioStream(stream);
         return INVALID_VOICE_ID;
     }
@@ -185,10 +187,12 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
 
     SDL_ClearAudioStream(stream);
     const size_t playSize = voice.clipEndOffset - voice.clipStartOffset;
-    if (playSize > 0 &&
-        SDL_PutAudioStreamData(stream, clip.data.data() + voice.clipStartOffset, static_cast<int>(playSize)) != 0) {
-        SDL_DestroyAudioStream(stream);
-        return INVALID_VOICE_ID;
+    if (playSize > 0) {
+        if (!SDL_PutAudioStreamData(stream, clip.data.data() + voice.clipStartOffset, static_cast<int>(playSize))) {
+            LOG_ERROR("Audio", "推送音频数据失败: {0}", SDL_GetError());
+            SDL_DestroyAudioStream(stream);
+            return INVALID_VOICE_ID;
+        }
     }
 
     ApplyVoiceSettings(voice);
@@ -197,6 +201,9 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
     m_stats.activeVoices     = static_cast<uint32_t>(m_playingVoices.size());
     ++m_stats.totalVoicesCreated;
     m_stats.maxConcurrentVoices = std::max(m_stats.maxConcurrentVoices, m_stats.activeVoices);
+    
+    LOG_INFO("Audio", "成功开始播放音频 Voice {0}: {1} (大小: {2} 字节)", voiceId, clip.path, playSize);
+    
     TriggerEvent(AudioEventType::VoiceStarted, voiceId);
     return voiceId;
 }
@@ -501,11 +508,14 @@ void AudioDeviceSDL3::UpdateVoiceStates() {
             voice.playbackPosition     = std::clamp(voice.duration - queuedSeconds, 0.0f, voice.duration);
         }
 
+        // 检查流是否已播放完排队的数据
         if (SDL_GetAudioStreamQueued(voice.stream) == 0) {
             if (voice.looping) {
+                // LOG_DEBUG("Audio", "Voice {0} 正在循环播放", id);
                 ResetStreamPosition(voice);
                 TriggerEvent(AudioEventType::VoiceLooped, id);
             } else {
+                LOG_INFO("Audio", "Voice {0} 播放结束", id);
                 toRemove.push_back(id);
             }
         }
