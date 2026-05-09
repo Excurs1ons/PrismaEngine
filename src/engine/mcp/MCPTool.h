@@ -27,6 +27,12 @@ public:
 
 class ENGINE_API ToolRegistry {
 public:
+    ToolRegistry() = default;
+    ToolRegistry(ToolRegistry&&) = default;
+    ToolRegistry& operator=(ToolRegistry&&) = default;
+    ToolRegistry(const ToolRegistry&) = delete;
+    ToolRegistry& operator=(const ToolRegistry&) = delete;
+
     void AddTool(std::unique_ptr<MCPTool> tool);
     void AddTools(std::vector<std::unique_ptr<MCPTool>> tools);
 

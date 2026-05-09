@@ -4,6 +4,7 @@
 #include "scene/Scene.h"
 #include "scene/GameObject.h"
 #include <set>
+#include <cstdint>
 
 namespace Prisma {
 namespace MCP {
@@ -17,7 +18,7 @@ nlohmann::json SceneHierarchyTool::GetInputSchema() const {
         {"type", "object"},
         {"properties", {
             {"fields", {{"type", "array", "items", {{"type", "string"}}},
-                        {"description", "Optional: filter response fields. E.g. [\"name\",\"id\"]"}}}
+                        {"description", "Optional: filter response fields. E.g. [\"name\"]"}}}
         }}
     };
 }
@@ -33,11 +34,12 @@ nlohmann::json SceneHierarchyTool::Execute(const nlohmann::json& args) {
     const auto& allEntities = scene->GetGameObjects();
 
     nlohmann::json entities = nlohmann::json::array();
+    uint32_t idCounter = 1;
     for (const auto& entity : allEntities) {
         nlohmann::json e;
-        e["id"] = (uint64_t)(void*)entity.get();
         if (fields.empty() || std::find(fields.begin(), fields.end(), "name") != fields.end())
             e["name"] = entity->name;
+        e["id"] = idCounter++;
         entities.push_back(std::move(e));
     }
 
@@ -52,41 +54,39 @@ nlohmann::json SceneEntityTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
-            {"entity_id", {{"type", "integer"}, {"description", "Entity ID to query"}}},
+            {"entity_index", {{"type", "integer"}, {"description", "Entity index in scene (0-based)"}}},
             {"fields", {{"type", "array", "items", {{"type", "string"}}}}}
         }},
-        {"required", {"entity_id"}}
+        {"required", {"entity_index"}}
     };
 }
 
 nlohmann::json SceneEntityTool::Execute(const nlohmann::json& args) {
-    auto entityId = args["entity_id"].get<uint64_t>();
+    auto entityIdx = args["entity_index"].get<size_t>();
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    // Find entity by pointer value
-    std::shared_ptr<GameObject> found;
-    for (const auto& obj : scene->GetGameObjects()) {
-        if ((uint64_t)(void*)obj.get() == entityId) {
-            found = obj;
-            break;
-        }
+    const auto& allEntities = scene->GetGameObjects();
+    if (entityIdx >= allEntities.size()) {
+        return {{"error", "Entity index out of range"}, {"max_index", allEntities.size() - 1}};
     }
-    if (!found) return {{"error", "Entity not found"}, {"entity_id", entityId}};
 
+    auto entity = allEntities[entityIdx];
     auto fields = args.value("fields", std::vector<std::string>{});
-    auto fieldSet = std::set<std::string>(fields.begin(), fields.end());
     bool allFields = fields.empty();
 
     nlohmann::json result;
-    result["entity_id"] = entityId;
+    result["entity_index"] = entityIdx;
 
-    if (allFields || fieldSet.count("name"))
-        result["name"] = found->name;
-    if (allFields || fieldSet.count("position")) {
-        auto pos = found->GetTransform()->GetPosition();
-        result["position"] = {pos.x, pos.y, pos.z};
+    if (allFields || std::find(fields.begin(), fields.end(), "name") != fields.end())
+        result["name"] = entity->name;
+
+    if (allFields || std::find(fields.begin(), fields.end(), "transform") != fields.end()) {
+        auto* transform = entity->GetTransform().get();
+        if (transform) {
+            result["position"] = {transform->GetPosition().x, transform->GetPosition().y, transform->GetPosition().z};
+        }
     }
 
     return result;
@@ -100,8 +100,7 @@ nlohmann::json SceneCreateEntityTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
-            {"name", {{"type", "string"}}},
-            {"parent_id", {{"type", "integer"}, {"description", "Optional parent entity ID"}}}
+            {"name", {{"type", "string"}}}
         }},
         {"required", {"name"}}
     };
@@ -117,7 +116,7 @@ nlohmann::json SceneCreateEntityTool::Execute(const nlohmann::json& args) {
     entity->Initialize();
     scene->AddGameObject(entity);
 
-    return {{"entity_id", (uint64_t)(void*)entity.get()}, {"name", name}};
+    return {{"name", name}};
 }
 
 // ---- SceneDeleteEntityTool ----
@@ -128,27 +127,25 @@ nlohmann::json SceneDeleteEntityTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
-            {"entity_id", {{"type", "integer"}, {"description", "Entity ID to delete"}}}
+            {"entity_index", {{"type", "integer"}, {"description", "Entity index in scene (0-based)"}}}
         }},
-        {"required", {"entity_id"}}
+        {"required", {"entity_index"}}
     };
 }
 
 nlohmann::json SceneDeleteEntityTool::Execute(const nlohmann::json& args) {
-    auto entityId = args["entity_id"].get<uint64_t>();
+    auto entityIdx = args["entity_index"].get<size_t>();
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    bool deleted = false;
-    for (const auto& obj : scene->GetGameObjects()) {
-        if ((uint64_t)(void*)obj.get() == entityId) {
-            scene->RemoveGameObject(obj.get());
-            deleted = true;
-            break;
-        }
+    const auto& allEntities = scene->GetGameObjects();
+    if (entityIdx >= allEntities.size()) {
+        return {{"error", "Index out of range"}};
     }
-    return {{"deleted", deleted}, {"entity_id", entityId}};
+
+    scene->RemoveGameObject(allEntities[entityIdx].get());
+    return {{"deleted", true}};
 }
 
 } // namespace MCP
