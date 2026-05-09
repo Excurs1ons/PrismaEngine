@@ -130,6 +130,30 @@ void Renderer2D::Shutdown() {
 
 void Renderer2D::BeginScene(const OrthographicCamera& camera) {
     if (!s_Data) return;
+
+    // 调试日志：打印相机投影矩阵范围（仅值变化时）
+    {
+        auto proj = camera.GetProjectionMatrix();
+        // orthoRH_ZO: m[0][0]=2/(r-l), m[1][1]=2/(t-b), m[3][0]=-(r+l)/(r-l), m[3][1]=-(t+b)/(t-b)
+        float scaleX = proj[0][0], scaleY = proj[1][1];
+        float offsetX = proj[3][0], offsetY = proj[3][1];
+        static float lastSX = 0, lastSY = 0, lastOX = 0, lastOY = 0;
+        if (std::abs(scaleX - lastSX) > 0.0001f || std::abs(scaleY - lastSY) > 0.0001f ||
+            std::abs(offsetX - lastOX) > 0.0001f || std::abs(offsetY - lastOY) > 0.0001f) {
+            // 从矩阵反推投影范围
+            float rightMinusLeft = 2.0f / scaleX;
+            float topMinusBottom = 2.0f / scaleY;
+            float leftPlusRight = -offsetX * rightMinusLeft;
+            float bottomPlusTop = -offsetY * topMinusBottom;
+            float left = (leftPlusRight - rightMinusLeft) * 0.5f;
+            float right2 = (leftPlusRight + rightMinusLeft) * 0.5f;
+            float bottom = (bottomPlusTop - topMinusBottom) * 0.5f;
+            float top2 = (bottomPlusTop + topMinusBottom) * 0.5f;
+            LOG_INFO("Renderer2D", "相机投影: [{:.1f}, {:.1f}] x [{:.1f}, {:.1f}] (matrix: {:.6f} {:.6f} {:.4f} {:.4f})",
+                left, right2, bottom, top2, scaleX, scaleY, offsetX, offsetY);
+            lastSX = scaleX; lastSY = scaleY; lastOX = offsetX; lastOY = offsetY;
+        }
+    }
     s_Data->ViewProjection = camera.GetViewProjectionMatrix();
     
     CameraData cameraData;
@@ -172,7 +196,8 @@ void Renderer2D::Flush() {
     // 完成当前批次的命令排序（为管线执行做准备）
     // 注意：不清除命令队列！队列由 RenderSystem::EndFrame() 在管线执行后清除
     Renderer::EndScene();
-    s_Data->Stats.DrawCalls++;
+    // 每个 Quad = 一次 GPU DrawIndexed 调用
+    s_Data->Stats.DrawCalls = s_Data->Stats.QuadCount;
 }
 
 void Renderer2D::StartBatch() {

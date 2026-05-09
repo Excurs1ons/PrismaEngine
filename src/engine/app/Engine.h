@@ -35,6 +35,7 @@ struct EngineSpecification {
     bool RefreshAssetDatabaseOnStartup = false;
     LogLevel MinLogLevel = LogLevel::Trace;
     uint32_t MaxFPS = 0; 
+    bool EnableVSync = false; // 默认关闭垂直同步，允许高帧率
 };
 
 /**

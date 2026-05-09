@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     spec.Name = "Scene2DTest";
     spec.Headless = false;
     spec.RefreshAssetDatabaseOnStartup = false;
-    spec.MaxFPS = 144;
+    spec.MaxFPS = 0; // 设为 0 以解除帧率限制
 
     int result = Prisma::RunApplication(
         std::make_unique<Prisma::Scene2DTestApp>(),

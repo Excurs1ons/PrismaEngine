@@ -38,6 +38,7 @@ public:
     void Shutdown() override;
     std::string GetName() const override;
     std::string GetAPIName() const override;
+    std::string GetGPUName() const override;
 
     // 命令缓冲区
     std::unique_ptr<ICommandBuffer> CreateCommandBuffer(CommandBufferType type) override;
@@ -179,6 +180,7 @@ private:
 
     RenderStats m_stats;
     DeviceDesc m_desc;
+    std::string m_gpuName;
     bool m_initialized = false;
     uint32_t m_currentFrameIndex = 0;
     uint32_t m_pendingPresentImageIndex = 0;
