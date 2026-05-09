@@ -16,6 +16,13 @@
 #include "threading/ThreadManager.h"
 #include "app/CommandLineParser.h"
 
+#if defined(PRISMA_ENABLE_MCP)
+#include "mcp/MCPSubSystem.h"
+#include "mcp/tools/SceneTools.h"
+#include "mcp/tools/ECSTools.h"
+#include "mcp/tools/EngineTools.h"
+#endif
+
 namespace Prisma {
 
 Engine* Engine::s_Instance = nullptr;
@@ -57,6 +64,22 @@ int Engine::Initialize() {
     
     // 新增：ShaderLibrary 子系统
     AddSystem<Graphic::ShaderLibrary>();
+
+#if defined(PRISMA_ENABLE_MCP)
+    LOG_INFO("Engine", "MCP 子系统正在初始化");
+    auto* mcp = AddSystem<MCP::MCPSubSystem>();
+
+    // 注册引擎核心工具
+    mcp->RegisterTool<MCP::SceneHierarchyTool>(this);
+    mcp->RegisterTool<MCP::SceneEntityTool>(this);
+    mcp->RegisterTool<MCP::SceneCreateEntityTool>(this);
+    mcp->RegisterTool<MCP::SceneDeleteEntityTool>(this);
+    mcp->RegisterTool<MCP::ECSComponentListTool>(this);
+    mcp->RegisterTool<MCP::ECSComponentGetTool>(this);
+    mcp->RegisterTool<MCP::EngineStatusTool>(this);
+    mcp->RegisterTool<MCP::EngineStateHashTool>(this);
+    mcp->RegisterTool<MCP::EngineBuildInfoTool>(this);
+#endif
     
     // 初始化所有子系统
     for (auto& sys : m_Systems) {

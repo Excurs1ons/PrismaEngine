@@ -56,6 +56,12 @@ Prisma_Declare_Dependency(vk-bootstrap https://github.com/charles-lunarg/vk-boot
 
 Prisma_Declare_Dependency(imgui https://github.com/ocornut/imgui.git ${PRISMA_DEP_IMGUI_VERSION})
 
+# xxhash - 极快哈希 (MCP 增量追踪)
+# 编译为静态库，禁用测试
+set(XXHASH_BUILD_XXHSUM OFF CACHE BOOL "" FORCE)
+set(DISPATCH_EXAMPLES OFF CACHE BOOL "" FORCE)
+Prisma_Declare_Dependency(xxhash https://github.com/Cyan4973/xxHash.git ${PRISMA_DEP_XXHASH_VERSION})
+
 if(WIN32 AND PRISMA_BUILD_EDITOR)
     Prisma_Declare_Dependency(libdeflate https://github.com/ebiggers/libdeflate.git ${PRISMA_DEP_LIBDEFLATE_VERSION})
     Prisma_Declare_Dependency(openfbx https://github.com/nem0/OpenFBX.git ${PRISMA_DEP_OPENFBX_VERSION})
