@@ -86,11 +86,14 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
     cmd->SetViewport(Viewport{0.0f, 0.0f, width, height, 0.0f, 1.0f});
     cmd->SetScissorRect(Rect{0, 0, static_cast<int>(width), static_cast<int>(height)});
 
+    // 缓存上一次绑定的材质指针，跳过重复绑定
+    Material* lastMaterial = nullptr;
     for (const auto& command : commands) {
         if (!command.mesh) continue;
 
-        if (command.material) {
+        if (command.material && command.material != lastMaterial) {
             command.material->Bind(cmd);
+            lastMaterial = command.material;
         }
 
         QuadPushConstants pushConstants{};

@@ -2,7 +2,9 @@
 
 #include "Application.h"
 #include "graphic/OrthographicCamera.h"
+#include "graphic/RenderSystem.h"
 #include <memory>
+#include <string>
 
 namespace Prisma {
 
@@ -38,6 +40,9 @@ private:
         float rotationSpeed;
     };
     std::vector<TestSprite> m_sprites;
+
+    // GPU 信息（仅在初始化时获取一次）
+    std::string m_gpuName;
 };
 
 } // namespace Prisma

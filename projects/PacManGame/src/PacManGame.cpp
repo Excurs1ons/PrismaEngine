@@ -175,7 +175,7 @@ void PacManGame::Run() {
     spec.Name = "PacManGame";
     spec.Headless = false;
     spec.RefreshAssetDatabaseOnStartup = false;
-    spec.MaxFPS = 144;
+    spec.MaxFPS = 0;
     spec.MinLogLevel = Prisma::LogLevel::Debug;
     // 使用相对工程根目录的路径，或者绝对路径
     // 强制输出到工程根目录下的 logs/pacman.log

@@ -69,6 +69,18 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         m_vkbPhysicalDevice = phys_ret.value();
         m_physicalDevice    = m_vkbPhysicalDevice.physical_device;
 
+        // 读取 GPU 名称
+        {
+            VkPhysicalDeviceProperties props{};
+            vkGetPhysicalDeviceProperties(m_physicalDevice, &props);
+            m_gpuName = props.deviceName;
+            LOG_INFO("Vulkan", "GPU: {0} (driver {1}.{2}.{3})",
+                props.deviceName,
+                VK_VERSION_MAJOR(props.driverVersion),
+                VK_VERSION_MINOR(props.driverVersion),
+                VK_VERSION_PATCH(props.driverVersion));
+        }
+
         // 3. 创建逻辑设备
         vkb::DeviceBuilder device_builder{m_vkbPhysicalDevice};
         auto dev_ret = device_builder.build();
@@ -441,6 +453,9 @@ std::string RenderDeviceVulkan::GetName() const {
 }
 std::string RenderDeviceVulkan::GetAPIName() const {
     return "Vulkan";
+}
+std::string RenderDeviceVulkan::GetGPUName() const {
+    return m_gpuName.empty() ? "Unknown GPU" : m_gpuName;
 }
 VkRenderPass RenderDeviceVulkan::GetOverlayRenderPass() const {
     return m_swapChain ? m_swapChain->GetRenderPass() : VK_NULL_HANDLE;

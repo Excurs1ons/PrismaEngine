@@ -99,7 +99,8 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     auto vkb_swap_ret = swapchain_builder
         .set_desired_extent(width, height)
         .set_desired_format({VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
-        .set_desired_present_mode(vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_MAILBOX_KHR)
+        .set_desired_present_mode(vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR)
+        .set_desired_min_image_count(3)
         .build();
 
     if (!vkb_swap_ret) {
@@ -113,6 +114,7 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     m_imageViews = vkb_swapchain.get_image_views().value();
     m_format = vkb_swapchain.image_format;
     m_extent = vkb_swapchain.extent;
+    LOG_INFO("Vulkan", "交换链实际 extent: {0}x{1} (请求 {2}x{3})", m_extent.width, m_extent.height, width, height);
     m_mode = vsync ? SwapChainMode::VSync : SwapChainMode::Immediate;
     m_hdrEnabled = false;
     m_renderTargets.clear();
@@ -214,9 +216,15 @@ ITexture* VulkanSwapChain::GetCurrentRenderTarget() {
 }
 
 bool VulkanSwapChain::AcquireNextImage(VkSemaphore semaphore, VkFence fence) {
+    // 使用 UINT64_MAX 等待图像可用。
+    // 在 Immediate 模式下，这通常会立即返回；在 FIFO (VSync) 模式下，这会阻塞直到垂直同步。
+    // 之前的 timeout=0 会导致在图像未立即准备好时跳过整帧渲染，反而限制了表现。
     VkResult result = vkAcquireNextImageKHR(m_device->GetVkDevice(), m_swapchain, UINT64_MAX, semaphore, fence, &m_currentImageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         return false;
+    }
+    if (result == VK_NOT_READY || result == VK_TIMEOUT) {
+        return false; // 无可用图像，跳过此帧
     }
     return result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR;
 }
@@ -309,7 +317,8 @@ bool VulkanSwapChain::Screenshot(const std::string& filename, uint32_t bufferInd
 
 bool VulkanSwapChain::Resize(uint32_t width, uint32_t height) {
     if (width == 0 || height == 0) return true;
-    return Initialize(m_device->GetVkSurface(), width, height, true) == 0; // 暂时写死 vsync
+    bool vsync = (m_mode == SwapChainMode::VSync);
+    return Initialize(m_device->GetVkSurface(), width, height, vsync) == 0;
 }
 
 } // namespace Prisma::Graphic::Vulkan

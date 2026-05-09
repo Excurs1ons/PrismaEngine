@@ -141,6 +141,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
         rDesc.windowHandle = m_Window->GetNativeWindow();
         rDesc.width = m_Window->GetWidth();
         rDesc.height = m_Window->GetHeight();
+        // === 引擎级开关（后续可改为配置文件） ===
+        rDesc.enableDebug      = false;
+        rDesc.enableVSync      = false;
+        rDesc.enableValidation = false;  // true=开 Vulkan 验证层(大幅降低性能)
         
         m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
         if (m_RenderSystem->Initialize() != 0) {
@@ -208,10 +212,25 @@ int Engine::Run(std::unique_ptr<Application> app) {
             
             // 2. 渲染流程
             if (GetRenderSystem()) {
+                double t0 = Platform::GetTimeSeconds();
                 GetRenderSystem()->BeginFrame();
+                double t1 = Platform::GetTimeSeconds();
                 m_CurrentApp->OnRender(); 
+                double t2 = Platform::GetTimeSeconds();
                 GetRenderSystem()->EndFrame();
+                double t3 = Platform::GetTimeSeconds();
                 GetRenderSystem()->Present();
+                double t4 = Platform::GetTimeSeconds();
+
+                // 每 5 秒打印一次单帧各阶段耗时
+                static double lastFrameLog = 0.0;
+                double now = Platform::GetTimeSeconds();
+                if (now - lastFrameLog >= 5.0) {
+                    LOG_INFO("Engine", "帧耗时 BF={:.2f}ms Render={:.2f}ms EF={:.2f}ms Present={:.2f}ms Total={:.2f}ms",
+                        (t1 - t0) * 1000.0, (t2 - t1) * 1000.0, (t3 - t2) * 1000.0, (t4 - t3) * 1000.0,
+                        (t4 - t0) * 1000.0);
+                    lastFrameLog = now;
+                }
             }
         } else {
             Platform::SleepMilliseconds(10);
