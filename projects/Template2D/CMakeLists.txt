@@ -111,26 +111,41 @@ if(HOSTFXR_DLL)
     message(STATUS "hostfxr.dll: ${HOSTFXR_DLL}")
 endif()
 
+# 删除自包含发布产物中不必要的调试文件
+set(SCRIPTS_CLEANUP
+    "${SCRIPTS_OUT}/GameScripts.exe"
+    "${SCRIPTS_OUT}/createdump.exe"
+    "${SCRIPTS_OUT}/Microsoft.DiaSymReader.Native.amd64.dll"
+    "${SCRIPTS_OUT}/mscordaccore.dll"
+    "${SCRIPTS_OUT}/mscordaccore_amd64_amd64_*"
+    "${SCRIPTS_OUT}/mscordbi.dll"
+    "${SCRIPTS_OUT}/mscorrc.dll"
+)
+
 # 构建时：自包含发布 C# 脚本 + 部署到输出目录
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${DOTNET} publish -c Release -r win-x64 --self-contained true
             -p:DebugType=none -p:DebugSymbols=false
+            -p:PublishTrimmed=true -p:TrimMode=link
             --nologo -v:q
             "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/win-x64/publish/"
             "${SCRIPTS_OUT}/"
-    COMMENT "Building + publishing C# scripts (self-contained)"
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${SCRIPTS_CLEANUP}
+    COMMENT "Building + publishing C# scripts (self-contained, trimmed)"
 )
 
 # 手动触发：生产部署（自包含，无需依赖系统 .NET）
 add_custom_target(DeployScripts
     COMMAND ${DOTNET} publish -c Release -r win-x64 --self-contained true
             -p:DebugType=none -p:DebugSymbols=false
+            -p:PublishTrimmed=true -p:TrimMode=link
             --nologo -v:q "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/win-x64/publish/"
             "${SCRIPTS_OUT}/"
+    COMMAND ${CMAKE_COMMAND} -E rm -f ${SCRIPTS_CLEANUP}
     COMMENT "Deploying C# scripts (self-contained, production)"
 )
 
