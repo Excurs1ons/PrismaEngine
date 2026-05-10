@@ -120,6 +120,39 @@ ComponentRegistry::Get()
 }
 ```
 
+## 后续改进（2026-05-10 第2轮）
+
+### ProjectConfig.h — 项目配置引擎化
+- 新建 `src/engine/app/ProjectConfig.h`：`WindowConfig`/`ProjectConfig` struct + `PresentMode`/`WindowConfig`/`ProjectConfig` 的 Glaze meta
+- `Engine::Run()` 自动读取 project.json，填充 `ApplicationSpecification` + 注册资产路径
+- `Engine::Initialize()` 移除了重复的 project.json assets 读取
+- `Template2DApp::LoadSpecification()` 删除
+- `Template2DApp` 构造函数简化为 aggregate init: `Application({"Template2D", "scenes/2d_test.jsonc", ...})`
+
+### ComponentEntry — glz::generic 修复 JSON 读取
+- `dataJson` (string) → `data` (`glz::generic`)
+- 修复 `unknown_key` 错误：JSONC 中 `"data": {...}` 对象可直接读入 `glz::generic`
+- 序列化: `reg.SerializeComponent` → string → `glz::read_json` → `glz::generic`
+- 反序列化: `glz::generic` → `.dump()` → string → `reg.DeserializeComponent`
+
+### SceneManager — AssetManager 路径解析
+- `LoadFromFile()` 使用 `Engine::Get().GetAssetManager()->FindResource()` 解析相对路径
+- 修复 `file_open_failure` 错误
+
+### Engine — resize 时更新 spec 窗口尺寸
+- `WindowResizeEvent` 中自动更新 `m_CurrentApp->GetSpecification().Width/Height`
+- `Template2DApp::OnEvent` 不再需要处理 resize
+
+### 相机移动（方向键 + WASD）
+- `Template2DApp` 新增 `m_moveUp/Down/Left/Right` 标志 + `m_cameraMoveSpeed` (600px/s)
+- `OnUpdate`: 根据按键状态计算移动向量，通过 `dynamic_cast<OrthographicCamera>` 调用 `SetPosition`
+- `OnEvent`: 跟踪 `KeyPressedEvent`/`KeyReleasedEvent` 设置标志
+
+### HUD 覆盖层（屏幕固定）
+- 渲染分两层但共享同一个 `BeginScene/EndScene`（避免命令队列被清空）
+- 场景层: 网格、精灵、坐标标注，受相机变换影响
+- HUD 层: 诊断信息用 `screenPos + cameraPos` 做偏移补偿，在屏幕上位置固定
+
 ## 设计模式
 
 ### 组件序列化
