@@ -52,7 +52,12 @@ Engine::~Engine() {
 int Engine::Initialize() {
     if (m_Initialized) return 0;
     
-    Logger::Get().Initialize();
+    {
+        LogConfig cfg;
+        cfg.asyncMode = false;
+        cfg.target = LogTarget::Console;
+        Logger::Get().Initialize(cfg);
+    }
     Logger::Get().SetMinLevel(m_Spec.MinLogLevel);
     LOG_INFO("Engine", "Prisma 引擎正在初始化: {0}", m_Spec.Name);
 
