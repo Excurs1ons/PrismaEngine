@@ -6,7 +6,7 @@
 #include <SDL3/SDL.h>
 #include <array>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 /// @brief SDL3 跨平台输入驱动
 /// 支持：键盘、鼠标、手柄
@@ -72,6 +72,7 @@ private:
     // 手柄状态
     std::array<GamepadState, MAX_GAMEPADS> m_gamepadStates{};
     SDL_JoystickID m_gamepadIds[MAX_GAMEPADS] = {};
+    SDL_Gamepad* m_openGamepads[MAX_GAMEPADS] = {}; // 缓存指针
 
     // 文本输入
     std::string m_textInput;
@@ -86,6 +87,6 @@ inline IInputDriver* CreateSDL3InputDriver() {
     return new InputDriverSDL3();
 }
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input
 
 #endif // PRISMA_ENABLE_INPUT_SDL3

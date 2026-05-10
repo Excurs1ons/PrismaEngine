@@ -5,7 +5,7 @@
 #include <sstream>
 #include <algorithm>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 std::string TmxParser::s_lastError;
 
@@ -242,7 +242,7 @@ std::vector<CollisionShape> TmxParser::ParseCollisionShapes(void* tileElement) {
             float y = objElem->FloatAttribute("y", 0.0f);
             float w = objElem->FloatAttribute("width", 0.0f);
             float h = objElem->FloatAttribute("height", 0.0f);
-            shape.points = {{0.0f, 0.0f}, {w, 0.0f}, {w, h}, {0.0f, h}};
+            shape.points = {{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}};
         }
 
         shapes.push_back(shape);
@@ -435,11 +435,22 @@ std::unique_ptr<Tileset> TmxParser::ParseTileset(
     const char* source = tsElem->Attribute("source");
 
     if (source) {
-        // 外部 TSX 文件
         tileset->source = source;
-
-        // TODO: 加载外部 TSX 文件
-        // 目前跳过，需要在完整实现中处理
+        std::filesystem::path tsxPath = basePath / source;
+        auto externalTileset = ParseTsxFile(tsxPath);
+        if (externalTileset) {
+            tileset->name = externalTileset->name;
+            tileset->tileWidth = externalTileset->tileWidth;
+            tileset->tileHeight = externalTileset->tileHeight;
+            tileset->spacing = externalTileset->spacing;
+            tileset->margin = externalTileset->margin;
+            tileset->tileCount = externalTileset->tileCount;
+            tileset->columns = externalTileset->columns;
+            tileset->imagePath = externalTileset->imagePath;
+            tileset->imageWidth = externalTileset->imageWidth;
+            tileset->imageHeight = externalTileset->imageHeight;
+            tileset->tiles = std::move(externalTileset->tiles);
+        }
         return tileset;
     }
 
@@ -575,11 +586,50 @@ std::unique_ptr<Tileset> TmxParser::ParseTileset(
     return tileset;
 }
 
+std::unique_ptr<Tileset> TmxParser::ParseTsxFile(const std::filesystem::path& tsxPath) {
+    if (!std::filesystem::exists(tsxPath)) {
+        s_lastError = "TSX file not found: " + tsxPath.string();
+        return nullptr;
+    }
+
+    tinyxml2::XMLDocument doc;
+    if (doc.LoadFile(tsxPath.string().c_str()) != tinyxml2::XML_SUCCESS) {
+        s_lastError = "Failed to load TSX file: " + tsxPath.string();
+        return nullptr;
+    }
+
+    tinyxml2::XMLElement* tsxElem = doc.FirstChildElement("tileset");
+    if (!tsxElem) {
+        s_lastError = "Invalid TSX file: missing tileset element";
+        return nullptr;
+    }
+
+    auto tileset = std::make_unique<Tileset>();
+    tileset->source = tsxPath.string();
+
+    tileset->name = tsxElem->Attribute("name") ? tsxElem->Attribute("name") : "";
+    tileset->tileWidth = tsxElem->IntAttribute("tilewidth", 0);
+    tileset->tileHeight = tsxElem->IntAttribute("tileheight", 0);
+    tileset->spacing = tsxElem->IntAttribute("spacing", 0);
+    tileset->margin = tsxElem->IntAttribute("margin", 0);
+    tileset->tileCount = tsxElem->IntAttribute("tilecount", 0);
+    tileset->columns = tsxElem->IntAttribute("columns", 0);
+
+    tinyxml2::XMLElement* imgElem = tsxElem->FirstChildElement("image");
+    if (imgElem) {
+        tileset->imagePath = imgElem->Attribute("source") ? imgElem->Attribute("source") : "";
+        tileset->imageWidth = imgElem->IntAttribute("width", 0);
+        tileset->imageHeight = imgElem->IntAttribute("height", 0);
+    }
+
+    return tileset;
+}
+
 // ============================================================================
 // 层解析
 // ============================================================================
 
-std::unique_ptr<Layer> TmxParser::ParseLayer(
+std::unique_ptr<TilemapLayer> TmxParser::ParseLayer(
     void* layerElement,
     const std::filesystem::path& basePath,
     TileMap& map
@@ -668,7 +718,7 @@ std::unique_ptr<Layer> TmxParser::ParseLayer(
                 tileLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(tileLayerImpl);
+            return tileLayerImpl;
         }
 
         case LayerType::ObjectLayer: {
@@ -708,7 +758,7 @@ std::unique_ptr<Layer> TmxParser::ParseLayer(
                 objLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(objLayerImpl);
+            return objLayerImpl;
         }
 
         case LayerType::ImageLayer: {
@@ -739,7 +789,7 @@ std::unique_ptr<Layer> TmxParser::ParseLayer(
                 imgLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(imgLayerImpl);
+            return imgLayerImpl;
         }
 
         case LayerType::GroupLayer: {
@@ -776,7 +826,7 @@ std::unique_ptr<Layer> TmxParser::ParseLayer(
                 groupLayer->properties = ParseProperties(propsElem);
             }
 
-            return std::move(groupLayerImpl);
+            return groupLayerImpl;
         }
 
         default:
@@ -947,4 +997,4 @@ std::unique_ptr<TileMap> TmxParser::ParseString(
     return map;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

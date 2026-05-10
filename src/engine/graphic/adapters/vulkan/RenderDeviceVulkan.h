@@ -12,12 +12,13 @@
 #include <vulkan/vulkan.h>
 
 #include <array>
+#include <functional>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 // 前置声明
 class VulkanCommandBuffer;
@@ -33,10 +34,11 @@ public:
     ~RenderDeviceVulkan() override;
 
     // ========== IRenderDevice接口实现 ==========
-    bool Initialize(const DeviceDesc& desc) override;
+    int Initialize(const DeviceDesc& desc) override;
     void Shutdown() override;
     std::string GetName() const override;
     std::string GetAPIName() const override;
+    std::string GetGPUName() const override;
 
     // 命令缓冲区
     std::unique_ptr<ICommandBuffer> CreateCommandBuffer(CommandBufferType type) override;
@@ -54,13 +56,14 @@ public:
 
     // 交换链
     std::unique_ptr<ISwapChain>
-    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync = true) override;
+    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode = PresentMode::VSync) override;
     ISwapChain* GetSwapChain() const override;
 
     // 帧管理
     void BeginFrame() override;
     void EndFrame() override;
     void Present() override;
+    void Resize(uint32_t width, uint32_t height) override;
 
     // 功能查询
     bool SupportsMultiThreaded() const override { return true; }
@@ -74,25 +77,59 @@ public:
     GPUMemoryInfo GetGPUMemoryInfo() const override;
     RenderStats GetRenderStats() const override;
 
-    // ImGui 集成
-    bool InitializeImGui() override;
-    void ShutdownImGui() override;
-
     // 调试
     void BeginDebugMarker(const std::string& name) override;
     void EndDebugMarker() override;
     void SetDebugMarker(const std::string& name) override;
-    // ========== Vulkan特定方法 ==========
-    VkInstance GetInstance() const { return m_instance; }
-    VkPhysicalDevice GetPhysicalDevice() const { return m_physicalDevice; }
-    VkDevice GetDevice() const { return m_device; }
-    VkQueue GetGraphicsQueue() const { return m_graphicsQueue; }
-    uint32_t GetGraphicsQueueFamily() const { return m_graphicsQueueFamily; }
-    VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
+    
+    // ========== Vulkan特定方法 (IRenderDevice 接口要求) ==========
+    VkInstance GetVkInstance() const override { return m_instance; }
+    VkSurfaceKHR GetVkSurface() const { return m_surface; }
+    VkPhysicalDevice GetPhysicalDevice() const override { return m_physicalDevice; }
+    VkDevice GetVkDevice() const override { return m_device; }
+    VkQueue GetGraphicsQueue() const override { return m_graphicsQueue; }
+    uint32_t GetGraphicsQueueFamily() const override { return m_graphicsQueueFamily; }
+    VkDescriptorPool GetVkDescriptorPool() const { return m_descriptorPool; }
+    VmaAllocator GetVmaAllocator() const override { return m_allocator; }
     VmaAllocator GetAllocator() const { return m_allocator; }
+    bool IsInitialized() const override { return m_initialized; }
+    uint32_t GetCurrentFrameIndex() const override { return m_currentFrameIndex; }
 
-    // 获取用于ImGui的RenderPass（从交换链获取）
-    VkRenderPass GetImGuiRenderPass() const;
+    // 获取用于附加渲染(UI等)的RenderPass（从交换链获取）
+    VkRenderPass GetOverlayRenderPass() const override;
+
+    // 离屏渲染支持
+    void SetSkipSwapChainRenderPass(bool skip) { m_skipSwapChainRenderPass = skip; }
+
+    // 获取当前帧的命令缓冲区（供 Viewport 渲染使用）
+    ICommandBuffer* GetCurrentCommandBuffer() const {
+        return m_frameActive ? (ICommandBuffer*)m_vulkanCommandBuffers[m_currentFrame].get() : nullptr;
+    }
+
+    // -----------------------------------------------------------------------
+    // [修复] ImGui 跨 DLL 渲染回调
+    //
+    // 目的：
+    //   解决 imgui_impl_vulkan.cpp 被同时编译进 Prisma.dll（Engine）和
+    //   PrismaEditor.dll（Editor）两份，导致两侧的 ImGui 后端状态
+    //   （BackendRendererUserData）互不相通的问题。
+    //
+    //   问题根源：
+    //   ImGui_ImplVulkan_Init() 在 PrismaEditor.dll 侧调用，BackendRendererUserData
+    //   注册在 PrismaEditor.dll 的静态数据段中。EndFrame() 在 Prisma.dll 侧调用
+    //   ImGui_ImplVulkan_RenderDrawData，此时 ImGui_ImplVulkan_GetBackendData()
+    //   拿到的是 Prisma.dll 侧未初始化的数据（内容全为 nullptr/0），
+    //   访问字体纹理 TexID 得到 ImTextureID_Invalid（0xFFFFFFFFFFFFFFFF），
+    //   传给 vkCmdBindDescriptorSets 引发访问冲突崩溃。
+    //
+    //   修复过程：
+    //   将 ImGui_ImplVulkan_RenderDrawData 调用完全移出 Engine，
+    //   改为让调用方（PrismaEditor.dll）在收到 VkCommandBuffer 句柄后
+    //   在自己的 DLL 上下文中执行实际渲染，从而使用正确的后端数据。
+
+    // -----------------------------------------------------------------------
+    using OverlayRenderCallback = std::function<void(VkCommandBuffer)>;
+    void SetOverlayRenderCallback(OverlayRenderCallback callback) { m_overlayRenderCallback = std::move(callback); }
 
 private:
     // vk-bootstrap 核心
@@ -101,6 +138,7 @@ private:
     vkb::Device m_vkbDevice;
 
     VkInstance m_instance             = VK_NULL_HANDLE;
+    VkSurfaceKHR m_surface            = VK_NULL_HANDLE;
     VkPhysicalDevice m_physicalDevice = VK_NULL_HANDLE;
     VkDevice m_device                 = VK_NULL_HANDLE;
 
@@ -112,12 +150,25 @@ private:
     VkQueue m_presentQueue         = VK_NULL_HANDLE;
     uint32_t m_graphicsQueueFamily = 0;
 
+    // 描述符池
+    VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
+
+    // 命令控制
+    VkCommandPool m_commandPool = VK_NULL_HANDLE;
+    std::vector<VkCommandBuffer> m_commandBuffers;
+    std::vector<std::unique_ptr<VulkanCommandBuffer>> m_vulkanCommandBuffers;
+
+    // 同步
+    std::vector<VkSemaphore> m_imageAvailableSemaphores;
+    std::vector<VkSemaphore> m_renderFinishedSemaphores;
+    std::vector<VkFence> m_inFlightFences;
+    uint32_t m_currentFrame = 0;
+
     // 资源
     std::unique_ptr<VulkanSwapChain> m_swapChain;
     std::unique_ptr<VulkanResourceFactory> m_resourceFactory;
 
-    // ImGui
-    VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
+
 
     // 设备能力
     struct DeviceFeatures {
@@ -129,7 +180,19 @@ private:
 
     RenderStats m_stats;
     DeviceDesc m_desc;
+    std::string m_gpuName;
     bool m_initialized = false;
+    uint32_t m_currentFrameIndex = 0;
+    uint32_t m_pendingPresentImageIndex = 0;
+    bool m_frameActive = false;
+    bool m_hasPendingPresent = false;
+
+    // 覆盖层渲染回调（指向 PrismaEditor.dll 的实际渲染函数）
+    OverlayRenderCallback m_overlayRenderCallback;
+
+    // 离屏渲染支持
+    bool m_skipSwapChainRenderPass = false;
+    bool m_isDefaultRenderPassActive = false;
 };
 
-}  // namespace PrismaEngine::Graphic::Vulkan
+}  // namespace Prisma::Graphic::Vulkan

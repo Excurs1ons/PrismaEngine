@@ -11,16 +11,16 @@
 #include <memory>
 #include <unordered_map>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 通用层基类 (多态包装)
 // ============================================================================
 
-class Layer {
+class TilemapLayer {
 public:
-    Layer() = default;
-    virtual ~Layer() = default;
+    TilemapLayer() = default;
+    virtual ~TilemapLayer() = default;
 
     // 类型标识
     virtual LayerType GetType() const = 0;
@@ -41,45 +41,53 @@ public:
 
     // 转换方法 - 返回数据指针类型
     virtual TileLayer* AsTileLayer() { return nullptr; }
+    virtual const TileLayer* AsTileLayer() const { return nullptr; }
     virtual ObjectLayer* AsObjectLayer() { return nullptr; }
+    virtual const ObjectLayer* AsObjectLayer() const { return nullptr; }
     virtual ImageLayer* AsImageLayer() { return nullptr; }
+    virtual const ImageLayer* AsImageLayer() const { return nullptr; }
     virtual GroupLayer* AsGroupLayer() { return nullptr; }
+    virtual const GroupLayer* AsGroupLayer() const { return nullptr; }
 };
 
 // ============================================================================
-// 具体层实现 (继承自 Layer)
+// 具体层实现 (继承自 TilemapLayer)
 // ============================================================================
 
-class TileLayerImpl : public Layer {
+class TileLayerImpl : public TilemapLayer {
 public:
     TileLayer tileData;
 
     LayerType GetType() const override { return LayerType::TileLayer; }
     TileLayer* AsTileLayer() override { return &tileData; }
+    const TileLayer* AsTileLayer() const override { return &tileData; }
 };
 
-class ObjectLayerImpl : public Layer {
+class ObjectLayerImpl : public TilemapLayer {
 public:
     ObjectLayer objectData;
 
     LayerType GetType() const override { return LayerType::ObjectLayer; }
     ObjectLayer* AsObjectLayer() override { return &objectData; }
+    const ObjectLayer* AsObjectLayer() const override { return &objectData; }
 };
 
-class ImageLayerImpl : public Layer {
+class ImageLayerImpl : public TilemapLayer {
 public:
     ImageLayer imageData;
 
     LayerType GetType() const override { return LayerType::ImageLayer; }
     ImageLayer* AsImageLayer() override { return &imageData; }
+    const ImageLayer* AsImageLayer() const override { return &imageData; }
 };
 
-class GroupLayerImpl : public Layer {
+class GroupLayerImpl : public TilemapLayer {
 public:
     GroupLayer groupData;
 
     LayerType GetType() const override { return LayerType::GroupLayer; }
     GroupLayer* AsGroupLayer() override { return &groupData; }
+    const GroupLayer* AsGroupLayer() const override { return &groupData; }
 };
 
 // ============================================================================
@@ -113,7 +121,7 @@ struct TileMap {
     std::vector<std::unique_ptr<Tileset>> tilesets;
 
     // 层
-    std::vector<std::unique_ptr<Layer>> layers;
+    std::vector<std::unique_ptr<TilemapLayer>> layers;
 
     // 自定义属性
     PropertyMap properties;
@@ -135,26 +143,57 @@ struct TileMap {
     }
 
     // 查找层
-    Layer* FindLayer(int layerId) const {
+    TilemapLayer* FindLayer(int layerId) const {
         for (const auto& layer : layers) {
             if (layer->id == layerId) {
                 return layer.get();
             }
             if (layer->GetType() == LayerType::GroupLayer) {
                 auto* group = static_cast<GroupLayerImpl*>(layer.get());
-                // TODO: 递归搜索子层
+                TilemapLayer* found = FindLayerRecursive(group->groupData.layers, layerId);
+                if (found) return found;
             }
         }
         return nullptr;
     }
 
-    Layer* FindLayerByName(const std::string& layerName) const {
+    static TilemapLayer* FindLayerRecursive(const std::vector<std::unique_ptr<TilemapLayer>>& layers, int layerId) {
+        for (const auto& layer : layers) {
+            if (layer->id == layerId) {
+                return layer.get();
+            }
+            if (layer->GetType() == LayerType::GroupLayer) {
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                TilemapLayer* found = FindLayerRecursive(group->groupData.layers, layerId);
+                if (found) return found;
+            }
+        }
+        return nullptr;
+    }
+
+    TilemapLayer* FindLayerByName(const std::string& layerName) const {
         for (const auto& layer : layers) {
             if (layer->name == layerName) {
                 return layer.get();
             }
             if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归搜索子层
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                TilemapLayer* found = FindLayerByNameRecursive(group->groupData.layers, layerName);
+                if (found) return found;
+            }
+        }
+        return nullptr;
+    }
+
+    static TilemapLayer* FindLayerByNameRecursive(const std::vector<std::unique_ptr<TilemapLayer>>& layers, const std::string& layerName) {
+        for (const auto& layer : layers) {
+            if (layer->name == layerName) {
+                return layer.get();
+            }
+            if (layer->GetType() == LayerType::GroupLayer) {
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                TilemapLayer* found = FindLayerByNameRecursive(group->groupData.layers, layerName);
+                if (found) return found;
             }
         }
         return nullptr;
@@ -178,6 +217,12 @@ struct TileMap {
         return result;
     }
 
+    std::vector<const TileLayer*> GetTileLayers() const {
+        std::vector<const TileLayer*> result;
+        CollectTileLayers(result, layers);
+        return result;
+    }
+
     // 获取所有对象层
     std::vector<ObjectLayer*> GetObjectLayers() {
         std::vector<ObjectLayer*> result;
@@ -185,9 +230,21 @@ struct TileMap {
         return result;
     }
 
+    std::vector<const ObjectLayer*> GetObjectLayers() const {
+        std::vector<const ObjectLayer*> result;
+        CollectObjectLayers(result, layers);
+        return result;
+    }
+
     // 获取所有图像层
     std::vector<ImageLayer*> GetImageLayers() {
         std::vector<ImageLayer*> result;
+        CollectImageLayers(result, layers);
+        return result;
+    }
+
+    std::vector<const ImageLayer*> GetImageLayers() const {
+        std::vector<const ImageLayer*> result;
         CollectImageLayers(result, layers);
         return result;
     }
@@ -207,35 +264,71 @@ struct TileMap {
     }
 
 private:
-    static void CollectTileLayers(std::vector<TileLayer*>& result, const std::vector<std::unique_ptr<Layer>>& layers) {
+    static void CollectTileLayers(std::vector<TileLayer*>& result, const std::vector<std::unique_ptr<TilemapLayer>>& layers) {
         for (const auto& layer : layers) {
             if (auto* tileLayer = layer->AsTileLayer()) {
                 result.push_back(tileLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectTileLayers(result, group->groupData.layers);
             }
         }
     }
 
-    static void CollectObjectLayers(std::vector<ObjectLayer*>& result, const std::vector<std::unique_ptr<Layer>>& layers) {
+    static void CollectTileLayers(std::vector<const TileLayer*>& result, const std::vector<std::unique_ptr<TilemapLayer>>& layers) {
+        for (const auto& layer : layers) {
+            if (auto* tileLayer = layer->AsTileLayer()) {
+                result.push_back(tileLayer);
+            } else if (layer->GetType() == LayerType::GroupLayer) {
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectTileLayers(result, group->groupData.layers);
+            }
+        }
+    }
+
+    static void CollectObjectLayers(std::vector<ObjectLayer*>& result, const std::vector<std::unique_ptr<TilemapLayer>>& layers) {
         for (const auto& layer : layers) {
             if (auto* objectLayer = layer->AsObjectLayer()) {
                 result.push_back(objectLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectObjectLayers(result, group->groupData.layers);
             }
         }
     }
 
-    static void CollectImageLayers(std::vector<ImageLayer*>& result, const std::vector<std::unique_ptr<Layer>>& layers) {
+    static void CollectObjectLayers(std::vector<const ObjectLayer*>& result, const std::vector<std::unique_ptr<TilemapLayer>>& layers) {
+        for (const auto& layer : layers) {
+            if (auto* objectLayer = layer->AsObjectLayer()) {
+                result.push_back(objectLayer);
+            } else if (layer->GetType() == LayerType::GroupLayer) {
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectObjectLayers(result, group->groupData.layers);
+            }
+        }
+    }
+
+    static void CollectImageLayers(std::vector<ImageLayer*>& result, const std::vector<std::unique_ptr<TilemapLayer>>& layers) {
         for (const auto& layer : layers) {
             if (auto* imageLayer = layer->AsImageLayer()) {
                 result.push_back(imageLayer);
             } else if (layer->GetType() == LayerType::GroupLayer) {
-                // TODO: 递归
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectImageLayers(result, group->groupData.layers);
+            }
+        }
+    }
+
+    static void CollectImageLayers(std::vector<const ImageLayer*>& result, const std::vector<std::unique_ptr<TilemapLayer>>& layers) {
+        for (const auto& layer : layers) {
+            if (auto* imageLayer = layer->AsImageLayer()) {
+                result.push_back(imageLayer);
+            } else if (layer->GetType() == LayerType::GroupLayer) {
+                auto* group = static_cast<GroupLayerImpl*>(layer.get());
+                CollectImageLayers(result, group->groupData.layers);
             }
         }
     }
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

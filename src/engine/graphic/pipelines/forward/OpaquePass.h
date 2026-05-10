@@ -1,75 +1,46 @@
 #pragma once
-#include "interfaces/RenderTypes.h"
-#include "ForwardRenderPassBase.h"
-#include "graphic/interfaces/IPass.h"
-#include "graphic/interfaces/IRenderTarget.h"
-#include "math/MathTypes.h"
-#include <vector>
-namespace PrismaEngine::Graphic {
 
-/// @brief 不透明物体逻辑 Pass
-/// 前向渲染的主要 Pass，渲染不透明物体
+#include "interfaces/RenderTypes.h"
+#include "graphic/Renderer.h"
+#include "ForwardRenderPassBase.h"
+#include <memory>
+#include <vector>
+
+namespace Prisma::Graphic {
+
+class ICommandBuffer;
+class IShader;
+class IPipelineState;
+
+/**
+ * @brief 不透明渲染通道 (Opaque Pass)
+ * 没有任何单例，由 ForwardPipeline 调用。
+ */
 class OpaquePass : public ForwardRenderPass {
 public:
-
     OpaquePass();
     ~OpaquePass() override = default;
 
-    // === IPass 接口实现 ===
-
-    /// @brief 执行 Pass
-    /// @param context 执行上下文
+    // IPass 接口实现
     void Execute(const PassExecutionContext& context) override;
+    void Update(Prisma::Timestep ts) override;
 
-    /// @brief 更新 Pass 数据
-    /// @param deltaTime 时间增量
-    void Update(float deltaTime) override;
+    // 旧版执行接口支持 (向后兼容)
+    void Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands);
 
-    // === 光照设置 ===
-
-    /// @brief 设置光源列表
-    /// @param lights 光源数组
-    void SetLights(const std::vector<Light>& lights) { m_lights = lights; }
-
-    /// @brief 获取光源列表
-    const std::vector<Light>& GetLights() const { return m_lights; }
-
-    /// @brief 设置环境光颜色
-    /// @param color 环境光颜色
-    void SetAmbientColor(const PrismaMath::vec3& color) { m_ambientColor = color; }
-
-    /// @brief 获取环境光颜色
-    const PrismaMath::vec3& GetAmbientColor() const { return m_ambientColor; }
-
-    /// @brief 设置环境光强度
-    /// @param intensity 环境光强度
-    void SetAmbientIntensity(float intensity) { m_ambientIntensity = intensity; }
-
-    /// @brief 获取环境光强度
-    float GetAmbientIntensity() const { return m_ambientIntensity; }
-
-    // === 渲染统计 ===
-
-    /// @brief 获取渲染统计
-    struct RenderStats {
-        uint32_t drawCalls = 0;
-        uint32_t triangles = 0;
-        uint32_t objects = 0;
-    };
-    const RenderStats& GetRenderStats() const { return m_stats; }
-    RenderStats& GetRenderStats() { return m_stats; }
-
-    /// @brief 重置渲染统计
-    void ResetStats() { m_stats = RenderStats(); }
+    // 数据设置
+    void SetLights(const std::vector<Light>& lights);
+    void SetDevice(IRenderDevice* device) { m_device = device; }
 
 private:
-    // 光照数据
-    std::vector<Light> m_lights;
-    PrismaMath::vec3 m_ambientColor;
-    float m_ambientIntensity;
+    bool EnsureDefaultPipeline();
 
-    // 渲染统计
-    RenderStats m_stats;
+    std::vector<Light> m_Lights;
+    IRenderDevice* m_device = nullptr;
+    std::unordered_map<uint64_t, std::shared_ptr<IPipelineState>> m_psoCache;
+    std::shared_ptr<IShader> m_defaultVertexShader;
+    std::shared_ptr<IShader> m_defaultPixelShader;
+    std::shared_ptr<IPipelineState> m_defaultPipelineState;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

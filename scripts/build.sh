@@ -1,58 +1,149 @@
-#!/bin/bash
-# Prisma Engine Unified Build Script (Linux/macOS)
-# This script detects the platform and calls the appropriate build script
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-
-# Color output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
-
-# Get the directory of this script
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+cd "${REPO_ROOT}"
 
-# Default preset
-PRESET="${1:-}"
-CLEAN_BUILD="${2:-}"
+TARGET="engine"
+CONFIG="debug"
+PRESET_OVERRIDE=""
+CLEAN=0
+JOBS="${JOBS:-$(nproc 2>/dev/null || echo 4)}"
 
-function show_usage() {
-    echo -e "${CYAN}Usage: ./build.sh [preset] [clean]${NC}"
-    echo ""
-    echo -e "${YELLOW}Linux Presets:${NC}"
-    echo "  linux-x64-debug           (default, Vulkan)"
-    echo "  linux-x64-release         (Vulkan)"
-    echo "  linux-x64-debug-opengl    (OpenGL)"
-    echo "  linux-x64-release-opengl  (OpenGL)"
-    echo ""
-    echo -e "${YELLOW}Android Presets:${NC}"
-    echo "  android-arm64-v8a-debug"
-    echo "  android-arm64-v8a-release"
-    echo ""
-    echo -e "${YELLOW}Examples:${NC}"
-    echo "  ./build.sh linux-x64-debug"
-    echo "  ./build.sh linux-x64-release clean"
-    echo "  ./build.sh android-arm64-v8a-debug"
-    echo ""
+usage() {
+    cat <<'EOF'
+Usage: ./scripts/build.sh [options]
+
+One-click build with auto platform/arch preset selection.
+
+Options:
+  -t, --target <engine|editor|runtime|pacman>  Build target (default: engine)
+  -c, --config <debug|release>          Build config (default: debug)
+  -p, --preset <name>                   Explicit preset (skip auto detect)
+      --clean                           Remove selected build directory first
+  -j, --jobs <N>                        Parallel jobs (default: nproc)
+  -h, --help                            Show help
+
+Examples:
+  ./scripts/build.sh
+  ./scripts/build.sh --target editor --config release
+  ./scripts/build.sh --preset engine-linux-arm64-debug --clean
+EOF
 }
 
-if [ -z "$PRESET" ]; then
-    show_usage
-    exit 0
+normalize_arch() {
+    case "$(uname -m)" in
+        x86_64|amd64) echo "x64" ;;
+        aarch64|arm64) echo "arm64" ;;
+        armv7l|armv7) echo "armv7" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+normalize_platform() {
+    case "$(uname -s)" in
+        Linux) echo "linux" ;;
+        Darwin) echo "macos" ;;
+        MINGW*|MSYS*|CYGWIN*) echo "windows" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+preset_exists() {
+    local preset="$1"
+    cmake --list-presets 2>/dev/null | sed -n 's/.*"\([^"]*\)".*/\1/p' | grep -Fxq "${preset}"
+}
+
+build_dir_from_preset() {
+    local preset="$1"
+    sed -n '/"configurePresets"[[:space:]]*:/,/"buildPresets"[[:space:]]*:/p' CMakePresets.json \
+        | awk -v p="$preset" '
+            $0 ~ /"name"[[:space:]]*:/ && $0 ~ "\"" p "\"" { found=1 }
+            found && $0 ~ /"binaryDir"[[:space:]]*:/ {
+                gsub(/.*"binaryDir"[[:space:]]*:[[:space:]]*"/, "", $0)
+                gsub(/".*/, "", $0)
+                gsub(/\$\{sourceDir\}/, ".", $0)
+                print $0
+                exit
+            }
+        '
+}
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -t|--target)
+            TARGET="${2:-}"; shift 2 ;;
+        -c|--config)
+            CONFIG="${2:-}"; shift 2 ;;
+        -p|--preset)
+            PRESET_OVERRIDE="${2:-}"; shift 2 ;;
+        --clean)
+            CLEAN=1; shift ;;
+        -j|--jobs)
+            JOBS="${2:-}"; shift 2 ;;
+        -h|--help)
+            usage; exit 0 ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage
+            exit 1 ;;
+    esac
+done
+
+case "${TARGET}" in
+    engine|editor|runtime|pacman) ;;
+    *) echo "Invalid --target: ${TARGET}" >&2; exit 1 ;;
+esac
+
+case "${CONFIG}" in
+    debug|release) ;;
+    *) echo "Invalid --config: ${CONFIG}" >&2; exit 1 ;;
+esac
+
+PLATFORM="$(normalize_platform)"
+ARCH="$(normalize_arch)"
+
+# ARM 平台统一限制并行度，避免内存/温度压力导致构建不稳定
+if [[ "${ARCH}" == "arm64" || "${ARCH}" == "armv7" ]]; then
+    if [[ "${JOBS}" -gt 4 ]]; then
+        JOBS=4
+    fi
 fi
 
-echo -e "${CYAN}====================================${NC}"
-echo -e "${CYAN}Prisma Engine Build Script${NC}"
-echo -e "${CYAN}====================================${NC}"
-echo ""
-
-# Check if it's an Android preset
-if [[ "$PRESET" == android* ]]; then
-    echo -e "${YELLOW}Detected Android preset, calling Android build script...${NC}"
-    bash "$SCRIPT_DIR/build-android.sh" "$PRESET" "$CLEAN_BUILD"
+if [[ -n "${PRESET_OVERRIDE}" ]]; then
+    PRESET="${PRESET_OVERRIDE}"
 else
-    echo -e "${YELLOW}Detected Linux preset, calling Linux build script...${NC}"
-    bash "$SCRIPT_DIR/build-linux.sh" "$PRESET" "$CLEAN_BUILD"
+    PRESET="${TARGET}-${PLATFORM}-${ARCH}-${CONFIG}"
 fi
+
+if ! preset_exists "${PRESET}"; then
+    echo "Auto-selected preset not found: ${PRESET}" >&2
+    echo "Detected platform=${PLATFORM}, arch=${ARCH}, target=${TARGET}, config=${CONFIG}" >&2
+    echo "Available configure presets:" >&2
+    cmake --list-presets >&2
+    exit 1
+fi
+
+BUILD_DIR="$(build_dir_from_preset "${PRESET}")"
+if [[ -z "${BUILD_DIR}" ]]; then
+    BUILD_DIR="build/${PRESET}"
+fi
+
+echo "Detected platform : ${PLATFORM}"
+echo "Detected arch     : ${ARCH}"
+echo "Selected target   : ${TARGET}"
+echo "Selected config   : ${CONFIG}"
+echo "Selected preset   : ${PRESET}"
+echo "Output directory  : ${BUILD_DIR}"
+echo "Build jobs        : ${JOBS}"
+
+if [[ ${CLEAN} -eq 1 ]]; then
+    echo "Cleaning ${BUILD_DIR}"
+    rm -rf "${BUILD_DIR}"
+fi
+
+cmake --preset "${PRESET}"
+cmake --build --preset "${PRESET}" -j"${JOBS}"
+
+echo "Build completed: ${PRESET}"

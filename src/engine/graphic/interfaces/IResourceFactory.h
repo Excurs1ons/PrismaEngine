@@ -3,9 +3,10 @@
 #include "RenderTypes.h"
 #include "IResourceManager.h"
 #include "IPipelineState.h"
+#include "IDescriptorSet.h"
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class IRenderDevice;
@@ -97,20 +98,24 @@ public:
     /// @param height 高度
     /// @param format 格式
     /// @param bufferCount 缓冲区数量
-    /// @param vsync 是否启用垂直同步
+    /// @param presentMode 呈现模式 (垂直同步模式)
     /// @return 交换链智能指针
     virtual std::unique_ptr<ISwapChain> CreateSwapChainImpl(void* windowHandle,
                                                             uint32_t width,
                                                             uint32_t height,
                                                             TextureFormat format,
                                                             uint32_t bufferCount,
-                                                            bool vsync) = 0;
+                                                            PresentMode presentMode) = 0;
 
     // === 围栏创建 ===
 
     /// @brief 创建围栏
     /// @return 围栏智能指针
     virtual std::unique_ptr<IFence> CreateFenceImpl() = 0;
+
+    // === 描述符集创建 ===
+    virtual std::shared_ptr<IDescriptorSet> CreateDescriptorSet(IDescriptorSetLayout* layout) = 0;
+    virtual std::shared_ptr<IDescriptorSetLayout> CreateDescriptorSetLayout(const std::vector<ShaderResource>& resources) = 0;
 
     // === 批量创建 ===
 
@@ -232,4 +237,4 @@ public:
     virtual void ProcessDeferredDestructions() = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

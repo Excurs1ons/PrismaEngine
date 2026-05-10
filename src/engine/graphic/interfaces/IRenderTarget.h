@@ -4,7 +4,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 渲染目标抽象接口
 /// 代表颜色附着点，可以是纹理、交换链等
@@ -99,4 +99,4 @@ public:
     virtual bool IsSwapChain() const override { return true; }
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

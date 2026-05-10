@@ -4,7 +4,7 @@
 #include <cstring>
 #include <memory>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 /// @brief 音频格式
 struct AudioFormat {
@@ -154,4 +154,4 @@ public:
 /// @brief 驱动创建函数类型
 using DriverCreateFunc = std::unique_ptr<IAudioDriver>(*)();
 
-} // namespace PrismaEngine::Audio
+} // namespace Prisma::Audio

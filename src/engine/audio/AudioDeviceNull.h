@@ -4,7 +4,7 @@
 #include "AudioTypes.h"
 #include <mutex>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 /// @brief 空音频设备实现
 /// 用于测试和调试，不产生任何声音
@@ -78,7 +78,7 @@ public:
     std::string GenerateDebugReport() override;
 
     // 更新
-    void Update(float deltaTime) override;
+    void Update(Prisma::Timestep ts) override;
 
 private:
     // 内部 Voice 状态
@@ -120,4 +120,4 @@ private:
     mutable std::mutex m_mutex;
 };
 
-} // namespace Engine::Audio
+} // namespace Prisma::Audio

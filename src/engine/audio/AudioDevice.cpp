@@ -1,16 +1,9 @@
 #include "AudioDevice.h"
 
-// 平台驱动
-#if defined(_WIN32) && defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
-    #include "drivers/AudioDriverXAudio2.h"
-#elif defined(__ANDROID__) && defined(PRISMA_ENABLE_AUDIO_AAUDIO)
-    #include "drivers/AudioDriverAAudio.h"
-#endif
-
 #include <algorithm>
 #include <cmath>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 // ========== AudioDevice ==========
 
@@ -81,7 +74,7 @@ void AudioDevice::Shutdown() {
     m_initialized.store(false);
 }
 
-void AudioDevice::Update(float deltaTime) {
+void AudioDevice::Update(Timestep ts) {
     if (!m_initialized.load()) {
         return;
     }
@@ -123,24 +116,6 @@ DeviceInfo AudioDevice::GetDeviceInfo() const {
 // ========== 驱动创建 ==========
 
 std::unique_ptr<IAudioDriver> AudioDevice::CreateDriver(AudioDeviceType deviceType) {
-    // Native 模式：使用平台原生驱动
-    #if defined(_WIN32) && defined(PRISMA_ENABLE_AUDIO_XAUDIO2)
-        if (deviceType == AudioDeviceType::Auto || deviceType == AudioDeviceType::XAudio2) {
-            return CreateXAudio2Driver();
-        }
-    #endif
-
-    #if defined(__ANDROID__) && defined(PRISMA_ENABLE_AUDIO_AAUDIO)
-        if (deviceType == AudioDeviceType::Auto || deviceType == AudioDeviceType::SDL3) {
-            return CreateAAudioDriver();
-        }
-    #endif
-
-    // 跨平台模式：使用 SDL3（暂未实现）
-    // if (deviceType == AudioDeviceType::SDL3) {
-    //     return CreateSDL3Driver();
-    // }
-
     return nullptr;
 }
 
@@ -674,4 +649,4 @@ void AudioDevice::OnBufferEnd(IAudioDriver::SourceId sourceId, void* userData) {
     }
 }
 
-} // namespace PrismaEngine::Audio
+} // namespace Prisma::Audio

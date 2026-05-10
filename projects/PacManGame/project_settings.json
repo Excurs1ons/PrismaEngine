@@ -1,0 +1,35 @@
+{
+  "companyName": "PacManGames",
+  "productName": "PacManGame",
+  "version": "1.0.0",
+  "screenWidth": 896,
+  "screenHeight": 992,
+  "fullscreen": false,
+  "resizable": true,
+  "gameSettings": {
+    "enableLighting": true,
+    "enableParticles":2 true,
+    "enableSound": true,
+    "masterVolume": 0.8,
+    "sfxVolume": 0.8,
+    "musicVolume": 0.5,
+    "initialLives": 3,
+    "debugMode": false
+  },
+  "buildSettings": {
+    "windows": {
+      "targetFramework": "MSVC",
+      "configuration": "Release",
+      "platform": "x64"
+    },
+    "linux": {
+      "targetFramework": "Makefile",
+      "configuration": "Release"
+    },
+    "android": {
+      "minSdkVersion": 24,
+      "targetSdkVersion": 34,
+      "applicationId": "com.pacman.games"
+    }
+  }
+}

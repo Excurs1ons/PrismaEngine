@@ -9,28 +9,15 @@
 #include <memory>
 #include <vector>
 
-namespace PrismaEngine {
-namespace Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class ICamera;
-
-} // namespace Graphic
-} // namespace Engine
-
-namespace PrismaEngine::Graphic {
-
-// 前置声明
 class GeometryPass;
 class LightingPass;
 class SkyboxPass;
 class TransparentPass;
 class CompositionPass;
-
-// 前置声明：超分辨率 Pass
-#if defined(PRISMA_ENABLE_UPSCALER_FSR) || defined(PRISMA_ENABLE_UPSCALER_DLSS) || defined(PRISMA_ENABLE_UPSCALER_TSR)
-class UpscalerPass;
-#endif
 
 /// @brief 延迟渲染管线实现
 /// 管理和执行延迟渲染的所有 Pass
@@ -75,9 +62,9 @@ public:
     bool Initialize();
 
     /// @brief 更新管线数据
-    /// @param deltaTime 时间增量
+    /// @param ts 时间增量
     /// @param camera 相机接口
-    void Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera);
+    void Update(Prisma::Timestep ts, Prisma::Graphic::ICamera* camera);
 
     /// @brief 执行管线渲染
     /// @param context 执行上下文
@@ -99,17 +86,6 @@ public:
 
     /// @brief 获取合成 Pass
     CompositionPass* GetCompositionPass() const { return m_compositionPass.get(); }
-
-    // === 超分辨率 Pass ===
-
-#if defined(PRISMA_ENABLE_UPSCALER_FSR) || defined(PRISMA_ENABLE_UPSCALER_DLSS) || defined(PRISMA_ENABLE_UPSCALER_TSR)
-    /// @brief 设置超分辨率 Pass
-    /// @param upscalerPass 超分辨率 Pass
-    void SetUpscalerPass(UpscalerPass* upscalerPass);
-
-    /// @brief 获取超分辨率 Pass
-    UpscalerPass* GetUpscalerPass() const { return m_upscalerPass; }
-#endif
 
     // === 光照设置 ===
 
@@ -156,7 +132,7 @@ public:
 
 private:
     /// @brief 更新所有 Pass 的相机数据
-    void UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* camera);
+    void UpdatePassesCameraData(Prisma::Graphic::ICamera* camera);
 
     /// @brief 收集渲染统计
     void CollectStats();
@@ -169,13 +145,8 @@ private:
     std::shared_ptr<TransparentPass> m_transparentPass;
     std::shared_ptr<CompositionPass> m_compositionPass;
 
-#if defined(PRISMA_ENABLE_UPSCALER_FSR) || defined(PRISMA_ENABLE_UPSCALER_DLSS) || defined(PRISMA_ENABLE_UPSCALER_TSR)
-    // 超分辨率 Pass（可选）
-    UpscalerPass* m_upscalerPass = nullptr;
-#endif
-
     // 相机接口
-    PrismaEngine::Graphic::ICamera* m_camera;
+    Prisma::Graphic::ICamera* m_camera;
 
     // 光照数据
     std::vector<Light> m_lights;
@@ -185,4 +156,4 @@ private:
     RenderStats m_stats;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

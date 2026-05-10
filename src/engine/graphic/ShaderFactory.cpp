@@ -1,58 +1,27 @@
 #include "ShaderFactory.h"
-#include "adapters/dx12/DX12Shader.h"
-#include "adapters/dx12/DX12RenderDevice.h"
-#include <fstream>
-#include <sstream>
+#include "interfaces/IResourceFactory.h"
+#include "Logger.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
-std::unique_ptr<IShader> ShaderFactory::CreateShader(
-    RenderAPIType backendType,
-    const std::string& sourceCode,
-    const ShaderDesc& desc) {
+std::shared_ptr<IShader> ShaderFactory::CreateShader(IRenderDevice* device, const ShaderDesc& desc) {
+    if (!device) return nullptr;
     
-    switch (backendType) {
-        case RenderAPIType::DirectX12:
-            // 在实际实现中，这里需要编译HLSL源码为DX12字节码
-            // 并创建DX12Shader实例
-            // 注意：这需要一个有效的DX12RenderDevice实例
-            // 示例伪代码：
-            // auto bytecode = CompileHLSLToDX12(sourceCode, desc);
-            // auto reflection = ReflectDX12Shader(bytecode);
-            // return std::make_unique<DX12Shader>(device, desc, bytecode, reflection);
-            break;
-            
-        case RenderAPIType::Vulkan:
-            // 为Vulkan着色器预留实现空间
-            // 示例伪代码：
-            // auto spirv = CompileGLSLToSPIRV(sourceCode, desc);
-            // return std::make_unique<VulkanShader>(spirv, desc);
-            break;
-            
-        default:
-            break;
-    }
+    auto* factory = device->GetResourceFactory();
+    if (!factory) return nullptr;
+
+    // Use dummy bytecode and reflection for now
+    std::vector<uint8_t> bytecode;
+    ShaderReflection reflection;
     
-    return nullptr;
+    return factory->CreateShaderImpl(desc, bytecode, reflection);
 }
 
-std::unique_ptr<IShader> ShaderFactory::CreateShaderFromFile(
-    RenderAPIType backendType,
-    const std::string& filepath,
-    const ShaderDesc& desc) {
-    
-    // 读取文件内容
-    std::ifstream file(filepath);
-    if (!file.is_open()) {
-        return nullptr;
-    }
-    
-    std::stringstream sourceStream;
-    sourceStream << file.rdbuf();
-    std::string sourceCode = sourceStream.str();
-    file.close();
-    
-    return CreateShader(backendType, sourceCode, desc);
+std::shared_ptr<IShader> ShaderFactory::CreateShaderFromFile(IRenderDevice* device, const std::string& path, ShaderType type) {
+    ShaderDesc desc;
+    desc.filename = path;
+    desc.type = type;
+    return CreateShader(device, desc);
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

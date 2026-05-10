@@ -5,7 +5,7 @@
 #include <string_view>
 #include <atomic>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 /// @brief 资源基础抽象类
 /// 所有渲染资源的基类
@@ -16,7 +16,7 @@ public:
 
     /// @brief 获取资源类型
     /// @return 资源类型
-    virtual ResourceType GetType() const = 0;
+    virtual ResourceType GetResourceType() const = 0;
 
     /// @brief 获取资源ID
     /// @return 资源ID
@@ -97,4 +97,4 @@ protected:
     mutable std::atomic<uint64_t> m_lastAccessTimestamp{0};
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

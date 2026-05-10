@@ -1,8 +1,9 @@
 #pragma once
 
 #include "math/MathTypes.h"
+#include "core/Timestep.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 namespace Graphic {
 
 // 相机接口
@@ -52,8 +53,11 @@ public:
     // 设置宽高比
     virtual void SetAspectRatio(float aspectRatio) = 0;
 
+    // 设置视口尺寸（像素），相机据此自适应投影
+    virtual void SetViewport(uint32_t width, uint32_t height) = 0;
+
     // 更新相机（每帧调用）
-    virtual void Update(float deltaTime) = 0;
+    virtual void Update(Timestep ts) = 0;
 
     // 是否是活动相机
     virtual bool IsActive() const = 0;
@@ -69,4 +73,4 @@ public:
 };
 
 } // namespace Graphic
-} // namespace Engine
+} // namespace Prisma

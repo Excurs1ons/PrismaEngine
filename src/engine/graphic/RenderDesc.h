@@ -7,8 +7,11 @@
 #define RENDERDESC_H
 #include "interfaces/RenderTypes.h"
 #include <vector>
+#include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
+class IShader;
+
 /// @brief 缓冲区描述
 struct BufferDesc : public ResourceDesc {
     BufferType type = BufferType::Vertex;
@@ -30,8 +33,8 @@ struct ShaderDesc : public ResourceDesc {
     uint64_t compileTimestamp = 0;
     uint64_t compileHash = 0;
     ShaderCompileOptions compileOptions;
-    std::vector<std::string> dependencies;  // 改为值类型
-    std::vector<std::string> includes;      // 改为值类型
+    std::vector<std::string> dependencies;
+    std::vector<std::string> includes;
 };
 
 /// @brief 管线描述

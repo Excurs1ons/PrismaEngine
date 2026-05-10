@@ -6,7 +6,7 @@
 #include <functional>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Input {
 
         /**
@@ -130,9 +130,9 @@ namespace PrismaEngine {
 
             /**
              * @brief 每帧更新输入状态
-             * @param deltaTime 帧时间
+             * @param ts 帧时间
              */
-            virtual void update(float deltaTime) = 0;
+            virtual void update(Timestep ts) = 0;
 
             /**
              * @brief 处理事件（由平台层调用）
@@ -427,4 +427,4 @@ namespace PrismaEngine {
         };
 
     } // namespace Input
-} // namespace PrismaEngine
+} // namespace Prisma

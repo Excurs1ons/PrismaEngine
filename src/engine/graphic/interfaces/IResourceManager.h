@@ -11,7 +11,7 @@
 #include <shared_mutex>
 #include <string>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class ITexture;
@@ -41,10 +41,9 @@ struct ResourceStats {
 
 /// @brief 资源管理器抽象接口
 /// 提供统一的资源加载、创建和管理功能
-class IResourceManager {
+class IRenderResourceManager {
 public:
-    virtual ~IResourceManager() = default;
-
+    virtual ~IRenderResourceManager() = default;
     /// @brief 初始化资源管理器
     /// @param device 渲染设备
     /// @return 是否初始化成功
@@ -172,6 +171,15 @@ public:
     /// @return 是否加载完成
     virtual bool IsAsyncLoadingComplete(ResourceId id) = 0;
 
+    /// @brief 同步加载着色器 (内部使用或特殊需求)
+    virtual std::shared_ptr<IShader> LoadShaderSync(const std::string& filename,
+                                                   const std::string& entryPoint = "main",
+                                                   const std::string& target = "",
+                                                   const std::vector<std::string>& defines = {}) = 0;
+
+    /// @brief 根据名称获取已加载的着色器
+    virtual std::shared_ptr<IShader> GetShader(const std::string& name) = 0;
+
     // === 统计信息 ===
 
 
@@ -193,4 +201,4 @@ public:
     virtual std::shared_mutex& GetResourceLock() = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

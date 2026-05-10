@@ -1,79 +1,86 @@
 #pragma once
-#include "SerializationVersion.h"
-#include "Archive.h"
+#include "Serializable.h"
 #include <vector>
 #include <fstream>
 
-namespace PrismaEngine {
-    namespace Serialization {
+namespace Prisma {
+namespace Serialization {
 
-        // 二进制输出存档
-        class BinaryOutputArchive : public OutputArchive {
-        public:
-            explicit BinaryOutputArchive(std::ostream& stream) : m_stream(stream) {}
+/**
+ * @brief 二进制输出存档
+ */
+class ENGINE_API BinaryOutputArchive : public OutputArchive {
+public:
+    void BeginObject(const std::string& name) override {}
+    void EndObject() override {}
 
-            void WriteBool(bool value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
-            void WriteInt32(int32_t value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
-            void WriteUInt32(uint32_t value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
-            void WriteFloat(float value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
-            void WriteDouble(double value) override { m_stream.write(reinterpret_cast<const char*>(&value), sizeof(value)); }
-            void WriteString(const std::string& value) override {
-                uint32_t size = static_cast<uint32_t>(value.size());
-                WriteUInt32(size);
-                m_stream.write(value.data(), size);
-            }
-
-            // 带 Key 版本
-            void BeginArray(const std::string& /*key*/, uint32_t& size) override { WriteUInt32(size); }
-            void BeginObject(const std::string& /*key*/) override {}
-
-            // 兼容旧代码版本
-            void BeginArray(uint32_t size) override { WriteUInt32(size); }
-            void BeginObject(size_t /*fieldCount*/ = 0) override {}
-
-            void EndArray() override {}
-            void EndObject() override {}
-            void SetCurrent(const std::string& /*key*/) override {}
-            void EnterField(const std::string& /*key*/) override {}
-
-        private:
-            std::ostream& m_stream;
-        };
-
-        // 二进制输入存档
-        class BinaryInputArchive : public InputArchive {
-        public:
-            explicit BinaryInputArchive(std::istream& stream) : m_stream(stream) {}
-
-            bool ReadBool() override { bool v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
-            int32_t ReadInt32() override { int32_t v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
-            uint32_t ReadUInt32() override { uint32_t v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
-            float ReadFloat() override { float v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
-            double ReadDouble() override { double v; m_stream.read(reinterpret_cast<char*>(&v), sizeof(v)); return v; }
-            std::string ReadString() override {
-                uint32_t size = ReadUInt32();
-                std::string v(size, '\0');
-                m_stream.read(&v[0], size);
-                return v;
-            }
-
-            // 带 Key 版本
-            void BeginArray(const std::string& /*key*/, uint32_t& size) override { size = ReadUInt32(); }
-            void BeginObject(const std::string& /*key*/) override {}
-
-            // 兼容旧代码版本
-            size_t BeginArray() override { return static_cast<size_t>(ReadUInt32()); }
-            size_t BeginObject() override { return 0; }
-
-            void EndArray() override {}
-            void EndObject() override {}
-            bool HasNextField() override { return !m_stream.eof(); }
-            bool HasNextField(const std::string& /*expectedField*/) override { return HasNextField(); }
-            void SetCurrent(const std::string& /*key*/) override {}
-            void EnterField(const std::string& /*key*/) override {}
-
-        private:
-            std::istream& m_stream;
-        };
+    void Write(const std::string& key, float value) override { WriteRaw(value); }
+    void Write(const std::string& key, int32_t value) override { WriteRaw(value); }
+    void Write(const std::string& key, uint32_t value) override { WriteRaw(value); }
+    void Write(const std::string& key, bool value) override { WriteRaw(value); }
+    void Write(const std::string& key, const std::string& value) override {
+        uint32_t size = static_cast<uint32_t>(value.size());
+        WriteRaw(size);
+        m_data.insert(m_data.end(), value.begin(), value.end());
     }
-}
+    
+    void Write(const std::string& key, const PrismaMath::vec2& value) override { WriteRaw(value); }
+    void Write(const std::string& key, const PrismaMath::vec3& value) override { WriteRaw(value); }
+    void Write(const std::string& key, const PrismaMath::vec4& value) override { WriteRaw(value); }
+    void Write(const std::string& key, const PrismaMath::quat& value) override { WriteRaw(value); }
+
+    const std::vector<uint8_t>& GetData() const { return m_data; }
+
+private:
+    template<typename T>
+    void WriteRaw(const T& value) {
+        const uint8_t* p = reinterpret_cast<const uint8_t*>(&value);
+        m_data.insert(m_data.end(), p, p + sizeof(T));
+    }
+
+    std::vector<uint8_t> m_data;
+};
+
+/**
+ * @brief 二进制输入存档
+ */
+class ENGINE_API BinaryInputArchive : public InputArchive {
+public:
+    explicit BinaryInputArchive(const std::vector<uint8_t>& data) : m_data(data), m_offset(0) {}
+
+    void BeginObject(const std::string& name) override {}
+    void EndObject() override {}
+
+    bool Read(const std::string& key, float& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, int32_t& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, uint32_t& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, bool& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, std::string& value) override {
+        uint32_t size = 0;
+        if (!ReadRaw(size)) return false;
+        if (m_offset + size > m_data.size()) return false;
+        value.assign(reinterpret_cast<const char*>(&m_data[m_offset]), size);
+        m_offset += size;
+        return true;
+    }
+    
+    bool Read(const std::string& key, PrismaMath::vec2& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, PrismaMath::vec3& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, PrismaMath::vec4& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, PrismaMath::quat& value) override { return ReadRaw(value); }
+
+private:
+    template<typename T>
+    bool ReadRaw(T& value) {
+        if (m_offset + sizeof(T) > m_data.size()) return false;
+        std::memcpy(&value, &m_data[m_offset], sizeof(T));
+        m_offset += sizeof(T);
+        return true;
+    }
+
+    const std::vector<uint8_t>& m_data;
+    size_t m_offset;
+};
+
+} // namespace Serialization
+} // namespace Prisma

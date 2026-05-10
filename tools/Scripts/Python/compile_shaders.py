@@ -74,6 +74,7 @@ def compile_shader_dxcompiler(shader_path, output_path, profile):
     cmd = [
         dxc_path,
         "-spirv",
+        "-fspv-target-env=vulkan1.1",
         "-T", profile,
         "-E", "main",
         str(shader_path),

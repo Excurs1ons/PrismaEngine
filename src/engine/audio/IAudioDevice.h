@@ -1,11 +1,12 @@
 #pragma once
 
 #include "AudioTypes.h"
+#include "core/Timestep.h"
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Audio {
+namespace Prisma::Audio {
 
 /// @brief 音频设备抽象接口
 /// 这是音频系统的核心抽象，不同的音频后端只需要实现这一个接口
@@ -30,8 +31,8 @@ public:
     virtual bool IsInitialized() const = 0;
 
     /// @brief 更新音频设备（每帧调用）
-    /// @param deltaTime 时间增量（秒）
-    virtual void Update(float deltaTime) = 0;
+    /// @param ts 时间增量（秒）
+    virtual void Update(Prisma::Timestep ts) = 0;
 
     // ========== 设备信息 ==========
 
@@ -56,8 +57,7 @@ public:
 
     /// @brief 设置当前设备（如果支持）
     /// @param deviceName 设备名称
-    virtual bool SetDevice(const std::string& deviceName) {
-        (void)deviceName;
+    virtual bool SetDevice(const std::string&) {
         return false;
     }
 
@@ -119,7 +119,7 @@ public:
     /// @param velocity 速度 (vx, vy, vz)
     virtual void SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) = 0;
 
-    /// @brief 设置音频源3D方向
+    /// @brief 设置音频源3D direction
     /// @param voiceId 音频Voice ID
     /// @param direction 方向 (dx, dy, dz)
     virtual void SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) = 0;
@@ -198,16 +198,13 @@ public:
     /// @param effectType 音效类型
     /// @param params 音效参数
     /// @return 是否成功
-    virtual bool ApplyEffect(AudioVoiceId voiceId, EffectType effectType, const void* params) {
-        (void)params;
-        (void)voiceId;
-        (void)effectType;
+    virtual bool ApplyEffect(AudioVoiceId, EffectType, const void*) {
         return false;
     }
 
     /// @brief 移除音频源的所有音效
     /// @param voiceId 音频Voice ID
-    virtual void RemoveEffects(AudioVoiceId voiceId) {}
+    virtual void RemoveEffects(AudioVoiceId) {}
 
     // ========== 事件系统 ==========
 
@@ -237,4 +234,4 @@ public:
     virtual std::string EndProfile() { return ""; }
 };
 
-}  // namespace PrismaEngine::Audio
+}  // namespace Prisma::Audio

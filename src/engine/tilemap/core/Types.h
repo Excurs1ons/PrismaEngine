@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 地图方向枚举
@@ -220,4 +220,4 @@ struct TileOffset {
     int y = 0;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

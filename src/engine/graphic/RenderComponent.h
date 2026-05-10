@@ -6,7 +6,7 @@
 #include <vector>
 #include "Material.h"
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Graphic {
         class RenderCommandContext;
 
@@ -36,7 +36,7 @@ namespace PrismaEngine {
             uint32_t GetIndexCount() const { return m_indexCount; }
 
             // 渲染方法
-            virtual void Render(PrismaEngine::Graphic::RenderCommandContext *context);
+            virtual void Render(Prisma::Graphic::RenderCommandContext *context);
 
             // 设置颜色 (为了向后兼容，现在设置材质的基础颜色)
             void SetColor(float r, float g, float b, float a = 1.0f);
@@ -55,7 +55,7 @@ namespace PrismaEngine {
             // Component接口实现
             void Initialize() override;
 
-            void Update(float deltaTime) override;
+            void Update(Timestep ts) override;
             void Shutdown() override;
         private:
             std::vector<float> m_vertices;
@@ -63,7 +63,7 @@ namespace PrismaEngine {
             uint32_t m_vertexCount;
             uint32_t m_indexCount;
             bool m_use16BitIndices; // 缓存索引类型，避免运行时检查
-            PrismaEngine::Color m_color;
+            Prisma::Color m_color;
 
             // 材质系统
             std::shared_ptr <Material> m_material;

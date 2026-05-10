@@ -5,7 +5,7 @@
 #include <functional>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 /// @brief UI 组件基类（最简实现）
 /// 使用屏幕坐标系：原点在左上角，X 向右，Y 向下
@@ -16,7 +16,7 @@ public:
 
     // Component 接口
     void Initialize() override {}
-    void Update(float deltaTime) override;
+    void Update(Timestep ts) override;
     void Shutdown() override {}
 
     // === 基础属性（屏幕坐标） ===
@@ -101,4 +101,4 @@ protected:
     ClickCallback m_onClick;
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

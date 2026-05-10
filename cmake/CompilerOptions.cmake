@@ -17,18 +17,15 @@ if(CMAKE_GENERATOR MATCHES "Visual Studio")
     set(CMAKE_VS_WINDOWS_TARGET_PLATFORM_VERSION "latest" CACHE STRING "WindowsTargetPlatformVersion" FORCE)
 endif()
 
-# Ninja 生成器配置
-if(CMAKE_GENERATOR MATCHES "Ninja")
-    set(CMAKE_NINJA_GENERATOR_PLATFORM "x64")
-    set(CMAKE_NINJA_GENERATOR_TOOLSET "host=x64")
-endif()
-
 # ========== 平台特定编译定义 ==========
 
 # Windows 平台定义
 if(WIN32)
     add_compile_definitions(NOMINMAX WIN32_LEAN_AND_MEAN)
     add_compile_options(/DNOMINMAX /DWIN32_LEAN_AND_MEAN)
+    if(MSVC)
+        add_compile_options(/utf-8)
+    endif()
 endif()
 
 # ========== 编译选项 ==========

@@ -1,0 +1,369 @@
+name: Release SDK (Linux ARM64)
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
+
+env:
+  CMAKE_VERSION: '3.31.0'
+  DEBIAN_FRONTEND: noninteractive
+
+jobs:
+  get-version:
+    name: Get Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Get version from tag
+        id: version
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION=${GITHUB_REF#refs/tags/}
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+  release-linux-arm64-sdk:
+    name: Linux ARM64 SDK
+    runs-on: ubuntu-latest
+    needs: get-version
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          fetch-depth: 1
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: linux/arm64
+
+      - name: Build SDK in ARM64 container
+        run: |
+          docker run --rm --platform linux/arm64 \
+            -v "${{ github.workspace }}":/workspace \
+            -w /workspace \
+            arm64v8/ubuntu:noble \
+            bash -c '
+              set -e
+              apt-get update
+              apt-get install -y curl ninja-build git unzip \
+                gcc g++ pkg-config libssl-dev libvulkan-dev vulkan-tools \
+                libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev \
+                libxi-dev libxext-dev libxkbcommon-dev \
+                libwayland-dev wayland-protocols libegl-dev libgl-dev patchelf
+              curl -sLO https://github.com/Kitware/CMake/releases/download/v3.31.0/cmake-3.31.0-linux-aarch64.sh
+              chmod +x cmake-3.31.0-linux-aarch64.sh
+              ./cmake-3.31.0-linux-aarch64.sh --skip-license --prefix=/usr/local
+              rm -rf build
+              cmake -B build -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DPRISMA_BUILD_SHARED_LIBS=ON \
+                -DPRISMA_BUILD_EDITOR=OFF \
+                -DPRISMA_BUILD_RUNTIME=OFF \
+                -DPRISMA_ENABLE_RENDER_VULKAN=ON \
+                -DPRISMA_ENABLE_AUDIO_SDL3=ON \
+                -DPRISMA_ENABLE_INPUT_SDL3=ON \
+                -DPRISMA_USE_NATIVE_AUDIO=OFF \
+                -DPRISMA_USE_NATIVE_INPUT=OFF \
+                -DPRISMA_USE_FETCHCONTENT=ON
+              cmake --build build --target Engine --parallel 2
+            '
+
+      - name: Package SDK
+        shell: bash
+        env:
+          SDK_VERSION: ${{ needs.get-version.outputs.version }}
+        run: |
+          set -e
+          SDK_DIR="PrismaEngine-SDK-${SDK_VERSION}-linux-arm64"
+          mkdir -p "$SDK_DIR/include/PrismaEngine"
+          mkdir -p "$SDK_DIR/lib/linux"
+          mkdir -p "$SDK_DIR/cmake"
+          mkdir -p "$SDK_DIR/template"
+
+          # Copy engine headers
+          for subdir in app core window logger transform scene graphic input audio physics platform utils math object resource serialization threading tilemap ui config packing; do
+            if [ -d "src/engine/$subdir" ]; then cp -r "src/engine/$subdir" "$SDK_DIR/include/PrismaEngine/"; fi
+          done
+
+          for h in EntryPoint.h Export.h Common.h Build.h framework.h; do
+            if [ -f "src/engine/$h" ]; then cp "src/engine/$h" "$SDK_DIR/include/PrismaEngine/"; fi
+          done
+
+          python3 << 'PYTHON_EOF'
+import os
+import re
+
+DIR_MAP = {
+    'app': 'PrismaEngine/app', 'core': 'PrismaEngine/core',
+    'window': 'PrismaEngine/window', 'logger': 'PrismaEngine/logger',
+    'transform': 'PrismaEngine/transform', 'scene': 'PrismaEngine/scene',
+    'graphic': 'PrismaEngine/graphic', 'input': 'PrismaEngine/input',
+    'audio': 'PrismaEngine/audio', 'physics': 'PrismaEngine/physics',
+    'platform': 'PrismaEngine/platform', 'utils': 'PrismaEngine/utils',
+    'math': 'PrismaEngine/math', 'object': 'PrismaEngine/object',
+    'resource': 'PrismaEngine/resource', 'serialization': 'PrismaEngine/serialization',
+    'threading': 'PrismaEngine/threading', 'tilemap': 'PrismaEngine/tilemap',
+    'ui': 'PrismaEngine/ui', 'config': 'PrismaEngine/config',
+    'packing': 'PrismaEngine/packing',
+}
+
+def get_module(path):
+    parts = path.split('/')
+    try:
+        idx = parts.index('PrismaEngine')
+        return parts[idx+1] if idx+1 < len(parts) else None
+    except ValueError:
+        return None
+
+def fix_file(path):
+    with open(path, 'r', encoding='utf-8', errors='ignore') as f:
+        content = f.read()
+    if 'PrismaEngine/' in content[:300]:
+        return False
+    module = get_module(path)
+    original = content
+    for subdir, prefix in DIR_MAP.items():
+        if subdir == module:
+            continue
+        content = re.sub(rf'#include "({subdir}/[^"]+)"', rf'#include "{prefix}/\1"', content)
+    if content != original:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        return True
+    return False
+
+count = 0
+for root, dirs, files in os.walk('PrismaEngine-SDK-${SDK_VERSION}-linux-arm64/include'):
+    for f in files:
+        if f.endswith(('.h', '.cpp')):
+            if fix_file(os.path.join(root, f)):
+                count += 1
+print(f"Fixed {count} files")
+PYTHON_EOF
+
+          # Copy library files
+          cp build/lib/libPrisma.so* "$SDK_DIR/lib/linux/" 2>/dev/null || true
+          cp build/lib/*.a "$SDK_DIR/lib/linux/" 2>/dev/null || true
+
+          # Copy SDL3 library
+          cp build/lib/libSDL3.so* "$SDK_DIR/lib/linux/" 2>/dev/null || true
+
+          # Copy third-party headers
+          mkdir -p "$SDK_DIR/third_party"
+          cp -r .dependencies/glm-src/glm "$SDK_DIR/third_party/" 2>/dev/null || true
+          cp -r .dependencies/stb-src/* "$SDK_DIR/third_party/" 2>/dev/null || true
+          cp -r .dependencies/nlohmann_json-src/single_include/nlohmann "$SDK_DIR/third_party/" 2>/dev/null || true
+          mkdir -p "$SDK_DIR/third_party/SDL3"
+          cp -r .dependencies/SDL3-src/include/SDL3/* "$SDK_DIR/third_party/SDL3/" 2>/dev/null || true
+
+          # Create CMake config files
+          cat > "$SDK_DIR/cmake/PrismaEngineConfig.cmake" << 'CONFIG_EOF'
+include(CMakeFindDependencyMacro)
+set(PRISMAENGINE_INCLUDE_DIR "${CMAKE_CURRENT_LIST_DIR}/../include")
+set(PRISMAENGINE_CMAKE_DIR "${CMAKE_CURRENT_LIST_DIR}")
+set(PRISMAENGINE_LIB_DIR "${CMAKE_CURRENT_LIST_DIR}/../lib/linux")
+set(PRISMAENGINE_FOUND TRUE)
+set(PRISMAENGINE_VERSION "VERSIONPLACEHOLDER")
+set(PRISMAENGINE_VERSION_MAJOR 1)
+set(PRISMAENGINE_VERSION_MINOR 0)
+set(PRISMAENGINE_VERSION_PATCH 1)
+find_dependency(Vulkan REQUIRED)
+include("${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
+CONFIG_EOF
+
+          cat > "$SDK_DIR/cmake/PrismaEngineTargets.cmake" << 'TARGETS_EOF'
+add_library(PrismaEngine::Engine SHARED IMPORTED)
+set_target_properties(PrismaEngine::Engine PROPERTIES
+    IMPORTED_LOCATION "${PRISMAENGINE_LIB_DIR}/libPrisma.so"
+    INTERFACE_INCLUDE_DIRECTORIES "${PRISMAENGINE_INCLUDE_DIR}"
+)
+TARGETS_EOF
+
+          sed -i "s/VERSIONPLACEHOLDER/$SDK_VERSION/" "$SDK_DIR/cmake/PrismaEngineConfig.cmake"
+
+          # Create PrismaEngine.h wrapper header
+          cat > "$SDK_DIR/include/PrismaEngine.h" << 'WRAPPER_EOF'
+#pragma once
+#include "PrismaEngine/EntryPoint.h"
+#include "PrismaEngine/app/Application.h"
+#include "PrismaEngine/app/Engine.h"
+#include "PrismaEngine/core/Timestep.h"
+#include "PrismaEngine/core/Event.h"
+#include "PrismaEngine/core/LayerStack.h"
+#include "PrismaEngine/core/Layer.h"
+#include "PrismaEngine/window/Window.h"
+#include "PrismaEngine/logger/Logger.h"
+#define PRISMA_TRACE(...) ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Trace, "App", ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), __VA_ARGS__)
+#define PRISMA_INFO(...) ::Prisma::Logger::Get().LogFormat(::Prisma::LogLevel::Info, "App", ::Prisma::SourceLocation(__FILE__, __LINE__, __func__), __VA_ARGS__)
+WRAPPER_EOF
+
+          # Create project template
+          cat > "$SDK_DIR/template/CMakeLists.txt" << 'TEMPLATE_CMAKE_EOF'
+cmake_minimum_required(VERSION 3.20)
+project(MyGame VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+set(PRISMA_SDK_VERSION "@SDK_VERSION@")
+set(PRISMA_SDK_URL "https://github.com/Excurs1ons/PrismaEngine/releases/download/v${PRISMA_SDK_VERSION}-sdk/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64.tar.gz")
+
+set(PRISMA_SDK_DIR "${CMAKE_BINARY_DIR}/PrismaEngine-SDK")
+if(NOT EXISTS "${PRISMA_SDK_DIR}/cmake/PrismaEngineConfig.cmake")
+    message(STATUS "Downloading PrismaEngine SDK...")
+    file(DOWNLOAD "${PRISMA_SDK_URL}" "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz" SHOW_PROGRESS)
+    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz" WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+    file(REMOVE "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz")
+    file(RENAME "${CMAKE_BINARY_DIR}/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64" "${PRISMA_SDK_DIR}")
+endif()
+
+list(APPEND CMAKE_PREFIX_PATH "${PRISMA_SDK_DIR}")
+find_package(PrismaEngine REQUIRED)
+
+file(GLOB_RECURSE SOURCES "src/*.cpp" "src/*.h")
+
+add_executable(${PROJECT_NAME} ${SOURCES})
+
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${PRISMA_SDK_DIR}/include
+    ${PRISMA_SDK_DIR}/third_party
+    src
+)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE PrismaEngine::Engine)
+target_link_directories(${PROJECT_NAME} PRIVATE "${PRISMA_SDK_DIR}/lib/linux")
+
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+TEMPLATE_CMAKE_EOF
+
+          cat > "$SDK_DIR/template/src/main.cpp" << 'TEMPLATE_MAIN_EOF'
+#include "DeepSpaceApp.h"
+#include <PrismaEngine/EntryPoint.h>
+
+Prisma::Application* PrismaCreateApplication() {
+    return new DeepSpaceApp();
+}
+
+int main(int argc, char** argv) {
+    Prisma::EngineSpecification spec;
+    spec.Name = "MyGame";
+    
+    Prisma::Engine engine(spec);
+    
+    if (engine.Initialize() != 0) {
+        return -1;
+    }
+
+    auto* app = PrismaCreateApplication();
+    int result = engine.Run(std::unique_ptr<Prisma::Application>(app));
+
+    engine.Shutdown();
+
+    return result;
+}
+TEMPLATE_MAIN_EOF
+
+          cat > "$SDK_DIR/template/src/DeepSpaceApp.h" << 'TEMPLATE_APP_H_EOF'
+#pragma once
+#include <PrismaEngine/EntryPoint.h>
+
+class DeepSpaceApp : public Prisma::Application {
+public:
+    DeepSpaceApp() : Application() {}
+    ~DeepSpaceApp() override = default;
+
+    void OnStart() override {
+        PRISMA_INFO("DeepSpace App Started!");
+    }
+
+    void OnUpdate(Prisma::Timestep ts) override {
+        // Update logic here
+    }
+
+    void OnShutdown() override {
+        PRISMA_INFO("DeepSpace App Shutdown!");
+    }
+};
+TEMPLATE_APP_H_EOF
+
+          cat > "$SDK_DIR/template/README.md" << 'TEMPLATE_README_EOF'
+# MyGame
+
+A game built with PrismaEngine.
+
+## Quick Start
+
+```bash
+# Create your project
+mkdir my-game && cd my-game
+curl -sL https://github.com/Excurs1ons/PrismaEngine/releases/download/v@SDK_VERSION@-sdk/PrismaEngine-SDK-@SDK_VERSION@-linux-arm64.tar.gz | tar xz
+mv PrismaEngine-SDK-@SDK_VERSION@-linux-arm64/template/* .
+rm -rf PrismaEngine-SDK-@SDK_VERSION@-linux-arm64
+
+# Build
+cmake -B build
+cmake --build build
+
+# Run
+./build/MyGame
+```
+
+## Requirements
+
+- CMake 3.20+
+- C++20 compiler
+- Vulkan SDK (libvulkan-dev on Ubuntu/Debian)
+TEMPLATE_README_EOF
+
+          sed -i "s/@SDK_VERSION@/$SDK_VERSION/g" "$SDK_DIR/template/CMakeLists.txt"
+          sed -i "s/@SDK_VERSION@/$SDK_VERSION/g" "$SDK_DIR/template/README.md"
+
+          # Set RPATH
+          patchelf --set-rpath '$ORIGIN/' "$SDK_DIR/lib/linux/libPrisma.so" 2>/dev/null || true
+
+          tar -czf "PrismaEngine-SDK-${SDK_VERSION}-linux-arm64.tar.gz" "$SDK_DIR"
+          echo "=== SDK Package ==="
+          ls -lh "PrismaEngine-SDK-${SDK_VERSION}-linux-arm64.tar.gz"
+
+      - name: Upload SDK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PrismaEngine-SDK-linux-arm64-${{ needs.get-version.outputs.version }}
+          path: PrismaEngine-SDK-${{ needs.get-version.outputs.version }}-linux-arm64.tar.gz
+          retention-days: 5
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.get-version.outputs.version }}
+          name: PrismaEngine SDK v${{ needs.get-version.outputs.version }}
+          draft: false
+          prerelease: false
+          files: PrismaEngine-SDK-${{ needs.get-version.outputs.version }}-linux-arm64.tar.gz
+          body: |
+            PrismaEngine SDK v${{ needs.get-version.outputs.version }} for Linux ARM64 (built with Docker + QEMU native ARM64)
+
+            Contents:
+            - include/PrismaEngine/ - Engine public API headers (no bundled 3rd-party)
+            - lib/linux/libPrisma.so - Prebuilt engine library (ARM64)
+            - cmake/ - CMake find_package configuration
+
+            Requirements:
+            - CMake 3.20+, C++20
+            - Vulkan SDK (libvulkan-dev on Ubuntu/Debian)
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -2,7 +2,7 @@
 #include <tinyxml2.h>
 #include <sstream>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 std::string TsxParser::s_lastError;
 
@@ -159,7 +159,12 @@ std::vector<CollisionShape> TsxParser::ParseCollisionShapes(void* tileElement) {
             float y = objElem->FloatAttribute("y", 0.0f);
             float w = objElem->FloatAttribute("width", 0.0f);
             float h = objElem->FloatAttribute("height", 0.0f);
-            shape.points = {{0, 0}, {static_cast<int>(w), 0}, {static_cast<int>(w), static_cast<int>(h)}, {0, static_cast<int>(h)}};
+            shape.points = {
+                {static_cast<int>(x), static_cast<int>(y)},
+                {static_cast<int>(x + w), static_cast<int>(y)},
+                {static_cast<int>(x + w), static_cast<int>(y + h)},
+                {static_cast<int>(x), static_cast<int>(y + h)}
+            };
         }
 
         shapes.push_back(shape);
@@ -400,4 +405,4 @@ std::unique_ptr<Tileset> TsxParser::ParseString(const std::string& tsxContent) {
     return tileset;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

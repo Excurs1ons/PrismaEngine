@@ -45,7 +45,8 @@ endmacro()
 Prisma_Declare_Dependency(glm https://github.com/g-truc/glm.git ${PRISMA_DEP_GLM_VERSION})
 Prisma_Declare_Dependency(nlohmann_json https://github.com/nlohmann/json.git ${PRISMA_DEP_NLOHMANN_JSON_VERSION})
 Prisma_Declare_Dependency(stb https://github.com/nothings/stb.git ${PRISMA_DEP_STB_VERSION})
-set(TINYXML2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(tinyxml2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
 Prisma_Declare_Dependency(tinyxml2 https://github.com/leethomason/tinyxml2.git ${PRISMA_DEP_TINYXML2_VERSION})
 Prisma_Declare_Dependency(zstd https://github.com/facebook/zstd.git ${PRISMA_DEP_ZSTD_VERSION})
 Prisma_Declare_Dependency(SDL3 https://github.com/libsdl-org/SDL.git ${PRISMA_DEP_SDL3_VERSION})
@@ -53,11 +54,18 @@ Prisma_Declare_Dependency(Vulkan-Headers https://github.com/KhronosGroup/Vulkan-
 Prisma_Declare_Dependency(vma https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git ${PRISMA_DEP_VMA_VERSION})
 Prisma_Declare_Dependency(vk-bootstrap https://github.com/charles-lunarg/vk-bootstrap.git ${PRISMA_DEP_VK_BOOTSTRAP_VERSION})
 
-if(WIN32)
-    Prisma_Declare_Dependency(DirectX-Headers https://github.com/microsoft/DirectX-Headers.git ${PRISMA_DEP_DIRECTX_HEADERS_VERSION})
-endif()
-
 Prisma_Declare_Dependency(imgui https://github.com/ocornut/imgui.git ${PRISMA_DEP_IMGUI_VERSION})
+
+# xxhash - 极快哈希 (MCP 增量追踪)
+# 编译为静态库，禁用测试
+set(XXHASH_BUILD_XXHSUM OFF CACHE BOOL "" FORCE)
+set(DISPATCH_EXAMPLES OFF CACHE BOOL "" FORCE)
+Prisma_Declare_Dependency(xxhash https://github.com/Cyan4973/xxHash.git ${PRISMA_DEP_XXHASH_VERSION})
+FetchContent_MakeAvailable(xxhash)
+
+# Glaze - 极速 JSON 库 (用于替代 nlohmann/json 作为最佳实践)
+Prisma_Declare_Dependency(glaze https://github.com/stephenberry/glaze.git ${PRISMA_DEP_GLAZE_VERSION})
+FetchContent_MakeAvailable(glaze)
 
 if(WIN32 AND PRISMA_BUILD_EDITOR)
     Prisma_Declare_Dependency(libdeflate https://github.com/ebiggers/libdeflate.git ${PRISMA_DEP_LIBDEFLATE_VERSION})
@@ -71,15 +79,21 @@ set(GLM_QUIET ON CACHE BOOL "" FORCE)
 set(GLM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(GLM_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(NLOHMANN_ADD_NATVIS OFF CACHE BOOL "" FORCE)
+set(SDL_ALSA OFF CACHE BOOL "" FORCE)
+set(NLOHMANN_ADD_NATVIS OFF CACHE BOOL "" FORCE)
 set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
+# [重要] SDL3 链接配置
+set(SDL_SHARED ON CACHE BOOL "" FORCE)
+set(SDL_STATIC OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 
+# 强制开启相关依赖的位置无关代码 (PIC)
+set(VK_BOOTSTRAP_POSITION_INDEPENDENT_CODE ON CACHE BOOL "" FORCE)
+
 # 针对 tinyxml2 和 libdeflate 的专项屏蔽
 set(TINYXML2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-# 强制 tinyxml2 使用 -fPIC 编译（链接成共享库需要）
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "" FORCE)
 set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
@@ -103,71 +117,64 @@ endif()
 
 if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_RENDER_VULKAN)
     FetchContent_MakeAvailable(SDL3)
+    foreach(sdl_target SDL3-shared SDL3-static SDL3_test SDL_uclibc)
+        if(TARGET ${sdl_target})
+            if(MSVC)
+                target_compile_options(${sdl_target} PRIVATE /W0)
+            else()
+                target_compile_options(${sdl_target} PRIVATE -w)
+            endif()
+        endif()
+    endforeach()
 endif()
 
 if(PRISMA_ENABLE_RENDER_VULKAN)
-    # 为 vk-bootstrap 添加 -fPIC 以支持共享库链接
     set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(Vulkan-Headers vma vk-bootstrap)
     set(CMAKE_POSITION_INDEPENDENT_CODE OFF CACHE BOOL "" FORCE)
     
-    # 确保 vk-bootstrap 使用 -fPIC
     if(TARGET vk-bootstrap)
         set_target_properties(vk-bootstrap PROPERTIES POSITION_INDEPENDENT_CODE ON)
     endif()
 endif()
 
+# ImGui 静态库创建
+FetchContent_MakeAvailable(imgui)
+
+set(IMGUI_CORE_SOURCES
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp
+)
+
+# Windows 后端
 if(WIN32)
-    FetchContent_MakeAvailable(DirectX-Headers)
-    if(TARGET DirectX-Headers AND NOT TARGET Microsoft::DirectX-Headers)
-        add_library(Microsoft::DirectX-Headers ALIAS DirectX-Headers)
-    endif()
+    list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
 endif()
 
-# ImGui 静态库创建
-if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_IMGUI_DEBUG OR PRISMA_ENABLE_RENDER_VULKAN)
-    FetchContent_MakeAvailable(imgui)
+# Vulkan 后端 - 跨平台
+if(PRISMA_ENABLE_RENDER_VULKAN)
+    list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
+endif()
+
+# SDL3 后端 - 跨平台（包括 Windows）
+if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+    list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+endif()
+
+if(NOT TARGET imgui)
+    add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
+    target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
     
-    set(IMGUI_CORE_SOURCES
-        ${imgui_SOURCE_DIR}/imgui.cpp
-        ${imgui_SOURCE_DIR}/imgui_draw.cpp
-        ${imgui_SOURCE_DIR}/imgui_tables.cpp
-        ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-        ${imgui_SOURCE_DIR}/imgui_demo.cpp
+    # 强力注入包含路径
+    target_include_directories(imgui SYSTEM PUBLIC 
+        "${PRISMA_GLOBAL_DEPS_DIR}/SDL3-src/include"
+        "${PRISMA_GLOBAL_DEPS_DIR}/Vulkan-Headers-src/include"
     )
 
-    # Windows 后端
-    if(WIN32)
-        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
-        if(PRISMA_ENABLE_RENDER_DX12)
-            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_dx12.cpp)
-        endif()
-    endif()
-
-    # Vulkan 后端 - 跨平台
-    if(PRISMA_ENABLE_RENDER_VULKAN)
-        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
-    endif()
-
-    # SDL3 后端 - 仅在使用 SDL3 时添加，但排除 Android 平台（Android 不使用 SDL3）
-    if(NOT ANDROID AND (PRISMA_ENABLE_AUDIO_SDL3 OR PRISMA_USE_NATIVE_INPUT STREQUAL "OFF"))
-        if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-            list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
-        endif()
-    endif()
-
-    if(NOT TARGET imgui)
-        add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
-        target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
-        
-        # 强力注入包含路径
-        target_include_directories(imgui SYSTEM PUBLIC 
-            "${PRISMA_GLOBAL_DEPS_DIR}/SDL3-src/include"
-            "${PRISMA_GLOBAL_DEPS_DIR}/Vulkan-Headers-src/include"
-        )
-
-        add_library(imgui::imgui ALIAS imgui)
-    endif()
+    add_library(imgui::imgui ALIAS imgui)
 endif()
 
 if(WIN32 AND PRISMA_BUILD_EDITOR)
@@ -186,7 +193,7 @@ endif()
 set(CMAKE_MESSAGE_LOG_LEVEL ${OLD_LOG_LEVEL})
 set(CMAKE_WARN_DEPRECATED ON)
 
-# 确保 VMA ALIAS targets 存在（类似 GLM）
+# 确保 VMA ALIAS targets 存在
 if(TARGET vma AND NOT TARGET vma::VulkanMemoryAllocator)
     add_library(vma::VulkanMemoryAllocator ALIAS vma)
 endif()
@@ -198,7 +205,6 @@ endif()
 if(TARGET vma)
     get_target_property(VMA_INCLUDE_DIRS vma INTERFACE_INCLUDE_DIRECTORIES)
     if(NOT VMA_INCLUDE_DIRS)
-        # VMA 可能没有正确设置 include 目录，手动添加
         get_target_property(VMA_SOURCE_DIR vma SOURCE_DIR)
         if(VMA_SOURCE_DIR)
             if(EXISTS "${VMA_SOURCE_DIR}/include")

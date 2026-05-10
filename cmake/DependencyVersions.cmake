@@ -23,10 +23,14 @@ set(PRISMA_DEP_GLM_VERSION "1.0.2")
 # GitHub: https://github.com/nlohmann/json
 set(PRISMA_DEP_NLOHMANN_JSON_VERSION "v3.12.0")
 
+# Glaze - 极速 JSON C++ 库
+# GitHub: https://github.com/stephenberry/glaze
+set(PRISMA_DEP_GLAZE_VERSION "v7.5.0")
+
 # stb - 图像加载库 (header-only)
 # GitHub: https://github.com/nothings/stb
 # 锁定到具体 commit 而非 master 分支
-set(PRISMA_DEP_STB_VERSION "2fb8c5a3deb2110c89669f8d6f36e5833b556b44")  # 2025-01-24
+set(PRISMA_DEP_STB_VERSION "28d546d5eb77d4585506a20480f4de2e706dff4c")  # 2026-04-06 (latest)
 
 # tinyxml2 - XML解析库 (用于 TMX 地图格式)
 # GitHub: https://github.com/leethomason/tinyxml2
@@ -69,10 +73,6 @@ set(PRISMA_DEP_VMA_VERSION "v3.1.0")
 # GitHub: https://github.com/charles-lunarg/vk-bootstrap
 set(PRISMA_DEP_VK_BOOTSTRAP_VERSION "v1.4.343")
 
-# DirectX-Headers (Windows) - DirectX 12 头文件
-# GitHub: https://github.com/microsoft/DirectX-Headers
-set(PRISMA_DEP_DIRECTX_HEADERS_VERSION "v1.614.1")
-
 # -------------------------------------------------------------------------------
 # 编辑器工具 / Editor Tools
 # -------------------------------------------------------------------------------
@@ -88,18 +88,6 @@ set(PRISMA_DEP_IMGUI_VERSION "docking")
 set(PRISMA_DEP_OPENFBX_VERSION "master")  # 2024-01-10
 
 # -------------------------------------------------------------------------------
-# 超分辨率 / Upscalers
-# -------------------------------------------------------------------------------
-
-# FSR SDK - AMD FidelityFX SDK
-# GitHub: https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK
-set(PRISMA_DEP_FIDELITYFX_SDK_VERSION "v2.1.0")
-
-# Streamline - NVIDIA DLSS SDK
-# GitHub: https://github.com/NVIDIA-RTX/Streamline
-set(PRISMA_DEP_STREAMLINE_VERSION "v2.9.0")
-
-# -------------------------------------------------------------------------------
 # 依赖兼容性矩阵 / Dependency Compatibility Matrix
 # -------------------------------------------------------------------------------
 
@@ -109,6 +97,10 @@ set(PRISMA_DEP_MATRIX_VERSION "1.0.0")
 
 # 最后验证日期
 set(PRISMA_DEP_LAST_VERIFIED "2025-01-24")
+
+# xxHash - 极快哈希 (MCP 增量追踪)
+# GitHub: https://github.com/Cyan4973/xxHash
+set(PRISMA_DEP_XXHASH_VERSION "v0.8.2")
 
 # 已知问题 / Known Issues
 set(PRISMA_DEP_KNOWN_ISSUES

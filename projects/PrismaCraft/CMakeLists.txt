@@ -35,6 +35,14 @@ file(GLOB_RECURSE PRISMACRAFT_SOURCES
 add_library(PrismaCraft SHARED ${PRISMACRAFT_SOURCES})
 add_library(PrismaCraft::PrismaCraft ALIAS PrismaCraft)
 
+# 设置输出属性 (内部构建时保持一致性)
+if(PRISMACRAFT_USE_ENGINE_FROM_BUILD)
+    set_target_properties(PrismaCraft PROPERTIES
+        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+    )
+endif()
+
 target_include_directories(PrismaCraft PUBLIC 
     $<BUILD_INTERFACE:${PRISMACRAFT_CORE_INCLUDE}>
     $<BUILD_INTERFACE:${PRISMACRAFT_LOGIC_INCLUDE}>
@@ -44,6 +52,9 @@ target_include_directories(PrismaCraft PUBLIC
 if(PRISMACRAFT_USE_ENGINE_FROM_BUILD)
     target_link_libraries(PrismaCraft PUBLIC Engine)
     message(STATUS "PrismaCraft linked to Engine (internal build)")
+
+    # 内部构建需要引擎头文件
+    target_include_directories(PrismaCraft PRIVATE "${CMAKE_SOURCE_DIR}/src/engine")
 else()
     target_link_libraries(PrismaCraft PUBLIC PrismaEngine::Engine)
     message(STATUS "PrismaCraft linked to PrismaEngine::Engine (SDK)")
@@ -51,5 +62,9 @@ endif()
 
 # 导出宏定义
 target_compile_definitions(PrismaCraft PRIVATE PRISMACRAFT_EXPORTS)
+# 对齐 Engine 的定义 (Windows)
+target_compile_definitions(PrismaCraft PRIVATE 
+    $<$<PLATFORM_ID:Windows>:_UNICODE UNICODE>
+)
 
 message(STATUS "PrismaCraft configured successfully")

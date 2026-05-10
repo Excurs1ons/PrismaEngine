@@ -26,8 +26,11 @@ set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "")
 project(PRISMA
     VERSION 1.0.0
     DESCRIPTION "PrismaEngine - 现代跨平台游戏引擎"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
+
+# 强制开启位置无关代码 (Position Independent Code)，确保静态库可以链接进动态库
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # ========== 注释: 代理配置 ==========
 # 本地开发时如果需要代理，请通过环境变量 HTTP_PROXY 和 HTTPS_PROXY 设置
@@ -58,9 +61,6 @@ include(cmake/OutputDirectories.cmake)
 
 # 设备选项配置 (需要在 FetchContent 之前)
 include(cmake/DeviceOptions.cmake)
-
-# 超分辨率选项配置 (需要在 FetchContent 之前)
-include(cmake/UpscalerOptions.cmake)
 
 # ========== 依赖管理配置 ==========
 
@@ -113,19 +113,12 @@ if(PRISMA_BUILD_EDITOR)
     message(STATUS "已添加编辑器模块")
     # 应用编辑器目标后配置（必须在 add_subdirectory 之后）
     include(cmake/EditorPostTargets.cmake)
-else()
-    # Game 模块 (Editor 模式下不需要 Game)
-    if(EXISTS ${CMAKE_SOURCE_DIR}/src/game/CMakeLists.txt)
-        add_subdirectory(src/game)
-        message(STATUS "已添加 Game 模块")
-    endif()
-    
-    # 外部项目模块 (PrismaCraft 等) - 在 SDK 模式下构建
-    if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt AND PRISMA_BUILD_SDK)
-        # PrismaCraft 使用内部构建方式：直接从构建目录链接，不需要安装 SDK
-        add_subdirectory(projects)
-        message(STATUS "已添加 Projects 模块 (SDK 模式 - 内部构建)")
-    endif()
+endif()
+
+# 外部项目模块 (PrismaCraft 等)
+if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt)
+    add_subdirectory(projects)
+    message(STATUS "已添加 Projects 模块")
 endif()
 
 # 运行时模块 (最后添加，以便能检测到 Game/Editor 目标)
@@ -166,14 +159,8 @@ message(STATUS "  Build Editor:    ${PRISMA_BUILD_EDITOR}")
 message(STATUS "  Build SDK:       ${PRISMA_BUILD_SDK}")
 message(STATUS "  Shared Library:  ${PRISMA_BUILD_SHARED_LIBS}")
 message(STATUS "")
-message(STATUS "  Render Backends:")
-message(STATUS "    DirectX 12:    ${PRISMA_ENABLE_RENDER_DX12}")
-message(STATUS "    Vulkan:        ${PRISMA_ENABLE_RENDER_VULKAN}")
-message(STATUS "    OpenGL:        ${PRISMA_ENABLE_RENDER_OPENGL}")
-message(STATUS "")
-message(STATUS "  Audio Backends:")
-message(STATUS "    SDL3:          ${PRISMA_ENABLE_AUDIO_SDL3}")
-message(STATUS "    XAudio2:       ${PRISMA_ENABLE_AUDIO_XAUDIO2}")
+message(STATUS "  Render Backend: Vulkan")
+message(STATUS "  Audio Backend: SDL3")
 message(STATUS "")
 message(STATUS "  Platform: ${CMAKE_SYSTEM_NAME}")
 message(STATUS "  Compiler: ${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION}")

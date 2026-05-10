@@ -1,223 +1,472 @@
+// [修复] 不在此包含 imgui_impl_vulkan.h
+// 目的：Engine.dll 不再直接使用 ImGui Vulkan 后端 API，
+//         渲染通过由 PrismaEditor.dll 注册的回调执行，
+//         避免两份独立的编译单元共享状态导致指针崩溃。
 #include "RenderDeviceVulkan.h"
-#include "Logger.h"
+#include "VulkanCommandBuffer.h"
+#include "logger/Logger.h"
+#include "VulkanFence.h"
 #include "VulkanResourceFactory.h"
 #include "VulkanSwapChain.h"
 #include <iostream>
 
-// 使用 Vulkan 1.2 版本以兼容 Android NDK (避免 vkGetDeviceBufferMemoryRequirements 链接错误)
-// VMA 会根据此版本选择不使用 Vulkan 1.3 的新函数
+#include <SDL3/SDL_vulkan.h>
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4324) // structure was padded due to alignment specifier
+#pragma warning(disable: 4505) // unreferenced local function has been removed
+#endif
 #define VMA_IMPLEMENTATION
-#define VMA_VULKAN_VERSION 1002000 // Vulkan 1.2
 #include <vk_mem_alloc.h>
-
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
-#include <imgui_impl_vulkan.h>
+#if defined(_MSC_VER)
+#pragma warning(pop)
 #endif
 
-namespace PrismaEngine::Graphic::Vulkan {
+
+#include "app/Engine.h"
+
+namespace Prisma::Graphic::Vulkan {
 
 RenderDeviceVulkan::RenderDeviceVulkan() {
+    LOG_INFO("Vulkan", "创建 Vulkan 渲染设备实例");
     m_resourceFactory = std::make_unique<VulkanResourceFactory>(this);
     m_swapChain       = std::make_unique<VulkanSwapChain>(this);
+    LOG_INFO("Vulkan", "Vulkan 渲染设备实例创建成功");
 }
 
-RenderDeviceVulkan::~RenderDeviceVulkan() {}
+RenderDeviceVulkan::~RenderDeviceVulkan() {
+    Shutdown();
+}
 
-bool RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
+int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     m_desc = desc;
-    LOG_INFO("Vulkan", "正在初始化 Vulkan 设备 (vk-bootstrap + VMA)");
+    LOG_INFO("Vulkan", "正在初始化 Vulkan 设备");
 
-    // 1. 创建实例
-    LOG_INFO("Vulkan", "正在创建 Vulkan 实例 (Validation: {0})...", desc.enableValidation ? "ON" : "OFF");
-    vkb::InstanceBuilder inst_builder;
-    auto inst_ret = inst_builder.set_app_name(desc.name.c_str())
-                        .request_validation_layers(desc.enableValidation)
-                        .use_default_debug_messenger()
-                        .require_api_version(1, 1, 0)
-                        .build();
+    try {
+        // 1. 创建实例
+        vkb::InstanceBuilder inst_builder;
+        auto inst_ret = inst_builder.set_app_name(desc.name.c_str())
+                            .request_validation_layers(desc.enableValidation)
+                            .use_default_debug_messenger()
+                            .require_api_version(1, 3, 0)
+                            .build();
 
-    // 如果启用验证层失败，尝试在关闭验证层的情况下重新创建
-    if (!inst_ret && desc.enableValidation) {
-        LOG_WARNING("Vulkan", "启用验证层失败，尝试在无验证层模式下启动...");
-        inst_ret = inst_builder.request_validation_layers(false).build();
+        if (!inst_ret)
+            return -1;
+        m_vkbInstance = inst_ret.value();
+        m_instance    = m_vkbInstance.instance;
+
+        auto& window          = Engine::Get().GetWindow();
+        SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
+        if (!SDL_Vulkan_CreateSurface(sdlWindow, m_instance, nullptr, &m_surface)) {
+            return -1;
+        }
+
+        // 2. 选择物理设备
+        VkPhysicalDeviceFeatures features{};
+        features.samplerAnisotropy = VK_TRUE;
+
+        vkb::PhysicalDeviceSelector selector{m_vkbInstance};
+        auto phys_ret = selector.set_surface(m_surface)
+                            .set_minimum_version(1, 3)
+                            .set_required_features(features)
+                            .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+                            .select();
+        if (!phys_ret)
+            return -2;
+        m_vkbPhysicalDevice = phys_ret.value();
+        m_physicalDevice    = m_vkbPhysicalDevice.physical_device;
+
+        // 读取 GPU 名称
+        {
+            VkPhysicalDeviceProperties props{};
+            vkGetPhysicalDeviceProperties(m_physicalDevice, &props);
+            m_gpuName = props.deviceName;
+            LOG_INFO("Vulkan", "GPU: {0} (driver {1}.{2}.{3})",
+                props.deviceName,
+                VK_VERSION_MAJOR(props.driverVersion),
+                VK_VERSION_MINOR(props.driverVersion),
+                VK_VERSION_PATCH(props.driverVersion));
+        }
+
+        // 3. 创建逻辑设备
+        vkb::DeviceBuilder device_builder{m_vkbPhysicalDevice};
+        auto dev_ret = device_builder.build();
+        if (!dev_ret)
+            return -3;
+        m_vkbDevice = dev_ret.value();
+        m_device    = m_vkbDevice.device;
+
+        // 4. 获取队列
+        m_graphicsQueue       = m_vkbDevice.get_queue(vkb::QueueType::graphics).value();
+        m_graphicsQueueFamily = m_vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+        // 5. 初始化 VMA
+        VmaAllocatorCreateInfo allocatorInfo = {};
+        allocatorInfo.vulkanApiVersion       = VK_API_VERSION_1_3;
+        allocatorInfo.physicalDevice         = m_physicalDevice;
+        allocatorInfo.device                 = m_device;
+        allocatorInfo.instance               = m_instance;
+        if (vmaCreateAllocator(&allocatorInfo, &m_allocator) != VK_SUCCESS)
+            return -5;
+
+        // 5.1 同步资源工厂的分销器
+        if (m_resourceFactory) {
+            m_resourceFactory->Initialize(this);
+        }
+
+
+
+        // 6. 初始化描述符池
+        std::array<VkDescriptorPoolSize, 2> poolSizes{};
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[0].descriptorCount = 1000;
+        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].descriptorCount = 1000;
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.maxSets = 1000;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
+
+        // 7. Command Pool & Buffers
+        VkCommandPoolCreateInfo cmd_pool_info = {};
+        cmd_pool_info.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        cmd_pool_info.queueFamilyIndex        = m_graphicsQueueFamily;
+        cmd_pool_info.flags                   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        vkCreateCommandPool(m_device, &cmd_pool_info, nullptr, &m_commandPool);
+
+        m_commandBuffers.resize(3);
+        VkCommandBufferAllocateInfo cmd_alloc_info = {};
+        cmd_alloc_info.sType                       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmd_alloc_info.commandPool                 = m_commandPool;
+        cmd_alloc_info.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmd_alloc_info.commandBufferCount          = 3;
+        vkAllocateCommandBuffers(m_device, &cmd_alloc_info, m_commandBuffers.data());
+
+        // [修复] 包装命令缓冲区
+        m_vulkanCommandBuffers.clear();
+        for (auto cmd : m_commandBuffers) {
+            m_vulkanCommandBuffers.push_back(std::make_unique<VulkanCommandBuffer>(cmd));
+        }
+
+        // 8. Sync Objects
+        m_imageAvailableSemaphores.resize(3);
+        m_renderFinishedSemaphores.resize(3);  // 这里后面会根据交换链调整
+        m_inFlightFences.resize(3);
+
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        for (size_t i = 0; i < 3; i++) {
+            vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]);
+            vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+            vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]);
+        }
+
+        // 9. SwapChain
+        m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.presentMode);
+
+        // 确保 renderFinishedSemaphores 足够大
+        uint32_t imageCount = m_swapChain->GetBufferCount();
+        if (m_renderFinishedSemaphores.size() < imageCount) {
+            size_t oldSize = m_renderFinishedSemaphores.size();
+            m_renderFinishedSemaphores.resize(imageCount);
+            for (size_t i = oldSize; i < imageCount; i++) {
+                vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+            }
+        }
+
+        m_initialized = true;
+        return 0;
+    } catch (...) {
+        return -999;
     }
-    LOG_DEBUG("Vulkan", "验证层启用成功");
-    m_vkbInstance = inst_ret.value();
-    m_instance    = m_vkbInstance.instance;
-    if (!inst_ret) {
-        LOG_ERROR("Vulkan", "无法创建实例: {0}", inst_ret.error().message());
-        return false;
-    }
-    LOG_DEBUG("Vulkan", "创建 Vulkan 实例成功");
-    Logger::GetInstance().Flush();
-
-    // 2. 选择物理设备
-    LOG_INFO("Vulkan", "正在选择物理设备...");
-    vkb::PhysicalDeviceSelector selector{m_vkbInstance};
-    auto phys_ret = selector
-                        .defer_surface_initialization()  // 延迟surface初始化，稍后创建swapchain时会验证
-                        .set_minimum_version(1, 1)
-                        .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
-                        .select();
-    if (!phys_ret) {
-        LOG_ERROR("Vulkan", "无法选择物理设备: {0}", phys_ret.error().message());
-        return false;
-    }
-    m_vkbPhysicalDevice = phys_ret.value();
-    m_physicalDevice    = m_vkbPhysicalDevice.physical_device;
-    Logger::GetInstance().Flush();
-
-    // 3. 创建逻辑设备
-    LOG_INFO("Vulkan", "正在创建逻辑设备...");
-    vkb::DeviceBuilder device_builder{m_vkbPhysicalDevice};
-    auto dev_ret = device_builder.build();
-    if (!dev_ret) {
-        LOG_ERROR("Vulkan", "无法创建逻辑设备: {0}", dev_ret.error().message());
-        return false;
-    }
-    m_vkbDevice = dev_ret.value();
-    m_device    = m_vkbDevice.device;
-
-    // 4. 获取队列
-    LOG_INFO("Vulkan", "正在获取队列...");
-    auto g_queue_ret = m_vkbDevice.get_queue(vkb::QueueType::graphics);
-    if (!g_queue_ret) {
-        LOG_ERROR("Vulkan", "无法获取图形队列");
-        return false;
-    }
-    m_graphicsQueue       = g_queue_ret.value();
-    m_graphicsQueueFamily = m_vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
-
-    // 5. 初始化 VMA 分配器
-    LOG_INFO("Vulkan", "正在初始化 VMA...");
-    VmaAllocatorCreateInfo allocatorInfo = {};
-    allocatorInfo.vulkanApiVersion       = VK_API_VERSION_1_1;
-    allocatorInfo.physicalDevice         = m_physicalDevice;
-    allocatorInfo.device                 = m_device;
-    allocatorInfo.instance               = m_instance;
-
-    if (vmaCreateAllocator(&allocatorInfo, &m_allocator) != VK_SUCCESS) {
-        LOG_ERROR("Vulkan", "无法创建 VMA 分配器");
-        return false;
-    }
-
-    m_initialized = true;
-    LOG_INFO("Vulkan", "Vulkan 设备初始化成功");
-    return true;
 }
 
 void RenderDeviceVulkan::Shutdown() {
-    if (!m_initialized)
+    if (!m_initialized) {
+        LOG_INFO("VulkanDevice", "渲染设备无需关闭（未初始化）");
         return;
-
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
-    if (m_imguiDescriptorPool != VK_NULL_HANDLE) {
-        vkDestroyDescriptorPool(m_device, m_imguiDescriptorPool, nullptr);
-        m_imguiDescriptorPool = VK_NULL_HANDLE;
     }
-#endif
+    
+    LOG_INFO("VulkanDevice", "正在关闭 Vulkan 渲染设备...");
 
-    if (m_allocator != VK_NULL_HANDLE) {
+    // 确保 GPU 已完成所有 work
+    if (m_device != VK_NULL_HANDLE) {
+        LOG_INFO("VulkanDevice", "等待 GPU 空闲...");
+        vkDeviceWaitIdle(m_device);
+        LOG_INFO("VulkanDevice", "GPU 已空闲");
+    }
+
+    // 1. 先销毁由此设备管理的子资源
+    if (m_resourceFactory) {
+        LOG_INFO("VulkanDevice", "关闭资源工厂...");
+        m_resourceFactory->Shutdown();
+        m_resourceFactory.reset();
+        LOG_INFO("VulkanDevice", "资源工厂已关闭");
+    }
+
+    if (m_swapChain) {
+        LOG_INFO("VulkanDevice", "清理交换链...");
+        m_swapChain->Cleanup();
+        m_swapChain.reset();
+        LOG_INFO("VulkanDevice", "交换链已清理");
+    }
+
+    // 2. 销毁同步对象和命令池
+    LOG_INFO("VulkanDevice", "销毁同步对象 (信号量/栅栏)...");
+    for (auto s : m_imageAvailableSemaphores)
+        vkDestroySemaphore(m_device, s, nullptr);
+    for (auto s : m_renderFinishedSemaphores)
+        vkDestroySemaphore(m_device, s, nullptr);
+    for (auto f : m_inFlightFences)
+        vkDestroyFence(m_device, f, nullptr);
+
+    if (m_commandPool) {
+        LOG_INFO("VulkanDevice", "销毁命令池...");
+        vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+    }
+
+    if (m_descriptorPool) {
+        LOG_INFO("VulkanDevice", "销毁描述符池...");
+        vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+        m_descriptorPool = VK_NULL_HANDLE;
+    }
+
+    // 3. 销毁基础组件
+    if (m_allocator) {
+        LOG_INFO("VulkanDevice", "销毁 VMA...");
         vmaDestroyAllocator(m_allocator);
         m_allocator = VK_NULL_HANDLE;
     }
 
-    vkb::destroy_device(m_vkbDevice);
-    vkb::destroy_instance(m_vkbInstance);
-
-    m_initialized = false;
-}
-
-bool RenderDeviceVulkan::InitializeImGui() {
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
-    // 创建 ImGui 描述符池
-    VkDescriptorPoolSize pool_sizes[] = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-                                         {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-                                         {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-                                         {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-                                         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-                                         {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-                                         {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-                                         {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
-
-    VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType                      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags                      = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets                    = 1000 * IM_ARRAYSIZE(pool_sizes);
-    pool_info.poolSizeCount              = (uint32_t)IM_ARRAYSIZE(pool_sizes);
-    pool_info.pPoolSizes                 = pool_sizes;
-
-    if (vkCreateDescriptorPool(m_device, &pool_info, nullptr, &m_imguiDescriptorPool) != VK_SUCCESS) {
-        LOG_ERROR("Vulkan", "Failed to create ImGui descriptor pool");
-        return false;
+    if (m_surface) {
+        LOG_INFO("VulkanDevice", "销毁表面...");
+        vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+        m_surface = VK_NULL_HANDLE;
     }
 
-    // 注意：这里只创建描述符池，不调用 ImGui_ImplVulkan_Init
-    // ImGui_ImplVulkan_Init 会在 RenderSystem::InitializeImGui 中调用
-    // 这样可以确保交换链已创建且 RenderPass 可用
-    return true;
-#else
-    return true;
-#endif
+    // 4. 最后销毁设备和实例
+    LOG_INFO("VulkanDevice", "销毁 Vulkan 设备和实例...");
+    vkb::destroy_device(m_vkbDevice);
+    vkb::destroy_instance(m_vkbInstance);
+    
+    m_device = VK_NULL_HANDLE;
+    m_instance = VK_NULL_HANDLE;
+    m_initialized = false;
+
+    LOG_INFO("VulkanDevice", "Vulkan 渲染设备已完全关闭");
 }
 
-void RenderDeviceVulkan::ShutdownImGui() {
-#if defined(PRISMA_ENABLE_IMGUI_DEBUG) || defined(PRISMA_BUILD_EDITOR)
-    ImGui_ImplVulkan_Shutdown();
-#endif
+void RenderDeviceVulkan::BeginFrame() {
+    if (!m_initialized)
+        return;
+    vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
+
+    if (!m_swapChain->AcquireNextImage(m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE)) {
+        return;
+    }
+
+    vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
+
+    VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+    vkResetCommandBuffer(cmd, 0);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    vkBeginCommandBuffer(cmd, &beginInfo);
+
+    // [改动] 统一保持 m_frameActive 为 true
+    // 目的：即使跳过了默认 RenderPass，命令缓冲区依然在录制（由调用方负责开启自己的 RenderPass），
+    //       必须保持活动状态以确保 EndFrame 能够执行提交。
+    m_frameActive = true;
+
+    // 如果不跳过交换链RenderPass，则开始它
+    if (!m_skipSwapChainRenderPass) {
+        VkRenderPassBeginInfo rpInfo{};
+        rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpInfo.renderPass        = m_swapChain->GetRenderPass();
+        rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
+        rpInfo.renderArea.extent = m_swapChain->GetExtent();
+        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        rpInfo.clearValueCount   = 1;
+        rpInfo.pClearValues      = &clearColor;
+
+        vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+        m_isDefaultRenderPassActive = true;
+    } else {
+        // 重置标志，下一帧恢复默认行为
+        m_skipSwapChainRenderPass = false;
+        m_isDefaultRenderPassActive = false;
+    }
+    m_currentFrameIndex = m_currentFrame;
+    m_hasPendingPresent = false;
 }
 
-std::string RenderDeviceVulkan::GetName() const {
-    return "Vulkan Device";
+void RenderDeviceVulkan::EndFrame() {
+    if (!m_initialized || !m_frameActive)
+        return;
+    VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+
+    // [修复] 如果还没有开启 RenderPass (说明之前被跳过了)，现在为了 Overlay 开启它。
+    // 这样可以确保 ImGui 的绘制指令处于合法的 RenderPass 中，
+    // 同时通过 RenderPass 的 finalLayout 自动将交换链图像转换到 PRESENT_SRC_KHR 布局，
+    // 彻底解决 VUID-vkCmdDrawIndexed-renderpass 和 VUID-VkPresentInfoKHR-pImageIndices-01430。
+    if (!m_isDefaultRenderPassActive) {
+        VkRenderPassBeginInfo rpInfo{};
+        rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        rpInfo.renderPass        = m_swapChain->GetRenderPass();
+        rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
+        rpInfo.renderArea.extent = m_swapChain->GetExtent();
+        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+        rpInfo.clearValueCount   = 1;
+        rpInfo.pClearValues      = &clearColor;
+
+        vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+        m_isDefaultRenderPassActive = true;
+    }
+
+    if (m_overlayRenderCallback) {
+        m_overlayRenderCallback(cmd);
+    }
+
+    // 无论如何都要结束活动中的默认 RenderPass
+    if (m_isDefaultRenderPassActive) {
+        vkCmdEndRenderPass(cmd);
+        m_isDefaultRenderPassActive = false;
+    }
+
+    vkEndCommandBuffer(cmd);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType                  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submitInfo.waitSemaphoreCount     = 1;
+    submitInfo.pWaitSemaphores        = &m_imageAvailableSemaphores[m_currentFrame];
+    submitInfo.pWaitDstStageMask      = waitStages;
+    submitInfo.commandBufferCount     = 1;
+    submitInfo.pCommandBuffers        = &cmd;
+
+    uint32_t imageIndex             = m_swapChain->GetCurrentBufferIndex();
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores    = &m_renderFinishedSemaphores[imageIndex];
+
+    vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]);
+    m_pendingPresentImageIndex = imageIndex;
+    m_hasPendingPresent        = true;
+    m_frameActive              = false;
+    m_skipSwapChainRenderPass  = false;
 }
 
-std::string RenderDeviceVulkan::GetAPIName() const {
-    return "Vulkan";
+void RenderDeviceVulkan::Present() {
+    if (!m_initialized || !m_hasPendingPresent || !m_swapChain) {
+        return;
+    }
+
+    if (!m_swapChain->Present(m_renderFinishedSemaphores[m_pendingPresentImageIndex])) {
+        LOG_WARNING("Vulkan", "Swapchain present returned suboptimal or out-of-date");
+    }
+
+    m_hasPendingPresent = false;
+    m_currentFrame      = (m_currentFrame + 1) % static_cast<uint32_t>(m_commandBuffers.size());
+}
+void RenderDeviceVulkan::Resize(uint32_t width, uint32_t height) {
+    if (m_device)
+        vkDeviceWaitIdle(m_device);
+    if (m_swapChain) {
+        m_swapChain->Resize(width, height);
+    }
+    m_frameActive       = false;
+    m_hasPendingPresent = false;
 }
 
-VkRenderPass RenderDeviceVulkan::GetImGuiRenderPass() const {
-    return m_swapChain ? m_swapChain->GetRenderPass() : VK_NULL_HANDLE;
-}
-
-void RenderDeviceVulkan::WaitForIdle() {
-    vkDeviceWaitIdle(m_device);
-}
-
-// ... 其余方法暂时返回空或默认实现以保证编译通过 ...
 std::unique_ptr<ICommandBuffer> RenderDeviceVulkan::CreateCommandBuffer(CommandBufferType type) {
+    LOG_WARNING(
+        "Vulkan", "CreateCommandBuffer is not implemented for command buffer type: {0}", static_cast<int>(type));
     return nullptr;
 }
-void RenderDeviceVulkan::SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fence) {}
+void RenderDeviceVulkan::SubmitCommandBuffer(ICommandBuffer* cmdBuffer, IFence* fence) {
+    if (!cmdBuffer) {
+        LOG_WARNING("Vulkan", "SubmitCommandBuffer called with null command buffer");
+        return;
+    }
+
+    LOG_WARNING("Vulkan", "Standalone command buffer submission is not implemented; use the frame command buffer path");
+    if (fence) {
+        fence->Signal(1);
+    }
+}
 void RenderDeviceVulkan::SubmitCommandBuffers(const std::vector<ICommandBuffer*>& cmdBuffers,
-                                              const std::vector<IFence*>& fences) {}
-std::unique_ptr<IFence> RenderDeviceVulkan::CreateFence() {
-    return nullptr;
+                                              const std::vector<IFence*>& fences) {
+    for (auto* cmdBuffer : cmdBuffers) {
+        SubmitCommandBuffer(cmdBuffer, nullptr);
+    }
+    for (auto* fence : fences) {
+        if (fence) {
+            fence->Signal(1);
+        }
+    }
 }
-void RenderDeviceVulkan::WaitForFence(IFence* fence) {}
+void RenderDeviceVulkan::WaitForIdle() {
+    if (m_device)
+        vkDeviceWaitIdle(m_device);
+}
+std::unique_ptr<IFence> RenderDeviceVulkan::CreateFence() {
+    if (m_device == VK_NULL_HANDLE) {
+        return nullptr;
+    }
+    return std::make_unique<VulkanFence>(m_device);
+}
+void RenderDeviceVulkan::WaitForFence(IFence* fence) {
+    if (fence) {
+        fence->Wait(1);
+    }
+}
 IResourceFactory* RenderDeviceVulkan::GetResourceFactory() const {
-    return nullptr;
+    return m_resourceFactory.get();
 }
 std::unique_ptr<ISwapChain>
-RenderDeviceVulkan::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync) {
-    return nullptr;
+RenderDeviceVulkan::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode) {
+    auto swapChain = std::make_unique<VulkanSwapChain>(this);
+    if (swapChain->Initialize(windowHandle, width, height, presentMode) != 0) {
+        return nullptr;
+    }
+    return swapChain;
 }
 ISwapChain* RenderDeviceVulkan::GetSwapChain() const {
-    return nullptr;
+    return m_swapChain.get();
 }
-void RenderDeviceVulkan::BeginFrame() {}
-void RenderDeviceVulkan::EndFrame() {}
-void RenderDeviceVulkan::Present() {}
 IRenderDevice::GPUMemoryInfo RenderDeviceVulkan::GetGPUMemoryInfo() const {
     return {};
 }
 IRenderDevice::RenderStats RenderDeviceVulkan::GetRenderStats() const {
     return m_stats;
 }
-void RenderDeviceVulkan::BeginDebugMarker(const std::string& name) {}
+void RenderDeviceVulkan::BeginDebugMarker(const std::string& name) {
+    LOG_DEBUG("Vulkan", "开始调试标记: {0}", name);
+}
 void RenderDeviceVulkan::EndDebugMarker() {}
-void RenderDeviceVulkan::SetDebugMarker(const std::string& name) {}
+void RenderDeviceVulkan::SetDebugMarker(const std::string& name) {
+    LOG_DEBUG("Vulkan", "设置调试标记: {0}", name);
+}
+std::string RenderDeviceVulkan::GetName() const {
+    return "Vulkan Device";
+}
+std::string RenderDeviceVulkan::GetAPIName() const {
+    return "Vulkan";
+}
+std::string RenderDeviceVulkan::GetGPUName() const {
+    return m_gpuName.empty() ? "Unknown GPU" : m_gpuName;
+}
+VkRenderPass RenderDeviceVulkan::GetOverlayRenderPass() const {
+    return m_swapChain ? m_swapChain->GetRenderPass() : VK_NULL_HANDLE;
+}
 
-}  // namespace PrismaEngine::Graphic::Vulkan
+}  // namespace Prisma::Graphic::Vulkan

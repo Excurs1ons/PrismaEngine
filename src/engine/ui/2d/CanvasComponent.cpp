@@ -1,21 +1,29 @@
 #include "CanvasComponent.h"
+#include "../platform/Platform.h"
 #include <algorithm>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 void CanvasComponent::Initialize() {
-    // 设置为全屏
-    // TODO: 从窗口/视口获取屏幕尺寸
-    m_size = {1920.0f, 1080.0f};
+    int w = 0, h = 0;
+    auto window = Prisma::Platform::GetCurrentWindow();
+    if (window) {
+        Prisma::Platform::GetWindowSize(window, w, h);
+    }
+    if (w <= 0 || h <= 0) {
+        w = 1920;
+        h = 1080;
+    }
+    m_size     = {static_cast<float>(w), static_cast<float>(h)};
     m_position = {0.0f, 0.0f};
 }
 
-void CanvasComponent::Update(float deltaTime) {
-    UIComponent::Update(deltaTime);
+void CanvasComponent::Update(Timestep ts) {
+    UIComponent::Update(ts);
 
     // 更新所有子组件
     for (auto* child : m_children) {
-        child->Update(deltaTime);
+        child->Update(ts);
     }
 }
 
@@ -30,4 +38,4 @@ void CanvasComponent::RemoveChild(UIComponent* child) {
     m_children.erase(it, m_children.end());
 }
 
-} // namespace PrismaEngine
+}  // namespace Prisma

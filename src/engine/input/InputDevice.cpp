@@ -1,23 +1,14 @@
 #include "InputDevice.h"
 
-// 平台驱动 - 使用独立的 #if 以支持多个驱动
-#if defined(_WIN32) && (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
-    #include "drivers/InputDriverWin32.h"
-#endif
-
-#if defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
-    #if __has_include(<game-activity/GameActivity.h>)
-        #include "drivers/InputDriverGameActivity.h"
-    #endif
-#endif
 
 #if defined(PRISMA_ENABLE_INPUT_SDL3)
     #include "drivers/InputDriverSDL3.h"
+    #include <SDL3/SDL.h>
 #endif
 
 #include <algorithm>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 // ========== InputDevice ==========
 
@@ -69,27 +60,17 @@ void InputDevice::Update() {
 }
 
 std::unique_ptr<IInputDriver> InputDevice::CreateDriver(InputDriverType type) {
-    #if defined(_WIN32) && (defined(PRISMA_ENABLE_INPUT_RAWINPUT) || defined(PRISMA_ENABLE_INPUT_XINPUT))
-        if (type == InputDriverType::Auto || type == InputDriverType::Win32) {
-            return std::unique_ptr<IInputDriver>(CreateWin32InputDriver());
-        }
-    #endif
-
-    #if defined(__ANDROID__) && defined(PRISMA_ENABLE_INPUT_GAMEACTIVITY)
-        #if __has_include(<game-activity/GameActivity.h>)
-            if (type == InputDriverType::Auto || type == InputDriverType::GameActivity) {
-                return std::unique_ptr<IInputDriver>(CreateGameActivityInputDriver());
-            }
-        #endif
-    #endif
-
-    #if defined(PRISMA_ENABLE_INPUT_SDL3)
-        if (type == InputDriverType::Auto || type == InputDriverType::SDL3) {
+    switch (type) {
+        case InputDriverType::Auto:
+        case InputDriverType::SDL3:
+        #if defined(PRISMA_ENABLE_INPUT_SDL3)
             return std::unique_ptr<IInputDriver>(CreateSDL3InputDriver());
-        }
-    #endif
-
-    return nullptr;
+        #else
+            return nullptr;
+        #endif
+        default:
+            return nullptr;
+    }
 }
 
 // ========== 键盘查询 ==========
@@ -348,12 +329,16 @@ const std::string& InputDevice::GetTextInput() const {
 
 void InputDevice::SetCursorVisible(bool visible) {
     m_cursorVisible = visible;
-    // TODO: 实现光标显示/隐藏
+#ifdef PRISMA_ENABLE_INPUT_SDL3
+    SDL_ShowCursor(visible ? SDL_TRUE : SDL_FALSE);
+#endif
 }
 
 void InputDevice::SetCursorLocked(bool locked) {
     m_cursorLocked = locked;
-    // TODO: 实现光标锁定
+#ifdef PRISMA_ENABLE_INPUT_SDL3
+    SDL_SetRelativeMouseMode(locked ? SDL_TRUE : SDL_FALSE);
+#endif
 }
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input

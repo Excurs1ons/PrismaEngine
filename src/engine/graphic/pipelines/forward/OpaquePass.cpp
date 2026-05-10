@@ -1,18 +1,37 @@
 #include "OpaquePass.h"
-#include <algorithm>
+#include "app/Engine.h"
+#include "Platform.h"
+#include "graphic/interfaces/ICommandBuffer.h"
+#include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/interfaces/IPipelineState.h"
+#include "graphic/interfaces/IResourceFactory.h"
+#include "graphic/interfaces/IResourceManager.h"
+#include "graphic/Mesh.h"
+#include "graphic/Material.h"
+#include "graphic/Shader.h"
+#include "graphic/interfaces/ISwapChain.h"
+#include "logger/Logger.h"
+#include <fstream>
+#include <iterator>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
-OpaquePass::OpaquePass()
-    : ForwardRenderPass("OpaquePass")
-    , m_ambientColor(0.1f, 0.1f, 0.1f)
-    , m_ambientIntensity(1.0f) {
-    // 不透明物体优先级较低，最先渲染
-    m_priority = 100;
+OpaquePass::OpaquePass() : ForwardRenderPass("OpaquePass") {}
+
+namespace {
+struct alignas(16) QuadPushConstants {
+    PrismaMath::mat4 mvp;
+    Prisma::Color color;
+};
 }
 
-void OpaquePass::Update(float deltaTime) {
-    UpdateTime(deltaTime);
+void OpaquePass::SetLights(const std::vector<Light>& lights) {
+    m_Lights = lights;
+}
+
+void OpaquePass::Update(Prisma::Timestep ts) {
+    ForwardRenderPass::Update(ts);
 }
 
 void OpaquePass::Execute(const PassExecutionContext& context) {
@@ -20,59 +39,133 @@ void OpaquePass::Execute(const PassExecutionContext& context) {
         return;
     }
 
-    // 重置统计
-    m_stats = {};
+    if (context.renderTarget && context.depthStencil) {
+        context.deviceContext->SetRenderTarget(context.renderTarget, context.depthStencil);
+    } else if (context.renderTarget) {
+        context.deviceContext->SetRenderTarget(context.renderTarget);
+    }
 
-    // 设置视口
-    context.deviceContext->SetViewport(0.0f, 0.0f,
-        static_cast<float>(context.sceneData->viewport.width),
-        static_cast<float>(context.sceneData->viewport.height));
+    if (context.sceneData) {
+        context.deviceContext->SetViewport(
+            0.0f,
+            0.0f,
+            static_cast<float>(context.sceneData->viewport.width),
+            static_cast<float>(context.sceneData->viewport.height)
+        );
+    }
 
-    // 设置视图投影矩阵
-    context.deviceContext->SetConstantData(0, &m_viewProjection, sizeof(PrismaMath::mat4));
+    context.deviceContext->MemoryBarrier();
+}
 
-    // 设置环境光
-    float ambientData[4] = {
-        m_ambientColor.x * m_ambientIntensity,
-        m_ambientColor.y * m_ambientIntensity,
-        m_ambientColor.z * m_ambientIntensity,
-        1.0f
-    };
-    context.deviceContext->SetConstantData(1, ambientData, sizeof(ambientData));
+void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {
+    if (!cmd || commands.empty() || !m_device) {
+        LOG_DEBUG("OpaquePass", "跳过 Execute: cmd={} empty={} device={}", (void*)cmd, commands.empty(), (void*)m_device);
+        return;
+    }
+    if (!EnsureDefaultPipeline()) {
+        LOG_ERROR("OpaquePass", "确保默认管线失败，跳过绘制");
+        return;
+    }
 
-    // TODO: 遍历场景中的渲染对象并绘制
-    // 这里需要与场景系统集成，获取所有带有 RenderComponent 的对象
-    // 目前暂时跳过实际渲染逻辑
+    static double lastLog = 0;
+    double now = Platform::GetTimeSeconds();
+    if (now - lastLog >= 5.0) {
+        LOG_INFO("OpaquePass", "绘制 {} 条命令, PSO={}, shaders ok={}",
+                 commands.size(), (void*)m_defaultPipelineState.get(),
+                 m_defaultVertexShader && m_defaultPixelShader);
+        lastLog = now;
+    }
 
-    // 设置光源数据
-    if (!m_lights.empty()) {
-        // 光源数据包含: position(3) + color(4) + direction(3) + type(1) = 11 floats
-        std::vector<float> lightData;
-        lightData.reserve(m_lights.size() * 11);
+    cmd->SetPipelineState(m_defaultPipelineState.get());
+    float width = 1.0f;
+    float height = 1.0f;
+    if (auto* swapChain = m_device->GetSwapChain()) {
+        width = static_cast<float>(swapChain->GetWidth());
+        height = static_cast<float>(swapChain->GetHeight());
+    }
+    cmd->SetViewport(Viewport{0.0f, 0.0f, width, height, 0.0f, 1.0f});
+    cmd->SetScissorRect(Rect{0, 0, static_cast<int>(width), static_cast<int>(height)});
 
-        for (const auto& light : m_lights) {
-            lightData.push_back(light.position.x);
-            lightData.push_back(light.position.y);
-            lightData.push_back(light.position.z);
+    // 缓存上一次绑定的材质指针，跳过重复绑定
+    Material* lastMaterial = nullptr;
+    for (const auto& command : commands) {
+        if (!command.mesh) continue;
 
-            lightData.push_back(light.color.x);
-            lightData.push_back(light.color.y);
-            lightData.push_back(light.color.z);
-            lightData.push_back(light.color.w);
-
-            lightData.push_back(light.direction.x);
-            lightData.push_back(light.direction.y);
-            lightData.push_back(light.direction.z);
-
-            lightData.push_back(static_cast<float>(light.type));
+        if (command.material && command.material != lastMaterial) {
+            command.material->Bind(cmd);
+            lastMaterial = command.material;
         }
 
-        context.deviceContext->SetConstantData(2, lightData.data(),
-            static_cast<uint32_t>(lightData.size() * sizeof(float)));
+        QuadPushConstants pushConstants{};
+        pushConstants.mvp = m_projection * m_view * command.transform;
+        pushConstants.color = command.color;
+        cmd->PushConstants(ShaderType::Vertex, &pushConstants, sizeof(pushConstants));
+        cmd->PushConstants(ShaderType::Pixel, &pushConstants, sizeof(pushConstants));
 
-        uint32_t lightCount = static_cast<uint32_t>(m_lights.size());
-        context.deviceContext->SetConstantData(3, &lightCount, sizeof(lightCount));
+        for (const auto& subMesh : command.mesh->GetSubMeshes()) {
+            if (subMesh.vertexBuffer && subMesh.indexBuffer) {
+                cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                cmd->SetIndexBuffer(subMesh.indexBuffer.get());
+                cmd->DrawIndexed(subMesh.indexCount);
+            }
+        }
     }
 }
 
-} // namespace PrismaEngine::Graphic
+bool OpaquePass::EnsureDefaultPipeline() {
+    if (m_defaultPipelineState) {
+        return true;
+    }
+    if (!m_device || !m_device->GetResourceFactory()) {
+        return false;
+    }
+
+    auto resourceManager = Engine::Get().GetRenderResourceManager();
+    if (!resourceManager) {
+        return false;
+    }
+
+    // 使用 RenderResourceManager 加载着色器，这会自动处理搜索路径和内置反射
+    m_defaultVertexShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.vert.spv", "main");
+    m_defaultPixelShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.frag.spv", "main");
+
+    // 如果加载失败，尝试使用内置的 Default 着色器作为保底
+    if (!m_defaultVertexShader) {
+        LOG_WARNING("OpaquePass", "无法加载 Renderer2D 顶点着色器，尝试使用内置默认着色器。");
+        m_defaultVertexShader = resourceManager->LoadShaderSync("Default");
+    }
+    
+    if (!m_defaultPixelShader) {
+        LOG_WARNING("OpaquePass", "无法加载 Renderer2D 片段着色器，尝试使用内置默认着色器。");
+        m_defaultPixelShader = resourceManager->LoadShaderSync("DefaultPixel");
+    }
+
+    if (!m_defaultVertexShader || !m_defaultPixelShader) {
+        LOG_ERROR("OpaquePass", "无法加载必要的着色器资源，OpaquePass 无法正常工作。");
+        return false;
+    }
+
+    auto pso = m_device->GetResourceFactory()->CreatePipelineStateImpl();
+    if (!pso) {
+        return false;
+    }
+
+    pso->SetShader(ShaderType::Vertex, m_defaultVertexShader);
+    pso->SetShader(ShaderType::Pixel, m_defaultPixelShader);
+    pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+    
+    // 设置基础状态
+    RasterizerState rs;
+    rs.cullMode = CullMode::None; // 2D 渲染通常不开启裁剪
+    pso->SetRasterizerState(rs);
+
+    if (!pso->Create(m_device)) {
+        LOG_ERROR("OpaquePass", "创建 Renderer2D 管线失败: {0}", pso->GetErrors());
+        return false;
+    }
+
+    m_defaultPipelineState = std::shared_ptr<IPipelineState>(std::move(pso));
+    return true;
+}
+
+} // namespace Prisma::Graphic

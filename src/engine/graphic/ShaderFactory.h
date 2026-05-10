@@ -1,33 +1,27 @@
 #pragma once
 
+#include "interfaces/IRenderDevice.h"
 #include "interfaces/IShader.h"
-#include "interfaces/RenderTypes.h"
-#include <memory>
+#include "RenderDesc.h"
 #include <string>
+#include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
+/**
+ * @brief 着色器工厂类
+ */
 class ShaderFactory {
 public:
-    /// @brief 根据指定的渲染后端类型创建着色器
-    /// @param backendType 渲染后端类型 (DX12, Vulkan等)
-    /// @param sourceCode 着色器源码
-    /// @param desc 着色器描述信息
-    /// @return 创建的着色器实例
-    static std::unique_ptr<IShader> CreateShader(
-        RenderAPIType backendType,
-        const std::string& sourceCode,
-        const ShaderDesc& desc);
+    /**
+     * @brief 创建着色器
+     */
+    static std::shared_ptr<IShader> CreateShader(IRenderDevice* device, const ShaderDesc& desc);
 
-    /// @brief 根据文件创建着色器
-    /// @param backendType 渲染后端类型 (DX12, Vulkan等)
-    /// @param filepath 着色器文件路径
-    /// @param desc 着色器描述信息
-    /// @return 创建的着色器实例
-    static std::unique_ptr<IShader> CreateShaderFromFile(
-        RenderAPIType backendType,
-        const std::string& filepath,
-        const ShaderDesc& desc);
+    /**
+     * @brief 从文件创建着色器
+     */
+    static std::shared_ptr<IShader> CreateShaderFromFile(IRenderDevice* device, const std::string& path, ShaderType type);
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -1,10 +1,11 @@
 #include "UIComponent.h"
 
-namespace PrismaEngine {
+namespace Prisma {
 
-void UIComponent::Update(float deltaTime) {
-    (void)deltaTime;
-    // 基础 Update - 子类可以扩展
+void UIComponent::Update(Timestep ts) {
+    if (ts.GetSeconds() < 0.0f) {
+        m_position = PrismaMath::vec2(0.0f, 0.0f);
+    }
 }
 
 PrismaMath::vec2 UIComponent::GetScreenPosition() const {
@@ -33,4 +34,4 @@ bool UIComponent::HitTest(const PrismaMath::vec2& point) const {
            point.y <= screenPos.y + m_size.y;
 }
 
-}  // namespace PrismaEngine
+}  // namespace Prisma

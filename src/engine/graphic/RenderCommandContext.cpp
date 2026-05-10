@@ -5,7 +5,7 @@
 #include "interfaces/IBuffer.h"
 #include "interfaces/ISampler.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 RenderCommandContext::RenderCommandContext() = default;
 
@@ -93,49 +93,105 @@ void RenderCommandContext::SetSampler(ISampler* sampler, uint32_t slot) {
 }
 
 void RenderCommandContext::SetVertexData(const void* data, uint32_t size, uint32_t stride) {
-    // 动态上传顶点数据
-    (void)data; (void)size; (void)stride;
+    const auto* begin = static_cast<const uint8_t*>(data);
+    if (!begin || size == 0) {
+        m_dynamicVertexData.clear();
+        m_lastVertexStride = stride;
+        return;
+    }
+
+    m_dynamicVertexData.assign(begin, begin + size);
+    m_lastVertexStride = stride;
 }
 
 void RenderCommandContext::SetIndexData(const void* data, uint32_t size, bool is32Bit) {
-    // 动态上传索引数据
-    (void)data; (void)size; (void)is32Bit;
+    const auto* begin = static_cast<const uint8_t*>(data);
+    if (!begin || size == 0) {
+        m_dynamicIndexData.clear();
+        m_lastIndexBufferIs32Bit = is32Bit;
+        return;
+    }
+
+    m_dynamicIndexData.assign(begin, begin + size);
+    m_lastIndexBufferIs32Bit = is32Bit;
 }
 
 void RenderCommandContext::SetConstantData(uint32_t slot, const void* data, uint32_t size) {
-    // 动态上传常量数据
-    (void)slot; (void)data; (void)size;
+    if (slot >= m_dynamicConstantData.size()) {
+        return;
+    }
+
+    const auto* begin = static_cast<const uint8_t*>(data);
+    if (!begin || size == 0) {
+        m_dynamicConstantData[slot].clear();
+        return;
+    }
+
+    m_dynamicConstantData[slot].assign(begin, begin + size);
 }
 
 void RenderCommandContext::Draw(uint32_t vertexCount, uint32_t startVertex) {
-    (void)vertexCount; (void)startVertex;
+    if (vertexCount == 0) {
+        return;
+    }
+
+    m_namedResources["__last_draw_start_vertex"] = reinterpret_cast<void*>(static_cast<uintptr_t>(startVertex));
+    ++m_drawCallCount;
 }
 
 void RenderCommandContext::DrawIndexed(uint32_t indexCount, uint32_t startIndex, int32_t baseVertex) {
-    (void)indexCount; (void)startIndex; (void)baseVertex;
+    if (indexCount == 0) {
+        return;
+    }
+
+    m_namedResources["__last_draw_start_index"] = reinterpret_cast<void*>(static_cast<uintptr_t>(startIndex));
+    m_namedResources["__last_draw_base_vertex"] = reinterpret_cast<void*>(static_cast<intptr_t>(baseVertex));
+    ++m_drawCallCount;
 }
 
 void RenderCommandContext::DrawInstanced(uint32_t vertexCount, uint32_t instanceCount,
                                      uint32_t startVertex, uint32_t startInstance) {
-    (void)vertexCount; (void)instanceCount; (void)startVertex; (void)startInstance;
+    if (vertexCount == 0 || instanceCount == 0) {
+        return;
+    }
+
+    m_namedResources["__last_instance_start_vertex"] = reinterpret_cast<void*>(static_cast<uintptr_t>(startVertex));
+    m_namedResources["__last_instance_start_instance"] = reinterpret_cast<void*>(static_cast<uintptr_t>(startInstance));
+    ++m_drawCallCount;
 }
 
 void RenderCommandContext::DrawIndexedInstanced(uint32_t indexCount, uint32_t instanceCount,
                                               uint32_t startIndex, int32_t baseVertex,
                                               uint32_t startInstance) {
-    (void)indexCount; (void)instanceCount; (void)startIndex; (void)baseVertex; (void)startInstance;
+    if (indexCount == 0 || instanceCount == 0) {
+        return;
+    }
+
+    m_namedResources["__last_indexed_instance_start_index"] = reinterpret_cast<void*>(static_cast<uintptr_t>(startIndex));
+    m_namedResources["__last_indexed_instance_base_vertex"] = reinterpret_cast<void*>(static_cast<intptr_t>(baseVertex));
+    m_namedResources["__last_indexed_instance_start_instance"] = reinterpret_cast<void*>(static_cast<uintptr_t>(startInstance));
+    ++m_drawCallCount;
 }
 
 void RenderCommandContext::ClearRenderTarget(IRenderTarget* renderTarget, const float color[4]) {
-    (void)renderTarget; (void)color;
+    m_stateCache.currentRenderTarget = renderTarget;
+    if (color) {
+        m_lastClearColor[0] = color[0];
+        m_lastClearColor[1] = color[1];
+        m_lastClearColor[2] = color[2];
+        m_lastClearColor[3] = color[3];
+    }
 }
 
 void RenderCommandContext::ClearRenderTarget(IRenderTarget* renderTarget, float r, float g, float b, float a) {
-    (void)renderTarget; (void)r; (void)g; (void)b; (void)a;
+    const float color[4] = {r, g, b, a};
+    ClearRenderTarget(renderTarget, color);
 }
 
 void RenderCommandContext::ClearDepthStencil(IDepthStencil* depthStencil, float depth, uint8_t stencil) {
-    (void)depthStencil; (void)depth; (void)stencil;
+    m_stateCache.currentDepthStencil = depthStencil;
+    m_lastDepthValue = depth;
+    m_lastStencilValue = stencil;
 }
 
 void RenderCommandContext::MemoryBarrier() {
@@ -145,14 +201,14 @@ void RenderCommandContext::UAVBarrier() {
 }
 
 void RenderCommandContext::BeginDebugMarker(const std::string& name) {
-    (void)name;
+    m_debugMarkers.push_back(name);
 }
 
 void RenderCommandContext::EndDebugMarker() {
 }
 
 void RenderCommandContext::InsertDebugMarker(const std::string& name) {
-    (void)name;
+    m_debugMarkers.push_back(name);
 }
 
 // === 兼容旧 API 的方法（待废弃） ===
@@ -184,7 +240,7 @@ void RenderCommandContext::SetSampler(const std::string& name, void* sampler) {
 }
 
 void RenderCommandContext::SetPipelineState(void* pso) {
-    (void)pso;
+    m_namedResources["__legacy_pipeline_state"] = pso;
 }
 
 void RenderCommandContext::SetNativeRenderTarget(void* renderTarget) {
@@ -195,4 +251,4 @@ void RenderCommandContext::SetNativeDepthStencil(void* depthStencil) {
     m_nativeDepthStencil = depthStencil;
 }
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

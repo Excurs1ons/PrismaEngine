@@ -5,7 +5,7 @@
 #include <memory>
 #include <filesystem>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // TMX 解析器
@@ -40,8 +40,11 @@ private:
         const std::filesystem::path& basePath
     );
 
+    // 解析 TSX 文件
+    static std::unique_ptr<Tileset> ParseTsxFile(const std::filesystem::path& tsxPath);
+
     // 解析层
-    static std::unique_ptr<Layer> ParseLayer(
+    static std::unique_ptr<TilemapLayer> ParseLayer(
         void* layerElement,
         const std::filesystem::path& basePath,
         TileMap& map
@@ -87,4 +90,4 @@ private:
     static LayerType ParseLayerType(const std::string& str);
 };
 
-} // namespace PrismaEngine
+} // namespace Prisma

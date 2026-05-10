@@ -2,19 +2,11 @@
 
 #include "RenderTypes.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class ITexture;
 class IRenderDevice;
-
-/// @brief 交换链模式
-enum class SwapChainMode {
-    Immediate,      // 立即呈现
-    VSync,          // 垂直同步
-    AdaptiveVSync,  // 自适应垂直同步
-    TripleBuffer    // 三重缓冲
-};
 
 /// @brief 交换链抽象接口
 class ISwapChain {
@@ -43,7 +35,7 @@ public:
 
     /// @brief 获取模式
     /// @return 模式
-    [[nodiscard]] virtual SwapChainMode GetMode() const = 0;
+    [[nodiscard]] virtual PresentMode GetMode() const = 0;
 
     /// @brief 检查是否启用HDR
     /// @return 是否启用HDR
@@ -69,7 +61,7 @@ public:
     /// @brief 设置模式
     /// @param mode 模式
     /// @return 是否成功
-    virtual bool SetMode(SwapChainMode mode) = 0;
+    virtual bool SetMode(PresentMode mode) = 0;
 
     /// @brief 调整大小
     /// @param width 新宽度
@@ -142,4 +134,4 @@ public:
     virtual void EnableDebugLayer(bool enable) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

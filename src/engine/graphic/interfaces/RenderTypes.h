@@ -6,8 +6,8 @@
 #include <string>
 #include <vector>
 
-namespace PrismaEngine::Graphic {
-using namespace PrismaEngine;
+namespace Prisma::Graphic {
+using namespace Prisma;
 // 前置声明
 class IResource;
 class ITexture;
@@ -51,20 +51,20 @@ struct Vertex {
 
 // 简单的包围盒结构
 struct BoundingBox {
-    PrismaMath::vec3 minBounds;
-    PrismaMath::vec3 maxBounds;
+    Vector3 minBounds;
+    Vector3 maxBounds;
 
     BoundingBox() {
-        minBounds = PrismaMath::vec3(0, 0, 0);
-        maxBounds = PrismaMath::vec3(0, 0, 0);
+        minBounds = Vector3(0, 0, 0);
+        maxBounds = Vector3(0, 0, 0);
     }
-    BoundingBox(const PrismaMath::vec3& minVal, const PrismaMath::vec3& maxVal) {
+    BoundingBox(const Vector3& minVal, const Vector3& maxVal) {
         minBounds = minVal;
         maxBounds = maxVal;
     }
 
     // 扩展包围盒以包含点
-    void Encapsulate(const PrismaMath::vec3& point) {
+    void Encapsulate(const Vector3& point) {
         if (point.x < minBounds.x) minBounds.x = point.x;
         if (point.y < minBounds.y) minBounds.y = point.y;
         if (point.z < minBounds.z) minBounds.z = point.z;
@@ -80,14 +80,27 @@ struct BoundingBox {
     }
 
     // 获取中心点
-    [[nodiscard]] PrismaMath::vec3 GetCenter() const {
+    [[nodiscard]] Vector3 GetCenter() const {
         return (minBounds + maxBounds) * 0.5f;
     }
 
     // 获取尺寸
-    [[nodiscard]] PrismaMath::vec3 GetSize() const {
+    [[nodiscard]] Vector3 GetSize() const {
         return maxBounds - minBounds;
     }
+};
+
+/// @brief 子网格 GPU 资源缓冲区
+struct SubMeshBuffer {
+    std::string name;
+    uint32_t materialIndex;
+    uint32_t baseVertex;
+    uint32_t baseIndex;
+    uint32_t indexCount;
+    uint32_t vertexCount;
+    std::shared_ptr<IBuffer> vertexBuffer;
+    std::shared_ptr<IBuffer> indexBuffer;
+    bool use16BitIndices;
 };
 
 // 资源ID类型
@@ -287,6 +300,14 @@ struct Color {
     Color(float r, float g, float b, float a = 1.0f) : r(r), g(g), b(b), a(a) {}
 };
 
+// 呈现模式 (VSync 模式)
+enum class PresentMode {
+    Immediate,   // 立即呈现 (关闭垂直同步，可能导致画面撕裂)
+    VSync,       // 等待垂直同步 (开启垂直同步，限制帧率为显示器刷新率)
+    Mailbox,     // 邮箱模式 (三重缓冲，开启垂直同步但允许低延迟，如果支持)
+    Adaptive     // 自适应垂直同步 (根据性能自动切换)
+};
+
 // 基础描述结构
 struct ResourceDesc {
     ResourceType type = ResourceType::Unknown;
@@ -300,7 +321,7 @@ struct DeviceDesc {
     void* windowHandle = nullptr;
     uint32_t width = 1920;
     uint32_t height = 1080;
-    bool vsync = true;
+    PresentMode presentMode = PresentMode::VSync;
     bool enableDebug = false;
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;
@@ -512,11 +533,11 @@ enum class StencilOp {
 
     // 光源结构
     struct Light {
-        PrismaEngine::Vector3 position;
-        PrismaEngine::Vector4 color;     // RGB + intensity
-        PrismaEngine::Vector3 direction;  // 用于方向光
+        Prisma::Vector3 position;
+        Prisma::Vector4 color;     // RGB + intensity
+        Prisma::Vector3 direction;  // 用于方向光
         int type;  // 0=directional, 1=point, 2=spot
     };
 
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

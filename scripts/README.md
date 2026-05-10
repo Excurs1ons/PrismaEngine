@@ -18,23 +18,20 @@ scripts\build.bat windows-x64-debug clean
 
 ### Linux/macOS
 ```bash
-# Using the unified build script (recommended)
-./scripts/build.sh linux-x64-debug
+# Auto-detect platform+arch and build engine debug
+./scripts/build.sh
 
-# Or use the platform-specific script
-./scripts/build-linux.sh linux-x64-release
+# Build editor release
+./scripts/build.sh --target editor --config release
 
-# Clean build
-./scripts/build.sh linux-x64-debug clean
+# Clean and build with explicit preset
+./scripts/build.sh --preset editor-linux-arm64-debug --clean
 ```
 
 ### Android
+Use explicit Android preset:
 ```bash
-# From Linux/macOS/Windows (with WSL)
-./scripts/build.sh android-arm64-v8a-debug
-
-# Or use the platform-specific script
-./scripts/build-android.sh android-arm64-v8a-release
+./scripts/build.sh --preset engine-android-arm64-debug
 ```
 
 ## Available Presets
@@ -42,24 +39,39 @@ scripts\build.bat windows-x64-debug clean
 ### Windows Presets
 | Preset | Description | Build Type | Library Type |
 |--------|-------------|------------|--------------|
-| `windows-x64-debug` | x64 Debug build | Debug | Shared DLL |
-| `windows-x64-release` | x64 Release build | Release | Static |
-| `windows-x86-debug` | x86 Debug build | Debug | Shared DLL |
-| `windows-x86-release` | x86 Release build | Release | Static |
+| `engine-windows-x64-debug` | Engine x64 Debug build | Debug | Shared |
+| `editor-windows-x64-debug` | Editor x64 Debug build | Debug | Shared |
+| `runtime-windows-x64-debug` | Runtime x64 Debug build | Debug | Shared |
+| `engine-windows-x64-release` | Engine x64 Release build | Release | Static |
 
 ### Linux Presets
 | Preset | Description | Build Type | Backend |
 |--------|-------------|------------|---------|
-| `linux-x64-debug` | x64 Debug build | Debug | Vulkan |
-| `linux-x64-release` | x64 Release build | Release | Vulkan |
-| `linux-x64-debug-opengl` | x64 Debug build | Debug | OpenGL |
-| `linux-x64-release-opengl` | x64 Release build | Release | OpenGL |
+| `engine-linux-x64-debug` | Engine x64 Debug build | Debug | Vulkan |
+| `engine-linux-arm64-debug` | Engine ARM64 Debug build | Debug | Vulkan |
+| `editor-linux-x64-debug` | Editor x64 Debug build | Debug | Vulkan |
+| `editor-linux-arm64-debug` | Editor ARM64 Debug build | Debug | Vulkan |
 
 ### Android Presets
 | Preset | Description | Build Type | ABI |
 |--------|-------------|------------|-----|
-| `android-arm64-v8a-debug` | ARM64 Debug build | Debug | arm64-v8a |
-| `android-arm64-v8a-release` | ARM64 Release build | Release | arm64-v8a |
+| `engine-android-arm64-debug` | Engine ARM64 Debug build | Debug | arm64-v8a |
+| `engine-android-arm64-release` | Engine ARM64 Release build | Release | arm64-v8a |
+| `runtime-android-arm64-debug` | Runtime ARM64 Debug build | Debug | arm64-v8a |
+
+## `build.sh` 参数说明
+
+- `--target <engine|editor|runtime>`: 目标模块，默认 `engine`
+- `--config <debug|release>`: 构建类型，默认 `debug`
+- `--preset <name>`: 直接指定 preset（跳过自动识别）
+- `--clean`: 构建前清理输出目录
+- `--jobs <N>`: 并行任务数
+
+自动选择规则：
+
+- `preset = <target>-<platform>-<arch>-<config>`
+- 例如 Linux ARM64 + `engine` + `debug` => `engine-linux-arm64-debug`
+- 脚本会打印：检测平台、架构、最终 preset、输出目录
 
 ## Platform-Specific Scripts
 
@@ -69,8 +81,7 @@ scripts\build.bat windows-x64-debug clean
 - **`build-windows.ps1`** - PowerShell script for Windows builds
 
 ### Linux
-- **`build.sh`** - Unified entry point (auto-detects platform)
-- **`build-linux.sh`** - Bash script for Linux builds
+- **`build.sh`** - Unified entry point (auto-detects platform + architecture)
 
 ### Android
 - **`build-android.sh`** - Bash script for Android builds (Linux/macOS/WSL)
@@ -111,11 +122,11 @@ sudo apt install libgl1-mesa-dev libglu1-mesa-dev
 ## Advanced Options
 
 ### Clean Build
-Add `clean` as the second argument to remove the build directory before building:
+Use `--clean` to remove the selected build directory before building:
 
 ```bash
 # Linux/macOS
-./scripts/build.sh linux-x64-debug clean
+./scripts/build.sh --target engine --config debug --clean
 
 # Windows
 scripts\build.bat windows-x64-debug clean
@@ -144,15 +155,14 @@ cmake -B build/linux-x64-debug \
 
 ## Output Directory
 
-Build artifacts are placed in the `build/` directory with the following structure:
+Build artifacts are placed in the preset `binaryDir` configured in `CMakePresets.json`, for example:
 
 ```
 build/
-├── windows-x64-debug/
-├── windows-x64-release/
-├── linux-x64-debug/
-├── linux-x64-release/
-└── android-arm64-v8a-debug/
+├── engine-linux-arm64-debug/
+├── editor-linux-arm64-debug/
+├── engine-linux-x64-release/
+└── engine-android-arm64-debug/
 ```
 
 ## Troubleshooting
@@ -187,7 +197,7 @@ These scripts are designed to work seamlessly with CI/CD pipelines:
 ```yaml
 # Example GitHub Actions workflow
 - name: Build Prisma Engine
-  run: ./scripts/build.sh linux-x64-release
+  run: ./scripts/build.sh --target engine --config release
 ```
 
 ## Additional Scripts

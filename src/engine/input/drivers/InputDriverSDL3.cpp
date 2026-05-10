@@ -1,9 +1,10 @@
 #if defined(PRISMA_ENABLE_INPUT_SDL3)
 #include "InputDriverSDL3.h"
+#include "../logger/Logger.h"
 #include <algorithm>
 #include <unordered_map>
 
-namespace PrismaEngine::Input {
+namespace Prisma::Input {
 
 // ========== InputDriverSDL3 ==========
 
@@ -25,10 +26,9 @@ bool InputDriverSDL3::Initialize() {
         return true;
     }
 
-    // SDL3 应该在外部初始化，这里只检查
     if (!SDL_WasInit(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
-        // 初始化 SDL 子系统
-        if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) < 0) {
+        if (!SDL_InitSubSystem(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
+            LOG_ERROR("Input", "SDL 输入子系统初始化失败: {0}", SDL_GetError());
             return false;
         }
     }
@@ -42,6 +42,13 @@ void InputDriverSDL3::Shutdown() {
         return;
     }
 
+    for (int i = 0; i < MAX_GAMEPADS; ++i) {
+        if (m_openGamepads[i]) {
+            SDL_CloseGamepad(m_openGamepads[i]);
+            m_openGamepads[i] = nullptr;
+        }
+    }
+
     m_initialized = false;
 }
 
@@ -50,24 +57,15 @@ void InputDriverSDL3::Update() {
         return;
     }
 
-    // 保存上一帧状态
     m_prevKeyStates = m_keyStates;
 
-    // 重置鼠标相对移动
     m_mouseState.deltaX = 0;
     m_mouseState.deltaY = 0;
     m_mouseState.wheelDelta = 0;
 
-    // 处理事件
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-        ProcessEvent(event);
-    }
-
-    // 更新手柄
+    // 更新已连接的手柄状态，不再每帧 Open/Close
     UpdateGamepads();
 
-    // 清空文本输入
     m_textInput.clear();
 }
 
@@ -115,16 +113,24 @@ void InputDriverSDL3::ProcessEvent(const SDL_Event& event) {
             break;
         }
 
-        case SDL_EVENT_GAMEPAD_ADDED:
-        case SDL_EVENT_GAMEPAD_REMOVED:
-        case SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN:
-        case SDL_EVENT_GAMEPAD_TOUCHPAD_UP:
-        case SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION:
-        case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
-        case SDL_EVENT_GAMEPAD_BUTTON_UP:
-        case SDL_EVENT_GAMEPAD_AXIS_MOTION:
-            // 手柄事件在 UpdateGamepads 中处理
+        case SDL_EVENT_GAMEPAD_ADDED: {
+            LOG_INFO("Input", "检测到手柄连接 ID: {0}", event.gdevice.which);
             break;
+        }
+        case SDL_EVENT_GAMEPAD_REMOVED: {
+            LOG_INFO("Input", "检测到手柄断开 ID: {0}", event.gdevice.which);
+            for (int i = 0; i < MAX_GAMEPADS; ++i) {
+                if (m_gamepadIds[i] == event.gdevice.which) {
+                    if (m_openGamepads[i]) {
+                        SDL_CloseGamepad(m_openGamepads[i]);
+                        m_openGamepads[i] = nullptr;
+                    }
+                    m_gamepadIds[i] = 0;
+                    m_gamepadStates[i].connected = false;
+                }
+            }
+            break;
+        }
 
         default:
             break;
@@ -132,38 +138,60 @@ void InputDriverSDL3::ProcessEvent(const SDL_Event& event) {
 }
 
 void InputDriverSDL3::UpdateGamepads() {
-    // SDL3 新 API: 使用 SDL_GetGamepads 获取所有连接的手柄 ID
-    int gamepadCount = 0;
-    SDL_JoystickID* gamepadIds = SDL_GetGamepads(&gamepadCount);
-
-    if (!gamepadIds || gamepadCount <= 0) {
-        if (gamepadIds) SDL_free(gamepadIds);
-        return;
+    static double lastRefresh = 0.0;
+    double now = SDL_GetTicks() / 1000.0;
+    
+    if (now - lastRefresh > 1.0) {
+        int count = 0;
+        SDL_JoystickID* gamepadIds = SDL_GetGamepads(&count);
+        if (gamepadIds) {
+            for (int i = 0; i < count && i < MAX_GAMEPADS; ++i) {
+                if (m_gamepadIds[i] != gamepadIds[i]) {
+                    if (m_openGamepads[i]) SDL_CloseGamepad(m_openGamepads[i]);
+                    m_openGamepads[i] = nullptr;
+                    m_gamepadIds[i] = gamepadIds[i];
+                    m_gamepadStates[i].connected = true;
+                }
+            }
+            for (int i = count; i < MAX_GAMEPADS; ++i) {
+                if (m_openGamepads[i]) SDL_CloseGamepad(m_openGamepads[i]);
+                m_openGamepads[i] = nullptr;
+                m_gamepadIds[i] = 0;
+                m_gamepadStates[i].connected = false;
+            }
+            SDL_free(gamepadIds);
+        }
+        lastRefresh = now;
     }
 
-    // 更新所有连接的手柄
-    for (int i = 0; i < gamepadCount && i < MAX_GAMEPADS; ++i) {
-        SDL_Gamepad* gamepad = SDL_OpenGamepad(gamepadIds[i]);
-        if (!gamepad) {
+    for (int i = 0; i < MAX_GAMEPADS; ++i) {
+        if (!m_gamepadStates[i].connected) continue;
+
+        if (!m_openGamepads[i]) {
+            m_openGamepads[i] = SDL_OpenGamepad(m_gamepadIds[i]);
+        }
+
+        SDL_Gamepad* gamepad = m_openGamepads[i];
+        if (!gamepad) continue;
+
+        if (!SDL_GamepadConnected(gamepad)) {
+            SDL_CloseGamepad(gamepad);
+            m_openGamepads[i] = nullptr;
+            m_gamepadStates[i].connected = false;
             continue;
         }
 
         GamepadState& state = m_gamepadStates[i];
-        state.connected = true;
-        m_gamepadIds[i] = gamepadIds[i]; // 保存 ID 用于振动功能
 
-        // 按钮
         auto UpdateButton = [&](SDL_GamepadButton sdlBtn, GamepadButton btn) {
             int idx = static_cast<int>(btn) - 1;
             if (idx < 0 || idx >= 18) return;
-
             bool pressed = SDL_GetGamepadButton(gamepad, sdlBtn);
-            state.buttons[idx].pressed = pressed;
             state.buttons[idx].justPressed = pressed && !state.buttons[idx].pressed;
             state.buttons[idx].justReleased = !pressed && state.buttons[idx].pressed;
+            state.buttons[idx].pressed = pressed;
         };
 
-        // SDL3 新按钮命名
         UpdateButton(SDL_GAMEPAD_BUTTON_SOUTH, GamepadButton::A);
         UpdateButton(SDL_GAMEPAD_BUTTON_EAST, GamepadButton::B);
         UpdateButton(SDL_GAMEPAD_BUTTON_WEST, GamepadButton::X);
@@ -179,18 +207,13 @@ void InputDriverSDL3::UpdateGamepads() {
         UpdateButton(SDL_GAMEPAD_BUTTON_DPAD_LEFT, GamepadButton::DPadLeft);
         UpdateButton(SDL_GAMEPAD_BUTTON_DPAD_RIGHT, GamepadButton::DPadRight);
 
-        // 轴
-        state.axes[0] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX);
-        state.axes[1] = -SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY);
-        state.axes[2] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX);
-        state.axes[3] = -SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTY);
-        state.axes[4] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER);
-        state.axes[5] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER);
-
-        SDL_CloseGamepad(gamepad);
+        state.axes[0] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTX) / 32767.0f;
+        state.axes[1] = -SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFTY) / 32767.0f;
+        state.axes[2] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTX) / 32767.0f;
+        state.axes[3] = -SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHTY) / 32767.0f;
+        state.axes[4] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_LEFT_TRIGGER) / 32767.0f;
+        state.axes[5] = SDL_GetGamepadAxis(gamepad, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) / 32767.0f;
     }
-
-    SDL_free(gamepadIds);
 }
 
 KeyCode InputDriverSDL3::MapSDLKey(SDL_Keycode sdlKey) const {
@@ -238,8 +261,6 @@ KeyCode InputDriverSDL3::MapSDLKey(SDL_Keycode sdlKey) const {
     return (it != keyMap.end()) ? it->second : KeyCode::Unknown;
 }
 
-// ========== 键盘查询 ==========
-
 bool InputDriverSDL3::IsKeyDown(KeyCode key) const {
     int idx = static_cast<int>(key);
     return (idx >= 0 && idx < MAX_KEYS) ? m_keyStates[idx] : false;
@@ -247,76 +268,50 @@ bool InputDriverSDL3::IsKeyDown(KeyCode key) const {
 
 bool InputDriverSDL3::IsKeyJustPressed(KeyCode key) const {
     int idx = static_cast<int>(key);
-    if (idx < 0 || idx >= MAX_KEYS) {
-        return false;
-    }
+    if (idx < 0 || idx >= MAX_KEYS) return false;
     return m_keyStates[idx] && !m_prevKeyStates[idx];
 }
 
 bool InputDriverSDL3::IsKeyJustReleased(KeyCode key) const {
     int idx = static_cast<int>(key);
-    if (idx < 0 || idx >= MAX_KEYS) {
-        return false;
-    }
+    if (idx < 0 || idx >= MAX_KEYS) return false;
     return !m_keyStates[idx] && m_prevKeyStates[idx];
 }
 
-// ========== 鼠标 ==========
-
 void InputDriverSDL3::SetMousePosition(int x, int y) {
-    SDL_WarpMouseInWindow(nullptr, x, y);
+    SDL_WarpMouseInWindow(nullptr, static_cast<float>(x), static_cast<float>(y));
 }
 
 void InputDriverSDL3::StartTextInput() {
-    // SDL3 新 API: 需要传入窗口指针，nullptr 表示当前窗口
     SDL_StartTextInput(nullptr);
     m_textInputEnabled = true;
 }
 
 void InputDriverSDL3::StopTextInput() {
-    // SDL3 新 API: 需要传入窗口指针，nullptr 表示当前窗口
     SDL_StopTextInput(nullptr);
     m_textInputEnabled = false;
 }
 
-// ========== 手柄查询 ==========
-
 uint32_t InputDriverSDL3::GetGamepadCount() const {
-    // SDL3 新 API: 使用 SDL_GetGamepads 获取手柄数量
-    int count = 0;
-    SDL_JoystickID* gamepadIds = SDL_GetGamepads(&count);
-    SDL_free(gamepadIds);
-    return (count > 0) ? static_cast<uint32_t>(count) : 0;
+    uint32_t count = 0;
+    for (int i = 0; i < MAX_GAMEPADS; ++i) if (m_gamepadStates[i].connected) count++;
+    return count;
 }
 
 bool InputDriverSDL3::IsGamepadConnected(uint32_t index) const {
-    if (index >= MAX_GAMEPADS) {
-        return false;
-    }
+    if (index >= MAX_GAMEPADS) return false;
     return m_gamepadStates[index].connected;
 }
 
 const GamepadState& InputDriverSDL3::GetGamepadState(uint32_t index) const {
-    if (index >= MAX_GAMEPADS) {
-        static const GamepadState empty{};
-        return empty;
-    }
+    if (index >= MAX_GAMEPADS) { static const GamepadState empty{}; return empty; }
     return m_gamepadStates[index];
 }
 
 void InputDriverSDL3::SetVibration(uint32_t index, float leftMotor, float rightMotor, uint32_t duration) {
-    if (index >= MAX_GAMEPADS) {
-        return;
-    }
-
-    SDL_JoystickID instanceId = m_gamepadIds[index];
-    SDL_Gamepad* gamepad = SDL_OpenGamepad(instanceId);
-    if (gamepad) {
-        // SDL3 新 API: 使用 SDL_RumbleGamepad
-        SDL_RumbleGamepad(gamepad, leftMotor, rightMotor, duration);
-        SDL_CloseGamepad(gamepad);
-    }
+    if (index >= MAX_GAMEPADS || m_openGamepads[index] == nullptr) return;
+    SDL_RumbleGamepad(m_openGamepads[index], static_cast<uint16_t>(leftMotor * 65535.0f), static_cast<uint16_t>(rightMotor * 65535.0f), duration);
 }
 
-} // namespace PrismaEngine::Input
+} // namespace Prisma::Input
 #endif

@@ -1,82 +1,41 @@
 #include "DeferredPipeline.h"
 #include "graphic/ICamera.h"
-#include "pipelines/SkyboxRenderPass.h"
-#include "pipelines/deferred/CompositionPass.h"
-#include "pipelines/deferred/GeometryPass.h"
-#include "pipelines/deferred/LightingPass.h"
-#include "pipelines/forward/TransparentPass.h"
+#include "../SkyboxRenderPass.h"
+#include "CompositionPass.h"
+#include "GeometryPass.h"
+#include "LightingPass.h"
+#include "../forward/TransparentPass.h"
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
-DeferredPipeline::DeferredPipeline() : LogicalDeferredPipeline(), m_camera(nullptr), m_ambientLight(0.1f, 0.1f, 0.1f) {
+DeferredPipeline::DeferredPipeline() : LogicalDeferredPipeline() {
+    m_camera = nullptr;
+    m_ambientLight = PrismaMath::vec3(0.1f, 0.1f, 0.1f);
     m_stats = {};
 }
 
 DeferredPipeline::~DeferredPipeline() {
-    // Pass 会通过 shared_ptr 自动释放
 }
 
 bool DeferredPipeline::Initialize() {
-    // TODO: 创建所有 Pass
-    // 这些 Pass 类需要先被重构为逻辑 Pass
-    //
-    // m_geometryPass = std::make_shared<GeometryPass>();
-    // m_skyboxPass = std::make_shared<SkyboxPass>();
-    // m_lightingPass = std::make_shared<LightingPass>();
-    // m_transparentPass = std::make_shared<TransparentPass>();
-    // m_compositionPass = std::make_shared<CompositionPass>();
-    //
-    // 添加到 Pipeline
-    // AddPass(m_geometryPass.get());
-    // AddPass(m_skyboxPass.get());
-    // AddPass(m_lightingPass.get());
-    // AddPass(m_transparentPass.get());
-    // AddPass(m_compositionPass.get());
-
-    // 设置默认环境光
-    SetAmbientLight(PrismaMath::vec3(0.1f, 0.1f, 0.1f));
-
-    // 添加默认方向光
-    Light defaultLight;
-    defaultLight.type      = LightType::Directional;
-    defaultLight.direction = PrismaMath::vec3(0.0f, -1.0f, -1.0f);
-    // Normalize direction
-    float length = sqrtf(defaultLight.direction.x * defaultLight.direction.x +
-                         defaultLight.direction.y * defaultLight.direction.y +
-                         defaultLight.direction.z * defaultLight.direction.z);
-    if (length > 0.0f) {
-        defaultLight.direction = defaultLight.direction / length;
-    }
-    defaultLight.color       = PrismaMath::vec3(1.0f, 1.0f, 1.0f);
-    defaultLight.intensity   = 1.0f;
-    defaultLight.castShadows = true;
-    AddLight(defaultLight);
-
-    // 启用默认后处理效果
-    SetPostProcessEffect(PostProcessEffect::ToneMapping, true);
-    SetPostProcessEffect(PostProcessEffect::GammaCorrection, true);
-
-    // 启用自动排序
-    SetAutoSort(true);
-
     return true;
 }
 
-void DeferredPipeline::Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera) {
+void DeferredPipeline::Update(Prisma::Timestep ts, Prisma::Graphic::ICamera* camera) {
     m_camera              = camera;
-    m_stats.lastFrameTime = deltaTime;
+    m_stats.lastFrameTime = ts;
 
     // 更新所有 Pass 的时间
     if (m_geometryPass)
-        m_geometryPass->Update(deltaTime);
+        m_geometryPass->Update(ts);
     if (m_skyboxPass)
-        m_skyboxPass->Update(deltaTime);
+        m_skyboxPass->Update(ts);
     if (m_lightingPass)
-        m_lightingPass->Update(deltaTime);
+        m_lightingPass->Update(ts);
     if (m_transparentPass)
-        m_transparentPass->Update(deltaTime);
+        m_transparentPass->Update(ts);
     if (m_compositionPass)
-        m_compositionPass->Update(deltaTime);
+        m_compositionPass->Update(ts);
 
     // 更新相机数据
     if (m_camera) {
@@ -85,8 +44,23 @@ void DeferredPipeline::Update(float deltaTime, PrismaEngine::Graphic::ICamera* c
 
     // 更新光照 Pass 的光源数据
     if (m_lightingPass) {
-        // TODO: m_lightingPass->SetLights(m_lights);
-        // TODO: m_lightingPass->SetAmbientLight(m_ambientLight);
+        // Convert DeferredPipeline::Light to LightingPass::Light
+        std::vector<LightingPass::Light> lights;
+        lights.reserve(m_lights.size());
+        for (const auto& light : m_lights) {
+            LightingPass::Light convertedLight;
+            convertedLight.type = static_cast<LightingPass::LightType>(light.type);
+            convertedLight.position = light.position;
+            convertedLight.direction = light.direction;
+            convertedLight.color = light.color;
+            convertedLight.intensity = light.intensity;
+            convertedLight.range = light.range;
+            convertedLight.outerCone = light.spotAngle;
+            convertedLight.castShadows = light.castShadows;
+            lights.push_back(convertedLight);
+        }
+        m_lightingPass->SetLights(lights);
+        m_lightingPass->SetAmbientLight(m_ambientLight);
     }
 }
 
@@ -111,24 +85,25 @@ void DeferredPipeline::SetLights(const std::vector<Light>& lights) {
 }
 
 void DeferredPipeline::SetAmbientLight(const PrismaMath::vec3& ambient) {
-    (void)ambient;
     m_ambientLight = ambient;
 }
 
 void DeferredPipeline::SetPostProcessEffect(PostProcessEffect effect, bool enable) {
     if (m_compositionPass) {
-        // TODO: m_compositionPass->SetPostProcessEffect(effect, enable);
+        m_compositionPass->SetPostProcessEffect(
+            static_cast<CompositionPass::PostProcessEffect>(effect), enable);
     }
 }
 
 bool DeferredPipeline::IsPostProcessEffectEnabled(PostProcessEffect effect) const {
     if (m_compositionPass) {
-        // TODO: return m_compositionPass->IsPostProcessEffectEnabled(effect);
+        return m_compositionPass->IsPostProcessEffectEnabled(
+            static_cast<CompositionPass::PostProcessEffect>(effect));
     }
     return false;
 }
 
-void DeferredPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* camera) {
+void DeferredPipeline::UpdatePassesCameraData(Prisma::Graphic::ICamera* camera) {
     if (!camera) {
         return;
     }
@@ -159,11 +134,20 @@ void DeferredPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* ca
 }
 
 void DeferredPipeline::CollectStats() {
-    // TODO: 从各个 Pass 收集渲染统计
-    m_stats.geometryPassObjects   = 0;
-    m_stats.geometryPassTriangles = 0;
-    m_stats.lightingPassLights    = static_cast<uint32_t>(m_lights.size());
-    m_stats.transparentObjects    = 0;
+    if (m_geometryPass) {
+        const auto& stats = m_geometryPass->GetRenderStats();
+        m_stats.geometryPassObjects   = stats.objects;
+        m_stats.geometryPassTriangles = stats.triangles;
+    }
+    if (m_lightingPass) {
+        const auto& stats = m_lightingPass->GetRenderStats();
+        m_stats.lightingPassLights = stats.lightsRendered;
+    }
+    if (m_transparentPass) {
+        const auto& stats = m_transparentPass->GetRenderStats();
+        m_stats.transparentObjects = stats.transparentObjects;
+    }
+    m_stats.lightingPassLights = static_cast<uint32_t>(m_lights.size());
 }
 
-}  // namespace PrismaEngine::Graphic
+}  // namespace Prisma::Graphic

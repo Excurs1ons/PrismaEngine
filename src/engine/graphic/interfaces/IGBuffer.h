@@ -3,7 +3,9 @@
 #include "IRenderTarget.h"
 #include <memory>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
+
+class IDeviceContext;
 
 /// @brief G-Buffer 目标枚举
 /// 延迟渲染的几何缓冲区目标
@@ -97,4 +99,4 @@ public:
     virtual void SetAsRenderTarget(IDeviceContext* deviceContext) = 0;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

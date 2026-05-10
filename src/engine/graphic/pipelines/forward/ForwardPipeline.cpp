@@ -1,47 +1,70 @@
 #include "ForwardPipeline.h"
-#include "graphic/RenderPass.h"
-#include "pipelines/forward/DepthPrePass.h"
-#include "pipelines/forward/OpaquePass.h"
-#include "pipelines/SkyboxRenderPass.h"
-#include "pipelines/forward/TransparentPass.h"
-#include "ui/UIPass.h"
+#include "DepthPrePass.h"
+#include "OpaquePass.h"
+#include "TransparentPass.h"
+#include "../SkyboxRenderPass.h"
+#include "graphic/Renderer.h"
+#include "graphic/RenderCommandContext.h"
 #include "Logger.h"
 
-namespace PrismaEngine::Graphic {
+// Vulkan 特定代码支持
+#include "adapters/vulkan/RenderDeviceVulkan.h"
+#include "adapters/vulkan/VulkanResources.h"
+#include "graphic/interfaces/IRenderTarget.h"
 
-ForwardPipeline::ForwardPipeline()
-    : LogicalForwardPipeline()
-    , m_camera(nullptr) {
-    m_stats = {};
-}
+namespace Prisma::Graphic {
+
+/**
+ * @brief 内部渲染目标代理
+ * 用于将 ITexture 包装为 IRenderTarget，以便传递给 Pass。
+ */
+class TextureRenderTargetProxy final : public ITextureRenderTarget {
+public:
+    TextureRenderTargetProxy(ITexture* texture) : m_texture(texture) {}
+
+    uint32_t GetWidth() const override { return m_texture ? static_cast<uint32_t>(m_texture->GetWidth()) : 0; }
+    uint32_t GetHeight() const override { return m_texture ? static_cast<uint32_t>(m_texture->GetHeight()) : 0; }
+    TextureFormat GetFormat() const override { return m_texture ? m_texture->GetFormat() : TextureFormat::Unknown; }
+    TextureType GetType() const override { return m_texture ? m_texture->GetTextureType() : TextureType::Texture2D; }
+    
+    void* GetNativeHandle() const override {
+        if (!m_texture) return nullptr;
+        auto vkTexture = dynamic_cast<Vulkan::VulkanTexture*>(m_texture);
+        if (vkTexture) {
+            return reinterpret_cast<void*>(vkTexture->GetVkImageView());
+        }
+        return nullptr;
+    }
+
+    bool IsSwapChain() const override { return false; }
+    void Clear(const float color[4]) override {
+        if (m_texture) {
+            m_texture->Clear(Color(color[0], color[1], color[2], color[3]));
+        }
+    }
+
+    uint32_t GetMipLevels() const override { return m_texture ? m_texture->GetMipLevels() : 0; }
+    uint32_t GetArraySize() const override { return m_texture ? m_texture->GetArraySize() : 0; }
+    ITexture* GetTexture() override { return m_texture; }
+
+private:
+    ITexture* m_texture;
+};
+
+ForwardPipeline::ForwardPipeline() = default;
 
 ForwardPipeline::~ForwardPipeline() {
+    Shutdown();
 }
 
-// === IPipeline 接口实现 ===
-
-bool ForwardPipeline::Initialize(IRenderDevice* device) {
-    (void)device;
-    LOG_INFO("ForwardPipeline", "Initializing ForwardPipeline...");
-    
-    // 创建所有 Pass
+int ForwardPipeline::Initialize(IRenderDevice* device) {
+    m_device = device;
     m_depthPrePass = std::make_shared<DepthPrePass>();
     m_opaquePass = std::make_shared<OpaquePass>();
+    m_opaquePass->SetDevice(device);
     m_skyboxPass = std::make_shared<SkyboxPass>();
     m_transparentPass = std::make_shared<TransparentPass>();
-    m_uiPass = std::make_shared<PrismaEngine::UIPass>();
-
-    // 添加到 Pipeline
-    AddPass(m_depthPrePass.get());
-    AddPass(m_opaquePass.get());
-    AddPass(m_skyboxPass.get());
-    AddPass(m_transparentPass.get());
-    AddPass(m_uiPass.get());
-
-    // 启用自动排序
-    SetAutoSort(true);
-
-    return true;
+    return 0;
 }
 
 void ForwardPipeline::Shutdown() {
@@ -49,207 +72,80 @@ void ForwardPipeline::Shutdown() {
     m_opaquePass.reset();
     m_skyboxPass.reset();
     m_transparentPass.reset();
-    m_uiPass.reset();
 }
 
-void ForwardPipeline::Execute(const RenderContext& context) {
-    PassExecutionContext passContext;
-    passContext.deviceContext = nullptr; // TODO
-    passContext.renderTarget = nullptr;
-    passContext.depthStencil = nullptr;
-    
-    // 调用逻辑 Pipeline 执行
-    Execute(passContext);
-}
+void ForwardPipeline::Execute(const RenderContext& ctx) {
+    if (!m_device) return;
 
-void ForwardPipeline::Begin(const RenderContext& context) {
-    (void)context;
-}
-
-void ForwardPipeline::End() {
-}
-
-void ForwardPipeline::SetRenderPassEnabled(const std::string& name, bool enabled) {
-    IPass* pass = FindPass(name.c_str());
-    if (pass) pass->SetEnabled(enabled);
-}
-
-bool ForwardPipeline::IsRenderPassEnabled(const std::string& name) const {
-    IPass* pass = FindPass(name.c_str());
-    return pass ? pass->IsEnabled() : false;
-}
-
-bool ForwardPipeline::AddRenderPass(std::unique_ptr<RenderPass> renderPass, int index) {
-    (void)renderPass; (void)index;
-    return false;
-}
-
-bool ForwardPipeline::RemoveRenderPass(const std::string& name) {
-    (void)name;
-    return false;
-}
-
-RenderPass* ForwardPipeline::GetRenderPass(const std::string& name) {
-    (void)name;
-    return nullptr;
-}
-
-RenderPass* ForwardPipeline::GetRenderPass(uint32_t index) {
-    (void)index;
-    return nullptr;
-}
-
-std::vector<std::string> ForwardPipeline::GetRenderPassNames() const {
-    return {};
-}
-
-uint32_t ForwardPipeline::GetRenderPassCount() const {
-    return static_cast<uint32_t>(GetPassCount());
-}
-
-void ForwardPipeline::SetMainRenderTarget(ITexture* renderTarget, ITexture* depthStencil) {
-    (void)renderTarget; (void)depthStencil;
-}
-
-ITexture* ForwardPipeline::GetMainRenderTarget() const {
-    return nullptr;
-}
-
-ITexture* ForwardPipeline::GetMainDepthStencil() const {
-    return nullptr;
-}
-
-bool ForwardPipeline::SetRenderPassDependency(const std::string& srcPass, const std::string& dstPass) {
-    (void)srcPass; (void)dstPass;
-    return false;
-}
-
-std::vector<std::string> ForwardPipeline::GetRenderPassDependencies(const std::string& name) const {
-    (void)name;
-    return {};
-}
-
-void ForwardPipeline::SetAutoClearRenderTarget(bool clear, const Color& color) {
-    (void)clear; (void)color;
-}
-
-void ForwardPipeline::SetAutoClearDepthStencil(bool clear, float depth, uint8_t stencil) {
-    (void)clear; (void)depth; (void)stencil;
-}
-
-void ForwardPipeline::SetDebugMarkersEnabled(bool enabled) {
-    m_debugMarkersEnabled = enabled;
-}
-
-void ForwardPipeline::ResetStats() {
-    m_stats = {};
-}
-
-// === ILogicalPipeline 接口实现 (转发到 LogicalPipeline) ===
-
-void ForwardPipeline::Execute(const PassExecutionContext& context) {
-    LogicalForwardPipeline::Execute(context);
-    CollectStats();
-}
-
-void ForwardPipeline::SetViewport(uint32_t width, uint32_t height) {
-    LogicalPipeline::SetViewport(width, height);
-}
-
-void ForwardPipeline::SetRenderTarget(IRenderTarget* renderTarget) {
-    LogicalForwardPipeline::SetRenderTarget(renderTarget);
-}
-
-void ForwardPipeline::SetDepthStencil(IDepthStencil* depthStencil) {
-    LogicalPipeline::SetDepthStencil(depthStencil);
-}
-
-IPass* ForwardPipeline::GetPass(size_t index) const {
-    return LogicalPipeline::GetPass(index);
-}
-
-IPass* ForwardPipeline::FindPass(const char* name) const {
-    return LogicalPipeline::FindPass(name);
-}
-
-size_t ForwardPipeline::GetPassCount() const {
-    return LogicalPipeline::GetPassCount();
-}
-
-bool ForwardPipeline::AddPass(IPass* pass) {
-    return LogicalPipeline::AddPass(pass);
-}
-
-bool ForwardPipeline::RemovePass(IPass* pass) {
-    return LogicalPipeline::RemovePass(pass);
-}
-
-// === 额外方法 ===
-
-void ForwardPipeline::Update(float deltaTime, PrismaEngine::Graphic::ICamera* camera) {
-    m_camera = camera;
-    
-    // 更新所有 Pass 的时间
-    if (m_depthPrePass) m_depthPrePass->Update(deltaTime);
-    if (m_opaquePass) m_opaquePass->Update(deltaTime);
-    if (m_skyboxPass) m_skyboxPass->Update(deltaTime);
-    if (m_transparentPass) m_transparentPass->Update(deltaTime);
-    if (m_uiPass) m_uiPass->Update(deltaTime);
-
-    if (m_camera) {
-        UpdatePassesCameraData(m_camera);
+    // -----------------------------------------------------------------------
+    // [修复] 处理目标重定向
+    // -----------------------------------------------------------------------
+    if (ctx.targetTexture) {
+        auto vulkanDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(ctx.device);
+        if (vulkanDevice) {
+            // 确保不开启默认交换链 Pass
+            vulkanDevice->SetSkipSwapChainRenderPass(true);
+        }
     }
-}
 
-class PrismaEngine::UIPass* ForwardPipeline::GetUIPass() const {
-    return (class PrismaEngine::UIPass*)m_uiPass.get();
-}
+    TextureRenderTargetProxy proxy(ctx.targetTexture);
 
-void ForwardPipeline::UpdatePassesCameraData(PrismaEngine::Graphic::ICamera* camera) {
-    if (!camera) return;
+    const auto& commands = Renderer::GetCommandQueue();
+    auto view = ctx.camera.viewMatrix;
+    auto proj = ctx.camera.projectionMatrix;
+    const PrismaMath::mat4 viewProjection = proj * view;
 
-    PrismaMath::mat4 view = camera->GetViewMatrix();
-    PrismaMath::mat4 projection = camera->GetProjectionMatrix();
+    RenderCommandContext fallbackContext;
+    IDeviceContext* deviceContext = &fallbackContext;
+
+    SceneData sceneData;
+    sceneData.camera.view = view;
+    sceneData.camera.projection = proj;
+    sceneData.camera.viewProjection = viewProjection;
+    sceneData.camera.position = ctx.camera.position;
+    sceneData.camera.nearPlane = ctx.camera.nearPlane;
+    sceneData.camera.farPlane = ctx.camera.farPlane;
+    sceneData.time.ts = ctx.deltaTime;
+    sceneData.viewport.width = ctx.width;
+    sceneData.viewport.height = ctx.height;
+
+    PassExecutionContext passContext;
+    passContext.deviceContext = deviceContext;
+    passContext.sceneData = &sceneData;
+    passContext.renderTarget = ctx.targetTexture ? &proxy : nullptr;
+
+    // TODO: 目前各 Pass 内部仍硬编码了对交换链 RenderPass 的依赖。
+    // 在后续重构中，需要将 targetTexture 传入 Pass 内部。
+    // 暂时保持逻辑链路畅通，修复嵌套崩溃。
 
     if (m_depthPrePass) {
         m_depthPrePass->SetViewMatrix(view);
-        m_depthPrePass->SetProjectionMatrix(projection);
+        m_depthPrePass->SetProjectionMatrix(proj);
+        m_depthPrePass->Execute(passContext);
     }
+
     if (m_opaquePass) {
         m_opaquePass->SetViewMatrix(view);
-        m_opaquePass->SetProjectionMatrix(projection);
+        m_opaquePass->SetProjectionMatrix(proj);
+        m_opaquePass->SetLights(ctx.lights);
+        m_opaquePass->Execute(passContext);
+        if (ctx.commandBuffer) {
+            // [修复] ICommandBuffer* 现在直接传递
+            m_opaquePass->Execute(ctx.commandBuffer, commands);
+        }
     }
+
+    if (m_skyboxPass) {
+        m_skyboxPass->SetViewMatrix(view);
+        m_skyboxPass->SetProjectionMatrix(proj);
+        m_skyboxPass->Execute(passContext);
+    }
+
     if (m_transparentPass) {
         m_transparentPass->SetViewMatrix(view);
-        m_transparentPass->SetProjectionMatrix(projection);
-    }
-    if (m_skyboxPass) {
-        PrismaMath::mat4 skyboxView = view;
-        skyboxView[3] = PrismaMath::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-        m_skyboxPass->SetViewMatrix(skyboxView);
-        m_skyboxPass->SetProjectionMatrix(projection);
+        m_transparentPass->SetProjectionMatrix(proj);
+        m_transparentPass->Execute(passContext);
     }
 }
 
-void ForwardPipeline::CollectStats() {
-    m_stats.drawCalls = 0;
-    m_stats.triangles = 0;
-
-    if (m_depthPrePass) {
-        const auto& s = m_depthPrePass->GetRenderStats();
-        m_stats.drawCalls += s.drawCalls;
-        m_stats.triangles += s.triangles;
-    }
-    if (m_opaquePass) {
-        const auto& s = m_opaquePass->GetRenderStats();
-        m_stats.drawCalls += s.drawCalls;
-        m_stats.triangles += s.triangles;
-    }
-    if (m_transparentPass) {
-        const auto& s = m_transparentPass->GetRenderStats();
-        m_stats.drawCalls += s.drawCalls;
-        m_stats.triangles += s.triangles;
-    }
-}
-
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

@@ -1,11 +1,11 @@
 #pragma once
 
 #include "core/Map.h"
-#include "../resource/Asset.h"
+#include "../core/Asset.h"
 #include <filesystem>
 #include <memory>
 
-namespace PrismaEngine {
+namespace Prisma {
 
 // ============================================================================
 // 瓦片地图资源类
@@ -16,19 +16,18 @@ public:
     TilemapAsset() = default;
     ~TilemapAsset() override = default;
 
-    // AssetBase 接口实现
+    // Asset 接口实现
     bool Load(const std::filesystem::path& path) override;
     void Unload() override;
     bool IsLoaded() const override { return m_isLoaded; }
     AssetType GetType() const override { return AssetType::Tilemap; }
 
-    // Serializable 接口实现
-    void Serialize(OutputArchive& archive) const override;
-    void Deserialize(InputArchive& archive) override;
+    // ISerializable 接口实现
+    void Serialize(Serialization::OutputArchive& archive) const override;
+    void Deserialize(Serialization::InputArchive& archive) override;
 
     // 资产特定方法
     std::string GetAssetType() const override { return "Tilemap"; }
-    std::string GetAssetVersion() const override { return "1.0.0"; }
 
     // 获取解析后的地图数据
     const TileMap* GetMap() const { return m_map.get(); }
@@ -74,11 +73,11 @@ public:
     }
 
     // 查找层
-    Layer* FindLayer(int layerId) const {
+    TilemapLayer* FindLayer(int layerId) const {
         return m_map ? m_map->FindLayer(layerId) : nullptr;
     }
 
-    Layer* FindLayerByName(const std::string& layerName) const {
+    TilemapLayer* FindLayerByName(const std::string& layerName) const {
         return m_map ? m_map->FindLayerByName(layerName) : nullptr;
     }
 
@@ -158,4 +157,4 @@ inline bool TilemapAsset::GetProperty<bool>(
     return defaultValue;
 }
 
-} // namespace PrismaEngine
+} // namespace Prisma

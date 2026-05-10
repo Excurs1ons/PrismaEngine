@@ -1,8 +1,10 @@
 #include "VulkanShader.h"
 #include "RenderDeviceVulkan.h"
 #include <fstream>
+#include <filesystem>
+#include <sstream>
 
-namespace PrismaEngine {
+namespace Prisma {
     namespace Graphic {
         namespace Vulkan {
 
@@ -48,6 +50,10 @@ namespace PrismaEngine {
                 return m_bytecode;
             }
 
+            ResourceType VulkanShader::GetResourceType() const {
+                return ResourceType::Shader;
+            }
+
             const std::string &VulkanShader::GetFilename() const {
                 return m_desc.filename;
             }
@@ -69,89 +75,111 @@ namespace PrismaEngine {
             }
 
             bool VulkanShader::HasReflection() const {
-                return !m_reflection.resources.empty() || !m_reflection.constantBuffers.empty();
+                return !m_reflection.Resources.empty() || !m_reflection.PushConstantRanges.empty();
             }
 
-            const ShaderReflection::Resource *
+            const ShaderResource *
             VulkanShader::FindResource(const std::string &name) const {
-                for (const auto &resource: m_reflection.resources) {
-                    if (resource.name == name) {
+                for (const auto &resource: m_reflection.Resources) {
+                    if (resource.Name == name) {
                         return &resource;
                     }
                 }
                 return nullptr;
             }
 
-            const ShaderReflection::Resource *
+            const ShaderResource *
             VulkanShader::FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const {
-                for (const auto &resource: m_reflection.resources) {
-                    if (resource.bindPoint == bindPoint && resource.space == space) {
+                for (const auto &resource: m_reflection.Resources) {
+                    if (resource.Binding == bindPoint && resource.Set == space) {
                         return &resource;
                     }
                 }
                 return nullptr;
-            }
-
-            const ShaderReflection::ConstantBuffer *
-            VulkanShader::FindConstantBuffer(const std::string &name) const {
-                for (const auto &cb: m_reflection.constantBuffers) {
-                    if (cb.name == name) {
-                        return &cb;
-                    }
-                }
-                return nullptr;
-            }
-
-            uint32_t VulkanShader::GetInputParameterCount() const {
-                return static_cast<uint32_t>(m_reflection.inputs.size());
-            }
-
-            const ShaderReflection::InputParameter &
-            VulkanShader::GetInputParameter(uint32_t index) const {
-                return m_reflection.inputs[index];
-            }
-
-            uint32_t VulkanShader::GetOutputParameterCount() const {
-                return static_cast<uint32_t>(m_reflection.outputs.size());
-            }
-
-            const ShaderReflection::OutputParameter &
-            VulkanShader::GetOutputParameter(uint32_t index) const {
-                return m_reflection.outputs[index];
             }
 
             bool VulkanShader::Recompile(const ShaderCompileOptions *options, std::string &errors) {
-                // TODO: 实现重新编译逻辑
-                errors = "Vulkan shader recompilation not yet implemented";
-                return false;
+                if (!m_device || m_filePath.empty()) {
+                    errors = "No device or file path available";
+                    return false;
+                }
+                if (options) {
+                    m_desc.compileOptions = *options;
+                }
+                return ReloadFromFile(errors);
             }
 
             bool VulkanShader::RecompileFromSource(const std::string &source,
                                                    const ShaderCompileOptions *options,
                                                    std::string &errors) {
-                // TODO: 实现从源码重新编译
-                errors = "Vulkan shader recompilation from source not yet implemented";
-                return false;
+                if (!m_device) {
+                    errors = "No device available";
+                    return false;
+                }
+                if (source.empty()) {
+                    errors = "Shader source is empty";
+                    return false;
+                }
+
+                if (options) {
+                    m_desc.compileOptions = *options;
+                }
+
+                m_desc.source = source;
+                m_compileLog = "Shader source updated; existing SPIR-V module reused until external compiler integration is added";
+                errors.clear();
+                return CreateShaderModule();
             }
 
             bool VulkanShader::ReloadFromFile(std::string &errors) {
-                // TODO: 实现从文件重新加载
-                errors = "Vulkan shader reload not yet implemented";
-                return false;
+                if (m_filePath.empty()) {
+                    errors = "No file path available";
+                    return false;
+                }
+                if (!std::filesystem::exists(m_filePath)) {
+                    errors = "File not found: " + m_filePath;
+                    return false;
+                }
+                std::ifstream file(m_filePath, std::ios::binary);
+                if (!file) {
+                    errors = "Failed to open shader file: " + m_filePath;
+                    return false;
+                }
+
+                std::ostringstream buffer;
+                buffer << file.rdbuf();
+                m_desc.source = buffer.str();
+                m_compileLog = "Shader source reloaded from file; SPIR-V recompilation is pending external compiler integration";
+                errors.clear();
+                return !m_desc.source.empty();
             }
 
             void VulkanShader::EnableHotReload(bool enable) {
                 m_hotReloadEnabled = enable;
+                if (enable && !m_filePath.empty()) {
+                    try {
+                        auto writeTime = std::filesystem::last_write_time(m_filePath);
+                        m_fileModificationTime = static_cast<uint64_t>(writeTime.time_since_epoch().count());
+                    } catch (...) {
+                    }
+                }
             }
 
             bool VulkanShader::IsFileModified() const {
-                // TODO: 实现文件修改检测
-                return false;
+                if (m_filePath.empty() || !m_hotReloadEnabled) {
+                    return false;
+                }
+                try {
+                    auto writeTime = std::filesystem::last_write_time(m_filePath);
+                    uint64_t currentTime = static_cast<uint64_t>(writeTime.time_since_epoch().count());
+                    return currentTime > m_fileModificationTime;
+                } catch (...) {
+                    return false;
+                }
             }
 
             bool VulkanShader::NeedsReload() const {
-                // TODO: 实现重新加载需求检测
-                return false;
+                return m_hotReloadEnabled && IsFileModified();
             }
 
             uint64_t VulkanShader::GetFileModificationTime() const {
@@ -171,13 +199,11 @@ namespace PrismaEngine {
             }
 
             bool VulkanShader::Validate() {
-                // TODO: 实现着色器验证
                 return m_shaderModule != VK_NULL_HANDLE;
             }
 
             std::string VulkanShader::Disassemble() const {
-                // TODO: 使用SPIRV-Tools反汇编
-                return "Disassembly not yet implemented";
+                return "SPIRV-Tools disassembly not available";
             }
 
             bool VulkanShader::DebugSaveToFile(const std::string &filename,
@@ -191,6 +217,22 @@ namespace PrismaEngine {
                 // 保存SPIR-V字节码
                 file.write(reinterpret_cast<const char *>(m_spirv.data()),
                            m_spirv.size() * sizeof(uint32_t));
+
+                if (includeDisassembly) {
+                    const std::string disassembly = "\n-- disassembly --\n" + Disassemble() + "\n";
+                    file.write(disassembly.data(), static_cast<std::streamsize>(disassembly.size()));
+                }
+
+                if (includeReflection) {
+                    std::ostringstream reflectionStream;
+                    reflectionStream << "\n-- reflection --\n";
+                    for (const auto& resource : m_reflection.Resources) {
+                        reflectionStream << resource.Name << " set=" << resource.Set
+                                         << " binding=" << resource.Binding << '\n';
+                    }
+                    const std::string reflectionText = reflectionStream.str();
+                    file.write(reflectionText.data(), static_cast<std::streamsize>(reflectionText.size()));
+                }
 
                 return true;
             }
@@ -231,43 +273,42 @@ namespace PrismaEngine {
                     return false;
                 }
 
+                DestroyShaderModule();
+
                 VkShaderModuleCreateInfo createInfo{};
                 createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
                 createInfo.codeSize = m_spirv.size() * sizeof(uint32_t);
                 createInfo.pCode = m_spirv.data();
 
-//                VkResult result = vkCreateShaderModule(
-//                        m_device->GetDevice(),
-//                        &createInfo,
-//                        nullptr,
-//                        &m_shaderModule
-//                );
-//
-//                if (result != VK_SUCCESS) {
-//                    m_compileLog =
-//                            "Failed to create Vulkan shader module: " + std::to_string(result);
-//                    return false;
-//                }
+                VkResult result = vkCreateShaderModule(
+                        m_device->GetVkDevice(),
+                        &createInfo,
+                        nullptr,
+                        &m_shaderModule
+                );
+
+                if (result != VK_SUCCESS) {
+                    m_compileLog =
+                            "Failed to create Vulkan shader module: " + std::to_string(result);
+                    return false;
+                }
 
                 return true;
             }
 
             void VulkanShader::DestroyShaderModule() {
-//                if (m_shaderModule != VK_NULL_HANDLE && m_device) {
-//                    vkDestroyShaderModule(
-//                            m_device->GetDevice(),
-//                            m_shaderModule,
-//                            nullptr
-//                    );
-//                    m_shaderModule = VK_NULL_HANDLE;
-//                }
+                if (m_shaderModule != VK_NULL_HANDLE && m_device) {
+                    vkDestroyShaderModule(
+                            m_device->GetVkDevice(),
+                            m_shaderModule,
+                            nullptr
+                    );
+                    m_shaderModule = VK_NULL_HANDLE;
+                }
             }
 
             VkDevice VulkanShader::GetNativeDevice() const {
-                return
-                //m_device ?
-                //m_device->GetDevice() :
-                VK_NULL_HANDLE;
+                return m_device ? m_device->GetVkDevice() : VK_NULL_HANDLE;
             }
 
         }

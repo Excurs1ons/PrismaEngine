@@ -1,0 +1,451 @@
+#include "Ghost.h"
+#include "GameBoard.h"
+#include "PacMan.h"
+#include "../core/GameResourceManager.h"
+#include "graphic/Renderer2D.h"
+#include "../core/GameConfig.h"
+#include <cmath>
+#include <algorithm>
+
+namespace PacMan {
+
+// ========== Ghost 实现 ==========
+
+Ghost::Ghost()
+    : m_type(GhostType::Blinky)
+    , m_state(GhostState::Scatter)
+    , m_color(COLOR_GHOST_BLINKY)
+    , m_position(0, 0)
+    , m_currentDirection(Direction::Left)
+    , m_previousDirection(Direction::None)
+    , m_normalSpeed(GHOST_SPEED)
+    , m_scaredSpeed(GHOST_SCARED_SPEED)
+    , m_eatenSpeed(4.0f)
+    , m_targetPosition(0, 0)
+    , m_aabbWidth(TILE_SIZE * 0.7f)
+    , m_aabbHeight(TILE_SIZE * 0.7f)
+    , m_board(nullptr)
+    , m_pacman(nullptr)
+    , m_spawnPosition(0, 0)
+    , m_aiUpdateTimer(0.0f)
+    , m_frightenedTimer(0.0f)
+    , m_frightenedWarningTime(2000.0f)
+{
+}
+
+void Ghost::Initialize(GhostType type, const glm::ivec2& spawnPosition, GameBoard* board, PacMan* pacman) {
+    m_type = type;
+    m_spawnPosition = spawnPosition;
+    m_board = board;
+    m_pacman = pacman;
+
+    // 根据类型设置颜色
+    switch (type) {
+        case GhostType::Blinky:
+            m_color = COLOR_GHOST_BLINKY;
+            break;
+        case GhostType::Pinky:
+            m_color = COLOR_GHOST_PINKY;
+            break;
+        case GhostType::Inky:
+            m_color = COLOR_GHOST_INKY;
+            break;
+        case GhostType::Clyde:
+            m_color = COLOR_GHOST_CLYDE;
+            break;
+        default:
+            m_color = COLOR_GHOST_BLINKY;
+            break;
+    }
+
+    // 初始位置
+    if (board) {
+        m_position = board->GridToPixel(spawnPosition.x, spawnPosition.y);
+    }
+    m_spriteRenderer.SetPosition(m_position);
+    m_spriteRenderer.SetSize(TILE_SIZE * 0.8f, TILE_SIZE * 0.8f);
+    m_spriteRenderer.SetColor(Prisma::Color(m_color.r, m_color.g, m_color.b, m_color.a));
+
+    // 初始状态
+    m_state = GhostState::Scatter;
+    m_currentDirection = Direction::Left;
+}
+
+void Ghost::Reset() {
+    if (m_board) {
+        m_position = m_board->GridToPixel(m_spawnPosition.x, m_spawnPosition.y);
+    }
+    m_state = GhostState::Scatter;
+    m_currentDirection = Direction::Left;
+    m_frightenedTimer = 0.0f;
+    m_spriteRenderer.SetPosition(m_position);
+    m_spriteRenderer.SetColor(Prisma::Color(m_color.r, m_color.g, m_color.b, m_color.a));
+}
+
+void Ghost::SetType(GhostType type) {
+    m_type = type;
+
+    // 更新颜色
+    switch (type) {
+        case GhostType::Blinky:
+            m_color = COLOR_GHOST_BLINKY;
+            break;
+        case GhostType::Pinky:
+            m_color = COLOR_GHOST_PINKY;
+            break;
+        case GhostType::Inky:
+            m_color = COLOR_GHOST_INKY;
+            break;
+        case GhostType::Clyde:
+            m_color = COLOR_GHOST_CLYDE;
+            break;
+        default:
+            m_color = COLOR_GHOST_BLINKY;
+            break;
+    }
+}
+
+void Ghost::SetState(GhostState state) {
+    m_state = state;
+}
+
+void Ghost::SetPosition(const glm::vec2& position) {
+    m_position = position;
+}
+
+glm::ivec2 Ghost::GetGridPosition() const {
+    if (m_board) {
+        return m_board->PixelToGrid(m_position);
+    }
+    return glm::ivec2(0, 0);
+}
+
+void Ghost::SetGridPosition(const glm::ivec2& position) {
+    if (m_board) {
+        m_position = m_board->GridToPixel(position.x, position.y);
+    }
+}
+
+float Ghost::GetCurrentSpeed() const {
+    switch (m_state) {
+        case GhostState::Frightened:
+            return m_scaredSpeed;
+        case GhostState::Eaten:
+            return m_eatenSpeed;
+        default:
+            return m_normalSpeed;
+    }
+}
+
+void Ghost::SetColor(const glm::vec4& color) {
+    m_color = color;
+    m_spriteRenderer.SetColor(Prisma::Color(color.r, color.g, color.b, color.a));
+}
+
+void Ghost::Update(Prisma::Timestep ts) {
+    // 更新惊吓计时器
+    if (m_state == GhostState::Frightened) {
+        m_frightenedTimer += static_cast<float>(ts) * 1000.0f;
+
+        // 检查是否惊吓结束
+        if (m_frightenedTimer >= g_GameConfig.powerModeDuration) {
+            ChaseMode();  // 返回追逐模式
+        }
+    }
+
+    // 更新移动
+    UpdateMovement(ts);
+
+    // 更新 AI（在格子交点）
+    m_aiUpdateTimer += static_cast<float>(ts);
+    if (m_aiUpdateTimer >= 0.1f) {  // 每 0.1 秒更新一次
+        m_aiUpdateTimer = 0.0f;
+        UpdateAI();
+    }
+}
+
+void Ghost::Render() {
+    auto& res = GameResourceManager::Get();
+    std::shared_ptr<Prisma::Graphic::ITexture> texture;
+
+    if (m_state == GhostState::Frightened) {
+        texture = res.GetTexture("GhostScared");
+    } else if (m_state == GhostState::Eaten) {
+        // TODO: 眼睛贴图，暂时显示半透明
+        texture = res.GetTexture("GhostScared");
+    } else {
+        switch (m_type) {
+            case GhostType::Blinky: texture = res.GetTexture("GhostBlinky"); break;
+            case GhostType::Pinky:  texture = res.GetTexture("GhostPinky");  break;
+            case GhostType::Inky:   texture = res.GetTexture("GhostInky");   break;
+            case GhostType::Clyde:  texture = res.GetTexture("GhostClyde");  break;
+        }
+    }
+
+    if (texture) {
+        Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), texture, m_spriteRenderer.GetColor());
+        return;
+    }
+
+    // 降级
+    Prisma::Graphic::Renderer2D::DrawQuad(m_position, m_spriteRenderer.GetSize(), m_spriteRenderer.GetColor());
+}
+
+void Ghost::UpdateMovement(Prisma::Timestep ts) {
+    if (!m_board) {
+        return;
+    }
+
+    float speed = GetCurrentSpeed();
+    glm::ivec2 dir = DirectionToVector(m_currentDirection);
+
+    // 计算新位置
+    glm::vec2 newPosition = m_position + glm::vec2(dir.x * speed, dir.y * speed) * static_cast<float>(ts);
+
+    // 检查中心点越过逻辑 (用于 AI 决策和碰撞停止)
+    glm::ivec2 currentGrid = m_board->PixelToGrid(m_position);
+    glm::vec2 tileCenter = m_board->GridToPixel(currentGrid.x, currentGrid.y);
+
+    bool movedPastCenter = false;
+    if (m_currentDirection == Direction::Right && m_position.x <= tileCenter.x && newPosition.x > tileCenter.x) movedPastCenter = true;
+    if (m_currentDirection == Direction::Left  && m_position.x >= tileCenter.x && newPosition.x < tileCenter.x) movedPastCenter = true;
+    if (m_currentDirection == Direction::Down  && m_position.y <= tileCenter.y && newPosition.y > tileCenter.y) movedPastCenter = true;
+    if (m_currentDirection == Direction::Up    && m_position.y >= tileCenter.y && newPosition.y < tileCenter.y) movedPastCenter = true;
+
+    if (movedPastCenter) {
+        // 到达中心，触发 AI 更新
+        UpdateAI();
+        // 更新方向后重新计算 velocity
+        dir = DirectionToVector(m_currentDirection);
+    }
+
+    // 检查穿墙 (隧道)
+    glm::vec2 tunnelPosition;
+    if (m_board->CheckTunnel(newPosition, tunnelPosition)) {
+        m_position = tunnelPosition;
+    } else {
+        // 检查前方碰撞
+        glm::ivec2 nextGrid = currentGrid + dir;
+        if (m_board->IsWalkable(nextGrid.x, nextGrid.y)) {
+            m_position = newPosition;
+        } else {
+            // 前方是墙，如果已经到达中心，则停在中心并选择新方向
+            if (movedPastCenter || glm::distance(newPosition, tileCenter) < 1.0f) {
+                m_position = tileCenter;
+                ChooseNextDirection();
+            } else {
+                m_position = newPosition;
+            }
+        }
+    }
+
+    // 更新精灵渲染器位置
+    m_spriteRenderer.SetPosition(m_position);
+}
+
+void Ghost::UpdateAI() {
+    // 幽灵 AI 通常在格子中心决定下一步
+    m_targetPosition = CalculateTargetPosition();
+
+    // 选择最佳方向
+    if (m_state != GhostState::Eaten) {
+        m_currentDirection = GetBestDirection(m_targetPosition);
+    } else {
+        // 被吃模式，回到生成点
+        glm::ivec2 gridPos = GetGridPosition();
+        if (gridPos == m_spawnPosition) {
+            Revive();
+        } else {
+            m_currentDirection = GetBestDirection(m_spawnPosition);
+        }
+    }
+}
+
+void Ghost::ChooseNextDirection() {
+    // 获取当前格子
+    glm::ivec2 gridPos = GetGridPosition();
+
+    // 尝试所有可能的方向（除了反方向）
+    std::vector<Direction> possibleDirections;
+
+    for (int i = 1; i <= 4; i++) {
+        Direction dir = static_cast<Direction>(i);
+        if (dir == ReverseDirection(m_currentDirection)) {
+            continue;  // 不能反方向
+        }
+
+        glm::ivec2 nextPos = gridPos + DirectionToVector(dir);
+        if (m_board && m_board->IsWalkable(nextPos.x, nextPos.y)) {
+            possibleDirections.push_back(dir);
+        }
+    }
+
+    // 如果没有可行方向，可以反方向
+    if (possibleDirections.empty()) {
+        Direction reverseDir = ReverseDirection(m_currentDirection);
+        glm::ivec2 nextPos = gridPos + DirectionToVector(reverseDir);
+        if (m_board && m_board->IsWalkable(nextPos.x, nextPos.y)) {
+            possibleDirections.push_back(reverseDir);
+        }
+    }
+
+    // 随机选择一个方向
+    if (!possibleDirections.empty()) {
+        int randomIndex = std::rand() % possibleDirections.size();
+        m_currentDirection = possibleDirections[randomIndex];
+    }
+}
+
+Direction Ghost::GetBestDirection(const glm::ivec2& target) {
+    if (!m_board) {
+        return m_currentDirection;
+    }
+
+    glm::ivec2 gridPos = GetGridPosition();
+    Direction bestDirection = m_currentDirection;
+    float bestDistance = std::numeric_limits<float>::max();
+
+    // 尝试所有可能的方向（通常不允许立即反向）
+    std::vector<Direction> validDirs;
+    for (int i = 1; i <= 4; i++) {
+        Direction dir = static_cast<Direction>(i);
+        if (dir == ReverseDirection(m_currentDirection)) {
+            continue;
+        }
+
+        glm::ivec2 nextPos = gridPos + DirectionToVector(dir);
+        if (m_board->IsWalkable(nextPos.x, nextPos.y)) {
+            float distance = glm::length(glm::vec2(target - nextPos));
+            
+            // 增加微小随机扰动，防止在对称路径上反复横跳
+            distance += (std::rand() % 100) * 0.001f;
+
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                bestDirection = dir;
+            }
+            validDirs.push_back(dir);
+        }
+    }
+
+    // 如果没有不反向的可行路径，则被迫反向
+    if (validDirs.empty()) {
+        return ReverseDirection(m_currentDirection);
+    }
+
+    return bestDirection;
+}
+
+glm::ivec2 Ghost::CalculateTargetPosition() {
+    switch (m_state) {
+        case GhostState::Scatter:
+            return GetScatterTarget();
+        case GhostState::Chase:
+            return GetChaseTarget();
+        case GhostState::Frightened:
+        case GhostState::Eaten:
+            return GetGridPosition();  // 惊吓时不计算目标
+        default:
+            return GetGridPosition();
+    }
+}
+
+glm::ivec2 Ghost::GetChaseTarget() {
+    if (!m_pacman) {
+        return GetGridPosition();
+    }
+
+    glm::ivec2 pacmanPos = m_pacman->GetGridPosition();
+    Direction pacmanDir = m_pacman->GetCurrentDirection();
+    glm::ivec2 pacmanDirVector = DirectionToVector(pacmanDir);
+
+    // 根据幽灵类型使用不同的追逐策略
+    switch (m_type) {
+        case GhostType::Blinky:
+            // Blinky: 直接追逐吃豆人
+            return pacmanPos;
+
+        case GhostType::Pinky:
+            // Pinky: 预判吃豆人前方4格
+            return pacmanPos + pacmanDirVector * 4;
+
+        case GhostType::Inky:
+            // Inky: 混合 Blinky 和吃豆人位置
+            {
+                glm::ivec2 inkyTarget = pacmanPos * 2 - GetGridPosition();
+                return inkyTarget;
+            }
+
+        case GhostType::Clyde:
+            // Clyde: 如果距离近，随机散开；否则追逐
+            {
+                float distance = glm::length(glm::vec2(pacmanPos - GetGridPosition()));
+                if (distance < 8.0f) {
+                    return GetScatterTarget();  // 靠近时散开
+                } else {
+                    return pacmanPos;  // 远时追逐
+                }
+            }
+
+        default:
+            return pacmanPos;
+    }
+}
+
+glm::ivec2 Ghost::GetScatterTarget() {
+    // 每个幽灵有不同的散开目标 (调整为迷宫内的四个角落)
+    switch (m_type) {
+        case GhostType::Blinky:
+            return glm::ivec2(BOARD_WIDTH - 2, 1);  // 右上角 (进迷宫内一格)
+        case GhostType::Pinky:
+            return glm::ivec2(1, 1);  // 左上角
+        case GhostType::Inky:
+            return glm::ivec2(BOARD_WIDTH - 2, BOARD_HEIGHT - 2);  // 右下角
+        case GhostType::Clyde:
+            return glm::ivec2(1, BOARD_HEIGHT - 2);  // 左下角
+        default:
+            return glm::ivec2(BOARD_WIDTH / 2, BOARD_HEIGHT / 2);
+    }
+}
+
+void Ghost::SetAABBSize(float width, float height) {
+    m_aabbWidth = width;
+    m_aabbHeight = height;
+}
+
+Prisma::Physics::AABB Ghost::GetAABB() const {
+    return Prisma::Physics::AABB(
+        m_position.x - m_aabbWidth / 2.0f,
+        m_position.y - m_aabbHeight / 2.0f,
+        0.0f,
+        m_position.x + m_aabbWidth / 2.0f,
+        m_position.y + m_aabbHeight / 2.0f,
+        0.0f
+    );
+}
+
+void Ghost::ChaseMode() {
+    m_state = GhostState::Chase;
+}
+
+void Ghost::ScatterMode() {
+    m_state = GhostState::Scatter;
+}
+
+void Ghost::FrightenMode() {
+    m_state = GhostState::Frightened;
+    m_frightenedTimer = 0.0f;
+}
+
+void Ghost::GetEaten() {
+    m_state = GhostState::Eaten;
+}
+
+void Ghost::Revive() {
+    if (m_board) {
+        m_position = m_board->GridToPixel(m_spawnPosition.x, m_spawnPosition.y);
+    }
+    m_state = GhostState::Scatter;
+}
+
+} // namespace PacMan

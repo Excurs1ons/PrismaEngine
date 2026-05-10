@@ -14,8 +14,10 @@
       "environment": {},
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
+        "PRISMA_BUILD_ENGINE": "ON",
+        "PRISMA_BUILD_RUNTIME": "ON",
         "PRISMA_BUILD_EDITOR": "OFF",
-        "PRISMA_ENABLE_RENDER_DX12": "ON",
+        "PRISMA_ENABLE_RENDER_DX12": "OFF",
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "ON",
         "PRISMA_ENABLE_RENDER_VULKAN": "OFF",
         "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
@@ -47,6 +49,21 @@
         "PRISMA_BUILD_EDITOR": "ON",
         "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
         "PRISMA_ENABLE_RENDER_VULKAN": "OFF"
+      }
+    },
+    {
+      "name": "windows-pacman-base",
+      "hidden": true,
+      "inherits": "windows-base",
+      "description": "Base Windows PacMan configuration",
+      "cacheVariables": {
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_RUNTIME": "OFF",
+        "PRISMA_BUILD_PROJECT_PRISMACRAFT": "OFF",
+        "PRISMA_BUILD_PROJECT_PACMAN": "ON",
+        "PRISMA_BUILD_SHARED_LIBS": "ON",
+        "PRISMA_ENABLE_RENDER_VULKAN": "ON",
+        "PRISMA_ENABLE_MCP": "OFF"
       }
     },
     {
@@ -113,6 +130,19 @@
       "cacheVariables": {
         "PRISMA_BUILD_EDITOR": "ON",
         "PRISMA_ENABLE_IMGUI_DEBUG": "ON"
+      }
+    },
+    {
+      "name": "linux-pacman-base",
+      "hidden": true,
+      "inherits": "linux-base",
+      "description": "Base Linux PacMan configuration",
+      "cacheVariables": {
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_RUNTIME": "OFF",
+        "PRISMA_BUILD_PROJECT_PRISMACRAFT": "OFF",
+        "PRISMA_BUILD_PROJECT_PACMAN": "ON",
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {
@@ -192,6 +222,31 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "pacman-windows-x64-debug",
+      "displayName": "PacMan Windows x64 Debug",
+      "inherits": "windows-pacman-base",
+      "description": "Debug build for PacManGame on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/pacman-windows-x64-debug",
+      "architecture": "x64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "pacman-windows-x64-release",
+      "displayName": "PacMan Windows x64 Release",
+      "inherits": "windows-pacman-base",
+      "description": "Release build for PacManGame on Windows x64 using Visual Studio 2022",
+      "binaryDir": "${sourceDir}/build/pacman-windows-x64-release",
+      "architecture": "x64",
+      "toolset": "host=x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
         "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
     },
@@ -354,89 +409,188 @@
         "PRISMA_BUILD_EDITOR": "OFF",
         "PRISMA_BUILD_SHARED_LIBS": "OFF"
       }
+    },
+    {
+      "name": "pacman-linux-x64-debug",
+      "displayName": "PacMan Linux x64 Debug",
+      "inherits": "linux-pacman-base",
+      "description": "Debug build for PacManGame on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "pacman-linux-x64-release",
+      "displayName": "PacMan Linux x64 Release",
+      "inherits": "linux-pacman-base",
+      "description": "Release build for PacManGame on Linux x64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
+    },
+    {
+      "name": "pacman-linux-arm64-debug",
+      "displayName": "PacMan Linux ARM64 Debug",
+      "inherits": "linux-pacman-base",
+      "description": "Debug build for PacManGame on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-arm64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+    {
+      "name": "pacman-linux-arm64-release",
+      "displayName": "PacMan Linux ARM64 Release",
+      "inherits": "linux-pacman-base",
+      "description": "Release build for PacManGame on Linux ARM64 using Ninja",
+      "binaryDir": "${sourceDir}/build/pacman-linux-arm64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+      }
     }
   ],
   "buildPresets": [
     {
       "name": "engine-windows-x64-debug",
-      "configurePreset": "engine-windows-x64-debug"
+      "configurePreset": "engine-windows-x64-debug",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "engine-windows-x64-release",
-      "configurePreset": "engine-windows-x64-release"
+      "configurePreset": "engine-windows-x64-release",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "editor-windows-x64-debug",
-      "configurePreset": "editor-windows-x64-debug"
+      "configurePreset": "editor-windows-x64-debug",
+      "jobs": 2
     },
     {
       "name": "editor-windows-x64-release",
-      "configurePreset": "editor-windows-x64-release"
+      "configurePreset": "editor-windows-x64-release",
+      "jobs": 2
     },
     {
       "name": "runtime-windows-x64-debug",
-      "configurePreset": "runtime-windows-x64-debug"
+      "configurePreset": "runtime-windows-x64-debug",
+      "jobs": 2
     },
     {
       "name": "runtime-windows-x64-release",
-      "configurePreset": "runtime-windows-x64-release"
+      "configurePreset": "runtime-windows-x64-release",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-windows-x64-debug",
+      "configurePreset": "pacman-windows-x64-debug",
+      "jobs": 32
+    },
+    {
+      "name": "pacman-windows-x64-release",
+      "configurePreset": "pacman-windows-x64-release",
+      "jobs": 32
     },
     {
       "name": "engine-android-arm64-debug",
-      "configurePreset": "engine-android-arm64-debug"
+      "configurePreset": "engine-android-arm64-debug",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "engine-android-arm64-release",
-      "configurePreset": "engine-android-arm64-release"
+      "configurePreset": "engine-android-arm64-release",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "runtime-android-arm64-debug",
-      "configurePreset": "runtime-android-arm64-debug"
+      "configurePreset": "runtime-android-arm64-debug",
+      "jobs": 2
     },
     {
       "name": "runtime-android-arm64-release",
-      "configurePreset": "runtime-android-arm64-release"
+      "configurePreset": "runtime-android-arm64-release",
+      "jobs": 2
     },
     {
       "name": "engine-linux-x64-debug",
-      "configurePreset": "engine-linux-x64-debug"
+      "configurePreset": "engine-linux-x64-debug",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "engine-linux-x64-release",
-      "configurePreset": "engine-linux-x64-release"
+      "configurePreset": "engine-linux-x64-release",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "engine-linux-arm64-debug",
-      "configurePreset": "engine-linux-arm64-debug"
+      "configurePreset": "engine-linux-arm64-debug",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "engine-linux-arm64-release",
-      "configurePreset": "engine-linux-arm64-release"
+      "configurePreset": "engine-linux-arm64-release",
+      "targets": ["Engine"],
+      "jobs": 2
     },
     {
       "name": "editor-linux-x64-debug",
-      "configurePreset": "editor-linux-x64-debug"
+      "configurePreset": "editor-linux-x64-debug",
+      "jobs": 2
     },
     {
       "name": "editor-linux-x64-release",
-      "configurePreset": "editor-linux-x64-release"
+      "configurePreset": "editor-linux-x64-release",
+      "jobs": 2
     },
     {
       "name": "editor-linux-arm64-debug",
-      "configurePreset": "editor-linux-arm64-debug"
+      "configurePreset": "editor-linux-arm64-debug",
+      "jobs": 2
     },
     {
       "name": "editor-linux-arm64-release",
-      "configurePreset": "editor-linux-arm64-release"
+      "configurePreset": "editor-linux-arm64-release",
+      "jobs": 2
     },
     {
       "name": "runtime-linux-x64-debug",
-      "configurePreset": "runtime-linux-x64-debug"
+      "configurePreset": "runtime-linux-x64-debug",
+      "jobs": 2
     },
     {
       "name": "runtime-linux-x64-release",
-      "configurePreset": "runtime-linux-x64-release"
+      "configurePreset": "runtime-linux-x64-release",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-x64-debug",
+      "configurePreset": "pacman-linux-x64-debug",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-x64-release",
+      "configurePreset": "pacman-linux-x64-release",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-arm64-debug",
+      "configurePreset": "pacman-linux-arm64-debug",
+      "jobs": 2
+    },
+    {
+      "name": "pacman-linux-arm64-release",
+      "configurePreset": "pacman-linux-arm64-release",
+      "jobs": 2
     }
   ]
 }
-

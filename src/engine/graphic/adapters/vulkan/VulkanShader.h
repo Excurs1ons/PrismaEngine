@@ -7,7 +7,7 @@
 #include <RenderDesc.h>
 
 
-namespace PrismaEngine::Graphic::Vulkan {
+namespace Prisma::Graphic::Vulkan {
 
 #ifdef FindResource
 #undef FindResource
@@ -49,14 +49,8 @@ public:
     const ShaderReflection& GetReflection() const override;
     bool HasReflection() const override;
 
-    const ShaderReflection::Resource* FindResource(const std::string& name) const override;
-    const ShaderReflection::Resource* FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const override;
-    const ShaderReflection::ConstantBuffer* FindConstantBuffer(const std::string& name) const override;
-
-    uint32_t GetInputParameterCount() const override;
-    const ShaderReflection::InputParameter& GetInputParameter(uint32_t index) const override;
-    uint32_t GetOutputParameterCount() const override;
-    const ShaderReflection::OutputParameter& GetOutputParameter(uint32_t index) const override;
+    const ShaderResource* FindResource(const std::string& name) const override;
+    const ShaderResource* FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const override;
 
     bool Recompile(const ShaderCompileOptions* options, std::string& errors) override;
     bool RecompileFromSource(const std::string& source,
@@ -84,6 +78,10 @@ public:
 
     // === Vulkan特定方法 ===
 
+    /// @brief 获取资源类型
+    /// @return 资源类型
+    ResourceType GetResourceType() const override;
+
     /// @brief 获取Vulkan着色器模块
     /// @return VkShaderModule句柄
     VkShaderModule GetShaderModule() const { return m_shaderModule; }
@@ -105,6 +103,7 @@ private:
     std::vector<uint8_t> m_bytecode;  // 兼容IShader接口
     ShaderReflection m_reflection;
     std::string m_compileLog;
+    std::string m_filePath;
     bool m_hotReloadEnabled = false;
     uint64_t m_fileModificationTime = 0;
     VkShaderModule m_shaderModule = VK_NULL_HANDLE;
@@ -117,4 +116,4 @@ private:
     void DestroyShaderModule();
 };
 
-} // namespace PrismaEngine::Graphic::Vulkan
+} // namespace Prisma::Graphic::Vulkan

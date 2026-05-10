@@ -1,123 +1,90 @@
 #pragma once
 
+#include "interfaces/IGBuffer.h"
+#include "interfaces/IDeviceContext.h"
 #include "math/MathTypes.h"
 #include <memory>
+#include <array>
+#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
-namespace PrismaEngine::Graphic {
+namespace Prisma::Graphic {
 
 // 前置声明
 class RenderCommandContext;
 
-// G-Buffer渲染目标结构
-// 使用MRT（Multiple Render Targets）技术
-enum class GBufferTarget : uint32_t {
-    // 0: Position (RGB) + Roughness (A)
-    Position = 0,
-    // 1: Normal (RGB) + Metallic (A)
-    Normal = 1,
-    // 2: Albedo (RGB) + Ambient Occlusion (A)
-    Albedo = 2,
-    // 3: Emissive (RGB) + Material ID (A)
-    Emissive = 3,
-    // 深度缓冲（单独的深度纹理）
-    Depth = 4,
-
-    Count
-};
-
 // G- Buffer纹理格式定义
 struct GBufferFormats {
-    static const uint32_t POSITION_FORMAT;      // DXGI_FORMAT_R16G16B16A16_FLOAT
-    static const uint32_t NORMAL_FORMAT;        // DXGI_FORMAT_R16G16B16A16_FLOAT
-    static const uint32_t ALBEDO_FORMAT;        // DXGI_FORMAT_R8G8B8A8_UNORM
-    static const uint32_t EMISSIVE_FORMAT;      // DXGI_FORMAT_R11G11B10_FLOAT
-    static const uint32_t DEPTH_FORMAT;         // DXGI_FORMAT_D32_FLOAT
+    static const uint32_t POSITION_FORMAT;
+    static const uint32_t NORMAL_FORMAT;
+    static const uint32_t ALBEDO_FORMAT;
+    static const uint32_t EMISSIVE_FORMAT;
+    static const uint32_t DEPTH_FORMAT;
 };
 
 // G-Buffer数据结构（用于着色器）
 struct GBufferData {
-    // World space position
     PrismaMath::vec3 position;
-    float padding1;
-
-    // World space normal
-    PrismaMath::vec3 normal;
     float roughness;
-
-    // Albedo color
-    PrismaMath::vec3 albedo;
+    PrismaMath::vec3 normal;
     float metallic;
-
-    // Emissive color
-    PrismaMath::vec3 emissive;
+    PrismaMath::vec3 albedo;
     float ao;
-
-    // Material properties
+    PrismaMath::vec3 emissive;
     uint32_t materialID;
-    float padding2[3];
 };
 
 // G-Buffer资源管理器
-class GBuffer
+class GBuffer : public IGBuffer
 {
 public:
     GBuffer();
-    ~GBuffer();
+    ~GBuffer() override;
 
-    // 创建G-Buffer资源
-    bool Create(uint32_t width, uint32_t height);
+    bool Initialize(uint32_t width, uint32_t height) override;
+    bool Resize(uint32_t width, uint32_t height) override;
 
-    // 销毁G-Buffer资源
-    void Destroy();
+    void SetAsRenderTarget(IDeviceContext* deviceContext) override;
+    void BindAsShaderResources(IDeviceContext* deviceContext, uint32_t startSlot = 0) override;
+    void UnbindShaderResources(IDeviceContext* deviceContext, uint32_t startSlot = 0, uint32_t count = 4) override;
 
-    // 调整G-Buffer尺寸
-    void Resize(uint32_t width, uint32_t height);
+    void Clear(IDeviceContext* deviceContext, const float color[4]) override;
+    void ClearDepth(IDeviceContext* deviceContext, float depth = 1.0f) override;
 
-    // 设置为渲染目标
-    void SetAsRenderTarget(RenderCommandContext* context);
+    uint32_t GetWidth() const override { return m_width; }
+    uint32_t GetHeight() const override { return m_height; }
+    bool IsInitialized() const override { return m_created; }
 
-    // 设置为着色器资源
-    void SetAsShaderResources(RenderCommandContext* context);
+    ITextureRenderTarget* GetTarget(GBufferTarget target) override;
+    IDepthStencil* GetDepthStencil() override;
+    void GetColorTargets(ITextureRenderTarget** targets, uint32_t count) override;
+    uint32_t GetColorTargetCount() const override { return 4; }
+    TextureFormat GetTargetFormat(GBufferTarget target) const override;
 
-    // 清除G-Buffer
-    void Clear(RenderCommandContext* context);
-
-    // 获取渲染目标视图
-    void* GetRenderTargetView(GBufferTarget target) const;
-
-    // 获取着色器资源视图
-    void* GetShaderResourceView(GBufferTarget target) const;
-
-    // 获取深度缓冲区视图
-    void* GetDepthStencilView() const;
-
-    // 获取宽度
-    uint32_t GetWidth() const { return m_width; }
-
-    // 获取高度
-    uint32_t GetHeight() const { return m_height; }
+    bool InitializeVulkanResources(uint32_t width, uint32_t height);
+    void DestroyVulkanResources();
 
 private:
-    // 渲染目标资源
-    struct RenderTarget {
-        void* resource = nullptr;
-        void* renderTargetView = nullptr;
-        void* shaderResourceView = nullptr;
+    class RenderTargetProxy;
+    class DepthStencilProxy;
+
+    struct VulkanResource {
+        VkImage image = VK_NULL_HANDLE;
+        VkImageView imageView = VK_NULL_HANDLE;
+        VmaAllocation allocation = VK_NULL_HANDLE;
     };
 
-    RenderTarget m_renderTargets[static_cast<uint32_t>(GBufferTarget::Count)];
+    VulkanResource m_renderTargets[static_cast<uint32_t>(GBufferTarget::Count)];
+    VulkanResource m_depthBuffer;
 
-    // 深度缓冲
-    void* m_depthBuffer = nullptr;
-    void* m_depthStencilView = nullptr;
-    void* m_depthShaderResourceView = nullptr;
+    VkDevice m_vkDevice = VK_NULL_HANDLE;
+    VmaAllocator m_vmaAllocator = VK_NULL_HANDLE;
 
-    // 尺寸
     uint32_t m_width = 0;
     uint32_t m_height = 0;
-
-    // 是否已创建
     bool m_created = false;
+    std::array<std::unique_ptr<RenderTargetProxy>, 4> m_colorTargetViews;
+    std::unique_ptr<DepthStencilProxy> m_depthStencilView;
 };
 
-} // namespace PrismaEngine::Graphic
+} // namespace Prisma::Graphic

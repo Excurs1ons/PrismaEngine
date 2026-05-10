@@ -1,209 +1,132 @@
 #include "RenderSystem.h"
-#include "../Camera.h"
-#include "../Logger.h"
-#include "../SceneManager.h"
-#include "../core/ECS.h"
+#include "../app/Engine.h"
+#include "../platform/Platform.h"
+#include "../logger/Logger.h"
+#include "../scene/Scene.h"
+#include "../transform/Camera.h"
+#include "RenderResourceManager.h"
+#include "Renderer.h"
+#include "Renderer2D.h"
+#include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
-// ImGui
-#ifdef PRISMA_BUILD_EDITOR
-#include <imgui.h>
-#endif
+namespace Prisma::Graphic {
+RenderSystem::RenderSystem(const RenderSystemDesc& desc) : m_desc(desc) {}
 
-#ifdef PRISMA_ENABLE_RENDER_DX12
-#include "adapters/dx12/DX12Adapters.h"
-#include <imgui_impl_dx12.h>
-#include <imgui_impl_win32.h>
-#endif
-
-#ifdef PRISMA_ENABLE_RENDER_VULKAN
-#include "adapters/vulkan/VulkanAdapters.h"
-#ifndef IMGUI_IMPL_VULKAN
-#define IMGUI_IMPL_VULKAN
-#endif
-#include <imgui_impl_vulkan.h>
-#endif
-
-#if defined(_WIN32)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#include <Windows.h>
-#endif
-
-namespace PrismaEngine::Graphic {
-
-std::shared_ptr<RenderSystem> RenderSystem::GetInstance() {
-    static std::shared_ptr<RenderSystem> instance = std::make_shared<RenderSystem>();
-    return instance;
+RenderSystem::~RenderSystem() {
+    Shutdown();
 }
 
 int RenderSystem::Initialize() {
-    RenderSystemDesc defaultDesc;
-    return Initialize(defaultDesc);
+    LOG_INFO("Renderer", "正在初始化渲染系统后端: {0}", (int)m_desc.backendType);
+    int dev_init_result = InitializeDevice();
+    if (dev_init_result != 0) {
+        LOG_ERROR("Renderer", "渲染设备初始化失败！ {0}", dev_init_result);
+        return dev_init_result;
+    }
+    LOG_INFO("Renderer", "渲染设备初始化成功: {0} ({1})", m_device->GetName(), m_device->GetAPIName());
+
+    int res_manager_init_result = InitializeRenderResourceManager();
+    if (res_manager_init_result != 0) {
+        LOG_ERROR("Renderer", "渲染资源管理器初始化失败！ {0}", res_manager_init_result);
+        return res_manager_init_result;
+    }
+    LOG_INFO("Renderer", "渲染资源管理器初始化成功。");
+
+    int pipeline_init_result = InitializeRenderPipelines();
+    if (pipeline_init_result != 0) {
+        LOG_ERROR("Renderer", "渲染管线初始化失败！ {0}", pipeline_init_result);
+        return pipeline_init_result;
+    }
+    LOG_INFO("Renderer", "管线初始化成功。");
+
+    // 初始化 2D 渲染器
+    Renderer2D::Initialize();
+    LOG_INFO("Renderer", "2D 渲染器初始化成功。");
+
+    LOG_INFO("Renderer", "渲染系统初始化成功。");
+    return 0;
 }
 
-int RenderSystem::Initialize(const RenderSystemDesc& desc) {
-    LOG_INFO("Render",
-             "正在初始化渲染系统 (Backend: {0})...",
-             desc.backendType == RenderAPIType::Vulkan ? "Vulkan" : "DirectX12");
-    m_desc = desc;
-    Logger::GetInstance().Flush();
+int RenderSystem::InitializeDevice() {
+    if (m_desc.backendType == RenderAPIType::Vulkan) {
+        LOG_INFO("Renderer", "正在创建 Vulkan 渲染设备...");
+        m_device = std::make_unique<Vulkan::RenderDeviceVulkan>();
 
-    // 1. 初始化设备
-    if (!InitializeDevice(desc)) {
-        LOG_ERROR("Render", "渲染设备初始化失败！请检查驱动程序或 SDK 是否正确安装。");
-        Logger::GetInstance().Flush();
-        return false;
+        DeviceDesc devDesc;
+        devDesc.name             = m_desc.name;
+        devDesc.width            = m_desc.width;
+        devDesc.height           = m_desc.height;
+        devDesc.presentMode      = m_desc.presentMode;
+        devDesc.enableValidation = m_desc.enableValidation;
+
+        return m_device->Initialize(devDesc);
+    }
+    LOG_ERROR("Renderer", "不支持的渲染 API 类型: {0}", (int)m_desc.backendType);
+    return -1;
+}
+
+int RenderSystem::InitializeRenderResourceManager() {
+    // 使用单例实例并进行初始化，确保全局访问一致性
+    m_renderResourceManager = std::dynamic_pointer_cast<RenderResourceManager>(RenderResourceManager::Get());
+    if (!m_renderResourceManager) {
+        LOG_ERROR("Renderer", "获取全局渲染资源管理器失败！");
+        return -1;
+    }
+    return m_renderResourceManager->Initialize(m_device.get());
+}
+
+int RenderSystem::InitializeRenderPipelines() {
+    // 默认创建前向渲染管线
+    m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+    return m_mainRenderPipeline->Initialize(m_device.get());
+}
+
+void RenderSystem::Update(Timestep ts) {
+    if (!m_device) {
+        return;
     }
 
-    // 2. 初始化资源管理器
-    if (!InitializeResourceManager()) {
-        LOG_ERROR("Render", "资源管理器初始化失败。");
-        Logger::GetInstance().Flush();
-        return false;
+    if (m_renderResourceManager) {
+        m_renderResourceManager->Update(ts);
+        m_renderResourceManager->GarbageCollect();
     }
-
-    // 3. 初始化管线
-    if (!InitializePipelines()) {
-        LOG_ERROR("Render", "渲染管线初始化失败。");
-        Logger::GetInstance().Flush();
-        return false;
-    }
-
-    // 4. 启动渲染线程
-    m_renderThread.Start();
-
-    LOG_INFO("Render", "渲染系统初始化成功。");
-    Logger::GetInstance().Flush();
-    return true;
 }
 
 void RenderSystem::Shutdown() {
-    LOG_INFO("Render", "渲染系统正在关闭...");
-
-    if (m_renderThread.IsRunning()) {
-        m_renderThread.Stop();
-        m_renderThread.Join();
+    if (!m_device) {
+        LOG_INFO("Renderer", "渲染系统无需关闭（无设备）");
+        return;
     }
 
-    ShutdownImGui();
+    LOG_INFO("Renderer", "正在关闭渲染器...");
 
-    m_mainPipeline.reset();
-    m_forwardPipeline.reset();
-    m_resourceManager.reset();
+    // 关闭 2D 渲染器
+    LOG_INFO("Renderer", "关闭 2D 渲染器...");
+    Renderer2D::Shutdown();
+    LOG_INFO("Renderer", "2D 渲染器已关闭");
 
+    // 1. 先销毁依赖设备的管线和资源管理器
+    if (m_mainRenderPipeline) {
+        LOG_INFO("Renderer", "关闭主渲染管线...");
+        m_mainRenderPipeline->Shutdown();
+        m_mainRenderPipeline.reset();
+        LOG_INFO("Renderer", "主渲染管线已关闭");
+    }
+
+    if (m_renderResourceManager) {
+        LOG_INFO("Renderer", "关闭渲染资源管理器...");
+        m_renderResourceManager->Shutdown();
+        m_renderResourceManager.reset();
+        LOG_INFO("Renderer", "渲染资源管理器已关闭");
+    }
+
+    // 2. 最后关闭设备并置空，确保此函数是幂等的
     if (m_device) {
+        LOG_INFO("Renderer", "关闭渲染设备...");
         m_device->Shutdown();
         m_device.reset();
-    }
-
-    LOG_INFO("RenderSystem", "渲染系统已关闭");
-}
-
-bool RenderSystem::InitializeImGui() {
-
-    if (!m_device) {
-        LOG_ERROR("Render", "Device not initialized, cannot init ImGui.");
-        return false;
-    }
-
-    // ImGui 上下文已经在 Editor 中创建，这里不再重复创建
-
-#if defined(PRISMA_ENABLE_RENDER_DX12)
-    if (m_desc.backendType == RenderAPIType::DirectX12) {
-        LOG_INFO("Render", "正在初始化ImGui(DX12)");
-
-        ImGui_ImplDX12_InitInfo init_info = {};
-        // TODO: 填充 init_info
-        if (!ImGui_ImplDX12_Init(&init_info))
-            return false;
-        if (!m_device->InitializeImGui())
-            return false;
-        m_imguiInitialized = true;
-    }
-#endif
-
-#if defined(PRISMA_ENABLE_RENDER_VULKAN)
-    if (m_desc.backendType == RenderAPIType::Vulkan) {
-        LOG_INFO("Render", "正在初始化 ImGui (Vulkan)...");
-        auto instancePtr = static_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
-
-        // 先初始化渲染器端的 ImGui（创建描述符池等）
-        if (!m_device->InitializeImGui()) {
-            LOG_ERROR("Render", "Device ImGui 初始化失败");
-            return false;
-        }
-
-        // 然后初始化 Vulkan 后端
-        ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.ApiVersion                = VK_API_VERSION_1_3;
-        init_info.Instance                  = instancePtr->GetInstance();
-        init_info.PhysicalDevice            = instancePtr->GetPhysicalDevice();
-        init_info.Device                    = instancePtr->GetDevice();
-        init_info.QueueFamily               = instancePtr->GetGraphicsQueueFamily();
-        init_info.Queue                     = instancePtr->GetGraphicsQueue();
-        init_info.MinImageCount             = 3;
-        init_info.ImageCount                = 3;
-        init_info.DescriptorPool            = instancePtr->GetImGuiDescriptorPool();
-        init_info.DescriptorPoolSize        = 0;  // 使用外部描述符池
-
-        // 设置渲染通道信息（新API使用 PipelineInfoMain）
-        init_info.PipelineInfoMain.Subpass    = 0;
-        init_info.PipelineInfoMain.RenderPass = instancePtr->GetImGuiRenderPass();
-
-        if (init_info.PipelineInfoMain.RenderPass == VK_NULL_HANDLE) {
-            LOG_ERROR("Render", "ImGui Vulkan 初始化失败：RenderPass 为空");
-            return false;
-        }
-
-        if (!ImGui_ImplVulkan_Init(&init_info)) {
-            LOG_ERROR("Render", "ImGui_ImplVulkan_Init 失败");
-            return false;
-        }
-
-        m_imguiInitialized = true;
-        LOG_DEBUG("Render", "ImGui (Vulkan) 初始化完成");
-    }
-#endif
-
-    if (m_imguiInitialized) {
-        LOG_INFO("Render", "ImGui初始化完成");
-        return true;
-    }
-    LOG_FATAL("Render", "ImGui初始化失败");
-    return false;
-}
-
-void RenderSystem::ShutdownImGui() {
-
-    if (!m_imguiInitialized)
-        return;
-
-#if defined(PRISMA_ENABLE_RENDER_DX12)
-    if (m_desc.backendType == RenderAPIType::DirectX12) {
-        ImGui_ImplDX12_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-    }
-#endif
-#if defined(PRISMA_ENABLE_RENDER_VULKAN) && !defined(_WIN32) && !defined(__ANDROID__)
-    if (m_desc.backendType == RenderAPIType::Vulkan) {
-        ImGui_ImplVulkan_Shutdown();
-    }
-#endif
-    if (ImGui::GetCurrentContext()) {
-        ImGui::DestroyContext();
-    }
-    m_imguiInitialized = false;
-}
-
-RenderSystem::~RenderSystem() {}
-
-void RenderSystem::Update(float deltaTime) {
-    UpdateStats(deltaTime);
-
-    if (!m_renderThread.IsRunning()) {
-        RenderFrame();
+        LOG_INFO("Renderer", "渲染设备已关闭");
     }
 }
 
@@ -213,145 +136,133 @@ void RenderSystem::BeginFrame() {
 }
 
 void RenderSystem::EndFrame() {
-    if (m_device) {
-        if (m_guiCallback) {
-            m_guiCallback(m_device.get());
+    if (m_device && m_mainRenderPipeline) {
+        auto& commands = Renderer::GetCommandQueue();
+        size_t cmdCount = commands.size();
+
+        // 每 5 秒真实时间记录一次 EndFrame 队列状态
+        static double lastLogTime = 0.0;
+        double now = Platform::GetTimeSeconds();
+        if (now - lastLogTime >= 5.0) {
+            LOG_INFO("RenderSystem", "EndFrame: {} 条命令, 管线已初始化={}, device={}",
+                     cmdCount, m_mainRenderPipeline != nullptr, m_device != nullptr);
+            lastLogTime = now;
         }
-        m_device->EndFrame();
+
+        if (!commands.empty()) {
+            RenderContext ctx;
+            ctx.device = m_device.get();
+
+            auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+            if (vkDevice) {
+                ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+            }
+
+            const auto& sceneData       = Renderer::GetSceneData();
+            ctx.camera.viewMatrix       = sceneData.camera.viewMatrix;
+            ctx.camera.projectionMatrix = sceneData.camera.projectionMatrix;
+            ctx.camera.position         = sceneData.camera.position;
+            ctx.camera.nearPlane        = sceneData.camera.nearPlane;
+            ctx.camera.farPlane         = sceneData.camera.farPlane;
+
+            ctx.frameIndex = m_device->GetCurrentFrameIndex();
+            ctx.width      = m_desc.width;
+            ctx.height     = m_desc.height;
+            ctx.deltaTime  = 0.016f;
+
+            m_mainRenderPipeline->Execute(ctx);
+            Renderer::ClearQueue();
+        }
     }
+
+    if (m_device)
+        m_device->EndFrame();
 }
 
 void RenderSystem::Present() {
     if (m_device)
         m_device->Present();
-    m_stats.frameCount++;
 }
 
 void RenderSystem::Resize(uint32_t width, uint32_t height) {
     m_desc.width  = width;
     m_desc.height = height;
-    // TODO: Resize swap chain
+    if (m_device)
+        m_device->Resize(width, height);
 }
 
 void RenderSystem::SetMainPipeline(std::shared_ptr<IPipeline> pipeline) {
-    m_mainPipeline = pipeline;
-    if (pipeline && m_device) {
-        pipeline->Initialize(m_device.get());
+    if (m_mainRenderPipeline == pipeline) {
+        return;
     }
-}
 
-void RenderSystem::SetGuiRenderCallback(GuiRenderCallback callback) {
-    m_guiCallback = callback;
-}
-
-RenderSystem::RenderStats RenderSystem::GetRenderStats() const {
-    RenderStats stats = m_stats;
-    if (m_device) {
-        auto devStats   = m_device->GetRenderStats();
-        stats.drawCalls = devStats.drawCalls;
-        stats.triangles = devStats.triangles;
-
-        auto memInfo         = m_device->GetGPUMemoryInfo();
-        stats.gpuMemoryUsage = memInfo.usedMemory;
+    if (m_mainRenderPipeline) {
+        m_mainRenderPipeline->Shutdown();
     }
-    return stats;
-}
 
-void RenderSystem::ResetStats() {
-    m_stats = {};
-}
+    m_mainRenderPipeline = std::move(pipeline);
 
-bool RenderSystem::InitializeDevice(const RenderSystemDesc& desc) {
-    LOG_INFO("Render", "正在探测可用后端...");
-#ifdef PRISMA_ENABLE_RENDER_DX12
-    LOG_INFO("Render", " - DirectX12: 已启用 (Enabled)");
-#else
-    LOG_INFO("Render", " - DirectX12: 未编译 (Disabled)");
-#endif
-
-#ifdef PRISMA_ENABLE_RENDER_VULKAN
-    LOG_INFO("Render", " - Vulkan:    已启用 (Enabled)");
-#else
-    LOG_INFO("Render", " - Vulkan:    未编译 (Disabled)");
-#endif
-    Logger::GetInstance().Flush();
-
-    switch (desc.backendType) {
-#ifdef PRISMA_ENABLE_RENDER_DX12
-        case RenderAPIType::DirectX12: {
-            DeviceDesc devDesc;
-            devDesc.windowHandle     = desc.windowHandle;
-            devDesc.width            = desc.width;
-            devDesc.height           = desc.height;
-            devDesc.enableDebug      = desc.enableDebug;
-            devDesc.enableValidation = desc.enableValidation;
-            m_device                 = DX12::CreateDX12RenderDeviceInterface(devDesc);
-            break;
-        }
-#endif
-#ifdef PRISMA_ENABLE_RENDER_VULKAN
-        case RenderAPIType::Vulkan: {
-            DeviceDesc devDesc;
-            devDesc.windowHandle     = desc.windowHandle;
-            devDesc.width            = desc.width;
-            devDesc.height           = desc.height;
-            devDesc.enableDebug      = desc.enableDebug;
-            devDesc.enableValidation = desc.enableValidation;
-            m_device                 = Vulkan::CreateRenderDeviceVulkanInterface(devDesc);
-            break;
-        }
-#endif
-        default:
-            return false;
-    }
-    return m_device != nullptr;
-}
-
-bool RenderSystem::InitializeResourceManager() {
-    return m_device != nullptr;
-}
-
-bool RenderSystem::InitializePipelines() {
-    auto forward      = std::make_shared<ForwardPipeline>();
-    m_forwardPipeline = forward;
-    m_mainPipeline    = forward;
-    LOG_INFO("Render", "Render pipelines initialized.");
-    return true;
-}
-
-void RenderSystem::RenderFrame() {
-    BeginFrame();
-    // TODO: Scene rendering
-    EndFrame();
-    Present();
-}
-
-void RenderSystem::UpdateStats(float deltaTime) {
-    m_stats.frameTime             = deltaTime;
-    static float fpsAccumulator   = 0.0f;
-    static uint32_t fpsFrameCount = 0;
-    static float fpsUpdateTime    = 0.0f;
-
-    if (deltaTime > 0.0f) {
-        fpsAccumulator += 1.0f / deltaTime;
-        fpsFrameCount++;
-        fpsUpdateTime += deltaTime;
-
-        if (fpsUpdateTime >= 1.0f) {
-            m_stats.fps    = fpsAccumulator / fpsFrameCount;
-            fpsAccumulator = 0.0f;
-            fpsFrameCount  = 0;
-            fpsUpdateTime  = 0.0f;
+    if (m_mainRenderPipeline && m_device) {
+        const int result = m_mainRenderPipeline->Initialize(m_device.get());
+        if (result != 0) {
+            LOG_ERROR("RenderSystem", "初始化新的主管线失败: {0}", result);
+            m_mainRenderPipeline.reset();
         }
     }
 }
 
-RenderContext RenderSystem::GetRenderContext() const {
-    RenderContext context;
-    context.device     = m_device.get();
-    context.frameIndex = m_stats.frameCount;
-    context.deltaTime  = m_stats.frameTime;
-    return context;
+void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera, ITexture* targetTexture) {
+    if (!scene || !camera) {
+        LOG_WARNING("RenderSystem", "尝试使用空的场景或相机进行渲染");
+        return;
+    }
+
+    if (m_mainRenderPipeline) {
+        // [新增] 开始场景收集
+        CameraData cameraData;
+        cameraData.viewMatrix       = camera->GetViewMatrix();
+        cameraData.projectionMatrix = camera->GetProjectionMatrix();
+        cameraData.position         = camera->GetPosition();
+        cameraData.nearPlane        = camera->GetNearPlane();
+        cameraData.farPlane         = camera->GetFarPlane();
+
+        Renderer::BeginScene(cameraData);
+
+        // [新增] 遍历场景中的对象并提交渲染指令
+        // 注意：目前由 Scene 负责 Update 并调用内部组件的渲染提交。
+        // 但为了确保 RenderScene 调用时队列里有东西，我们需要确保提交逻辑被触发。
+        // 暂时假设上一帧或本帧的 Scene::Update 已经填好了 Renderer::s_Data。
+        // 为了保险，我们在这里显式触发一次提交（如果组件支持）。
+
+        Renderer::EndScene();
+
+        // 构建 RenderContext
+        RenderContext ctx;
+        ctx.device = m_device.get();
+
+        // [修复] 获取当前的指令缓冲
+        auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+        if (vkDevice) {
+            ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+        } else {
+            ctx.commandBuffer = nullptr;
+        }
+
+        ctx.targetTexture           = targetTexture;
+        ctx.camera.viewMatrix       = camera->GetViewMatrix();
+        ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
+        ctx.camera.position         = camera->GetPosition();
+        ctx.camera.nearPlane        = camera->GetNearPlane();
+        ctx.camera.farPlane         = camera->GetFarPlane();
+        ctx.frameIndex              = m_device ? m_device->GetCurrentFrameIndex() : 0;
+        ctx.width                   = m_desc.width;
+        ctx.height                  = m_desc.height;
+        ctx.lights.clear();
+
+        m_mainRenderPipeline->Execute(ctx);
+    } else {
+        LOG_ERROR("RenderSystem", "没有处于活动状态的管线来进行场景渲染");
+    }
 }
 
-}  // namespace PrismaEngine::Graphic
+}  // namespace Prisma::Graphic

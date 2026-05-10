@@ -4,8 +4,16 @@
 #include <memory>
 #include <string>
 #include <vector>
+// vk-bootstrap - Vulkan 初始化库
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
+#include <VkBootstrap.h>
+#endif
 
-namespace PrismaEngine::Graphic {
+// VMA - Vulkan Memory Allocator
+#if defined(PRISMA_ENABLE_RENDER_VULKAN)
+#include <vk_mem_alloc.h>
+#endif
+namespace Prisma::Graphic {
 
 // 前置声明
 class ICommandBuffer;
@@ -24,16 +32,19 @@ public:
     /// @brief 初始化设备
     /// @param desc 设备描述
     /// @return 是否初始化成功
-    virtual bool Initialize(const DeviceDesc& desc) = 0;
+    virtual int Initialize(const DeviceDesc& desc) = 0;
 
     /// @brief 关闭设备
     virtual void Shutdown() = 0;
 
     /// @brief 获取设备名称
-    [[nodiscard]] virtual std::string GetName() const = 0;
+    virtual  std::string GetName() const = 0;
 
     /// @brief 获取API名称 (DirectX12, Vulkan等)
-    [[nodiscard]] virtual std::string GetAPIName() const = 0;
+    virtual  std::string GetAPIName() const = 0;
+
+    /// @brief 获取 GPU 名称
+    virtual std::string GetGPUName() const = 0;
 
     // === 命令缓冲区管理 ===
 
@@ -70,7 +81,7 @@ public:
 
     /// @brief 获取资源工厂
     /// @return 资源工厂指针
-    [[nodiscard]] virtual IResourceFactory* GetResourceFactory() const = 0;
+    virtual IResourceFactory* GetResourceFactory() const = 0;
 
     // === 交换链管理 ===
 
@@ -78,14 +89,14 @@ public:
     /// @param windowHandle 窗口句柄
     /// @param width 窗口宽度
     /// @param height 窗口高度
-    /// @param vsync 是否启用垂直同步
+    /// @param presentMode 呈现模式 (垂直同步模式)
     /// @return 交换链指针
     virtual std::unique_ptr<ISwapChain>
-    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync = true) = 0;
+    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode = PresentMode::VSync) = 0;
 
     /// @brief 获取当前交换链
     /// @return 交换链指针
-    [[nodiscard]] virtual ISwapChain* GetSwapChain() const = 0;
+    virtual  ISwapChain* GetSwapChain() const = 0;
 
     // === 帧管理 ===
 
@@ -98,25 +109,28 @@ public:
     /// @brief 呈现帧
     virtual void Present() = 0;
 
+    /// @brief 调整交换链大小
+    virtual void Resize(uint32_t width, uint32_t height) = 0;
+
     // === 查询支持的功能 ===
 
     /// @brief 检查是否支持多线程
-    [[nodiscard]] virtual bool SupportsMultiThreaded() const = 0;
+    virtual  bool SupportsMultiThreaded() const = 0;
 
     /// @brief 检查是否支持绑定less纹理
-    [[nodiscard]] virtual bool SupportsBindlessTextures() const = 0;
+    virtual  bool SupportsBindlessTextures() const = 0;
 
     /// @brief 检查是否支持计算着色器
-    [[nodiscard]] virtual bool SupportsComputeShader() const = 0;
+    virtual  bool SupportsComputeShader() const = 0;
 
     /// @brief 检查是否支持光线追踪
-    [[nodiscard]] virtual bool SupportsRayTracing() const = 0;
+    virtual  bool SupportsRayTracing() const = 0;
 
     /// @brief 检查是否支持网格着色器
-    [[nodiscard]] virtual bool SupportsMeshShader() const = 0;
+    virtual  bool SupportsMeshShader() const = 0;
 
     /// @brief 检查是否支持可变速率着色
-    [[nodiscard]] virtual bool SupportsVariableRateShading() const = 0;
+    virtual  bool SupportsVariableRateShading() const = 0;
 
     // === 渲染统计 ===
 
@@ -129,7 +143,7 @@ public:
 
     /// @brief 获取GPU内存信息
     /// @return GPU内存信息
-    [[nodiscard]] virtual GPUMemoryInfo GetGPUMemoryInfo() const = 0;
+    virtual  GPUMemoryInfo GetGPUMemoryInfo() const = 0;
 
     /// @brief 获取渲染统计信息
     struct RenderStats {
@@ -144,16 +158,7 @@ public:
 
     /// @brief 获取渲染统计
     /// @return 统计信息
-    [[nodiscard]] virtual RenderStats GetRenderStats() const = 0;
-
-    // === ImGui 集成 ===
-
-    /// @brief 初始化 ImGui（与渲染后端无关）
-    /// @return 是否初始化成功
-    virtual bool InitializeImGui() = 0;
-
-    /// @brief 清理 ImGui 资源
-    virtual void ShutdownImGui() = 0;
+    virtual  RenderStats GetRenderStats() const = 0;
 
     // === 调试功能 ===
 
@@ -167,6 +172,29 @@ public:
     /// @brief 设置调试标记
     /// @param name 标记名称
     virtual void SetDebugMarker(const std::string& name) = 0;
+
+        // === Vulkan 特定方法 ===
+
+    /// @brief 获取 Vulkan 实例
+    virtual VkInstance GetVkInstance() const = 0;
+    /// @brief 获取物理设备
+    virtual VkPhysicalDevice GetPhysicalDevice() const = 0;
+    /// @brief 获取逻辑设备
+    virtual VkDevice GetVkDevice() const = 0;
+    /// @brief 获取 VMA 分配器
+    virtual VmaAllocator GetVmaAllocator() const = 0;
+    /// @brief 获取图形队列
+    virtual VkQueue GetGraphicsQueue() const = 0;
+    /// @brief 获取图形队列族索引
+    virtual uint32_t GetGraphicsQueueFamily() const = 0;
+
+    /// @brief 是否已初始化
+    virtual bool IsInitialized() const = 0;
+    /// @brief 获取当前帧索引
+    virtual uint32_t GetCurrentFrameIndex() const = 0;
+
+    /// @brief 获取附加渲染(UI等)的 RenderPass
+    virtual VkRenderPass GetOverlayRenderPass() const = 0;
 };
 
-}  // namespace PrismaEngine::Graphic
+}  // namespace Prisma::Graphic
