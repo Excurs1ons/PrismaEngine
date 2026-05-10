@@ -28,7 +28,7 @@
 
 namespace Prisma {
 
-Editor::Editor() : Application(ApplicationSpecification{"Prisma Editor", 1280, 720}) {}
+Editor::Editor() : Application(ApplicationSpecification{"Prisma Editor", "", 1280, 720}) {}
 
 Editor::~Editor() {}
 

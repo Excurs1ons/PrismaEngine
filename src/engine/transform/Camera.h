@@ -75,6 +75,8 @@ namespace Prisma::Graphic {
 
         void SetAspectRatio(float aspectRatio) override;
 
+        void SetViewport(uint32_t width, uint32_t height) override;
+
         bool IsActive() const override { return m_isActive; }
 
         void SetActive(bool active) override { m_isActive = active; }

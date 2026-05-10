@@ -111,6 +111,12 @@ void Camera::SetAspectRatio(float aspectRatio) {
     m_isProjectionDirty = true;
 }
 
+void Camera::SetViewport(uint32_t width, uint32_t height) {
+    if (height == 0) return;
+    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+    m_isProjectionDirty = true;
+}
+
 void Camera::MoveWorld(float x, float y, float z) {
     if (auto transform = GetOwner()->GetTransform()) {
         Prisma::Vector3 pos = transform->GetPosition();
