@@ -95,3 +95,6 @@ projects/android/PrismaAndroid/app/src/main/assets/
 *.tmp
 *.log
 vcpkg_installed/
+
+# SDK Packaging Artifacts
+PrismaEngine-SDK-*
