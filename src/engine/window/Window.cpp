@@ -54,6 +54,12 @@ void Window::OnUpdate() {
 void Window::SetVSync(bool enabled) { m_Data.VSync = enabled; }
 bool Window::IsVSync() const { return m_Data.VSync; }
 
+uint32_t Window::GetWidth() const { return m_Data.Width; }
+uint32_t Window::GetHeight() const { return m_Data.Height; }
+
+void Window::SetEventCallback(const EventCallbackFn& callback) { m_Data.EventCallback = callback; }
+void* Window::GetNativeWindow() const { return m_Window; }
+
 std::unique_ptr<Window> Window::Create(const WindowProps& props) {
     class SDLWindowImpl : public Window { public: SDLWindowImpl(const WindowProps& props) { Init(props); } };
     return std::make_unique<SDLWindowImpl>(props);

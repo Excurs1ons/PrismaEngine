@@ -29,6 +29,11 @@ option(PRISMA_ENABLE_BINDLESS_RESOURCES "Enable Bindless Resources" OFF)
 
 option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
+# ========== C# Scripting ==========
+
+set(PRISMA_ENABLE_SCRIPTING "CORECLR" CACHE STRING "C# scripting backend: OFF, MONO, CORECLR")
+set_property(CACHE PRISMA_ENABLE_SCRIPTING PROPERTY STRINGS OFF MONO CORECLR)
+
 # ========== 打印配置信息 ==========
 
 message(STATUS "")
@@ -55,6 +60,6 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
     message(STATUS "  - SDL3 (default)")
 endif()
 message(STATUS "")
-message(STATUS "Default Backend: ${PRISMA_DEFAULT_RENDER_BACKEND}")
+message(STATUS "Scripting Backend: ${PRISMA_ENABLE_SCRIPTING}")
 message(STATUS "==============================================")
 message(STATUS "")

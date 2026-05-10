@@ -2,7 +2,38 @@
 
 ## 概述
 
-PrismaEngine 使用 Mono 运行时提供 C# 脚本支持，类似于 Unity 的 MonoBehaviour 系统。
+PrismaEngine 提供 C# 脚本支持，支持 **CoreCLR**（默认）和 **Mono** 两种后端，通过编译时 CMake 选项和运行时项目配置灵活切换。
+
+## 脚本后端配置
+
+### 编译时 (CMake)
+
+```cmake
+# 默认 CoreCLR
+cmake --preset engine-windows-x64-debug
+
+# 关闭脚本支持
+cmake --preset engine-windows-x64-debug -DPRISMA_ENABLE_SCRIPTING=OFF
+
+# Mono 模式
+cmake --preset engine-windows-x64-debug -DPRISMA_ENABLE_SCRIPTING=MONO
+```
+
+### 运行时 (project.json)
+
+```json
+{
+    "name": "MyGame",
+    "scriptingBackend": "CoreCLR",
+    "window": { ... }
+}
+```
+
+取值：`"Off"`（关闭）、`"Mono"`、`"CoreCLR"`（默认）。
+
+> **注意**: 运行时选择的后端必须与编译时匹配，否则引擎会输出警告并跳过初始化。
+
+详细说明见 [ScriptingSystem.md](ScriptingSystem.md) 和 [DeviceConfiguration.md](DeviceConfiguration.md)。
 
 ## 特性
 

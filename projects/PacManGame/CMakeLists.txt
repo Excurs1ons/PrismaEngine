@@ -69,6 +69,14 @@ if(MSVC)
             /W4
             /WX-
             /utf-8
+            $<$<CONFIG:Release>:/O2 /Oi /Gy>
+            $<$<CONFIG:MinSizeRel>:/O1 /Oi /Gy>
+            $<$<CONFIG:RelWithDebInfo>:/O2 /Oi /Gy>
+    )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
     )
 else()
     target_compile_options(${PROJECT_NAME}

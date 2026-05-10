@@ -38,11 +38,22 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     glaze::glaze
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+    TEMPLATE2D_EXPORTS=1
+)
+
 # ========== 包含目录 ==========
 
 target_include_directories(${PROJECT_NAME}
     PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
+        ${CMAKE_SOURCE_DIR}/src/engine/app
+        ${CMAKE_SOURCE_DIR}/src/engine/core
+        ${CMAKE_SOURCE_DIR}/src/engine/graphic
+        ${CMAKE_SOURCE_DIR}/src/engine/logger
+        ${CMAKE_SOURCE_DIR}/src/engine/platform
+        ${CMAKE_SOURCE_DIR}/src/engine/scripting
+        ${CMAKE_SOURCE_DIR}/src/engine/window
 )
 
 # ========== 编译选项 ==========
@@ -53,7 +64,17 @@ if(MSVC)
             /W4
             /WX-
             /utf-8
+            $<$<CONFIG:Release>:/O2 /Oi /Gy /Zi>
+            $<$<CONFIG:MinSizeRel>:/O1 /Oi /Gy>
+            $<$<CONFIG:RelWithDebInfo>:/O2 /Oi /Gy>
     )
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        _CRT_SECURE_NO_WARNINGS
+        NOMINMAX
+        WIN32_LEAN_AND_MEAN
+    )
+    # Release 也生成 PDB（用于崩溃转储分析）
+    target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/DEBUG>)
 else()
     target_compile_options(${PROJECT_NAME}
         PRIVATE
@@ -123,13 +144,11 @@ set(SCRIPTS_CLEANUP
 )
 
 # 构建时：自包含发布 C# 脚本 + 部署到输出目录
-# Debug 预设导出 PDB（用于调试 C# 脚本），Release 跳过符号
+# 始终导出 PDB（用于调试和崩溃转储分析）
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${DOTNET} publish -c Release -r win-x64 --self-contained true
             -p:PublishTrimmed=true -p:TrimMode=link
-            $<$<CONFIG:Debug>:-p:DebugType=portable>
-            $<$<NOT:$<CONFIG:Debug>>:-p:DebugType=none>
-            $<$<NOT:$<CONFIG:Debug>>:-p:DebugSymbols=false>
+            -p:DebugType=portable -p:DebugSymbols=true
             --nologo -v:q
             "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
     COMMAND ${CMAKE_COMMAND} -E copy_directory

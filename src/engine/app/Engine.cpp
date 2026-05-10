@@ -11,10 +11,10 @@
 #include "graphic/Shader.h"
 #include "SceneManager.h"
 #include "PhysicsSystem.h"
+#include "core/ECS.h"
 #include "scripting/MonoRuntime.h"
 #include "scripting/CoreCLRHost.h"
 #include "scripting/ScriptEngine.h"
-#include "core/ECS.h"
 #include <typeinfo>
 #include <filesystem>
 #include <glaze/glaze.hpp>
@@ -36,6 +36,10 @@
 namespace Prisma {
 
 Engine* Engine::s_Instance = nullptr;
+
+Engine& Engine::Get() {
+    return *s_Instance;
+}
 
 Engine::Engine(const EngineSpecification& spec)
     : m_Spec(spec), m_Initialized(false), m_Running(false) {
@@ -122,7 +126,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
     m_CurrentApp = std::move(app);
     m_Running = true;
 
-    // 从 project.json 读取项目配置（窗口参数、入口场景、资产路径）
+    // 从 project.json 读取项目配置（窗口参数、入口场景、资产路径、脚本后端）
+    auto scriptingBackend = ScriptingBackend::CoreCLR;
     {
         auto& spec = m_CurrentApp->GetSpecification();
         std::vector<std::string> projPaths = {
@@ -148,8 +153,11 @@ int Engine::Run(std::unique_ptr<Application> app) {
                         for (auto& ap : config.assets)
                             m_AssetManager->AddSearchPath(ap);
                     }
-                    LOG_INFO("Engine", "项目配置已加载: {0} ({1}x{2})",
-                             config.name, config.window.width, config.window.height);
+                    scriptingBackend = config.scriptingBackend;
+                    LOG_INFO("Engine", "项目配置已加载: {0} ({1}x{2}), 脚本后端: {3}",
+                             config.name, config.window.width, config.window.height,
+                             scriptingBackend == ScriptingBackend::Off ? "Off" :
+                             scriptingBackend == ScriptingBackend::Mono ? "Mono" : "CoreCLR");
                 }
                 break;
             }
@@ -192,8 +200,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
             m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
         }
 
-        // 初始化 C# 脚本引擎
-        {
+        // 初始化 C# 脚本引擎（根据项目设置决定）
+        if (scriptingBackend == ScriptingBackend::CoreCLR) {
             std::vector<std::string> scriptPaths = {
                 "scripts",
                 "../scripts",
@@ -210,12 +218,21 @@ int Engine::Run(std::unique_ptr<Application> app) {
             if (!scriptsDir.empty()) {
                 if (m_coreCLRHost->Initialize(scriptsDir)) {
                     if (m_scriptEngine->Initialize(*m_coreCLRHost)) {
-                        LOG_INFO("Engine", "C# 脚本系统已启动");
+                        LOG_INFO("Engine", "C# 脚本系统已启动 (CoreCLR)");
                     }
                 }
             } else {
                 LOG_WARNING("Engine", "未找到 C# 脚本输出目录（先执行 dotnet publish --self-contained）");
             }
+        } else if (scriptingBackend == ScriptingBackend::Mono) {
+#if PRISMA_ENABLE_MONO
+            // TODO: Mono 运行时初始化
+            LOG_INFO("Engine", "Mono 脚本后端将在后续版本实现");
+#else
+            LOG_WARNING("Engine", "项目配置为 Mono 后端，但引擎编译时未启用 Mono 支持");
+#endif
+        } else {
+            LOG_INFO("Engine", "C# 脚本已关闭（项目配置）");
         }
 
         m_Window->SetEventCallback([this](Event& e) {
@@ -339,6 +356,9 @@ AssetDatabase& Engine::GetAssetDatabase() { return AssetDatabase::Get(); }
 Core::ECS::World& Engine::GetWorld() { return Core::ECS::World::Get(); }
 ThreadManager& Engine::GetThreadManager() { return *ThreadManager::Get(); }
 CommandLineParser& Engine::GetCommandLineParser() { return CommandLineParser::Get(); }
+
+const std::string& Engine::GetGPUName() const { return m_GPUName; }
+const EngineSpecification& Engine::GetSpecification() const { return m_Spec; }
 
 void Engine::Update(Timestep ts) {
     for (auto& sys : m_Systems) sys->Update(ts);

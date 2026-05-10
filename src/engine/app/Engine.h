@@ -30,7 +30,7 @@ class ThreadManager;
  * @brief 引擎配置规范
  */
 struct EngineSpecification {
-    std::string Name = "PrismaEngine";
+    const char* Name = "PrismaEngine";
     bool Headless = false;
     // Runtime/游戏默认只读资源元数据库，避免每次启动改写 assets/metadata.json
     bool RefreshAssetDatabaseOnStartup = false;
@@ -54,7 +54,7 @@ public:
     int Run(std::unique_ptr<Application> app);
     void Shutdown();
 
-    static Engine& Get() { return *s_Instance; }
+    static Engine& Get();
     
     struct FrameStats {
         double BeginFrameTime  = 0.0;
@@ -67,7 +67,7 @@ public:
 
     const FrameStats& GetFrameStats() const { return m_FrameStats; }
     float GetFPS() const { return m_FrameStats.FPS; }
-    const std::string& GetGPUName() const { return m_GPUName; }
+    const std::string& GetGPUName() const;
     
     // --- Window Management ---
     Window& GetWindow() { return *m_Window; }
@@ -102,7 +102,7 @@ public:
     Logger& GetLogger() { return Logger::Get(); }
     AssetDatabase& GetAssetDatabase();
 
-    const EngineSpecification& GetSpecification() const { return m_Spec; }
+    const EngineSpecification& GetSpecification() const;
     bool IsRunning() const { return m_Running; }
 
     // 通用系统添加 (用于非核心扩展)

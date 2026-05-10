@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Export.h"
+#include <string>
 #include "core/LayerStack.h"
 #include "core/Timestep.h"
 #include "core/Event.h"
@@ -28,7 +29,7 @@ public:
     Application(const ApplicationSpecification& spec = ApplicationSpecification());
     virtual ~Application();
 
-    static Application& Get() { return *s_Instance; }
+    static Application& Get();
 
     // --- Lifecycle Hooks ---
     virtual int OnInitialize()      = 0;
@@ -47,8 +48,8 @@ public:
     bool IsRunning() const { return m_Running; }
     
     // --- Accessors ---
-    const ApplicationSpecification& GetSpecification() const { return m_Spec; }
-    ApplicationSpecification& GetSpecification() { return m_Spec; }
+    const ApplicationSpecification& GetSpecification() const;
+    ApplicationSpecification& GetSpecification();
     LayerStack& GetLayerStack() { return m_LayerStack; }
 
     void PushLayer(Layer* layer);

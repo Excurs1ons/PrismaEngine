@@ -222,6 +222,23 @@ void ScriptEngine::Update(float dt) {
     m_onFrameFn(dt);
 }
 
+void ScriptEngine::GetCameraPosition(float& x, float& y) const {
+    x = m_cameraPosX;
+    y = m_cameraPosY;
+}
+
+uint32_t ScriptEngine::GetEntityCount() const {
+    return (uint32_t)m_entities.size();
+}
+
+EntityData* ScriptEngine::GetEntity(uint32_t id) {
+    return (id < m_entities.size()) ? &m_entities[id] : nullptr;
+}
+
+const EntityData* ScriptEngine::GetEntity(uint32_t id) const {
+    return (id < m_entities.size()) ? &m_entities[id] : nullptr;
+}
+
 void ScriptEngine::Shutdown() {
     m_initialized = false;
     m_bootstrapFn = nullptr;

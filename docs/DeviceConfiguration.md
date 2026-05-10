@@ -62,6 +62,48 @@ cmake .. -DPRISMA_ENABLE_RENDER_DX12=ON \
 - **Linux**: 需要手动启用（推荐 Vulkan 或 OpenGL）
 - **Web**: 自动启用 WebGPU
 
+## C# 脚本后端
+
+### 可用后端
+
+- **OFF** (关闭) — 不编译脚本子系统代码，不初始化运行时，不尝试加载 DLL，仅使用 Native 逻辑
+- **Mono** — Mono 运行时（预留，暂未实现完整初始化链路）
+- **CoreCLR** — .NET CoreCLR 宿主（默认），通过 `hostfxr` 自承载 .NET 运行时
+
+### 编译时配置 (CMake)
+
+```cmake
+# CMake 命令行配置
+cmake .. -DPRISMA_ENABLE_SCRIPTING=CORECLR    # .NET CoreCLR（默认）
+cmake .. -DPRISMA_ENABLE_SCRIPTING=MONO        # Mono 运行时
+cmake .. -DPRISMA_ENABLE_SCRIPTING=OFF         # 关闭 C# 脚本
+```
+
+### 运行时配置 (project.json)
+
+即使编译时启用了脚本后端，也可以通过 `project.json` 在项目级别控制脚本是否激活：
+
+```json
+{
+    "name": "MyGame",
+    "scriptingBackend": "CoreCLR",
+    "window": { ... }
+}
+```
+
+取值：`"Off"` / `"Mono"` / `"CoreCLR"`（默认 `"CoreCLR"`）。
+
+运行时行为：
+- **Off**: 跳过脚本子系统初始化，不加载任何 DLL
+- **Mono**: 尝试初始化 Mono 运行时（需编译时启用 `PRISMA_ENABLE_SCRIPTING=MONO`）
+- **CoreCLR**: 从 `scripts/` 目录加载 `hostfxr` 和 .NET 运行时（需编译时启用 `PRISMA_ENABLE_SCRIPTING=CORECLR`）
+
+如果运行时选择的后端与编译时不匹配，引擎会输出警告并跳过初始化。
+
+### 默认配置
+
+- **所有平台**: CoreCLR（需要执行 `dotnet publish --self-contained` 生成脚本程序集）
+
 ## 高级功能
 
 ### 音频功能

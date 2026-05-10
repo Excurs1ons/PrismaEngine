@@ -22,17 +22,17 @@ public:
     void Shutdown();
     virtual void OnUpdate();
 
-    virtual uint32_t GetWidth() const { return m_Data.Width; }
-    virtual uint32_t GetHeight() const { return m_Data.Height; }
+    virtual uint32_t GetWidth() const;
+    virtual uint32_t GetHeight() const;
 
     virtual void SetTitle(const std::string& title);
 
     // 窗口属性
-    virtual void SetEventCallback(const EventCallbackFn& callback) { m_Data.EventCallback = callback; }
+    virtual void SetEventCallback(const EventCallbackFn& callback);
     virtual void SetVSync(bool enabled);
     virtual bool IsVSync() const;
 
-    virtual void* GetNativeWindow() const { return m_Window; }
+    virtual void* GetNativeWindow() const;
 
     static std::unique_ptr<Window> Create(const WindowProps& props = WindowProps());
     struct WindowData {
