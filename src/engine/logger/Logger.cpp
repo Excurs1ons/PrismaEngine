@@ -127,10 +127,10 @@ void Logger::LogInternal(LogLevel level, const std::string& category, const std:
 
     LogEntry entry(level, message, category, loc);
 
-    // 跳过 GetCurrentLogScope() — 其中 std::mutex 在 MSVC /MD Release 跨 DLL 边界时会崩溃
-    // 日志作用域只是辅助调试功能，不影响核心日志
-    {
-        // 不使用 GetCurrentLogScope
+    LogScope* currentScope = GetCurrentLogScope();
+    if (currentScope) {
+        currentScope->CacheLogEntry(entry);
+    } else {
         if (m_Config.asyncMode && level < LogLevel::Error) {
             EnqueueEntry(std::move(entry));
         } else {
