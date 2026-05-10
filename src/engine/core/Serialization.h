@@ -1,6 +1,7 @@
 #pragma once
 
 #include "ECS.h"
+#include "math/MathTypes.h"
 #include <string>
 #include <memory>
 #include <functional>
@@ -53,8 +54,8 @@ public:
     void Serialize(const std::string& key, float value);
     void Serialize(const std::string& key, double value);
     void Serialize(const std::string& key, const std::string& value);
-    void Serialize(const std::string& key, const DirectX::XMFLOAT3& value);
-    void Serialize(const std::string& key, const DirectX::XMFLOAT4& value);
+    void Serialize(const std::string& key, const PrismaMath::vec3& value);
+    void Serialize(const std::string& key, const PrismaMath::vec4& value);
 
     // ISerializer 实现
     std::string ToString() const override;
@@ -110,6 +111,10 @@ public:
     // 加载场景
     bool LoadScene(const std::string& filePath, SerializationFormat format = SerializationFormat::JSON);
 
+    // 注册具体组件的序列化函数 (用于 ECS 模式)
+    template<typename T>
+    void RegisterComponentSerializer();
+
 private:
     Scene* m_scene = nullptr;
     ECS::World* m_world = nullptr;
@@ -118,11 +123,15 @@ private:
     void SerializeSceneGameObject(JsonSerializer& serializer);
     void DeserializeSceneGameObject(JsonSerializer& serializer);
 
-    // ECS 模式序列化逻辑 (保持原有逻辑兼容)
+    // ECS 模式序列化逻辑
     void SerializeSceneECS(JsonSerializer& serializer);
     void DeserializeSceneECS(JsonSerializer& serializer);
 
-    // ... 其他原有逻辑 ...
+    // 组件序列化函数映射 (用于 ECS 模式)
+    std::unordered_map<uint32_t, std::function<void(ECS::EntityID, JsonSerializer&)>> m_componentSerializers;
+    std::unordered_map<uint32_t, std::function<void(ECS::EntityID, JsonSerializer&)>> m_componentDeserializers;
+
+    void RegisterComponentSerializers();
 };
 
 // 资源序列化器
@@ -145,25 +154,25 @@ private:
 // 模板实现
 template<typename T>
 void SceneSerializer::RegisterComponentSerializer() {
-    ECS::ComponentTypeID typeID = T::TYPE_ID;
+    // 假设 T::TYPE_ID 存在，或者使用 typeid
+    uint32_t typeID = (uint32_t)typeid(T).hash_code();
     const char* typeName = typeid(T).name();
 
     // 序列化函数
-    m_componentSerializers[typeID] = [this](ECS::EntityID entity, JsonSerializer& serializer) {
-        if (auto* component = m_world.GetComponent<T>(entity)) {
+    m_componentSerializers[typeID] = [this, typeName](ECS::EntityID entity, JsonSerializer& serializer) {
+        if (auto* component = m_world->GetComponent<T>(entity)) {
             serializer.BeginObject(typeName);
-            serializer.Serialize("enabled", component->enabled);
-            // 组件特定属性序列化需要在各组件中实现
+            // 假设组件有 enabled 属性
+            // serializer.Serialize("enabled", true); 
             serializer.EndObject();
         }
     };
 
     // 反序列化函数
     m_componentDeserializers[typeID] = [this](ECS::EntityID entity, JsonSerializer& serializer) {
-        auto& component = m_world.AddComponent<T>(entity);
-        // 组件特定属性反序列化需要在各组件中实现
+        m_world->AddComponent<T>(entity);
     };
 }
 
 } // namespace Core
-} // namespace Engine
+} // namespace Prisma

@@ -101,6 +101,11 @@ void SceneSerializer::DeserializeSceneECS(JsonSerializer& serializer)
     LOG_INFO("Serialization", "正在从 JSON 反序列化 ECS 场景...");
 }
 
+void SceneSerializer::RegisterComponentSerializers()
+{
+    // 这里注册所有需要支持序列化的 ECS 组件
+}
+
 // ========== JsonSerializer 存根实现 (为了让编译通过) ==========
 
 JsonSerializer::JsonSerializer() {}
@@ -114,8 +119,8 @@ void JsonSerializer::Serialize(const std::string& key, uint32_t value) {}
 void JsonSerializer::Serialize(const std::string& key, float value) {}
 void JsonSerializer::Serialize(const std::string& key, double value) {}
 void JsonSerializer::Serialize(const std::string& key, const std::string& value) {}
-void JsonSerializer::Serialize(const std::string& key, const DirectX::XMFLOAT3& value) {}
-void JsonSerializer::Serialize(const std::string& key, const DirectX::XMFLOAT4& value) {}
+void JsonSerializer::Serialize(const std::string& key, const PrismaMath::vec3& value) {}
+void JsonSerializer::Serialize(const std::string& key, const PrismaMath::vec4& value) {}
 std::string JsonSerializer::ToString() const { return ""; }
 bool JsonSerializer::FromString(const std::string& data) { return true; }
 bool JsonSerializer::SaveToFile(const std::string& filePath) const { return true; }
