@@ -7,6 +7,30 @@
 
 namespace Prisma::Core {
 
+class JsonDocument {}; // JsonSerializer 使用的存根定义
+
+// ========== JsonSerializer 实现 ==========
+
+JsonSerializer::JsonSerializer() {}
+JsonSerializer::~JsonSerializer() = default;
+
+void JsonSerializer::BeginObject(const std::string& name) {}
+void JsonSerializer::EndObject() {}
+void JsonSerializer::BeginArray(const std::string& name) {}
+void JsonSerializer::EndArray() {}
+void JsonSerializer::Serialize(const std::string& key, bool value) {}
+void JsonSerializer::Serialize(const std::string& key, int32_t value) {}
+void JsonSerializer::Serialize(const std::string& key, uint32_t value) {}
+void JsonSerializer::Serialize(const std::string& key, float value) {}
+void JsonSerializer::Serialize(const std::string& key, double value) {}
+void JsonSerializer::Serialize(const std::string& key, const std::string& value) {}
+void JsonSerializer::Serialize(const std::string& key, const PrismaMath::vec3& value) {}
+void JsonSerializer::Serialize(const std::string& key, const PrismaMath::vec4& value) {}
+std::string JsonSerializer::ToString() const { return ""; }
+bool JsonSerializer::FromString(const std::string& data) { return true; }
+bool JsonSerializer::SaveToFile(const std::string& filePath) const { return true; }
+bool JsonSerializer::LoadFromFile(const std::string& filePath) { return true; }
+
 // ========== SceneSerializer 实现 ==========
 
 SceneSerializer::SceneSerializer(Prisma::Scene& scene)
@@ -79,16 +103,6 @@ void SceneSerializer::DeserializeSceneGameObject(JsonSerializer& serializer)
 {
     // 假设 serializer 已经加载了文件内容
     LOG_INFO("Serialization", "正在从 JSON 反序列化 GameObject 场景...");
-    
-    // 这里应该是真正的解析逻辑，调用 serializer 的接口读取数据
-    // 由于 JsonSerializer 目前是存根，我们先记录意图
-    
-    // 1. 读取场景名称
-    // std::string sceneName = serializer.ReadString("Name");
-    // m_scene->SetName(sceneName);
-
-    // 2. 遍历 GameObjects 数组
-    // ...
 }
 
 void SceneSerializer::SerializeSceneECS(JsonSerializer& serializer)
@@ -105,25 +119,5 @@ void SceneSerializer::RegisterComponentSerializers()
 {
     // 这里注册所有需要支持序列化的 ECS 组件
 }
-
-// ========== JsonSerializer 存根实现 (为了让编译通过) ==========
-
-JsonSerializer::JsonSerializer() {}
-void JsonSerializer::BeginObject(const std::string& name) {}
-void JsonSerializer::EndObject() {}
-void JsonSerializer::BeginArray(const std::string& name) {}
-void JsonSerializer::EndArray() {}
-void JsonSerializer::Serialize(const std::string& key, bool value) {}
-void JsonSerializer::Serialize(const std::string& key, int32_t value) {}
-void JsonSerializer::Serialize(const std::string& key, uint32_t value) {}
-void JsonSerializer::Serialize(const std::string& key, float value) {}
-void JsonSerializer::Serialize(const std::string& key, double value) {}
-void JsonSerializer::Serialize(const std::string& key, const std::string& value) {}
-void JsonSerializer::Serialize(const std::string& key, const PrismaMath::vec3& value) {}
-void JsonSerializer::Serialize(const std::string& key, const PrismaMath::vec4& value) {}
-std::string JsonSerializer::ToString() const { return ""; }
-bool JsonSerializer::FromString(const std::string& data) { return true; }
-bool JsonSerializer::SaveToFile(const std::string& filePath) const { return true; }
-bool JsonSerializer::LoadFromFile(const std::string& filePath) { return true; }
 
 } // namespace Prisma::Core
