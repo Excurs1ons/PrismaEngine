@@ -12,6 +12,8 @@
 #include "SceneManager.h"
 #include "PhysicsSystem.h"
 #include "scripting/MonoRuntime.h"
+#include "scripting/CoreCLRHost.h"
+#include "scripting/ScriptEngine.h"
 #include "core/ECS.h"
 #include <typeinfo>
 #include <filesystem>
@@ -38,6 +40,8 @@ Engine* Engine::s_Instance = nullptr;
 Engine::Engine(const EngineSpecification& spec)
     : m_Spec(spec), m_Initialized(false), m_Running(false) {
     s_Instance = this;
+    m_coreCLRHost = std::make_unique<Scripting::CoreCLRHost>();
+    m_scriptEngine = std::make_unique<Scripting::ScriptEngine>();
 }
 
 Engine::~Engine() {
@@ -183,6 +187,32 @@ int Engine::Run(std::unique_ptr<Application> app) {
             m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
         }
 
+        // 初始化 C# 脚本引擎
+        {
+            std::vector<std::string> scriptPaths = {
+                "scripts",
+                "../scripts",
+                "../projects/Template2D/scripts/GameScripts/bin/Debug/net10.0/win-x64/publish",
+                "../projects/Template2D/scripts/GameScripts/bin/Release/net10.0/win-x64/publish",
+            };
+            std::string scriptsDir;
+            for (const auto& p : scriptPaths) {
+                if (std::filesystem::exists(p + "/GameScripts.runtimeconfig.json")) {
+                    scriptsDir = std::filesystem::canonical(p).string();
+                    break;
+                }
+            }
+            if (!scriptsDir.empty()) {
+                if (m_coreCLRHost->Initialize(scriptsDir)) {
+                    if (m_scriptEngine->Initialize(*m_coreCLRHost)) {
+                        LOG_INFO("Engine", "C# 脚本系统已启动");
+                    }
+                }
+            } else {
+                LOG_WARNING("Engine", "未找到 C# 脚本输出目录（先执行 dotnet publish --self-contained）");
+            }
+        }
+
         m_Window->SetEventCallback([this](Event& e) {
             EventDispatcher dispatcher(e);
             
@@ -249,6 +279,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
         if (m_Spec.Headless || !m_Minimized) {
             Update(Timestep(std::min(deltaTime, 0.1f)));
+            // C# 脚本更新（在 App OnUpdate 之后、渲染之前）
+            if (m_scriptEngine->IsInitialized())
+                m_scriptEngine->Update(std::min(deltaTime, 0.1f));
             if (GetRenderSystem()) {
                 double t0 = Platform::GetTimeSeconds();
                 GetRenderSystem()->BeginFrame();
