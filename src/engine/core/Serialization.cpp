@@ -9,7 +9,7 @@ namespace Prisma::Core {
 
 // ========== SceneSerializer 实现 ==========
 
-SceneSerializer::SceneSerializer(Scene& scene)
+SceneSerializer::SceneSerializer(Prisma::Scene& scene)
     : m_scene(&scene)
 {
 }
