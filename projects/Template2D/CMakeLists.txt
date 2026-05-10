@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-project(Scene2DTest
+project(Template2D
     VERSION 1.0.0
     DESCRIPTION "2D Scene Test Template for PrismaEngine"
     LANGUAGES CXX
@@ -16,11 +16,11 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(TEST_SOURCES
     src/main.cpp
-    src/Scene2DTestApp.cpp
+    src/Template2DApp.cpp
 )
 
 set(TEST_HEADERS
-    src/Scene2DTestApp.h
+    src/Template2DApp.h
 )
 
 # ========== 可执行文件 ==========
@@ -80,4 +80,4 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMENT "Copying project assets to project output"
 )
 
-message(STATUS "Scene2DTest configured")
+message(STATUS "Template2D configured")
