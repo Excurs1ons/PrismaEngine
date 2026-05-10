@@ -56,7 +56,7 @@ public:
 
     // 交换链
     std::unique_ptr<ISwapChain>
-    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync = true) override;
+    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode = PresentMode::VSync) override;
     ISwapChain* GetSwapChain() const override;
 
     // 帧管理

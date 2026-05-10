@@ -89,10 +89,10 @@ public:
     /// @param windowHandle 窗口句柄
     /// @param width 窗口宽度
     /// @param height 窗口高度
-    /// @param vsync 是否启用垂直同步
+    /// @param presentMode 呈现模式 (垂直同步模式)
     /// @return 交换链指针
     virtual std::unique_ptr<ISwapChain>
-    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync = true) = 0;
+    CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode = PresentMode::VSync) = 0;
 
     /// @brief 获取当前交换链
     /// @return 交换链指针

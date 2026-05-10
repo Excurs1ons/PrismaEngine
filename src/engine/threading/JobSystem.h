@@ -16,6 +16,7 @@ class JobSystem : public ISubSystem {
 public:
     int Initialize() override;
     void Shutdown() override;
+    const char* GetName() const override { return "JobSystem"; }
     using Job = std::function<void()>;
 
     // 提交作业到指定线程池

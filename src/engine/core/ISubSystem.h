@@ -12,6 +12,7 @@ public:
     virtual int Initialize()             = 0;
     virtual void Shutdown()              = 0;
     virtual void Update([[maybe_unused]] Timestep ts) {}
+    virtual const char* GetName() const = 0;
 };
 
 }  // namespace Prisma

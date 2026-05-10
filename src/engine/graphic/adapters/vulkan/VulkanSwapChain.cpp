@@ -85,21 +85,30 @@ VulkanSwapChain::~VulkanSwapChain() {
     Cleanup();
 }
 
-int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t height, bool vsync) {
+int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode) {
     // 在重新初始化（如窗口缩放）前等待 GPU 空闲，避免销毁正在被 CommandBuffer 引用的旧资源。
     if (m_device->GetVkDevice() != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(m_device->GetVkDevice());
     }
     Cleanup();
 
-    LOG_INFO("Vulkan", "正在初始化交换链: {0}x{1}, 垂直同步: {2}", width, height, vsync);
+    LOG_INFO("Vulkan", "正在初始化交换链: {0}x{1}, 呈现模式: {2}", width, height, static_cast<int>(presentMode));
+
+    VkPresentModeKHR vkPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+    switch (presentMode) {
+        case PresentMode::Immediate: vkPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR; break;
+        case PresentMode::VSync:     vkPresentMode = VK_PRESENT_MODE_FIFO_KHR; break;
+        case PresentMode::Mailbox:   vkPresentMode = VK_PRESENT_MODE_MAILBOX_KHR; break;
+        case PresentMode::Adaptive:  vkPresentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR; break;
+    }
 
     // 修正：按照 (VkPhysicalDevice, VkDevice, VkSurfaceKHR) 的顺序传递
     vkb::SwapchainBuilder swapchain_builder{m_device->GetPhysicalDevice(), m_device->GetVkDevice(), (VkSurfaceKHR)windowHandle};
     auto vkb_swap_ret = swapchain_builder
         .set_desired_extent(width, height)
         .set_desired_format({VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR})
-        .set_desired_present_mode(vsync ? VK_PRESENT_MODE_FIFO_KHR : VK_PRESENT_MODE_IMMEDIATE_KHR)
+        .set_desired_present_mode(vkPresentMode)
+        .add_fallback_present_mode(VK_PRESENT_MODE_FIFO_KHR)
         .set_desired_min_image_count(3)
         .build();
 
@@ -115,7 +124,7 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     m_format = vkb_swapchain.image_format;
     m_extent = vkb_swapchain.extent;
     LOG_INFO("Vulkan", "交换链实际 extent: {0}x{1} (请求 {2}x{3})", m_extent.width, m_extent.height, width, height);
-    m_mode = vsync ? SwapChainMode::VSync : SwapChainMode::Immediate;
+    m_mode = presentMode;
     m_hdrEnabled = false;
     m_renderTargets.clear();
 
@@ -273,7 +282,7 @@ bool VulkanSwapChain::Present() {
     return Present(VK_NULL_HANDLE);
 }
 
-bool VulkanSwapChain::SetMode(SwapChainMode mode) {
+bool VulkanSwapChain::SetMode(PresentMode mode) {
     m_mode = mode;
     return true;
 }
@@ -317,8 +326,7 @@ bool VulkanSwapChain::Screenshot(const std::string& filename, uint32_t bufferInd
 
 bool VulkanSwapChain::Resize(uint32_t width, uint32_t height) {
     if (width == 0 || height == 0) return true;
-    bool vsync = (m_mode == SwapChainMode::VSync);
-    return Initialize(m_device->GetVkSurface(), width, height, vsync) == 0;
+    return Initialize(m_device->GetVkSurface(), width, height, m_mode) == 0;
 }
 
 } // namespace Prisma::Graphic::Vulkan

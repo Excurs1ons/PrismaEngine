@@ -104,6 +104,7 @@ public:
     int Initialize() override;
     void Shutdown() override;
     void Update(Timestep ts) override;
+    const char* GetName() const override { return "InputManager"; }
 
     // 事件处理 (由 Engine 分发)
     void OnEvent(Event& e);

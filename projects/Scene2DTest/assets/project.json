@@ -1,0 +1,12 @@
+{
+    "name": "Scene2DTest Serialized",
+    "entryScene": "scenes/2d_test.json",
+    "window": {
+        "width": 1024,
+        "height": 768,
+        "fullscreen": false,
+        "resizable": true,
+        "vsync": "Mailbox",
+        "maxFPS": 120
+    }
+}

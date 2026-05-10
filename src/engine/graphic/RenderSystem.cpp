@@ -57,7 +57,7 @@ int RenderSystem::InitializeDevice() {
         devDesc.name             = m_desc.name;
         devDesc.width            = m_desc.width;
         devDesc.height           = m_desc.height;
-        devDesc.vsync            = m_desc.enableVSync;
+        devDesc.presentMode      = m_desc.presentMode;
         devDesc.enableValidation = m_desc.enableValidation;
 
         return m_device->Initialize(devDesc);

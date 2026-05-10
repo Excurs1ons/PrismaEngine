@@ -300,6 +300,14 @@ struct Color {
     Color(float r, float g, float b, float a = 1.0f) : r(r), g(g), b(b), a(a) {}
 };
 
+// 呈现模式 (VSync 模式)
+enum class PresentMode {
+    Immediate,   // 立即呈现 (关闭垂直同步，可能导致画面撕裂)
+    VSync,       // 等待垂直同步 (开启垂直同步，限制帧率为显示器刷新率)
+    Mailbox,     // 邮箱模式 (三重缓冲，开启垂直同步但允许低延迟，如果支持)
+    Adaptive     // 自适应垂直同步 (根据性能自动切换)
+};
+
 // 基础描述结构
 struct ResourceDesc {
     ResourceType type = ResourceType::Unknown;
@@ -313,7 +321,7 @@ struct DeviceDesc {
     void* windowHandle = nullptr;
     uint32_t width = 1920;
     uint32_t height = 1080;
-    bool vsync = true;
+    PresentMode presentMode = PresentMode::VSync;
     bool enableDebug = false;
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;

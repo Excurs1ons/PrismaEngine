@@ -21,7 +21,9 @@ bool TransportStdio::Start(MCPMessageHandler handler) {
 }
 
 void TransportStdio::Stop() {
+    if (!m_Running) return;
     m_Running = false;
+    
     if (m_ReadThread.joinable()) {
 #ifdef _WIN32
         // 取消待决的控制台输入读取，以唤醒因 std::getline(std::cin) 阻塞的读取线程
@@ -29,8 +31,13 @@ void TransportStdio::Stop() {
         if (hStdin != INVALID_HANDLE_VALUE) {
             CancelIoEx(hStdin, nullptr);
         }
-#endif
         m_ReadThread.join();
+#else
+        // 在 Linux/POSIX 上，没有完美的办法取消阻塞在 std::cin 的 read/getline。
+        // 如果我们正在退出且该线程仍然阻塞，直接销毁进程。
+        // 这虽然粗暴，但在 CLI/MCP 模式下是必要的，否则会一直挂起。
+        std::terminate(); 
+#endif
     }
 }
 

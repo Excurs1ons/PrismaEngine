@@ -163,7 +163,7 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         }
 
         // 9. SwapChain
-        m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.vsync);
+        m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.presentMode);
 
         // 确保 renderFinishedSemaphores 足够大
         uint32_t imageCount = m_swapChain->GetBufferCount();
@@ -425,9 +425,9 @@ IResourceFactory* RenderDeviceVulkan::GetResourceFactory() const {
     return m_resourceFactory.get();
 }
 std::unique_ptr<ISwapChain>
-RenderDeviceVulkan::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, bool vsync) {
+RenderDeviceVulkan::CreateSwapChain(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode) {
     auto swapChain = std::make_unique<VulkanSwapChain>(this);
-    if (swapChain->Initialize(windowHandle, width, height, vsync) != 0) {
+    if (swapChain->Initialize(windowHandle, width, height, presentMode) != 0) {
         return nullptr;
     }
     return swapChain;

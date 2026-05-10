@@ -10,6 +10,7 @@ namespace Prisma {
 
 class EDITOR_API CommandLineEditor : public ManagerBase<CommandLineEditor> {
 public:
+    PRISMA_SUBSET_NAME("CommandLineEditor")
     CommandLineEditor();
     ~CommandLineEditor() override;
 

@@ -61,6 +61,7 @@ Prisma_Declare_Dependency(imgui https://github.com/ocornut/imgui.git ${PRISMA_DE
 set(XXHASH_BUILD_XXHSUM OFF CACHE BOOL "" FORCE)
 set(DISPATCH_EXAMPLES OFF CACHE BOOL "" FORCE)
 Prisma_Declare_Dependency(xxhash https://github.com/Cyan4973/xxHash.git ${PRISMA_DEP_XXHASH_VERSION})
+FetchContent_MakeAvailable(xxhash)
 
 if(WIN32 AND PRISMA_BUILD_EDITOR)
     Prisma_Declare_Dependency(libdeflate https://github.com/ebiggers/libdeflate.git ${PRISMA_DEP_LIBDEFLATE_VERSION})

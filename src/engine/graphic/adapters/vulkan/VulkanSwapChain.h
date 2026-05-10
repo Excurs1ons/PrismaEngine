@@ -17,7 +17,7 @@ public:
     VulkanSwapChain(RenderDeviceVulkan* device);
     ~VulkanSwapChain() override;
 
-    int Initialize(void* windowHandle, uint32_t width, uint32_t height, bool vsync);
+    int Initialize(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode);
     void Cleanup();
 
     uint32_t GetBufferCount() const override { return (uint32_t)m_images.size(); }
@@ -25,7 +25,7 @@ public:
     uint32_t GetWidth() const override { return m_extent.width; }
     uint32_t GetHeight() const override { return m_extent.height; }
     TextureFormat GetFormat() const override { return TextureFormat::RGBA8_UNorm; }
-    SwapChainMode GetMode() const override { return m_mode; }
+    PresentMode GetMode() const override { return m_mode; }
     bool IsHDR() const override { return m_hdrEnabled; }
 
     ITexture* GetRenderTarget(uint32_t bufferIndex = 0) override;
@@ -40,7 +40,7 @@ public:
     bool Present(VkSemaphore waitSemaphore);
 
     bool Present() override;
-    bool SetMode(SwapChainMode mode) override;
+    bool SetMode(PresentMode mode) override;
     bool Resize(uint32_t width, uint32_t height) override;
     bool SetHDR(bool enable) override;
 
@@ -69,7 +69,7 @@ private:
     std::vector<std::unique_ptr<ITexture>> m_renderTargets;
     VkRenderPass m_renderPass = VK_NULL_HANDLE;
     uint32_t m_currentImageIndex = 0;
-    SwapChainMode m_mode = SwapChainMode::VSync;
+    PresentMode m_mode = PresentMode::VSync;
     bool m_hdrEnabled = false;
     bool m_fullscreen = false;
     bool m_debugLayerEnabled = false;
