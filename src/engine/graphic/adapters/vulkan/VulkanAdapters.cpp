@@ -7,7 +7,7 @@ namespace Prisma::Graphic::Vulkan {
 std::unique_ptr<RenderDeviceVulkan> CreateRenderDeviceVulkan(const DeviceDesc& deviceDesc) {
     auto device = std::make_unique<RenderDeviceVulkan>();
     if (device->Initialize(deviceDesc)) {
-        LOG_INFO("Adapter", "设备已初始化。");
+        LOG_DEBUG("Adapter", "设备已初始化。");
         return device;
     }
     LOG_ERROR("Adapter", "设备初始化失败");
@@ -17,7 +17,7 @@ std::unique_ptr<RenderDeviceVulkan> CreateRenderDeviceVulkan(const DeviceDesc& d
 std::unique_ptr<IRenderDevice> CreateRenderDeviceVulkanInterface(const DeviceDesc& deviceDesc) {
     auto device = std::make_unique<RenderDeviceVulkan>();
     if (device->Initialize(deviceDesc)) {
-        LOG_INFO("Adapter", "设备已初始化。");
+        LOG_DEBUG("Adapter", "设备已初始化。");
         return device;
     }
     LOG_ERROR("Adapter", "设备初始化失败");

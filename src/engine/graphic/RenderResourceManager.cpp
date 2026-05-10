@@ -50,7 +50,7 @@ int RenderResourceManager::Initialize(IRenderDevice* device) {
     m_loadingThread = std::thread(&RenderResourceManager::LoadingThreadFunction, this);
     
     m_initialized = true;
-    LOG_INFO("RenderResourceManager", "资源管理器已初始化。");
+    LOG_DEBUG("RenderResourceManager", "资源管理器已初始化。");
     return 0;
 }
 
@@ -83,20 +83,20 @@ void RenderResourceManager::Update(Timestep ts) {
 }
 
 void RenderResourceManager::Shutdown() {
-    LOG_INFO("RenderResourceManager", "正在关闭渲染资源管理器...");
+    LOG_DEBUG("RenderResourceManager", "正在关闭渲染资源管理器...");
     m_shouldStopLoading = true;
     m_loadQueueCV.notify_all();
     if (m_loadingThread.joinable()) {
-        LOG_INFO("RenderResourceManager", "等待加载线程结束...");
+        LOG_DEBUG("RenderResourceManager", "等待加载线程结束...");
         m_loadingThread.join();
-        LOG_INFO("RenderResourceManager", "加载线程已结束");
+        LOG_DEBUG("RenderResourceManager", "加载线程已结束");
     }
 
-    LOG_INFO("RenderResourceManager", "释放所有 GPU 资源...");
+    LOG_DEBUG("RenderResourceManager", "释放所有 GPU 资源...");
     ReleaseAllResources();
     m_defaultSampler.reset();  // 在设备销毁前释放默认采样器
     m_initialized = false;
-    LOG_INFO("RenderResourceManager", "渲染资源管理器已关闭");
+    LOG_DEBUG("RenderResourceManager", "渲染资源管理器已关闭");
 }
 
 std::shared_ptr<ITexture> RenderResourceManager::LoadTexture(const std::string& filename, bool generateMips) {
@@ -250,7 +250,7 @@ bool RenderResourceManager::CompileShader(const ShaderDesc& desc, std::string* e
 
 std::shared_ptr<IPipeline> RenderResourceManager::CreatePipeline(const PipelineDesc& desc) {
     if (!desc.name.empty()) {
-        LOG_INFO("RenderResourceManager", "正在创建管线: {0}", desc.name);
+        LOG_DEBUG("RenderResourceManager", "正在创建管线: {0}", desc.name);
     }
 
     if (desc.computeShader && !desc.vertexShader && !desc.pixelShader) {
@@ -581,7 +581,7 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
         {
             auto shaderTypeName = (desc.type == ShaderType::Vertex) ? "Vertex" : "Pixel";
             auto magicHex = static_cast<unsigned long>(spirv_ptr[0]);
-            LOG_INFO("RenderResourceManager", "加载内嵌 SPIR-V: name={0} type={1} | size={2} bytes ({3} words) | magic=0x{4:08X}",
+            LOG_DEBUG("RenderResourceManager", "加载内嵌 SPIR-V: name={0} type={1} | size={2} bytes ({3} words) | magic=0x{4:08X}",
                 filename, shaderTypeName, spirv_size, spirv_size / sizeof(uint32_t), magicHex);
             if (spirv_ptr[0] != 0x07230203) {
                 LOG_WARNING("RenderResourceManager", "内嵌 SPIR-V magic number 异常: 0x{0:08X} (预期 0x07230203)", magicHex);
@@ -635,10 +635,10 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
     {
         auto magicHex = static_cast<unsigned long>(magic);
         if (!absPath.empty()) {
-            LOG_INFO("RenderResourceManager", "加载 SPIR-V: {0} | size={1} bytes | magic=0x{2:08X}",
+            LOG_DEBUG("RenderResourceManager", "加载 SPIR-V: {0} | size={1} bytes | magic=0x{2:08X}",
                 absPath.string(), size, magicHex);
         } else {
-            LOG_INFO("RenderResourceManager", "加载 SPIR-V: {0} | magic=0x{1:08X}", filename, magicHex);
+            LOG_DEBUG("RenderResourceManager", "加载 SPIR-V: {0} | magic=0x{1:08X}", filename, magicHex);
         }
 
         if (magic != 0x07230203) {

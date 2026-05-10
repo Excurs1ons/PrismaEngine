@@ -21,7 +21,7 @@ void WorkerThread::Start()
 
     m_shouldStop.store(false);
     m_thread = std::thread(&WorkerThread::Run, this);
-    LOG_INFO("WorkerThread", "线程已启动");
+    LOG_DEBUG("WorkerThread", "线程已启动");
 }
 
 void WorkerThread::Stop()
@@ -31,14 +31,14 @@ void WorkerThread::Stop()
     }
 
     m_shouldStop.store(true);
-    LOG_INFO("WorkerThread", "线程停止信号已发送");
+    LOG_DEBUG("WorkerThread", "线程停止信号已发送");
 }
 
 void WorkerThread::Join()
 {
     if (m_thread.joinable()) {
         m_thread.join();
-        LOG_INFO("WorkerThread", "线程已结束");
+        LOG_DEBUG("WorkerThread", "线程已结束");
     }
 }
 
@@ -70,11 +70,11 @@ void WorkerThread::Run()
 void WorkerThread::OnStart()
 {
     m_running.store(true);
-    LOG_INFO("WorkerThread", "线程开始运行");
+    LOG_DEBUG("WorkerThread", "线程开始运行");
 }
 
 void WorkerThread::OnStop()
 {
     m_running.store(false);
-    LOG_INFO("WorkerThread", "线程已停止");
+    LOG_DEBUG("WorkerThread", "线程已停止");
 }

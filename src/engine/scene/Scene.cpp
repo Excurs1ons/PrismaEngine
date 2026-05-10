@@ -72,7 +72,7 @@ std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
 
 void Scene::SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera) {
     m_mainCamera = std::move(camera);
-    LOG_INFO("Scene", "主相机已设置为 {0}", m_mainCamera ? "有效相机" : "nullptr");
+    LOG_DEBUG("Scene", "主相机已设置为 {0}", m_mainCamera ? "有效相机" : "nullptr");
 }
 
 bool Scene::Deserialize(const std::string& path) {
@@ -98,7 +98,7 @@ bool Scene::Deserialize(const std::string& path) {
         AddGameObject(go);
     }
 
-    LOG_INFO("Scene", "场景已加载: {0} ({1} 个对象)", sfd.name, m_gameObjects.size());
+    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个对象)", sfd.name, m_gameObjects.size());
     return true;
 }
 
