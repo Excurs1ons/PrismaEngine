@@ -621,7 +621,7 @@ std::unique_ptr<ISampler> VulkanResourceFactory::CreateSamplerImpl(const Sampler
     return std::make_unique<VulkanSampler>(m_vkDevice, desc);
 }
 
-std::unique_ptr<ISwapChain> VulkanResourceFactory::CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, bool vsync) {
+std::unique_ptr<ISwapChain> VulkanResourceFactory::CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, PresentMode presentMode) {
     if (!m_device || !windowHandle || width == 0 || height == 0) {
         return nullptr;
     }
@@ -634,7 +634,7 @@ std::unique_ptr<ISwapChain> VulkanResourceFactory::CreateSwapChainImpl(void* win
     }
 
     auto swapChain = std::make_unique<VulkanSwapChain>(m_device);
-    if (swapChain->Initialize(windowHandle, width, height, vsync) != 0) {
+    if (swapChain->Initialize(windowHandle, width, height, presentMode) != 0) {
         return nullptr;
     }
     return swapChain;

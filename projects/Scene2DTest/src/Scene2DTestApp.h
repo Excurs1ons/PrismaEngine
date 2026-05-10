@@ -16,7 +16,12 @@ namespace Prisma {
 class Scene2DTestApp : public Application {
 public:
     Scene2DTestApp();
+    Scene2DTestApp(const ApplicationSpecification& spec);
     ~Scene2DTestApp() override = default;
+
+    static ApplicationSpecification LoadSpecification(const std::string& filePath);
+
+    void SetAutoQuit(bool quit) { m_autoQuit = quit; }
 
     // Application 接口
     int OnInitialize() override;
@@ -25,6 +30,8 @@ public:
     void OnEvent(Event& e) override;
 
 private:
+    bool LoadScene(const std::string& filePath);
+
     std::shared_ptr<Graphic::OrthographicCamera> m_camera;
     float m_totalTime = 0.0f;
     int m_frameCount = 0;
@@ -40,6 +47,8 @@ private:
         float rotationSpeed;
     };
     std::vector<TestSprite> m_sprites;
+
+    bool m_autoQuit = false;
 
     // GPU 信息（仅在初始化时获取一次）
     std::string m_gpuName;

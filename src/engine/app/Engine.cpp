@@ -130,6 +130,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
         props.Title = appSpec.Name;
         props.Width = appSpec.Width;
         props.Height = appSpec.Height;
+        props.Resizable = appSpec.Resizable;
+        props.fullScreenMode = appSpec.Fullscreen ? FullScreenMode::FullScreen : FullScreenMode::Window;
 
         m_Window = Window::Create(props);
         if (!m_Window) {
@@ -143,7 +145,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         rDesc.height = m_Window->GetHeight();
         // === 引擎级开关（后续可改为配置文件） ===
         rDesc.enableDebug      = false;
-        rDesc.enableVSync      = false;
+        rDesc.presentMode      = appSpec.PresentMode;
         rDesc.enableValidation = false;  // true=开 Vulkan 验证层(大幅降低性能)
         
         m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
@@ -183,6 +185,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
     }
 
     if (m_CurrentApp->OnInitialize() != 0) return -1;
+
+    // 应用应用级规格到引擎 (如果是硬编码 spec 没设，现在通过 appSpec 同步)
+    auto& actualAppSpec = m_CurrentApp->GetSpecification();
+    if (m_Spec.MaxFPS == 0) m_Spec.MaxFPS = actualAppSpec.MaxFPS;
 
     double lastFrameTime = Platform::GetTimeSeconds();
 
@@ -308,9 +314,9 @@ void Engine::Shutdown() {
     {
         int idx = 0;
         for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) {
-            const char* name = typeid(**it).name();
+            const char* name = (*it)->GetName();
             if (it->get() == m_RenderSystem) {
-                LOG_INFO("Engine", "跳过 RenderSystem ({}) [{}]", idx, name);
+                LOG_INFO("Engine", "跳过 RenderSystem (idx:{}) [{}]", idx, name);
                 continue;
             }
             LOG_INFO("Engine", "关闭子系统 #{} [{}]...", idx, name);

@@ -38,7 +38,7 @@ public:
     std::unique_ptr<IPipelineState> CreatePipelineStateImpl() override;
     std::unique_ptr<ISampler> CreateSamplerImpl(const SamplerDesc& desc) override;
 
-    std::unique_ptr<ISwapChain> CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, bool vsync) override;
+    std::unique_ptr<ISwapChain> CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, PresentMode presentMode) override;
     std::unique_ptr<IFence> CreateFenceImpl() override;
 
     std::vector<std::unique_ptr<ITexture>> CreateTexturesBatch(const TextureDesc* descs, uint32_t count) override;

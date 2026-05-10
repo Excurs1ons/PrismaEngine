@@ -1,0 +1,52 @@
+{
+  "name": "2D Test Scene",
+  "camera": {
+    "projection": {
+      "left": 0.0,
+      "right": 800.0,
+      "bottom": 0.0,
+      "top": 600.0
+    }
+  },
+  "settings": {
+    "clearColor": [0.1, 0.1, 0.1, 1.0],
+    "showGrid": true
+  },
+  "sprites": [
+    {
+      "position": [200.0, 200.0],
+      "size": [100.0, 100.0],
+      "color": [1.0, 0.2, 0.2, 1.0],
+      "rotation": 0.0,
+      "rotationSpeed": 45.0
+    },
+    {
+      "position": [400.0, 300.0],
+      "size": [120.0, 80.0],
+      "color": [0.2, 1.0, 0.2, 1.0],
+      "rotation": 0.0,
+      "rotationSpeed": -60.0
+    },
+    {
+      "position": [600.0, 450.0],
+      "size": [90.0, 90.0],
+      "color": [0.2, 0.4, 1.0, 1.0],
+      "rotation": 0.0,
+      "rotationSpeed": 30.0
+    },
+    {
+      "position": [100.0, 500.0],
+      "size": [60.0, 60.0],
+      "color": [1.0, 1.0, 0.2, 1.0],
+      "rotation": 0.0,
+      "rotationSpeed": 90.0
+    },
+    {
+      "position": [700.0, 100.0],
+      "size": [80.0, 80.0],
+      "color": [1.0, 0.4, 0.8, 1.0],
+      "rotation": 0.0,
+      "rotationSpeed": -120.0
+    }
+  ]
+}

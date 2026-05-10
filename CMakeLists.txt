@@ -26,7 +26,7 @@ set(CMAKE_PROJECT_TOP_LEVEL_INCLUDES "")
 project(PRISMA
     VERSION 1.0.0
     DESCRIPTION "PrismaEngine - 现代跨平台游戏引擎"
-    LANGUAGES CXX
+    LANGUAGES C CXX
 )
 
 # 强制开启位置无关代码 (Position Independent Code)，确保静态库可以链接进动态库

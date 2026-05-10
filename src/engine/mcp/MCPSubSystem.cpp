@@ -33,8 +33,11 @@ int MCPSubSystem::Initialize() {
 }
 
 void MCPSubSystem::Shutdown() {
-    if (m_Server) m_Server->Stop();
-    LOG_INFO("MCP", "MCP subsystem shut down");
+    if (m_Server) {
+        m_Server->Stop();
+        m_Server.reset();
+        LOG_INFO("MCP", "MCP subsystem shut down");
+    }
 }
 
 void MCPSubSystem::Update(Timestep ts) {

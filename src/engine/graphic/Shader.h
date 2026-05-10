@@ -89,6 +89,7 @@ public:
     int Initialize() override { return 0; }
     void Shutdown() override { m_Shaders.clear(); }
     void Update(Prisma::Timestep ts) override;
+    const char* GetName() const override { return "ShaderLibrary"; }
 
     std::shared_ptr<Shader> Load(const std::string& name, const std::filesystem::path& path);
     std::shared_ptr<Shader> Get(const std::string& name);

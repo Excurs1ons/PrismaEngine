@@ -98,14 +98,14 @@ public:
     /// @param height 高度
     /// @param format 格式
     /// @param bufferCount 缓冲区数量
-    /// @param vsync 是否启用垂直同步
+    /// @param presentMode 呈现模式 (垂直同步模式)
     /// @return 交换链智能指针
     virtual std::unique_ptr<ISwapChain> CreateSwapChainImpl(void* windowHandle,
                                                             uint32_t width,
                                                             uint32_t height,
                                                             TextureFormat format,
                                                             uint32_t bufferCount,
-                                                            bool vsync) = 0;
+                                                            PresentMode presentMode) = 0;
 
     // === 围栏创建 ===
 

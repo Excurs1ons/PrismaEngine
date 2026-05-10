@@ -28,7 +28,7 @@ struct RenderSystemDesc {
     uint32_t height            = 900;
     bool enableDebug           = true;
     bool enableValidation      = true;
-    bool enableVSync           = true;
+    PresentMode presentMode    = PresentMode::VSync;
     uint32_t maxFramesInFlight = 3;
     std::string name           = "PrismaApp";
 };
@@ -46,6 +46,7 @@ public:
     int Initialize() override;
     void Shutdown() override;
     void Update(Timestep ts) override;
+    const char* GetName() const override { return "RenderSystem"; }
 
     // === 帧控制 ===
     void BeginFrame();

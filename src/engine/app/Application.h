@@ -5,6 +5,7 @@
 #include "core/Timestep.h"
 #include "core/Event.h"
 #include "Window.h"
+#include "graphic/interfaces/RenderTypes.h"
 
 namespace Prisma {
 
@@ -13,8 +14,13 @@ namespace Prisma {
  */
 struct ApplicationSpecification {
     std::string Name = "Prisma App";
+    std::string EntryScene = "";
     uint32_t Width = 1280;
     uint32_t Height = 720;
+    bool Fullscreen = false;
+    bool Resizable = true;
+    Graphic::PresentMode PresentMode = Graphic::PresentMode::VSync;
+    uint32_t MaxFPS = 0;
 };
 
 class ENGINE_API Application {

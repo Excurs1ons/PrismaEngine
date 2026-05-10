@@ -12,6 +12,7 @@ namespace Prisma {
 
 class ENGINE_API ThreadManager : public ManagerBase<ThreadManager> {
 public:
+    PRISMA_SUBSET_NAME("ThreadManager")
     static std::shared_ptr<ThreadManager> Get();
 
     static constexpr const char* GetStaticName() { return "ThreadManager"; }
