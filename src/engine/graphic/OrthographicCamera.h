@@ -43,6 +43,10 @@ public:
         m_far = farPlane;
         RecalculateMatrices();
     }
+    virtual void SetViewport(uint32_t width, uint32_t height) override {
+        SetProjection(0.0f, (float)width, 0.0f, (float)height);
+    }
+
     virtual void SetAspectRatio(float aspectRatio) override {
         // 对于正交相机，调整宽高比意味着调整左右边界
         float height = std::abs(m_top - m_bottom);

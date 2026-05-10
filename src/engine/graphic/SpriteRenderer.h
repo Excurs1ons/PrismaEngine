@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "Component.h"
 #include "math/MathTypes.h"
+#include <array>
 #include <memory>
 
 namespace Prisma {
@@ -56,6 +57,19 @@ public:
 
     void SetVisible(bool visible) { m_visible = visible; }
     bool IsVisible() const { return m_visible; }
+
+    // ========== 序列化 ==========
+
+    struct Data {
+        std::array<float, 4> color = {1,1,1,1};
+        std::array<float, 2> position = {0,0};
+        std::array<float, 2> size = {100,100};
+        float rotation = 0.0f;
+    };
+
+    const char* GetComponentTypeName() const override { return "SpriteRenderer"; }
+    Data GetData() const;
+    void SetData(const Data& d);
 
     // ========== 渲染 ==========
 

@@ -10,8 +10,8 @@ bool Shader::Load(const std::filesystem::path& path) {
     m_Reflection.Resources.clear();
     m_ResourceMap.clear();
     SetPath(path);
+    m_FilenameCache = path.string();
 
-    // 1. 加载 SPIR-V 字节码
     LOG_INFO("Shader", "正在从以下路径加载着色器字节码: {0}", path.string());
     if (std::filesystem::exists(path)) {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
@@ -29,7 +29,6 @@ bool Shader::Load(const std::filesystem::path& path) {
         }
     }
     
-    // 2. 模拟反射信息填充 (此处应由外部或工具生成)
     m_IsLoaded = !m_Bytecode.empty();
     return m_IsLoaded;
 }
@@ -41,43 +40,38 @@ void Shader::Unload() {
     m_ResourceMap.clear();
     m_RHIResource = nullptr;
     m_IsLoaded = false;
+    m_FilenameCache.clear();
 }
 
 const ShaderResource* Shader::FindResource(const std::string& name) const {
     if (m_RHIResource) return m_RHIResource->FindResource(name);
-
     auto it = m_ResourceMap.find(name);
-    if (it != m_ResourceMap.end()) {
-        return &m_Reflection.Resources[it->second];
-    }
-    return nullptr;
+    return (it != m_ResourceMap.end()) ? &m_Reflection.Resources[it->second] : nullptr;
 }
 
 const ShaderResource* Shader::FindResourceByBindPoint(uint32_t bindPoint, uint32_t space) const {
     if (m_RHIResource) return m_RHIResource->FindResourceByBindPoint(bindPoint, space);
-
     for (const auto& res : m_Reflection.Resources) {
         if (res.Binding == bindPoint && res.Set == space) return &res;
     }
     return nullptr;
 }
 
-// === ShaderLibrary 实现 ===
+const std::string& Shader::GetEntryPoint() const { static const std::string main = "main"; return main; }
+const std::string& Shader::GetTarget() const { static const std::string empty = ""; return empty; }
+const std::string& Shader::GetSource() const { static const std::string empty = ""; return empty; }
+const ShaderCompileOptions& Shader::GetCompileOptions() const { static const ShaderCompileOptions opt{}; return opt; }
 
 std::shared_ptr<Shader> ShaderLibrary::Load(const std::string& name, const std::filesystem::path& path) {
     auto existing = Get(name);
     if (existing) return existing;
-
     auto shader = std::make_shared<Shader>();
     shader->SetName(name);
     if (shader->Load(path)) {
         m_Shaders[name] = shader;
-        if (std::filesystem::exists(path)) {
-            m_lastWriteTimes[name] = std::filesystem::last_write_time(path);
-        }
+        if (std::filesystem::exists(path)) m_lastWriteTimes[name] = std::filesystem::last_write_time(path);
         return shader;
     }
-
     return nullptr;
 }
 
@@ -90,7 +84,6 @@ void ShaderLibrary::Update(Prisma::Timestep ts) {
     m_accumulatedTime += ts.GetSeconds();
     if (m_accumulatedTime >= 5.0f) {
         m_accumulatedTime = 0.0f;
-        // 热重载逻辑...
     }
 }
 

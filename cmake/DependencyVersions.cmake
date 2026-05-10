@@ -23,6 +23,10 @@ set(PRISMA_DEP_GLM_VERSION "1.0.2")
 # GitHub: https://github.com/nlohmann/json
 set(PRISMA_DEP_NLOHMANN_JSON_VERSION "v3.12.0")
 
+# Glaze - 极速 JSON C++ 库
+# GitHub: https://github.com/stephenberry/glaze
+set(PRISMA_DEP_GLAZE_VERSION "v7.5.0")
+
 # stb - 图像加载库 (header-only)
 # GitHub: https://github.com/nothings/stb
 # 锁定到具体 commit 而非 master 分支

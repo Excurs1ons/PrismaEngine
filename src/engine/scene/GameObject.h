@@ -12,6 +12,17 @@ class Component;
 class ENGINE_API GameObject : public std::enable_shared_from_this<GameObject>
 {
 public:
+    // ── 序列化数据结构 ──
+    struct ComponentEntry {
+        std::string type;
+        std::string dataJson;  // Component::Data 序列化为 JSON 字符串
+    };
+    struct Data {
+        std::string name;
+        Transform::Data transform;
+        std::vector<ComponentEntry> components;
+    };
+
     std::string name;
     
     GameObject();
@@ -41,6 +52,11 @@ public:
     }
 
     std::shared_ptr<Transform> GetTransform() const { return m_Transform; }
+    const std::vector<std::shared_ptr<Component>>& GetComponents() const { return m_Components; }
+
+    // 序列化
+    Data GetData() const;
+    void SetData(const Data& d);
 
 private:
     std::shared_ptr<Transform> m_Transform;

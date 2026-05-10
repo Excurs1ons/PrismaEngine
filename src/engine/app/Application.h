@@ -48,6 +48,7 @@ public:
     
     // --- Accessors ---
     const ApplicationSpecification& GetSpecification() const { return m_Spec; }
+    ApplicationSpecification& GetSpecification() { return m_Spec; }
     LayerStack& GetLayerStack() { return m_LayerStack; }
 
     void PushLayer(Layer* layer);

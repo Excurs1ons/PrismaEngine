@@ -15,6 +15,9 @@ public:
     virtual void Initialize(){};
     virtual void Update([[maybe_unused]] Timestep ts) {}
     virtual void Shutdown(){};
+
+    // 返回组件类型名称（用于序列化），默认返回 nullptr 表示不可序列化
+    virtual const char* GetComponentTypeName() const { return nullptr; }
     
     void SetOwner(GameObject* gameObject) { this->owner = gameObject; }
     void Owner(GameObject* gameObject) {

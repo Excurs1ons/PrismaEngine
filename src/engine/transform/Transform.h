@@ -2,12 +2,19 @@
 #include "Component.h"
 #include "Logger.h"
 #include "math/MathTypes.h"
+#include <array>
 namespace Prisma {
 class GameObject;  // 前向声明以避免循环依赖
 
 class ENGINE_API Transform : public Component
 {
 public:
+    struct Data {
+        std::array<float, 3> position = {0,0,0};
+        std::array<float, 4> rotation = {0,0,0,1};  // quat x,y,z,w
+        std::array<float, 3> scale = {1,1,1};
+    };
+
     Transform() : m_Position(0.0f), m_Rotation(1.0f, 0.0f, 0.0f, 0.0f), m_Scale(1.0f), m_Matrix(1.0f), m_Dirty(true) {}
 
     // Setters that trigger dirty flag
@@ -19,6 +26,11 @@ public:
     [[nodiscard]] const Vector3& GetPosition() const { return m_Position; }
     [[nodiscard]] const Quaternion& GetRotation() const { return m_Rotation; }
     [[nodiscard]] const Vector3& GetScale() const { return m_Scale; }
+
+    // 序列化
+    const char* GetComponentTypeName() const override { return "Transform"; }
+    Data GetData() const;
+    void SetData(const Data& d);
 
     // 按需计算矩阵，缓存结果
     [[nodiscard]] const Matrix4x4& GetMatrix() {

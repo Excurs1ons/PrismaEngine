@@ -81,7 +81,7 @@ void VulkanCommandBuffer::BindDescriptorSet(uint32_t set, IDescriptorSet* descri
     vkCmdBindDescriptorSets(m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_currentLayout, set, 1, &ds, 0, nullptr);
 }
 
-void VulkanCommandBuffer::PushConstants(ShaderType stage, const void* data, uint32_t size) {
+void VulkanCommandBuffer::PushConstants([[maybe_unused]] ShaderType stage, const void* data, uint32_t size) {
     if (!m_currentLayout) return;
     VkShaderStageFlags flag = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     vkCmdPushConstants(m_cmd, m_currentLayout, flag, 0, size, data);
