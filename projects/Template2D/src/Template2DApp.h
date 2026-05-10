@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Application.h"
+#include "graphic/CameraComponent.h"
 #include "graphic/OrthographicCamera.h"
 #include "graphic/RenderSystem.h"
 #include <memory>
@@ -32,7 +33,7 @@ public:
 private:
     bool LoadScene(const std::string& filePath);
 
-    std::shared_ptr<Graphic::OrthographicCamera> m_camera;
+    std::shared_ptr<CameraComponent> m_CameraComponent;
     float m_totalTime = 0.0f;
     int m_frameCount = 0;
     float m_fpsTimer = 0.0f;

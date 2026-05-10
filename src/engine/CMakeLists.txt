@@ -19,6 +19,7 @@ set(CORE_SOURCES
     app/Engine.cpp
     app/EngineLauncher.cpp
     app/Application.cpp
+    app/ECSApplication.cpp
 
     # Threading
     threading/JobSystem.cpp
@@ -89,6 +90,7 @@ set(CORE_SOURCES
     core/AssetManager.cpp
     core/AssetDatabase.cpp
     core/ECS.cpp
+    core/Serialization.cpp
     core/Layer.cpp
     core/LayerStack.cpp
     core/UUID.cpp
@@ -105,6 +107,7 @@ set(CORE_SOURCES
     # Graphic
     graphic/Renderer.cpp
     graphic/Renderer2D.cpp
+    graphic/CameraComponent.cpp
     graphic/RenderSystem.cpp
     graphic/RenderCommandContext.cpp
     graphic/RenderComponent.cpp
@@ -175,6 +178,7 @@ set(CORE_HEADERS
     app/Engine.h
     app/EngineLauncher.h
     app/Application.h
+    app/ECSApplication.h
 
     # Threading
     threading/JobSystem.h
@@ -320,6 +324,9 @@ set(CORE_HEADERS
     config/AudioBackendConfig.h
     config/EngineConfig.h
     config/RenderBackendConfig.h
+
+    # Graphic
+    graphic/CameraComponent.h
 
     # PCH
     pch.h
