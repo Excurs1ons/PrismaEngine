@@ -1,6 +1,7 @@
 #pragma once
 #include "Export.h"
 #include "Transform.h"
+#include <glaze/json/generic.hpp>
 #include <memory>
 #include <string>
 #include <vector>
@@ -15,7 +16,7 @@ public:
     // ── 序列化数据结构 ──
     struct ComponentEntry {
         std::string type;
-        std::string dataJson;  // Component::Data 序列化为 JSON 字符串
+        glz::generic data;  // Component::Data 的通用 JSON 表示
     };
     struct Data {
         std::string name;

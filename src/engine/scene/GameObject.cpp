@@ -10,7 +10,7 @@ template <>
 struct glz::meta<Prisma::GameObject::ComponentEntry> {
     static constexpr auto value = glz::object(
         "type", &Prisma::GameObject::ComponentEntry::type,
-        "data", &Prisma::GameObject::ComponentEntry::dataJson
+        "data", &Prisma::GameObject::ComponentEntry::data
     );
 };
 
@@ -79,7 +79,8 @@ GameObject::Data GameObject::GetData() const {
 
         ComponentEntry entry;
         entry.type = std::string(typeName);
-        entry.dataJson = reg.SerializeComponent(*comp);
+        auto json = reg.SerializeComponent(*comp);
+        if (!json.empty()) glz::read_json(entry.data, json);
         d.components.push_back(std::move(entry));
     }
     return d;
@@ -97,8 +98,9 @@ void GameObject::SetData(const Data& d) {
         comp->SetOwner(this);
         comp->Initialize();
 
-        if (!entry.dataJson.empty()) {
-            reg.DeserializeComponent(*comp, entry.type, entry.dataJson);
+        auto json = entry.data.dump();
+        if (json) {
+            reg.DeserializeComponent(*comp, entry.type, *json);
         }
 
         m_Components.push_back(comp);
