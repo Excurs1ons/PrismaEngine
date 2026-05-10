@@ -177,6 +177,7 @@ set(CORE_HEADERS
     # App
     app/CommandLineParser.h
     app/Engine.h
+    app/ProjectConfig.h
     app/EngineLauncher.h
     app/Application.h
     app/ECSApplication.h
