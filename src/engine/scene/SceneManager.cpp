@@ -2,6 +2,8 @@
 #include "Scene.h"
 #include "logger/Logger.h"
 #include "graphic/OrthographicCamera.h"
+#include "core/AssetManager.h"
+#include "app/Engine.h"
 
 namespace Prisma {
 
@@ -39,9 +41,16 @@ Scene* SceneManager::GetCurrentScene() const {
 }
 
 bool SceneManager::LoadFromFile(const std::string& path) {
-    // 让 Scene::Deserialize 创建场景对象
+    // 通过 AssetManager 解析实际文件路径
+    std::string actualPath = path;
+    auto assetMgr = Engine::Get().GetAssetManager();
+    if (assetMgr) {
+        auto found = assetMgr->FindResource(path);
+        if (found) actualPath = found->string();
+    }
+
     auto newScene = std::make_shared<Scene>();
-    if (!newScene->Deserialize(path)) {
+    if (!newScene->Deserialize(actualPath)) {
         LOG_ERROR("SceneManager", "从文件加载场景失败: {0}", path);
         return false;
     }
