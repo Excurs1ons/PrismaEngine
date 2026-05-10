@@ -72,6 +72,7 @@ private:
     // 手柄状态
     std::array<GamepadState, MAX_GAMEPADS> m_gamepadStates{};
     SDL_JoystickID m_gamepadIds[MAX_GAMEPADS] = {};
+    SDL_Gamepad* m_openGamepads[MAX_GAMEPADS] = {}; // 缓存指针
 
     // 文本输入
     std::string m_textInput;
