@@ -1,13 +1,14 @@
 #pragma once
 
 #include "ECS.h"
-#include "Components.h"
 #include <string>
 #include <memory>
 #include <functional>
 #include <unordered_map>
 
 namespace Prisma {
+    class Scene; // 前置声明 GameObject 模式的 Scene
+
 namespace Core {
 
 // 序列化格式
