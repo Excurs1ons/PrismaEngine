@@ -16,6 +16,7 @@
 #include <typeinfo>
 #include <filesystem>
 #include <glaze/glaze.hpp>
+#include "app/ProjectConfig.h"
 #include "threading/ThreadManager.h"
 #include "app/CommandLineParser.h"
 #include "scene/Scene.h"
@@ -29,18 +30,6 @@
 #include "mcp/transport/TransportTCP.h"
 #endif
 
-namespace Prisma {
-    // 资产搜索路径配置结构
-    struct ProjectAssetsConfig { 
-        std::vector<std::string> assets; 
-    };
-}
-
-// Glaze 特化 (修复语法错误，移除 invalid using enum)
-template <>
-struct glz::meta<Prisma::ProjectAssetsConfig> {
-    static constexpr auto value = glz::object("assets", &Prisma::ProjectAssetsConfig::assets);
-};
 
 namespace Prisma {
 
@@ -114,23 +103,6 @@ int Engine::Initialize() {
         }
     }
 
-    // 从 project.json 读取资产搜索路径
-    if (m_AssetManager) {
-        std::vector<std::string> projPaths = {"project.json", "assets/project.json"};
-        for (const auto& p : projPaths) {
-            if (std::filesystem::exists(p)) {
-                ProjectAssetsConfig pac;
-                std::string buffer;
-                auto err = glz::read_file_json(pac, p, buffer);
-                if (!err) {
-                    for (auto& ap : pac.assets) m_AssetManager->AddSearchPath(ap);
-                    LOG_INFO("Engine", "从 {0} 加载了 {1} 个资产搜索路径", p, pac.assets.size());
-                }
-                break;
-            }
-        }
-    }
-
     m_Initialized = true;
     return 0;
 }
@@ -140,6 +112,40 @@ int Engine::Run(std::unique_ptr<Application> app) {
     
     m_CurrentApp = std::move(app);
     m_Running = true;
+
+    // 从 project.json 读取项目配置（窗口参数、入口场景、资产路径）
+    {
+        auto& spec = m_CurrentApp->GetSpecification();
+        std::vector<std::string> projPaths = {
+            "assets/project.json",
+            "project.json",
+            "projects/Template2D/assets/project.json"
+        };
+        for (const auto& p : projPaths) {
+            if (std::filesystem::exists(p)) {
+                ProjectConfig config;
+                std::string buf;
+                auto err = glz::read_file_json(config, p, buf);
+                if (!err) {
+                    spec.Name        = config.name;
+                    spec.EntryScene  = config.entryScene;
+                    spec.Width       = config.window.width;
+                    spec.Height      = config.window.height;
+                    spec.Fullscreen  = config.window.fullscreen;
+                    spec.Resizable   = config.window.resizable;
+                    spec.PresentMode = config.window.vsync;
+                    spec.MaxFPS      = config.window.maxFPS;
+                    if (m_AssetManager) {
+                        for (auto& ap : config.assets)
+                            m_AssetManager->AddSearchPath(ap);
+                    }
+                    LOG_INFO("Engine", "项目配置已加载: {0} ({1}x{2})",
+                             config.name, config.window.width, config.window.height);
+                }
+                break;
+            }
+        }
+    }
 
     if (!m_Spec.Headless) {
         WindowProps props;
@@ -199,6 +205,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
                         if (camera) camera->SetViewport(event.GetWidth(), event.GetHeight());
                     }
                 }
+                if (m_CurrentApp) {
+                    m_CurrentApp->GetSpecification().Width  = event.GetWidth();
+                    m_CurrentApp->GetSpecification().Height = event.GetHeight();
+                }
                 return false;
             });
 
@@ -206,16 +216,21 @@ int Engine::Run(std::unique_ptr<Application> app) {
         });
     }
 
-    if (m_CurrentApp->OnInitialize() != 0) return -1;
-
-    // 场景加载后，将主相机视口同步到实际窗口尺寸
+    // 自动加载入口场景
     if (m_SceneManager) {
+        auto& spec = m_CurrentApp->GetSpecification();
+        if (!spec.EntryScene.empty()) {
+            m_SceneManager->LoadFromFile(spec.EntryScene);
+        }
+        // 相机视口同步到实际窗口尺寸
         auto* scene = m_SceneManager->GetCurrentScene();
         if (scene) {
             auto camera = scene->GetMainCamera();
             if (camera) camera->SetViewport(m_Window->GetWidth(), m_Window->GetHeight());
         }
     }
+
+    if (m_CurrentApp->OnInitialize() != 0) return -1;
 
     auto& actualAppSpec = m_CurrentApp->GetSpecification();
     if (m_Spec.MaxFPS == 0) m_Spec.MaxFPS = actualAppSpec.MaxFPS;
