@@ -82,12 +82,6 @@ set(CORE_SOURCES
     tilemap/format/TsxParser.cpp
     tilemap/renderer/TilemapRenderer.cpp
 
-    # Scripting
-    scripting/MonoRuntime.cpp
-    scripting/CoreCLRHost.cpp
-    scripting/ScriptEngine.cpp
-    scripting/ScriptSystem.cpp
-
     # Core
     core/AssetManager.cpp
     core/AssetDatabase.cpp
@@ -173,6 +167,23 @@ set(CORE_SOURCES
     pch.cpp
 )
 
+
+# ========== C# Scripting (条件编译) ==========
+if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
+    set(PRISMA_SCRIPTING_SOURCES
+        scripting/MonoRuntime.cpp
+        scripting/CoreCLRHost.cpp
+        scripting/ScriptEngine.cpp
+        scripting/ScriptSystem.cpp
+    )
+    set(PRISMA_SCRIPTING_HEADERS
+        scripting/MonoRuntime.h
+        scripting/CoreCLRHost.h
+        scripting/ScriptEngine.h
+        scripting/ScriptSystem.h
+    )
+    list(APPEND CORE_SOURCES ${PRISMA_SCRIPTING_SOURCES})
+endif()
 
 # ========== 收集核心头文件 ==========
 set(CORE_HEADERS
@@ -283,12 +294,6 @@ set(CORE_HEADERS
     tilemap/renderer/TileGeometryBuilder.h
     tilemap/renderer/TilemapRenderer.h
 
-    # Scripting
-    scripting/MonoRuntime.h
-    scripting/CoreCLRHost.h
-    scripting/ScriptEngine.h
-    scripting/ScriptSystem.h
-
     # Core
     core/AssetManager.h
     core/Asset.h
@@ -339,6 +344,10 @@ set(CORE_HEADERS
     pch.h
 )
 
+if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
+    list(APPEND CORE_HEADERS ${PRISMA_SCRIPTING_HEADERS})
+endif()
+
 # ========== 创建引擎库 ==========
 
 # Linux 下为 LSP 生成 compile_commands.json
@@ -367,15 +376,38 @@ target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
 
-set_target_properties(Engine PROPERTIES OUTPUT_NAME Prisma)
+# C# Scripting 编译定义
+#   PRISMA_ENABLE_SCRIPTING=0 → OFF（不编译脚本子系统）
+#   PRISMA_ENABLE_SCRIPTING=1 → MONO（Mono 运行时）
+#   PRISMA_ENABLE_SCRIPTING=2 → CORECLR（.NET CoreCLR 宿主）
+if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO")
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_SCRIPTING=1)
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_MONO=1)
+    message(STATUS "Scripting: Mono 运行时")
+elseif(PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_SCRIPTING=2)
+    message(STATUS "Scripting: .NET CoreCLR 运行时")
+else()
+    target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_SCRIPTING=0)
+    message(STATUS "Scripting: 关闭")
+endif()
 
+set_target_properties(Engine PROPERTIES OUTPUT_NAME Prisma)
 if(MSVC)
     set_target_properties(Engine PROPERTIES
         ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
         LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     )
-    target_compile_options(Engine PUBLIC /utf-8)
+    target_compile_options(Engine PRIVATE 
+        /utf-8
+        $<$<CONFIG:Release>:/O2 /Oi /Gy>
+        $<$<CONFIG:MinSizeRel>:/O1 /Oi /Gy>
+        $<$<CONFIG:RelWithDebInfo>:/O2 /Oi /Gy>
+    )
+    # Release 也生成 PDB 符号文件（用于崩溃转储分析）
+    target_compile_options(Engine PRIVATE $<$<CONFIG:Release>:/Zi>)
+    target_link_options(Engine PRIVATE $<$<CONFIG:Release>:/DEBUG>)
 endif()
 
 # ========== 链接依赖项 ==========

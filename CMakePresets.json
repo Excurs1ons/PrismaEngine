@@ -167,7 +167,7 @@
       "toolset": "host=x64",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "PRISMA_BUILD_SHARED_LIBS": "OFF"
+        "PRISMA_BUILD_SHARED_LIBS": "ON"
       }
     },
     {

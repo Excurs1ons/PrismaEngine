@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "Export.h"
+
 namespace Prisma {
 namespace Scripting {
 
@@ -60,7 +62,7 @@ struct PrismaAPI {
 // ScriptEngine — 脚本引擎
 // ============================================================================
 
-class ScriptEngine {
+class ENGINE_API ScriptEngine {
 public:
     ScriptEngine() = default;
     ~ScriptEngine() { Shutdown(); }
@@ -83,16 +85,12 @@ public:
     const PrismaAPI& GetAPI() const { return m_api; }
 
     /** @brief 获取 C# 控制的相机位置（用于同步到渲染相机） */
-    void GetCameraPosition(float& x, float& y) const { x = m_cameraPosX; y = m_cameraPosY; }
+    void GetCameraPosition(float& x, float& y) const;
 
-    // ---- 实体数据访问（inline 避免链接跨库符号问题） ----
-    uint32_t GetEntityCount() const { return (uint32_t)m_entities.size(); }
-    EntityData* GetEntity(uint32_t id) {
-        return (id < m_entities.size()) ? &m_entities[id] : nullptr;
-    }
-    const EntityData* GetEntity(uint32_t id) const {
-        return (id < m_entities.size()) ? &m_entities[id] : nullptr;
-    }
+    // ---- 实体数据访问 ----
+    uint32_t GetEntityCount() const;
+    EntityData* GetEntity(uint32_t id);
+    const EntityData* GetEntity(uint32_t id) const;
 
 private:
     // ---- PrismaAPI 静态实现 ----
