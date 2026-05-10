@@ -219,6 +219,37 @@ void Template2DApp::OnRender() {
     // ---- 轴标签 ----
     Graphic::Renderer2D::DrawString("X", {winW - 50.0f, 15.0f}, 3.0f, {1.0f, 0.2f, 0.2f, 1.0f});
     Graphic::Renderer2D::DrawString("Y", {15.0f, winH - 50.0f}, 3.0f, {0.2f, 1.0f, 0.2f, 1.0f});
+    
+    // ---- 实时帧耗时与瓶颈分析 (左上角) ----
+    const auto& stats = Engine::Get().GetFrameStats();
+    char timingBuffer[128];
+    snprintf(timingBuffer, sizeof(timingBuffer), "BF=%.2fms Render=%.2fms EF=%.2fms Present=%.2fms Total=%.2fms",
+             stats.BeginFrameTime, stats.RenderTime, stats.EndFrameTime, stats.PresentTime, stats.TotalTime);
+    Graphic::Renderer2D::DrawString(timingBuffer, {80.0f, winH - 40.0f}, 1.5f, {1.0f, 1.0f, 0.0f, 1.0f});
+
+    // 瓶颈分析
+    std::string bottleneck = "Bottleneck: ";
+    Prisma::Color bottleneckColor = {0.0f, 1.0f, 1.0f, 1.0f}; // 默认青色
+
+    auto& engineSpec = Engine::Get().GetSpecification();
+    if (engineSpec.MaxFPS > 0 && stats.TotalTime >= (1000.0 / engineSpec.MaxFPS) * 0.95) {
+        bottleneck += "Frame Rate Limit (" + std::to_string(engineSpec.MaxFPS) + ")";
+        bottleneckColor = {1.0f, 0.5f, 0.0f, 1.0f}; // 橙色
+    } else if (engineSpec.PresentMode != Graphic::PresentMode::Immediate && stats.PresentTime > 1.0) {
+        bottleneck += "VSync (Locked)";
+        bottleneckColor = {0.0f, 0.8f, 1.0f, 1.0f}; // 天蓝色
+    } else if (stats.EndFrameTime > stats.RenderTime) {
+        bottleneck += "GPU (Submission/Driver)";
+        bottleneckColor = {1.0f, 0.2f, 0.2f, 1.0f}; // 红色
+    } else if (stats.RenderTime > 2.0) {
+        bottleneck += "CPU (Logic/Render Collection)";
+        bottleneckColor = {1.0f, 0.2f, 0.8f, 1.0f}; // 粉紫色
+    } else {
+        bottleneck += "None (Balanced)";
+        bottleneckColor = {0.2f, 1.0f, 0.2f, 1.0f}; // 绿色
+    }
+    Graphic::Renderer2D::DrawString(bottleneck, {80.0f, winH - 70.0f}, 1.5f, bottleneckColor);
+
     // 原点标记
     Graphic::Renderer2D::DrawQuad({0.0f, 0.0f}, {6.0f, 6.0f}, {1.0f, 1.0f, 1.0f, 0.8f});
 
