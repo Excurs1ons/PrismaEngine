@@ -9,7 +9,10 @@
     <OutputType>Exe</OutputType>
     <PublishTrimmed>true</PublishTrimmed>
     <TrimMode>link</TrimMode>
+    <!-- 逃逸舱：C++ CoreCLRHost 从原生代码调用 C#，修剪器默认关闭此功能 -->
+    <_EnableConsumingManagedCodeFromNativeHosting>true</_EnableConsumingManagedCodeFromNativeHosting>
   </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="../PrismaEngine.Core/PrismaEngine.Core.csproj">
       <Private>true</Private>
