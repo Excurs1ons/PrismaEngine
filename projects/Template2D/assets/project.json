@@ -1,0 +1,12 @@
+{
+    "name": "Template2D Serialized",
+    "entryScene": "scenes/2d_test.json",
+    "window": {
+        "width": 1920,
+        "height": 1080,
+        "fullscreen": true,
+        "resizable": true,
+        "vsync": "Mailbox",
+        "maxFPS": 0
+    }
+}

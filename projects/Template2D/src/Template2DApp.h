@@ -9,15 +9,15 @@
 namespace Prisma {
 
 /**
- * @brief 2D 场景测试模板
+ * @brief 2D 场景模板
  * 最小化 Renderer2D 使用示例，包含旋转彩色方块和文字渲染。
  * 作为新 2D 项目的起点模板。
  */
-class Scene2DTestApp : public Application {
+class Template2DApp : public Application {
 public:
-    Scene2DTestApp();
-    Scene2DTestApp(const ApplicationSpecification& spec);
-    ~Scene2DTestApp() override = default;
+    Template2DApp();
+    Template2DApp(const ApplicationSpecification& spec);
+    ~Template2DApp() override = default;
 
     static ApplicationSpecification LoadSpecification(const std::string& filePath);
 

@@ -2,7 +2,7 @@
 
 ## 问题描述
 
-在 2DTemplate (Scene2DTest) 项目中，点击窗口关闭按钮或按 ESC 退出时，引擎卡死在以下日志之后：
+在 2DTemplate (Template2D) 项目中，点击窗口关闭按钮或按 ESC 退出时，引擎卡死在以下日志之后：
 
 ```
 [INFO] [Engine] (Engine.cpp:277) 正在关闭引擎...
