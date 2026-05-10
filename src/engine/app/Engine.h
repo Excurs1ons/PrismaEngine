@@ -62,9 +62,12 @@ public:
         double EndFrameTime    = 0.0;
         double PresentTime     = 0.0;
         double TotalTime       = 0.0;
+        float  FPS             = 0.0f;
     };
 
     const FrameStats& GetFrameStats() const { return m_FrameStats; }
+    float GetFPS() const { return m_FrameStats.FPS; }
+    const std::string& GetGPUName() const { return m_GPUName; }
     
     // --- Window Management ---
     Window& GetWindow() { return *m_Window; }
@@ -130,6 +133,7 @@ private:
     bool m_Minimized = false;
 
     FrameStats m_FrameStats;
+    std::string m_GPUName;
 
     static Engine* s_Instance;
 };

@@ -49,8 +49,8 @@ public:
     // === 资源同步与屏障 ===
     void PipelineBarrier() override {}
 
-    // === 调试 ===
-    void BeginDebugGroup(const std::string& name) override {}
+    // === 调试 (修复接口匹配) ===
+    void BeginDebugGroup([[maybe_unused]] const std::string& name) override { }
     void EndDebugGroup() override {}
 
     VkCommandBuffer GetVkCommandBuffer() const { return m_cmd; }

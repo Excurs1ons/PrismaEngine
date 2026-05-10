@@ -63,6 +63,10 @@ set(DISPATCH_EXAMPLES OFF CACHE BOOL "" FORCE)
 Prisma_Declare_Dependency(xxhash https://github.com/Cyan4973/xxHash.git ${PRISMA_DEP_XXHASH_VERSION})
 FetchContent_MakeAvailable(xxhash)
 
+# Glaze - 极速 JSON 库 (用于替代 nlohmann/json 作为最佳实践)
+Prisma_Declare_Dependency(glaze https://github.com/stephenberry/glaze.git ${PRISMA_DEP_GLAZE_VERSION})
+FetchContent_MakeAvailable(glaze)
+
 if(WIN32 AND PRISMA_BUILD_EDITOR)
     Prisma_Declare_Dependency(libdeflate https://github.com/ebiggers/libdeflate.git ${PRISMA_DEP_LIBDEFLATE_VERSION})
     Prisma_Declare_Dependency(openfbx https://github.com/nem0/OpenFBX.git ${PRISMA_DEP_OPENFBX_VERSION})

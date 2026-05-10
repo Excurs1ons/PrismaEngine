@@ -93,6 +93,7 @@ set(CORE_SOURCES
     core/Serialization.cpp
     core/Layer.cpp
     core/LayerStack.cpp
+    core/ComponentRegistry.cpp
     core/UUID.cpp
 
     # UI
@@ -294,6 +295,7 @@ set(CORE_HEADERS
     core/LayerStack.h
     core/Event.h
     core/Component.h
+    core/ComponentRegistry.h
     core/ISubSystem.h
     core/IWorld.h
     core/ManagerBase.h
@@ -376,6 +378,7 @@ target_link_libraries(Engine
     PUBLIC
         glm::glm-header-only
         nlohmann_json::nlohmann_json
+        glaze::glaze
         stb
         tinyxml2
         imgui::imgui

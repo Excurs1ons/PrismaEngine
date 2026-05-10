@@ -1,19 +1,13 @@
 #pragma once
 
 #include "Application.h"
-#include "graphic/CameraComponent.h"
-#include "graphic/OrthographicCamera.h"
-#include "graphic/RenderSystem.h"
+#include "graphic/SpriteRenderer.h"
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace Prisma {
 
-/**
- * @brief 2D 场景模板
- * 最小化 Renderer2D 使用示例，包含旋转彩色方块和文字渲染。
- * 作为新 2D 项目的起点模板。
- */
 class Template2DApp : public Application {
 public:
     Template2DApp();
@@ -21,7 +15,6 @@ public:
     ~Template2DApp() override = default;
 
     static ApplicationSpecification LoadSpecification(const std::string& filePath);
-
     void SetAutoQuit(bool quit) { m_autoQuit = quit; }
 
     // Application 接口
@@ -31,15 +24,7 @@ public:
     void OnEvent(Event& e) override;
 
 private:
-    bool LoadScene(const std::string& filePath);
-
-    std::shared_ptr<CameraComponent> m_CameraComponent;
-    float m_totalTime = 0.0f;
-    int m_frameCount = 0;
-    float m_fpsTimer = 0.0f;
-    float m_currentFps = 0.0f;
-
-    // 测试场景元素
+    // 动态精灵（含 rotationSpeed，由 App 管理）
     struct TestSprite {
         Vector2 position;
         Vector2 size;
@@ -49,10 +34,10 @@ private:
     };
     std::vector<TestSprite> m_sprites;
 
-    bool m_autoQuit = false;
+    // 场景精灵缓存（SceneManager 加载后的 SpriteRenderer 引用）
+    std::vector<std::shared_ptr<Graphic::SpriteRenderer>> m_sceneSprites;
 
-    // GPU 信息（仅在初始化时获取一次）
-    std::string m_gpuName;
+    bool m_autoQuit = false;
 };
 
 } // namespace Prisma

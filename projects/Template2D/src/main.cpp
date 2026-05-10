@@ -34,8 +34,6 @@ int main(int argc, char* argv[]) {
     }
 
     spec.RefreshAssetDatabaseOnStartup = false;
-    spec.MaxFPS = 0; // 设为 0 以解除帧率限制
-
     auto app = std::make_unique<Prisma::Template2DApp>();
     app->SetAutoQuit(autoQuit);
 

@@ -17,6 +17,7 @@ public:
 
     Scene* GetCurrentScene() const;
     void CreateNewScene();
+    bool LoadFromFile(const std::string& path);
 
 private:
     std::shared_ptr<Scene> m_currentScene;

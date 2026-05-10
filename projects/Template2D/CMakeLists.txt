@@ -35,6 +35,7 @@ add_executable(${PROJECT_NAME}
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Engine
     SDL3::SDL3
+    glaze::glaze
 )
 
 # ========== 包含目录 ==========

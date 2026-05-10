@@ -53,6 +53,9 @@ public:
     // 设置宽高比
     virtual void SetAspectRatio(float aspectRatio) = 0;
 
+    // 设置视口尺寸（像素），相机据此自适应投影
+    virtual void SetViewport(uint32_t width, uint32_t height) = 0;
+
     // 更新相机（每帧调用）
     virtual void Update(Timestep ts) = 0;
 

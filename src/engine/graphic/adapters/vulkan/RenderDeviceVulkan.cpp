@@ -12,7 +12,15 @@
 
 #define VMA_IMPLEMENTATION
 #include <SDL3/SDL_vulkan.h>
+#if defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable: 4324) // structure was padded due to alignment specifier
+#pragma warning(disable: 4505) // unreferenced local function has been removed
+#endif
 #include <vk_mem_alloc.h>
+#if defined(_MSC_VER)
+#pragma warning(pop)
+#endif
 
 
 #include "app/Engine.h"

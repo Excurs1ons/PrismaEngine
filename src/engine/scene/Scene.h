@@ -41,6 +41,12 @@ public:
     // 设置主相机 (非拥有引用)
     void SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera);
 
+    // 从 JSONC 文件加载场景（含 GameObject + Camera）
+    bool Deserialize(const std::string& path);
+    
+    // 序列化场景到 JSON 文件
+    bool Serialize(const std::string& path) const;
+
 private:
     std::string m_Name = "Untitled";
     bool m_IsDirty = false;
