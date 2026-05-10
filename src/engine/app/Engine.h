@@ -20,7 +20,7 @@ class JobSystem;
 class AssetDatabase;
 namespace Input { class InputManager; }
 namespace Graphic { class RenderSystem; class IRenderResourceManager; }
-namespace Scripting { class MonoRuntime; }
+namespace Scripting { class CoreCLRHost; class ScriptEngine; class MonoRuntime; }
 namespace Core::ECS { class World; }
 class SceneManager;
 class PhysicsSystem;
@@ -82,6 +82,8 @@ public:
     PhysicsSystem* GetPhysicsSystem() { return m_PhysicsSystem; }
     JobSystem* GetJobSystem() { return m_JobSystem; }
     Scripting::MonoRuntime& GetMonoRuntime();
+    Scripting::CoreCLRHost& GetCoreCLRHost() { return *m_coreCLRHost; }
+    Scripting::ScriptEngine& GetScriptEngine() { return *m_scriptEngine; }
     Core::ECS::World& GetWorld();
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
@@ -134,6 +136,10 @@ private:
 
     FrameStats m_FrameStats;
     std::string m_GPUName;
+
+    // C# 脚本系统（unique_ptr 避免头文件包含膨胀）
+    std::unique_ptr<Scripting::CoreCLRHost> m_coreCLRHost;
+    std::unique_ptr<Scripting::ScriptEngine> m_scriptEngine;
 
     static Engine* s_Instance;
 };

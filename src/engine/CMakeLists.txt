@@ -84,6 +84,8 @@ set(CORE_SOURCES
 
     # Scripting
     scripting/MonoRuntime.cpp
+    scripting/CoreCLRHost.cpp
+    scripting/ScriptEngine.cpp
     scripting/ScriptSystem.cpp
 
     # Core
@@ -283,6 +285,8 @@ set(CORE_HEADERS
 
     # Scripting
     scripting/MonoRuntime.h
+    scripting/CoreCLRHost.h
+    scripting/ScriptEngine.h
     scripting/ScriptSystem.h
 
     # Core
