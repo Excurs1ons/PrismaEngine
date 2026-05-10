@@ -12,7 +12,7 @@ bool Shader::Load(const std::filesystem::path& path) {
     SetPath(path);
     m_FilenameCache = path.string();
 
-    LOG_INFO("Shader", "正在从以下路径加载着色器字节码: {0}", path.string());
+    LOG_DEBUG("Shader", "正在从以下路径加载着色器字节码: {0}", path.string());
     if (std::filesystem::exists(path)) {
         std::ifstream file(path, std::ios::binary | std::ios::ate);
         if (file.is_open()) {

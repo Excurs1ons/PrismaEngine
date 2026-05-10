@@ -34,7 +34,7 @@ int Template2DApp::OnInitialize() {
     }
 
     // 生成 20 个额外的动态测试精灵
-    LOG_INFO("Template2D", "正在生成 20 个额外的动态对象...");
+    LOG_DEBUG("Template2D", "正在生成 20 个额外的动态对象...");
     for (int i = 0; i < 20; ++i) {
         TestSprite s; 
         s.position = { (float)(rand() % m_Spec.Width), (float)(rand() % m_Spec.Height) };
@@ -134,6 +134,12 @@ void Template2DApp::OnRender() {
         static std::string pInf = "Loading..."; 
         static std::string resInfo = ""; 
         static std::string dcInfo = "";
+        static std::string sceneInfo = []() -> std::string {
+            auto* sm = Engine::Get().GetSceneManager();
+            auto* s = sm ? sm->GetCurrentScene() : nullptr;
+            return s ? "Scene: " + s->GetName() + " (" + std::to_string(s->GetGameObjects().size()) + " objects)"
+                     : "Scene: (none)";
+        }();
         static Prisma::Color pC = {0.2f, 1.0f, 0.2f, 1.0f}; 
         static float pT = 0.0f; static double lastT = 0.0;
         double nowT = Platform::GetTimeSeconds(); float dt = (lastT > 0) ? (float)(nowT - lastT) : 0.016f; lastT = nowT;
@@ -167,6 +173,7 @@ void Template2DApp::OnRender() {
         
         Graphic::Renderer2D::DrawString(timingInfo, hudPos(130.0f, winH - 45.0f), 1.5f, {0.2f, 1.0f, 0.2f, 1.0f});
         Graphic::Renderer2D::DrawString(pInf, hudPos(130.0f, winH - 85.0f), 1.5f, pC);
+        Graphic::Renderer2D::DrawString(sceneInfo, hudPos(30.0f, winH - 30.0f), 1.5f, {0.5f, 0.5f, 0.7f, 1.0f});
         float resW = Graphic::Renderer2D::GetStringWidth(resInfo, 3.0f);
         Graphic::Renderer2D::DrawString(resInfo, hudPos(winW - resW - 30.0f, winH - 50.0f), 3.0f, {0.4f, 0.7f, 0.4f, 1.0f});
         std::string gpuName = Engine::Get().GetGPUName();

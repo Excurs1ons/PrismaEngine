@@ -55,7 +55,7 @@ void ScriptSystem::Update(Prisma::Timestep ts) {
 }
 
 void ScriptSystem::Shutdown() {
-    LOG_INFO("ScriptSystem", "关闭脚本系统");
+    LOG_DEBUG("ScriptSystem", "关闭脚本系统");
     Engine::Get().GetMonoRuntime().Shutdown();
     m_initialized = false;
 }
@@ -64,7 +64,7 @@ bool ScriptSystem::LoadAssembly(const std::string& assemblyPath) {
     auto& runtime = Engine::Get().GetMonoRuntime();
     if (runtime.LoadAssembly("assembly", assemblyPath)) {
         m_loadedAssemblies.push_back(assemblyPath);
-        LOG_INFO("ScriptSystem", "成功加载程序集: {0}", assemblyPath);
+        LOG_DEBUG("ScriptSystem", "成功加载程序集: {0}", assemblyPath);
         return true;
     }
     LOG_ERROR("ScriptSystem", "加载程序集失败: {0}", assemblyPath);
@@ -93,7 +93,7 @@ void ScriptSystem::AddScript(Prisma::Core::ECS::EntityID entity, const std::stri
         scriptComp->scriptPaths.push_back(scriptPath);
         scriptComp->scriptInstances.push_back(std::make_shared<ManagedObject>(std::move(managedScript)));
         scriptComp->initialized = false;
-        LOG_INFO("ScriptSystem", "为实体 {0} 添加脚本: {1}", entity, scriptPath);
+        LOG_DEBUG("ScriptSystem", "为实体 {0} 添加脚本: {1}", entity, scriptPath);
     }
 }
 
@@ -114,7 +114,7 @@ void ScriptSystem::RemoveScript(Prisma::Core::ECS::EntityID entity, const std::s
 }
 
 void ScriptSystem::ReloadScripts() {
-    LOG_INFO("ScriptSystem", "重新加载所有脚本");
+    LOG_DEBUG("ScriptSystem", "重新加载所有脚本");
 
     auto* pool = Engine::Get().GetWorld().GetComponentManager().GetPool<ScriptComponent>();
     if (!pool) {
@@ -167,7 +167,7 @@ bool ScriptSystem::CompileScripts(const std::string& projectPath) {
         return false;
     }
 
-    LOG_INFO("ScriptSystem", "脚本项目扫描完成: {0}", projectPath);
+    LOG_DEBUG("ScriptSystem", "脚本项目扫描完成: {0}", projectPath);
     return true;
 }
 

@@ -70,7 +70,7 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
     static double lastLog = 0;
     double now = Platform::GetTimeSeconds();
     if (now - lastLog >= 5.0) {
-        LOG_INFO("OpaquePass", "绘制 {} 条命令, PSO={}, shaders ok={}",
+        LOG_DEBUG("OpaquePass", "绘制 {} 条命令, PSO={}, shaders ok={}",
                  commands.size(), (void*)m_defaultPipelineState.get(),
                  m_defaultVertexShader && m_defaultPixelShader);
         lastLog = now;

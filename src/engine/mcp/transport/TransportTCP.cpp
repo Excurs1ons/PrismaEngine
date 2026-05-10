@@ -156,7 +156,7 @@ void TransportTCP::acceptLoop() {
 
     char clientIP[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIP, INET_ADDRSTRLEN);
-    LOG_INFO("MCP", "TCP client connected from {}:{}", clientIP, ntohs(clientAddr.sin_port));
+    LOG_DEBUG("MCP", "TCP client connected from {}:{}", clientIP, ntohs(clientAddr.sin_port));
 
     // Start read loop for this client
     m_ReadThread = std::thread([this]() {
@@ -169,7 +169,7 @@ void TransportTCP::acceptLoop() {
 
             if (bytes <= 0) {
                 // Client disconnected
-                LOG_INFO("MCP", "TCP client disconnected");
+                LOG_DEBUG("MCP", "TCP client disconnected");
                 break;
             }
 

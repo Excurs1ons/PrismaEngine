@@ -36,7 +36,7 @@ void MCPSubSystem::Shutdown() {
     if (m_Server) {
         m_Server->Stop();
         m_Server.reset();
-        LOG_INFO("MCP", "MCP subsystem shut down");
+        LOG_DEBUG("MCP", "MCP subsystem shut down");
     }
 }
 

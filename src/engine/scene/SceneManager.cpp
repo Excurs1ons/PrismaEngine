@@ -9,7 +9,7 @@ namespace Prisma {
 
 int SceneManager::Initialize() {
     CreateNewScene();
-    LOG_INFO("Scene", "场景管理器已初始化。");
+    LOG_DEBUG("Scene", "场景管理器已初始化。");
     return 0;
 }
 
@@ -24,7 +24,7 @@ void SceneManager::Update(Timestep ts) {
 }
 
 void SceneManager::CreateNewScene() {
-    LOG_INFO("Scene", "正在创建新的空场景...");
+    LOG_DEBUG("Scene", "正在创建新的空场景...");
     m_currentScene = std::make_shared<Scene>();
     m_currentScene->SetName("未命名场景");
 

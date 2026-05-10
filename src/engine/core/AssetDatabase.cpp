@@ -42,7 +42,7 @@ bool AssetDatabase::Load(const std::string& dbPath) {
     m_guidToPath.clear();
 
     if (!fs::exists(m_dbPath)) {
-        LOG_INFO("AssetDB", "未找到元数据库文件，将创建新库。");
+        LOG_DEBUG("AssetDB", "未找到元数据库文件，将创建新库。");
         return true;
     }
 
@@ -80,7 +80,7 @@ void AssetDatabase::Save() {
         std::ofstream file(m_dbPath);
         file << j.dump(4);
         m_isDirty = false;
-        LOG_INFO("AssetDB", "元数据库已保存。");
+        LOG_DEBUG("AssetDB", "元数据库已保存。");
     } catch (const std::exception& e) {
         LOG_ERROR("AssetDB", "保存元数据库失败: {0}", e.what());
     }
@@ -89,7 +89,7 @@ void AssetDatabase::Save() {
 void AssetDatabase::Refresh(const std::string& rootPath) {
     if (!fs::exists(rootPath)) return;
 
-    LOG_INFO("AssetDB", "正在快速扫描资源目录: {0}...", rootPath);
+    LOG_DEBUG("AssetDB", "正在快速扫描资源目录: {0}...", rootPath);
     auto startTime = std::chrono::high_resolution_clock::now();
 
     int updatedCount = 0;

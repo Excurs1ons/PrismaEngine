@@ -25,7 +25,7 @@ public:
         m_running.store(true);
         m_watcherThread = std::thread(&HotReloadManager::WatchFilesystem, this);
         m_watcherThread.detach();
-        LOG_INFO("HotReload", "热重载系统已初始化");
+        LOG_DEBUG("HotReload", "热重载系统已初始化");
     }
 
     void Shutdown() {
@@ -69,13 +69,13 @@ public:
         
         watchedFiles[path] = change;
         
-        LOG_INFO("HotReload", "已注册热重载资源: {}", path);
+        LOG_DEBUG("HotReload", "已注册热重载资源: {}", path);
     }
 
     void UnregisterAsset(const std::string& path) {
         std::lock_guard<std::mutex> lock(m_mutex);
         watchedFiles.erase(path);
-        LOG_INFO("HotReload", "已注销资源: {}", path);
+        LOG_DEBUG("HotReload", "已注销资源: {}", path);
     }
 
     void TriggerReload(const std::string& path) {

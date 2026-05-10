@@ -31,7 +31,7 @@ RenderDeviceVulkan::RenderDeviceVulkan() {
     LOG_INFO("Vulkan", "创建 Vulkan 渲染设备实例");
     m_resourceFactory = std::make_unique<VulkanResourceFactory>(this);
     m_swapChain       = std::make_unique<VulkanSwapChain>(this);
-    LOG_INFO("Vulkan", "Vulkan 渲染设备实例创建成功");
+    LOG_DEBUG("Vulkan", "Vulkan 渲染设备实例创建成功");
 }
 
 RenderDeviceVulkan::~RenderDeviceVulkan() {
@@ -192,36 +192,36 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
 
 void RenderDeviceVulkan::Shutdown() {
     if (!m_initialized) {
-        LOG_INFO("VulkanDevice", "渲染设备无需关闭（未初始化）");
+        LOG_DEBUG("VulkanDevice", "渲染设备无需关闭（未初始化）");
         return;
     }
     
-    LOG_INFO("VulkanDevice", "正在关闭 Vulkan 渲染设备...");
+    LOG_DEBUG("VulkanDevice", "正在关闭 Vulkan 渲染设备...");
 
     // 确保 GPU 已完成所有工作
     if (m_device != VK_NULL_HANDLE) {
-        LOG_INFO("VulkanDevice", "等待 GPU 空闲...");
+        LOG_DEBUG("VulkanDevice", "等待 GPU 空闲...");
         vkDeviceWaitIdle(m_device);
-        LOG_INFO("VulkanDevice", "GPU 已空闲");
+        LOG_DEBUG("VulkanDevice", "GPU 已空闲");
     }
 
     // 1. 先销毁由此设备管理的子资源
     if (m_resourceFactory) {
-        LOG_INFO("VulkanDevice", "关闭资源工厂...");
+        LOG_DEBUG("VulkanDevice", "关闭资源工厂...");
         m_resourceFactory->Shutdown();
         m_resourceFactory.reset();
-        LOG_INFO("VulkanDevice", "资源工厂已关闭");
+        LOG_DEBUG("VulkanDevice", "资源工厂已关闭");
     }
 
     if (m_swapChain) {
-        LOG_INFO("VulkanDevice", "清理交换链...");
+        LOG_DEBUG("VulkanDevice", "清理交换链...");
         m_swapChain->Cleanup();
         m_swapChain.reset();
-        LOG_INFO("VulkanDevice", "交换链已清理");
+        LOG_DEBUG("VulkanDevice", "交换链已清理");
     }
 
     // 2. 销毁同步对象和命令池
-    LOG_INFO("VulkanDevice", "销毁同步对象 (信号量/栅栏)...");
+    LOG_DEBUG("VulkanDevice", "销毁同步对象 (信号量/栅栏)...");
     for (auto s : m_imageAvailableSemaphores)
         vkDestroySemaphore(m_device, s, nullptr);
     for (auto s : m_renderFinishedSemaphores)
@@ -230,31 +230,31 @@ void RenderDeviceVulkan::Shutdown() {
         vkDestroyFence(m_device, f, nullptr);
 
     if (m_commandPool) {
-        LOG_INFO("VulkanDevice", "销毁命令池...");
+        LOG_DEBUG("VulkanDevice", "销毁命令池...");
         vkDestroyCommandPool(m_device, m_commandPool, nullptr);
     }
 
     if (m_descriptorPool) {
-        LOG_INFO("VulkanDevice", "销毁描述符池...");
+        LOG_DEBUG("VulkanDevice", "销毁描述符池...");
         vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
         m_descriptorPool = VK_NULL_HANDLE;
     }
 
     // 3. 销毁基础组件
     if (m_allocator) {
-        LOG_INFO("VulkanDevice", "销毁 VMA...");
+        LOG_DEBUG("VulkanDevice", "销毁 VMA...");
         vmaDestroyAllocator(m_allocator);
         m_allocator = VK_NULL_HANDLE;
     }
 
     if (m_surface) {
-        LOG_INFO("VulkanDevice", "销毁表面...");
+        LOG_DEBUG("VulkanDevice", "销毁表面...");
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         m_surface = VK_NULL_HANDLE;
     }
 
     // 4. 最后销毁设备和实例
-    LOG_INFO("VulkanDevice", "销毁 Vulkan 设备和实例...");
+    LOG_DEBUG("VulkanDevice", "销毁 Vulkan 设备和实例...");
     vkb::destroy_device(m_vkbDevice);
     vkb::destroy_instance(m_vkbInstance);
     
@@ -262,7 +262,7 @@ void RenderDeviceVulkan::Shutdown() {
     m_instance = VK_NULL_HANDLE;
     m_initialized = false;
 
-    LOG_INFO("VulkanDevice", "Vulkan 渲染设备已完全关闭");
+    LOG_DEBUG("VulkanDevice", "Vulkan 渲染设备已完全关闭");
 }
 
 void RenderDeviceVulkan::BeginFrame() {

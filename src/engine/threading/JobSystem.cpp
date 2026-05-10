@@ -4,12 +4,12 @@
 namespace Prisma {
 
 int JobSystem::Initialize() {
-    LOG_INFO("JobSystem", "任务系统初始化（基础实现）");
+    LOG_DEBUG("JobSystem", "任务系统初始化（基础实现）");
     return 0;
 }
 
 void JobSystem::Shutdown() {
-    LOG_INFO("JobSystem", "任务系统关闭");
+    LOG_DEBUG("JobSystem", "任务系统关闭");
 }
 
 void JobSystem::SubmitJob(Job job, uint32_t threadPoolIndex) {

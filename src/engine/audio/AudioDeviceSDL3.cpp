@@ -202,7 +202,7 @@ AudioVoiceId AudioDeviceSDL3::Play(const AudioClip& clip, const PlayDesc& desc) 
     ++m_stats.totalVoicesCreated;
     m_stats.maxConcurrentVoices = std::max(m_stats.maxConcurrentVoices, m_stats.activeVoices);
     
-    LOG_INFO("Audio", "成功开始播放音频 Voice {0}: {1} (大小: {2} 字节)", voiceId, clip.path, playSize);
+    LOG_DEBUG("Audio", "成功开始播放音频 Voice {0}: {1} (大小: {2} 字节)", voiceId, clip.path, playSize);
     
     TriggerEvent(AudioEventType::VoiceStarted, voiceId);
     return voiceId;
@@ -515,7 +515,7 @@ void AudioDeviceSDL3::UpdateVoiceStates() {
                 ResetStreamPosition(voice);
                 TriggerEvent(AudioEventType::VoiceLooped, id);
             } else {
-                LOG_INFO("Audio", "Voice {0} 播放结束", id);
+                LOG_DEBUG("Audio", "Voice {0} 播放结束", id);
                 toRemove.push_back(id);
             }
         }
