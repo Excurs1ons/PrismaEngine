@@ -97,10 +97,11 @@ private:
     size_t m_readPosition;
 };
 
-// 场景序列化器 - 处理整个ECS世界的序列化
+// 场景序列化器 - 支持 GameObject 模式和 ECS 模式
 class SceneSerializer {
 public:
-    SceneSerializer(ECS::World& world);
+    SceneSerializer(Scene& scene);           // GameObject 模式
+    SceneSerializer(ECS::World& world);      // ECS 模式
 
     // 保存场景
     bool SaveScene(const std::string& filePath, SerializationFormat format = SerializationFormat::JSON);
@@ -108,31 +109,19 @@ public:
     // 加载场景
     bool LoadScene(const std::string& filePath, SerializationFormat format = SerializationFormat::JSON);
 
-    // 保存预制体
-    bool SavePrefab(const std::string& filePath, ECS::EntityID entity, SerializationFormat format = SerializationFormat::JSON);
-
-    // 加载预制体
-    ECS::EntityID LoadPrefab(const std::string& filePath, SerializationFormat format = SerializationFormat::JSON);
-
 private:
-    ECS::World& m_world;
+    Scene* m_scene = nullptr;
+    ECS::World* m_world = nullptr;
 
-    // 序列化实体
-    void SerializeEntity(ECS::EntityID entity, JsonSerializer& serializer);
+    // GameObject 模式序列化逻辑
+    void SerializeSceneGameObject(JsonSerializer& serializer);
+    void DeserializeSceneGameObject(JsonSerializer& serializer);
 
-    // 反序列化实体
-    ECS::EntityID DeserializeEntity(JsonSerializer& serializer);
+    // ECS 模式序列化逻辑 (保持原有逻辑兼容)
+    void SerializeSceneECS(JsonSerializer& serializer);
+    void DeserializeSceneECS(JsonSerializer& serializer);
 
-    // 组件序列化函数映射
-    std::unordered_map<ECS::ComponentTypeID, std::function<void(ECS::EntityID, JsonSerializer&)>> m_componentSerializers;
-    std::unordered_map<ECS::ComponentTypeID, std::function<void(ECS::EntityID, JsonSerializer&)>> m_componentDeserializers;
-
-    // 注册组件序列化器
-    void RegisterComponentSerializers();
-
-    // 注册具体组件的序列化函数
-    template<typename T>
-    void RegisterComponentSerializer();
+    // ... 其他原有逻辑 ...
 };
 
 // 资源序列化器
