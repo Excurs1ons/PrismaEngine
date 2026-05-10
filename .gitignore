@@ -98,3 +98,4 @@ vcpkg_installed/
 
 # SDK Packaging Artifacts
 PrismaEngine-SDK-*
+/nul
