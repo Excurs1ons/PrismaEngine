@@ -41,6 +41,7 @@ public:
 class JsonSerializer : public ISerializer {
 public:
     JsonSerializer();
+    ~JsonSerializer() override;
 
     // 基础类型序列化
     void BeginObject(const std::string& name = "");
