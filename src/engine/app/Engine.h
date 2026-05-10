@@ -56,6 +56,16 @@ public:
 
     static Engine& Get() { return *s_Instance; }
     
+    struct FrameStats {
+        double BeginFrameTime  = 0.0;
+        double RenderTime      = 0.0;
+        double EndFrameTime    = 0.0;
+        double PresentTime     = 0.0;
+        double TotalTime       = 0.0;
+    };
+
+    const FrameStats& GetFrameStats() const { return m_FrameStats; }
+    
     // --- Window Management ---
     Window& GetWindow() { return *m_Window; }
     bool IsMinimized() const { return m_Minimized; }
@@ -118,6 +128,8 @@ private:
     bool m_Initialized = false;
     bool m_Running = false;
     bool m_Minimized = false;
+
+    FrameStats m_FrameStats;
 
     static Engine* s_Instance;
 };

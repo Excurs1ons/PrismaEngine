@@ -228,13 +228,21 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 GetRenderSystem()->Present();
                 double t4 = Platform::GetTimeSeconds();
 
+                // 更新帧统计数据
+                m_FrameStats.BeginFrameTime = (t1 - t0) * 1000.0;
+                m_FrameStats.RenderTime     = (t2 - t1) * 1000.0;
+                m_FrameStats.EndFrameTime   = (t3 - t2) * 1000.0;
+                m_FrameStats.PresentTime    = (t4 - t3) * 1000.0;
+                m_FrameStats.TotalTime      = (t4 - t0) * 1000.0;
+
                 // 每 5 秒打印一次单帧各阶段耗时
                 static double lastFrameLog = 0.0;
                 double now = Platform::GetTimeSeconds();
                 if (now - lastFrameLog >= 5.0) {
                     LOG_INFO("Engine", "帧耗时 BF={:.2f}ms Render={:.2f}ms EF={:.2f}ms Present={:.2f}ms Total={:.2f}ms",
-                        (t1 - t0) * 1000.0, (t2 - t1) * 1000.0, (t3 - t2) * 1000.0, (t4 - t3) * 1000.0,
-                        (t4 - t0) * 1000.0);
+                        m_FrameStats.BeginFrameTime, m_FrameStats.RenderTime, 
+                        m_FrameStats.EndFrameTime, m_FrameStats.PresentTime,
+                        m_FrameStats.TotalTime);
                     lastFrameLog = now;
                 }
             }
