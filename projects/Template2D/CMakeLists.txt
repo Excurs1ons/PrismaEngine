@@ -123,10 +123,13 @@ set(SCRIPTS_CLEANUP
 )
 
 # 构建时：自包含发布 C# 脚本 + 部署到输出目录
+# Debug 预设导出 PDB（用于调试 C# 脚本），Release 跳过符号
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${DOTNET} publish -c Release -r win-x64 --self-contained true
-            -p:DebugType=none -p:DebugSymbols=false
             -p:PublishTrimmed=true -p:TrimMode=link
+            $<$<CONFIG:Debug>:-p:DebugType=portable>
+            $<$<NOT:$<CONFIG:Debug>>:-p:DebugType=none>
+            $<$<NOT:$<CONFIG:Debug>>:-p:DebugSymbols=false>
             --nologo -v:q
             "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -139,8 +142,8 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 # 手动触发：生产部署（自包含，无需依赖系统 .NET）
 add_custom_target(DeployScripts
     COMMAND ${DOTNET} publish -c Release -r win-x64 --self-contained true
-            -p:DebugType=none -p:DebugSymbols=false
             -p:PublishTrimmed=true -p:TrimMode=link
+            -p:DebugType=none -p:DebugSymbols=false
             --nologo -v:q "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/win-x64/publish/"
