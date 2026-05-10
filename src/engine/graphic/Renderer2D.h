@@ -59,6 +59,10 @@ public:
     static void ResetStats();
     static Statistics GetStats();
 
+    // 控制合批开关
+    static void SetBatchingEnabled(bool enabled);
+    static bool IsBatchingEnabled();
+
 private:
     static void StartBatch();
     static void NextBatch();

@@ -16,386 +16,301 @@
 
 namespace Prisma::Graphic {
 
+static constexpr uint32_t MAX_BATCH_QUADS = 50000;
+static constexpr uint32_t MAX_BATCH_VERTICES = MAX_BATCH_QUADS * 4;
+static constexpr uint32_t MAX_BATCH_INDICES = MAX_BATCH_QUADS * 6;
+static constexpr uint32_t FRAME_SLOTS = 3;
+
 struct Renderer2D::Renderer2DData {
     Renderer2D::Statistics Stats;
-    std::shared_ptr<Mesh> QuadMesh;
+    Renderer2D::Statistics LastStats; 
+    std::shared_ptr<Mesh> QuadMesh; 
     std::shared_ptr<Material> DefaultMaterial;
     std::vector<std::shared_ptr<Material>> FrameMaterials;
     PrismaMath::mat4 ViewProjection;
-    CameraData LastCameraData; // 保存上一帧/批的相机数据，用于 Flush 后的重新开始
+    CameraData LastCameraData; 
+
+    struct FrameResource {
+        std::shared_ptr<IBuffer> VBO;
+        std::shared_ptr<IBuffer> IBO;
+        std::shared_ptr<Mesh> MeshObj;
+        Vertex* VertexBufferBase = nullptr; 
+        Vertex* VertexBufferPtr = nullptr;  
+        uint32_t QuadCount = 0;
+    };
+    FrameResource Frames[FRAME_SLOTS];
+    uint32_t CurrentFrameSlot = 0;
+
+    std::shared_ptr<ITexture> CurrentTexture = nullptr;
+    bool BatchingEnabled = true;
 };
 
 Renderer2D::Renderer2DData* Renderer2D::s_Data = nullptr;
 
+static const unsigned char g_FontData[95][5] = {
+    {0x00, 0x00, 0x00, 0x00, 0x00}, {0x00, 0x00, 0x5F, 0x00, 0x00}, {0x00, 0x07, 0x00, 0x07, 0x00}, {0x14, 0x7F, 0x14, 0x7F, 0x14}, {0x24, 0x2A, 0x7F, 0x2A, 0x12}, {0x23, 0x13, 0x08, 0x64, 0x62}, {0x36, 0x49, 0x55, 0x22, 0x50}, {0x00, 0x05, 0x03, 0x00, 0x00}, {0x00, 0x1C, 0x22, 0x41, 0x00}, {0x00, 0x41, 0x22, 0x1C, 0x00}, {0x08, 0x2A, 0x1C, 0x2A, 0x08}, {0x08, 0x08, 0x3E, 0x08, 0x08}, {0x00, 0x50, 0x30, 0x00, 0x00}, {0x08, 0x08, 0x08, 0x08, 0x08}, {0x00, 0x60, 0x60, 0x00, 0x00}, {0x20, 0x10, 0x08, 0x04, 0x02}, {0x3E, 0x51, 0x49, 0x45, 0x3E}, {0x00, 0x42, 0x7F, 0x40, 0x00}, {0x42, 0x61, 0x51, 0x49, 0x46}, {0x21, 0x41, 0x45, 0x4B, 0x31}, {0x18, 0x14, 0x12, 0x7F, 0x10}, {0x27, 0x45, 0x45, 0x45, 0x39}, {0x3C, 0x4A, 0x49, 0x49, 0x30}, {0x01, 0x71, 0x09, 0x05, 0x03}, {0x36, 0x49, 0x49, 0x49, 0x36}, {0x06, 0x49, 0x49, 0x29, 0x1E}, {0x00, 0x36, 0x36, 0x00, 0x00}, {0x00, 0x56, 0x36, 0x00, 0x00}, {0x00, 0x08, 0x14, 0x22, 0x41}, {0x14, 0x14, 0x14, 0x14, 0x14}, {0x41, 0x22, 0x14, 0x08, 0x00}, {0x02, 0x01, 0x51, 0x09, 0x06}, {0x32, 0x49, 0x79, 0x41, 0x3E}, {0x7E, 0x11, 0x11, 0x11, 0x7E}, {0x7F, 0x49, 0x49, 0x49, 0x36}, {0x3E, 0x41, 0x41, 0x41, 0x22}, {0x7F, 0x41, 0x41, 0x22, 1.0f}, {0x7F, 0x49, 0x49, 0x49, 0x41}, {0x7F, 0x09, 0x09, 0x01, 0x01}, {0x3E, 0x41, 0x41, 0x51, 0x32}, {0x7F, 0x08, 0x08, 0x08, 0x7F}, {0x00, 0x41, 0x7F, 0x41, 0x00}, {0x20, 0x40, 0x41, 0x3F, 0x01}, {0x7F, 0x08, 0x14, 0x22, 0x41}, {0x7F, 0x40, 0x40, 0x40, 0x40}, {0x7F, 0x02, 0x04, 0x02, 0x7F}, {0x7F, 0x04, 0x08, 0x10, 0x7F}, {0x3E, 0x41, 0x41, 0x41, 0x3E}, {0x7F, 0x09, 0x09, 0x09, 0x06}, {0x3E, 0x41, 0x51, 0x21, 0x5E}, {0x7F, 0x09, 0x19, 0x29, 0x46}, {0x46, 0x49, 0x49, 0x49, 0x31}, {0x01, 0x01, 0x7F, 0x01, 0x01}, {0x3F, 0x40, 0x40, 0x40, 0x3F}, {0x1F, 0x20, 0x40, 0x20, 1.0f}, {0x7F, 0x20, 0x18, 0x20, 0x7F}, {0x63, 0x14, 0x08, 0x14, 0x63}, {0x03, 0x04, 0x78, 0x04, 0x03}, {0x61, 0x51, 0x49, 0x45, 0x43}, {0x00, 0x00, 0x7F, 0x41, 0x41}, {0x02, 0x04, 0x08, 0x10, 0x20}, {0x41, 0x41, 0x7F, 0x00, 0x00}, {0x04, 0x02, 0x01, 0x02, 0x04}, {0x40, 0x40, 0x40, 0x40, 0x40}, {0x00, 0x01, 0x02, 0x05, 0x00}, {0x20, 0x54, 0x54, 0x54, 0x78}, {0x7F, 0x48, 0x44, 0x44, 0x38}, {0x38, 0x44, 0x44, 0x44, 0x20}, {0x38, 0x44, 0x44, 0x48, 0x7F}, {0x38, 0x54, 0x54, 0x54, 0x18}, {0x08, 0x7E, 0x09, 0x01, 0x02}, {0x08, 0x14, 0x54, 0x54, 0x3C}, {0x7F, 0x08, 0x04, 0x04, 0x78}, {0x00, 0x44, 0x7D, 0x40, 0x00}, {0x20, 0x40, 0x44, 0x3D, 0x00}, {0x00, 0x7F, 0x10, 0x28, 0x44}, {0x00, 0x41, 0x7F, 0x40, 0x00}, {0x7C, 0x04, 0x18, 0x04, 0x78}, {0x7C, 0x08, 0x04, 0x04, 0x78}, {0x38, 0x44, 0x44, 0x44, 0x38}, {0x7C, 0x14, 0x14, 0x14, 0x08}, {0x08, 0x14, 0x14, 0x18, 0x7C}, {0x7C, 0x08, 0x04, 0x04, 0x08}, {0x48, 0x54, 0x54, 0x54, 0x20}, {0x04, 0x3F, 0x44, 0x40, 0x20}, {0x3C, 0x40, 0x40, 0x20, 0x7C}, {0x1C, 0x20, 0x40, 0x20, 1.0f}, {0x3C, 0x40, 0x30, 0x40, 0x3C}, {0x44, 0x28, 0x10, 0x28, 0x44}, {0x0C, 0x50, 0x50, 0x50, 0x3C}, {0x44, 0x64, 0x54, 0x4C, 0x44}, {0x00, 0x08, 0x36, 0x41, 0x00}, {0x00, 0x00, 0x7F, 0x00, 0x00}, {0x00, 0x41, 0x36, 0x08, 0x00}, {0x08, 0x08, 0x2A, 0x1C, 0x08}
+};
+
 void Renderer2D::Initialize() {
     if (s_Data) return;
     s_Data = new Renderer2DData();
-
     LOG_INFO("Renderer2D", "正在初始化 2D 渲染器...");
+    auto rs = Engine::Get().GetRenderSystem();
+    auto rf = rs ? rs->GetDevice()->GetResourceFactory() : nullptr;
 
-    // 创建一个简单的 Quad Mesh
-    s_Data->QuadMesh = std::make_shared<Mesh>();
-    // 创建 Quad 网格
-    // 顶点格式: Position(vec4), Color(vec4), UV(vec4)
-    std::vector<Vertex> vertices = {
-        { { -0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } },
-        { {  0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } },
-        { {  0.5f,  0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 0.0f } },
-        { { -0.5f,  0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } }
+    std::vector<Vertex> qV = {
+        { { -0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 1.0f, 0.0f, 0.0f } },
+        { {  0.5f, -0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 1.0f, 0.0f, 0.0f } },
+        { {  0.5f,  0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 1.0f, 0.0f, 0.0f, 0.0f } },
+        { { -0.5f,  0.5f, 0.0f, 1.0f }, { 1.0f, 1.0f, 1.0f, 1.0f }, { 0.0f, 0.0f, 0.0f, 0.0f } }
     };
+    std::vector<uint32_t> qI = { 0, 1, 2, 2, 3, 0 };
+    s_Data->QuadMesh = std::make_shared<Mesh>();
 
-    std::vector<uint32_t> indices = { 0, 1, 2, 2, 3, 0 };
+    if (rf) {
+        BufferDesc vd; vd.type = BufferType::Vertex; vd.size = qV.size() * sizeof(Vertex); vd.initialData = qV.data(); vd.usage = BufferUsage::Immutable;
+        auto vbo = rf->CreateBufferImpl(vd);
+        BufferDesc id; id.type = BufferType::Index; id.size = qI.size() * sizeof(uint32_t); id.initialData = qI.data(); id.usage = BufferUsage::Immutable;
+        auto ibo = rf->CreateBufferImpl(id);
+        s_Data->QuadMesh->AddSubMesh({ "Quad", 0, 0, 0, 6, 4, std::move(vbo), std::move(ibo), false });
 
-    auto renderSystem = Engine::Get().GetRenderSystem();
-    auto device = renderSystem ? renderSystem->GetDevice() : nullptr;
-    
-    if (device && device->GetResourceFactory()) {
-        BufferDesc vDesc;
-        vDesc.type = BufferType::Vertex;
-        vDesc.size = vertices.size() * sizeof(Vertex);
-        vDesc.initialData = vertices.data();
-        auto vbo = device->GetResourceFactory()->CreateBufferImpl(vDesc);
-
-        BufferDesc iDesc;
-        iDesc.type = BufferType::Index;
-        iDesc.size = indices.size() * sizeof(uint32_t);
-        iDesc.initialData = indices.data();
-        auto ibo = device->GetResourceFactory()->CreateBufferImpl(iDesc);
-
-        if (!vbo || !ibo) {
-            LOG_ERROR("Renderer2D", "创建 2D Quad 缓冲区失败。");
-            s_Data->QuadMesh.reset();
-            s_Data->DefaultMaterial = Material::CreateDefault();
-            return;
+        for (uint32_t i = 0; i < FRAME_SLOTS; ++i) {
+            auto& f = s_Data->Frames[i];
+            BufferDesc bvd; bvd.type = BufferType::Vertex; bvd.size = MAX_BATCH_VERTICES * sizeof(Vertex); bvd.usage = BufferUsage::Dynamic;
+            f.VBO = rf->CreateBufferImpl(bvd);
+            BufferDesc bid; bid.type = BufferType::Index; bid.size = MAX_BATCH_INDICES * sizeof(uint32_t); bid.usage = BufferUsage::Dynamic;
+            f.IBO = rf->CreateBufferImpl(bid);
+            f.MeshObj = std::make_shared<Mesh>();
+            f.VertexBufferBase = new Vertex[MAX_BATCH_VERTICES];
+            f.VertexBufferPtr = f.VertexBufferBase;
+            std::vector<uint32_t> bI(MAX_BATCH_INDICES);
+            uint32_t off = 0;
+            for (uint32_t j = 0; j < MAX_BATCH_INDICES; j += 6) {
+                bI[j+0]=off+0; bI[j+1]=off+1; bI[j+2]=off+2; bI[j+3]=off+2; bI[j+4]=off+3; bI[j+5]=off+0; off+=4;
+            }
+            f.IBO->UpdateData(bI.data(), (uint32_t)bI.size() * sizeof(uint32_t), 0);
+            f.MeshObj->AddSubMesh({ "Batch", 0, 0, 0, 0, 0, f.VBO, f.IBO, false });
         }
-
-        SubMeshBuffer subMesh;
-        subMesh.vertexBuffer = std::shared_ptr<IBuffer>(std::move(vbo));
-        subMesh.indexBuffer = std::shared_ptr<IBuffer>(std::move(ibo));
-        subMesh.indexCount = 6;
-        subMesh.vertexCount = 4;
-        subMesh.use16BitIndices = false;
-        
-        s_Data->QuadMesh->AddSubMesh(subMesh);
-        s_Data->QuadMesh->SetBoundingBox(BoundingBox(
-            Prisma::Vector3(-0.5f, -0.5f, 0.0f),
-            Prisma::Vector3(0.5f, 0.5f, 0.0f)
-        ));
-        LOG_INFO("Renderer2D", "已创建 2D Quad 网格资源。");
     }
 
-    s_Data->DefaultMaterial = Material::CreateDefault();
-    
-    // 获取资源管理器
-    auto resourceManager = Engine::Get().GetRenderResourceManager();
-    if (!resourceManager) {
-        LOG_ERROR("Renderer2D", "无法获取资源管理器，2D 渲染器初始化可能不完整。");
-        return;
+    // [核心修复] 手动加载 2D 专用材质
+    auto rm = Engine::Get().GetRenderResourceManager();
+    if (rm) {
+        uint32_t val = 0xFFFFFFFF; TextureDesc wD; wD.width = 1; wD.height = 1; wD.format = TextureFormat::RGBA8_UNorm;
+        auto wT = rm->CreateTextureFromMemory(&val, sizeof(val), wD);
+        auto sS = rm->LoadShaderSync("assets/shaders/Renderer2D.frag.spv");
+        if (!sS) sS = rm->LoadShaderSync("DefaultPixel");
+        if (sS) {
+            s_Data->DefaultMaterial = std::make_shared<Material>(sS);
+            s_Data->DefaultMaterial->SetParam("AlbedoMap", wT);
+        }
     }
-
-    // 创建一个 1x1 的纯白纹理作为默认纹理
-    uint32_t whitePixel = 0xFFFFFFFF;
-    TextureDesc whiteDesc;
-    whiteDesc.width = 1;
-    whiteDesc.height = 1;
-    whiteDesc.format = TextureFormat::RGBA8_UNorm;
-    auto whiteTexture = resourceManager->CreateTextureFromMemory(&whitePixel, sizeof(whitePixel), whiteDesc);
-    if (whiteTexture) {
-        s_Data->DefaultMaterial->SetParam("AlbedoMap", whiteTexture);
-    }
-
-    // 尝试加载支持纹理的专用 2D 片段着色器 (它包含 AlbedoMap 的反射信息)
-    auto spriteShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.frag.spv");
-    if (!spriteShader) {
-        LOG_WARNING("Renderer2D", "无法加载专用 2D 片段着色器，尝试使用内置默认着色器。");
-        spriteShader = resourceManager->LoadShaderSync("DefaultPixel");
-    }
-
-    if (spriteShader) {
-        LOG_INFO("Renderer2D", "已加载 2D 纹理着色器 (Fragment)。");
-        // 复用刚才创建的白色纹理，但改用专用着色器
-        auto newMat = std::make_shared<Material>(spriteShader);
-        if (whiteTexture) newMat->SetParam("AlbedoMap", whiteTexture);
-        s_Data->DefaultMaterial = newMat;
-    }
-    
-    LOG_INFO("Renderer2D", "2D 渲染器初始化完成。");
+    if (!s_Data->DefaultMaterial) s_Data->DefaultMaterial = Material::CreateDefault();
 }
 
 void Renderer2D::Shutdown() {
-    LOG_INFO("Renderer2D", "正在关闭 2D 渲染器...");
-    delete s_Data;
-    s_Data = nullptr;
+    if (s_Data) { for (int i = 0; i < FRAME_SLOTS; ++i) delete[] s_Data->Frames[i].VertexBufferBase; delete s_Data; s_Data = nullptr; }
 }
 
 void Renderer2D::BeginScene(const OrthographicCamera& camera) {
     if (!s_Data) return;
-
-    // 调试日志：打印相机投影矩阵范围（仅值变化时）
-    {
-        auto proj = camera.GetProjectionMatrix();
-        // orthoRH_ZO: m[0][0]=2/(r-l), m[1][1]=2/(t-b), m[3][0]=-(r+l)/(r-l), m[3][1]=-(t+b)/(t-b)
-        float scaleX = proj[0][0], scaleY = proj[1][1];
-        float offsetX = proj[3][0], offsetY = proj[3][1];
-        static float lastSX = 0, lastSY = 0, lastOX = 0, lastOY = 0;
-        if (std::abs(scaleX - lastSX) > 0.0001f || std::abs(scaleY - lastSY) > 0.0001f ||
-            std::abs(offsetX - lastOX) > 0.0001f || std::abs(offsetY - lastOY) > 0.0001f) {
-            // 从矩阵反推投影范围
-            float rightMinusLeft = 2.0f / scaleX;
-            float topMinusBottom = 2.0f / scaleY;
-            float leftPlusRight = -offsetX * rightMinusLeft;
-            float bottomPlusTop = -offsetY * topMinusBottom;
-            float left = (leftPlusRight - rightMinusLeft) * 0.5f;
-            float right2 = (leftPlusRight + rightMinusLeft) * 0.5f;
-            float bottom = (bottomPlusTop - topMinusBottom) * 0.5f;
-            float top2 = (bottomPlusTop + topMinusBottom) * 0.5f;
-            LOG_INFO("Renderer2D", "相机投影: [{:.1f}, {:.1f}] x [{:.1f}, {:.1f}] (matrix: {:.6f} {:.6f} {:.4f} {:.4f})",
-                left, right2, bottom, top2, scaleX, scaleY, offsetX, offsetY);
-            lastSX = scaleX; lastSY = scaleY; lastOX = offsetX; lastOY = offsetY;
-        }
-    }
     s_Data->ViewProjection = camera.GetViewProjectionMatrix();
-    
-    CameraData cameraData;
-    cameraData.viewMatrix = camera.GetViewMatrix();
-    cameraData.projectionMatrix = camera.GetProjectionMatrix();
-    cameraData.position = camera.GetPosition();
-    cameraData.nearPlane = camera.GetNearPlane();
-    cameraData.farPlane = camera.GetFarPlane();
-    
-    s_Data->LastCameraData = cameraData;
-    Renderer::BeginScene(cameraData);
-    
+    CameraData cD; cD.viewMatrix = camera.GetViewMatrix(); cD.projectionMatrix = camera.GetProjectionMatrix();
+    cD.position = camera.GetPosition(); cD.nearPlane = camera.GetNearPlane(); cD.farPlane = camera.GetFarPlane();
+    s_Data->LastCameraData = cD;
+    Renderer::BeginScene(cD);
+    s_Data->CurrentFrameSlot = (s_Data->CurrentFrameSlot + 1) % FRAME_SLOTS;
+    s_Data->Stats.QuadCount = 0; s_Data->Stats.DrawCalls = 0;
     StartBatch();
 }
 
 void Renderer2D::EndScene() {
-    Flush(); // 排序并完成当前批次（不再重复调用 Renderer::EndScene）
-    
-    if (s_Data && s_Data->Stats.QuadCount > 0) {
-        static bool firstRenderReported = false;
-        if (!firstRenderReported) {
-            LOG_INFO("Renderer2D", "首次渲染: 本帧提交 {} 个 Quad, {} 次 DrawCall",
-                     s_Data->Stats.QuadCount, s_Data->Stats.DrawCalls);
-            firstRenderReported = true;
-        }
-
-        // 每 5 秒真实时间打印一次统计
-        static double lastLogTime = 0.0;
-        double now = Platform::GetTimeSeconds();
-        if (now - lastLogTime >= 5.0) {
-            LOG_INFO("Renderer2D", "5秒统计: {} 个 Quad, {} 次 DrawCall",
-                     s_Data->Stats.QuadCount, s_Data->Stats.DrawCalls);
-            lastLogTime = now;
-        }
-    }
+    if (s_Data->BatchingEnabled) Flush();
+    Renderer::EndScene();
+    if (s_Data) s_Data->LastStats = s_Data->Stats;
 }
 
 void Renderer2D::Flush() {
     if (!s_Data) return;
-    // 完成当前批次的命令排序（为管线执行做准备）
-    // 注意：不清除命令队列！队列由 RenderSystem::EndFrame() 在管线执行后清除
-    Renderer::EndScene();
-    // 每个 Quad = 一次 GPU DrawIndexed 调用
-    s_Data->Stats.DrawCalls = s_Data->Stats.QuadCount;
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (f.QuadCount == 0) return;
+    f.VBO->UpdateData(f.VertexBufferBase, (uint32_t)(f.VertexBufferPtr - f.VertexBufferBase) * sizeof(Vertex), 0);
+    auto& sub = const_cast<std::vector<SubMeshBuffer>&>(f.MeshObj->GetSubMeshes());
+    if (!sub.empty()) { sub[0].indexCount = f.QuadCount * 6; sub[0].vertexCount = f.QuadCount * 4; }
+    Material* m = s_Data->DefaultMaterial.get();
+    if (s_Data->CurrentTexture) {
+        auto tM = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader());
+        tM->SetParam("AlbedoMap", s_Data->CurrentTexture);
+        s_Data->FrameMaterials.push_back(tM);
+        m = tM.get();
+    }
+    Renderer::Submit(f.MeshObj.get(), m, PrismaMath::mat4(1.0f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
+    s_Data->Stats.DrawCalls++;
+    f.VertexBufferPtr = f.VertexBufferBase; f.QuadCount = 0;
 }
 
 void Renderer2D::StartBatch() {
     if (!s_Data) return;
-    s_Data->Stats.QuadCount = 0;
-    s_Data->Stats.DrawCalls = 0;
-    s_Data->FrameMaterials.clear();
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    f.VertexBufferPtr = f.VertexBufferBase; f.QuadCount = 0;
+    s_Data->FrameMaterials.clear(); s_Data->CurrentTexture = nullptr;
 }
 
 void Renderer2D::NextBatch() {
-    Flush();
-    StartBatch();
+    if (s_Data->BatchingEnabled) Flush();
 }
 
-void Renderer2D::DrawQuad(const Vector2& position, const Vector2& size, const Prisma::Color& color) {
-    Matrix4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(position, 0.0f)) * 
-                        glm::scale(glm::mat4(1.0f), glm::vec3(size, 1.0f));
-    DrawQuad(transform, color);
+void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const Prisma::Color& col) {
+    if (!s_Data) return;
+    if (!s_Data->BatchingEnabled) {
+        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(pos, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(size, 1.0f));
+        Renderer::Submit(s_Data->QuadMesh.get(), s_Data->DefaultMaterial.get(), t, col);
+        s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
+    }
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (s_Data->CurrentTexture != nullptr || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
+    float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
+    Vertex* v = f.VertexBufferPtr;
+    v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {0, 1, 0, 0} };
+    v[1] = { {pos.x + hw, pos.y - hh, 0, 1}, tint, {1, 1, 0, 0} };
+    v[2] = { {pos.x + hw, pos.y + hh, 0, 1}, tint, {1, 0, 0, 0} };
+    v[3] = { {pos.x - hw, pos.y + hh, 0, 1}, tint, {0, 0, 0, 0} };
+    f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
-void Renderer2D::DrawQuad(const Matrix4& transform, const Prisma::Color& color) {
-    if (!s_Data || !s_Data->QuadMesh || !s_Data->DefaultMaterial) return;
-
-    // TODO: 为了支持批处理和不同属性，后续应该使用更高效的材质管理
-    // 暂时为了性能和稳定性，复用默认材质
-    Renderer::Submit(s_Data->QuadMesh.get(), s_Data->DefaultMaterial.get(), transform, color);
-    s_Data->Stats.QuadCount++;
+void Renderer2D::DrawQuad(const Matrix4& trans, const Prisma::Color& col) {
+    if (!s_Data) return;
+    if (!s_Data->BatchingEnabled) {
+        Renderer::Submit(s_Data->QuadMesh.get(), s_Data->DefaultMaterial.get(), trans, col);
+        s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
+    }
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (s_Data->CurrentTexture != nullptr || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
+    PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
+    Vertex* v = f.VertexBufferPtr;
+    v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {0, 1, 0, 0} };
+    v[1] = { trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1), tint, {1, 1, 0, 0} };
+    v[2] = { trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1), tint, {1, 0, 0, 0} };
+    v[3] = { trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1), tint, {0, 0, 0, 0} };
+    f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
-void Renderer2D::DrawQuad(const Vector2& position, const Vector2& size, const std::shared_ptr<ITexture>& texture, const Prisma::Color& tintColor) {
-    Matrix4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(position, 0.0f)) * 
-                        glm::scale(glm::mat4(1.0f), glm::vec3(size, 1.0f));
-    DrawQuad(transform, texture, tintColor);
+void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const std::shared_ptr<ITexture>& tex, const Prisma::Color& tC) {
+    if (!s_Data) return;
+    if (!s_Data->BatchingEnabled) {
+        auto m = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader()); m->SetParam("AlbedoMap", tex);
+        s_Data->FrameMaterials.push_back(m);
+        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(pos, 0.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(size, 1.0f));
+        Renderer::Submit(s_Data->QuadMesh.get(), m.get(), t, tC);
+        s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
+    }
+    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
+    Vertex* v = f.VertexBufferPtr;
+    v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {0, 1, 0, 0} };
+    v[1] = { {pos.x + hw, pos.y - hh, 0, 1}, tint, {1, 1, 0, 0} };
+    v[2] = { {pos.x + hw, pos.y + hh, 0, 1}, tint, {1, 0, 0, 0} };
+    v[3] = { {pos.x - hw, pos.y + hh, 0, 1}, tint, {0, 0, 0, 0} };
+    f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
-void Renderer2D::DrawQuad(const Matrix4& transform, const std::shared_ptr<ITexture>& texture, const Prisma::Color& tintColor) {
-    if (!s_Data || !s_Data->QuadMesh || !s_Data->DefaultMaterial) return;
-    
-    // 如果没有纹理，直接调用基础版本
-    if (!texture) {
-        DrawQuad(transform, tintColor);
+void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>& tex, const Prisma::Color& tC) {
+    if (!s_Data) return;
+    if (!s_Data->BatchingEnabled) {
+        auto m = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader()); m->SetParam("AlbedoMap", tex);
+        s_Data->FrameMaterials.push_back(m);
+        Renderer::Submit(s_Data->QuadMesh.get(), m.get(), trans, tC);
+        s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
+    }
+    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
+    Vertex* v = f.VertexBufferPtr;
+    v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {0, 1, 0, 0} };
+    v[1] = { trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1), tint, {1, 1, 0, 0} };
+    v[2] = { trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1), tint, {1, 0, 0, 0} };
+    v[3] = { trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1), tint, {0, 0, 0, 0} };
+    f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
+}
+
+void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const std::shared_ptr<ITexture>& tex, const Vector2 uv[4], const Prisma::Color& tC) {
+    if (!s_Data) return;
+    if (!s_Data->BatchingEnabled) { DrawQuad(pos, size, tex, tC); return; }
+    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
+    Vertex* v = f.VertexBufferPtr;
+    v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {uv[0].x, uv[0].y, 0, 0} };
+    v[1] = { {pos.x + hw, pos.y - hh, 0, 1}, tint, {uv[1].x, uv[1].y, 0, 0} };
+    v[2] = { {pos.x + hw, pos.y + hh, 0, 1}, tint, {uv[2].x, uv[2].y, 0, 0} };
+    v[3] = { {pos.x - hw, pos.y + hh, 0, 1}, tint, {uv[3].x, uv[3].y, 0, 0} };
+    f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
+}
+
+void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>& tex, const Vector2 uv[4], const Prisma::Color& tC) {
+    if (!s_Data) return;
+    if (!s_Data->BatchingEnabled) { DrawQuad(trans, tex, tC); return; }
+    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
+    Vertex* v = f.VertexBufferPtr;
+    v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {uv[0].x, uv[0].y, 0, 0} };
+    v[1] = { trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1), tint, {uv[1].x, uv[1].y, 0, 0} };
+    v[2] = { trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1), tint, {uv[2].x, uv[2].y, 0, 0} };
+    v[3] = { trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1), tint, {uv[3].x, uv[3].y, 0, 0} };
+    f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
+}
+
+void Renderer2D::DrawString(const std::string& text, const Vector2& pos, float scale, const Prisma::Color& color) {
+    if (!s_Data || text.empty()) return;
+    if (!s_Data->BatchingEnabled) {
+        float cS = 6.0f * scale; Vector2 cP = pos;
+        for (char c : text) {
+            if (c < 32 || c > 126) { cP.x += cS; continue; }
+            const unsigned char* g = g_FontData[c - 32];
+            for (int col = 0; col < 5; ++col) {
+                unsigned char d = g[col];
+                for (int row = 0; row < 8; ++row) {
+                    if (d & (1 << row)) {
+                        DrawQuad(cP + Vector2(col * scale, (7 - row) * scale), Vector2(scale, scale), color);
+                    }
+                }
+            }
+            cP.x += cS;
+        }
         return;
     }
-
-    // 含有纹理的情况，目前依然需要临时材质，但后续应优化
-    auto material = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader());
-    material->SetParam("AlbedoMap", texture);
-    s_Data->FrameMaterials.push_back(material);
-    
-    Renderer::Submit(s_Data->QuadMesh.get(), material.get(), transform, tintColor);
-    s_Data->Stats.QuadCount++;
-}
-
-void Renderer2D::DrawQuad(const Vector2& position, const Vector2& size, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor) {
-    DrawQuad(position, size, texture, tintColor);
-}
-
-void Renderer2D::DrawQuad(const Matrix4& transform, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor) {
-    DrawQuad(transform, texture, tintColor);
-}
-
-// 5x7 嵌入式点阵字体 (每个字符占用 5 个 uint8_t 字节)
-static const unsigned char g_FontData[95][5] = {
-    {0x00, 0x00, 0x00, 0x00, 0x00}, // (space)
-    {0x00, 0x00, 0x5F, 0x00, 0x00}, // !
-    {0x00, 0x07, 0x00, 0x07, 0x00}, // "
-    {0x14, 0x7F, 0x14, 0x7F, 0x14}, // #
-    {0x24, 0x2A, 0x7F, 0x2A, 0x12}, // $
-    {0x23, 0x13, 0x08, 0x64, 0x62}, // %
-    {0x36, 0x49, 0x55, 0x22, 0x50}, // &
-    {0x00, 0x05, 0x03, 0x00, 0x00}, // '
-    {0x00, 0x1C, 0x22, 0x41, 0x00}, // (
-    {0x00, 0x41, 0x22, 0x1C, 0x00}, // )
-    {0x08, 0x2A, 0x1C, 0x2A, 0x08}, // *
-    {0x08, 0x08, 0x3E, 0x08, 0x08}, // +
-    {0x00, 0x50, 0x30, 0x00, 0x00}, // ,
-    {0x08, 0x08, 0x08, 0x08, 0x08}, // -
-    {0x00, 0x60, 0x60, 0x00, 0x00}, // .
-    {0x20, 0x10, 0x08, 0x04, 0x02}, // /
-    {0x3E, 0x51, 0x49, 0x45, 0x3E}, // 0
-    {0x00, 0x42, 0x7F, 0x40, 0x00}, // 1
-    {0x42, 0x61, 0x51, 0x49, 0x46}, // 2
-    {0x21, 0x41, 0x45, 0x4B, 0x31}, // 3
-    {0x18, 0x14, 0x12, 0x7F, 0x10}, // 4
-    {0x27, 0x45, 0x45, 0x45, 0x39}, // 5
-    {0x3C, 0x4A, 0x49, 0x49, 0x30}, // 6
-    {0x01, 0x71, 0x09, 0x05, 0x03}, // 7
-    {0x36, 0x49, 0x49, 0x49, 0x36}, // 8
-    {0x06, 0x49, 0x49, 0x29, 0x1E}, // 9
-    {0x00, 0x36, 0x36, 0x00, 0x00}, // :
-    {0x00, 0x56, 0x36, 0x00, 0x00}, // ;
-    {0x00, 0x08, 0x14, 0x22, 0x41}, // <
-    {0x14, 0x14, 0x14, 0x14, 0x14}, // =
-    {0x41, 0x22, 0x14, 0x08, 0x00}, // >
-    {0x02, 0x01, 0x51, 0x09, 0x06}, // ?
-    {0x32, 0x49, 0x79, 0x41, 0x3E}, // @
-    {0x7E, 0x11, 0x11, 0x11, 0x7E}, // A
-    {0x7F, 0x49, 0x49, 0x49, 0x36}, // B
-    {0x3E, 0x41, 0x41, 0x41, 0x22}, // C
-    {0x7F, 0x41, 0x41, 0x22, 0x1C}, // D
-    {0x7F, 0x49, 0x49, 0x49, 0x41}, // E
-    {0x7F, 0x09, 0x09, 0x01, 0x01}, // F
-    {0x3E, 0x41, 0x41, 0x51, 0x32}, // G
-    {0x7F, 0x08, 0x08, 0x08, 0x7F}, // H
-    {0x00, 0x41, 0x7F, 0x41, 0x00}, // I
-    {0x20, 0x40, 0x41, 0x3F, 0x01}, // J
-    {0x7F, 0x08, 0x14, 0x22, 0x41}, // K
-    {0x7F, 0x40, 0x40, 0x40, 0x40}, // L
-    {0x7F, 0x02, 0x04, 0x02, 0x7F}, // M
-    {0x7F, 0x04, 0x08, 0x10, 0x7F}, // N
-    {0x3E, 0x41, 0x41, 0x41, 0x3E}, // O
-    {0x7F, 0x09, 0x09, 0x09, 0x06}, // P
-    {0x3E, 0x41, 0x51, 0x21, 0x5E}, // Q
-    {0x7F, 0x09, 0x19, 0x29, 0x46}, // R
-    {0x46, 0x49, 0x49, 0x49, 0x31}, // S
-    {0x01, 0x01, 0x7F, 0x01, 0x01}, // T
-    {0x3F, 0x40, 0x40, 0x40, 0x3F}, // U
-    {0x1F, 0x20, 0x40, 0x20, 0x1F}, // V
-    {0x7F, 0x20, 0x18, 0x20, 0x7F}, // W
-    {0x63, 0x14, 0x08, 0x14, 0x63}, // X
-    {0x03, 0x04, 0x78, 0x04, 0x03}, // Y
-    {0x61, 0x51, 0x49, 0x45, 0x43}, // Z
-    {0x00, 0x00, 0x7F, 0x41, 0x41}, // [
-    {0x02, 0x04, 0x08, 0x10, 0x20}, // \\ (backslash)
-    {0x41, 0x41, 0x7F, 0x00, 0x00}, // ]
-    {0x04, 0x02, 0x01, 0x02, 0x04}, // ^
-    {0x40, 0x40, 0x40, 0x40, 0x40}, // _
-    {0x00, 0x01, 0x02, 0x05, 0x00}, // `
-    {0x20, 0x54, 0x54, 0x54, 0x78}, // a
-    {0x7F, 0x48, 0x44, 0x44, 0x38}, // b
-    {0x38, 0x44, 0x44, 0x44, 0x20}, // c
-    {0x38, 0x44, 0x44, 0x48, 0x7F}, // d
-    {0x38, 0x54, 0x54, 0x54, 0x18}, // e
-    {0x08, 0x7E, 0x09, 0x01, 0x02}, // f
-    {0x08, 0x14, 0x54, 0x54, 0x3C}, // g
-    {0x7F, 0x08, 0x04, 0x04, 0x78}, // h
-    {0x00, 0x44, 0x7D, 0x40, 0x00}, // i
-    {0x20, 0x40, 0x44, 0x3D, 0x00}, // j
-    {0x00, 0x7F, 0x10, 0x28, 0x44}, // k
-    {0x00, 0x41, 0x7F, 0x40, 0x00}, // l
-    {0x7C, 0x04, 0x18, 0x04, 0x78}, // m
-    {0x7C, 0x08, 0x04, 0x04, 0x78}, // n
-    {0x38, 0x44, 0x44, 0x44, 0x38}, // o
-    {0x7C, 0x14, 0x14, 0x14, 0x08}, // p
-    {0x08, 0x14, 0x14, 0x18, 0x7C}, // q
-    {0x7C, 0x08, 0x04, 0x04, 0x08}, // r
-    {0x48, 0x54, 0x54, 0x54, 0x20}, // s
-    {0x04, 0x3F, 0x44, 0x40, 0x20}, // t
-    {0x3C, 0x40, 0x40, 0x20, 0x7C}, // u
-    {0x1C, 0x20, 0x40, 0x20, 0x1C}, // v
-    {0x3C, 0x40, 0x30, 0x40, 0x3C}, // w
-    {0x44, 0x28, 0x10, 0x28, 0x44}, // x
-    {0x0C, 0x50, 0x50, 0x50, 0x3C}, // y
-    {0x44, 0x64, 0x54, 0x4C, 0x44}, // z
-    {0x00, 0x08, 0x36, 0x41, 0x00}, // {
-    {0x00, 0x00, 0x7F, 0x00, 0x00}, // |
-    {0x00, 0x41, 0x36, 0x08, 0x00}, // }
-    {0x08, 0x08, 0x2A, 0x1C, 0x08}  // ~
-};
-
-void Renderer2D::DrawString(const std::string& text, const Vector2& position, float scale, const Prisma::Color& color) {
-    if (!s_Data) return;
-
-    Vector2 currentPos = position;
-    float charSpacing = 6.0f * scale; // 每个字符宽 5 + 1
-    float pixelSize = 1.0f * scale;
-
+    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (s_Data->CurrentTexture != nullptr) { NextBatch(); s_Data->CurrentTexture = nullptr; }
+    float charSpacing = 6.0f * scale, pixelSize = 1.0f * scale; PrismaMath::vec4 tint = {color.r, color.g, color.b, color.a};
+    Vector2 cur = pos;
     for (char c : text) {
-        if (c < 32 || c > 126) {
-            currentPos.x += charSpacing;
-            continue;
-        }
-
-        int fontIdx = c - 32;
+        if (c < 32 || c > 126) { cur.x += charSpacing; continue; }
+        const unsigned char* glyph = g_FontData[c - 32];
         for (int col = 0; col < 5; ++col) {
-            unsigned char colData = g_FontData[fontIdx][col];
-            // [修复] 颠倒文字: 渲染行时翻转 Y 轴方向，使字模高位(bit 6)对应字符底部
+            unsigned char data = glyph[col];
             for (int row = 0; row < 8; ++row) {
-                if (colData & (1 << row)) {
-                    Vector2 pixelPos = currentPos + Vector2(col * pixelSize, (7 - row) * pixelSize);
-                    DrawQuad(pixelPos, Vector2(pixelSize, pixelSize), color);
+                if (data & (1 << row)) {
+                    if (f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
+                    float px = cur.x + col * pixelSize, py = cur.y + (7 - row) * pixelSize;
+                    Vertex* v = f.VertexBufferPtr;
+                    v[0] = {{px, py, 0, 1}, tint, {0, 1, 0, 0}};
+                    v[1] = {{px + pixelSize, py, 0, 1}, tint, {1, 1, 0, 0}};
+                    v[2] = {{px + pixelSize, py + pixelSize, 0, 1}, tint, {1, 0, 0, 0}};
+                    v[3] = {{px, py + pixelSize, 0, 1}, tint, {0, 0, 0, 0}};
+                    f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
                 }
             }
         }
-        currentPos.x += charSpacing;
+        cur.x += charSpacing;
     }
 }
 
-float Renderer2D::GetStringWidth(const std::string& text, float scale) {
-    return static_cast<float>(text.length()) * 6.0f * scale;
-}
-
-void Renderer2D::ResetStats() {
-    if (s_Data) s_Data->Stats = Statistics();
-}
-
-Renderer2D::Statistics Renderer2D::GetStats() {
-    return s_Data ? s_Data->Stats : Statistics();
-}
+float Renderer2D::GetStringWidth(const std::string& text, float scale) { return (float)text.length() * 6.0f * scale; }
+void Renderer2D::ResetStats() { if (s_Data) s_Data->Stats = Statistics(); }
+Renderer2D::Statistics Renderer2D::GetStats() { return s_Data ? s_Data->LastStats : Statistics(); }
+void Renderer2D::SetBatchingEnabled(bool enabled) { if (s_Data) s_Data->BatchingEnabled = enabled; }
+bool Renderer2D::IsBatchingEnabled() { return s_Data ? s_Data->BatchingEnabled : false; }
 
 } // namespace Prisma::Graphic
