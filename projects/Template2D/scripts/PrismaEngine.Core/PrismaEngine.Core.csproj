@@ -5,6 +5,7 @@
     <AssemblyName>PrismaEngine.Core</AssemblyName>
     <RootNamespace>PrismaEngine</RootNamespace>
     <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,4 +13,9 @@
       <_Parameter1>GameScripts</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PrismaEngine.Generators/PrismaEngine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
 </Project>

@@ -1,3 +1,4 @@
+using System;
 using PrismaEngine;
 
 namespace GameScripts;
@@ -6,10 +7,9 @@ namespace GameScripts;
 /// 相机控制脚本。
 /// Camera controller script.
 /// </summary>
-[PrismaScript]
+[Serializable]
 public partial class CameraController : Script 
 {
-    [PrismaProperty]
     public float MoveSpeed = 600f;
 
     public override void OnUpdate(TimeContext time, InputContext input) 

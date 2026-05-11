@@ -1,8 +1,9 @@
+using System;
 using PrismaEngine;
-
+using Random = PrismaEngine.Random;
 namespace GameScripts;
 
-[PrismaScript]
+[Serializable]
 public partial class SceneInit : Script
 {
     public override void OnCreate()

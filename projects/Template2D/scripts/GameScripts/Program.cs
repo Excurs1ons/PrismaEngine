@@ -4,7 +4,7 @@ namespace GameScripts;
 /// 自包含发布需要可执行入口点。
 /// 实际初始化由 C++ 端通过 ScriptEntry.Bootstrap 函数指针触发。
 /// </summary>
-class Program
+public static class Program
 {
     static void Main(string[] args)
     {

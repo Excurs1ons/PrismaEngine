@@ -1,4 +1,6 @@
+using System;
 using PrismaEngine;
+using Random = PrismaEngine.Random;
 
 namespace GameScripts;
 
@@ -6,10 +8,9 @@ namespace GameScripts;
 /// 旋转精灵脚本。
 /// Rotating sprite script.
 /// </summary>
-[PrismaScript]
+[Serializable]
 public partial class RotatingSprite : Script
 {
-    [PrismaProperty]
     public float Speed = 45f;
 
     public override void OnCreate()
