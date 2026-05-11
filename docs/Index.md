@@ -47,6 +47,11 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 - [Roadmap](Roadmap.md) - Future plans and task list
 - [Module Progress](MODULE_PROGRESS.md) - Detailed module status
 - [Development MEMO](MEMO.md) - Random notes and troubleshooting
+- [Unity Legacy Avoidance](UnityLegacyAvoidance.md) - Design philosophy: avoiding Unity's technical debt (8 rules)
+
+## 🤖 AI Integration
+- [PrismaMCP](PrismaMCP.md) - Model Context Protocol for AI Agent control (31 tools)
+- [MCP Test Report](MCP_Test_Report.md) - MCP protocol test results and validation
 
 ---
-*Last Updated: March 2026*
+*Last Updated: May 2026*
