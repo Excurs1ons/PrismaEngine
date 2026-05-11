@@ -114,6 +114,7 @@ int Engine::Initialize() {
     mcp->RegisterTool<MCP::EngineBuildInfoTool>(this);
     mcp->RegisterTool<MCP::DebugFrameStatsTool>();
     mcp->RegisterTool<MCP::DebugLogGetTool>();
+    mcp->RegisterTool<MCP::DebugProfilerGetTool>(this);
     mcp->RegisterTool<MCP::DebugBreakpointListTool>();
     mcp->RegisterTool<MCP::DebugBreakpointToggleTool>();
     mcp->RegisterTool<MCP::ProfilerCaptureTool>(this);
