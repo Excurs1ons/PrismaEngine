@@ -132,11 +132,9 @@ set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>/scripts")
 # 构建时：跨平台自包含发布
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "Publishing C# scripts for RID: ${CS_RID}..."
-    COMMAND ${CMAKE_COMMAND} -E env DOTNET_GCRegionRange=0x10000000 
-            ${DOTNET} publish -c Release -r ${CS_RID} --self-contained true
-            -p:PublishTrimmed=true -p:TrimMode=link
+    COMMAND ${DOTNET} publish -c Release -r ${CS_RID} --self-contained true
             -p:DebugType=portable -p:DebugSymbols=true
-            --nologo -v:q
+            --nologo
             "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/${CS_RID}/publish/"

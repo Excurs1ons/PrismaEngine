@@ -36,8 +36,12 @@ struct hostfxr_initialize_parameters {
     const char_t* dotnet_root;
 };
 
-using hostfxr_initialize_for_runtime_config_fn = int32_t (*)(
-    const char_t* runtime_config_path,
+// 自包含 publish 必须使用 hostfxr_initialize_for_dotnet_command_line。
+// hostfxr_initialize_for_runtime_config 不支持 self-contained 模式的
+// runtimeconfig.json（报错 "Initialization for self-contained components..."）。
+using hostfxr_initialize_for_dotnet_command_line_fn = int32_t (*)(
+    int32_t argc,
+    const char_t** argv,
     const hostfxr_initialize_parameters* parameters,
     hostfxr_handle* host_context_handle);
 
@@ -100,35 +104,54 @@ bool CoreCLRHost::Initialize(const std::string& scriptsDir) {
     }
 
     // 2. 获取函数指针
-    auto init_fn = (hostfxr_initialize_for_runtime_config_fn)getExport(m_hostfxrLib, "hostfxr_initialize_for_runtime_config");
-    auto get_delegate_fn = (hostfxr_get_runtime_delegate_fn)getExport(m_hostfxrLib, "hostfxr_get_runtime_delegate");
-    auto close_fn = (hostfxr_close_fn)getExport(m_hostfxrLib, "hostfxr_close");
+    auto initCmdLineFn = (hostfxr_initialize_for_dotnet_command_line_fn)
+        getExport(m_hostfxrLib, "hostfxr_initialize_for_dotnet_command_line");
+    auto getDelegateFn = (hostfxr_get_runtime_delegate_fn)
+        getExport(m_hostfxrLib, "hostfxr_get_runtime_delegate");
+    auto closeFn = (hostfxr_close_fn)
+        getExport(m_hostfxrLib, "hostfxr_close");
 
-    if (!init_fn || !get_delegate_fn || !close_fn) {
-        LOG_ERROR("CoreCLRHost", "Failed to get hostfxr exports");
+    if (!initCmdLineFn || !getDelegateFn || !closeFn) {
+        LOG_ERROR("CoreCLRHost", "hostfxr missing required exports");
         return false;
     }
 
-    // 3. 初始化运行时
-    fs::path configPath = fs::path(scriptsDir) / runtimeConfigFilename();
-    hostfxr_handle ctx = nullptr;
-    int rc = init_fn(to_native(configPath.string()).c_str(), nullptr, &ctx);
-    if (rc != 0 || !ctx) {
-        LOG_ERROR("CoreCLRHost", "hostfxr_initialize failed with rc: {0}", rc);
+    // 3. 禁止系统路径探测（仅使用 scriptsDir 内的运行时）
+#ifdef _WIN32
+    SetEnvironmentVariableW(L"DOTNET_MULTILEVEL_LOOKUP", L"0");
+#else
+    setenv("DOTNET_MULTILEVEL_LOOKUP", "0", 1);
+#endif
+
+    // 4. 通过自包含程序集路径初始化运行时（argv[0] = .dll 路径）
+    std::string dllPath = (fs::path(scriptsDir) / "GameScripts.dll").string();
+    std::vector<char_t> dllBuf(to_native(dllPath).begin(), to_native(dllPath).end());
+    dllBuf.push_back(0); // null-terminate
+    const char_t* argv[] = { dllBuf.data() };
+
+    int32_t rc = initCmdLineFn(1, argv, nullptr, (hostfxr_handle*)&m_hostContext);
+    if (rc != 0 || !m_hostContext) {
+        LOG_ERROR("CoreCLRHost", "hostfxr_initialize_for_dotnet_command_line failed: {0}", rc);
+        if (m_hostContext) closeFn((hostfxr_handle)m_hostContext);
+        m_hostContext = nullptr;
         return false;
     }
 
-    // 4. 获取程序集加载委托
-    rc = get_delegate_fn(ctx, 1 /* hdt_load_assembly_and_get_function_pointer */, (void**)&m_loadAssemblyAndGetFn);
-    close_fn(ctx);
-
+    // 5. 获取 load_assembly_and_get_function_pointer 委托
+    constexpr int32_t HDT_LOAD_ASSEMBLY_AND_GET_FN_PTR = 5;
+    rc = getDelegateFn((hostfxr_handle)m_hostContext,
+                       HDT_LOAD_ASSEMBLY_AND_GET_FN_PTR,
+                       &m_loadAssemblyAndGetFn);
     if (rc != 0 || !m_loadAssemblyAndGetFn) {
-        LOG_ERROR("CoreCLRHost", "Failed to get load_assembly delegate, rc: {0}", rc);
+        LOG_ERROR("CoreCLRHost", "Failed to get runtime delegate, rc: {0}", rc);
+        closeFn((hostfxr_handle)m_hostContext);
+        m_hostContext = nullptr;
         return false;
     }
 
+    // 6. 完成 - 保持 m_hostContext 打开，后续 GetFunctionPointer 需要它
     m_initialized = true;
-    LOG_INFO("CoreCLRHost", "Successfully initialized .NET Runtime (CoreCLR)");
+    LOG_INFO("CoreCLRHost", "CoreCLR initialized (scripts: {0})", scriptsDir);
     return true;
 }
 
@@ -146,7 +169,7 @@ void* CoreCLRHost::GetFunctionPointer(const std::string& assemblyPath, const std
     );
 
     if (rc != 0) {
-        LOG_ERROR("CoreCLRHost", "Failed to get function pointer for {0}.{1}, rc: {0}", typeName, methodName, rc);
+        LOG_ERROR("CoreCLRHost", "Failed to get function pointer for {0}.{1}, rc: {2}", typeName, methodName, rc);
         return nullptr;
     }
 
@@ -154,10 +177,16 @@ void* CoreCLRHost::GetFunctionPointer(const std::string& assemblyPath, const std
 }
 
 void CoreCLRHost::Shutdown() {
+    if (m_hostContext) {
+        auto closeFn = (hostfxr_close_fn)getExport(m_hostfxrLib, "hostfxr_close");
+        if (closeFn) closeFn((hostfxr_handle)m_hostContext);
+        m_hostContext = nullptr;
+    }
     if (m_hostfxrLib) {
         freeLibrary(m_hostfxrLib);
         m_hostfxrLib = nullptr;
     }
+    m_loadAssemblyAndGetFn = nullptr;
     m_initialized = false;
 }
 
