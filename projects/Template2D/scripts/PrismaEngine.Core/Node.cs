@@ -1,161 +1,81 @@
-using System.Collections.Generic;
+using System;
+using System.Runtime.CompilerServices;
 
 namespace PrismaEngine;
 
-/// <summary>
-/// 游戏实体。位置、旋转、缩放直接挂在 Node 上（无额外的 Transform 类）。
-/// </summary>
-public class Node
+public static class ScriptType<T> where T : Script
 {
-    internal uint _handle;
-    internal List<Script> _scripts = new();
-    internal bool _destroyed;
+    public static readonly uint Id = ScriptTypeInfo.GetNextId();
+}
 
-    public string Name { get; set; } = "";
+internal static class ScriptTypeInfo
+{
+    private static uint _nextId = 0;
+    public static uint GetNextId() => _nextId++;
+}
 
-    // ── Position ──────────────────────────────────────────────
-    public float X
+public readonly struct Node : IEquatable<Node>
+{
+    private readonly uint _handle;
+    private readonly World _world;
+
+    public Node(uint handle, World world) { _handle = handle; _world = world; }
+    public uint Handle => _handle;
+    public World World => _world;
+
+    private uint Index => _handle & 0xFFFF;
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private unsafe void Validate()
     {
-        get
-        {
-            float x = 0, y = 0;
-            unsafe { NativeAPI.API.GetPosition(_handle, &x, &y); }
-            return x;
-        }
-        set
-        {
-            unsafe { NativeAPI.API.SetPosition(_handle, value, Y); }
-        }
+#if DEBUG
+        uint index = Index;
+        uint gen = _handle >> 16;
+        if (index >= NativeAPI.MaxEntities) throw new IndexOutOfRangeException("Handle OOB");
+        if ((NativeAPI.RenderBuffer->Generation[index] & 0xFFFF) != gen) 
+            throw new InvalidOperationException("Node Handle is STALE (Entity re-allocated)");
+#endif
     }
 
-    public float Y
+    // Cherno Optimization: 属性访问直接指向对应的 SoA 缓冲区（热/冷分离）
+    public float X { get { unsafe { Validate(); return NativeAPI.TransformBuffer_Read->PosX[Index]; } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->PosX[Index] = value; } } }
+    public float Y { get { unsafe { Validate(); return NativeAPI.TransformBuffer_Read->PosY[Index]; } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->PosY[Index] = value; } } }
+    public Vector2 Position { get { unsafe { Validate(); return new Vector2(NativeAPI.TransformBuffer_Read->PosX[Index], NativeAPI.TransformBuffer_Read->PosY[Index]); } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->PosX[Index] = value.X; NativeAPI.TransformBuffer_Write->PosY[Index] = value.Y; } } }
+    public float Rotation { get { unsafe { Validate(); return NativeAPI.TransformBuffer_Read->Rotation[Index]; } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->Rotation[Index] = value; } } }
+    public Vector2 Scale { get { unsafe { Validate(); return new Vector2(NativeAPI.TransformBuffer_Read->ScaleX[Index], NativeAPI.TransformBuffer_Read->ScaleY[Index]); } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->ScaleX[Index] = value.X; NativeAPI.TransformBuffer_Write->ScaleY[Index] = value.Y; } } }
+
+    public static Node Create(string name, World? world = null)
     {
-        get
-        {
-            float x = 0, y = 0;
-            unsafe { NativeAPI.API.GetPosition(_handle, &x, &y); }
-            return y;
-        }
-        set
-        {
-            unsafe { NativeAPI.API.SetPosition(_handle, X, value); }
-        }
+        var targetWorld = world ?? World.Active ?? throw new InvalidOperationException("No active world.");
+        uint handle;
+        unsafe { handle = NativeAPI.API.CreateEntity(); }
+        var node = new Node(handle, targetWorld);
+        targetWorld.RegisterNode(node);
+        return node;
     }
 
-    public Vector2 Position
-    {
-        get
-        {
-            float x = 0, y = 0;
-            unsafe { NativeAPI.API.GetPosition(_handle, &x, &y); }
-            return new(x, y);
-        }
-        set
-        {
-            unsafe { NativeAPI.API.SetPosition(_handle, value.X, value.Y); }
-        }
+    public void Destroy() => _world.QueueDestruction(_handle);
+
+    public T AddScript<T>() where T : Script, new() 
+    { 
+        var s = ScriptConstructor<T>.Create();
+        s.node = this; 
+        _world.RegisterActiveScript(s); 
+        s.OnCreate(); 
+        return s; 
     }
 
-    // ── Rotation ─────────────────────────────────────────────
-    public float Rotation
+    private static class ScriptConstructor<T> where T : Script, new()
     {
-        get
-        {
-            unsafe { return NativeAPI.API.GetRotation(_handle); }
-        }
-        set
-        {
-            unsafe { NativeAPI.API.SetRotation(_handle, value); }
-        }
+        private static readonly Func<T> _constructor = () => new T();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static T Create() => _constructor();
     }
 
-    // ── Scale ─────────────────────────────────────────────────
-    public float ScaleX
-    {
-        get
-        {
-            float x = 0, y = 0;
-            unsafe { NativeAPI.API.GetScale(_handle, &x, &y); }
-            return x;
-        }
-        set
-        {
-            unsafe { NativeAPI.API.SetScale(_handle, value, ScaleY); }
-        }
-    }
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T? GetScript<T>() where T : Script => _world.GetScriptFromNodeByTypeId<T>(_handle, ScriptType<T>.Id);
 
-    public float ScaleY
-    {
-        get
-        {
-            float x = 0, y = 0;
-            unsafe { NativeAPI.API.GetScale(_handle, &x, &y); }
-            return y;
-        }
-        set
-        {
-            unsafe { NativeAPI.API.SetScale(_handle, ScaleX, value); }
-        }
-    }
-
-    public Vector2 Scale
-    {
-        get
-        {
-            float x = 0, y = 0;
-            unsafe { NativeAPI.API.GetScale(_handle, &x, &y); }
-            return new(x, y);
-        }
-        set
-        {
-            unsafe { NativeAPI.API.SetScale(_handle, value.X, value.Y); }
-        }
-    }
-
-    // ── Constructor ──────────────────────────────────────────
-
-    public Node(string name)
-    {
-        unsafe { _handle = NativeAPI.API.CreateEntity(); }
-        Name = name;
-        ScriptEngine.RegisterNode(this);
-    }
-
-    ~Node()
-    {
-        if (!_destroyed)
-        {
-            _destroyed = true;
-            unsafe { NativeAPI.API.DestroyEntity(_handle); }
-        }
-    }
-
-    // ── Script management ────────────────────────────────────
-
-    public T AddScript<T>() where T : Script, new()
-    {
-        var s = new T { node = this };
-        _scripts.Add(s);
-        s.OnCreate();
-        return s;
-    }
-
-    public T? GetScript<T>() where T : Script
-    {
-        foreach (var s in _scripts)
-            if (s is T t) return t;
-        return null;
-    }
-
-    public void RemoveScript<T>() where T : Script
-    {
-        for (int i = _scripts.Count - 1; i >= 0; i--)
-        {
-            if (_scripts[i] is T)
-            {
-                _scripts[i].OnDestroy();
-                _scripts.RemoveAt(i);
-            }
-        }
-    }
+    public bool Equals(Node other) => _handle == other._handle && _world == other._world;
+    public override bool Equals(object? obj) => obj is Node other && Equals(other);
+    public override int GetHashCode() => HashCode.Combine(_handle, _world);
 }

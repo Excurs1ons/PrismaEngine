@@ -107,6 +107,18 @@ emcmake cmake -B build/runtime-web-debug -DPRISMA_BUILD_EDITOR=OFF \
 cmake --build build/runtime-web-debug --target Runtime
 ```
 
+### C# Scripting Builds (Cross-Platform)
+```bash
+# General build
+dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
+
+# Termux / Restricted VM Build (CRITICAL)
+# Android/Termux environments often limit virtual memory (ulimit -v). 
+# .NET 10+ defaults to a large GC region reservation (256GB) which will fail.
+# Use this environment variable to cap reservation to 256MB:
+export DOTNET_GCRegionRange=0x10000000 && dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
+```
+
 ### Environment Setup
 ```bash
 # Initialize vcpkg

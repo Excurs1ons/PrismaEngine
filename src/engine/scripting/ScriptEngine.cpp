@@ -1,258 +1,145 @@
 #include "ScriptEngine.h"
 #include "CoreCLRHost.h"
 #include "Logger.h"
-#include "app/Engine.h"        // for InputManager
+#include "app/Engine.h"
 #include "input/InputManager.h"
+#include <cstring>
+#include <mutex>
 
 namespace Prisma {
 namespace Scripting {
 
-// ============================================================================
-// PrismaAPI 静态实现
-// 所有函数直接操作 ScriptEngine 单例的实体池
-// ============================================================================
+static thread_local ScriptEngine* s_activeEngine = nullptr;
 
-static ScriptEngine* s_self = nullptr;
-
-// ---- Logging ----
-void ScriptEngine::S_Log(const char* subsystem, const char* msg) {
-    // 不递归调用 Logger (C# 侧可能也用了 logger)
-    if (subsystem && msg) {
-        printf("[%s] %s\n", subsystem, msg);
+ScriptEngine::ScriptEngine() {
+    m_transformBufferA = new TransformBufferSoA();
+    m_transformBufferB = new TransformBufferSoA();
+    m_renderBuffer = new RenderBufferSoA();
+    
+    std::memset(m_transformBufferA, 0, sizeof(TransformBufferSoA));
+    std::memset(m_transformBufferB, 0, sizeof(TransformBufferSoA));
+    std::memset(m_renderBuffer, 0, sizeof(RenderBufferSoA));
+    
+    for (uint32_t i = 0; i < kMaxEntities; ++i) {
+        // 初始 generation 设置为 1
+        m_renderBuffer->generation[i] = 1;
+        // 初始缩放
+        m_transformBufferA->scaleX[i] = m_transformBufferA->scaleY[i] = 1.0f;
+        m_transformBufferB->scaleX[i] = m_transformBufferB->scaleY[i] = 1.0f;
     }
 }
 
-// ---- Entity Lifecycle ----
-uint32_t ScriptEngine::S_CreateEntity() {
-    if (!s_self) return 0;
-    auto& entities = s_self->m_entities;
+ScriptEngine::~ScriptEngine() {
+    Shutdown();
+    delete m_transformBufferA;
+    delete m_transformBufferB;
+    delete m_renderBuffer;
+}
 
-    // 找空闲槽位
-    for (uint32_t i = 0; i < (uint32_t)entities.size(); ++i) {
-        if (!entities[i].active) {
-            entities[i].active = true;
-            return i;
+// ---- 句柄解构 ----
+inline uint32_t EncodeHandle(uint32_t index, uint32_t gen) { return (index & 0xFFFF) | ((gen & 0xFFFF) << 16); }
+inline uint32_t DecodeIndex(uint32_t handle) { return handle & 0xFFFF; }
+inline uint32_t DecodeGen(uint32_t handle) { return handle >> 16; }
+
+uint32_t ScriptEngine::CreateEntity() {
+    // 简单的线性分配器 (实际应用中应配合 freeList)
+    for (uint32_t i = 0; i < kMaxEntities; ++i) {
+        if (m_renderBuffer->active[i] == 0) {
+            m_renderBuffer->active[i] = 1;
+            // 初始化数据
+            m_transformBufferA->posX[i] = m_transformBufferB->posX[i] = 0;
+            m_transformBufferA->posY[i] = m_transformBufferB->posY[i] = 0;
+            m_renderBuffer->colorA[i] = 1.0f;
+            return EncodeHandle(i, m_renderBuffer->generation[i]);
         }
     }
-
-    // 扩展
-    if (entities.size() < kMaxEntities) {
-        uint32_t id = (uint32_t)entities.size();
-        entities.emplace_back();
-        entities.back().active = true;
-        return id;
-    }
-
-    LOG_ERROR("ScriptEngine", "Entity pool exhausted (max={0})", kMaxEntities);
     return 0;
 }
 
-void ScriptEngine::S_DestroyEntity(uint32_t id) {
-    if (s_self && id < s_self->m_entities.size()) {
-        s_self->m_entities[id].active = false;
+void ScriptEngine::DestroyEntity(uint32_t handle) {
+    uint32_t index = DecodeIndex(handle);
+    uint32_t handleGen = DecodeGen(handle);
+    if (index < kMaxEntities && (m_renderBuffer->generation[index] & 0xFFFF) == handleGen) {
+        m_renderBuffer->active[index] = 0;
+        m_renderBuffer->generation[index]++; // 增加版本号，失效旧句柄
+        if ((m_renderBuffer->generation[index] & 0xFFFF) == 0) m_renderBuffer->generation[index] = 1;
     }
 }
 
-// ---- Transform ----
-void ScriptEngine::S_SetPosition(uint32_t id, float x, float y) {
-    if (s_self && id < s_self->m_entities.size()) {
-        auto& e = s_self->m_entities[id];
-        e.posX = x; e.posY = y;
+const TransformBufferSoA* ScriptEngine::GetCurrentTransformBuffer() const {
+    // 这里的逻辑需要根据 C# 侧的 SwapBuffers 保持同步
+    // 假设 C# 侧每帧开始前会读取 Swap 后的 A/B 指针
+    return (m_currentReadIndex == 0) ? m_transformBufferA : m_transformBufferB;
+}
+
+uint32_t ScriptEngine::S_CreateEntity() { return s_activeEngine ? s_activeEngine->CreateEntity() : 0; }
+void ScriptEngine::S_DestroyEntity(uint32_t h) { if (s_activeEngine) s_activeEngine->DestroyEntity(h); }
+
+TransformBufferSoA* ScriptEngine::S_GetTransformBufferA() { return s_activeEngine ? s_activeEngine->m_transformBufferA : nullptr; }
+TransformBufferSoA* ScriptEngine::S_GetTransformBufferB() { return s_activeEngine ? s_activeEngine->m_transformBufferB : nullptr; }
+RenderBufferSoA* ScriptEngine::S_GetRenderBuffer() { return s_activeEngine ? s_activeEngine->m_renderBuffer : nullptr; }
+
+void ScriptEngine::S_SetCameraPos(float x, float y) { 
+    if (s_activeEngine) {
+        s_activeEngine->m_cameraPosX = x;
+        s_activeEngine->m_cameraPosY = y;
     }
 }
+void ScriptEngine::S_GetCameraPos(float* x, float* y) { if (x && y) { *x = 0; *y = 0; } }
 
-void ScriptEngine::S_GetPosition(uint32_t id, float* x, float* y) {
-    if (s_self && id < s_self->m_entities.size() && x && y) {
-        *x = s_self->m_entities[id].posX;
-        *y = s_self->m_entities[id].posY;
-    }
-}
-
-void ScriptEngine::S_SetRotation(uint32_t id, float deg) {
-    if (s_self && id < s_self->m_entities.size()) {
-        s_self->m_entities[id].rotation = deg;
-    }
-}
-
-float ScriptEngine::S_GetRotation(uint32_t id) {
-    if (s_self && id < s_self->m_entities.size()) {
-        return s_self->m_entities[id].rotation;
-    }
-    return 0.0f;
-}
-
-void ScriptEngine::S_SetScale(uint32_t id, float x, float y) {
-    if (s_self && id < s_self->m_entities.size()) {
-        s_self->m_entities[id].scaleX = x;
-        s_self->m_entities[id].scaleY = y;
-    }
-}
-
-void ScriptEngine::S_GetScale(uint32_t id, float* x, float* y) {
-    if (s_self && id < s_self->m_entities.size() && x && y) {
-        *x = s_self->m_entities[id].scaleX;
-        *y = s_self->m_entities[id].scaleY;
-    }
-}
-
-// ---- Visual ----
-void ScriptEngine::S_SetColor(uint32_t id, float r, float g, float b, float a) {
-    if (s_self && id < s_self->m_entities.size()) {
-        auto& e = s_self->m_entities[id];
-        e.colorR = r; e.colorG = g; e.colorB = b; e.colorA = a;
-    }
-}
-
-void ScriptEngine::S_GetColor(uint32_t id, float* r, float* g, float* b, float* a) {
-    if (s_self && id < s_self->m_entities.size() && r && g && b && a) {
-        *r = s_self->m_entities[id].colorR;
-        *g = s_self->m_entities[id].colorG;
-        *b = s_self->m_entities[id].colorB;
-        *a = s_self->m_entities[id].colorA;
-    }
-}
-
-void ScriptEngine::S_SetSize(uint32_t id, float w, float h) {
-    if (s_self && id < s_self->m_entities.size()) {
-        s_self->m_entities[id].sizeW = w;
-        s_self->m_entities[id].sizeH = h;
-    }
-}
-
-void ScriptEngine::S_GetSize(uint32_t id, float* w, float* h) {
-    if (s_self && id < s_self->m_entities.size() && w && h) {
-        *w = s_self->m_entities[id].sizeW;
-        *h = s_self->m_entities[id].sizeH;
-    }
-}
-
-// ---- Input ----
-bool ScriptEngine::S_IsKeyDown(int key) {
-    auto* mgr = Engine::Get().GetInputManager();
-    return mgr ? mgr->IsKeyPressed(static_cast<Prisma::Input::KeyCode>(key)) : false;
-}
-
-float ScriptEngine::S_GetMouseX() {
-    auto* mgr = Engine::Get().GetInputManager();
-    return mgr ? mgr->GetMousePosition().x : 0.0f;
-}
-
-float ScriptEngine::S_GetMouseY() {
-    auto* mgr = Engine::Get().GetInputManager();
-    return mgr ? mgr->GetMousePosition().y : 0.0f;
-}
-
-float ScriptEngine::S_GetDeltaTime() {
-    return 0.016f;
-}
-
-// ---- Camera ----
-void ScriptEngine::S_SetCameraPos(float x, float y) {
-    if (s_self) { s_self->m_cameraPosX = x; s_self->m_cameraPosY = y; }
-}
-
-void ScriptEngine::S_GetCameraPos(float* x, float* y) {
-    if (s_self && x && y) { *x = s_self->m_cameraPosX; *y = s_self->m_cameraPosY; }
-}
-
-// ============================================================================
-// ScriptEngine 实现
-// ============================================================================
+static bool S_IsKeyDown(int k) { auto* m = Engine::Get().GetInputManager(); return m ? m->IsKeyPressed((Prisma::Input::KeyCode)k) : false; }
+static float S_GetMouseX() { auto* m = Engine::Get().GetInputManager(); return m ? m->GetMousePosition().x : 0; }
+static float S_GetMouseY() { auto* m = Engine::Get().GetInputManager(); return m ? m->GetMousePosition().y : 0; }
+static float S_GetDeltaTime() { return 0.016f; }
+static void S_Log(const char* s, const char* m) { if (s && m) printf("[%s] %s\n", s, m); }
 
 bool ScriptEngine::Initialize(CoreCLRHost& host) {
-    if (m_initialized) {
-        LOG_WARNING("ScriptEngine", "Already initialized");
-        return true;
-    }
-
+    if (m_initialized) return true;
     m_host = &host;
-    s_self = this;
-
-    // 1. 填充 PrismaAPI
-    m_api.log           = S_Log;
-    m_api.createEntity  = S_CreateEntity;
+    s_activeEngine = this;
+    
+    m_api.log = S_Log;
+    m_api.createEntity = S_CreateEntity;
     m_api.destroyEntity = S_DestroyEntity;
-    m_api.setPosition   = S_SetPosition;
-    m_api.getPosition   = S_GetPosition;
-    m_api.setRotation   = S_SetRotation;
-    m_api.getRotation   = S_GetRotation;
-    m_api.setScale      = S_SetScale;
-    m_api.getScale      = S_GetScale;
-    m_api.setColor      = S_SetColor;
-    m_api.getColor      = S_GetColor;
-    m_api.setSize       = S_SetSize;
-    m_api.getSize       = S_GetSize;
-    m_api.isKeyDown     = S_IsKeyDown;
-    m_api.getMouseX     = S_GetMouseX;
-    m_api.getMouseY     = S_GetMouseY;
-    m_api.getDeltaTime  = S_GetDeltaTime;
-    m_api.setCameraPos  = S_SetCameraPos;
-    m_api.getCameraPos  = S_GetCameraPos;
+    m_api.getTransformBufferA = S_GetTransformBufferA;
+    m_api.getTransformBufferB = S_GetTransformBufferB;
+    m_api.getRenderBuffer = S_GetRenderBuffer;
+    m_api.isKeyDown = S_IsKeyDown;
+    m_api.getMouseX = S_GetMouseX;
+    m_api.getMouseY = S_GetMouseY;
+    m_api.getDeltaTime = S_GetDeltaTime;
+    m_api.setCameraPos = S_SetCameraPos;
+    m_api.getCameraPos = S_GetCameraPos;
 
-    // 2. 获取 C# 入口函数指针
     const std::string& scriptsDir = host.GetScriptsDir();
     std::string assemblyPath = scriptsDir + "/GameScripts.dll";
-
-    auto bootstrapRaw = host.GetFunctionPointer(
-        assemblyPath, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
-    m_bootstrapFn = (void (*)(void*))bootstrapRaw;
-
-    m_onFrameFn = (void (*)(float))host.GetFunctionPointer(
-        assemblyPath, "GameScripts.ScriptEntry, GameScripts", "OnFrame");
-
-    if (!m_bootstrapFn || !m_onFrameFn) {
-        LOG_ERROR("ScriptEngine", "Failed to resolve C# entry points");
-        Shutdown();
-        return false;
-    }
-
-    // 3. 调用 Bootstrap（传 PrismaAPI 指针）
+    m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
+    m_onFrameFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "OnFrame");
+    
+    if (!m_bootstrapFn || !m_onFrameFn) return false;
+    
     m_bootstrapFn(&m_api);
-
     m_initialized = true;
-    LOG_INFO("ScriptEngine", "Script engine initialized");
+    s_activeEngine = nullptr;
     return true;
 }
 
 void ScriptEngine::Update(float dt) {
     if (!m_initialized || !m_onFrameFn) return;
-
-    // 刷新 API 中的 deltaTime（因为它是一个函数指针，只能返回缓存的静态值）
-    // OnFrame 由 C# 侧独立计时
+    s_activeEngine = this;
+    
+    // 调用 C# 侧更新
+    // C# 侧会在 OnFrame 内部执行：Logic -> SwapBuffers
     m_onFrameFn(dt);
+    
+    // 同步 C++ 侧的读取索引
+    // 这是一个简化的假设，实际中应由 C# 传回或通过原子变量共享
+    m_currentReadIndex = 1 - m_currentReadIndex;
+    
+    s_activeEngine = nullptr;
 }
 
-void ScriptEngine::GetCameraPosition(float& x, float& y) const {
-    x = m_cameraPosX;
-    y = m_cameraPosY;
-}
-
-uint32_t ScriptEngine::GetEntityCount() const {
-    return (uint32_t)m_entities.size();
-}
-
-EntityData* ScriptEngine::GetEntity(uint32_t id) {
-    return (id < m_entities.size()) ? &m_entities[id] : nullptr;
-}
-
-const EntityData* ScriptEngine::GetEntity(uint32_t id) const {
-    return (id < m_entities.size()) ? &m_entities[id] : nullptr;
-}
-
-void ScriptEngine::Shutdown() {
-    m_initialized = false;
-    m_bootstrapFn = nullptr;
-    m_onFrameFn = nullptr;
-    m_host = nullptr;
-    m_entities.clear();
-    m_nextEntityId = 1;
-
-    if (s_self == this) s_self = nullptr;
-
-    LOG_DEBUG("ScriptEngine", "Shut down");
-}
-
-// GetEntity inlined in header
+void ScriptEngine::Shutdown() { m_initialized = false; }
 
 } // namespace Scripting
 } // namespace Prisma

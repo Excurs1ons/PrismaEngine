@@ -18,6 +18,7 @@
     <ProjectReference Include="../PrismaEngine.Core/PrismaEngine.Core.csproj">
       <Private>true</Private>
     </ProjectReference>
+    <ProjectReference Include="../PrismaEngine.Generators/PrismaEngine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <!-- 保留从原生代码（C++ CoreCLRHost）调用的入口点，防止 linker 删除 -->
     <TrimmerRootAssembly Include="GameScripts" />
   </ItemGroup>

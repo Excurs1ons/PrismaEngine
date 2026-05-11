@@ -42,7 +42,7 @@ void Template2DApp::OnRender() {
 
     // 从 ScriptEngine 同步相机位置到渲染相机
     float camX = 0, camY = 0;
-    Engine::Get().GetScriptEngine().GetCameraPosition(camX, camY);
+    Engine::Get().GetScriptEngine().GetCameraPos(&camX, &camY);
     ortho->SetPosition({camX, camY});
 
     Graphic::Renderer2D::BeginScene(*ortho);
@@ -80,22 +80,26 @@ void Template2DApp::OnRender() {
     auto& scriptEngine = Engine::Get().GetScriptEngine();
     uint32_t scriptEntityCount = 0;
     if (scriptEngine.IsInitialized()) {
-        for (uint32_t i = 0; i < scriptEngine.GetEntityCount(); ++i) {
-            auto* e = scriptEngine.GetEntity(i);
-            if (!e || !e->active) continue;
+        auto* rb = scriptEngine.GetRenderBuffer();
+        auto* tb = scriptEngine.GetCurrentTransformBuffer();
+        
+        for (uint32_t i = 0; i < Scripting::kMaxEntities; ++i) {
+            if (!rb->active[i]) continue;
             ++scriptEntityCount;
 
-            float cx = e->posX + e->sizeW * 0.5f;
-            float cy = e->posY + e->sizeH * 0.5f;
+            float cx = tb->posX[i] + rb->sizeW[i] * 0.5f;
+            float cy = tb->posY[i] + rb->sizeH[i] * 0.5f;
 
             Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(cx, cy, 0.0f));
-            if (std::abs(e->rotation) > 0.001f)
-                t = glm::rotate(t, glm::radians(e->rotation), glm::vec3(0, 0, 1));
-            t = glm::scale(t, glm::vec3(e->sizeW, e->sizeH, 1.0f));
-            Graphic::Renderer2D::DrawQuad(t, {e->colorR, e->colorG, e->colorB, e->colorA});
+            if (std::abs(tb->rotation[i]) > 0.001f)
+                t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
+            t = glm::scale(t, glm::vec3(rb->sizeW[i], rb->sizeH[i], 1.0f));
+            
+            Color color = {rb->colorR[i], rb->colorG[i], rb->colorB[i], rb->colorA[i]};
+            Graphic::Renderer2D::DrawQuad(t, color);
 
-            std::string coord = "(" + std::to_string((int)e->posX) + "," + std::to_string((int)e->posY) + ")";
-            Color inv = {1.0f - e->colorR, 1.0f - e->colorG, 1.0f - e->colorB, 1.0f};
+            std::string coord = "(" + std::to_string((int)tb->posX[i]) + "," + std::to_string((int)tb->posY[i]) + ")";
+            Color inv = {1.0f - rb->colorR[i], 1.0f - rb->colorG[i], 1.0f - rb->colorB[i], 1.0f};
             // 投影线从精灵中心到坐标轴
             Graphic::Renderer2D::DrawQuad({cx, cy * 0.5f}, {1.5f, cy}, inv);
             Graphic::Renderer2D::DrawQuad({cx * 0.5f, cy}, {cx, 1.5f}, inv);

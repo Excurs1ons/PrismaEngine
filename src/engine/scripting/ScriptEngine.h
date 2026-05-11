@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <deque>
+#include <mutex> // 引入锁以支持线程安全同步
 
 #include "Export.h"
 
@@ -12,105 +14,78 @@ namespace Scripting {
 class CoreCLRHost;
 
 // ============================================================================
-// 实体数据池
+// 实体数据池 - SoA (Struct of Arrays) 布局
 // ============================================================================
 
-constexpr uint32_t kMaxEntities = 2048;
+constexpr uint32_t kMaxEntities = 32768; // 与 C# NativeAPI.MaxEntities 保持一致
 
-struct EntityData {
-    bool    active   = false;
-    float   posX = 0, posY = 0;
-    float   rotation = 0.0f;
-    float   scaleX = 1.0f, scaleY = 1.0f;
-    float   colorR = 1.0f, colorG = 1.0f, colorB = 1.0f, colorA = 1.0f;
-    float   sizeW = 50.0f, sizeH = 50.0f;
+struct TransformBufferSoA {
+    float posX[kMaxEntities];
+    float posY[kMaxEntities];
+    float rotation[kMaxEntities];
+    float scaleX[kMaxEntities];
+    float scaleY[kMaxEntities];
 };
 
-// ============================================================================
-// PrismaAPI — C++ → C# 服务层函数指针表
-// ============================================================================
+struct RenderBufferSoA {
+    uint32_t active[kMaxEntities];
+    uint32_t generation[kMaxEntities];
+    float    colorR[kMaxEntities];
+    float    colorG[kMaxEntities];
+    float    colorB[kMaxEntities];
+    float    colorA[kMaxEntities];
+    float    sizeW[kMaxEntities];
+    float    sizeH[kMaxEntities];
+};
 
 struct PrismaAPI {
     void (*log)(const char* subsystem, const char* msg);
-
     uint32_t (*createEntity)();
-    void (*destroyEntity)(uint32_t id);
-
-    void (*setPosition)(uint32_t id, float x, float y);
-    void (*getPosition)(uint32_t id, float* x, float* y);
-    void (*setRotation)(uint32_t id, float deg);
-    float (*getRotation)(uint32_t id);
-    void (*setScale)(uint32_t id, float x, float y);
-    void (*getScale)(uint32_t id, float* x, float* y);
-
-    void (*setColor)(uint32_t id, float r, float g, float b, float a);
-    void (*getColor)(uint32_t id, float* r, float* g, float* b, float* a);
-    void (*setSize)(uint32_t id, float w, float h);
-    void (*getSize)(uint32_t id, float* w, float* h);
-
+    void (*destroyEntity)(uint32_t handle);
+    
+    // 缓冲区获取 (双缓冲支持)
+    TransformBufferSoA* (*getTransformBufferA)();
+    TransformBufferSoA* (*getTransformBufferB)();
+    RenderBufferSoA*    (*getRenderBuffer)();
+    
+    // 输入与环境
     bool (*isKeyDown)(int key);
     float (*getMouseX)();
     float (*getMouseY)();
-
     float (*getDeltaTime)();
-
+    
+    // 相机与全局状态
     void (*setCameraPos)(float x, float y);
     void (*getCameraPos)(float* x, float* y);
 };
 
-// ============================================================================
-// ScriptEngine — 脚本引擎
-// ============================================================================
-
 class ENGINE_API ScriptEngine {
 public:
-    ScriptEngine() = default;
-    ~ScriptEngine() { Shutdown(); }
+    ScriptEngine();
+    ~ScriptEngine();
 
-    ScriptEngine(const ScriptEngine&) = delete;
-    ScriptEngine& operator=(const ScriptEngine&) = delete;
-
-    /** @brief 初始化：获取 C# 入口函数指针，填充 PrismaAPI */
     bool Initialize(CoreCLRHost& host);
-
-    /** @brief 关闭脚本引擎 */
     void Shutdown();
-
-    bool IsInitialized() const { return m_initialized; }
-
-    /** @brief 每帧调用 C# OnFrame(dt) */
     void Update(float dt);
 
-    /** @brief 获取 PrismaAPI 函数指针表（给 C# 传递用） */
+    bool IsInitialized() const { return m_initialized; }
     const PrismaAPI& GetAPI() const { return m_api; }
+    
+    void GetCameraPos(float* x, float* y) const { *x = m_cameraPosX; *y = m_cameraPosY; }
 
-    /** @brief 获取 C# 控制的相机位置（用于同步到渲染相机） */
-    void GetCameraPosition(float& x, float& y) const;
-
-    // ---- 实体数据访问 ----
-    uint32_t GetEntityCount() const;
-    EntityData* GetEntity(uint32_t id);
-    const EntityData* GetEntity(uint32_t id) const;
+    // 渲染器调用此接口获取当前可读的数据
+    const TransformBufferSoA* GetCurrentTransformBuffer() const;
+    const RenderBufferSoA*    GetRenderBuffer() const { return m_renderBuffer; }
 
 private:
-    // ---- PrismaAPI 静态实现 ----
+    uint32_t CreateEntity();
+    void     DestroyEntity(uint32_t handle);
+
     static uint32_t S_CreateEntity();
-    static void     S_DestroyEntity(uint32_t id);
-    static void     S_SetPosition(uint32_t id, float x, float y);
-    static void     S_GetPosition(uint32_t id, float* x, float* y);
-    static void     S_SetRotation(uint32_t id, float deg);
-    static float    S_GetRotation(uint32_t id);
-    static void     S_SetScale(uint32_t id, float x, float y);
-    static void     S_GetScale(uint32_t id, float* x, float* y);
-    static void     S_SetColor(uint32_t id, float r, float g, float b, float a);
-    static void     S_GetColor(uint32_t id, float* r, float* g, float* b, float* a);
-    static void     S_SetSize(uint32_t id, float w, float h);
-    static void     S_GetSize(uint32_t id, float* w, float* h);
-    static bool     S_IsKeyDown(int key);
-    static float    S_GetMouseX();
-    static float    S_GetMouseY();
-    static float    S_GetDeltaTime();
-    static void     S_Log(const char* subsystem, const char* msg);
+    static void     S_DestroyEntity(uint32_t handle);
+    static TransformBufferSoA* S_GetTransformBufferA();
+    static TransformBufferSoA* S_GetTransformBufferB();
+    static RenderBufferSoA*    S_GetRenderBuffer();
     static void     S_SetCameraPos(float x, float y);
     static void     S_GetCameraPos(float* x, float* y);
 
@@ -120,11 +95,18 @@ private:
     void (*m_onFrameFn)(float) = nullptr;
 
     PrismaAPI m_api = {};
-
-    std::vector<EntityData> m_entities;
-    uint32_t m_nextEntityId = 1; // 0 = invalid
+    
+    // 真正的 Ping-Pong 缓冲区
+    TransformBufferSoA* m_transformBufferA = nullptr;
+    TransformBufferSoA* m_transformBufferB = nullptr;
+    RenderBufferSoA*    m_renderBuffer = nullptr; 
+    
+    // 追踪当前 C# 侧作为 "Read" 的缓冲区索引 (0=A, 1=B)
+    // 注意：C# 侧每帧会交换，C++ 需要同步或感知
+    mutable int m_currentReadIndex = 0;
 
     float m_cameraPosX = 0.0f, m_cameraPosY = 0.0f;
+    float m_lastDeltaTime = 0.016f;
 };
 
 } // namespace Scripting

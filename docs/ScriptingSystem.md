@@ -133,6 +133,16 @@ Engine::Run()
 | Phase 4 | ECS 全集成 | ⏳ 待实现 |
 | Phase 5 | 热重载支持 | ⏳ 待实现 |
 
+## 开发建议
+
+- **IDE**: 推荐使用 Visual Studio 2022 (Windows) 或 VS Code + C# Dev Kit (跨平台)。
+- **编译 Termux 环境**: 
+  在 Android/Termux 或受限虚拟内存环境（`ulimit -v`）中编译时，.NET 10 默认尝试预留 256GB 虚拟地址空间，这会导致编译失败。必须通过以下环境变量压制：
+  ```bash
+  export DOTNET_GCRegionRange=0x10000000
+  dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
+  ```
+
 ## 参考资料
 
 - [.NET Host](https://learn.microsoft.com/en-us/dotnet/core/tutorials/nethost)

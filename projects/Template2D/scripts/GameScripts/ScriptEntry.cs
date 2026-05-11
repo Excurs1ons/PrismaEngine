@@ -15,7 +15,7 @@ internal static class ScriptEntry
         ScriptEngine.Bootstrap(apiPtr);
 
         // 创建场景 → SceneInit 会创建摄像机 + 精灵
-        var init = new Node("__SceneInit__");
+        var init = Node.Create("__SceneInit__");
         init.AddScript<SceneInit>();
 
         System.Console.WriteLine("[GameScripts] Scene initialized");

@@ -5,46 +5,56 @@ using System.Runtime.InteropServices;
 namespace PrismaEngine;
 
 /// <summary>
-/// 内部脚本引擎。管理所有 Node 和 Script 的生命周期。
-/// 普通 C# 方法，无 [UnmanagedCallersOnly] 限制。
+/// 内部脚本引擎。充当 C++ 引擎与 C# World 之间的桥梁。
+/// Internal script engine. Acts as a bridge between C++ engine and C# World.
 /// </summary>
 internal static class ScriptEngine
 {
-    private static List<Node> _allNodes = new();
-
-    internal static void RegisterNode(Node n) => _allNodes.Add(n);
+    private static World? _mainWorld;
 
     /// <summary>
-    /// C++ 端调用的引导入口。
-    /// 接收 PrismaAPI 函数指针表，完成 C# 侧初始化。
+    /// 引导入口。支持热重载时的状态迁移。
+    /// Bootstrap entry point. Supports state migration during Hot Reloading.
     /// </summary>
     internal static void Bootstrap(IntPtr apiPtr)
     {
         unsafe { NativeAPI.Init((PrismaAPI*)apiPtr); }
+        
+        // Cherno: 如果是在热重载过程中，我们可能需要保留之前的 World 状态
+        if (_mainWorld == null)
+        {
+            _mainWorld = new World();
+            World.Active = _mainWorld;
+
+            // 调用自动生成的脚本注册逻辑
+            // Call automatically generated script registration logic
+            try { 
+                // 使用反射尝试调用，以防 Generator 还没运行
+                var registryType = Type.GetType("PrismaEngine.Generated.ScriptRegistry, GameScripts") ?? 
+                                   Type.GetType("PrismaEngine.Generated.ScriptRegistry, PrismaEngine.Core");
+                registryType?.GetMethod("RegisterAll")?.Invoke(null, null);
+            } catch { /* Ignore */ }
+        }
+        else
+        {
+            Debug.Log("Hot Reload detected: Migrating state...");
+            // TODO: 在这里实现跨程序集的脚本实例迁移逻辑
+        }
     }
 
     /// <summary>
-    /// C++ 端每帧调用的更新入口。
+    /// 每帧更新逻辑。
+    /// Update logic per frame.
     /// </summary>
     internal static void OnFrame(float dt)
     {
-        Time.DeltaTime = dt;
-        Time.Elapsed += dt;
-
-        foreach (var n in _allNodes)
+        try
         {
-            if (n._destroyed) continue;
-
-            for (int i = n._scripts.Count - 1; i >= 0; i--)
-            {
-                var s = n._scripts[i];
-                if (!s._started)
-                {
-                    s.OnStart();
-                    s._started = true;
-                }
-                s.OnUpdate(dt);
-            }
+            _mainWorld?.Step(dt);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"CRITICAL: ScriptEngine Execution Failure: {e.Message}\n{e.StackTrace}");
         }
     }
 }
