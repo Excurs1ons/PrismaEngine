@@ -13,8 +13,48 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 
 [中文文档](./docs/README_zh.md) | [English](./README.md)
 
-> **Current Status**: Android Vulkan runtime is production-ready. Windows DirectX 12 backend is in active development.
+> **Current Status**: CoreCLR C# scripting functional. SoA entity pool with 1M virtual capacity. Android Vulkan runtime production-ready.
 > **Last Updated**: 2026-05-11
+
+## Architecture Highlights
+
+### SoA Entity Pool (Structure of Arrays)
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│              Virtual Memory Block (1M entities max)         │
+├─────────────────┬─────────────────┬─────────────────────────┤
+│  Transform SoA  │  Transform SoA  │      Render SoA         │
+│     (Buffer A)  │     (Buffer B)  │                        │
+│  ─────────────  │  ─────────────  │  ─────────────────────│
+│  posX, posY     │  posX, posY     │  active, generation   │
+│  rotation       │  rotation       │  colorRGBA            │
+│  scaleX, scaleY │  scaleX, scaleY  │  sizeW, sizeH         │
+└─────────────────┴─────────────────┴─────────────────────────┘
+         ↑ Double-buffer read             ↑ Single read
+           (ping-pong swap)
+```
+
+- **VirtualAlloc MEM_RESERVE**: Pre-reserve 1M entity virtual address space
+- **Double-buffered Transform**: Ping-pong SoA for lock-free read during writes
+- **Fixed pointer stability**: C# never gets dangling pointers
+
+### CoreCLR C# Scripting
+
+```
+C++ Engine                        CoreCLR Runtime
+├── CoreCLRHost                   └── hostfxr (self-contained)
+│   └── hostfxr_init              └── PrismaEngine.Core.dll
+├── ScriptEngine                  C# GameScripts.dll
+│   └── PrismaAPI (18 fns)        ├── Node (entity = position)
+├── Engine::Run()                 ├── Script (base class)
+│   └── Bootstrap → OnFrame       ├── Input/Time/Math
+└── Template2DApp                 └── SceneInit, Behaviors
+```
+
+- **Unity-style C#**: `Node` is entity, C++ provides backend
+- **No GameObject/Transform split**: `Node.Position/Rotation/Scale` directly
+- **Self-contained publish**: No system .NET dependency
 
 ## CI/CD Status
 
@@ -38,6 +78,8 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 
 | Module | Status | Description |
 |--------|--------|-------------|
+| SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
+| CoreCLR Scripting | ✅ 90% | C# Node/Script system, self-contained publish |
 | Rendering Architecture | ✅ 85% | Core Pass + Feature system |
 | Resource Management | ✅ 95% | Handle<T> system + resource pools |
 | Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
@@ -50,7 +92,7 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 | Editor Tools | ⏳ 15% | ImGui-based inspector |
 | MCP Protocol | ✅ 80% | 31 tools for AI Agent integration |
 
-**Overall: ~75%**
+**Overall: ~80%**
 
 ## Quick Start
 
@@ -92,6 +134,7 @@ cmake --build build/linux-x64-debug --parallel
 - [Documentation Index](docs/Index.md) - **Start here**
 - [Architecture Overview](docs/README_zh.md) - Architecture and design
 - [Vulkan Integration](docs/VulkanIntegration.md) - Detailed Android implementation
+- [CoreCLR Scripting Summary](docs/plans/2026-05-10-coreclr-scripting-summary.md) - C# scripting implementation
 - [RenderGraph Plan](docs/RenderGraph_Migration_Plan.md) - Future rendering roadmap
 
 ## Core Features
@@ -100,6 +143,7 @@ cmake --build build/linux-x64-debug --parallel
 - **Smart Dependency Management**: No manual library installation required; CMake handles everything.
 - **Unified Rendering API**: Write once, run on DX12 or Vulkan.
 - **Android Deep Optimization**: Zero-latency input via GameActivity and high-performance Vulkan rendering path.
+- **CoreCLR Scripting**: Full C# scripting with SoA entity pool and self-contained deployment.
 - **MCP Integration**: Full Model Context Protocol support for AI Agent control (31 tools).
 
 ## License
