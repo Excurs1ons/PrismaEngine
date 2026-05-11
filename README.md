@@ -6,6 +6,8 @@
 [![Android APK](https://img.shields.io/badge/APK-Download-green.svg?logo=android)](https://github.com/Excurs1ons/PrismaEngine/releases/download/latest/PrismaAndroid.apk)
 [![CodeWiki](https://img.shields.io/badge/CodeWiki-Google-blue?style=flat&logo=googlegemini&logoColor=fff)](https://codewiki.google/github.com/Excurs1ons/PrismaEngine)
 [![Ask Zread](https://img.shields.io/badge/Ask_Zread-blue?style=flat&logo=readme&logoColor=white)](https://zread.ai/Excurs1ons/PrismaEngine)
+[![DeepWiki](https://img.shields.io/badge/DeepWiki-Free-blue?style=flat)](https://deepwiki.com/Excurs1ons/PrismaEngine)
+[![Mintlify](https://img.shields.io/badge/Mintlify-Docs-green?style=flat)](https://mintlify.com/github.com/Excurs1ons/PrismaEngine)
 
 Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusing on high-performance rendering and modern graphics architectures.
 
