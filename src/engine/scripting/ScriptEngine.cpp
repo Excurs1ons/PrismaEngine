@@ -130,10 +130,14 @@ void ScriptEngine::Update(float dt) {
     
     // 调用 C# 侧更新
     // C# 侧会在 OnFrame 内部执行：Logic -> SwapBuffers
+    // SwapBuffers 之后，C# 的 TransformBuffer_Read 指针指向最新写入的缓冲区。
+    // 渲染时 C++ 通过 GetCurrentTransformBuffer() 获取匹配的缓冲区：
+    //   当 m_currentReadIndex == 0 → m_transformBufferB (第一帧 C# 写入的对象)
+    //   当 m_currentReadIndex == 1 → m_transformBufferA
+    // 这个翻转必须与 C# 的 SwapBuffers 保持同步——因为都是每帧一次。
     m_onFrameFn(dt);
     
-    // 同步 C++ 侧的读取索引
-    // 这是一个简化的假设，实际中应由 C# 传回或通过原子变量共享
+    // C# World.Step 末尾已调 SwapBuffers，此处同步索引
     m_currentReadIndex = 1 - m_currentReadIndex;
     
     s_activeEngine = nullptr;

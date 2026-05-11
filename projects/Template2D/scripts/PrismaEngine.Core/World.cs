@@ -76,8 +76,8 @@ public class World : IDisposable
         ProcessRemovalQueue();
         ProcessPendingStarts();
 
-        // 1. 并行更新空间索引 (使用当前 Write 缓冲区的数据，为下一帧做准备)
-        UpdateSpatialGridParallel();
+        // 1. 更新空间索引 (使用当前 Write 缓冲区的数据，为下一帧做准备)
+        UpdateSpatialGrid();
 
         // 2. 并行执行逻辑
         PrismaEngine.Time._isParallelStep = true;
@@ -93,23 +93,38 @@ public class World : IDisposable
         NativeAPI.SwapBuffers();
     }
 
-    private unsafe void UpdateSpatialGridParallel()
+    private unsafe void UpdateSpatialGrid()
     {
         SpatialGrid.Clear();
         int nodeCount = _nodes.Count;
         if (nodeCount == 0) return;
 
-        // Cherno Optimization: 并行网格构建。
-        // 由于 SpatialGrid.UpdateEntity 目前内部还有 Dictionary.Add，并不是完全并行的。
-        // 在百万级实体方案中，这里应该使用并行计数排序（Parallel Radix Sort）。
-        // 此处先实现并行分发以提升效率。
-        Parallel.For(0, nodeCount, i => 
+        if (nodeCount < ParallelThreshold)
         {
-            uint handle = _nodes[i].Handle;
-            uint idx = handle & 0xFFFF;
-            // 使用 Write 缓冲区的数据进行空间索引，因为这是实体最新的位置
-            SpatialGrid.UpdateEntity(handle, new Vector2(NativeAPI.TransformBuffer_Write->PosX[idx], NativeAPI.TransformBuffer_Write->PosY[idx]));
-        });
+            // 小规模：串行构建，避免 Dictionary 竞态
+            for (int i = 0; i < nodeCount; i++)
+            {
+                uint handle = _nodes[i].Handle;
+                uint idx = handle & 0xFFFF;
+                SpatialGrid.UpdateEntity(handle,
+                    new Vector2(NativeAPI.TransformBuffer_Write->PosX[idx],
+                                NativeAPI.TransformBuffer_Write->PosY[idx]));
+            }
+        }
+        else
+        {
+            // Cherno Optimization: 大规模实体时并行构建。
+            // 注意：SpatialGrid.UpdateEntity 修改 Dictionary，当前不是完全线程安全的。
+            // 在百万级实体方案中，应该使用并行计数排序（Parallel Radix Sort）。
+            Parallel.For(0, nodeCount, i =>
+            {
+                uint handle = _nodes[i].Handle;
+                uint idx = handle & 0xFFFF;
+                SpatialGrid.UpdateEntity(handle,
+                    new Vector2(NativeAPI.TransformBuffer_Write->PosX[idx],
+                                NativeAPI.TransformBuffer_Write->PosY[idx]));
+            });
+        }
     }
 
     private void ProcessPendingStarts()

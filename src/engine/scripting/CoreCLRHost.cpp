@@ -125,7 +125,8 @@ bool CoreCLRHost::Initialize(const std::string& scriptsDir) {
 
     // 4. 通过自包含程序集路径初始化运行时（argv[0] = .dll 路径）
     std::string dllPath = (fs::path(scriptsDir) / "GameScripts.dll").string();
-    std::vector<char_t> dllBuf(to_native(dllPath).begin(), to_native(dllPath).end());
+    auto nativePath = to_native(dllPath);
+    std::vector<char_t> dllBuf(nativePath.begin(), nativePath.end());
     dllBuf.push_back(0); // null-terminate
     const char_t* argv[] = { dllBuf.data() };
 

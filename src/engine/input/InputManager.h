@@ -16,7 +16,7 @@ class Event;
 
 namespace Input {
 
-// 按键码定义 (省略详细内容以节省篇幅，实际文件中保留)
+// 按键码定义
 enum class KeyCode : uint32_t {
     A          = 65,
     B          = 66,
