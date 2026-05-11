@@ -14,7 +14,25 @@
 
 #ifdef _WIN32
     #include <process.h>
+    #define WIN32_LEAN_AND_MEAN
+    #define NOMINMAX
     #include <windows.h>
+    // windows.h 定义 CreateMutex/CreateWindowEx 等宏，与 Platform 方法名冲突
+    #ifdef CreateMutex
+    #undef CreateMutex
+    #endif
+    #ifdef CreateWindowEx
+    #undef CreateWindowEx
+    #endif
+    #ifdef GetEnvironmentVariable
+    #undef GetEnvironmentVariable
+    #endif
+    #ifdef SetCurrentDirectory
+    #undef SetCurrentDirectory
+    #endif
+    #ifdef SetEnvironmentVariable
+    #undef SetEnvironmentVariable
+    #endif
 #else
     #include <unistd.h>
     #include <sys/mman.h>

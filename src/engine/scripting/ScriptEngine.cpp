@@ -40,48 +40,9 @@ ScriptEngine::~ScriptEngine() {
     if (m_blockRBase) Platform::ReleaseVirtualMemory(m_blockRBase, 8 * kFieldStride);
 }
 
-static void osCommit(void* addr, size_t bytes) {
-#ifdef _WIN32
-    VirtualAlloc(addr, bytes, MEM_COMMIT, PAGE_READWRITE);
-#else
-    // 用 MAP_FIXED 替换 PROT_NONE 映射为可读写
-    mmap(addr, bytes, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
-}
-
-static void osRelease(void* addr, size_t bytes) {
-#ifdef _WIN32
-    VirtualFree(addr, 0, MEM_RELEASE);
-#else
-    munmap(addr, bytes);
-#endif
-}
-
 // ============================================================================
-// ScriptEngine
+// 布局指针初始化 + 内存提交
 // ============================================================================
-
-ScriptEngine::ScriptEngine() {
-    // 预留 3 个 VA 块：Transform A / Transform B / Render
-    // Transform: 5 float 数组 × 4MB = 20MB/块
-    // Render: 8 数组 (2 uint32 + 6 float) × 4MB = 32MB
-    size_t blockSizeA = 5 * kFieldStride;  // 20MB
-    size_t blockSizeR = 8 * kFieldStride;  // 32MB
-
-    m_blockABase = osReserve(blockSizeA);
-    m_blockBBase = osReserve(blockSizeA);
-    m_blockRBase = osReserve(blockSizeR);
-
-    // 初始化布局指针（设置一次永不改变）
-    initLayoutPointers();
-}
-
-ScriptEngine::~ScriptEngine() {
-    Shutdown();
-    if (m_blockABase) osRelease(m_blockABase, 5 * kFieldStride);
-    if (m_blockBBase) osRelease(m_blockBBase, 5 * kFieldStride);
-    if (m_blockRBase) osRelease(m_blockRBase, 8 * kFieldStride);
-}
 
 void ScriptEngine::initLayoutPointers() {
     auto initTransform = [](TransformBufferSoA& layout, void* base) {
