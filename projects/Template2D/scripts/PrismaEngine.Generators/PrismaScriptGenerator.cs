@@ -121,14 +121,7 @@ namespace PrismaEngine.Generators
             sb.AppendLine();
             sb.AppendLine($"namespace {info.Namespace}");
             sb.AppendLine("{");
-            
-            // 在 partial 类声明中包含基类和接口
-            sb.Append($"    public partial class {info.ClassName}");
-            if (!string.IsNullOrEmpty(info.BaseList))
-            {
-                sb.Append($" : {info.BaseList}");
-            }
-            sb.AppendLine();
+            sb.AppendLine($"    public partial class {info.ClassName}");
             sb.AppendLine("    {");
 
             // 1. 如果是 Script，生成 TypeId / If Script, generate TypeId
