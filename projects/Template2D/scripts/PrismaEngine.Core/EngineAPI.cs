@@ -4,34 +4,32 @@ using System.Runtime.InteropServices;
 namespace PrismaEngine;
 
 /// <summary>
-/// 热数据：物理与变换 (SoA 布局)。
-/// Hot Data: Transform and Physics (SoA).
+/// 热数据：物理与变换 (动态 SoA 布局，指针指向 C++ vector.data())。
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct TransformBufferSoA
 {
-    public fixed float PosX[NativeAPI.MaxEntities];
-    public fixed float PosY[NativeAPI.MaxEntities];
-    public fixed float Rotation[NativeAPI.MaxEntities];
-    public fixed float ScaleX[NativeAPI.MaxEntities];
-    public fixed float ScaleY[NativeAPI.MaxEntities];
+    public float* PosX;
+    public float* PosY;
+    public float* Rotation;
+    public float* ScaleX;
+    public float* ScaleY;
 }
 
 /// <summary>
-/// 冷数据：渲染与外观 (SoA 布局)。
-/// Cold Data: Rendering and Appearance (SoA).
+/// 冷数据：渲染与外观 (动态 SoA 布局)。
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
 public unsafe struct RenderBufferSoA
 {
-    public fixed uint Active[NativeAPI.MaxEntities];
-    public fixed uint Generation[NativeAPI.MaxEntities];
-    public fixed float ColorR[NativeAPI.MaxEntities];
-    public fixed float ColorG[NativeAPI.MaxEntities];
-    public fixed float ColorB[NativeAPI.MaxEntities];
-    public fixed float ColorA[NativeAPI.MaxEntities];
-    public fixed float SizeW[NativeAPI.MaxEntities];
-    public fixed float SizeH[NativeAPI.MaxEntities];
+    public uint*   Active;
+    public uint*   Generation;
+    public float*  ColorR;
+    public float*  ColorG;
+    public float*  ColorB;
+    public float*  ColorA;
+    public float*  SizeW;
+    public float*  SizeH;
 }
 
 [StructLayout(LayoutKind.Sequential)]
@@ -40,7 +38,6 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<byte*, byte*, void> Log;
     public delegate* unmanaged<uint> CreateEntity;
     public delegate* unmanaged<uint, void> DestroyEntity;
-    // Cherno: 获取两个变换缓冲区以实现双缓冲
     public delegate* unmanaged<TransformBufferSoA*> GetTransformBufferA;
     public delegate* unmanaged<TransformBufferSoA*> GetTransformBufferB;
     public delegate* unmanaged<RenderBufferSoA*> GetRenderBuffer;
@@ -48,13 +45,16 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<float> GetMouseX;
     public delegate* unmanaged<float> GetMouseY;
     public delegate* unmanaged<float> GetDeltaTime;
+    // 以下字段与 C++ PrismaAPI 对齐（C# 当前未直接调用，但必须占位保证偏移正确）
+    public delegate* unmanaged<float, float, void> SetCameraPos;
+    public delegate* unmanaged<float*, float*, void> GetCameraPos;
+    public delegate* unmanaged<uint> GetEntityCapacity;
 }
 
 internal static unsafe class NativeAPI
 {
-    public const int MaxEntities = 32768; // 翻倍，继续向百万迈进
     internal static PrismaAPI API;
-    
+
     // 双缓冲区指针
     internal static TransformBufferSoA* TransformBuffer_Read;
     internal static TransformBufferSoA* TransformBuffer_Write;

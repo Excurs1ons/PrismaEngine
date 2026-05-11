@@ -111,6 +111,72 @@ Engine::Run()
             └─ ScriptEngine::Update(dt) → 调用 C# OnFrame(dt)
 ```
 
+## 内存架构
+
+### SoA 池：虚拟内存预留 + 按需提交
+
+实体数据采用 **SoA（Structure of Arrays）** 布局，双缓冲（Transform A/B）支持并行写入。内存管理使用 **Virtual Memory Reservation** 而非固定分配或 `std::vector`：
+
+```
+启动时 VirtualAlloc(MEM_RESERVE) 预留 1M 实体虚拟地址（不占物理内存）
+  ├─ Transform A: 5 float 数组 × 4MB = 20MB VA
+  ├─ Transform B: 5 float 数组 × 4MB = 20MB VA
+  └─ Render:     8 数组   × 4MB = 32MB VA（无缓冲）
+                   总 VA 预留: 72MB（仅页表，无物理内存）
+
+CreateEntity 时按需 VirtualAlloc(MEM_COMMIT)
+  以 kCommitStep=16384 槽位为粒度提交物理页
+  20 实体时仅提交 ~288KB 物理内存
+```
+
+**设计取舍：**
+
+| 方案 | 指针稳定性 | 物理内存浪费 | 扩容成本 |
+|------|-----------|-------------|---------|
+| `float posX[32768]` 固定数组 | ✅ 永远不变 | ❌ 640KB 固定浪费 | ❌ 越界=崩溃 |
+| `std::vector<float>` | ❌ 扩容即野指针 | ✅ 按需分配 | ❌ 需同步 C# 指针 |
+| `VirtualAlloc(MEM_RESERVE)` | ✅ 终身固定 | ✅ 按需提交 | ✅ 页粒度提交，指针不变 |
+
+**Active Range Copy：**
+Bootstrap 后将活跃实体区间（0 ~ `m_aliveCount`）从 Write 缓冲区镜像到 Read 缓冲区：
+```cpp
+// 20 个实体时只拷贝 20 × 4 × 5 = 400 字节
+std::memcpy(m_layoutA.posX, m_layoutB.posX, m_aliveCount * sizeof(float));
+```
+而非全量 640KB 或全 VA 范围拷贝。
+
+**关键指标：**
+
+| 场景 | 固定 32768 | std::vector | VirtualAlloc (当前) |
+|------|-----------|-------------|-------------------|
+| 20 实体物理内存 | 640KB | ~2KB | ~288KB |
+| 1M 实体物理内存 | 无法支持 | 20MB + vector 元数据 | 20MB（无元数据） |
+| 扩容后指针稳定性 | N/A | ❌ 需同步 | ✅ 不变 |
+| C# 边界检查 | 硬编码常量 | 动态查询 | AliveCount 查询 |
+
+### 实体句柄
+
+```
+31        16 15        0
+┌────────────┬──────────┐
+│ generation │  index   │
+└────────────┴──────────┘
+```
+
+- `index`（低 16 位）：SoA 数组索引，最大 65535
+- `generation`（高 16 位）：槽位复用计数，用于检测野指针（stale handle）
+
+DestroyEntity 递增 generation，CreateEntity 重用空闲槽时返回新 generation。
+持有旧句柄的 Node 在 Validate() 中检测 generation 不匹配并抛出异常。
+
+### 关键文件
+
+| 文件 | 职责 |
+|------|------|
+| `ScriptEngine.h` | SoA 结构体定义、VirtualAlloc VA 块 |
+| `ScriptEngine.cpp` | `osReserve/Commit/Release`、`CreateEntity` 自动扩容、`commitRange`、Active Range Copy |
+| `EngineAPI.cs` | C# 侧 `float*` 指针匹配、`GetEntityCapacity` 动态边界 |
+
 ## 代码位置
 
 | 文件 | 职责 |

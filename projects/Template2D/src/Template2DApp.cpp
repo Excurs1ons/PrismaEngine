@@ -83,7 +83,7 @@ void Template2DApp::OnRender() {
         auto* rb = scriptEngine.GetRenderBuffer();
         auto* tb = scriptEngine.GetCurrentTransformBuffer();
         
-        for (uint32_t i = 0; i < Scripting::kMaxEntities; ++i) {
+        for (uint32_t i = 0; i < scriptEngine.GetEntityCapacity(); ++i) {
             if (!rb->active[i]) continue;
             ++scriptEntityCount;
 

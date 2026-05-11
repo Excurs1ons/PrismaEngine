@@ -5,13 +5,12 @@ namespace PrismaEngine;
 
 public static class ScriptType<T> where T : Script
 {
-    public static readonly uint Id = ScriptTypeInfo.GetNextId();
+    public static uint Id => ScriptRegistry.GetId<T>();
 }
 
 internal static class ScriptTypeInfo
 {
-    private static uint _nextId = 0;
-    public static uint GetNextId() => _nextId++;
+    // Runtime counter removed as we now use Source Generator hash-based IDs
 }
 
 public readonly struct Node : IEquatable<Node>
@@ -31,7 +30,9 @@ public readonly struct Node : IEquatable<Node>
 #if DEBUG
         uint index = Index;
         uint gen = _handle >> 16;
-        if (index >= NativeAPI.MaxEntities) throw new IndexOutOfRangeException("Handle OOB");
+        // 动态容量检查：超过当前已分配的实体槽位则无效
+        if (index >= NativeAPI.API.GetEntityCapacity())
+            throw new IndexOutOfRangeException("Handle OOB (entity does not exist)");
         if ((NativeAPI.RenderBuffer->Generation[index] & 0xFFFF) != gen) 
             throw new InvalidOperationException("Node Handle is STALE (Entity re-allocated)");
 #endif

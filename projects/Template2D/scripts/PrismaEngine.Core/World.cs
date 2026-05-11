@@ -20,7 +20,16 @@ public class World : IDisposable
     private readonly ConcurrentQueue<Script> _scriptsToRemove = new();
     private readonly ConcurrentQueue<uint> _destructionQueue = new();
     
-    private readonly Script?[] _nodeScripts = new Script?[NativeAPI.MaxEntities];
+    private Script?[] _nodeScripts = Array.Empty<Script?>();
+
+    private void EnsureNodeScriptsIndex(uint index)
+    {
+        if (index >= _nodeScripts.Length)
+        {
+            int newSize = Math.Max((int)index + 1, Math.Max(_nodeScripts.Length * 2, 64));
+            Array.Resize(ref _nodeScripts, newSize);
+        }
+    }
 
     public SpatialGrid SpatialGrid { get; } = new(128);
     public TimeContext Time { get; } = new();
@@ -32,6 +41,7 @@ public class World : IDisposable
     internal void RegisterActiveScript(Script s)
     {
         uint index = s.node.Handle & 0xFFFF;
+        EnsureNodeScriptsIndex(index);
         s._nextScript = _nodeScripts[index];
         _nodeScripts[index] = s;
         s._entityIndex = index;
