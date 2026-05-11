@@ -127,6 +127,13 @@ public:
     // SDL 特定功能
     // ------------------------------------------------------------
     ENGINE_API static void SetEventCallback(EventCallback callback);
+
+    // ------------------------------------------------------------
+    // 虚拟内存管理（预留 VA + 按需提交物理内存）
+    // ------------------------------------------------------------
+    ENGINE_API static void* ReserveVirtualMemory(size_t bytes);
+    ENGINE_API static void  CommitVirtualMemory(void* addr, size_t bytes);
+    ENGINE_API static void  ReleaseVirtualMemory(void* addr, size_t bytes);
 };
 
 } // namespace Prisma

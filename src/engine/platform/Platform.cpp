@@ -14,8 +14,10 @@
 
 #ifdef _WIN32
     #include <process.h>
+    #include <windows.h>
 #else
     #include <unistd.h>
+    #include <sys/mman.h>
 #endif
 namespace Prisma {
 
@@ -357,6 +359,36 @@ const char* Platform::GetLogDirectoryPath() {
 
 void Platform::SetEventCallback(EventCallback callback) {
     s_eventCallback = callback;
+}
+
+// ============================================================================
+// 虚拟内存管理
+// ============================================================================
+
+void* Platform::ReserveVirtualMemory(size_t bytes) {
+#ifdef _WIN32
+    return VirtualAlloc(nullptr, bytes, MEM_RESERVE, PAGE_READWRITE);
+#else
+    return mmap(nullptr, bytes, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
+#endif
+}
+
+void Platform::CommitVirtualMemory(void* addr, size_t bytes) {
+#ifdef _WIN32
+    VirtualAlloc(addr, bytes, MEM_COMMIT, PAGE_READWRITE);
+#else
+    // 用 MAP_FIXED 替换 PROT_NONE 映射为可读写
+    mmap(addr, bytes, PROT_READ | PROT_WRITE, MAP_FIXED | MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
+}
+
+void Platform::ReleaseVirtualMemory(void* addr, size_t bytes) {
+#ifdef _WIN32
+    (void)bytes;
+    VirtualFree(addr, 0, MEM_RELEASE);
+#else
+    munmap(addr, bytes);
+#endif
 }
 
 } // namespace Prisma

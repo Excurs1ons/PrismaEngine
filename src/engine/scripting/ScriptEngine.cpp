@@ -3,14 +3,8 @@
 #include "Logger.h"
 #include "app/Engine.h"
 #include "input/InputManager.h"
+#include "platform/Platform.h"
 #include <cstring>
-
-#ifdef _WIN32
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#include <unistd.h>
-#endif
 
 namespace Prisma {
 namespace Scripting {
@@ -21,15 +15,29 @@ static thread_local ScriptEngine* s_activeEngine = nullptr;
 static constexpr size_t kFieldStride = kMaxVirtualEntities * sizeof(float);
 
 // ============================================================================
-// 平台内存抽象
+// ScriptEngine
 // ============================================================================
 
-static void* osReserve(size_t bytes) {
-#ifdef _WIN32
-    return VirtualAlloc(nullptr, bytes, MEM_RESERVE, PAGE_READWRITE);
-#else
-    return mmap(nullptr, bytes, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE, -1, 0);
-#endif
+ScriptEngine::ScriptEngine() {
+    // 预留 3 个 VA 块：Transform A / Transform B / Render
+    // Transform: 5 float 数组 × 4MB = 20MB/块
+    // Render: 8 数组 (2 uint32 + 6 float) × 4MB = 32MB
+    size_t blockSizeA = 5 * kFieldStride;  // 20MB
+    size_t blockSizeR = 8 * kFieldStride;  // 32MB
+
+    m_blockABase = Platform::ReserveVirtualMemory(blockSizeA);
+    m_blockBBase = Platform::ReserveVirtualMemory(blockSizeA);
+    m_blockRBase = Platform::ReserveVirtualMemory(blockSizeR);
+
+    // 初始化布局指针（设置一次永不改变）
+    initLayoutPointers();
+}
+
+ScriptEngine::~ScriptEngine() {
+    Shutdown();
+    if (m_blockABase) Platform::ReleaseVirtualMemory(m_blockABase, 5 * kFieldStride);
+    if (m_blockBBase) Platform::ReleaseVirtualMemory(m_blockBBase, 5 * kFieldStride);
+    if (m_blockRBase) Platform::ReleaseVirtualMemory(m_blockRBase, 8 * kFieldStride);
 }
 
 static void osCommit(void* addr, size_t bytes) {
@@ -115,7 +123,7 @@ void ScriptEngine::commitRange(uint32_t fromEntity, uint32_t toEntity) {
     auto commitField = [&](void* base, uint32_t fieldCount) {
         for (uint32_t f = 0; f < fieldCount; f++) {
             void* addr = (uint8_t*)base + f * kFieldStride + start;
-            osCommit(addr, size);
+            Platform::CommitVirtualMemory(addr, size);
         }
     };
 

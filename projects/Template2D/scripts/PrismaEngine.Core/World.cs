@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace PrismaEngine;
 
@@ -82,6 +83,12 @@ public class World : IDisposable
         PrismaEngine.Time._elapsed = this.Time.Elapsed;
         PrismaEngine.Time._timeScale = this.Time.TimeScale;
 
+        // 每帧同步：将 Read 缓冲区的活跃数据拷贝到 Write 缓冲区
+        // 确保脚本只写增量时，Write 始终有完整的基值
+        int aliveCount;
+        unsafe { aliveCount = (int)NativeAPI.API.GetEntityCapacity(); }
+        SyncActiveBuffers(aliveCount);
+
         ProcessDestructionQueue();
         ProcessRemovalQueue();
         ProcessPendingStarts();
@@ -101,6 +108,24 @@ public class World : IDisposable
         // 3. 交换读写缓冲区 (Double-Buffer Swap)
         // 本帧写的数据变成下一帧读的数据。
         NativeAPI.SwapBuffers();
+    }
+
+    /// <summary>
+    /// 将 Read 缓冲区的活跃数据拷贝到 Write 缓冲区。
+    /// 消除"幽灵数据"闪烁：静止实体未写增量时，Write 中仍有正确的基值。
+    /// </summary>
+    private unsafe void SyncActiveBuffers(int aliveCount)
+    {
+        long bytes = (long)aliveCount * sizeof(float);
+        if (bytes <= 0) return;
+
+        var r = NativeAPI.TransformBuffer_Read;
+        var w = NativeAPI.TransformBuffer_Write;
+        Buffer.MemoryCopy(r->PosX, w->PosX, bytes, bytes);
+        Buffer.MemoryCopy(r->PosY, w->PosY, bytes, bytes);
+        Buffer.MemoryCopy(r->Rotation, w->Rotation, bytes, bytes);
+        Buffer.MemoryCopy(r->ScaleX, w->ScaleX, bytes, bytes);
+        Buffer.MemoryCopy(r->ScaleY, w->ScaleY, bytes, bytes);
     }
 
     private unsafe void UpdateSpatialGrid()
