@@ -26,24 +26,12 @@
 #ifdef _WIN32
     #include <process.h>
     // 取消定义与 Platform 方法名冲突的宏
-    #ifdef CreateMutex
     #undef CreateMutex
-    #endif
-    #ifdef CreateWindowEx
     #undef CreateWindowEx
-    #endif
-    #ifdef CreateWindow
     #undef CreateWindow
-    #endif
-    #ifdef GetEnvironmentVariable
     #undef GetEnvironmentVariable
-    #endif
-    #ifdef SetCurrentDirectory
     #undef SetCurrentDirectory
-    #endif
-    #ifdef SetEnvironmentVariable
     #undef SetEnvironmentVariable
-    #endif
 #else
     #include <unistd.h>
     #include <sys/mman.h>

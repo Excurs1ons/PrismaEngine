@@ -9,7 +9,16 @@
 #include <functional>
 
 #include "core/Event.h"
-
+#ifdef _WIN32
+#include <process.h>
+// 取消定义与 Platform 方法名冲突的宏
+#undef CreateMutex
+#undef CreateWindowEx
+#undef CreateWindow
+#undef GetEnvironmentVariable
+#undef SetCurrentDirectory
+#undef SetEnvironmentVariable
+#endif
 namespace Prisma {
 
 // ------------------------------------------------------------
