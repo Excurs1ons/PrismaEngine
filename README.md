@@ -18,6 +18,32 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 
 ## Architecture Highlights
 
+### Driver-Device Pattern
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    Application Layer                       │
+│              (Template2D / Game / Editor)                 │
+└─────────────────────────────┬──────────────────────────────┘
+                              │
+┌─────────────────────────────▼──────────────────────────────┐
+│                    Device Layer                            │
+│         AudioDevice  │  InputDevice  │  RenderSystem       │
+└─────────────────────────────┬──────────────────────────────┘
+                              │
+┌─────────────────────────────▼──────────────────────────────┐
+│                    Driver Interface                         │
+│        IAudioDriver  │  IInputDriver  │  IRenderDevice     │
+└─────────────────────────────┬──────────────────────────────┘
+                              │
+┌─────────────────────────────▼──────────────────────────────┐
+│                 Platform Implementation                     │
+│  Windows: XAudio2/RawInput/DX12                           │
+│  Android: AAudio/GameActivity/Vulkan                       │
+│  Cross:  SDL3 (audio/input/window)                         │
+└────────────────────────────────────────────────────────────┘
+```
+
 ### SoA Entity Pool (Structure of Arrays)
 
 ```
