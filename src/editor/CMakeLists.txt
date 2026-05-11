@@ -66,6 +66,12 @@ target_link_libraries(Editor PRIVATE
     imgui::imgui
     SDL3-shared
 )
+
+# 链接Blender集成模块
+if(TARGET BlenderIntegration)
+    target_link_libraries(Editor PRIVATE BlenderIntegration)
+    target_compile_definitions(Editor PRIVATE PRISMA_ENABLE_BLENDER_INTEGRATION=1)
+endif()
 # 2. 创建编辑器启动器 (EXE)
 add_executable(PrismaEditor core/main.cpp)
 

@@ -113,6 +113,10 @@ if(PRISMA_BUILD_EDITOR)
     message(STATUS "已添加编辑器模块")
     # 应用编辑器目标后配置（必须在 add_subdirectory 之后）
     include(cmake/EditorPostTargets.cmake)
+    
+    # Blender集成模块 (仅编辑器需要)
+    add_subdirectory(src/blender_integration)
+    message(STATUS "已添加Blender集成模块")
 endif()
 
 # 外部项目模块 (PrismaCraft 等)
