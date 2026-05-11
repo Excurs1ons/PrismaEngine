@@ -1,3 +1,14 @@
+// windows.h 必须最先 include（含 NOMINMAX），避免 SDL3 间接包含时定义冲突宏
+#ifdef _WIN32
+    #ifndef WIN32_LEAN_AND_MEAN
+    #define WIN32_LEAN_AND_MEAN
+    #endif
+    #ifndef NOMINMAX
+    #define NOMINMAX
+    #endif
+    #include <windows.h>
+#endif
+
 #include "Platform.h"
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
@@ -14,15 +25,15 @@
 
 #ifdef _WIN32
     #include <process.h>
-    #define WIN32_LEAN_AND_MEAN
-    #define NOMINMAX
-    #include <windows.h>
-    // windows.h 定义 CreateMutex/CreateWindowEx 等宏，与 Platform 方法名冲突
+    // 取消定义与 Platform 方法名冲突的宏
     #ifdef CreateMutex
     #undef CreateMutex
     #endif
     #ifdef CreateWindowEx
     #undef CreateWindowEx
+    #endif
+    #ifdef CreateWindow
+    #undef CreateWindow
     #endif
     #ifdef GetEnvironmentVariable
     #undef GetEnvironmentVariable
