@@ -29,6 +29,8 @@
 #include "mcp/tools/SceneTools.h"
 #include "mcp/tools/ECSTools.h"
 #include "mcp/tools/EngineTools.h"
+#include "mcp/tools/DebugTools.h"
+#include "mcp/tools/ConsoleTools.h"
 #include "mcp/tools/PropertyTools.h"
 #include "mcp/tools/PerformanceTools.h"
 #include "mcp/tools/BuildTools.h"
@@ -110,6 +112,10 @@ int Engine::Initialize() {
     mcp->RegisterTool<MCP::EngineStatusTool>(this);
     mcp->RegisterTool<MCP::EngineStateHashTool>(this);
     mcp->RegisterTool<MCP::EngineBuildInfoTool>(this);
+    mcp->RegisterTool<MCP::DebugFrameStatsTool>();
+    mcp->RegisterTool<MCP::DebugLogGetTool>();
+    mcp->RegisterTool<MCP::DebugBreakpointListTool>();
+    mcp->RegisterTool<MCP::DebugBreakpointToggleTool>();
     mcp->RegisterTool<MCP::ProfilerCaptureTool>(this);
     mcp->RegisterTool<MCP::MemoryStatsTool>(this);
     mcp->RegisterTool<MCP::ConsoleExecuteTool>(this);
