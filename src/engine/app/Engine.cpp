@@ -29,6 +29,12 @@
 #include "mcp/tools/SceneTools.h"
 #include "mcp/tools/ECSTools.h"
 #include "mcp/tools/EngineTools.h"
+#include "mcp/tools/PropertyTools.h"
+#include "mcp/tools/PerformanceTools.h"
+#include "mcp/tools/BuildTools.h"
+#include "mcp/tools/ResourceTools.h"
+#include "mcp/tools/RenderTools.h"
+#include "mcp/tools/ScriptTools.h"
 #include "mcp/transport/TransportTCP.h"
 #endif
 
@@ -97,11 +103,28 @@ int Engine::Initialize() {
     mcp->RegisterTool<MCP::SceneEntityTool>(this);
     mcp->RegisterTool<MCP::SceneCreateEntityTool>(this);
     mcp->RegisterTool<MCP::SceneDeleteEntityTool>(this);
+    mcp->RegisterTool<MCP::SceneSaveTool>(this);
+    mcp->RegisterTool<MCP::SceneLoadTool>(this);
     mcp->RegisterTool<MCP::ECSComponentListTool>(this);
     mcp->RegisterTool<MCP::ECSComponentGetTool>(this);
     mcp->RegisterTool<MCP::EngineStatusTool>(this);
     mcp->RegisterTool<MCP::EngineStateHashTool>(this);
     mcp->RegisterTool<MCP::EngineBuildInfoTool>(this);
+    mcp->RegisterTool<MCP::ProfilerCaptureTool>(this);
+    mcp->RegisterTool<MCP::MemoryStatsTool>(this);
+    mcp->RegisterTool<MCP::ConsoleExecuteTool>(this);
+    mcp->RegisterTool<MCP::LogFilterTool>(this);
+    mcp->RegisterTool<MCP::ResourceListTool>(this);
+    mcp->RegisterTool<MCP::ResourceLoadTool>(this);
+    mcp->RegisterTool<MCP::ResourceUnloadTool>(this);
+    mcp->RegisterTool<MCP::RenderScreenshotTool>(this);
+    mcp->RegisterTool<MCP::RenderDocCaptureTool>(this);
+    mcp->RegisterTool<MCP::BuildInfoTool>(this);
+    mcp->RegisterTool<MCP::ShaderCompileTool>(this);
+    mcp->RegisterTool<MCP::ScriptCompileTool>(this);
+    mcp->RegisterTool<MCP::ScriptHotReloadTool>(this);
+    mcp->RegisterTool<MCP::PropertyGetTool>(this);
+    mcp->RegisterTool<MCP::PropertySetTool>(this);
 #endif
     
     for (auto& sys : m_Systems) {

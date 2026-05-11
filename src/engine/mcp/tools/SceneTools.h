@@ -60,5 +60,29 @@ private:
     Engine* m_Engine;
 };
 
+class SceneSaveTool : public MCPTool {
+public:
+    explicit SceneSaveTool(Engine* engine);
+    std::string_view GetName() const override { return "scene_save"; }
+    std::string_view GetDescription() const override { return "Save the current scene to a JSON file."; }
+    std::string_view GetCategory() const override { return "scene"; }
+    nlohmann::json GetInputSchema() const override;
+    nlohmann::json Execute(const nlohmann::json& args) override;
+private:
+    Engine* m_Engine;
+};
+
+class SceneLoadTool : public MCPTool {
+public:
+    explicit SceneLoadTool(Engine* engine);
+    std::string_view GetName() const override { return "scene_load"; }
+    std::string_view GetDescription() const override { return "Load a scene from a JSON file."; }
+    std::string_view GetCategory() const override { return "scene"; }
+    nlohmann::json GetInputSchema() const override;
+    nlohmann::json Execute(const nlohmann::json& args) override;
+private:
+    Engine* m_Engine;
+};
+
 } // namespace MCP
 } // namespace Prisma

@@ -521,6 +521,18 @@ if(PRISMA_ENABLE_MCP)
         mcp/tools/EditorTools.h
         mcp/tools/GameTools.cpp
         mcp/tools/GameTools.h
+        mcp/tools/ResourceTools.cpp
+        mcp/tools/ResourceTools.h
+        mcp/tools/BuildTools.cpp
+        mcp/tools/BuildTools.h
+        mcp/tools/PerformanceTools.cpp
+        mcp/tools/PerformanceTools.h
+        mcp/tools/ConsoleTools.cpp
+        mcp/tools/ConsoleTools.h
+        mcp/tools/ScriptTools.cpp
+        mcp/tools/ScriptTools.h
+        mcp/tools/RenderTools.cpp
+        mcp/tools/RenderTools.h
     )
 
     target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_MCP=1)

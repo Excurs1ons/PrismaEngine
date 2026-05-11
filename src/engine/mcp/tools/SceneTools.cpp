@@ -148,5 +148,54 @@ nlohmann::json SceneDeleteEntityTool::Execute(const nlohmann::json& args) {
     return {{"deleted", true}};
 }
 
+// ---- SceneSaveTool ----
+
+SceneSaveTool::SceneSaveTool(Engine* engine) : m_Engine(engine) {}
+
+nlohmann::json SceneSaveTool::GetInputSchema() const {
+    return {
+        {"type", "object"},
+        {"properties", {
+            {"path", {{"type", "string"}, {"description", "File path to save the scene JSON"}}}
+        }},
+        {"required", {"path"}}
+    };
+}
+
+nlohmann::json SceneSaveTool::Execute(const nlohmann::json& args) {
+    auto* sceneManager = m_Engine->GetSceneManager();
+    auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
+    if (!scene) return {{"success", false}, {"error", "No active scene"}};
+
+    auto path = args["path"].get<std::string>();
+    bool result = scene->Serialize(path);
+
+    return {{"success", result}, {"path", path}};
+}
+
+// ---- SceneLoadTool ----
+
+SceneLoadTool::SceneLoadTool(Engine* engine) : m_Engine(engine) {}
+
+nlohmann::json SceneLoadTool::GetInputSchema() const {
+    return {
+        {"type", "object"},
+        {"properties", {
+            {"path", {{"type", "string"}, {"description", "File path to load the scene JSON from"}}}
+        }},
+        {"required", {"path"}}
+    };
+}
+
+nlohmann::json SceneLoadTool::Execute(const nlohmann::json& args) {
+    auto* sceneManager = m_Engine->GetSceneManager();
+    if (!sceneManager) return {{"success", false}, {"error", "No scene manager"}};
+
+    auto path = args["path"].get<std::string>();
+    bool result = sceneManager->LoadFromFile(path);
+
+    return {{"success", result}, {"path", path}};
+}
+
 } // namespace MCP
 } // namespace Prisma
