@@ -8,6 +8,10 @@ namespace Prisma {
 
 Application* Application::s_Instance = nullptr;
 
+Application& Application::Get() {
+    return *s_Instance;
+}
+
 Application::Application(const ApplicationSpecification& spec)
     : m_Spec(spec) {
     s_Instance = this;
@@ -57,6 +61,14 @@ void Application::PushLayer(Layer* layer) {
 void Application::PushOverlay(Layer* overlay) {
     m_LayerStack.PushOverlay(overlay);
     overlay->OnAttach();
+}
+
+const ApplicationSpecification& Application::GetSpecification() const {
+    return m_Spec;
+}
+
+ApplicationSpecification& Application::GetSpecification() {
+    return m_Spec;
 }
 
 } // namespace Prisma

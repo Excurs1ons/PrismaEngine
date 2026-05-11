@@ -29,6 +29,13 @@ project(PRISMA
     LANGUAGES C CXX
 )
 
+# MSVC 17.10+ 将 std::mutex 构造函数改为 constexpr，导致与旧版 msvcp140.dll 不兼容
+# 见 https://github.com/microsoft/STL/issues/4978
+# 全局禁用此变更以保证二进制兼容性
+if(MSVC)
+    add_compile_definitions(_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR)
+endif()
+
 # 强制开启位置无关代码 (Position Independent Code)，确保静态库可以链接进动态库
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 

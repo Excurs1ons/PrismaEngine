@@ -123,7 +123,7 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     m_imageViews = vkb_swapchain.get_image_views().value();
     m_format = vkb_swapchain.image_format;
     m_extent = vkb_swapchain.extent;
-    LOG_INFO("Vulkan", "交换链实际 extent: {0}x{1} (请求 {2}x{3})", m_extent.width, m_extent.height, width, height);
+    LOG_DEBUG("Vulkan", "交换链实际 extent: {0}x{1} (请求 {2}x{3})", m_extent.width, m_extent.height, width, height);
     m_mode = presentMode;
     m_hdrEnabled = false;
     m_renderTargets.clear();

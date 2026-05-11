@@ -20,7 +20,7 @@ class JobSystem;
 class AssetDatabase;
 namespace Input { class InputManager; }
 namespace Graphic { class RenderSystem; class IRenderResourceManager; }
-namespace Scripting { class MonoRuntime; }
+namespace Scripting { class CoreCLRHost; class ScriptEngine; class MonoRuntime; }
 namespace Core::ECS { class World; }
 class SceneManager;
 class PhysicsSystem;
@@ -30,7 +30,7 @@ class ThreadManager;
  * @brief 引擎配置规范
  */
 struct EngineSpecification {
-    std::string Name = "PrismaEngine";
+    const char* Name = "PrismaEngine";
     bool Headless = false;
     // Runtime/游戏默认只读资源元数据库，避免每次启动改写 assets/metadata.json
     bool RefreshAssetDatabaseOnStartup = false;
@@ -54,14 +54,7 @@ public:
     int Run(std::unique_ptr<Application> app);
     void Shutdown();
 
-    // --- 外部驱动接口 (External Driving Interface) ---
-    void BeginFrame();
-    void Update(Timestep ts);
-    void Render();
-    void EndFrame();
-    void Present();
-
-    static Engine& Get() { return *s_Instance; }
+    static Engine& Get();
     
     struct FrameStats {
         double BeginFrameTime  = 0.0;
@@ -74,7 +67,7 @@ public:
 
     const FrameStats& GetFrameStats() const { return m_FrameStats; }
     float GetFPS() const { return m_FrameStats.FPS; }
-    const std::string& GetGPUName() const { return m_GPUName; }
+    const std::string& GetGPUName() const;
     
     // --- Window Management ---
     Window& GetWindow() { return *m_Window; }
@@ -89,6 +82,8 @@ public:
     PhysicsSystem* GetPhysicsSystem() { return m_PhysicsSystem; }
     JobSystem* GetJobSystem() { return m_JobSystem; }
     Scripting::MonoRuntime& GetMonoRuntime();
+    Scripting::CoreCLRHost& GetCoreCLRHost() { return *m_coreCLRHost; }
+    Scripting::ScriptEngine& GetScriptEngine() { return *m_scriptEngine; }
     Core::ECS::World& GetWorld();
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
@@ -107,7 +102,7 @@ public:
     Logger& GetLogger() { return Logger::Get(); }
     AssetDatabase& GetAssetDatabase();
 
-    const EngineSpecification& GetSpecification() const { return m_Spec; }
+    const EngineSpecification& GetSpecification() const;
     bool IsRunning() const { return m_Running; }
 
     // 通用系统添加 (用于非核心扩展)
@@ -139,6 +134,10 @@ private:
 
     FrameStats m_FrameStats;
     std::string m_GPUName;
+
+    // C# 脚本系统（unique_ptr 避免头文件包含膨胀）
+    std::unique_ptr<Scripting::CoreCLRHost> m_coreCLRHost;
+    std::unique_ptr<Scripting::ScriptEngine> m_scriptEngine;
 
     static Engine* s_Instance;
 };

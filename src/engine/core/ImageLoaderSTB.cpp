@@ -40,7 +40,7 @@ ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
     result.data.resize(dataSize);
     std::memcpy(result.data.data(), data, dataSize);
 
-    LOG_INFO("ImageLoader", "已加载图像: {} ({}x{}x{} 通道)", 
+    LOG_DEBUG("ImageLoader", "已加载图像: {} ({}x{}x{} 通道)", 
               filePath, width, height, channels);
 
     stbi_image_free(data);

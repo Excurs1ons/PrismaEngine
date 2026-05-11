@@ -31,18 +31,18 @@ int RenderSystem::Initialize() {
         LOG_ERROR("Renderer", "渲染资源管理器初始化失败！ {0}", res_manager_init_result);
         return res_manager_init_result;
     }
-    LOG_INFO("Renderer", "渲染资源管理器初始化成功。");
+    LOG_DEBUG("Renderer", "渲染资源管理器初始化成功。");
 
     int pipeline_init_result = InitializeRenderPipelines();
     if (pipeline_init_result != 0) {
         LOG_ERROR("Renderer", "渲染管线初始化失败！ {0}", pipeline_init_result);
         return pipeline_init_result;
     }
-    LOG_INFO("Renderer", "管线初始化成功。");
+    LOG_DEBUG("Renderer", "管线初始化成功。");
 
     // 初始化 2D 渲染器
     Renderer2D::Initialize();
-    LOG_INFO("Renderer", "2D 渲染器初始化成功。");
+    LOG_DEBUG("Renderer", "2D 渲染器初始化成功。");
 
     LOG_INFO("Renderer", "渲染系统初始化成功。");
     return 0;
@@ -50,7 +50,7 @@ int RenderSystem::Initialize() {
 
 int RenderSystem::InitializeDevice() {
     if (m_desc.backendType == RenderAPIType::Vulkan) {
-        LOG_INFO("Renderer", "正在创建 Vulkan 渲染设备...");
+        LOG_DEBUG("Renderer", "正在创建 Vulkan 渲染设备...");
         m_device = std::make_unique<Vulkan::RenderDeviceVulkan>();
 
         DeviceDesc devDesc;
@@ -95,38 +95,38 @@ void RenderSystem::Update(Timestep ts) {
 
 void RenderSystem::Shutdown() {
     if (!m_device) {
-        LOG_INFO("Renderer", "渲染系统无需关闭（无设备）");
+        LOG_DEBUG("Renderer", "渲染系统无需关闭（无设备）");
         return;
     }
 
-    LOG_INFO("Renderer", "正在关闭渲染器...");
+    LOG_DEBUG("Renderer", "正在关闭渲染器...");
 
     // 关闭 2D 渲染器
-    LOG_INFO("Renderer", "关闭 2D 渲染器...");
+    LOG_DEBUG("Renderer", "关闭 2D 渲染器...");
     Renderer2D::Shutdown();
-    LOG_INFO("Renderer", "2D 渲染器已关闭");
+    LOG_DEBUG("Renderer", "2D 渲染器已关闭");
 
     // 1. 先销毁依赖设备的管线和资源管理器
     if (m_mainRenderPipeline) {
-        LOG_INFO("Renderer", "关闭主渲染管线...");
+        LOG_DEBUG("Renderer", "关闭主渲染管线...");
         m_mainRenderPipeline->Shutdown();
         m_mainRenderPipeline.reset();
-        LOG_INFO("Renderer", "主渲染管线已关闭");
+        LOG_DEBUG("Renderer", "主渲染管线已关闭");
     }
 
     if (m_renderResourceManager) {
-        LOG_INFO("Renderer", "关闭渲染资源管理器...");
+        LOG_DEBUG("Renderer", "关闭渲染资源管理器...");
         m_renderResourceManager->Shutdown();
         m_renderResourceManager.reset();
-        LOG_INFO("Renderer", "渲染资源管理器已关闭");
+        LOG_DEBUG("Renderer", "渲染资源管理器已关闭");
     }
 
     // 2. 最后关闭设备并置空，确保此函数是幂等的
     if (m_device) {
-        LOG_INFO("Renderer", "关闭渲染设备...");
+        LOG_DEBUG("Renderer", "关闭渲染设备...");
         m_device->Shutdown();
         m_device.reset();
-        LOG_INFO("Renderer", "渲染设备已关闭");
+        LOG_DEBUG("Renderer", "渲染设备已关闭");
     }
 }
 
@@ -144,7 +144,7 @@ void RenderSystem::EndFrame() {
         static double lastLogTime = 0.0;
         double now = Platform::GetTimeSeconds();
         if (now - lastLogTime >= 5.0) {
-            LOG_INFO("RenderSystem", "EndFrame: {} 条命令, 管线已初始化={}, device={}",
+            LOG_DEBUG("RenderSystem", "EndFrame: {} 条命令, 管线已初始化={}, device={}",
                      cmdCount, m_mainRenderPipeline != nullptr, m_device != nullptr);
             lastLogTime = now;
         }

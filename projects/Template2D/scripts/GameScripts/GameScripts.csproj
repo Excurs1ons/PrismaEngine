@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>GameScripts</AssemblyName>
+    <RootNamespace>GameScripts</RootNamespace>
+    <Nullable>enable</Nullable>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <OutputType>Exe</OutputType>
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>link</TrimMode>
+    <!-- 逃逸舱：C++ CoreCLRHost 从原生代码调用 C#，修剪器默认关闭此功能 -->
+    <_EnableConsumingManagedCodeFromNativeHosting>true</_EnableConsumingManagedCodeFromNativeHosting>
+    <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../PrismaEngine.Core/PrismaEngine.Core.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+    <!-- 保留从原生代码（C++ CoreCLRHost）调用的入口点，防止 linker 删除 -->
+    <TrimmerRootAssembly Include="GameScripts" />
+  </ItemGroup>
+</Project>

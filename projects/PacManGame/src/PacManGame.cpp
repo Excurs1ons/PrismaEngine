@@ -27,7 +27,7 @@ bool HasGraphicsDeviceAvailable() {
 class PacManApplication : public Prisma::Application {
 public:
     PacManApplication(PacManGame* game)
-        : Prisma::Application(Prisma::ApplicationSpecification{"Pac-Man", "", 28 * 32, 31 * 32 + 100}) // 宽度, 高度(带UI)
+        : Prisma::Application({"Pac-Man", "", 28 * 32, 31 * 32 + 100}) // 名称, 场景, 宽度, 高度(带UI)
         , m_game(game)
     {
     }

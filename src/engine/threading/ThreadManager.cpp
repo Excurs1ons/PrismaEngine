@@ -19,14 +19,14 @@ ThreadManager::~ThreadManager() {
 }
 
 int ThreadManager::Initialize() {
-    LOG_INFO("Thread", "线程管理器初始化开始");
+    LOG_DEBUG("Thread", "线程管理器初始化开始");
     std::lock_guard<std::mutex> lock(m_mutex);
     m_threadMetadata[std::this_thread::get_id()] = {"MainThread", 0, 0, false};
     return 0;
 }
 
 void ThreadManager::Shutdown() {
-    LOG_INFO("Thread", "线程管理器开始关闭");
+    LOG_DEBUG("Thread", "线程管理器开始关闭");
     std::lock_guard<std::mutex> lock(m_mutex);
     for (auto& pair : m_threads) {
         if (pair.second.joinable()) {

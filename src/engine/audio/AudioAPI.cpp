@@ -84,7 +84,7 @@ std::shared_ptr<AudioClip> AudioAPI::LoadWAV(const std::string& path) {
     clip->duration = static_cast<float>(len) / static_cast<float>(std::max<uint32_t>(1, bytesPerSecond));
 
     SDL_free(data);
-    LOG_INFO("Audio", "成功加载音频: {0} ({1}s)", path, clip->duration);
+    LOG_DEBUG("Audio", "成功加载音频: {0} ({1}s)", path, clip->duration);
     return clip;
 }
 

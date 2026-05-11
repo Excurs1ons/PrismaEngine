@@ -87,7 +87,7 @@ static VkFormat TextureFormatToVkFormat(TextureFormat format) {
 
 VulkanResourceFactory::VulkanResourceFactory(RenderDeviceVulkan* device)
     : m_device(device), m_vkDevice(device->GetVkDevice()), m_vmaAllocator(device->GetAllocator()) {
-    LOG_INFO("Vulkan", "创建 Vulkan 资源工厂实例");
+    LOG_DEBUG("Vulkan", "创建 Vulkan 资源工厂实例");
 }
 
 VulkanResourceFactory::~VulkanResourceFactory() {

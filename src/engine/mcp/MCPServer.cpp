@@ -70,7 +70,7 @@ void MCPServer::handleRequest(const MCPRequest& req) {
 void MCPServer::handleInitialize(const MCPRequest& req) {
     auto clientInfo = req.params.value("clientInfo", nlohmann::json::object());
 
-    LOG_INFO("MCP", "Client connected: {} v{}",
+    LOG_DEBUG("MCP", "Client connected: {} v{}",
         clientInfo.value("name", "unknown"),
         clientInfo.value("version", "?"));
 

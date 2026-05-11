@@ -49,15 +49,15 @@ void SceneSerializer::SerializeSceneGameObject(JsonSerializer& s) {
 }
 
 void SceneSerializer::DeserializeSceneGameObject(JsonSerializer& s) {
-    LOG_INFO("Serialization", "正在反序列化 GameObject 场景...");
+    LOG_DEBUG("Serialization", "正在反序列化 GameObject 场景...");
 }
 
 void SceneSerializer::SerializeSceneECS(JsonSerializer& s) {
-    LOG_INFO("Serialization", "正在序列化 ECS 世界...");
+    LOG_DEBUG("Serialization", "正在序列化 ECS 世界...");
 }
 
 void SceneSerializer::DeserializeSceneECS(JsonSerializer& s) {
-    LOG_INFO("Serialization", "正在反序列化 ECS 场景...");
+    LOG_DEBUG("Serialization", "正在反序列化 ECS 场景...");
 }
 
 void SceneSerializer::RegisterComponentSerializers() {}
