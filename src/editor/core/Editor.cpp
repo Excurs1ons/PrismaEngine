@@ -1,135 +1,139 @@
 #include "Editor.h"
-#include "../graphic/ImGuiVulkanResourceManager.h"
-#include "../panels/EditorLayer.h"
-#include "CommandLineEditor.h"
-#include "CommandLineParser.h"
-#include "Environment.h"
-#include "app/Engine.h"
-#include "graphic/RenderSystem.h"
-#include "platform/Platform.h"
-#include "scene/Scene.h"
-#include "scene/SceneManager.h"
-#include <filesystem>
+#include "EditorLayer.h"
+#include "../engine/Engine.h"
+#include "../engine/Platform.h"
+#include "../engine/graphic/RenderSystem.h"
+#include "graphic/ImGuiVulkanResourceManager.h"
 
 // ImGui
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
+#include <SDL3/SDL_vulkan.h>
 #include <imgui_impl_vulkan.h>
 
 // 访问具体的 Vulkan 设备类型，以注册 ImGui 渲染回调
 #include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
 #include "graphic/adapters/vulkan/VulkanResources.h"
 
-// [修复] 移除 IMGUI_IMPL_VULKAN_USE_LOADER 定义
-// 原因：当定义此宏时，ImGui 会使用动态函数指针调用 Vulkan API。
-//        如果这些函数指针未被正确加载，调用时会访问空指针导致 0xc0000005 异常。
-// 解决：使用标准 Vulkan 函数原型（通过 Vulkan-Headers 提供），避免函数指针初始化问题。
-// #define IMGUI_IMPL_VULKAN_USE_LOADER
+// vk-bootstrap for Editor side Vulkan init
+#include <VkBootstrap.h>
 
 namespace Prisma {
 
-Editor::Editor() : Application(ApplicationSpecification{"Prisma Editor", "", 1280, 720}) {}
+Editor* Editor::s_Instance = nullptr;
 
-Editor::~Editor() {}
-
-int Editor::OnInitialize() {
-    LOG_INFO("Editor", "正在初始化编辑器插件 (纯净模式)...");
-
-    // 1. 初始化 ImGui
-    int result = OnImGuiInitialize();
-    if (result != 0) {
-        LOG_ERROR("Editor", "ImGui 初始化失败");
-        return result;
-    }
-
-    // 2. 推送编辑器层
-    PushLayer(new EditorLayer());
-
-    LOG_INFO("Editor", "编辑器插件初始化成功。");
-    return 0;
+Editor::Editor() {
+    s_Instance = this;
 }
 
-int Editor::OnImGuiInitialize() {
-    LOG_INFO("Editor", "OnImGuiInitialize: 正在启动...");
+Editor::~Editor() {
+    Shutdown();
+    s_Instance = nullptr;
+}
+
+int Editor::Initialize() {
+    // 1. 初始化 SDL
+    if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS)) {
+        LOG_FATAL("Editor", "Failed to initialize SDL: {0}", SDL_GetError());
+        return -1;
+    }
+
+    // 2. 创建主窗口 (必须带 SDL_WINDOW_VULKAN)
+    m_Window = SDL_CreateWindow("Prisma Editor", 1600, 900, SDL_WINDOW_RESIZABLE | SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    if (!m_Window) {
+        LOG_FATAL("Editor", "Failed to create SDL window: {0}", SDL_GetError());
+        return -1;
+    }
+
+    // 3. 编辑器侧初始化 Vulkan 环境 (作为 Master)
+    vkb::InstanceBuilder inst_builder;
+    auto inst_ret = inst_builder.set_app_name("Prisma Editor")
+                        .request_validation_layers(true)
+                        .use_default_debug_messenger()
+                        .require_api_version(1, 3, 0)
+                        .build();
+    if (!inst_ret) return -1;
+    vkb::Instance vkb_inst = inst_ret.value();
+    
+    VkSurfaceKHR surface;
+    if (!SDL_Vulkan_CreateSurface(m_Window, vkb_inst.instance, nullptr, &surface)) return -1;
+
+    vkb::PhysicalDeviceSelector selector{vkb_inst};
+    auto phys_ret = selector.set_surface(surface)
+                        .set_minimum_version(1, 3)
+                        .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+                        .select();
+    if (!phys_ret) return -1;
+    vkb::PhysicalDevice vkb_phys = phys_ret.value();
+
+    vkb::DeviceBuilder device_builder{vkb_phys};
+    auto dev_ret = device_builder.build();
+    if (!dev_ret) return -1;
+    vkb::Device vkb_device = dev_ret.value();
+
+    VkQueue graphicsQueue = vkb_device.get_queue(vkb::QueueType::graphics).value();
+    uint32_t graphicsQueueFamily = vkb_device.get_queue_index(vkb::QueueType::graphics).value();
+
+    // [架构调整] VMA 转移到引擎侧创建，编辑器侧不再包含 VMA 实现宏
+
+    // 4. 初始化引擎 (Headless 模式，由编辑器注入资源)
+    EngineSpecification engineSpec;
+    engineSpec.Name = "Prisma Engine Slave";
+    engineSpec.Headless = true; 
+    
+    m_Engine = std::make_unique<Engine>(engineSpec);
+    if (m_Engine->Initialize() != 0) {
+        LOG_FATAL("Editor", "Failed to initialize Engine core!");
+        return -1;
+    }
+
+    // [核心重构] 将编辑器创建好的 Vulkan 句柄注入引擎
+    auto renderSystem = m_Engine->GetRenderSystem();
+    auto device = renderSystem->GetDevice();
+    auto* vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(device);
+    
+    Graphic::IRenderDevice::ExternalVulkanInitInfo extInfo;
+    extInfo.instance = vkb_inst.instance;
+    extInfo.physicalDevice = vkb_phys.physical_device;
+    extInfo.device = vkb_device.device;
+    extInfo.graphicsQueue = graphicsQueue;
+    extInfo.graphicsQueueFamily = graphicsQueueFamily;
+    extInfo.allocator = VK_NULL_HANDLE; // 引擎会自己创建 VMA
+    extInfo.windowHandle = m_Window;
+
+    // 引擎设备现在完全通过外部句柄初始化其子系统
+    vkDevice->InitializeExternalVulkan(extInfo);
+
+    // 5. 初始化 ImGui 上下文
     IMGUI_CHECKVERSION();
-    LOG_INFO("Editor", "OnImGuiInitialize: 创建上下文...");
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
     ImGui::StyleColorsDark();
 
-    // [改动] 加载中文字体以解决编辑器无法显示中文的问题
-    ImFont* font                       = nullptr;
-    std::vector<std::string> fontPaths = {"C:/Windows/Fonts/msyh.ttc",  // Microsoft YaHei
-                                          "C:/Windows/Fonts/msyh.ttf",
-                                          "C:/Windows/Fonts/simsun.ttc",  // SimSun
-                                          "assets/fonts/msyh.ttc"};
+    // 6. 初始化 ImGui 后端 (SDL3 + Vulkan)
+    ImGui_ImplSDL3_InitForVulkan(m_Window);
 
-    for (const auto& path : fontPaths) {
-        if (std::filesystem::exists(path)) {
-            // 使用 GetGlyphRangesChineseSimplifiedCommon() 获取常用中文字符集
-            font = io.Fonts->AddFontFromFileTTF(
-                path.c_str(), 18.0f, nullptr, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-            if (font) {
-                LOG_INFO("Editor", "成功加载中文字体: %s", path.c_str());
-                break;
-            }
-        }
-    }
+    ImGui_ImplVulkan_InitInfo imgui_init = {};
+    imgui_init.ApiVersion = VK_API_VERSION_1_3;
+    imgui_init.Instance = vkb_inst.instance;
+    imgui_init.PhysicalDevice = vkb_phys.physical_device;
+    imgui_init.Device = vkb_device.device;
+    imgui_init.QueueFamily = graphicsQueueFamily;
+    imgui_init.Queue = graphicsQueue;
 
-    if (!font) {
-        LOG_WARN("Editor", "加载中文字体失败。将使用 ImGui 默认字体。");
-    }
-
-    auto& engine      = Engine::Get();
-    auto renderSystem = engine.GetRenderSystem();
-    auto device       = renderSystem->GetDevice();
-    auto* vkDevice    = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(device);
-
-    LOG_INFO("Editor", "OnImGuiInitialize: 正在绑定 SDL3...");
-    // 绑定后端
-    auto& window          = engine.GetWindow();
-    SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
-    if (!sdlWindow) {
-        LOG_ERROR("Editor", "原生窗口为空！");
-        return -1;
-    }
-
-    if (!ImGui_ImplSDL3_InitForVulkan(sdlWindow)) {
-        LOG_ERROR("Editor", "ImGui_ImplSDL3_InitForVulkan 失败！");
-        return -1;
-    }
-
-    LOG_INFO("Editor", "OnImGuiInitialize: 正在初始化 Vulkan 后端...");
-    ImGui_ImplVulkan_InitInfo init_info = {};
-
-    // [修复] ApiVersion 必须与创建 VkInstance 时使用的 Vulkan API 版本一致。
-    //   目的：ImGui 内部根据此版本决定初始化路径（例如是否启用某些 Vulkan 1.2/1.3 特性）。
-    //   问题根源：原代码未设置此字段，默认值为 0，导致 ImGui_ImplVulkan_Init 内部
-    //             选择了错误的代码路径，字体纹理的 DescriptorSet 未被正确创建，
-    //             其 TexID 留在 ImTextureID_Invalid（即 0xFFFFFFFFFFFFFFFF），
-    //             渲染时 vkCmdBindDescriptorSets 读取该无效句柄引发访问冲突崩溃。
-    //   过程：设置为与 RenderDeviceVulkan::Initialize 中 require_api_version(1,3,0) 一致的值。
-    init_info.ApiVersion = VK_API_VERSION_1_3;
-
-    init_info.Instance       = device->GetVkInstance();
-    init_info.PhysicalDevice = device->GetPhysicalDevice();
-    init_info.Device         = device->GetVkDevice();
-    init_info.QueueFamily    = device->GetGraphicsQueueFamily();
-    init_info.Queue          = device->GetGraphicsQueue();
-
-    VkDescriptorPoolSize pool_sizes[]    = {{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000}};
+    // 创建 ImGui 特有的 DescriptorPool
+    VkDescriptorPoolSize pool_sizes[] = { { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 } };
     VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType                      = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags                      = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets                    = 1000;
-    pool_info.poolSizeCount              = 1;
-    pool_info.pPoolSizes                 = pool_sizes;
-    vkCreateDescriptorPool(device->GetVkDevice(), &pool_info, nullptr, &m_imguiDescriptorPool);
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000;
+    pool_info.poolSizeCount = 1;
+    pool_info.pPoolSizes = pool_sizes;
+    vkCreateDescriptorPool(vkb_device.device, &pool_info, nullptr, &m_imguiDescriptorPool);
 
-    // 创建 ImGui 使用的 Sampler
+    // 创建采样器
     VkSamplerCreateInfo samplerInfo{};
     samplerInfo.sType        = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     samplerInfo.magFilter    = VK_FILTER_LINEAR;
@@ -138,141 +142,118 @@ int Editor::OnImGuiInitialize() {
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
     samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    samplerInfo.maxLod       = VK_LOD_CLAMP_NONE;
-    vkCreateSampler(device->GetVkDevice(), &samplerInfo, nullptr, &m_imguiSampler);
+    samplerInfo.maxLod = VK_LOD_CLAMP_NONE;
+    vkCreateSampler(vkb_device.device, &samplerInfo, nullptr, &m_imguiSampler);
 
-    // 初始化 ImGui Vulkan 资源管理器
-    m_imguiResourceManager = std::make_unique<ImGuiVulkanResourceManager>();
-    m_imguiResourceManager->Initialize(device->GetVkDevice());
+    imgui_init.DescriptorPool = m_imguiDescriptorPool;
+    imgui_init.MinImageCount = 2;
+    imgui_init.ImageCount = 3; 
+    
+    // [修复] 最新 ImGui API 要求
+    imgui_init.PipelineInfoMain.RenderPass = vkDevice->GetOverlayRenderPass();
+    imgui_init.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
-    init_info.DescriptorPool      = m_imguiDescriptorPool;
-    init_info.PipelineCache       = VK_NULL_HANDLE;
-    init_info.MinImageCount       = 2;                                           // Vulkan 规范要求 >= 2
-    init_info.ImageCount          = vkDevice->GetSwapChain()->GetBufferCount();  // 与交换链缓冲数对齐
-    init_info.UseDynamicRendering = false;
-    init_info.Allocator           = nullptr;
-    init_info.CheckVkResultFn     = nullptr;
-
-    // RenderPass / MSAA 设置（使用交换链的 RenderPass，禁用多重采样）
-    init_info.PipelineInfoMain.RenderPass = device->GetOverlayRenderPass();
-    init_info.PipelineInfoMain.Subpass    = 0;
-    // [修复] MSAASamples 必须显式设置为 VK_SAMPLE_COUNT_1_BIT（= 1）。
-    //   若保持 0（零值初始化默认），ImGui 内部在创建 pipeline 时
-    //   vkCreateGraphicsPipelines 会收到无效的采样数，driver 可能返回错误。
-    init_info.PipelineInfoMain.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
-
-    // 副视口使用相同的管线配置（当前已禁用多视口，此字段实际未使用）
-    init_info.PipelineInfoForViewports = init_info.PipelineInfoMain;
-
-    if (!ImGui_ImplVulkan_Init(&init_info)) {
+    if (!ImGui_ImplVulkan_Init(&imgui_init)) {
+        LOG_FATAL("Editor", "Failed to initialize ImGui Vulkan backend!");
         return -1;
     }
 
-    // -----------------------------------------------------------------------
-    vkDevice->SetOverlayRenderCallback([this](VkCommandBuffer cmd) {
-        // [修复] 必须在渲染前设置正确的 Context
-        ImGui::SetCurrentContext((ImGuiContext*)this->GetImGuiContext());
+    // 7. 初始化编辑器内部资源管理器
+    m_imguiResourceManager = std::make_unique<ImGuiVulkanResourceManager>();
+    m_imguiResourceManager->Initialize(vkb_device.device);
 
-        if (ImGui::GetCurrentContext() && ImGui::GetDrawData()) {
-            // 这里可以添加对特定纹理的布局转换逻辑（如果需要）
+    // 8. 注册引擎渲染回调
+    vkDevice->SetOverlayRenderCallback([this](VkCommandBuffer cmd) {
+        ImGui::SetCurrentContext(ImGui::GetCurrentContext());
+        if (ImGui::GetDrawData()) {
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         }
     });
 
+    // 9. 初始化编辑器层
+    auto editorLayer = std::make_unique<EditorLayer>();
+    m_Layers.push_back(std::move(editorLayer));
+
+    m_Running = true;
     return 0;
 }
-void Editor::OnUpdate(Timestep ts) {
-    Application::OnUpdate(ts);
 
-    // 更新窗口标题
-    static std::string lastTitle = "";
-    std::string projectName      = m_projectSettingsWindow.GetSettings().productName;
-    if (m_IsProjectDirty)
-        projectName += "*";
+void Editor::Run() {
+    double lastFrameTime = Platform::GetTimeSeconds();
 
-    std::string sceneName = "None";
-    bool sceneDirty       = false;
-    if (auto sceneManager = Engine::Get().GetSceneManager()) {
-        if (auto scene = sceneManager->GetCurrentScene()) {
-            sceneName  = scene->GetName();
-            sceneDirty = scene->IsDirty();
+    while (m_Running) {
+        double time = Platform::GetTimeSeconds();
+        float deltaTime = static_cast<float>(time - lastFrameTime);
+        lastFrameTime = time;
+
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL3_ProcessEvent(&event);
+            OnEvent(event);
         }
-    }
-    if (sceneDirty)
-        sceneName += "*";
 
-    std::string title = projectName + " - " + sceneName + " - Prisma Engine (Vulkan)";
-    if (title != lastTitle) {
-        Engine::Get().GetWindow().SetTitle(title);
-        lastTitle = title;
+        if (!m_Running) break;
+
+        OnUpdate(Timestep(std::min(deltaTime, 0.1f)));
+
+        m_Engine->BeginFrame(); 
+        
+        for (auto& layer : m_Layers) {
+            layer->OnRender();
+        }
+
+        OnImGuiRender();
+
+        m_Engine->EndFrame();
+        m_Engine->Present();
     }
 }
 
-void* Editor::GetImGuiContext() {
-    return (void*)ImGui::GetCurrentContext();
+void Editor::OnEvent(SDL_Event& event) {
+    if (event.type == SDL_EVENT_QUIT) {
+        m_Running = false;
+    }
+    if (event.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED && event.window.windowID == SDL_GetWindowID(m_Window)) {
+        m_Running = false;
+    }
+}
+
+void Editor::OnUpdate(Timestep ts) {
+    m_Engine->Update(ts);
+    for (auto& layer : m_Layers) {
+        layer->OnUpdate(ts);
+    }
 }
 
 void Editor::OnImGuiRender() {
-    // 1. ImGui 帧开始
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
-    // 2. 渲染所有 Layer 的 UI
-    Application::OnImGuiRender();
-
-    // 渲染 Editor 自己的内置窗口
+    for (auto& layer : m_Layers) {
+        layer->OnImGuiRender();
+    }
+    
     if (m_showProjectSettings) {
         m_projectSettingsWindow.Draw(&m_showProjectSettings);
     }
 
-    // 3. ImGui 帧结束
     ImGui::Render();
-    // 注意：不再在这里调用 ImGui_ImplVulkan_RenderDrawData
-    // 而是由 RenderDeviceVulkan::EndFrame 在正确的 RenderPass 中调用
 }
 
-void Editor::OnRender() {
-    // 这里放置场景提交逻辑 (由 Engine 循环调用)
-    Application::OnRender();
-    OnImGuiRender();
-}
+void Editor::Shutdown() {
+    if (!m_Running && !m_Window) return;
 
-// -----------------------------------------------------------------------
-// [改动] OnShutdown
-//
-// 目的：
-//   修复程序退出时偶发的 0xc0000005 崩溃和 Vulkan 验证层严重错误。
-//
-// 过程：
-//   1. 显式清除 OverlayRenderCallback 为 nullptr，断开引擎渲染循环与
-//      即将销毁的编辑器 DLL 逻辑（捕捉了 this 的 Lambda）之间的联系。
-//   2. 调整销毁顺序：必须先调用 ImGui_ImplVulkan_Shutdown，
-//      再手动销毁我们自己创建的 DescriptorPool 和 Sampler。
-//      因为 ImGui 后端内部可能在销毁过程中仍持有这些资源的句柄。
-// -----------------------------------------------------------------------
-void Editor::OnShutdown() {
-    LOG_INFO("Editor", "正在关闭编辑器...");
+    LOG_INFO("Editor", "Shutting down Editor...");
 
-    // 1. 立即停止渲染回调，防止后续帧进入
-    if (auto renderSystem = Engine::Get().GetRenderSystem()) {
-        if (renderSystem->GetDevice()) {
-            auto* vkDevice = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
-            vkDevice->SetOverlayRenderCallback(nullptr);
+    m_Layers.clear();
+
+    if (m_Engine) {
+        auto renderSystem = m_Engine->GetRenderSystem();
+        if (renderSystem && renderSystem->GetDevice()) {
+            auto vkDevice = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
             vkDevice->WaitForIdle();
-        }
-    }
-
-    // 2. 首先关闭 ImGui 后端（它可能正在引用下面的 Pool 或 Sampler）
-    ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL3_Shutdown();
-    ImGui::DestroyContext();
-
-    // 3. 然后再安全地销毁我们自己管理的资源
-    if (auto renderSystem = Engine::Get().GetRenderSystem()) {
-        if (renderSystem->GetDevice()) {
-            auto* vkDevice = static_cast<Prisma::Graphic::Vulkan::RenderDeviceVulkan*>(renderSystem->GetDevice());
-            VkDevice vkDev = vkDevice->GetVkDevice();
+            vkDevice->SetOverlayRenderCallback(nullptr);
 
             if (m_imguiResourceManager) {
                 m_imguiResourceManager->Shutdown();
@@ -280,22 +261,28 @@ void Editor::OnShutdown() {
             }
 
             if (m_imguiDescriptorPool != VK_NULL_HANDLE) {
-                vkDestroyDescriptorPool(vkDev, m_imguiDescriptorPool, nullptr);
-                m_imguiDescriptorPool = VK_NULL_HANDLE;
+                vkDestroyDescriptorPool(vkDevice->GetVkDevice(), m_imguiDescriptorPool, nullptr);
             }
             if (m_imguiSampler != VK_NULL_HANDLE) {
-                vkDestroySampler(vkDev, m_imguiSampler, nullptr);
-                m_imguiSampler = VK_NULL_HANDLE;
+                vkDestroySampler(vkDevice->GetVkDevice(), m_imguiSampler, nullptr);
             }
+
+            ImGui_ImplVulkan_Shutdown();
+            ImGui_ImplSDL3_Shutdown();
+            ImGui::DestroyContext();
         }
+
+        m_Engine->Shutdown();
+        m_Engine.reset();
     }
+
+    if (m_Window) {
+        SDL_DestroyWindow(m_Window);
+        m_Window = nullptr;
+    }
+
+    SDL_Quit();
+    m_Running = false;
 }
 
-}  // namespace Prisma
-
-// ============================================================================
-// Factory
-// ============================================================================
-extern "C" EDITOR_API Prisma::Application* CreateApplication() {
-    return new Prisma::Editor();
-}
+} // namespace Prisma

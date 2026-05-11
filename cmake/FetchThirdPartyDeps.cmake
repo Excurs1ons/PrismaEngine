@@ -174,7 +174,38 @@ if(NOT TARGET imgui)
         "${PRISMA_GLOBAL_DEPS_DIR}/Vulkan-Headers-src/include"
     )
 
-    add_library(imgui::imgui ALIAS imgui)
+    # Windows 后端
+    if(WIN32)
+        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp)
+    endif()
+
+    # Vulkan 后端 - 跨平台
+    if(PRISMA_ENABLE_RENDER_VULKAN)
+        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp)
+    endif()
+
+    # SDL3 后端 - 跨平台（包括 Windows）
+    if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdl3.cpp)
+    endif()
+
+    # SDL_Renderer3 后端
+    if(EXISTS ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
+        list(APPEND IMGUI_CORE_SOURCES ${imgui_SOURCE_DIR}/backends/imgui_impl_sdlrenderer3.cpp)
+    endif()
+
+    if(NOT TARGET imgui)
+        add_library(imgui STATIC ${IMGUI_CORE_SOURCES})
+        target_include_directories(imgui PUBLIC ${imgui_SOURCE_DIR} ${imgui_SOURCE_DIR}/backends)
+        
+        # 强力注入包含路径
+        target_include_directories(imgui SYSTEM PUBLIC 
+            "${PRISMA_GLOBAL_DEPS_DIR}/SDL3-src/include"
+            "${PRISMA_GLOBAL_DEPS_DIR}/Vulkan-Headers-src/include"
+        )
+
+        add_library(imgui::imgui ALIAS imgui)
+    endif()
 endif()
 
 if(WIN32 AND PRISMA_BUILD_EDITOR)

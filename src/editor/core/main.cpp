@@ -3,8 +3,8 @@
 #include "app/CommandLineParser.h"
 #include "logger/Logger.h"
 #include <memory>
-
-extern "C" Prisma::Application* CreateApplication();
+#include "Editor.h"
+#include "../engine/Logger.h"
 
 /**
  * @brief Prisma Editor Launcher
@@ -18,44 +18,23 @@ int main(int argc, char* argv[]) {
     logConfig.target = Prisma::LogTarget::Both;
     Prisma::Logger::Get().Initialize(logConfig);
 
-    if (argc > 1) {
-        std::string arguments;
-        for (int i = 1; i < argc; ++i) {
-            if (argv[i] == nullptr || argv[i][0] == '\0') {
-                continue;
-            }
-            if (!arguments.empty()) {
-                arguments += ' ';
-            }
-            arguments += argv[i];
-        }
+    LOG_INFO("Editor", "Starting Prisma Editor...");
 
-        if (!arguments.empty()) {
-            LOG_INFO("Editor", "Startup arguments: {}", arguments);
-        }
-    }
+    // 1. Create Editor Application (マスター Master)
+    // 架构调整：编辑器现在是驱动者，它持有并管理引擎。
+    auto editor = std::make_unique<Prisma::Editor>();
 
-    // 2. Create Engine (Architecture fix: explicit instantiation on stack)
-    Prisma::EngineSpecification spec;
-    spec.Name                          = "Prisma Editor";
-    spec.RefreshAssetDatabaseOnStartup = true;
-    Prisma::Engine engine(spec);
-
-    // 2. Initialize engine
-    if (engine.Initialize() != 0) {
+    // 2. Initialize Editor
+    if (editor->Initialize() != 0) {
+        LOG_FATAL("Editor", "Failed to initialize editor!");
         return -1;
     }
 
-    // 3. Create application
-    std::unique_ptr<Prisma::Application> app(CreateApplication());
+    // 3. Main Loop
+    editor->Run();
 
-    if (app) {
-        // 4. Engine drives the lifecycle
-        engine.Run(std::move(app));
-    }
-
-    // 5. Shutdown
-    engine.Shutdown();
+    // 4. Shutdown
+    editor->Shutdown();
 
     return 0;
 }

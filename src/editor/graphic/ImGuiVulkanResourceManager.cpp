@@ -74,15 +74,14 @@ VkDescriptorSet ImGuiVulkanResourceManager::GetDescriptorSet(Prisma::Graphic::Vu
     // [改动] imageInfo.imageLayout
     //
     // 目的：
-    //   解决新创建纹理处于 UNDEFINED 布局时，ImGui 采样导致的验证层报错。
+    //   解决布局不一致导致的验证层报错。
     //
     // 过程：
-    //   使用 VK_IMAGE_LAYOUT_GENERAL 作为描述符中的默认布局。相比于
-    //   SHADER_READ_ONLY_OPTIMAL，GENERAL 布局对 UNDEFINED 状态
-    //   初次引用的兼容性更好（在某些同步场景下），配合 EditorLayer 的延迟
-    //   显示逻辑，可以彻底消除 VUID-vkCmdDraw-None-09600 错误。
+    //   必须使用 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL。
+    //   原因：ViewportRenderPass 的颜色附件 finalLayout 已声明为此布局。
+    //   Vulkan 要求描述符中声明的布局与采样时的真实布局严格匹配。
     // -----------------------------------------------------------------------
-    imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     imageInfo.imageView = texture->GetVkImageView();
     imageInfo.sampler = sampler;
 

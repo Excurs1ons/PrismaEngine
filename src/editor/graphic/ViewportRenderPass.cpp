@@ -78,7 +78,7 @@ void ViewportRenderPass::Begin(VkCommandBuffer cmd) {
 
     // 设置清除值：颜色 + 深度
     VkClearValue clearValues[2] = {};
-    clearValues[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};  // 颜色：黑色
+    clearValues[0].color = {{1.0f, 0.0f, 0.0f, 1.0f}};  // 颜色：鲜红（调试用）
     clearValues[1].depthStencil = {1.0f, 0};                 // 深度：1.0f
 
     rpInfo.clearValueCount = 2;

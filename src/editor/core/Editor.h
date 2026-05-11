@@ -2,67 +2,81 @@
 
 #include "../windows/ProjectSettingsWindow.h"
 #include "Export.h"
-#include "app/Application.h"
-#include "core/ManagerBase.h"
-#include "core/Singleton.h"
-#include "logger/Logger.h"
-#include "platform/Platform.h"
+#include "../engine/Engine.h"
+#include "../engine/Logger.h"
+#include "../engine/core/Timestep.h"
+#include "ProjectSettingsWindow.h"
 
 // 显式包含 SDL3
 #include <SDL3/SDL.h>
 #include <memory>
-#include <vulkan/vulkan.h>
-
-namespace Prisma::Graphic::Vulkan {
-class VulkanTexture;
-}
+#include <vector>
 
 namespace Prisma {
 
+class EditorLayer;
 class ImGuiVulkanResourceManager;
 
-class EDITOR_API Editor : public Application {
+/**
+ * @brief 编辑器主应用程序
+ * 
+ * [架构重构] 编辑器现在是系统的 Master，持有并驱动 Engine。
+ * UI 渲染使用 ImGui Vulkan 后端，与引擎视口共享 GPU 设备。
+ */
+class EDITOR_API Editor {
 public:
     Editor();
-    ~Editor() override;
+    ~Editor();
 
-    static Editor& Get() { return static_cast<Editor&>(Application::Get()); }
+    int Initialize();
+    void Run();
+    void Shutdown();
 
-    // 被动初始化接口，仅负责应用层自身的逻辑
-    int OnInitialize() override;
-    void OnShutdown() override;
+    static Editor& Get() { return *s_Instance; }
 
-    void OnUpdate(Timestep ts) override;
-    void OnRender() override;
-    void OnImGuiRender() override;
-
-    int OnImGuiInitialize() override;
-
-    void* GetImGuiContext() override;
+    // 获取引擎实例
+    Engine& GetEngine() { return *m_Engine; }
+    
+    // 获取 ImGui 资源管理器 (用于视口纹理转换)
+    ImGuiVulkanResourceManager& GetImGuiResourceManager() { return *m_imguiResourceManager; }
 
     void OpenProjectSettings() { m_showProjectSettings = true; }
 
-    bool IsProjectDirty() const { return m_IsProjectDirty; }
-    void SetProjectDirty(bool dirty) { m_IsProjectDirty = dirty; }
-
-    // 获取 ImGui DescriptorPool 和 Sampler
+    // 获取 ImGui 所需的 Vulkan 资源句柄
     VkDescriptorPool GetImGuiDescriptorPool() const { return m_imguiDescriptorPool; }
     VkSampler GetImGuiSampler() const { return m_imguiSampler; }
 
-    // 获取 ImGui 资源管理器
-    ImGuiVulkanResourceManager& GetImGuiResourceManager() { return *m_imguiResourceManager; }
+private:
+    void OnUpdate(Timestep ts);
+    void OnRender();
+    void OnImGuiRender();
+
+    // 事件处理
+    void OnEvent(SDL_Event& event);
 
 private:
-    // Editor Windows
-    ProjectSettingsWindow m_projectSettingsWindow;
-    bool m_showProjectSettings = false;
+    static Editor* s_Instance;
 
+    std::unique_ptr<Engine> m_Engine;
+    bool m_Running = false;
+
+    // 窗口资源 (由编辑器管理)
+    SDL_Window* m_Window = nullptr;
+
+    // ImGui Vulkan 资源
     VkDescriptorPool m_imguiDescriptorPool = VK_NULL_HANDLE;
     VkSampler m_imguiSampler               = VK_NULL_HANDLE;
 
+    // 编辑器状态
+    ProjectSettingsWindow m_projectSettingsWindow;
+    bool m_showProjectSettings = false;
+    bool m_showDemoWindow = true;
+
     // ImGui 资源管理器
     std::unique_ptr<ImGuiVulkanResourceManager> m_imguiResourceManager;
-    bool m_IsProjectDirty = false;
+    
+    // 编辑器层
+    std::vector<std::unique_ptr<EditorLayer>> m_Layers;
 };
 
 }  // namespace Prisma

@@ -34,6 +34,22 @@ public:
     /// @return 是否初始化成功
     virtual int Initialize(const DeviceDesc& desc) = 0;
 
+    /// @brief 外部 Vulkan 初始化信息
+    struct ExternalVulkanInitInfo {
+        VkInstance instance = VK_NULL_HANDLE;
+        VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+        VkDevice device = VK_NULL_HANDLE;
+        VkQueue graphicsQueue = VK_NULL_HANDLE;
+        uint32_t graphicsQueueFamily = 0;
+        VmaAllocator allocator = VK_NULL_HANDLE;
+        void* windowHandle = nullptr; // 用于创建主交换链
+    };
+
+    /// @brief 使用外部已有的 Vulkan 资源初始化设备
+    /// @param info 外部资源信息
+    /// @return 是否初始化成功
+    virtual int InitializeExternalVulkan(const ExternalVulkanInitInfo& info) = 0;
+
     /// @brief 关闭设备
     virtual void Shutdown() = 0;
 
