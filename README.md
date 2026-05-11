@@ -1,175 +1,102 @@
 # Prisma Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/platform-Windows%20x64--lightgrey.svg)](https://github.com/Excurs1ons/PrismaEngine)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android-lightgrey.svg)](https://github.com/Excurs1ons/PrismaEngine)
 [![Build Status](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions)
-
-## Prune Branch
-
-此分支是 Prisma Engine 的简化版本，专注于 SDL3 + Vulkan 渲染路径。
-
-**简化内容：**
-- ✅ 支持 **SDL3 + Vulkan** 可适配的平台（按 preset 配置）
-- ✅ 渲染后端：仅启用 **Vulkan**
-- ✅ 音频后端：仅启用 **SDL3**
-- ✅ 编辑器：集成 **ImGui**
-- ❌ 移除 DirectX 12 后端
-- ❌ 移除 OpenGL 后端
-- ❌ 移除 XAudio2 后端
-- ❌ 移除 DirectX12 / OpenGL / XAudio2 路径
-
-**目标：** 简化引擎架构，专注 Vulkan 渲染管线开发。
-
----
+[![Android APK](https://img.shields.io/badge/APK-Download-green.svg?logo=android)](https://github.com/Excurs1ons/PrismaEngine/releases/download/latest/PrismaAndroid.apk)
 
 Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusing on high-performance rendering and modern graphics architectures.
 
-> **Current Status**: Windows Vulkan backend is production-ready with integrated ImGui editor.
+[中文文档](./docs/README_zh.md) | [English](./README.md)
+
+> **Current Status**: Android Vulkan runtime is production-ready. Windows DirectX 12 backend is in active development.
+> **Last Updated**: 2026-05-11
 
 ## CI/CD Status
 
-### CI (Continuous Integration)
-
-| Platform | Status | Trigger |
-|----------|--------|---------|
-| Windows | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-windows.yml?branch=prune&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml) | Push / PR |
-
-### Editor Build
-
-| Platform | Status | Trigger |
-|----------|--------|---------|
-| Windows | [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-editor.yml?branch=prune&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-editor.yml) | Push / Manual |
+| Target | Platform | Status | Trigger |
+|--------|----------|--------|---------|
+| **CI** | Windows | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-windows.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml) | Push / PR |
+| **CI** | Android | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-android.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml) | Push / PR |
+| **CI** | Linux | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-linux.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml) | Push / PR |
+| **APK** | Android | [![Android Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-runtime.yml?branch=main&label=APK)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-runtime.yml) | Push / Manual |
+| **Engine** | Windows | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-engine.yml) | Push / Manual |
+| **Engine** | Android | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-engine.yml) | Push / Manual |
+| **Engine** | Linux | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-engine.yml) | Push / Manual |
+| **Editor** | Windows | [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-editor.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-editor.yml) | Push / Manual |
+| **Editor** | Linux | [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-editor.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-editor.yml) | Push / Manual |
+| **Runtime** | Windows | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-runtime.yml) | Push / Manual |
+| **Runtime** | Android | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-runtime.yml) | Push / Manual |
+| **Runtime** | Linux | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-runtime.yml) | Push / Manual |
+| **Release** | All | [![Release](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/release.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/release.yml) | Tag (`v*.*.*`) |
 
 ## Current Progress
 
 | Module | Status | Description |
 |--------|--------|-------------|
-| ECS Component System | ✅ 80% | High-performance Entity Component System |
-| Vulkan Backend | ✅ 90% | Robust Windows implementation |
-| Platform Layer | ✅ 95% | Windows abstraction |
+| Rendering Architecture | ✅ 85% | Core Pass + Feature system |
+| Resource Management | ✅ 95% | Handle<T> system + resource pools |
+| Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
+| DirectX 12 Backend | ⏳ 70% | Primary Windows rendering backend |
+| Platform Layer | ✅ 95% | Unified Windows/Linux/Android abstraction |
 | Logger System | ✅ 100% | Thread-safe cross-platform logging |
-| Audio System (SDL3) | ✅ 50% | SDL3 backend with 3D spatial support |
-| Resource Management | ✅ 75% | Smart asset loading and caching |
-| Editor Tools (ImGui) | ⏳ 30% | ImGui integrated inspector |
+| Audio System | ✅ 50% | XAudio2/SDL3 backends with 3D spatial support |
+| Shaders | ✅ 50% | PBR lighting shaders (lit/unlit) |
+| Android Runtime | ✅ 90% | Optimized Vulkan runtime (integrated GameActivity) |
+| Editor Tools | ⏳ 15% | ImGui-based inspector |
+| MCP Protocol | ✅ 80% | 31 tools for AI Agent integration |
 
-**Overall: ~70%**
-
-## SDK Usage
-
-Use PrismaEngine SDK to build your game without embedding the engine source code.
-
-### One-Click Project Setup
-
-```bash
-# Replace VERSION with SDK version (e.g., 1.0.1)
-SDK_VERSION=1.0.1
-
-# Download SDK with project template
-curl -sL https://github.com/Excurs1ons/PrismaEngine/releases/download/v${SDK_VERSION}-sdk/PrismaEngine-SDK-${SDK_VERSION}-linux-arm64.tar.gz | tar xz
-
-# Move template to your project directory
-mv PrismaEngine-SDK-${SDK_VERSION}-linux-arm64/template/* .
-mv PrismaEngine-SDK-${SDK_VERSION}-linux-arm64/template/.* . 2>/dev/null || true
-rm -rf PrismaEngine-SDK-${SDK_VERSION}-linux-arm64
-
-# Build your game
-cmake -B build
-cmake --build build
-
-# Run
-./build/MyGame
-```
-
-### Manual Integration
-
-If you prefer to set up manually:
-
-```cmake
-cmake_minimum_required(VERSION 3.20)
-project(MyGame VERSION 0.1.0 LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-# Download PrismaEngine SDK
-set(PRISMA_SDK_VERSION "1.0.1")
-set(PRISMA_SDK_URL "https://github.com/Excurs1ons/PrismaEngine/releases/download/v${PRISMA_SDK_VERSION}-sdk/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64.tar.gz")
-
-set(PRISMA_SDK_DIR "${CMAKE_BINARY_DIR}/PrismaEngine-SDK")
-if(NOT EXISTS "${PRISMA_SDK_DIR}/cmake/PrismaEngineConfig.cmake")
-    message(STATUS "Downloading PrismaEngine SDK...")
-    file(DOWNLOAD "${PRISMA_SDK_URL}" "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz" SHOW_PROGRESS)
-    execute_process(COMMAND ${CMAKE_COMMAND} -E tar xzf "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz"
-                    WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
-    file(REMOVE "${CMAKE_BINARY_DIR}/PrismaEngine-SDK.tar.gz")
-    file(RENAME "${CMAKE_BINARY_DIR}/PrismaEngine-SDK-${PRISMA_SDK_VERSION}-linux-arm64" "${PRISMA_SDK_DIR}")
-endif()
-
-list(APPEND CMAKE_PREFIX_PATH "${PRISMA_SDK_DIR}")
-find_package(PrismaEngine REQUIRED)
-
-add_executable(MyGame src/main.cpp src/MyApp.h)
-target_include_directories(MyGame PRIVATE ${PRISMA_SDK_DIR}/include src)
-target_link_libraries(MyGame PRIVATE PrismaEngine::Engine)
-target_link_directories(MyGame PRIVATE "${PRISMA_SDK_DIR}/lib/linux")
-```
-
-### SDK Requirements
-
-- CMake 3.20+
-- C++20 compiler
-- Vulkan SDK (`libvulkan-dev` on Ubuntu/Debian)
-
----
+**Overall: ~75%**
 
 ## Quick Start
 
-### One-Command Build (Auto Preset)
+Prisma Engine uses **CMake FetchContent** for dependency management by default - no manual library installation required.
+
+### Windows
 
 ```bash
 # Clone repository
-git clone --recursive https://github.com/Excurs1ons/PrismaEngine.git -b prune
+git clone --recursive https://github.com/Excurs1ons/PrismaEngine.git
 cd PrismaEngine
 
-# Auto-detect platform + architecture and choose preset
-./scripts/build.sh
-
-# Optional: choose target/config explicitly
-./scripts/build.sh --target editor --config release
-
-# Optional: force a specific preset
-./scripts/build.sh --preset editor-linux-arm64-debug --clean
+# Build with CMake Presets
+cmake --preset windows-x64-debug
+cmake --build build/windows-x64-debug --parallel
 ```
 
-### PacMan Build / Run / Package
+### Linux
 
 ```bash
-# Build PacMan only (isolated output path)
-./scripts/build.sh --target pacman --config debug
+# Install dependencies (Ubuntu/Debian)
+sudo apt-get install libx11-dev libxrandr-dev libvulkan-dev
 
-# Build + run PacMan
-./scripts/run-pacman.sh --config debug
-
-# Build + package (tar.gz)
-./scripts/package-pacman.sh --config release
+# Build
+cmake --preset linux-x64-debug
+cmake --build build/linux-x64-debug --parallel
 ```
 
-PacMan standalone output path:
-- `build/pacman-linux-x64-{debug|release}/bin/PacManGame`
-- `build/pacman-linux-arm64-{debug|release}/bin/PacManGame`
+### Android
 
-说明：
-- PacMan 已从 Editor 构建目录拆分，不再输出到 editor 的构建路径。
-- 在无图形设备环境下，PacMan 会自动切换到 console view（文本交互）。
-- ARM 平台编译并行度固定上限 `-j4`（脚本自动限制）。
+```bash
+# Open in Android Studio
+# Path: projects/android/PrismaAndroid
+# Dependencies download automatically via CMake FetchContent
+```
 
-## Features (Prune Branch)
+## Documentation
+
+- [Documentation Index](docs/Index.md) - **Start here**
+- [Architecture Overview](docs/README_zh.md) - Architecture and design
+- [Vulkan Integration](docs/VulkanIntegration.md) - Detailed Android implementation
+- [RenderGraph Plan](docs/RenderGraph_Migration_Plan.md) - Future rendering roadmap
+
+## Core Features
 
 - **Modern C++20**: Utilizing concepts, coroutines, and designated initializers.
 - **Smart Dependency Management**: No manual library installation required; CMake handles everything.
-- **Vulkan Rendering**: High-performance GPU rendering on Windows x64.
-- **SDL3 Platform**: Unified input and audio handling.
-- **ImGui Integration**: Built-in editor tools for scene inspection and debugging.
+- **Unified Rendering API**: Write once, run on DX12 or Vulkan.
+- **Android Deep Optimization**: Zero-latency input via GameActivity and high-performance Vulkan rendering path.
+- **MCP Integration**: Full Model Context Protocol support for AI Agent control (31 tools).
 
 ## License
 
