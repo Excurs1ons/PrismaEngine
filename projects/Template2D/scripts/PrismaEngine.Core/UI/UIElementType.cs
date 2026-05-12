@@ -11,5 +11,8 @@ public enum UIElementType
     Toggle = 6,
     Dropdown = 7,
     TextField = 8,
-    ContextMenu = 9
+    ContextMenu = 9,
+    Canvas = 100,
+    FlexboxLayout = 101,
+    RectTransform = 102
 }
