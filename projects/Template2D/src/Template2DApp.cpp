@@ -108,7 +108,7 @@ void Template2DApp::OnRender() {
     }
 
     // HUD 显示两种来源的计数
-    uint32_t totalDrawn = sceneSpriteCount + scriptEntityCount;
+    // uint32_t totalDrawn = sceneSpriteCount + scriptEntityCount;
 
     // 坐标轴
     Graphic::Renderer2D::DrawQuad({winW * 0.5f, 0.0f}, {winW, 3.0f}, {1.0f, 0.2f, 0.2f, 0.9f});

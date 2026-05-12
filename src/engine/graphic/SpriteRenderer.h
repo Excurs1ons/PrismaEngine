@@ -78,7 +78,7 @@ public:
     // ========== Component 接口实现 ==========
 
     virtual void Initialize() override {}
-    virtual void Update(Timestep ts) override {}
+    virtual void Update(Timestep /*ts*/) override {}
     virtual void Shutdown() override {}
 
 private:
