@@ -1,6 +1,6 @@
 using System;
-using PrismaEngine;
-using Random = PrismaEngine.Random;
+using Prisma;
+using Random = Prisma.Random;
 namespace GameScripts;
 
 [Serializable]
@@ -12,7 +12,7 @@ public partial class SceneInit : Script
         var camAnchor = Node.Create("__CameraAnchor__");
         camAnchor.AddScript<CameraController>();
 
-        // 2. 创建 20 个动态精灵
+        // 2. 创建 20 个动态精�?
         for (int i = 0; i < 20; i++)
         {
             var n = Node.Create($"Sprite_{i}");

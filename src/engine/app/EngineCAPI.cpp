@@ -36,7 +36,7 @@ public:
         Prisma::EngineSpecification spec;
 
         if (info) {
-            spec.Name                             = info->Name ? info->Name : "PrismaEngine";
+            spec.Name                             = info->Name ? info->Name : "Prisma Engine";
             spec.Headless                         = info->Headless != 0;
             spec.MinLogLevel                      = static_cast<Prisma::LogLevel>(info->MinLogLevel);
             spec.PresentMode                      = static_cast<Prisma::Graphic::PresentMode>(info->PresentMode);

@@ -58,19 +58,11 @@ add_library(Editor SHARED
 target_compile_definitions(Editor PRIVATE EDITOR_EXPORTS=1)
 
 # 链接依赖
-# 注意：同时链接 Engine 和 SDL3-shared 是安全的，因为它们共享同一个 SDL3.dll 状态。
-# 虽然 Engine 内部也链接了 SDL3，但由于其使用 PRIVATE 链接进行封装，
-# Editor 必须显式链接 SDL3-shared 以自动获取 SDL3 的包含目录（头文件路径）并声明其直接依赖。
 target_link_libraries(Editor PRIVATE
     Engine
     imgui::imgui
     SDL3-shared
 )
-# 2. 创建编辑器启动器 (EXE)
-add_executable(PrismaEditor core/main.cpp)
-
-# 链接到编辑器 DLL 和 引擎 DLL
-target_link_libraries(PrismaEditor PRIVATE Editor Engine)
 
 # ========== 路径与输出配置 ==========
 
@@ -81,18 +73,6 @@ set_target_properties(Editor PROPERTIES
     LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 )
-
-set_target_properties(PrismaEditor PROPERTIES
-    OUTPUT_NAME "Prisma"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-)
-
-# 设置 VS 调试属性：工作目录设为项目根目录以加载资源
-if(MSVC)
-    set_target_properties(PrismaEditor PROPERTIES
-        VS_DEBUGGER_WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    )
-endif()
 
 # Windows 平台特定
 if(WIN32)

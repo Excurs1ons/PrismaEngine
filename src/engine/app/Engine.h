@@ -30,7 +30,7 @@ class ThreadManager;
  * @brief 引擎配置规范
  */
 struct EngineSpecification {
-    const char* Name = "PrismaEngine";
+    const char* Name = "Prisma Engine";
     bool Headless = false;
     // Runtime/游戏默认只读资源元数据库，避免每次启动改写 assets/metadata.json
     bool RefreshAssetDatabaseOnStartup = false;
