@@ -110,22 +110,22 @@ src/engine/
 └── [Other core systems]     # Engine, Scene, GameObject, etc.
 ```
 
-### Runtime / src/runtime/
+### Launcher / src/launcher/
 
 Platform-specific runtime implementations (similar to Unity Player).
 
 平台特定的运行时实现（类似于 Unity Player）。
 
 ```
-src/runtime/
-├── windows/                 # Windows runtime / Windows 运行时
-│   └── WindowsRuntime.cpp   # Windows entry point
+src/launcher/
+├── windows/                 # Windows launcher / Windows 启动器
+│   └── WindowsLauncher.cpp  # Windows entry point
 │
-├── linux/                   # Linux runtime / Linux 运行时
-│   └── LinuxRuntime.cpp     # Linux entry point
+├── linux/                   # Linux launcher / Linux 启动器
+│   └── LinuxLauncher.cpp    # Linux entry point
 │
-└── android/                 # Android runtime / Android 运行时
-    ├── AndroidRuntime.cpp   # Android entry point
+└── android/                 # Android launcher / Android 启动器
+    ├── AndroidLauncher.cpp  # Android entry point
     ├── Renderer.*           # Renderer abstraction
     ├── RendererOpenGL.*     # OpenGL rendering
     ├── RendererVulkan.*     # Vulkan rendering
@@ -187,17 +187,17 @@ resources/common/
 └── fonts/                   # Common fonts / 通用字体
 ```
 
-### Runtime Resources / resources/runtime/
+### Launcher Resources / resources/launcher/
 
-Platform-specific runtime resources (icons, etc.).
+Platform-specific launcher resources (icons, etc.).
 
-平台特定的运行时资源（图标等）。
+平台特定的启动器资源（图标等）。
 
 ```
-resources/runtime/
+resources/launcher/
 ├── windows/
 │   └── icons/               # Windows icons
-│       ├── Runtime.ico      # Main application icon
+│       ├── Launcher.ico     # Main application icon
 │       └── small.ico        # Small icon
 │
 ├── linux/
@@ -225,9 +225,9 @@ resources/editor/
 
 ### Android Project / projects/android/PrismaAndroid/
 
-Android Studio project for Android runtime.
+Android Studio project for Android launcher.
 
-Android 运行时的 Android Studio 项目。
+Android 启动器的 Android Studio 项目。
 
 ```
 projects/android/PrismaAndroid/
@@ -327,14 +327,14 @@ namespace PrismaEngine {
 4. Use `PrismaEngine` namespace / 使用 `PrismaEngine` 命名空间
 
 ### Adding Platform-Specific Code / 添加平台特定代码
-1. Create implementation in `src/runtime/{platform}/` / 在运行时目录创建实现
+1. Create implementation in `src/launcher/{platform}/` / 在启动器目录创建实现
 2. Use platform abstraction in `src/engine/platform/` / 使用平台抽象层
 3. Add conditional compilation if needed / 如需要使用条件编译
 
 ### Adding Resources / 添加资源
 - **Common shaders**: `resources/common/shaders/hlsl/` or `glsl/`
 - **Common textures**: `resources/common/textures/`
-- **Platform-specific**: `resources/runtime/{platform}/`
+- **Platform-specific**: `resources/launcher/{platform}/`
 
 ## Related Documentation / 相关文档
 - [CLAUDE.md](../CLAUDE.md) - Project overview / 项目概述

@@ -16,7 +16,7 @@ YAGE (Yet Another Game Engine) 是一个跨平台游戏引擎，支持Windows和
 YAGE/
 ├── Engine/           # 核心引擎代码
 ├── Editor/           # 编辑器应用
-├── Runtime/          # 游戏运行时实现
+├── Launcher/          # 游戏启动器实现
 ├── Assets/           # 游戏资源
 └── Docs/             # 文档 (计划中)
 ```
@@ -40,16 +40,16 @@ YAGE/
 - 统一资源加载接口
 - 文件系统抽象
 
-## Runtime执行流程 (仿照UnityPlayer)
+## Launcher执行流程 (仿照UnityPlayer)
 
 ### 整体架构
 ```
-Runtime启动 → 引擎核心初始化 → 脚本系统初始化 → 场景加载 → 主循环 → 退出清理
+Launcher启动 → 引擎核心初始化 → 脚本系统初始化 → 场景加载 → 主循环 → 退出清理
 ```
 
 ### 详细执行流程
 
-1. **Runtime入口点**
+1. **Launcher入口点**
    - 平台检测和特定初始化
    - 日志系统初始化
    - 创建应用程序实例
@@ -66,7 +66,7 @@ Runtime启动 → 引擎核心初始化 → 脚本系统初始化 → 场景加�
    - 加载托管代码程序集
    - 注册内部调用函数
    - 初始化脚本域和基本类型
-   - 执行RuntimeInitializeOnLoadMethod标记的方法
+   - 执行LauncherInitializeOnLoadMethod标记的方法
 
 4. **启动画面和初始场景加载**
    - 显示启动画面（如果有配置）
@@ -93,7 +93,7 @@ Runtime启动 → 引擎核心初始化 → 脚本系统初始化 → 场景加�
 ### 流程图
 ```mermaid
 graph TD
-    A[Runtime启动] --> B[平台检测]
+    A[Launcher启动] --> B[平台检测]
     B --> C[日志系统初始化]
     C --> D[创建应用程序实例]
     D --> E[引擎核心初始化]
@@ -107,7 +107,7 @@ graph TD
     L --> M[加载程序集]
     M --> N[注册内部调用]
     N --> O[初始化脚本域]
-    O --> P[执行RuntimeInitialize方法]
+    O --> P[执行LauncherInitialize方法]
     P --> Q[启动画面/场景加载]
     Q --> R[显示启动画面]
     R --> S[加载初始场景]
@@ -250,7 +250,7 @@ ScriptEngine (脚本引擎)
 - `Initialize()` - 初始化脚本引擎
 - `Shutdown()` - 关闭脚本引擎
 - `LoadAssemblies()` - 加载程序集
-- `ExecuteRuntimeInitializeMethods()` - 执行RuntimeInitialize方法
+- `ExecuteLauncherInitializeMethods()` - 执行LauncherInitialize方法
 - `CallAwakeOnAllScripts()` - 调用所有脚本的Awake方法
 - `CallUpdateOnAllScripts(float deltaTime)` - 调用所有脚本的Update方法
 - `CallLateUpdateOnAllScripts(float deltaTime)` - 调用所有脚本的LateUpdate方法
@@ -271,7 +271,7 @@ InputManager (单例)
 
 ### 主要执行函数流程
 
-#### Runtime启动流程
+#### Launcher启动流程
 ```cpp
 int main() {
     // 1. 平台检测和初始化

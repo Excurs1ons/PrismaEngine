@@ -240,9 +240,9 @@ AssetManager::GetInstance().SetAssetBasePath("./Assets");
 ### Windows Assets / Windows 资产
 
 ```
-resources/runtime/windows/
+resources/launcher/windows/
 └── icons/
-    ├── Runtime.ico
+    ├── Launcher.ico
     └── small.ico
 ```
 

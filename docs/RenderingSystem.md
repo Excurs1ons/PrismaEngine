@@ -226,19 +226,19 @@ glsl/
 
 - **Primary API**: DirectX 12
 - **Fallback**: Vulkan (optional)
-- Entry point: `src/runtime/windows/WindowsRuntime.cpp`
+- Entry point: `src/launcher/windows/WindowsLauncher.cpp`
 
 ### Linux Rendering / Linux 渲染
 
 - **Primary API**: Vulkan
-- Entry point: `src/runtime/linux/LinuxRuntime.cpp`
+- Entry point: `src/launcher/linux/LinuxLauncher.cpp`
 
 ### Android Rendering / Android 渲染
 
 - **Primary API**: Vulkan
 - **Shaders**: Automatically compiled from GLSL to SPIR-V
 - **Assets**: Loaded via `AAssetManager`
-- Entry point: `src/runtime/android/AndroidRuntime.cpp`
+- Entry point: `src/launcher/android/AndroidLauncher.cpp`
 
 See: [Android Integration](VulkanIntegration.md) for details.
 

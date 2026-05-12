@@ -10,6 +10,7 @@
 
 | 时间 | 模块 | 变更 |
 |------|------|------|
+| 21:17 | 脚本系统 | ✅ PrismaEngine.Core 迁移至引擎 (src/engine/scripting/CSharp) |
 | 12:45 | 2D 渲染 | ✅ 极致 2D 合批系统 (DC 缩减 >99%, 支持 5万+ Quads) |
 | 12:30 | 性能分析 | ✅ 实时性能 HUD + 瓶颈自动分析 (CPU/GPU/VSync/FPS Limit) |
 | 12:15 | 输入系统 | ✅ 鼠标事件合并 (Coalescing) + 手柄指针缓存 (解决 3000FPS 掉帧) |

@@ -85,11 +85,11 @@ if(PRISMA_BUILD_ENGINE AND TARGET Engine)
     )
 endif()
 
-# ========== Runtime 可执行文件安装 ==========
+# ========== Launcher 可执行文件安装 ==========
 
-if(PRISMA_BUILD_RUNTIME AND TARGET Runtime)
+if(PRISMA_BUILD_LAUNCHER AND TARGET Launcher)
     # 安装运行时可执行文件
-    install(TARGETS Runtime
+    install(TARGETS Launcher
         RUNTIME DESTINATION bin
     )
 endif()

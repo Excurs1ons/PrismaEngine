@@ -41,7 +41,7 @@ Use explicit Android preset:
 |--------|-------------|------------|--------------|
 | `engine-windows-x64-debug` | Engine x64 Debug build | Debug | Shared |
 | `editor-windows-x64-debug` | Editor x64 Debug build | Debug | Shared |
-| `runtime-windows-x64-debug` | Runtime x64 Debug build | Debug | Shared |
+| `launcher-windows-x64-debug` | Launcher x64 Debug build | Debug | Shared |
 | `engine-windows-x64-release` | Engine x64 Release build | Release | Static |
 
 ### Linux Presets
@@ -57,11 +57,11 @@ Use explicit Android preset:
 |--------|-------------|------------|-----|
 | `engine-android-arm64-debug` | Engine ARM64 Debug build | Debug | arm64-v8a |
 | `engine-android-arm64-release` | Engine ARM64 Release build | Release | arm64-v8a |
-| `runtime-android-arm64-debug` | Runtime ARM64 Debug build | Debug | arm64-v8a |
+| `launcher-android-arm64-debug` | Launcher ARM64 Debug build | Debug | arm64-v8a |
 
 ## `build.sh` 参数说明
 
-- `--target <engine|editor|runtime>`: 目标模块，默认 `engine`
+- `--target <engine|editor|launcher>`: 目标模块，默认 `engine`
 - `--config <debug|release>`: 构建类型，默认 `debug`
 - `--preset <name>`: 直接指定 preset（跳过自动识别）
 - `--clean`: 构建前清理输出目录

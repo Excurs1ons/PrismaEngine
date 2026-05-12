@@ -15,10 +15,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../PrismaEngine.Core/PrismaEngine.Core.csproj">
+    <Reference Include="PrismaEngine.Core" Condition="'$(PrismaCoreRef)' != ''">
+      <HintPath>$(PrismaCoreRef)\PrismaEngine.Core.dll</HintPath>
       <Private>true</Private>
-    </ProjectReference>
-    <ProjectReference Include="../PrismaEngine.Generators/PrismaEngine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    </Reference>
+    <ProjectReference Include="../../../../src/engine/scripting/CSharp/PrismaEngine.Generators/PrismaEngine.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <!-- 保留从原生代码（C++ CoreCLRHost）调用的入口点，防止 linker 删除 -->
     <TrimmerRootAssembly Include="GameScripts" />
   </ItemGroup>

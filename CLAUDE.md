@@ -15,7 +15,7 @@ Prisma Engine（原 YAGE - Yet Another Game Engine）是一个使用现代 C++20
 ### Windows Builds
 Using CMake presets (recommended):
 ```bash
-# Engine only (no editor, no runtime app)
+# Engine only (no editor, no launcher app)
 cmake --preset engine-windows-x64-debug
 cmake --build --preset engine-windows-x64-debug
 
@@ -29,12 +29,12 @@ cmake --build --preset editor-windows-x64-debug
 cmake --preset editor-windows-x64-release
 cmake --build --preset editor-windows-x64-release
 
-# Runtime
-cmake --preset runtime-windows-x64-debug
-cmake --build --preset runtime-windows-x64-debug
+# Launcher
+cmake --preset launcher-windows-x64-debug
+cmake --build --preset launcher-windows-x64-debug
 
-cmake --preset runtime-windows-x64-release
-cmake --build --preset runtime-windows-x64-release
+cmake --preset launcher-windows-x64-release
+cmake --build --preset launcher-windows-x64-release
 ```
 
 Using Visual Studio:
@@ -63,12 +63,12 @@ cmake --build --preset editor-linux-x64-debug
 cmake --preset editor-linux-arm64-debug
 cmake --build --preset editor-linux-arm64-debug
 
-# Runtime
-cmake --preset runtime-linux-x64-debug
-cmake --build --preset runtime-linux-x64-debug
+# Launcher
+cmake --preset launcher-linux-x64-debug
+cmake --build --preset launcher-linux-x64-debug
 
-cmake --preset runtime-linux-x64-release
-cmake --build --preset runtime-linux-x64-release
+cmake --preset launcher-linux-x64-release
+cmake --build --preset launcher-linux-x64-release
 ```
 
 ### Android Builds
@@ -81,12 +81,12 @@ cmake --build --preset engine-android-arm64-debug
 cmake --preset engine-android-arm64-release
 cmake --build --preset engine-android-arm64-release
 
-# Runtime
-cmake --preset runtime-android-arm64-debug
-cmake --build --preset runtime-android-arm64-debug
+# Launcher
+cmake --preset launcher-android-arm64-debug
+cmake --build --preset launcher-android-arm64-debug
 
-cmake --preset runtime-android-arm64-release
-cmake --build --preset runtime-android-arm64-release
+cmake --preset launcher-android-arm64-release
+cmake --build --preset launcher-android-arm64-release
 ```
 
 Using Gradle:
@@ -102,9 +102,9 @@ Using Gradle:
 ### WebAssembly Builds
 ```bash
 # Requires emsdk + emcmake
-emcmake cmake -B build/runtime-web-debug -DPRISMA_BUILD_EDITOR=OFF \
-              -DPRISMA_BUILD_SHARED_LIBS=OFF -DPRISMA_RUNTIME_DYNAMIC_LOAD=OFF
-cmake --build build/runtime-web-debug --target Runtime
+emcmake cmake -B build/launcher-web-debug -DPRISMA_BUILD_EDITOR=OFF \
+              -DPRISMA_BUILD_SHARED_LIBS=OFF -DPRISMA_LAUNCHER_DYNAMIC_LOAD=OFF
+cmake --build build/launcher-web-debug --target Launcher
 ```
 
 ### C# Scripting Builds (Cross-Platform)
@@ -154,11 +154,11 @@ PrismaEngine/
 │   │   └── scripting/       # 脚本系统 / Scripting system
 │   ├── editor/              # 编辑器应用 / Editor application
 │   ├── game/                # 游戏框架 / Game framework
-│   └── runtime/             # 运行时环境 / Runtime environment
-│       ├── windows/         # Windows 运行时
-│       ├── linux/           # Linux 运行时
-│       ├── android/         # Android 运行时
-│       └── web/             # WebAssembly 运行时
+│   └── launcher/             # 启动器 / Launcher
+│       ├── windows/         # Windows 启动器
+│       ├── linux/           # Linux 启动器
+│       ├── android/         # Android 启动器
+│       └── web/             # WebAssembly 启动器
 ├── resources/               # 引擎资源 / Engine resources
 │   ├── common/              # 通用资源 / Common resources
 │   │   ├── shaders/
@@ -166,7 +166,7 @@ PrismaEngine/
 │   │   │   └── glsl/        # GLSL 着色器源码
 │   │   ├── textures/        # 通用纹理
 │   │   └── fonts/           # 通用字体
-│   └── runtime/             # 运行时特定资源 / Runtime-specific resources
+│   └── launcher/             # 启动器特定资源 / Launcher-specific resources
 │       ├── windows/
 │       ├── linux/
 │       └── android/
@@ -308,7 +308,7 @@ Configure via:
 ```
 
 ### Resource Management Guidelines / 资源管理指南
-- **Runtime resources** (assets, shaders) go to `resources/runtime/{platform}/`
+- **Launcher resources** (assets, shaders) go to `resources/launcher/{platform}/`
 - **Common resources** (shared across platforms) go to `resources/common/`
 - **Editor resources** go to `resources/editor/`
 - Use `AssetManager` for loading all runtime assets
@@ -320,7 +320,7 @@ Configure via:
 - Avoid direct platform APIs in core engine code
 - Implement platform-specific versions in:
   - `src/engine/platform/Platform{Windows,Linux,Android}.cpp`
-  - `src/runtime/{platform}/`
+  - `src/launcher/{platform}/`
 
 ## CMake Configuration Options / CMake 配置选项
 

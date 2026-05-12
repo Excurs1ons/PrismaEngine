@@ -88,10 +88,9 @@ function Show-Help {
     Write-Host ""
     Write-Host "What CMake FetchContent handles (NOT installed by this script):" -ForegroundColor DarkGray
     Write-Host "  GLM, nlohmann/json, stb, tinyxml2, zstd, SDL3, Vulkan-Headers,"
-    Write-Host "  VMA, vk-bootstrap, ImGui, libdeflate, OpenFBX"
+    Write-Host "  VMA, vk-bootstrap, ImGui"
     Write-Host ""
-    Write-Host "Examples:" -ForegroundColor Yellow
-    Write-Host "  .\scripts\setup-env.ps1              # Full setup"
+    Write-Host "Examples:" -ForegroundColor Yellow    Write-Host "  .\scripts\setup-env.ps1              # Full setup"
     Write-Host "  .\scripts\setup-env.ps1 -SkipVS      # Skip Visual Studio check"
     Write-Host "  .\scripts\setup-env.ps1 -Force        # Re-install everything"
     Write-Host ""
@@ -286,8 +285,7 @@ Write-Host "    - Git              (source control)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  CMake FetchContent dependencies (auto-downloaded on first build):" -ForegroundColor White
 Write-Host "    GLM, nlohmann/json, stb, tinyxml2, zstd, SDL3," -ForegroundColor DarkGray
-Write-Host "    Vulkan-Headers, VMA, vk-bootstrap, ImGui," -ForegroundColor DarkGray
-Write-Host "    libdeflate, OpenFBX" -ForegroundColor DarkGray
+Write-Host "    Vulkan-Headers, VMA, vk-bootstrap, ImGui" -ForegroundColor DarkGray
 Write-Host ""
 
 if ($needsRestart) {

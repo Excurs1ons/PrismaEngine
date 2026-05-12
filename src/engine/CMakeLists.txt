@@ -18,6 +18,7 @@ set(CORE_SOURCES
     app/CommandLineParser.cpp
     app/Engine.cpp
     app/EngineLauncher.cpp
+    app/EngineCAPI.cpp
     app/Application.cpp
     app/ECSApplication.cpp
 
@@ -183,6 +184,57 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         scripting/ScriptSystem.h
     )
     list(APPEND CORE_SOURCES ${PRISMA_SCRIPTING_SOURCES})
+
+    # 构建 C# 核心库
+    find_program(DOTNET dotnet)
+    if(DOTNET)
+        message(STATUS "Scripting: 找到 dotnet, 将构建 C# 核心库")
+        
+        # 动态确定运行时标识符 (RID)
+        if(WIN32)
+            set(CS_RID "win-x64")
+        else()
+            if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+                set(CS_RID "linux-arm64")
+            else()
+                set(CS_RID "linux-x64")
+            endif()
+        endif()
+
+        set(CS_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/PrismaEngine.Core")
+        set(CS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin/scripts")
+        set(CS_LIB_DIR "${CMAKE_SOURCE_DIR}/projects/Template2D/scripts/lib")
+
+        add_custom_command(
+            OUTPUT "${CS_OUTPUT_DIR}/PrismaEngine.Core.dll"
+            COMMAND ${DOTNET} build "${CS_CORE_DIR}/PrismaEngine.Core.csproj" -c Release -o "${CS_OUTPUT_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${CS_LIB_DIR}"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CS_OUTPUT_DIR}/PrismaEngine.Core.dll"
+                "${CS_LIB_DIR}/PrismaEngine.Core.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CS_OUTPUT_DIR}/PrismaEngine.Core.pdb"
+                "${CS_LIB_DIR}/PrismaEngine.Core.pdb"
+            DEPENDS "${CS_CORE_DIR}/PrismaEngine.Core.csproj"
+            COMMENT "Building PrismaEngine.Core C# library"
+        )
+
+        add_custom_target(PrismaCore ALL
+            DEPENDS "${CS_OUTPUT_DIR}/PrismaEngine.Core.dll"
+        )
+
+        # C# 源码生成器（Roslyn Analyzer，编译 GameScripts 时自动调用）
+        set(CS_GENERATORS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/PrismaEngine.Generators")
+        add_custom_target(PrismaGenerators ALL
+            COMMAND ${DOTNET} build "${CS_GENERATORS_DIR}/PrismaEngine.Generators.csproj" -c Release --nologo
+            COMMENT "Building PrismaEngine.Generators (Roslyn source generators)"
+        )
+        
+        # 让 Engine 依赖于 C# 核心库构建
+        # add_dependencies(Engine PrismaCore)
+    else()
+        message(WARNING "Scripting: 未找到 dotnet, 无法构建 C# 核心库")
+    endif()
 endif()
 
 # ========== 收集核心头文件 ==========
@@ -192,6 +244,11 @@ set(CORE_HEADERS
     app/Engine.h
     app/ProjectConfig.h
     app/EngineLauncher.h
+    app/EngineCAPI.h
+
+    # Interfaces (纯虚接口，可被非 Engine 项目引用)
+    interfaces/IEngine.h
+
     app/Application.h
     app/ECSApplication.h
 

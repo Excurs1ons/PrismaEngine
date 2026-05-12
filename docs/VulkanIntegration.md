@@ -6,9 +6,9 @@
 
 ## Overview / 概述
 
-Prisma Engine supports Android platform with Vulkan rendering backend. The Android runtime is implemented in `src/runtime/android/` with complete Vulkan support.
+Prisma Engine supports Android platform with Vulkan rendering backend. The Android launcher is implemented in `src/launcher/android/` with complete Vulkan support.
 
-Prisma Engine 支持 Android 平台，使用 Vulkan 渲染后端。Android 运行时在 `src/runtime/android/` 中实现，具有完整的 Vulkan 支持。
+Prisma Engine 支持 Android 平台，使用 Vulkan 渲染后端。Android 启动器在 `src/launcher/android/` 中实现，具有完整的 Vulkan 支持。
 
 ## Architecture / 架构
 
@@ -16,8 +16,8 @@ Prisma Engine 支持 Android 平台，使用 Vulkan 渲染后端。Android 运�
 
 ```
 PrismaEngine/
-├── src/runtime/android/           # Android runtime implementation
-│   ├── AndroidRuntime.cpp         # Entry point (android_main)
+├── src/launcher/android/           # Android launcher implementation
+│   ├── AndroidLauncher.cpp         # Entry point (android_main)
 │   ├── VulkanContext.*            # Vulkan context management
 │   ├── RendererVulkan.*           # Vulkan renderer
 │   ├── ShaderVulkan.*             # SPIR-V shader loading
@@ -38,7 +38,7 @@ PrismaEngine/
 │       ├── shader.vert/frag
 │       └── skybox.vert/frag
 │
-├── resources/runtime/android/     # Android-specific resources
+├── resources/launcher/android/     # Android-specific resources
 │   └── icons/                    # App icons
 │
 └── projects/android/PrismaAndroid/ # Android Studio project
@@ -53,14 +53,14 @@ PrismaEngine/
 
 ## Key Components / 核心组件
 
-### 1. AndroidRuntime / Android 运行时
+### 1. AndroidLauncher / Android 启动器
 
 Entry point for Android applications.
 
 Android 应用的入口点。
 
 ```cpp
-// src/runtime/android/AndroidRuntime.cpp
+// src/launcher/android/AndroidLauncher.cpp
 
 extern "C" void android_main(struct android_app* app) {
     // Initialize logging / 初始化日志
@@ -75,9 +75,9 @@ Manages Vulkan instance, device, and swapchain.
 
 管理 Vulkan 实例、设备和交换链。
 
-Located in `src/runtime/android/VulkanContext.*`:
+Located in `src/launcher/android/VulkanContext.*`:
 
-位置：`src/runtime/android/VulkanContext.*`：
+位置：`src/launcher/android/VulkanContext.*`：
 
 ```cpp
 class VulkanContext {
@@ -109,9 +109,9 @@ Complete Vulkan rendering implementation (~1456 lines).
 
 完整的 Vulkan 渲染实现（约 1456 行）。
 
-Located in `src/runtime/android/RendererVulkan.*`:
+Located in `src/launcher/android/RendererVulkan.*`:
 
-位置：`src/runtime/android/RendererVulkan.*`：
+位置：`src/launcher/android/RendererVulkan.*`：
 
 - **RenderPass** creation and management
 - **GraphicsPipeline** creation
@@ -267,9 +267,9 @@ app/build/outputs/apk/
 
 ## Screen Rotation Support / 屏幕旋转支持
 
-Android runtime properly handles screen rotation:
+Android launcher properly handles screen rotation:
 
-Android 运行时正确处理屏幕旋转：
+Android 启动器正确处理屏幕旋转：
 
 ```cpp
 // Handle configuration changes / 处理配置变化
@@ -377,7 +377,7 @@ class VulkanBackend {
 ### Code Sharing / 代码共享
 
 - **Common code** / 通用代码: `src/engine/graphic/`
-- **Platform-specific** / 平台特定: `src/runtime/android/`
+- **Platform-specific** / 平台特定: `src/launcher/android/`
 
 ## Future Plans / 未来计划
 

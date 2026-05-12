@@ -222,7 +222,7 @@ if [ "$QUIET_MODE" = true ]; then
 else
     print_header "Build completed successfully!"
     echo -e "${GREEN}Output directory: build/${PRESET}${NC}"
-    echo -e "${GREEN}Editor binary: build/${PRESET}/bin/PrismaRuntime${NC}"
+    echo -e "${GREEN}Editor binary: build/${PRESET}/bin/PrismaLauncher${NC}"
     echo -e "${GREEN}Editor library: build/${PRESET}/lib/libPrismaEditor.so${NC}"
     echo ""
 fi

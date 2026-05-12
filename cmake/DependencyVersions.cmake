@@ -40,10 +40,6 @@ set(PRISMA_DEP_TINYXML2_VERSION "10.0.0")
 # GitHub: https://github.com/facebook/zstd
 set(PRISMA_DEP_ZSTD_VERSION "v1.5.6")
 
-# libdeflate - 快速 DEFLATE/zlib/gzip 库 (OpenFBX 依赖)
-# GitHub: https://github.com/ebiggers/libdeflate
-set(PRISMA_DEP_LIBDEFLATE_VERSION "v1.19")
-
 # Tweeny - 补间动画库 (header-only, 用于 UI 动画)
 # GitHub: https://github.com/mobius3/tweeny
 # 锁定到具体 tag
@@ -81,11 +77,6 @@ set(PRISMA_DEP_VK_BOOTSTRAP_VERSION "v1.4.343")
 # GitHub: https://github.com/ocornut/imgui
 # 使用分支名而不是 commit SHA
 set(PRISMA_DEP_IMGUI_VERSION "docking")
-
-# OpenFBX - FBX模型加载 (Windows only)
-# GitHub: https://github.com/nem0/OpenFBX
-# 锁定到具体 commit 而非 master 分支
-set(PRISMA_DEP_OPENFBX_VERSION "master")  # 2024-01-10
 
 # -------------------------------------------------------------------------------
 # 依赖兼容性矩阵 / Dependency Compatibility Matrix

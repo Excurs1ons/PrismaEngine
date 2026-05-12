@@ -118,8 +118,8 @@ jobs:
         path: PrismaEngine-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}.zip
         retention-days: 30
 
-  build-windows-runtime:
-    name: Windows Runtime ${{ matrix.build_type }}
+  build-windows-launcher:
+    name: Windows Launcher ${{ matrix.build_type }}
     runs-on: windows-latest
     needs: build-windows-engine
     strategy:
@@ -147,37 +147,37 @@ jobs:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
     - name: Configure CMake
-      run: cmake --preset runtime-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+      run: cmake --preset launcher-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
 
-    - name: Build Runtime
-      run: cmake --build build/runtime-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Runtime --parallel
+    - name: Build Launcher
+      run: cmake --build build/launcher-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Launcher --parallel
 
     - name: Build Game
-      run: cmake --build build/runtime-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Game --parallel
+      run: cmake --build build/launcher-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Game --parallel
 
-    - name: Package Runtime
+    - name: Package Launcher
       shell: pwsh
       run: |
         $cfg = "${{ matrix.build_type }}"
-        $pkgDir = "package-runtime-x64-$cfg"
+        $pkgDir = "package-launcher-x64-$cfg"
 
         # 创建包目录
         New-Item -ItemType Directory -Force -Path "$pkgDir"
 
         # 复制可执行文件和 DLL
-        Copy-Item "build/runtime-windows-x64-$($cfg.ToLower())/bin/$cfg/PrismaRuntime.exe" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
-        Copy-Item "build/runtime-windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
+        Copy-Item "build/launcher-windows-x64-$($cfg.ToLower())/bin/$cfg/PrismaLauncher.exe" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
+        Copy-Item "build/launcher-windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
 
         # 复制资源
         Copy-Item -Path "assets" -Destination "$pkgDir/assets" -Recurse -ErrorAction SilentlyContinue
         Copy-Item -Path "projects" -Destination "$pkgDir/projects" -Recurse -ErrorAction SilentlyContinue
 
         # 打包
-        Compress-Archive -Path "$pkgDir/*" -DestinationPath "PrismaRuntime-x64-$cfg.zip" -Force
+        Compress-Archive -Path "$pkgDir/*" -DestinationPath "PrismaLauncher-x64-$cfg.zip" -Force
 
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: PrismaRuntime-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
-        path: PrismaRuntime-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}.zip
+        name: PrismaLauncher-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+        path: PrismaLauncher-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}.zip
         retention-days: 30

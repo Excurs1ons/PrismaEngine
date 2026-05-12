@@ -50,9 +50,9 @@ if "%~1"=="--help" (
     echo   editor-windows-x64-debug
     echo   editor-windows-x64-release
     echo.
-    echo Runtime Presets:
-    echo   runtime-windows-x64-debug
-    echo   runtime-windows-x64-release
+    echo Launcher Presets:
+    echo   launcher-windows-x64-debug
+    echo   launcher-windows-x64-release
     echo.
     echo Options:
     echo   clean                  Clean build directory before building

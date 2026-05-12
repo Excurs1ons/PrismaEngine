@@ -15,7 +15,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # ========== 源文件 ==========
 
 set(TEST_SOURCES
-    src/main.cpp
+    src/CreateApplication.cpp
     src/Template2DApp.cpp
 )
 
@@ -23,9 +23,9 @@ set(TEST_HEADERS
     src/Template2DApp.h
 )
 
-# ========== 可执行文件 ==========
+# ========== 插件 DLL（由 PrismaLauncher 运行时加载） ==========
 
-add_executable(${PROJECT_NAME}
+add_library(${PROJECT_NAME} SHARED
     ${TEST_SOURCES}
     ${TEST_HEADERS}
 )
@@ -34,8 +34,6 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Engine
-    SDL3::SDL3
-    glaze::glaze
 )
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -71,6 +69,15 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_SOURCE_DIR}/src/engine/packing
         ${CMAKE_SOURCE_DIR}/src/engine/utils
 )
+
+# ========== VS 调试器配置（一键启动） ==========
+
+if(MSVC)
+    # Template2D 是 DLL 插件，F5 调试时自动启动 PrismaLauncher 并传入插件路径
+    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:PrismaLauncher>")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND_ARGUMENTS "$<TARGET_FILE:${PROJECT_NAME}>")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:PrismaLauncher>")
+endif()
 
 # ========== 编译选项 ==========
 
@@ -111,6 +118,12 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMENT "Copying shaders and project assets"
 )
 
+# ========== 依赖 C# 引擎核心库 ==========
+
+# 依赖引擎 C# 核心库（PrismaCore 输出到 bin/scripts/，同时复制到 project 本地 lib）
+add_dependencies(${PROJECT_NAME} PrismaCore)
+set(CS_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts/lib")
+
 # ========== C# 脚本构建与部署 (跨平台) ==========
 
 find_program(DOTNET dotnet REQUIRED)
@@ -134,6 +147,7 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E echo "Publishing C# scripts for RID: ${CS_RID}..."
     COMMAND ${DOTNET} publish -c Release -r ${CS_RID} --self-contained true
             -p:DebugType=portable -p:DebugSymbols=true
+            -p:PrismaCoreRef="${CS_LIB_DIR}"
             --nologo
             "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
     COMMAND ${CMAKE_COMMAND} -E copy_directory

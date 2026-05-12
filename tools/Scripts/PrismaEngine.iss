@@ -2,7 +2,7 @@
 #define MyAppVersion "1.0"
 #define MyAppPublisher "Prisma"
 #define MyAppURL "https://prisma.example.com/"
-#define MyAppExeName "PrismaRuntime.exe"
+#define MyAppExeName "PrismaLauncher.exe"
 
 [Setup]
 AppId={{4CF73B5F-5F8E-4A8D-8C7D-E1B5C9AAEE21}

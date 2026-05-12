@@ -187,7 +187,7 @@ cmake .. -DPRISMA_ENABLE_AUDIO_OPENAL=ON \
 # Web 配置（Runtime + Game 静态链接）
 emcmake cmake .. -DPRISMA_BUILD_EDITOR=OFF \
                   -DPRISMA_BUILD_SHARED_LIBS=OFF \
-                  -DPRISMA_RUNTIME_DYNAMIC_LOAD=OFF \
+                  -DPRISMA_LAUNCHER_DYNAMIC_LOAD=OFF \
                   -DPRISMA_ENABLE_RENDER_OPENGL=ON
 ```
 

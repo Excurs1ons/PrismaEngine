@@ -3,7 +3,7 @@
 #
 # 支持的构建目标：
 #   - Engine:      引擎核心库 (静态/动态库)
-#   - Runtime:     运行时可执行文件
+#   - Launcher:    启动器可执行文件
 #   - Editor:      编辑器可执行文件 (可选)
 #   - SDK:         SDK 打包目标
 #
@@ -48,7 +48,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # ========== 构建选项 ==========
 option(PRISMA_BUILD_ENGINE "构建引擎核心库" ON)
 option(PRISMA_BUILD_EDITOR "构建编辑器" ON)
-option(PRISMA_BUILD_RUNTIME "构建运行时" ON)
+option(PRISMA_BUILD_LAUNCHER "构建运行时" ON)
 option(PRISMA_BUILD_SDK "构建 SDK" OFF)
 option(PRISMA_BUILD_TESTING "构建测试" OFF)
 
@@ -86,7 +86,7 @@ message(STATUS "=== Loading Target Configuration ===")
 include(cmake/EngineTargets.cmake)
 
 # 加载运行时目标配置
-include(cmake/RuntimeTargets.cmake)
+include(cmake/LauncherTargets.cmake)
 
 # 加载编辑器目标配置 (如果启用)
 if(PRISMA_BUILD_EDITOR)
@@ -129,11 +129,11 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/projects/CMakeLists.txt)
 endif()
 
 # 运行时模块 (最后添加，以便能检测到 Game/Editor 目标)
-if(PRISMA_BUILD_RUNTIME)
-    add_subdirectory(src/runtime)
+if(PRISMA_BUILD_LAUNCHER)
+    add_subdirectory(src/launcher)
     message(STATUS "已添加运行时模块")
 else()
-    message(STATUS "跳过运行时模块 (PRISMA_BUILD_RUNTIME=OFF)")
+    message(STATUS "跳过运行时模块 (PRISMA_BUILD_LAUNCHER=OFF)")
 endif()
 
 message(STATUS "==============================")
@@ -161,7 +161,7 @@ message(STATUS "")
 message(STATUS "=== Build Configuration Summary ===")
 message(STATUS "  PrismaEngine Version: ${PROJECT_VERSION}")
 message(STATUS "  Build Engine:    ${PRISMA_BUILD_ENGINE}")
-message(STATUS "  Build Runtime:   ${PRISMA_BUILD_RUNTIME}")
+message(STATUS "  Build Launcher:  ${PRISMA_BUILD_LAUNCHER}")
 message(STATUS "  Build Editor:    ${PRISMA_BUILD_EDITOR}")
 message(STATUS "  Build SDK:       ${PRISMA_BUILD_SDK}")
 message(STATUS "  Shared Library:  ${PRISMA_BUILD_SHARED_LIBS}")

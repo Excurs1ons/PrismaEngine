@@ -67,11 +67,6 @@ FetchContent_MakeAvailable(xxhash)
 Prisma_Declare_Dependency(glaze https://github.com/stephenberry/glaze.git ${PRISMA_DEP_GLAZE_VERSION})
 FetchContent_MakeAvailable(glaze)
 
-if(WIN32 AND PRISMA_BUILD_EDITOR)
-    Prisma_Declare_Dependency(libdeflate https://github.com/ebiggers/libdeflate.git ${PRISMA_DEP_LIBDEFLATE_VERSION})
-    Prisma_Declare_Dependency(openfbx https://github.com/nem0/OpenFBX.git ${PRISMA_DEP_OPENFBX_VERSION})
-endif()
-
 # ========== 依赖项加载与配置 ==========
 
 # 禁用所有不需要的测试、示例和程序
@@ -97,11 +92,8 @@ set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 # 强制开启相关依赖的位置无关代码 (PIC)
 set(VK_BOOTSTRAP_POSITION_INDEPENDENT_CODE ON CACHE BOOL "" FORCE)
 
-# 针对 tinyxml2 和 libdeflate 的专项屏蔽
+# 针对 tinyxml2 的专项屏蔽
 set(TINYXML2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(LIBDEFLATE_BUILD_GZIP OFF CACHE BOOL "" FORCE)
-set(LIBDEFLATE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(LIBDEFLATE_BUILD_SHARED_LIB OFF CACHE BOOL "" FORCE)
 
 # 暂时提升消息等级以压制第三方库的繁杂输出
 set(OLD_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
@@ -174,10 +166,6 @@ if(NOT TARGET imgui)
     )
 
     add_library(imgui::imgui ALIAS imgui)
-endif()
-
-if(WIN32 AND PRISMA_BUILD_EDITOR)
-    FetchContent_MakeAvailable(libdeflate openfbx)
 endif()
 
 # 确保 GLM ALIAS targets 存在

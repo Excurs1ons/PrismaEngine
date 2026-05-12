@@ -54,7 +54,6 @@ set(FETCHCONTENT_UPDATES_DISCONNECTED OFF)
 | vk-bootstrap | v0.9 | Tag |
 | DirectX-Headers | v1.614.1 | Tag |
 | ImGui | docking | Branch |
-| OpenFBX | c2ac836... | Commit |
 | FidelityFX-SDK | v2.1.0 | Tag |
 | Streamline | v2.9.0 | Tag |
 

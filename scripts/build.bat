@@ -30,9 +30,9 @@ if "%PRESET%"=="" (
     echo   editor-windows-x64-debug
     echo   editor-windows-x64-release
     echo.
-    echo Windows Runtime Presets:
-    echo   runtime-windows-x64-debug
-    echo   runtime-windows-x64-release
+    echo Windows Launcher Presets:
+    echo   launcher-windows-x64-debug
+    echo   launcher-windows-x64-release
     echo.
     echo Linux Engine Presets:
     echo   engine-linux-x64-debug
@@ -48,9 +48,9 @@ if "%PRESET%"=="" (
     echo   engine-android-arm64-debug
     echo   engine-android-arm64-release
     echo.
-    echo Android Runtime Presets:
-    echo   runtime-android-arm64-debug
-    echo   runtime-android-arm64-release
+    echo Android Launcher Presets:
+    echo   launcher-android-arm64-debug
+    echo   launcher-android-arm64-release
     echo.
     echo Examples:
     echo   build.bat engine-windows-x64-debug

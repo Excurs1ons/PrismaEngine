@@ -1,7 +1,7 @@
 # ProjectTargets.cmake
 # 项目目标和资源复制配置
 
-# 此文件必须在所有子目录添加后调用，因为它依赖于 Engine/Editor/Runtime/Game 目标
+# 此文件必须在所有子目录添加后调用，因为它依赖于 Engine/Editor/Launcher/Game 目标
 
 # ========== Prisma 聚合目标 ==========
 
@@ -10,8 +10,8 @@ set(PRISMA_DEPENDENCIES Engine)
 if(TARGET Editor)
     list(APPEND PRISMA_DEPENDENCIES Editor)
 endif()
-if(TARGET Runtime)
-    list(APPEND PRISMA_DEPENDENCIES Runtime)
+if(TARGET Launcher)
+    list(APPEND PRISMA_DEPENDENCIES Launcher)
 endif()
 if(TARGET Game)
     list(APPEND PRISMA_DEPENDENCIES Game)
@@ -24,12 +24,12 @@ add_custom_target(Prisma ALL
 # ========== 资源复制目标 ==========
 
 # 为 Runtime 复制资源（仅当 Runtime 目标存在时）
-if(TARGET Runtime)
-    add_custom_target(copy-runtime-resources ALL
-        COMMAND ${CMAKE_COMMAND} -E echo "Copying resources to runtime directories..."
-        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Runtime>/Assets
-        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Runtime>/Assets
-        COMMENT "Copying resources to runtime directories"
+if(TARGET Launcher)
+    add_custom_target(copy-launcher-resources ALL
+        COMMAND ${CMAKE_COMMAND} -E echo "Copying resources to launcher directories..."
+        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_FILE_DIR:Launcher>/Assets
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Launcher>/Assets
+        COMMENT "Copying resources to launcher directories"
     )
 endif()
 
@@ -41,14 +41,14 @@ if(PRISMA_BUILD_EDITOR)
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets $<TARGET_FILE_DIR:Editor>/Assets
         COMMENT "Copying resources to Editor directory"
     )
-    if(TARGET copy-runtime-resources)
-        add_dependencies(copy-runtime-resources copy-editor-resources)
+    if(TARGET copy-launcher-resources)
+        add_dependencies(copy-launcher-resources copy-editor-resources)
     endif()
 endif()
 
 # 确保在构建后复制资源
-if(TARGET copy-runtime-resources)
-    add_dependencies(copy-runtime-resources Prisma)
+if(TARGET copy-launcher-resources)
+    add_dependencies(copy-launcher-resources Prisma)
 endif()
 
 # ========== 清理目标 ==========

@@ -127,7 +127,7 @@
 命令建议：
 
 ```bash
-# 全量 editor（覆盖 engine + runtime + projects）
+# 全量 editor（覆盖 engine + launcher + projects）
 ./scripts/build.sh --target editor --config debug
 
 # 单独验证 PacMan 目标
