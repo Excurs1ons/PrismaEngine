@@ -47,18 +47,18 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 ### SoA Entity Pool (Structure of Arrays)
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│              Virtual Memory Block (1M entities max)         │
-├─────────────────┬─────────────────┬─────────────────────────┤
-│  Transform SoA  │  Transform SoA  │      Render SoA         │
-│     (Buffer A)  │     (Buffer B)  │                        │
-│  ─────────────  │  ─────────────  │  ─────────────────────│
-│  posX, posY     │  posX, posY     │  active, generation   │
-│  rotation       │  rotation       │  colorRGBA            │
-│  scaleX, scaleY │  scaleX, scaleY  │  sizeW, sizeH         │
-└─────────────────┴─────────────────┴─────────────────────────┘
-         ↑ Double-buffer read             ↑ Single read
-           (ping-pong swap)
+┌─────────────────────────────────────────────────────────────────┐
+│              Virtual Memory Block (1M entities max)              │
+├───────────────────┬───────────────────┬─────────────────────────┤
+│  Transform SoA    │  Transform SoA    │      Render SoA         │
+│     (Buffer A)    │     (Buffer B)    │                        │
+│  ────────────────│  ────────────────│  ────────────────────── │
+│  posX, posY       │  posX, posY       │  active, generation    │
+│  rotation         │  rotation         │  colorRGBA             │
+│  scaleX, scaleY   │  scaleX, scaleY   │  sizeW, sizeH          │
+└───────────────────┴───────────────────┴─────────────────────────┘
+          ↑ Double-buffer read                  ↑ Single read
+            (ping-pong swap)
 ```
 
 - **VirtualAlloc MEM_RESERVE**: Pre-reserve 1M entity virtual address space
