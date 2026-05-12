@@ -20,67 +20,81 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 
 ### Driver-Device Pattern
 
-```
-┌────────────────────────────────────────────────────────────┐
-│                    Application Layer                       │
-│              (Template2D / Game / Editor)                 │
-└─────────────────────────────┬──────────────────────────────┘
-                              │
-┌─────────────────────────────▼──────────────────────────────┐
-│                    Device Layer                            │
-│         AudioDevice  │  InputDevice  │  RenderSystem       │
-└─────────────────────────────┬──────────────────────────────┘
-                              │
-┌─────────────────────────────▼──────────────────────────────┐
-│                    Driver Interface                         │
-│        IAudioDriver  │  IInputDriver  │  IRenderDevice     │
-└─────────────────────────────┬──────────────────────────────┘
-                              │
-┌─────────────────────────────▼──────────────────────────────┐
-│                 Platform Implementation                     │
-│  Windows: XAudio2/RawInput/DX12                           │
-│  Android: AAudio/GameActivity/Vulkan                       │
-│  Cross:  SDL3 (audio/input/window)                         │
-└────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph App[Application Layer]
+        A1[Template2D]
+        A2[Game]
+        A3[Editor]
+    end
+    
+    subgraph Dev[Device Layer]
+        D1[AudioDevice]
+        D2[InputDevice]
+        D3[RenderSystem]
+    end
+    
+    subgraph Drv[Driver Interface]
+        I1[IAudioDriver]
+        I2[IInputDriver]
+        I3[IRenderDevice]
+    end
+    
+    subgraph Plat[Platform Implementation]
+        P1[Windows: XAudio2/RawInput/DX12]
+        P2[Android: AAudio/GameActivity/Vulkan]
+        P3[Cross: SDL3 audio/input/window]
+    end
+    
+    App --> Dev
+    Dev --> Drv
+    Drv --> Plat
 ```
 
 ### SoA Entity Pool (Structure of Arrays)
 
+```mermaid
+block-beta
+    columns 3
+    block header: Virtual Memory Block (1M entities max)
+        A["Transform SoA<br/>(Buffer A)<br/>posX, posY<br/>rotation<br/>scaleX, scaleY"] width:1
+        B["Transform SoA<br/>(Buffer B)<br/>posX, posY<br/>rotation<br/>scaleX, scaleY"] width:1
+        C["Render SoA<br/>active, generation<br/>colorRGBA<br/>sizeW, sizeH"] width:1
+    end
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│              Virtual Memory Block (1M entities max)              │
-├───────────────────┬───────────────────┬─────────────────────────┤
-│  Transform SoA    │  Transform SoA    │      Render SoA         │
-│     (Buffer A)    │     (Buffer B)    │                        │
-│  ────────────────│  ────────────────│  ────────────────────── │
-│  posX, posY       │  posX, posY       │  active, generation    │
-│  rotation         │  rotation         │  colorRGBA             │
-│  scaleX, scaleY   │  scaleX, scaleY   │  sizeW, sizeH          │
-└───────────────────┴───────────────────┴─────────────────────────┘
-          ↑ Double-buffer read                  ↑ Single read
-            (ping-pong swap)
-```
-
-- **VirtualAlloc MEM_RESERVE**: Pre-reserve 1M entity virtual address space
-- **Double-buffered Transform**: Ping-pong SoA for lock-free read during writes
-- **Fixed pointer stability**: C# never gets dangling pointers
 
 ### CoreCLR C# Scripting
 
+```mermaid
+flowchart LR
+    subgraph Cpp["C++ Engine"]
+        H[CoreCLRHost]
+        E[ScriptEngine]
+        A[PrismaAPI<br/>18 fns]
+        R[Engine::Run]
+    end
+    
+    subgraph DotNet["CoreCLR Runtime"]
+        HR[hostfxr<br/>self-contained]
+        Core[PrismaEngine.Core.dll]
+        Game[GameScripts.dll]
+    end
+    
+    subgraph CS["C# Game"]
+        N[Node<br/>entity=position]
+        S[Script<br/>OnCreate/OnUpdate]
+        W[World<br/>SceneInit]
+    end
+    
+    H --> HR
+    E --> A
+    R --> H
+    HR --> Core
+    Core --> Game
+    Game --> N
+    Game --> S
+    Game --> W
 ```
-C++ Engine                        CoreCLR Runtime
-├── CoreCLRHost                   └── hostfxr (self-contained)
-│   └── hostfxr_init              └── PrismaEngine.Core.dll
-├── ScriptEngine                  C# GameScripts.dll
-│   └── PrismaAPI (18 fns)        ├── Node (entity = position)
-├── Engine::Run()                 ├── Script (base class)
-│   └── Bootstrap → OnFrame       ├── Input/Time/Math
-└── Template2DApp                 └── SceneInit, Behaviors
-```
-
-- **Unity-style C#**: `Node` is entity, C++ provides backend
-- **No GameObject/Transform split**: `Node.Position/Rotation/Scale` directly
-- **Self-contained publish**: No system .NET dependency
 
 ## CI/CD Status
 
