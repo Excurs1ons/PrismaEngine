@@ -54,13 +54,13 @@ flowchart TD
 ### SoA Entity Pool (Structure of Arrays)
 
 ```mermaid
-block-beta
-    columns 3
-    block header: Virtual Memory Block (1M entities max)
-        A["Transform SoA<br/>(Buffer A)<br/>posX, posY<br/>rotation<br/>scaleX, scaleY"] width:1
-        B["Transform SoA<br/>(Buffer B)<br/>posX, posY<br/>rotation<br/>scaleX, scaleY"] width:1
-        C["Render SoA<br/>active, generation<br/>colorRGBA<br/>sizeW, sizeH"] width:1
+flowchart LR
+    subgraph VM["Virtual Memory Block (1M entities max)"]
+        TA["Transform SoA<br/>Buffer A<br/>posX, posY<br/>rotation<br/>scaleX, scaleY"]
+        TB["Transform SoA<br/>Buffer B<br/>posX, posY<br/>rotation<br/>scaleX, scaleY"]
+        TR["Render SoA<br/>active, generation<br/>colorRGBA<br/>sizeW, sizeH"]
     end
+    TA <-->|"ping-pong swap"| TB
 ```
 
 ### CoreCLR C# Scripting
