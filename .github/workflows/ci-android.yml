@@ -1,0 +1,68 @@
+name: CI Android
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'projects/**'
+      - 'cmake/**'
+      - 'scripts/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/ci-android.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'src/**'
+      - 'projects/**'
+      - 'cmake/**'
+      - 'scripts/**'
+      - 'CMakeLists.txt'
+      - 'CMakePresets.json'
+      - '.github/workflows/ci-android.yml'
+  workflow_dispatch:
+
+env:
+  CMAKE_VERSION: '3.31.0'
+
+jobs:
+  ci-android:
+    name: Android CI
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '17'
+
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
+      with:
+        ndk-version: r26b
+
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2.0
+      with:
+        cmake-version: ${{ env.CMAKE_VERSION }}
+
+    - name: Cache dependencies
+      uses: actions/cache@v4
+      with:
+        path: .dependencies
+        key: ${{ runner.os }}-android-deps-${{ hashFiles('cmake/DependencyVersions.cmake') }}
+        restore-keys: |
+          ${{ runner.os }}-android-deps-
+
+    - name: Configure CMake
+      run: cmake --preset android-arm64-debug
+      env:
+        ANDROID_NDK_HOME: ${{ env.ANDROID_NDK_ROOT }}
+
+    - name: Build
+      run: cmake --build build/android-arm64-debug --parallel

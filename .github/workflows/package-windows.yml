@@ -60,10 +60,10 @@ jobs:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
     - name: Configure CMake
-      run: cmake --preset engine-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+      run: cmake --preset windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
 
     - name: Build Engine
-      run: cmake --build build/engine-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --parallel
+      run: cmake --build build/windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --parallel
 
     - name: Package Engine
       shell: pwsh
@@ -77,8 +77,8 @@ jobs:
         New-Item -ItemType Directory -Force -Path "$pkgDir/bin/$cfg"
 
         # 复制库文件
-        Copy-Item "build/engine-windows-x64-$($cfg.ToLower())/lib/$cfg/PrismaEngine.lib" -Destination "$pkgDir/lib/$cfg/" -ErrorAction SilentlyContinue
-        Copy-Item "build/engine-windows-x64-$($cfg.ToLower())/lib/$cfg/PrismaEngine.dll" -Destination "$pkgDir/bin/$cfg/" -ErrorAction SilentlyContinue
+        Copy-Item "build/windows-x64-$($cfg.ToLower())/lib/$cfg/PrismaEngine.lib" -Destination "$pkgDir/lib/$cfg/" -ErrorAction SilentlyContinue
+        Copy-Item "build/windows-x64-$($cfg.ToLower())/lib/$cfg/PrismaEngine.dll" -Destination "$pkgDir/bin/$cfg/" -ErrorAction SilentlyContinue
 
         # 复制头文件（排除内部实现）
         $excludePatterns = @(
@@ -106,7 +106,7 @@ jobs:
         }
 
         # 复制依赖 DLL（SDL3 等）
-        Copy-Item "build/engine-windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/bin/$cfg/" -ErrorAction SilentlyContinue
+        Copy-Item "build/windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/bin/$cfg/" -ErrorAction SilentlyContinue
 
         # 打包
         Compress-Archive -Path "$pkgDir/*" -DestinationPath "PrismaEngine-x64-$cfg.zip" -Force
@@ -147,13 +147,13 @@ jobs:
         cmake-version: ${{ env.CMAKE_VERSION }}
 
     - name: Configure CMake
-      run: cmake --preset launcher-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
+      run: cmake --preset windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }}
 
     - name: Build Launcher
-      run: cmake --build build/launcher-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Launcher --parallel
+      run: cmake --build build/windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Launcher --parallel
 
     - name: Build Game
-      run: cmake --build build/launcher-windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Game --parallel
+      run: cmake --build build/windows-x64-${{ matrix.build_type == 'Debug' && 'debug' || 'release' }} --config ${{ matrix.build_type }} --target Game --parallel
 
     - name: Package Launcher
       shell: pwsh
@@ -165,8 +165,8 @@ jobs:
         New-Item -ItemType Directory -Force -Path "$pkgDir"
 
         # 复制可执行文件和 DLL
-        Copy-Item "build/launcher-windows-x64-$($cfg.ToLower())/bin/$cfg/PrismaLauncher.exe" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
-        Copy-Item "build/launcher-windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
+        Copy-Item "build/windows-x64-$($cfg.ToLower())/bin/$cfg/PrismaLauncher.exe" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
+        Copy-Item "build/windows-x64-$($cfg.ToLower())/bin/$cfg/*.dll" -Destination "$pkgDir/" -ErrorAction SilentlyContinue
 
         # 复制资源
         Copy-Item -Path "assets" -Destination "$pkgDir/assets" -Recurse -ErrorAction SilentlyContinue
