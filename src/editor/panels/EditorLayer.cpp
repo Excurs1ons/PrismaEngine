@@ -81,9 +81,17 @@ void Prisma::EditorLayer::OnRender() {
     VkCommandBuffer cmd = vkCmdBuffer ? vkCmdBuffer->GetVkCommandBuffer() : VK_NULL_HANDLE;
 
     if (cmd && m_viewportRenderPass) {
-        // [改动] 必须先通知 RenderDevice 跳过这一帧的默认交换链 Pass，
-        // 否则 Viewport RenderPass 会被错误地嵌套在默认 Pass 内部。
+        // [改动] 通知 RenderDevice 跳过下一帧的默认交换链 Pass
         vkDevice->SetSkipSwapChainRenderPass(true);
+
+        // [修复] 防止嵌套 vkCmdBeginRenderPass
+        // 问题：SetSkipSwapChainRenderPass 有一帧延迟，BeginFrame 可能已经开始了交换链 RP。
+        //       此时再开始视口 RP 会导致嵌套 vkCmdBeginRenderPass，违反 Vulkan 规范，
+        //       引起 GPU Driver 崩溃（nvoglv64.dll）。
+        // 解决：检查当前是否已处于默认 RP 中，若是则跳过本帧的视口渲染。
+        if (vkDevice->IsDefaultRenderPassActive()) {
+            return;
+        }
 
         m_viewportRenderPass->Begin(cmd);
         renderSystem->RenderScene(scene, camera, m_viewportTexture.get());

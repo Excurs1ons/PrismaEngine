@@ -102,7 +102,7 @@ int main(int argc, char* argv[]) {
 
     // ---- 6. 运行（引擎内部加载插件 DLL） ----
     const char* plugin = PickPlugin(argc, argv);
-    if (!plugin) plugin = "Template2D.dll";
+    if (!plugin) plugin = "PrismaEditor.dll";
     std::printf("[Launcher] Running engine with plugin: %s\n", plugin);
     engine->Run(plugin);
 

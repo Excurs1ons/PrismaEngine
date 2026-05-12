@@ -202,25 +202,25 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         endif()
 
         set(CS_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/Prisma.Core")
-        set(CS_OUTPUT_DIR "${CMAKE_BINARY_DIR}/bin/scripts")
+        set(CS_OUTPUT_FILE "${CMAKE_BINARY_DIR}/bin/Prisma.Core.dll")
         set(CS_LIB_DIR "${CMAKE_SOURCE_DIR}/projects/Template2D/scripts/lib")
 
         add_custom_command(
-            OUTPUT "${CS_OUTPUT_DIR}/Prisma.Core.dll"
-            COMMAND ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CS_OUTPUT_DIR}"
+            OUTPUT "${CS_OUTPUT_FILE}"
+            COMMAND ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin"
             COMMAND ${CMAKE_COMMAND} -E make_directory "${CS_LIB_DIR}"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CS_OUTPUT_DIR}/Prisma.Core.dll"
+                "${CS_OUTPUT_FILE}"
                 "${CS_LIB_DIR}/Prisma.Core.dll"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CS_OUTPUT_DIR}/Prisma.Core.pdb"
+                "${CMAKE_BINARY_DIR}/bin/Prisma.Core.pdb"
                 "${CS_LIB_DIR}/Prisma.Core.pdb"
             DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj"
             COMMENT "Building Prisma.Core C# library"
         )
 
         add_custom_target(PrismaCore ALL
-            DEPENDS "${CS_OUTPUT_DIR}/Prisma.Core.dll"
+            DEPENDS "${CS_OUTPUT_FILE}"
         )
 
         # C# 源码生成器（Roslyn Analyzer，编译 GameScripts 时自动调用）
@@ -230,8 +230,6 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
             COMMENT "Building Prisma.Generators (Roslyn source generators)"
         )
         
-        # 让 Engine 依赖于 C# 核心库构建
-        # add_dependencies(Engine PrismaCore)
     else()
         message(WARNING "Scripting: 未找到 dotnet, 无法构建 C# 核心库")
     endif()
@@ -450,12 +448,23 @@ else()
 endif()
 
 set_target_properties(Engine PROPERTIES OUTPUT_NAME Prisma)
+
+# 确保 Engine 构建完成后，将 Prisma.Core.dll 复制到 Engine 的实际输出目录 (Debug/Release)
+if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
+    if(DOTNET)
+        add_custom_command(TARGET Engine POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CS_OUTPUT_FILE}"
+                "$<TARGET_FILE_DIR:Engine>/Prisma.Core.dll"
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_BINARY_DIR}/bin/Prisma.Core.pdb"
+                "$<TARGET_FILE_DIR:Engine>/Prisma.Core.pdb"
+            COMMENT "Deploying Prisma.Core.dll to Engine output directory"
+        )
+        add_dependencies(Engine PrismaCore)
+    endif()
+endif()
 if(MSVC)
-    set_target_properties(Engine PROPERTIES
-        ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    )
     target_compile_options(Engine PRIVATE 
         /utf-8
         $<$<CONFIG:Release>:/O2 /Oi /Gy>

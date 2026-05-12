@@ -5,8 +5,12 @@
 set(LAUNCHER_SOURCES core/LauncherMain.cpp)
 
 # 创建可执行程序
-add_executable(PrismaLauncher
+add_executable(Launcher
     ${LAUNCHER_SOURCES}
+)
+
+set_target_properties(Launcher PROPERTIES
+    OUTPUT_NAME "PrismaLauncher"
 )
 
 # ====================================================================
@@ -22,23 +26,18 @@ add_executable(PrismaLauncher
 #   - 更清晰的模块边界
 # ====================================================================
 # 添加 IEngine.h 纯虚接口的包含路径（仅此一个头文件，无 Engine 链接依赖）
-target_include_directories(PrismaLauncher PRIVATE
+target_include_directories(Launcher PRIVATE
     ${CMAKE_SOURCE_DIR}/src/engine/interfaces
 )
 
 message(STATUS "Launcher: 运行时加载 Engine DLL + Game/Editor 插件")
 
 # 编译选项
-target_compile_options(PrismaLauncher PRIVATE
+target_compile_options(Launcher PRIVATE
     $<$<CXX_COMPILER_ID:MSVC>:/W3 /utf-8>
 )
 
 # 编译定义
-target_compile_definitions(PrismaLauncher
+target_compile_definitions(Launcher
     PRIVATE _UNICODE UNICODE
-)
-
-# 设置输出名称
-set_target_properties(PrismaLauncher PROPERTIES
-    OUTPUT_NAME "PrismaLauncher"
 )

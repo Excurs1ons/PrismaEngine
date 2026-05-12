@@ -198,6 +198,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         // 初始化 C# 脚本引擎（根据项目设置决定）
         if (scriptingBackend == ScriptingBackend::CoreCLR) {
             std::vector<std::string> scriptPaths = {
+                ".",
                 "scripts",
                 "../scripts",
                 "../projects/Template2D/scripts/GameScripts/bin/Debug/net10.0/win-x64/publish",

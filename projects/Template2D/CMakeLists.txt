@@ -73,10 +73,10 @@ target_include_directories(${PROJECT_NAME}
 # ========== VS 调试器配置（一键启动） ==========
 
 if(MSVC)
-    # Template2D 是 DLL 插件，F5 调试时自动启动 PrismaLauncher 并传入插件路径
-    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:PrismaLauncher>")
+    # Template2D 是 DLL 插件，F5 调试时自动启动 Launcher 并传入插件路径
+    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:Launcher>")
     set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND_ARGUMENTS "$<TARGET_FILE:${PROJECT_NAME}>")
-    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:PrismaLauncher>")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:Launcher>")
 endif()
 
 # ========== 编译选项 ==========
@@ -140,7 +140,7 @@ else()
 endif()
 
 set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
-set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>/scripts")
+set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
 # 构建时：跨平台自包含发布
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

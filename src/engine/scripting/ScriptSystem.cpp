@@ -17,7 +17,7 @@ void ScriptSystem::Initialize() {
     }
 
     // 加载核心程序集
-    LoadAssembly("scripts/Prisma.Core.dll");
+    LoadAssembly("Prisma.Core.dll");
 
     m_initialized = true;
     LOG_INFO("ScriptSystem", "脚本系统初始化完成");

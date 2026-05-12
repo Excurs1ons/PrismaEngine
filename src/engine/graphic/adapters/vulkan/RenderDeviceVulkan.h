@@ -100,6 +100,7 @@ public:
 
     // 离屏渲染支持
     void SetSkipSwapChainRenderPass(bool skip) { m_skipSwapChainRenderPass = skip; }
+    bool IsDefaultRenderPassActive() const { return m_isDefaultRenderPassActive; }
 
     // 获取当前帧的命令缓冲区（供 Viewport 渲染使用）
     ICommandBuffer* GetCurrentCommandBuffer() const {

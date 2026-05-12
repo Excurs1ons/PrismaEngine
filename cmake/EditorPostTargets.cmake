@@ -9,33 +9,15 @@ if(PRISMA_BUILD_EDITOR AND TARGET Editor)
 
     # Windows 编辑器配置
     if(WIN32)
-        # Windows 子系统设置
-        set(PRISMA_EDITOR_WINDOWS_SUBSYSTEM "CONSOLE" CACHE STRING "Windows 子系统")
-        set_property(CACHE PRISMA_EDITOR_WINDOWS_SUBSYSTEM PROPERTY STRINGS "CONSOLE" "WINDOWS")
-
-        # 注意: PrismaEditor 是可执行文件，Editor 是库
-        if(TARGET PrismaEditor)
-            if(PRISMA_EDITOR_WINDOWS_SUBSYSTEM STREQUAL "WINDOWS")
-                target_link_options(PrismaEditor PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
-            endif()
-
-            # DPI 感知
-            target_compile_definitions(PrismaEditor PRIVATE
-                DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2=1
-            )
-        endif()
-
         # Windows 崩溃转储
         option(PRISMA_EDITOR_ENABLE_MINIDUMP "启用编辑器崩溃转储" ON)
         if(PRISMA_EDITOR_ENABLE_MINIDUMP)
-            if(TARGET PrismaEditor)
-                target_compile_definitions(PrismaEditor PRIVATE
-                    PRISMA_ENABLE_MINIDUMP=1
-                )
-                target_link_libraries(PrismaEditor PRIVATE
-                    dbghelp.lib
-                )
-            endif()
+            target_compile_definitions(Editor PRIVATE
+                PRISMA_ENABLE_MINIDUMP=1
+            )
+            target_link_libraries(Editor PRIVATE
+                dbghelp.lib
+            )
         endif()
     endif()
 
@@ -65,7 +47,7 @@ if(PRISMA_BUILD_EDITOR AND TARGET Editor)
         # 测试目标
         add_custom_target(test-editor
             COMMAND ${CMAKE_CTEST_COMMAND} --output-on-failure
-            DEPENDS PrismaEditor
+            DEPENDS Editor
             COMMENT "运行编辑器测试"
         )
     endif()

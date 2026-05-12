@@ -69,9 +69,6 @@ target_link_libraries(Editor PRIVATE
 # 统一输出到 ${CMAKE_BINARY_DIR}/bin
 set_target_properties(Editor PROPERTIES
     OUTPUT_NAME "PrismaEditor"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib"
 )
 
 # Windows 平台特定

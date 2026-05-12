@@ -35,14 +35,6 @@ file(GLOB_RECURSE PRISMACRAFT_SOURCES
 add_library(PrismaCraft SHARED ${PRISMACRAFT_SOURCES})
 add_library(PrismaCraft::PrismaCraft ALIAS PrismaCraft)
 
-# 设置输出属性 (内部构建时保持一致性)
-if(PRISMACRAFT_USE_ENGINE_FROM_BUILD)
-    set_target_properties(PrismaCraft PROPERTIES
-        LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
-    )
-endif()
-
 target_include_directories(PrismaCraft PUBLIC 
     $<BUILD_INTERFACE:${PRISMACRAFT_CORE_INCLUDE}>
     $<BUILD_INTERFACE:${PRISMACRAFT_LOGIC_INCLUDE}>
