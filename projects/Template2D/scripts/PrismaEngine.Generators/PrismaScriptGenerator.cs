@@ -108,6 +108,7 @@ namespace PrismaEngine.Generators
                 Properties = properties,
                 IsScript = isScript,
                 IsSerializable = isSerializable,
+                IsAbstract = classSymbol.IsAbstract,
                 TypeId = (uint)Math.Abs(classSymbol.ToDisplayString().GetHashCode())
             };
         }
@@ -173,6 +174,8 @@ namespace PrismaEngine.Generators
             sb.AppendLine("        {");
             foreach (var script in scripts)
             {
+                // Skip abstract classes as they cannot be instantiated
+                if (script.IsAbstract) continue;
                 sb.AppendLine($"            PrismaEngine.ScriptRegistry.Register<{script.FullName}>({script.TypeId}u);");
             }
             sb.AppendLine("        }");
@@ -226,6 +229,7 @@ namespace PrismaEngine.Generators
             public uint TypeId { get; set; }
             public bool IsScript { get; set; }
             public bool IsSerializable { get; set; }
+            public bool IsAbstract { get; set; }
             public List<PropertyInfo> Properties { get; set; } = new List<PropertyInfo>();
         }
 

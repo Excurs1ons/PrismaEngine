@@ -3,54 +3,52 @@ using System.Collections.Generic;
 
 namespace PrismaEngine.UI;
 
-public abstract class UIComponent : Script
+public abstract partial class UIComponent : Script
 {
-    // Position & Size
-    public PrismaEngine.Vector2 AnchoredPosition { get; set; }
-    public PrismaEngine.Vector2 Size { get; set; } = new PrismaEngine.Vector2(100, 100);
+    public Vector2 AnchoredPosition { get; set; }
+    public Vector2 Size { get; set; } = new Vector2(100, 100);
     
-    // Anchor System (NGUI Style)
     public AnchorPresets AnchorPreset { get; set; } = AnchorPresets.MiddleCenter;
-    public PrismaEngine.Vector2 AnchorMin { get; set; } = new PrismaEngine.Vector2(0.5f, 0.5f);
-    public PrismaEngine.Vector2 AnchorMax { get; set; } = new PrismaEngine.Vector2(0.5f, 0.5f);
-    public PrismaEngine.Vector2 Pivot { get; set; } = new PrismaEngine.Vector2(0.5f, 0.5f);
-    public PrismaEngine.Vector2 OffsetMin { get; set; }
-    public PrismaEngine.Vector2 OffsetMax { get; set; }
+    public Vector2 AnchorMin { get; set; } = new Vector2(0.5f, 0.5f);
+    public Vector2 AnchorMax { get; set; } = new Vector2(0.5f, 0.5f);
+    public Vector2 Pivot { get; set; } = new Vector2(0.5f, 0.5f);
+    public Vector2 OffsetMin { get; set; }
+    public Vector2 OffsetMax { get; set; }
     
-    // Computed Properties
-    public PrismaEngine.Vector2 WorldPosition => CalculateWorldPosition();
-    public PrismaEngine.Rect Rect => new PrismaEngine.Rect(
+    public Vector2 WorldPosition => CalculateWorldPosition();
+    public Rect Rect => new Rect(
         WorldPosition.X - Size.X * Pivot.X,
         WorldPosition.Y - Size.Y * Pivot.Y,
         Size.X, Size.Y);
     
-    // Render Properties
-    public PrismaEngine.Color Color { get; set; } = PrismaEngine.Color.White;
+    public Color Color { get; set; } = Color.White;
     public int SortingOrder { get; set; } = 0;
     public bool IsRaycastTarget { get; set; } = true;
     public bool IsRaycastEnabled => IsRaycastTarget && Visible;
     
-    // Hierarchy
-    public Node? Parent { get; set; }
-    public List<Node> Children { get; } = new();
-    public int ChildCount => Children.Count;
+    internal Node _parent;
+    public Node Parent 
+    { 
+        get => _parent; 
+        set => _parent = value; 
+    }
+    public bool HasParent => _parent.Handle != 0;
     
-    // Visibility
+    internal List<Node> _children = new();
+    public List<Node> Children => _children;
+    public int ChildCount => _children.Count;
+    
     public bool Visible { get; set; } = true;
-    
-    // Event Bubbling Control
     public bool IsStopBubbling { get; set; }
     
-    // Internal state
     internal UIElementType ElementType { get; set; }
     internal bool _isInitialized;
     
-    protected virtual PrismaEngine.Vector2 CalculateWorldPosition()
+    protected virtual Vector2 CalculateWorldPosition()
     {
         var pos = AnchoredPosition;
         
-        // Apply parent offset if exists
-        if (Parent != null)
+        if (HasParent)
         {
             var parentUI = Parent.GetScript<UIComponent>();
             if (parentUI != null)
@@ -69,51 +67,44 @@ public abstract class UIComponent : Script
         _isInitialized = true;
     }
     
-    public override void OnUpdate(PrismaEngine.TimeContext time, PrismaEngine.InputContext input)
+    public override void OnUpdate(TimeContext time, InputContext input)
     {
-        // UI update logic - can be overridden by subclasses
     }
     
-    public virtual bool HitTest(PrismaEngine.Vector2 screenPos)
+    public virtual bool HitTest(Vector2 screenPos)
     {
         if (!IsRaycastEnabled) return false;
         return Rect.Contains(screenPos);
     }
-    
-    #region Event Callbacks
     
     public virtual void OnClick() { }
     public virtual void OnPointerEnter() { }
     public virtual void OnPointerExit() { }
     public virtual void OnPointerDown() { }
     public virtual void OnPointerUp() { }
-    public virtual void OnBeginDrag(PrismaEngine.Vector2 position) { }
-    public virtual void OnDrag(PrismaEngine.Vector2 position) { }
+    public virtual void OnBeginDrag(Vector2 position) { }
+    public virtual void OnDrag(Vector2 position) { }
     public virtual void OnEndDrag() { }
-    
-    #endregion
-    
-    #region Hierarchy Management
     
     public void AddChild(Node child)
     {
-        if (child == null) return;
-        Children.Add(child);
+        if (child.Handle == 0) return;
+        _children.Add(child);
         var childUI = child.GetScript<UIComponent>();
         if (childUI != null)
         {
-            childUI.Parent = node;
+            childUI._parent = node;
         }
     }
     
     public void RemoveChild(Node child)
     {
-        if (child == null) return;
-        Children.Remove(child);
+        if (child.Handle == 0) return;
+        _children.Remove(child);
         var childUI = child.GetScript<UIComponent>();
         if (childUI != null)
         {
-            childUI.Parent = null;
+            childUI._parent = default;
         }
     }
     
@@ -126,6 +117,4 @@ public abstract class UIComponent : Script
     {
         SortingOrder = Math.Min(SortingOrder - 1, 0);
     }
-    
-    #endregion
 }

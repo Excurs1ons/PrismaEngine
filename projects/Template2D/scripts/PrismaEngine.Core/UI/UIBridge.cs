@@ -4,28 +4,21 @@ using System.Linq;
 
 namespace PrismaEngine.UI;
 
-public static class UIBridge
+public sealed class UIBridge
 {
-    private static UIBridge? _instance;
-    public static UIBridge Instance => _instance ??= new UIBridge();
+    public static readonly UIBridge Instance = new();
     
-    // Input priority mode
     public InputPriorityMode PriorityMode { get; set; } = InputPriorityMode.UIFirst;
     
-    // All UI roots (Canvases)
     private readonly List<Node> _uiRoots = new();
-    
-    // Currently hovered element per pointer
     private readonly Dictionary<int, Node> _hoveredElements = new();
-    
-    // Currently dragging element per pointer
     private readonly Dictionary<int, Node> _draggingElements = new();
     
     private UIBridge() { }
     
     public void RegisterUIRoot(Node root)
     {
-        if (!_uiRoots.Contains(root))
+        if (root.Handle != 0 && !_uiRoots.Contains(root))
         {
             _uiRoots.Add(root);
         }
@@ -36,25 +29,23 @@ public static class UIBridge
         _uiRoots.Remove(root);
     }
     
-    public void ProcessPointerMove(int pointerId, PrismaEngine.Vector2 position)
+    public void ProcessPointerMove(int pointerId, Vector2 position)
     {
         var hit = RaycastUI(position, pointerId);
         
-        if (_hoveredElements.TryGetValue(pointerId, out var previous))
+        if (_hoveredElements.TryGetValue(pointerId, out var previous) && previous.Handle != 0)
         {
-            if (previous != hit)
+            if (!previous.Equals(hit))
             {
-                // Pointer exited previous element
                 ProcessExit(previous, pointerId);
                 
-                if (hit != null)
+                if (hit.Handle != 0)
                 {
-                    // Pointer entered new element
                     ProcessEnter(hit, pointerId);
                 }
             }
         }
-        else if (hit != null)
+        else if (hit.Handle != 0)
         {
             ProcessEnter(hit, pointerId);
         }
@@ -62,18 +53,15 @@ public static class UIBridge
         _hoveredElements[pointerId] = hit;
     }
     
-    public void ProcessPointerDown(int pointerId, PrismaEngine.Vector2 position)
+    public void ProcessPointerDown(int pointerId, Vector2 position)
     {
         var hit = RaycastUI(position, pointerId);
-        if (hit == null) return;
+        if (hit.Handle == 0) return;
         
-        // Store for drag detection
         _draggingElements[pointerId] = hit;
         
-        // Bubble event (A)
         BubbleEvent(hit, "OnPointerDown", position);
         
-        // EventBus publish (C)
         EventBus.Publish(new PointerDownEvent 
         { 
             Target = hit, 
@@ -81,16 +69,14 @@ public static class UIBridge
         });
     }
     
-    public void ProcessPointerUp(int pointerId, PrismaEngine.Vector2 position)
+    public void ProcessPointerUp(int pointerId, Vector2 position)
     {
         var hit = RaycastUI(position, pointerId);
         
-        // If we were dragging, end the drag
-        if (_draggingElements.TryGetValue(pointerId, out var dragging) && dragging != null)
+        if (_draggingElements.TryGetValue(pointerId, out var dragging) && dragging.Handle != 0)
         {
-            if (_hoveredElements[pointerId] == dragging)
+            if (_hoveredElements.TryGetValue(pointerId, out var hovered) && hovered.Equals(dragging))
             {
-                // Click on the same element
                 BubbleEvent(dragging, "OnClick", position);
                 EventBus.Publish(new ClickEvent 
                 { 
@@ -100,18 +86,18 @@ public static class UIBridge
             }
             
             BubbleEvent(dragging, "OnEndDrag");
-            _draggingElements[pointerId] = null!;
+            _draggingElements[pointerId] = default;
         }
         
-        if (hit != null)
+        if (hit.Handle != 0)
         {
             BubbleEvent(hit, "OnPointerUp", position);
         }
     }
     
-    public void ProcessDrag(int pointerId, PrismaEngine.Vector2 position)
+    public void ProcessDrag(int pointerId, Vector2 position)
     {
-        if (!_draggingElements.TryGetValue(pointerId, out var dragging) || dragging == null)
+        if (!_draggingElements.TryGetValue(pointerId, out var dragging) || dragging.Handle == 0)
             return;
         
         BubbleEvent(dragging, "OnDrag", position);
@@ -129,13 +115,8 @@ public static class UIBridge
         EventBus.Publish(new PointerExitEvent { Target = target });
     }
     
-    /// <summary>
-    /// Raycast UI elements at screen position
-    /// Returns the topmost UI element or null
-    /// </summary>
-    public Node? RaycastUI(PrismaEngine.Vector2 screenPos, int pointerId = 0)
+    public Node RaycastUI(Vector2 screenPos, int pointerId = 0)
     {
-        // Sort all UI elements by SortingOrder descending
         var allElements = GetAllUIElements();
         allElements.Sort((a, b) => 
         {
@@ -153,7 +134,7 @@ public static class UIBridge
             }
         }
         
-        return null;
+        return default;
     }
     
     private List<Node> GetAllUIElements()
@@ -182,13 +163,10 @@ public static class UIBridge
         }
     }
     
-    /// <summary>
-    /// Event bubbling - events bubble up from target to root (A)
-    /// </summary>
-    private void BubbleEvent(Node target, string methodName, PrismaEngine.Vector2? position = null)
+    private void BubbleEvent(Node target, string methodName, Vector2? position = null)
     {
         var current = target;
-        while (current != null)
+        while (current.Handle != 0)
         {
             var ui = current.GetScript<UIComponent>();
             if (ui == null) break;
@@ -199,7 +177,6 @@ public static class UIBridge
                 continue;
             }
             
-            // Call event method (B)
             InvokeUIEvent(ui, methodName, position);
             
             if (ui.IsStopBubbling) break;
@@ -208,7 +185,7 @@ public static class UIBridge
         }
     }
     
-    private void InvokeUIEvent(UIComponent ui, string methodName, PrismaEngine.Vector2? position)
+    private void InvokeUIEvent(UIComponent ui, string methodName, Vector2? position)
     {
         var method = typeof(UIComponent).GetMethod(methodName);
         if (method == null) return;
@@ -228,7 +205,7 @@ public static class UIBridge
 
 public enum InputPriorityMode
 {
-    UIFirst,      // A: UI always takes priority
-    LayerBased,  // B: Based on camera layer order
-    GameFirst    // C: Game objects take priority
+    UIFirst,
+    LayerBased,
+    GameFirst
 }
