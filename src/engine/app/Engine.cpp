@@ -221,6 +221,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 if (m_coreCLRHost->Initialize(scriptsDir)) {
                     if (m_scriptEngine->Initialize(*m_coreCLRHost)) {
                         LOG_INFO("Engine", "C# 脚本系统已启动 (CoreCLR)");
+
+                        // [修复] Bootstrap 将场景初始数据写入 Write 缓冲区，交换一次使 Read 获得这些数据
+                        // 否则第一帧 World::Step 中的 SyncActiveBuffers 会从空 Read 覆盖已写入的 Write
+                        EntityManager::Get().SwapBuffers();
                     }
                 }
             } else {
