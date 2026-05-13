@@ -1,5 +1,6 @@
 #include "EngineCAPI.h"
 #include "Engine.h"
+#include "CommandLineParser.h"
 #include "Application.h"
 #include "Export.h"
 #include <cstring>
@@ -49,6 +50,10 @@ public:
 
     ~EngineImpl() override {
         delete m_engine;
+    }
+
+    void SetCommandLine(int argc, char** argv) override {
+        Prisma::Engine::Get().GetCommandLineParser().Parse(argc, argv);
     }
 
     int Initialize() override {

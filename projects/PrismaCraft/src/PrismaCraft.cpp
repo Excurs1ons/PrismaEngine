@@ -1,14 +1,14 @@
-#include "../engine/Application.h"
-#include "../engine/Engine.h"
-#include "../engine/core/Layer.h"
-#include "../engine/Logger.h"
-#include "../engine/core/Timestep.h"
-#include "../engine/graphic/Renderer.h" // 包含现代渲染器
-#include "../engine/graphic/Mesh.h"
-#include "../engine/graphic/Material.h"
-#include "../engine/SceneManager.h"
-#include "../engine/Scene.h"
-#include "../engine/Camera.h"
+#include "app/Application.h"
+#include "app/Engine.h"
+#include "core/Layer.h"
+#include "logger/Logger.h"
+#include "core/Timestep.h"
+#include "graphic/Renderer.h"
+#include "graphic/Mesh.h"
+#include "graphic/Material.h"
+#include "scene/SceneManager.h"
+#include "scene/Scene.h"
+#include "transform/Camera.h"
 
 namespace Prisma {
 

@@ -2,7 +2,7 @@
 #include "../graphic/ImGuiVulkanResourceManager.h"
 #include "../panels/EditorLayer.h"
 #include "CommandLineEditor.h"
-#include "CommandLineParser.h"
+#include "app/CommandLineParser.h"
 #include "Environment.h"
 #include "app/Engine.h"
 #include "graphic/RenderSystem.h"
@@ -39,15 +39,30 @@ Editor::~Editor() {}
 int Editor::OnInitialize() {
     LOG_INFO("Editor", "正在初始化编辑器插件 (纯净模式)...");
 
-    // 1. 初始化 ImGui
-    int result = OnImGuiInitialize();
-    if (result != 0) {
-        LOG_ERROR("Editor", "ImGui 初始化失败");
-        return result;
+    // 1. 初始化 ImGui (仅在非无头模式下)
+    if (!Engine::Get().GetSpecification().Headless) {
+        int result = OnImGuiInitialize();
+        if (result != 0) {
+            LOG_ERROR("Editor", "ImGui 初始化失败");
+            return result;
+        }
+
+        // 2. 推送编辑器层
+        PushLayer(new EditorLayer());
     }
 
-    // 2. 推送编辑器层
-    PushLayer(new EditorLayer());
+    // 3. WebUI 检测
+    auto& parser = ::CommandLineParser::Get();
+    if (parser.IsOptionSet("webui")) {
+        int port = 8080;
+        std::string portStr = parser.GetOptionValue("webui-port");
+        if (!portStr.empty()) {
+            port = std::stoi(portStr);
+        }
+
+        m_webUIEditor = std::make_unique<WebUIEditor>();
+        m_webUIEditor->Start(port);
+    }
 
     LOG_INFO("Editor", "编辑器插件初始化成功。");
     return 0;
@@ -188,6 +203,10 @@ int Editor::OnImGuiInitialize() {
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
 
+    if (m_webUIEditor) {
+        m_webUIEditor->Update();
+    }
+
     // 更新窗口标题
     static std::string lastTitle = "";
     std::string projectName      = m_projectSettingsWindow.GetSettings().productName;
@@ -207,7 +226,9 @@ void Editor::OnUpdate(Timestep ts) {
 
     std::string title = projectName + " - " + sceneName + " - Prisma Engine (Vulkan)";
     if (title != lastTitle) {
-        Engine::Get().GetWindow().SetTitle(title);
+        if (!Engine::Get().GetSpecification().Headless) {
+            Engine::Get().GetWindow().SetTitle(title);
+        }
         lastTitle = title;
     }
 }
@@ -239,7 +260,9 @@ void Editor::OnImGuiRender() {
 void Editor::OnRender() {
     // 这里放置场景提交逻辑 (由 Engine 循环调用)
     Application::OnRender();
-    OnImGuiRender();
+    if (!Engine::Get().GetSpecification().Headless) {
+        OnImGuiRender();
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -257,6 +280,15 @@ void Editor::OnRender() {
 // -----------------------------------------------------------------------
 void Editor::OnShutdown() {
     LOG_INFO("Editor", "正在关闭编辑器...");
+
+    if (m_webUIEditor) {
+        m_webUIEditor->Stop();
+    }
+
+    if (Engine::Get().GetSpecification().Headless) {
+        Application::OnShutdown();
+        return;
+    }
 
     // 1. 立即停止渲染回调，防止后续帧进入
     if (auto renderSystem = Engine::Get().GetRenderSystem()) {

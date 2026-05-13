@@ -58,6 +58,8 @@ public:
     bool Screenshot(const std::string& filename, uint32_t bufferIndex = 0) override;
     void EnableDebugLayer(bool enable) override { m_debugLayerEnabled = enable; }
 
+    const std::vector<VkImage>& GetImages() const { return m_images; }
+
 private:
     RenderDeviceVulkan* m_device;
     VkSwapchainKHR m_swapchain = VK_NULL_HANDLE;

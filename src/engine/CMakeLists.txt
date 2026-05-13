@@ -155,8 +155,8 @@ set(CORE_SOURCES
     # Graphic - Vulkan Backend
     graphic/adapters/vulkan/VulkanAdapters.cpp
     graphic/adapters/vulkan/RenderDeviceVulkan.cpp
-    graphic/adapters/vulkan/VulkanSwapChain.cpp
-    graphic/adapters/vulkan/VulkanShader.cpp
+    graphic/adapters/vulkan/RenderDeviceVulkan_Capture.cpp
+    graphic/adapters/vulkan/VulkanSwapChain.cpp    graphic/adapters/vulkan/VulkanShader.cpp
     graphic/adapters/vulkan/VulkanResources.cpp
     graphic/adapters/vulkan/VulkanResourceFactory.cpp
     graphic/adapters/vulkan/VulkanFence.cpp
@@ -604,7 +604,7 @@ if(PRISMA_ENABLE_MCP)
     add_library(xxhash STATIC "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src/xxhash.c")
     target_include_directories(xxhash PUBLIC "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src")
     set_target_properties(xxhash PROPERTIES POSITION_INDEPENDENT_CODE ON)
-    target_link_libraries(Engine PRIVATE xxhash)
+    target_link_libraries(Engine PUBLIC xxhash)
 
     # TransportTCP 需要 Winsock2 (Windows)
     if(WIN32)

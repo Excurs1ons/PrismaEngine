@@ -95,5 +95,61 @@ nlohmann::json ECSComponentGetTool::Execute(const nlohmann::json& args) {
     return {{"entity_index", entityIdx}, {"component_type", compType}, {"data", data}};
 }
 
+ECSComponentSetTool::ECSComponentSetTool(Engine* engine) : m_Engine(engine) {}
+
+nlohmann::json ECSComponentSetTool::GetInputSchema() const {
+    return {
+        {"type", "object"},
+        {"properties", {
+            {"entity_index", {{"type", "integer"}}},
+            {"component_type", {{"type", "string"}}},
+            {"data", {{"type", "object"}}}
+        }},
+        {"required", {"entity_index", "component_type", "data"}}
+    };
+}
+
+nlohmann::json ECSComponentSetTool::Execute(const nlohmann::json& args) {
+    auto entityIdx = args["entity_index"].get<size_t>();
+    auto compType = args["component_type"].get<std::string>();
+    auto data = args["data"];
+
+    auto* sceneManager = m_Engine->GetSceneManager();
+    auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
+    if (!scene) return {{"error", "No active scene"}};
+
+    const auto& allEntities = scene->GetGameObjects();
+    if (entityIdx >= allEntities.size()) {
+        return {{"error", "Entity index out of range"}};
+    }
+
+    auto entity = allEntities[entityIdx];
+
+    if (compType == "Transform") {
+        auto transform = entity->GetTransform();
+        m_Engine->SubmitToMainThread([transform, data]() {
+            if (data.contains("position")) {
+                auto p = data["position"];
+                transform->SetPosition({p[0], p[1], p[2]});
+            }
+            if (data.contains("scale")) {
+                auto s = data["scale"];
+                transform->SetScale({s[0], s[1], s[2]});
+            }
+        });
+        return {{"success", true}, {"deferred", true}};
+    } else if (compType == "GameObject") {
+        if (data.contains("name")) {
+            std::string name = data["name"].get<std::string>();
+            m_Engine->SubmitToMainThread([entity, name]() {
+                entity->name = name;
+            });
+        }
+        return {{"success", true}, {"deferred", true}};
+    }
+
+    return {{"error", "Setting for component type not implemented yet"}, {"component_type", compType}};
+}
+
 } // namespace MCP
 } // namespace Prisma

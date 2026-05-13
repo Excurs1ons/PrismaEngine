@@ -45,6 +45,11 @@ public:
     AssetMetadata* GetMetadata(const std::string& path);
     AssetMetadata* GetMetadata(const UUID& guid);
 
+    /**
+     * @brief 获取所有资源的元数据 (只读)
+     */
+    const std::unordered_map<std::string, AssetMetadata>& GetAllMetadata() const { return m_pathMap; }
+
 private:
     AssetDatabase() = default;
     

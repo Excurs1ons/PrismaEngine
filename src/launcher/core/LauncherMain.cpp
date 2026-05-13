@@ -95,6 +95,8 @@ int main(int argc, char* argv[]) {
     IEngine* engine = static_cast<IEngine*>(createInterface("IEngine", &config));
     if (!engine) { std::fprintf(stderr, "[Launcher] Failed to create Engine.\n"); CloseLibrary(engineLib); return -1; }
 
+    engine->SetCommandLine(argc, argv);
+
     // ---- 5. 初始化 ----
     std::printf("[Launcher] Initializing engine...\n");
     if (engine->Initialize() != 0) { std::fprintf(stderr, "[Launcher] Engine init failed.\n"); delete engine; CloseLibrary(engineLib); return -1; }

@@ -33,6 +33,11 @@ public:
     virtual ~IEngine() = default;
 
     /**
+     * @brief 设置命令行参数
+     */
+    virtual void SetCommandLine(int argc, char** argv) = 0;
+
+    /**
      * @brief 初始化引擎所有子系统
      * @return 0 = 成功，非 0 = 失败
      */

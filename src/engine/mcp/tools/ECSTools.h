@@ -30,5 +30,17 @@ private:
     Engine* m_Engine;
 };
 
+class ECSComponentSetTool : public MCPTool {
+public:
+    explicit ECSComponentSetTool(Engine* engine);
+    std::string_view GetName() const override { return "ecs_component_set"; }
+    std::string_view GetDescription() const override { return "Set component data for a specific component type on an entity."; }
+    std::string_view GetCategory() const override { return "ecs"; }
+    nlohmann::json GetInputSchema() const override;
+    nlohmann::json Execute(const nlohmann::json& args) override;
+private:
+    Engine* m_Engine;
+};
+
 } // namespace MCP
 } // namespace Prisma

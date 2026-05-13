@@ -44,8 +44,10 @@ Engine& Engine::Get() {
 Engine::Engine(const EngineSpecification& spec)
     : m_Spec(spec), m_Initialized(false), m_Running(false) {
     s_Instance = this;
+#if PRISMA_ENABLE_SCRIPTING > 0
     m_coreCLRHost = std::make_unique<Scripting::CoreCLRHost>();
     m_scriptEngine = std::make_unique<Scripting::ScriptEngine>();
+#endif
 }
 
 Engine::~Engine() {
@@ -99,6 +101,7 @@ int Engine::Initialize() {
     mcp->RegisterTool<MCP::SceneDeleteEntityTool>(this);
     mcp->RegisterTool<MCP::ECSComponentListTool>(this);
     mcp->RegisterTool<MCP::ECSComponentGetTool>(this);
+    mcp->RegisterTool<MCP::ECSComponentSetTool>(this);
     mcp->RegisterTool<MCP::EngineStatusTool>(this);
     mcp->RegisterTool<MCP::EngineStateHashTool>(this);
     mcp->RegisterTool<MCP::EngineBuildInfoTool>(this);
@@ -195,6 +198,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
             m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
         }
 
+#if PRISMA_ENABLE_SCRIPTING > 0
         // 初始化 C# 脚本引擎（根据项目设置决定）
         if (scriptingBackend == ScriptingBackend::CoreCLR) {
             std::vector<std::string> scriptPaths = {
@@ -230,6 +234,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         } else {
             LOG_INFO("Engine", "C# 脚本已关闭（项目配置）");
         }
+#endif
 
         m_Window->SetEventCallback([this](Event& e) {
             EventDispatcher dispatcher(e);
@@ -274,7 +279,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         auto* scene = m_SceneManager->GetCurrentScene();
         if (scene) {
             auto camera = scene->GetMainCamera();
-            if (camera) camera->SetViewport(m_Window->GetWidth(), m_Window->GetHeight());
+            if (camera && m_Window) camera->SetViewport(m_Window->GetWidth(), m_Window->GetHeight());
         }
     }
 
@@ -286,20 +291,27 @@ int Engine::Run(std::unique_ptr<Application> app) {
     double lastFrameTime = Platform::GetTimeSeconds();
 
     while (m_Running && m_CurrentApp->IsRunning()) {
+        if (m_Window) m_Window->OnUpdate();
+        else {
+            Platform::PumpEvents();
+            // 无头模式下手动限制帧率，防止 CPU 空转
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
+        
         double time = Platform::GetTimeSeconds();
         float deltaTime = static_cast<float>(time - lastFrameTime);
         lastFrameTime = time;
-
-        if (m_Window) m_Window->OnUpdate();
-        else Platform::PumpEvents();
+        if (deltaTime > 0.0f) m_FrameStats.FPS = 1.0f / deltaTime;
         
         if (!m_Running) break;
 
         if (m_Spec.Headless || !m_Minimized) {
             Update(Timestep(std::min(deltaTime, 0.1f)));
             // C# 脚本更新（在 App OnUpdate 之后、渲染之前）
+#if PRISMA_ENABLE_SCRIPTING > 0
             if (m_scriptEngine->IsInitialized())
                 m_scriptEngine->Update(std::min(deltaTime, 0.1f));
+#endif
             if (GetRenderSystem()) {
                 double t0 = Platform::GetTimeSeconds();
                 GetRenderSystem()->BeginFrame();
@@ -347,7 +359,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
 }
 
 Graphic::IRenderResourceManager* Engine::GetRenderResourceManager() { return m_RenderSystem ? m_RenderSystem->GetRenderResourceManager() : nullptr; }
+#if PRISMA_ENABLE_SCRIPTING > 0
 Scripting::MonoRuntime& Engine::GetMonoRuntime() { return Scripting::MonoRuntime::Get(); }
+#endif
 AssetDatabase& Engine::GetAssetDatabase() { return AssetDatabase::Get(); }
 Core::ECS::World& Engine::GetWorld() { return Core::ECS::World::Get(); }
 ThreadManager& Engine::GetThreadManager() { return *ThreadManager::Get(); }
@@ -357,8 +371,27 @@ const std::string& Engine::GetGPUName() const { return m_GPUName; }
 const EngineSpecification& Engine::GetSpecification() const { return m_Spec; }
 
 void Engine::Update(Timestep ts) {
+    ExecuteMainThreadQueue();
     for (auto& sys : m_Systems) sys->Update(ts);
     if (m_CurrentApp) m_CurrentApp->OnUpdate(ts);
+}
+
+void Engine::SubmitToMainThread(std::function<void()>&& func) {
+    std::lock_guard<std::mutex> lock(m_MainThreadQueueMutex);
+    m_MainThreadQueue.emplace_back(std::move(func));
+}
+
+void Engine::ExecuteMainThreadQueue() {
+    std::vector<std::function<void()>> queue;
+    {
+        std::lock_guard<std::mutex> lock(m_MainThreadQueueMutex);
+        queue = std::move(m_MainThreadQueue);
+        m_MainThreadQueue.clear();
+    }
+
+    for (auto& func : queue) {
+        func();
+    }
 }
 
 void Engine::Shutdown() {

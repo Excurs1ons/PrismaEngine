@@ -120,40 +120,46 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
 
 # ========== 依赖 C# 引擎核心库 ==========
 
-# 依赖引擎 C# 核心库（PrismaCore 输出到 bin/scripts/，同时复制到 project 本地 lib）
-add_dependencies(${PROJECT_NAME} PrismaCore)
-set(CS_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts/lib")
+if(PRISMA_ENABLE_SCRIPTING)
+    # 依赖引擎 C# 核心库（PrismaCore 输出到 bin/scripts/，同时复制到 project 本地 lib）
+    add_dependencies(${PROJECT_NAME} PrismaCore)
+    set(CS_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts/lib")
 
-# ========== C# 脚本构建与部署 (跨平台) ==========
+    # ========== C# 脚本构建与部署 (跨平台) ==========
 
-find_program(DOTNET dotnet REQUIRED)
-
-# 动态确定运行时标识符 (RID)
-if(WIN32)
-    set(CS_RID "win-x64")
+    find_program(DOTNET dotnet REQUIRED)
 else()
-    if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
-        set(CS_RID "linux-arm64")
-    else()
-        set(CS_RID "linux-x64")
-    endif()
+    message(STATUS "Template2D: Scripting disabled, skipping C# dependencies.")
 endif()
 
-set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
-set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
+if(PRISMA_ENABLE_SCRIPTING)
+    # 动态确定运行时标识符 (RID)
+    if(WIN32)
+        set(CS_RID "win-x64")
+    else()
+        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
+            set(CS_RID "linux-arm64")
+        else()
+            set(CS_RID "linux-x64")
+        endif()
+    endif()
 
-# 构建时：跨平台自包含发布
-add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E echo "Publishing C# scripts for RID: ${CS_RID}..."
-    COMMAND ${DOTNET} publish -c Release -r ${CS_RID} --self-contained true
-            -p:DebugType=portable -p:DebugSymbols=true
-            -p:PrismaCoreRef="${CS_LIB_DIR}"
-            --nologo
-            "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/${CS_RID}/publish/"
-            "${SCRIPTS_OUT}/"
-    COMMENT "Building + publishing C# scripts (RID: ${CS_RID})"
-)
+    set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
+    set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
-message(STATUS "Template2D configured for RID: ${CS_RID}")
+    # 构建时：跨平台自包含发布
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E echo "Publishing C# scripts for RID: ${CS_RID}..."
+        COMMAND ${DOTNET} publish -c Release -r ${CS_RID} --self-contained true
+                -p:DebugType=portable -p:DebugSymbols=true
+                -p:PrismaCoreRef="${CS_LIB_DIR}"
+                --nologo
+                "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/${CS_RID}/publish/"
+                "${SCRIPTS_OUT}/"
+        COMMENT "Building + publishing C# scripts (RID: ${CS_RID})"
+    )
+
+    message(STATUS "Template2D configured for RID: ${CS_RID}")
+endif()

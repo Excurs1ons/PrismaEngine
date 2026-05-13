@@ -16,6 +16,10 @@ CommandLineParser::CommandLineParser() {
     AddOption("mcp-transport", "", "MCP 传输方式: stdio (默认) 或 tcp", true);
     AddOption("mcp-port", "", "MCP TCP 端口 (默认 3100)", true);
 #endif
+
+    // WebUI options
+    AddOption("webui", "", "启动全功能 WebUI 编辑器", false);
+    AddOption("webui-port", "", "WebUI 监听端口 (默认 8080)", true);
 }
 
 void CommandLineParser::AddOption(const std::string& name,

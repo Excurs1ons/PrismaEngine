@@ -81,9 +81,11 @@ public:
     SceneManager* GetSceneManager() { return m_SceneManager; }
     PhysicsSystem* GetPhysicsSystem() { return m_PhysicsSystem; }
     JobSystem* GetJobSystem() { return m_JobSystem; }
+#if PRISMA_ENABLE_SCRIPTING > 0
     Scripting::MonoRuntime& GetMonoRuntime();
     Scripting::CoreCLRHost& GetCoreCLRHost() { return *m_coreCLRHost; }
     Scripting::ScriptEngine& GetScriptEngine() { return *m_scriptEngine; }
+#endif
     Core::ECS::World& GetWorld();
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
@@ -105,6 +107,11 @@ public:
     const EngineSpecification& GetSpecification() const;
     bool IsRunning() const { return m_Running; }
 
+    /**
+     * @brief 提交一个函数到主线程执行 (线程安全)
+     */
+    void SubmitToMainThread(std::function<void()>&& func);
+
     // 通用系统添加 (用于非核心扩展)
     template<typename T, typename... Args>
     T* AddSystem(Args&&... args) {
@@ -116,11 +123,16 @@ public:
 
 private:
     void Update(Timestep ts);
+    void ExecuteMainThreadQueue();
     
     EngineSpecification m_Spec;
     std::vector<std::unique_ptr<ISubSystem>> m_Systems;
     std::unique_ptr<Application> m_CurrentApp;
     std::unique_ptr<Window> m_Window;
+
+    // 线程安全队列
+    std::vector<std::function<void()>> m_MainThreadQueue;
+    std::mutex m_MainThreadQueueMutex;
     
     // 核心系统指针缓存 (快车道)
     AssetManager* m_AssetManager = nullptr;
@@ -137,9 +149,11 @@ private:
     FrameStats m_FrameStats;
     std::string m_GPUName;
 
+#if PRISMA_ENABLE_SCRIPTING > 0
     // C# 脚本系统（unique_ptr 避免头文件包含膨胀）
     std::unique_ptr<Scripting::CoreCLRHost> m_coreCLRHost;
     std::unique_ptr<Scripting::ScriptEngine> m_scriptEngine;
+#endif
 
     static Engine* s_Instance;
 };

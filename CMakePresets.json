@@ -113,7 +113,8 @@
         "PRISMA_USE_NATIVE_INPUT": "OFF",
         "PRISMA_ENABLE_UPSCALER_FSR": "OFF",
         "PRISMA_ENABLE_UPSCALER_DLSS": "OFF",
-        "PRISMA_ENABLE_UPSCALER_TSR": "OFF"
+        "PRISMA_ENABLE_UPSCALER_TSR": "OFF",
+        "PRISMA_ENABLE_SCRIPTING": "OFF"
       }
     },
     {
@@ -141,7 +142,7 @@
       "hidden": true,
       "inherits": "linux-base",
       "cacheVariables": {
-        "PRISMA_BUILD_LAUNCHER": "OFF",
+        "PRISMA_BUILD_LAUNCHER": "ON",
         "CMAKE_SYSTEM_PROCESSOR": "aarch64",
         "CMAKE_C_COMPILER": "aarch64-linux-gnu-gcc",
         "CMAKE_CXX_COMPILER": "aarch64-linux-gnu-g++"

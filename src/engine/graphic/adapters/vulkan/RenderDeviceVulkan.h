@@ -132,6 +132,11 @@ public:
     using OverlayRenderCallback = std::function<void(VkCommandBuffer)>;
     void SetOverlayRenderCallback(OverlayRenderCallback callback) { m_overlayRenderCallback = std::move(callback); }
 
+    /**
+     * @brief Capture current swapchain frame to host memory (Binary Raw)
+     */
+    void CaptureFrame(void* outBuffer, size_t* outSize);
+
 private:
     // vk-bootstrap 核心
     vkb::Instance m_vkbInstance;

@@ -18,6 +18,7 @@
 #include <chrono>
 #include <condition_variable>
 #include <cstddef>
+#include <deque>
 #include <format>
 #include <fstream>
 #include <mutex>
@@ -111,6 +112,7 @@ public:
 
     void Flush();
     void WriteEntry(const LogEntry& entry);
+    std::vector<LogEntry> GetRecentLogs(size_t limit);
     std::vector<StackFrame> CaptureCallStack(int skipFrames = 0, int maxFrames = 32);
     std::string FormatCallStack(const std::vector<StackFrame>& callStack);
     CallStackOutput GetCallStackOutputForLevel(LogLevel level);
@@ -144,6 +146,7 @@ private:
 
     std::atomic<bool> m_Running{false};
     std::queue<LogEntry> m_LogQueue;
+    std::deque<LogEntry> m_History;
     std::mutex m_QueueMutex;
     std::condition_variable m_QueueCondition;
     std::unique_ptr<std::thread> m_WorkerThread;

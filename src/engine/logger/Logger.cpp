@@ -171,6 +171,12 @@ void Logger::ProcessQueue() {
 }
 
 void Logger::WriteEntry(const LogEntry& entry) {
+    {
+        std::lock_guard<std::mutex> lock(m_QueueMutex);
+        m_History.push_back(entry);
+        if (m_History.size() > 500) m_History.pop_front();
+    }
+
     if (static_cast<int>(m_Config.target) & static_cast<int>(LogTarget::Console)) {
         std::string consoleMsg = FormatEntry(entry, m_Config.enableColors);
         WriteToConsole(consoleMsg, m_Config.enableColors);
@@ -180,6 +186,17 @@ void Logger::WriteEntry(const LogEntry& entry) {
         std::string fileMsg = FormatEntry(entry, false);
         WriteToFile(fileMsg);
     }
+}
+
+std::vector<LogEntry> Logger::GetRecentLogs(size_t limit) {
+    std::lock_guard<std::mutex> lock(m_QueueMutex);
+    size_t count = std::min(limit, m_History.size());
+    std::vector<LogEntry> logs;
+    logs.reserve(count);
+    for (size_t i = m_History.size() - count; i < m_History.size(); ++i) {
+        logs.push_back(m_History[i]);
+    }
+    return logs;
 }
 
 void Logger::PushLogScope(LogScope* scope) {

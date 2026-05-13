@@ -2,6 +2,7 @@
 
 #include "../windows/ProjectSettingsWindow.h"
 #include "Export.h"
+#include "WebUIEditor.h"
 #include "app/Application.h"
 #include "core/ManagerBase.h"
 #include "core/Singleton.h"
@@ -62,6 +63,10 @@ private:
 
     // ImGui 资源管理器
     std::unique_ptr<ImGuiVulkanResourceManager> m_imguiResourceManager;
+    
+    // WebUI 编辑器
+    std::unique_ptr<WebUIEditor> m_webUIEditor;
+
     bool m_IsProjectDirty = false;
 };
 

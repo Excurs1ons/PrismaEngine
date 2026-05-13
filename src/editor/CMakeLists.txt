@@ -25,6 +25,8 @@ set(EDITOR_SOURCES
         core/Environment.cpp
         core/CommandLineParser.cpp
         core/CommandLineEditor.cpp
+        core/WebUIEditor.cpp
+        core/EditorService.cpp
         core/main.cpp
         panels/EditorLayer.cpp
         windows/ProjectSettingsWindow.cpp
@@ -40,6 +42,8 @@ set(EDITOR_HEADERS
         core/Environment.h
         core/CommandLineParser.h
         core/CommandLineEditor.h
+        core/WebUIEditor.h
+        core/EditorService.h
         panels/EditorLayer.h
         windows/ProjectSettingsWindow.h
         Export.h
@@ -62,6 +66,11 @@ target_link_libraries(Editor PRIVATE
     Engine
     imgui::imgui
     SDL3-shared
+)
+
+target_include_directories(Editor PRIVATE
+    ${CMAKE_SOURCE_DIR}/src/engine
+    ${CMAKE_SOURCE_DIR}/src/engine/logger
 )
 
 # ========== 路径与输出配置 ==========
