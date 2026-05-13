@@ -221,10 +221,6 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 if (m_coreCLRHost->Initialize(scriptsDir)) {
                     if (m_scriptEngine->Initialize(*m_coreCLRHost)) {
                         LOG_INFO("Engine", "C# 脚本系统已启动 (CoreCLR)");
-
-                        // [修复] Bootstrap 将场景初始数据写入 Write 缓冲区，交换一次使 Read 获得这些数据
-                        // 否则第一帧 World::Step 中的 SyncActiveBuffers 会从空 Read 覆盖已写入的 Write
-                        EntityManager::Get().SwapBuffers();
                     }
                 }
             } else {
@@ -288,6 +284,12 @@ int Engine::Run(std::unique_ptr<Application> app) {
             if (camera && m_Window) camera->SetViewport(m_Window->GetWidth(), m_Window->GetHeight());
         }
     }
+
+    // [修复] 所有初始化数据（场景 + C# Bootstrap）已写入 Write (layout A)，
+    // 交换一次使 Read 获得完整数据。
+    // 若不交换：第一帧 World::Step 的 SyncActiveBuffers 从空 Read 覆盖 Write，
+    // 导致场景方块位置丢失（永远在 0,0）。
+    EntityManager::Get().SwapBuffers();
 
     if (m_CurrentApp->OnInitialize() != 0) return -1;
 
