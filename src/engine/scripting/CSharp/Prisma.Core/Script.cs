@@ -13,9 +13,9 @@ public abstract class Script
 
     public abstract uint TypeId { get; }
 
-    // Cherno Optimization: 双缓冲变换访问�?
-    // Getter 读取上一帧锁定的数据（ReadBuffer），Setter 写入这一帧的新数据（WriteBuffer）�?
-    // 这保证了在并�?Update 期间，所有脚本看到的数据视图都是一致的�?
+    // Cherno Optimization: 双缓冲变换访问�?
+    // Getter 读取上一帧锁定的数据（ReadBuffer），Setter 写入这一帧的新数据（WriteBuffer）�?
+    // 这保证了在并�?Update 期间，所有脚本看到的数据视图都是一致的�?
     public unsafe Vector2 Position 
     { 
         get => new Vector2(NativeAPI.TransformBuffer_Read->PosX[_entityIndex], NativeAPI.TransformBuffer_Read->PosY[_entityIndex]); 
@@ -49,9 +49,10 @@ public abstract class Script
     public virtual void OnStart() { }
     public virtual void OnUpdate(TimeContext time, InputContext input) { }
     public virtual void OnLateUpdate(TimeContext time, InputContext input) { }
+    public virtual void OnDrawGizmos() { }
     public virtual void OnDestroy() { }
 
-    // 序列化支�?/ Serialization Support
+    // 序列化支�?/ Serialization Support
     public virtual void OnSerialize(System.Text.Json.Utf8JsonWriter writer) { }
     public virtual void OnDeserialize(ref System.Text.Json.Utf8JsonReader reader) { }
 }

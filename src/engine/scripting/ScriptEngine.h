@@ -6,42 +6,12 @@
 #include <mutex>
 
 #include "Export.h"
+#include "core/Node.h"
 
 namespace Prisma {
 namespace Scripting {
 
 class CoreCLRHost;
-
-// ============================================================================
-// 实体数据池 - 虚拟内存 SoA (Virtual Memory Reservation)
-// ============================================================================
-// 启动时 VirtualAlloc(MEM_RESERVE) 预留 1M 实体的虚拟地址空间，
-// CreateEntity 时按需 VirtualAlloc(MEM_COMMIT) 提交物理内存。
-// 指针从创建到销毁永不改变，C# 侧不会拿到野指针。
-
-static constexpr uint32_t kMaxVirtualEntities = 1024 * 1024; // 1M VA 上限
-static constexpr uint32_t kCommitStep = 16384;                // 每次提交 16K 槽位
-
-// Transform 双缓冲 SoA — 字段为指针，指向 VA block 内的固定偏移
-struct TransformBufferSoA {
-    float* posX;
-    float* posY;
-    float* rotation;
-    float* scaleX;
-    float* scaleY;
-};
-
-// Render SoA（无缓冲）
-struct RenderBufferSoA {
-    uint32_t* active;
-    uint32_t* generation;
-    float*    colorR;
-    float*    colorG;
-    float*    colorB;
-    float*    colorA;
-    float*    sizeW;
-    float*    sizeH;
-};
 
 struct PrismaAPI {
     void (*log)(const char* subsystem, const char* msg);
@@ -60,8 +30,32 @@ struct PrismaAPI {
     void (*setCameraPos)(float x, float y);
     void (*getCameraPos)(float* x, float* y);
     
+    // Gizmos
+    void (*drawGizmoLine)(float x1, float y1, float x2, float y2, float r, float g, float b, float a);
+    void (*drawGizmoRect)(float x, float y, float w, float h, float r, float g, float b, float a);
+    void (*drawGizmoString)(const char* text, float x, float y, float scale, float r, float g, float b, float a);
+
     // 已提交的实体槽位数（C# 用于边界检查）
     uint32_t (*getEntityCapacity)();
+
+    // 2D 光照 API
+    uint32_t (*createLight)(int type);
+    void     (*destroyLight)(uint32_t handle);
+    void     (*setLightPos)(uint32_t handle, float x, float y);
+    void     (*setLightColor)(uint32_t handle, float r, float g, float b);
+    void     (*setLightIntensity)(uint32_t handle, float intensity);
+    void     (*setLightRadius)(uint32_t handle, float radius);
+    void     (*setLightFalloff)(uint32_t handle, float falloff);
+    void     (*setLightOrder)(uint32_t handle, int order);
+    void     (*setLightBlendMode)(uint32_t handle, int mode);
+
+    // 2D 环境光（调节场景基础照明级别）
+    void (*setAmbientLight)(float r, float g, float b);
+
+    // [诊断] 结构体大小，用于 C++/C# 版本校验
+    // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)
+    // C# 侧在 Init 中校验，不匹配时抛出明确异常
+    uint32_t structSize = 0;
 };
 
 class ENGINE_API ScriptEngine {
@@ -77,19 +71,7 @@ public:
     const PrismaAPI& GetAPI() const { return m_api; }
     void GetCameraPos(float* x, float* y) const { *x = m_cameraPosX; *y = m_cameraPosY; }
 
-    const TransformBufferSoA* GetCurrentTransformBuffer() const;
-    const RenderBufferSoA*    GetRenderBuffer() const { return &m_layoutR; }
-    uint32_t GetEntityCapacity() const { return m_aliveCount; }
-
 private:
-    uint32_t CreateEntity();
-    void     DestroyEntity(uint32_t handle);
-
-    // ---- VA 内存管理 ----
-    void* reserveBlock(size_t bytes);
-    void  commitRange(uint32_t fromEntity, uint32_t toEntity);
-    void  initLayoutPointers();
-
     static uint32_t S_CreateEntity();
     static void     S_DestroyEntity(uint32_t handle);
     static TransformBufferSoA* S_GetTransformBufferA();
@@ -97,18 +79,7 @@ private:
     static RenderBufferSoA*    S_GetRenderBuffer();
     static void     S_SetCameraPos(float x, float y);
     static void     S_GetCameraPos(float* x, float* y);
-
-    // ---- VA 预留块（3 个：Transform A / Transform B / Render） ----
-    void* m_blockABase = nullptr;  // 5 float arrays
-    void* m_blockBBase = nullptr;  // 5 float arrays
-    void* m_blockRBase = nullptr;  // 8 arrays (2 uint32 + 6 float)
-    uint32_t m_aliveCount = 0;     // 活跃实体数（高水位线，Create 递增）
-    uint32_t m_committed = 0;      // 已提交的物理槽位数（按 kCommitStep 增长）
-
-    // ---- 固定偏移的 SoA 布局（指针设一次永远不变） ----
-    TransformBufferSoA m_layoutA{};
-    TransformBufferSoA m_layoutB{};
-    RenderBufferSoA    m_layoutR{};
+    static uint32_t S_GetEntityCapacity();
 
     CoreCLRHost* m_host = nullptr;
     bool  m_initialized = false;
@@ -116,12 +87,9 @@ private:
     void (*m_onFrameFn)(float) = nullptr;
 
     PrismaAPI m_api = {};
-    mutable int m_currentReadIndex = 0;
 
     float m_cameraPosX = 0.0f, m_cameraPosY = 0.0f;
     float m_lastDeltaTime = 0.016f;
-    
-    static uint32_t S_GetEntityCapacity();
 };
 
 } // namespace Scripting

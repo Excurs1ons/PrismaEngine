@@ -2,159 +2,70 @@
 #include "CoreCLRHost.h"
 #include "Logger.h"
 #include "app/Engine.h"
+#include "app/Application.h"
 #include "input/InputManager.h"
 #include "platform/Platform.h"
+#include "core/EntityManager.h"
+#include "graphic/2d/LightManager2D.h"
+#include "graphic/Renderer2D.h"
 #include <cstring>
+
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
 
 namespace Prisma {
 namespace Scripting {
 
+// ============================================================
+// 辅助函数：带 SEH 保护的 Bootstrap 调用
+// 必须在独立函数中（无 C++ 析构对象），否则 MSVC 禁止 __try/__except
+// ============================================================
+#ifdef _MSC_VER
+static bool TryBootstrap(void (*fn)(void*), void* api, DWORD& outExceptionCode) noexcept {
+    __try {
+        fn(api);
+        return true;
+    } __except (outExceptionCode = GetExceptionCode(), EXCEPTION_EXECUTE_HANDLER) {
+        return false;
+    }
+}
+#endif
+
 static thread_local ScriptEngine* s_activeEngine = nullptr;
 
-// 每个子数组（posX/posY/...）的跨步 = 1M float * 4 字节 = 4MB
-static constexpr size_t kFieldStride = kMaxVirtualEntities * sizeof(float);
-
-// ============================================================================
-// ScriptEngine
-// ============================================================================
-
 ScriptEngine::ScriptEngine() {
-    // 预留 3 个 VA 块：Transform A / Transform B / Render
-    // Transform: 5 float 数组 × 4MB = 20MB/块
-    // Render: 8 数组 (2 uint32 + 6 float) × 4MB = 32MB
-    size_t blockSizeA = 5 * kFieldStride;  // 20MB
-    size_t blockSizeR = 8 * kFieldStride;  // 32MB
-
-    m_blockABase = Platform::ReserveVirtualMemory(blockSizeA);
-    m_blockBBase = Platform::ReserveVirtualMemory(blockSizeA);
-    m_blockRBase = Platform::ReserveVirtualMemory(blockSizeR);
-
-    // 初始化布局指针（设置一次永不改变）
-    initLayoutPointers();
 }
 
 ScriptEngine::~ScriptEngine() {
     Shutdown();
-    if (m_blockABase) Platform::ReleaseVirtualMemory(m_blockABase, 5 * kFieldStride);
-    if (m_blockBBase) Platform::ReleaseVirtualMemory(m_blockBBase, 5 * kFieldStride);
-    if (m_blockRBase) Platform::ReleaseVirtualMemory(m_blockRBase, 8 * kFieldStride);
 }
 
-// ============================================================================
-// 布局指针初始化 + 内存提交
-// ============================================================================
-
-void ScriptEngine::initLayoutPointers() {
-    auto initTransform = [](TransformBufferSoA& layout, void* base) {
-        auto* bytes = (uint8_t*)base;
-        layout.posX     = (float*)(bytes + 0 * kFieldStride);
-        layout.posY     = (float*)(bytes + 1 * kFieldStride);
-        layout.rotation = (float*)(bytes + 2 * kFieldStride);
-        layout.scaleX   = (float*)(bytes + 3 * kFieldStride);
-        layout.scaleY   = (float*)(bytes + 4 * kFieldStride);
-    };
-
-    auto initRender = [](RenderBufferSoA& layout, void* base) {
-        auto* bytes = (uint8_t*)base;
-        layout.active     = (uint32_t*)(bytes + 0 * kFieldStride);
-        layout.generation = (uint32_t*)(bytes + 1 * kFieldStride);
-        layout.colorR     = (float*)(bytes + 2 * kFieldStride);
-        layout.colorG     = (float*)(bytes + 3 * kFieldStride);
-        layout.colorB     = (float*)(bytes + 4 * kFieldStride);
-        layout.colorA     = (float*)(bytes + 5 * kFieldStride);
-        layout.sizeW      = (float*)(bytes + 6 * kFieldStride);
-        layout.sizeH      = (float*)(bytes + 7 * kFieldStride);
-    };
-
-    initTransform(m_layoutA, m_blockABase);
-    initTransform(m_layoutB, m_blockBBase);
-    initRender(m_layoutR, m_blockRBase);
+uint32_t ScriptEngine::S_CreateEntity() { 
+    return EntityManager::Get().CreateNode().handle; 
 }
 
-// 确保 entityIndex 对应的物理页已提交
-void ScriptEngine::commitRange(uint32_t fromEntity, uint32_t toEntity) {
-    if (toEntity <= fromEntity) return;
-
-    // 对齐到页边界
-    size_t start = (fromEntity * sizeof(float) / 4096) * 4096;
-    size_t end   = ((toEntity   * sizeof(float) + 4095) / 4096) * 4096;
-    size_t size  = end - start;
-    if (size == 0) return;
-
-    auto commitField = [&](void* base, uint32_t fieldCount) {
-        for (uint32_t f = 0; f < fieldCount; f++) {
-            void* addr = (uint8_t*)base + f * kFieldStride + start;
-            Platform::CommitVirtualMemory(addr, size);
-        }
-    };
-
-    commitField(m_blockABase, 5);
-    commitField(m_blockBBase, 5);
-    commitField(m_blockRBase, 8);
+void ScriptEngine::S_DestroyEntity(uint32_t h) { 
+    EntityManager::Get().DestroyNode(h); 
 }
 
-// ---- 句柄编码 ----
-inline uint32_t EncodeHandle(uint32_t index, uint32_t gen) { return (index & 0xFFFF) | ((gen & 0xFFFF) << 16); }
-inline uint32_t DecodeIndex(uint32_t handle) { return handle & 0xFFFF; }
-inline uint32_t DecodeGen(uint32_t handle) { return handle >> 16; }
-
-uint32_t ScriptEngine::CreateEntity() {
-    // 找空闲槽
-    for (uint32_t i = 0; i < m_aliveCount; ++i) {
-        if (m_layoutR.active[i] == 0) {
-            m_layoutR.active[i] = 1;
-            m_layoutA.posX[i] = m_layoutB.posX[i] = 0;
-            m_layoutA.posY[i] = m_layoutB.posY[i] = 0;
-            m_layoutR.colorA[i] = 1.0f;
-            return EncodeHandle(i, m_layoutR.generation[i]);
-        }
-    }
-
-    // 无空闲槽，追加新槽位
-    uint32_t index = m_aliveCount++;
-    
-    // 确保物理内存已提交
-    if (index >= m_committed) {
-        uint32_t newCommit = ((index + 1 + kCommitStep - 1) / kCommitStep) * kCommitStep;
-        if (newCommit > kMaxVirtualEntities) newCommit = kMaxVirtualEntities;
-        commitRange(m_committed, newCommit);
-        m_committed = newCommit;
-    }
-
-    m_layoutR.active[index]     = 1;
-    m_layoutR.generation[index] = 1;
-    // scale 默认为 1
-    m_layoutA.scaleX[index] = m_layoutA.scaleY[index] = 1.0f;
-    m_layoutB.scaleX[index] = m_layoutB.scaleY[index] = 1.0f;
-    m_layoutR.colorA[index] = 1.0f;
-
-    return EncodeHandle(index, m_layoutR.generation[index]);
+TransformBufferSoA* ScriptEngine::S_GetTransformBufferA() { 
+    // C++ Write 缓冲区：C# 脚本往这里写
+    return EntityManager::Get().GetTransformBufferWrite();
 }
 
-void ScriptEngine::DestroyEntity(uint32_t handle) {
-    uint32_t index = DecodeIndex(handle);
-    uint32_t handleGen = DecodeGen(handle);
-    if (index < m_aliveCount && (m_layoutR.generation[index] & 0xFFFF) == handleGen) {
-        m_layoutR.active[index] = 0;
-        m_layoutR.generation[index]++;
-        if ((m_layoutR.generation[index] & 0xFFFF) == 0) m_layoutR.generation[index] = 1;
-    }
+TransformBufferSoA* ScriptEngine::S_GetTransformBufferB() { 
+    // C++ Read 缓冲区：C# 从这里读取上一帧的已提交数据
+    return EntityManager::Get().GetTransformBufferRead();
 }
 
-const TransformBufferSoA* ScriptEngine::GetCurrentTransformBuffer() const {
-    return (m_currentReadIndex == 0) ? &m_layoutA : &m_layoutB;
+RenderBufferSoA* ScriptEngine::S_GetRenderBuffer() { 
+    return EntityManager::Get().GetRenderBuffer(); 
 }
 
-// ---- 静态回调（通过 s_activeEngine 转发） ----
-
-uint32_t ScriptEngine::S_CreateEntity() { return s_activeEngine ? s_activeEngine->CreateEntity() : 0; }
-void ScriptEngine::S_DestroyEntity(uint32_t h) { if (s_activeEngine) s_activeEngine->DestroyEntity(h); }
-
-TransformBufferSoA* ScriptEngine::S_GetTransformBufferA() { return s_activeEngine ? &s_activeEngine->m_layoutA : nullptr; }
-TransformBufferSoA* ScriptEngine::S_GetTransformBufferB() { return s_activeEngine ? &s_activeEngine->m_layoutB : nullptr; }
-RenderBufferSoA*    ScriptEngine::S_GetRenderBuffer() { return s_activeEngine ? &s_activeEngine->m_layoutR : nullptr; }
-
-uint32_t ScriptEngine::S_GetEntityCapacity() { return s_activeEngine ? s_activeEngine->m_aliveCount : 0; }
+uint32_t ScriptEngine::S_GetEntityCapacity() { 
+    return EntityManager::Get().GetAliveCount(); 
+}
 
 void ScriptEngine::S_SetCameraPos(float x, float y) {
     if (s_activeEngine) {
@@ -162,13 +73,78 @@ void ScriptEngine::S_SetCameraPos(float x, float y) {
         s_activeEngine->m_cameraPosY = y;
     }
 }
-void ScriptEngine::S_GetCameraPos(float* x, float* y) { if (x && y) { *x = 0; *y = 0; } }
+
+void ScriptEngine::S_GetCameraPos(float* x, float* y) { 
+    if (s_activeEngine && x && y) { 
+        *x = s_activeEngine->m_cameraPosX; 
+        *y = s_activeEngine->m_cameraPosY; 
+    } 
+}
 
 static bool S_IsKeyDown(int k) { auto* m = Engine::Get().GetInputManager(); return m ? m->IsKeyPressed((Prisma::Input::KeyCode)k) : false; }
 static float S_GetMouseX() { auto* m = Engine::Get().GetInputManager(); return m ? m->GetMousePosition().x : 0; }
-static float S_GetMouseY() { auto* m = Engine::Get().GetInputManager(); return m ? m->GetMousePosition().y : 0; }
+static float S_GetMouseY() {
+    auto* m = Engine::Get().GetInputManager();
+    if (!m) return 0;
+    // [修复] 翻转 Y 轴：SDL 鼠标 Y=0 在顶部，引擎坐标 Y=0 在底部
+    auto& spec = Application::Get().GetSpecification();
+    return (float)spec.Height - m->GetMousePosition().y;
+}
 static float S_GetDeltaTime() { return 0.016f; }
 static void S_Log(const char* s, const char* m) { if (s && m) printf("[%s] %s\n", s, m); }
+
+// ========== 2D Lighting API ==========
+
+static uint32_t S_CreateLight(int type) {
+    return Graphic::LightManager2D::Get().CreateLight(static_cast<Graphic::Light2D::Type>(type));
+}
+
+static void S_DestroyLight(uint32_t handle) {
+    Graphic::LightManager2D::Get().DestroyLight(handle);
+}
+
+static void S_SetLightPos(uint32_t handle, float x, float y) {
+    auto* light = Graphic::LightManager2D::Get().GetLight(handle);
+    if (light) light->SetPosition({ x, y });
+}
+
+static void S_SetLightColor(uint32_t handle, float r, float g, float b) {
+    auto* light = Graphic::LightManager2D::Get().GetLight(handle);
+    if (light) light->SetColor({ r, g, b });
+}
+
+static void S_SetLightIntensity(uint32_t handle, float intensity) {
+    auto* light = Graphic::LightManager2D::Get().GetLight(handle);
+    if (light) light->SetIntensity(intensity);
+}
+
+static void S_SetLightRadius(uint32_t handle, float radius) {
+    auto* light = Graphic::LightManager2D::Get().GetLight(handle);
+    if (light) light->SetRadius(radius);
+}
+
+static void S_SetLightFalloff(uint32_t handle, float falloff) {
+    auto* light = Graphic::LightManager2D::Get().GetLight(handle);
+    if (light) light->SetFalloffCurve(falloff);
+}
+
+static void S_SetLightOrder(uint32_t handle, int order) {
+    auto* light = Graphic::LightManager2D::Get().GetLight(handle);
+    if (light) light->SetLightOrder(order);
+}
+
+static void S_SetLightBlendMode(uint32_t handle, int mode) {
+    auto* light = Graphic::LightManager2D::Get().GetLight(handle);
+    if (light) light->SetBlendMode(static_cast<Graphic::Light2D::BlendMode>(mode));
+}
+
+static void S_DrawGizmoLine(float x1, float y1, float x2, float y2, float r, float g, float b, float a) { Graphic::Renderer2D::DrawLine({x1, y1}, {x2, y2}, {r, g, b, a}); }
+static void S_DrawGizmoRect(float x, float y, float w, float h, float r, float g, float b, float a) { Graphic::Renderer2D::DrawRect({x, y}, {w, h}, {r, g, b, a}); }
+static void S_DrawGizmoString(const char* t, float x, float y, float s, float r, float g, float b, float a) { if (t) Graphic::Renderer2D::DrawString(t, {x, y}, s, {r, g, b, a}); }
+
+static void S_SetAmbientLight(float r, float g, float b) {
+    Graphic::LightManager2D::Get().SetAmbientColor({r, g, b});
+}
 
 bool ScriptEngine::Initialize(CoreCLRHost& host) {
     if (m_initialized) return true;
@@ -189,6 +165,22 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
     m_api.getCameraPos = S_GetCameraPos;
     m_api.getEntityCapacity = S_GetEntityCapacity;
 
+    m_api.drawGizmoLine = S_DrawGizmoLine;
+    m_api.drawGizmoRect = S_DrawGizmoRect;
+    m_api.drawGizmoString = S_DrawGizmoString;
+
+    // Lighting
+    m_api.createLight = S_CreateLight;
+    m_api.destroyLight = S_DestroyLight;
+    m_api.setLightPos = S_SetLightPos;
+    m_api.setLightColor = S_SetLightColor;
+    m_api.setLightIntensity = S_SetLightIntensity;
+    m_api.setLightRadius = S_SetLightRadius;
+    m_api.setLightFalloff = S_SetLightFalloff;
+    m_api.setLightOrder = S_SetLightOrder;
+    m_api.setLightBlendMode = S_SetLightBlendMode;
+    m_api.setAmbientLight = S_SetAmbientLight;
+
     const std::string& scriptsDir = host.GetScriptsDir();
     std::string assemblyPath = scriptsDir + "/GameScripts.dll";
     m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
@@ -196,18 +188,23 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
 
     if (!m_bootstrapFn || !m_onFrameFn) return false;
 
-    m_bootstrapFn(&m_api);
+    // [诊断] 设置结构体大小，C# 侧校验 C++/C# API 版本一致性
+    m_api.structSize = sizeof(PrismaAPI);
 
-    // --- Active Range Copy: 只拷贝活跃实体区间 ---
-    // Bootstrap 写入了 Write 缓冲区（默认为 B），将活跃区数据镜像到 Read 缓冲区（A）
-    size_t copyBytes = m_aliveCount * sizeof(float);
-    if (copyBytes > 0) {
-        std::memcpy(m_layoutA.posX,     m_layoutB.posX,     copyBytes);
-        std::memcpy(m_layoutA.posY,     m_layoutB.posY,     copyBytes);
-        std::memcpy(m_layoutA.rotation, m_layoutB.rotation, copyBytes);
-        std::memcpy(m_layoutA.scaleX,   m_layoutB.scaleX,   copyBytes);
-        std::memcpy(m_layoutA.scaleY,   m_layoutB.scaleY,   copyBytes);
+#ifdef _MSC_VER
+    DWORD exceptionCode = 0;
+    if (!TryBootstrap(m_bootstrapFn, &m_api, exceptionCode)) {
+        LOG_ERROR("ScriptEngine", "C# Bootstrap 崩溃！异常代码: 0x{0:08X}", exceptionCode);
+        LOG_ERROR("ScriptEngine", "可能原因: Prisma.Core.dll 与 C++ PrismaAPI 结构体版本不一致");
+        LOG_ERROR("ScriptEngine", "请确保 C++ (ScriptEngine.h) 与 C# (EngineAPI.cs) PrismaAPI 字段完全匹配");
+        LOG_ERROR("ScriptEngine", "C++ structSize={0}, 请对比 C# sizeof(PrismaAPI)", sizeof(PrismaAPI));
+        LOG_ERROR("ScriptEngine", "然后重新编译 Prisma.Core 与 GameScripts 并部署到输出目录");
+        s_activeEngine = nullptr;
+        return false;
     }
+#else
+    m_bootstrapFn(&m_api);
+#endif
 
     m_initialized = true;
     s_activeEngine = nullptr;
@@ -218,7 +215,6 @@ void ScriptEngine::Update(float dt) {
     if (!m_initialized || !m_onFrameFn) return;
     s_activeEngine = this;
     m_onFrameFn(dt);
-    m_currentReadIndex = 1 - m_currentReadIndex;
     s_activeEngine = nullptr;
 }
 
