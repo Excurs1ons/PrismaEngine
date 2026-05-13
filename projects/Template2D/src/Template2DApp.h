@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Template2DExport.h"
 #include "app/Application.h"
 #include "scripting/ScriptEngine.h"
 #include <memory>
@@ -8,7 +7,7 @@
 
 namespace Prisma {
 
-class TEMPLATE2D_API Template2DApp : public Application {
+class Template2DApp : public Application {
 public:
     Template2DApp();
     ~Template2DApp() override = default;

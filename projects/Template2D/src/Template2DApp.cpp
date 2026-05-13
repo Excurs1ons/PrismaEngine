@@ -4,6 +4,7 @@
 #include "graphic/OrthographicCamera.h"
 #include "graphic/SpriteRenderer.h"
 #include "app/Engine.h"
+#include "core/EntityManager.h"
 #include "SceneManager.h"
 #include "scene/Scene.h"
 #include "core/Event.h"
@@ -47,6 +48,16 @@ void Template2DApp::OnRender() {
 
     Graphic::Renderer2D::BeginScene(*ortho);
 
+    // ── 场景物体（受光照影响） ──
+    Graphic::Renderer2D::DrawNodesSoA();
+    Graphic::Renderer2D::EndScene();
+
+    // ═══════════════════════════════════════════════
+    // Gizmo 覆盖层（不受光照影响，纯叠加渲染）
+    // 使用独立 VBO + 白色 LightMap，OpaquePass 后由 GizmoPass 处理
+    // ═══════════════════════════════════════════════
+    Graphic::Renderer2D::BeginGizmo(*ortho);
+
     float winW = (float)m_Spec.Width, winH = (float)m_Spec.Height;
     const float step = 50.0f;
 
@@ -59,56 +70,6 @@ void Template2DApp::OnRender() {
         float a = ((int)y % 100 == 0) ? 0.15f : 0.08f;
         Graphic::Renderer2D::DrawQuad({winW * 0.5f, y}, {winW, 2.0f}, {1.0f, 1.0f, 1.0f, a});
     }
-
-    // ── 绘制场景文件中的 SpriteRenderer（静态基础） ──
-    uint32_t sceneSpriteCount = 0;
-    for (auto& go : scene->GetGameObjects()) {
-        auto sr = go->GetComponent<Graphic::SpriteRenderer>();
-        if (!sr) continue;
-        ++sceneSpriteCount;
-
-        float cx = sr->GetPosition().x + sr->GetSize().x * 0.5f;
-        float cy = sr->GetPosition().y + sr->GetSize().y * 0.5f;
-        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(cx, cy, 0.0f));
-        if (std::abs(sr->GetRotation()) > 0.001f)
-            t = glm::rotate(t, glm::radians(sr->GetRotation()), glm::vec3(0, 0, 1));
-        t = glm::scale(t, glm::vec3(sr->GetSize(), 1.0f));
-        Graphic::Renderer2D::DrawQuad(t, sr->GetColor());
-    }
-
-    // ── 绘制 C# 脚本创建的实体（动态层） ──
-    auto& scriptEngine = Engine::Get().GetScriptEngine();
-    uint32_t scriptEntityCount = 0;
-    if (scriptEngine.IsInitialized()) {
-        auto* rb = scriptEngine.GetRenderBuffer();
-        auto* tb = scriptEngine.GetCurrentTransformBuffer();
-        
-        for (uint32_t i = 0; i < scriptEngine.GetEntityCapacity(); ++i) {
-            if (!rb->active[i]) continue;
-            ++scriptEntityCount;
-
-            float cx = tb->posX[i] + rb->sizeW[i] * 0.5f;
-            float cy = tb->posY[i] + rb->sizeH[i] * 0.5f;
-
-            Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(cx, cy, 0.0f));
-            if (std::abs(tb->rotation[i]) > 0.001f)
-                t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
-            t = glm::scale(t, glm::vec3(rb->sizeW[i], rb->sizeH[i], 1.0f));
-            
-            Color color = {rb->colorR[i], rb->colorG[i], rb->colorB[i], rb->colorA[i]};
-            Graphic::Renderer2D::DrawQuad(t, color);
-
-            std::string coord = "(" + std::to_string((int)tb->posX[i]) + "," + std::to_string((int)tb->posY[i]) + ")";
-            Color inv = {1.0f - rb->colorR[i], 1.0f - rb->colorG[i], 1.0f - rb->colorB[i], 1.0f};
-            // 投影线从精灵中心到坐标轴
-            Graphic::Renderer2D::DrawQuad({cx, cy * 0.5f}, {1.5f, cy}, inv);
-            Graphic::Renderer2D::DrawQuad({cx * 0.5f, cy}, {cx, 1.5f}, inv);
-            Graphic::Renderer2D::DrawString(coord, {cx + 10.0f, cy + 10.0f}, 2.0f, inv);
-        }
-    }
-
-    // HUD 显示两种来源的计数
-    // uint32_t totalDrawn = sceneSpriteCount + scriptEntityCount;
 
     // 坐标轴
     Graphic::Renderer2D::DrawQuad({winW * 0.5f, 0.0f}, {winW, 3.0f}, {1.0f, 0.2f, 0.2f, 0.9f});
@@ -132,6 +93,7 @@ void Template2DApp::OnRender() {
         float dt = (lastT > 0) ? (float)(nowT - lastT) : 0.016f;
         lastT = nowT;
 
+        uint32_t totalNodes = EntityManager::Get().GetAliveCount();
         const auto& st = Engine::Get().GetFrameStats();
         pT += dt;
         if (pT >= 1.0f) {
@@ -171,13 +133,13 @@ void Template2DApp::OnRender() {
         float dW = Graphic::Renderer2D::GetStringWidth(dcInfo, 2.0f);
         Graphic::Renderer2D::DrawString(dcInfo, hud(winW - dW - 30.0f, winH - 135.0f), 2.0f, {0.5f, 0.7f, 0.5f, 1.0f});
         Graphic::Renderer2D::DrawString("ESC to exit", hud(winW - 220.0f, 30.0f), 2.0f, {0.4f, 0.4f, 0.4f, 1.0f});
-        Graphic::Renderer2D::DrawString("Template2D (" + std::to_string(sceneSpriteCount) + " scene + " + std::to_string(scriptEntityCount) + " script entities)",
+        Graphic::Renderer2D::DrawString("Template2D (Unified Nodes: " + std::to_string(totalNodes) + ")",
                                         hud(30.0f, 30.0f), 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
         Graphic::Renderer2D::DrawString("Cam: (" + std::to_string((int)camX) + "," + std::to_string((int)camY) + ")",
                                         hud(30.0f, 65.0f), 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
     }
 
-    Graphic::Renderer2D::EndScene();
+    Graphic::Renderer2D::EndGizmo();
 }
 
 void Template2DApp::OnEvent(Event& e) {

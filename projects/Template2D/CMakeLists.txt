@@ -12,101 +12,125 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ========== 源文件 ==========
+# ========== 共享源码（EXE 与 Plugin 共用） ==========
 
-set(TEST_SOURCES
-    src/CreateApplication.cpp
+set(TEMPLATE2D_SOURCES
     src/Template2DApp.cpp
 )
 
-set(TEST_HEADERS
+set(TEMPLATE2D_HEADERS
     src/Template2DApp.h
 )
 
-# ========== 插件 DLL（由 PrismaLauncher 运行时加载） ==========
+# ========== 共享包含目录 ==========
 
-add_library(${PROJECT_NAME} SHARED
-    ${TEST_SOURCES}
-    ${TEST_HEADERS}
+set(TEMPLATE2D_INCLUDE_DIRS
+    ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/engine/app
+    ${CMAKE_SOURCE_DIR}/src/engine/core
+    ${CMAKE_SOURCE_DIR}/src/engine/graphic
+    ${CMAKE_SOURCE_DIR}/src/engine/logger
+    ${CMAKE_SOURCE_DIR}/src/engine/platform
+    ${CMAKE_SOURCE_DIR}/src/engine/scripting
+    ${CMAKE_SOURCE_DIR}/src/engine/window
+    ${CMAKE_SOURCE_DIR}/src/engine/math
+    ${CMAKE_SOURCE_DIR}/src/engine/resource
+    ${CMAKE_SOURCE_DIR}/src/engine/audio
+    ${CMAKE_SOURCE_DIR}/src/engine/ui
+    ${CMAKE_SOURCE_DIR}/src/engine/ui/2d
+    ${CMAKE_SOURCE_DIR}/src/engine/input
+    ${CMAKE_SOURCE_DIR}/src/engine/tilemap
+    ${CMAKE_SOURCE_DIR}/src/engine/scene
+    ${CMAKE_SOURCE_DIR}/src/engine/object
+    ${CMAKE_SOURCE_DIR}/src/engine/transform
+    ${CMAKE_SOURCE_DIR}/src/engine/threading
+    ${CMAKE_SOURCE_DIR}/src/engine/serialization
+    ${CMAKE_SOURCE_DIR}/src/engine/physics
+    ${CMAKE_SOURCE_DIR}/src/engine/config
+    ${CMAKE_SOURCE_DIR}/src/engine/packing
+    ${CMAKE_SOURCE_DIR}/src/engine/utils
 )
 
-# ========== 链接引擎 ==========
+# ========== 共享编译选项宏 ==========
 
-target_link_libraries(${PROJECT_NAME} PRIVATE
-    Engine
-)
-
-target_compile_definitions(${PROJECT_NAME} PRIVATE
-    TEMPLATE2D_EXPORTS=1
-)
-
-# ========== 包含目录 ==========
-
-target_include_directories(${PROJECT_NAME}
-    PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/src/engine/app
-        ${CMAKE_SOURCE_DIR}/src/engine/core
-        ${CMAKE_SOURCE_DIR}/src/engine/graphic
-        ${CMAKE_SOURCE_DIR}/src/engine/logger
-        ${CMAKE_SOURCE_DIR}/src/engine/platform
-        ${CMAKE_SOURCE_DIR}/src/engine/scripting
-        ${CMAKE_SOURCE_DIR}/src/engine/window
-        ${CMAKE_SOURCE_DIR}/src/engine/math
-        ${CMAKE_SOURCE_DIR}/src/engine/resource
-        ${CMAKE_SOURCE_DIR}/src/engine/audio
-        ${CMAKE_SOURCE_DIR}/src/engine/ui
-        ${CMAKE_SOURCE_DIR}/src/engine/ui/2d
-        ${CMAKE_SOURCE_DIR}/src/engine/input
-        ${CMAKE_SOURCE_DIR}/src/engine/tilemap
-        ${CMAKE_SOURCE_DIR}/src/engine/scene
-        ${CMAKE_SOURCE_DIR}/src/engine/object
-        ${CMAKE_SOURCE_DIR}/src/engine/transform
-        ${CMAKE_SOURCE_DIR}/src/engine/threading
-        ${CMAKE_SOURCE_DIR}/src/engine/serialization
-        ${CMAKE_SOURCE_DIR}/src/engine/physics
-        ${CMAKE_SOURCE_DIR}/src/engine/config
-        ${CMAKE_SOURCE_DIR}/src/engine/packing
-        ${CMAKE_SOURCE_DIR}/src/engine/utils
-)
-
-# ========== VS 调试器配置（一键启动） ==========
-
-if(MSVC)
-    # Template2D 是 DLL 插件，F5 调试时自动启动 Launcher 并传入插件路径
-    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:Launcher>")
-    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND_ARGUMENTS "$<TARGET_FILE:${PROJECT_NAME}>")
-    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:Launcher>")
-endif()
-
-# ========== 编译选项 ==========
-
-if(MSVC)
-    target_compile_options(${PROJECT_NAME}
-        PRIVATE
-            /W4
-            /WX-
-            /utf-8
+macro(setup_target_defaults target)
+    target_include_directories(${target} PRIVATE ${TEMPLATE2D_INCLUDE_DIRS})
+    target_link_libraries(${target} PRIVATE Engine)
+    if(MSVC)
+        target_compile_options(${target} PRIVATE
+            /W4 /WX- /utf-8
             $<$<CONFIG:Release>:/O2 /Oi /Gy /Zi>
             $<$<CONFIG:MinSizeRel>:/O1 /Oi /Gy>
             $<$<CONFIG:RelWithDebInfo>:/O2 /Oi /Gy>
-    )
-    target_compile_definitions(${PROJECT_NAME} PRIVATE
-        _CRT_SECURE_NO_WARNINGS
-        NOMINMAX
-        WIN32_LEAN_AND_MEAN
-    )
-    target_link_options(${PROJECT_NAME} PRIVATE $<$<CONFIG:Release>:/DEBUG>)
-else()
-    target_compile_options(${PROJECT_NAME}
-        PRIVATE
-            -Wall
-            -Wextra
-            -Wpedantic
+        )
+        target_compile_definitions(${target} PRIVATE
+            _CRT_SECURE_NO_WARNINGS NOMINMAX WIN32_LEAN_AND_MEAN
+        )
+        target_link_options(${target} PRIVATE $<$<CONFIG:Release>:/DEBUG>)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endmacro()
+
+# ============================================================
+# Target 1: Template2D (EXE)
+# 独立可执行文件，直接链接 Engine.dll，F5 即可调试
+# ============================================================
+
+add_executable(${PROJECT_NAME}
+    src/main.cpp
+    ${TEMPLATE2D_SOURCES}
+    ${TEMPLATE2D_HEADERS}
+)
+
+setup_target_defaults(${PROJECT_NAME})
+
+if(MSVC)
+    set_property(TARGET ${PROJECT_NAME} PROPERTY VS_DEBUGGER_COMMAND "$<TARGET_FILE:${PROJECT_NAME}>")
+endif()
+
+# ============================================================
+# Target 2: Template2D_plugin (DLL)
+# 保持与旧 Launcher 加载路径兼容，输出 Template2D.dll
+# ============================================================
+
+set(TEMPLATE2D_PLUGIN_NAME "${PROJECT_NAME}_plugin")
+
+add_library(${TEMPLATE2D_PLUGIN_NAME} SHARED
+    src/CreateApplication.cpp
+    ${TEMPLATE2D_SOURCES}
+    ${TEMPLATE2D_HEADERS}
+)
+
+set_target_properties(${TEMPLATE2D_PLUGIN_NAME} PROPERTIES
+    OUTPUT_NAME "Template2D"              # 生成 Template2D.dll（与旧名一致）
+    DEBUG_POSTFIX ""                      # Debug 也不加后缀
+)
+
+setup_target_defaults(${TEMPLATE2D_PLUGIN_NAME})
+target_compile_definitions(${TEMPLATE2D_PLUGIN_NAME} PRIVATE TEMPLATE2D_PLUGIN_EXPORTS=1)
+
+# ============================================================
+# VS 额外调试入口：Launcher + Plugin
+# ============================================================
+
+if(MSVC)
+    set(DEBUG_HELPER "${CMAKE_CURRENT_BINARY_DIR}/__vs_debug_template2d_main.cpp")
+    if(NOT EXISTS "${DEBUG_HELPER}")
+        file(WRITE "${DEBUG_HELPER}" "int main(){return 0;}\n")
+    endif()
+    add_executable(Template2D_Launcher_Debug EXCLUDE_FROM_ALL "${DEBUG_HELPER}")
+    target_link_libraries(Template2D_Launcher_Debug PRIVATE Engine)
+    add_dependencies(Template2D_Launcher_Debug ${TEMPLATE2D_PLUGIN_NAME} Launcher)
+    set_target_properties(Template2D_Launcher_Debug PROPERTIES
+        VS_DEBUGGER_COMMAND "$<TARGET_FILE:Launcher>"
+        VS_DEBUGGER_COMMAND_ARGUMENTS "$<TARGET_FILE:${TEMPLATE2D_PLUGIN_NAME}>"
     )
 endif()
 
-# ========== 复制项目资源 ==========
+# ============================================================
+# 复制项目资源
+# ============================================================
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
@@ -118,22 +142,27 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMENT "Copying shaders and project assets"
 )
 
-# ========== 依赖 C# 引擎核心库 ==========
+add_custom_command(TARGET ${TEMPLATE2D_PLUGIN_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets/shaders
+        $<TARGET_FILE_DIR:${TEMPLATE2D_PLUGIN_NAME}>/assets/shaders
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:${TEMPLATE2D_PLUGIN_NAME}>/assets
+    COMMENT "Copying shaders and project assets (plugin)"
+)
+
+# ============================================================
+# C# 脚本构建与部署
+# ============================================================
 
 if(PRISMA_ENABLE_SCRIPTING)
-    # 依赖引擎 C# 核心库（PrismaCore 输出到 bin/scripts/，同时复制到 project 本地 lib）
     add_dependencies(${PROJECT_NAME} PrismaCore)
+    add_dependencies(${TEMPLATE2D_PLUGIN_NAME} PrismaCore)
+
     set(CS_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts/lib")
-
-    # ========== C# 脚本构建与部署 (跨平台) ==========
-
     find_program(DOTNET dotnet REQUIRED)
-else()
-    message(STATUS "Template2D: Scripting disabled, skipping C# dependencies.")
-endif()
 
-if(PRISMA_ENABLE_SCRIPTING)
-    # 动态确定运行时标识符 (RID)
     if(WIN32)
         set(CS_RID "win-x64")
     else()
@@ -147,7 +176,6 @@ if(PRISMA_ENABLE_SCRIPTING)
     set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
     set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
-    # 构建时：跨平台自包含发布
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Publishing C# scripts for RID: ${CS_RID}..."
         COMMAND ${DOTNET} publish -c Release -r ${CS_RID} --self-contained true
@@ -162,4 +190,6 @@ if(PRISMA_ENABLE_SCRIPTING)
     )
 
     message(STATUS "Template2D configured for RID: ${CS_RID}")
+else()
+    message(STATUS "Template2D: Scripting disabled, skipping C# dependencies.")
 endif()
