@@ -3,36 +3,31 @@
   "camera": {
     "projection": [0.0, 1920.0, 0.0, 1080.0]
   },
-  "nodes": [
+  "entities": [
     {
       "name": "RedSquare",
-      "position": [200.0, 200.0],
-      "rotation": 0.0,
-      "scale": [100.0, 100.0]
+      "transform": { "position": [200.0, 200.0], "rotation": 0.0 },
+      "spriteRenderer": { "color": [1.0, 0.0, 0.0, 1.0], "size": [100.0, 100.0] }
     },
     {
       "name": "GreenRect",
-      "position": [400.0, 300.0],
-      "rotation": 0.0,
-      "scale": [120.0, 80.0]
+      "transform": { "position": [400.0, 300.0], "rotation": 0.0 },
+      "spriteRenderer": { "color": [0.0, 1.0, 0.0, 1.0], "size": [120.0, 80.0] }
     },
     {
       "name": "BlueSquare",
-      "position": [600.0, 450.0],
-      "rotation": 0.0,
-      "scale": [90.0, 90.0]
+      "transform": { "position": [600.0, 450.0], "rotation": 0.0 },
+      "spriteRenderer": { "color": [0.0, 0.0, 1.0, 1.0], "size": [90.0, 90.0] }
     },
     {
       "name": "YellowSquare",
-      "position": [100.0, 500.0],
-      "rotation": 0.0,
-      "scale": [60.0, 60.0]
+      "transform": { "position": [100.0, 500.0], "rotation": 0.0 },
+      "spriteRenderer": { "color": [1.0, 1.0, 0.0, 1.0], "size": [60.0, 60.0] }
     },
     {
       "name": "PinkSquare",
-      "position": [700.0, 100.0],
-      "rotation": 0.0,
-      "scale": [80.0, 80.0]
+      "transform": { "position": [700.0, 100.0], "rotation": 0.0 },
+      "spriteRenderer": { "color": [1.0, 0.0, 1.0, 1.0], "size": [80.0, 80.0] }
     }
   ]
 }

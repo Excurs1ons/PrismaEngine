@@ -7,15 +7,28 @@
 #include <glaze/glaze.hpp>
 #include <array>
 #include <vector>
+#include <optional>
 
 namespace Prisma {
 
-// ── 场景文件顶层 JSON 结构 (SoA 兼容版) ──
-struct NodeData {
-    std::string name;
+// ── 场景文件实体-组件结构 ──
+/// SpriteRenderer 组件数据（JSON 序列化用 std::array，再写入 SoA）
+struct SpriteRendererData {
+    std::array<float, 4> color = {1.0f, 1.0f, 1.0f, 1.0f}; // RGBA
+    std::array<float, 2> size = {100.0f, 100.0f};            // width, height
+};
+
+/// 实体变换数据
+struct EntityTransformData {
     std::array<float, 2> position = {0.0f, 0.0f};
     float rotation = 0.0f;
-    std::array<float, 2> scale = {1.0f, 1.0f};
+};
+
+/// 实体数据（含可选组件）
+struct EntityData {
+    std::string name;
+    EntityTransformData transform;
+    std::optional<SpriteRendererData> spriteRenderer;
 };
 
 struct SceneCameraData {
@@ -25,18 +38,33 @@ struct SceneCameraData {
 struct SceneFileData {
     std::string name;
     SceneCameraData camera;
-    std::vector<NodeData> nodes;
+    std::vector<EntityData> entities;
 };
 
 } // namespace Prisma
 
 template <>
-struct glz::meta<Prisma::NodeData> {
+struct glz::meta<Prisma::SpriteRendererData> {
     static constexpr auto value = glz::object(
-        "name", &Prisma::NodeData::name,
-        "position", &Prisma::NodeData::position,
-        "rotation", &Prisma::NodeData::rotation,
-        "scale", &Prisma::NodeData::scale
+        "color", &Prisma::SpriteRendererData::color,
+        "size",  &Prisma::SpriteRendererData::size
+    );
+};
+
+template <>
+struct glz::meta<Prisma::EntityTransformData> {
+    static constexpr auto value = glz::object(
+        "position", &Prisma::EntityTransformData::position,
+        "rotation", &Prisma::EntityTransformData::rotation
+    );
+};
+
+template <>
+struct glz::meta<Prisma::EntityData> {
+    static constexpr auto value = glz::object(
+        "name",           &Prisma::EntityData::name,
+        "transform",      &Prisma::EntityData::transform,
+        "spriteRenderer", &Prisma::EntityData::spriteRenderer
     );
 };
 
@@ -48,9 +76,9 @@ struct glz::meta<Prisma::SceneCameraData> {
 template <>
 struct glz::meta<Prisma::SceneFileData> {
     static constexpr auto value = glz::object(
-        "name", &Prisma::SceneFileData::name,
-        "camera", &Prisma::SceneFileData::camera,
-        "nodes", &Prisma::SceneFileData::nodes
+        "name",     &Prisma::SceneFileData::name,
+        "camera",   &Prisma::SceneFileData::camera,
+        "entities", &Prisma::SceneFileData::entities
     );
 };
 
@@ -111,15 +139,28 @@ bool Scene::Deserialize(const std::string& path) {
     camera->SetProjection(p[0], p[1], p[2], p[3]);
     SetMainCamera(camera);
 
-    // 创建 Node 并恢复 SoA 数据
-    for (auto& nd : sfd.nodes) {
-        Node node = CreateNode(nd.name);
-        node.SetPosition({nd.position[0], nd.position[1]});
-        node.SetRotation(nd.rotation);
-        node.SetScale({nd.scale[0], nd.scale[1]});
+    // 创建 Entity 并恢复数据
+    for (auto& ed : sfd.entities) {
+        Node node = CreateNode(ed.name);
+        node.SetPosition({ed.transform.position[0], ed.transform.position[1]});
+        node.SetRotation(ed.transform.rotation);
+
+        // 加载 SpriteRenderer 组件（颜色 + 大小写入 SoA）
+        if (ed.spriteRenderer) {
+            auto& sr = *ed.spriteRenderer;
+            auto& em = EntityManager::Get();
+            auto* rb = em.GetRenderBuffer();
+            uint32_t idx = node.GetIndex();
+            rb->colorR[idx] = sr.color[0];
+            rb->colorG[idx] = sr.color[1];
+            rb->colorB[idx] = sr.color[2];
+            rb->colorA[idx] = sr.color[3];
+            rb->sizeW[idx] = sr.size[0];
+            rb->sizeH[idx] = sr.size[1];
+        }
     }
 
-    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个 Node)", sfd.name, m_nodes.size());
+    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个 Entity)", sfd.name, m_nodes.size());
     return true;
 }
 
@@ -129,14 +170,23 @@ bool Scene::Serialize(const std::string& path) const {
 
     // TODO: 相机投影保存
 
-    // Node 数据
+    // Entity 数据
     for (auto node : m_nodes) {
-        NodeData nd;
-        nd.name = "Node"; // TODO: 实际名称
-        nd.position = { node.GetX(), node.GetY() };
-        nd.rotation = node.GetRotation();
-        nd.scale = { node.GetScale().x, node.GetScale().y };
-        sfd.nodes.push_back(nd);
+        EntityData ed;
+        ed.name = "Node"; // TODO: 实际名称
+        ed.transform.position = { node.GetX(), node.GetY() };
+        ed.transform.rotation = node.GetRotation();
+
+        // TODO: 从 SoA 读取 spriteRenderer 数据
+        // auto& em = EntityManager::Get();
+        // auto* rb = em.GetRenderBuffer();
+        // uint32_t idx = node.GetIndex();
+        // SpriteRendererData sr;
+        // sr.color = { rb->colorR[idx], rb->colorG[idx], rb->colorB[idx], rb->colorA[idx] };
+        // sr.size  = { rb->sizeW[idx], rb->sizeH[idx] };
+        // ed.spriteRenderer = sr;
+
+        sfd.entities.push_back(ed);
     }
 
     auto error = glz::write_file_json(sfd, path, std::string{});
@@ -145,7 +195,7 @@ bool Scene::Serialize(const std::string& path) const {
         return false;
     }
 
-    LOG_INFO("Scene", "场景已保存: {0} ({1} 个 Node)", path, m_nodes.size());
+    LOG_INFO("Scene", "场景已保存: {0} ({1} 个 Entity)", path, m_nodes.size());
     return true;
 }
 

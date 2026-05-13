@@ -94,6 +94,7 @@ set(CORE_SOURCES
     core/LayerStack.cpp
     core/ComponentRegistry.cpp
     core/UUID.cpp
+    core/SpriteRendererComponent.cpp
 
     # UI
     ui/UIComponent.cpp
@@ -366,6 +367,7 @@ set(CORE_HEADERS
     core/Event.h
     core/Component.h
     core/ComponentRegistry.h
+    core/SpriteRendererComponent.h
     core/ISubSystem.h
     core/IWorld.h
     core/ManagerBase.h
