@@ -86,6 +86,8 @@ set(CORE_SOURCES
     # Core
     core/AssetManager.cpp
     core/AssetDatabase.cpp
+    core/EntityManager.cpp
+    core/Node.cpp
     core/ECS.cpp
     core/Serialization.cpp
     core/Layer.cpp
@@ -124,6 +126,7 @@ set(CORE_SOURCES
     graphic/SpriteAnimation.cpp
     graphic/stb_impl.cpp
     graphic/RenderResourceManager.cpp
+    graphic/SpirvReflector.cpp
     graphic/LogicalPass.cpp
     graphic/LogicalPipeline.cpp
     graphic/interfaces/IPipelineState.cpp
@@ -151,6 +154,8 @@ set(CORE_SOURCES
 
     # Graphic - 2D
     graphic/2d/Light2D.cpp
+    graphic/2d/LightManager2D.cpp
+    graphic/2d/Light2DPass.cpp
 
     # Graphic - Vulkan Backend
     graphic/adapters/vulkan/VulkanAdapters.cpp
@@ -514,7 +519,11 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     if(TARGET vk-bootstrap::vk-bootstrap)
         target_link_libraries(Engine PUBLIC vk-bootstrap::vk-bootstrap)
     endif()
-
+    if(TARGET spirv-reflect-static)
+        target_link_libraries(Engine PUBLIC spirv-reflect-static)
+    elseif(TARGET spirv-reflect)
+        target_link_libraries(Engine PUBLIC spirv-reflect)
+    endif()
 endif()
 
 target_include_directories(Engine

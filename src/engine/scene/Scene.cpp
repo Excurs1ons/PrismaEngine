@@ -2,6 +2,7 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "Logger.h"
+#include "core/EntityManager.h"
 #include "graphic/OrthographicCamera.h"
 #include <glaze/glaze.hpp>
 #include <array>
@@ -9,28 +10,47 @@
 
 namespace Prisma {
 
-// ── 场景文件顶层 JSON 结构 ──
+// ── 场景文件顶层 JSON 结构 (SoA 兼容版) ──
+struct NodeData {
+    std::string name;
+    std::array<float, 2> position = {0.0f, 0.0f};
+    float rotation = 0.0f;
+    std::array<float, 2> scale = {1.0f, 1.0f};
+};
+
 struct SceneCameraData {
     std::array<float, 4> projection = {0.0f, 1920.0f, 0.0f, 1080.0f};
 };
+
 struct SceneFileData {
     std::string name;
     SceneCameraData camera;
-    std::vector<GameObject::Data> gameObjects;
+    std::vector<NodeData> nodes;
 };
 
 } // namespace Prisma
 
 template <>
+struct glz::meta<Prisma::NodeData> {
+    static constexpr auto value = glz::object(
+        "name", &Prisma::NodeData::name,
+        "position", &Prisma::NodeData::position,
+        "rotation", &Prisma::NodeData::rotation,
+        "scale", &Prisma::NodeData::scale
+    );
+};
+
+template <>
 struct glz::meta<Prisma::SceneCameraData> {
     static constexpr auto value = glz::object("projection", &Prisma::SceneCameraData::projection);
 };
+
 template <>
 struct glz::meta<Prisma::SceneFileData> {
     static constexpr auto value = glz::object(
         "name", &Prisma::SceneFileData::name,
         "camera", &Prisma::SceneFileData::camera,
-        "gameObjects", &Prisma::SceneFileData::gameObjects
+        "nodes", &Prisma::SceneFileData::nodes
     );
 };
 
@@ -38,32 +58,32 @@ namespace Prisma {
 
 Scene::Scene() {}
 
-Scene::~Scene() {}
-
-void Scene::AddGameObject(std::shared_ptr<GameObject> gameObject) {
-    m_gameObjects.push_back(std::move(gameObject));
-    m_IsDirty = true;
-}
-
-void Scene::RemoveGameObject(GameObject* gameObject) {
-    m_gameObjects.erase(
-        std::remove_if(m_gameObjects.begin(), m_gameObjects.end(),
-            [gameObject](const std::shared_ptr<GameObject>& obj) {
-                return obj.get() == gameObject;
-            }),
-        m_gameObjects.end()
-    );
-    m_IsDirty = true;
-}
-
-void Scene::Update(Timestep ts) {
-    for (auto& obj : m_gameObjects) {
-        obj->Update(ts);
+Scene::~Scene() {
+    for (auto node : m_nodes) {
+        node.Destroy();
     }
 }
 
-const std::vector<std::shared_ptr<GameObject>>& Scene::GetGameObjects() const {
-    return m_gameObjects;
+Node Scene::CreateNode(const std::string& name) {
+    Node node = EntityManager::Get().CreateNode();
+    // TODO: 存储名称到 SoA 或额外的名称表
+    m_nodes.push_back(node);
+    m_IsDirty = true;
+    return node;
+}
+
+void Scene::RemoveNode(Node node) {
+    auto it = std::find(m_nodes.begin(), m_nodes.end(), node);
+    if (it != m_nodes.end()) {
+        node.Destroy();
+        m_nodes.erase(it);
+        m_IsDirty = true;
+    }
+}
+
+void Scene::Update(Timestep /*ts*/) {
+    // 逻辑更新现在主要由 ScriptEngine 或 System 处理
+    // Scene 仅负责维护 Node 列表的有效性
 }
 
 std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
@@ -91,14 +111,15 @@ bool Scene::Deserialize(const std::string& path) {
     camera->SetProjection(p[0], p[1], p[2], p[3]);
     SetMainCamera(camera);
 
-    // 创建 GameObject 并恢复数据
-    for (auto& god : sfd.gameObjects) {
-        auto go = std::make_shared<GameObject>(god.name);
-        go->SetData(god);
-        AddGameObject(go);
+    // 创建 Node 并恢复 SoA 数据
+    for (auto& nd : sfd.nodes) {
+        Node node = CreateNode(nd.name);
+        node.SetPosition({nd.position[0], nd.position[1]});
+        node.SetRotation(nd.rotation);
+        node.SetScale({nd.scale[0], nd.scale[1]});
     }
 
-    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个对象)", sfd.name, m_gameObjects.size());
+    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个 Node)", sfd.name, m_nodes.size());
     return true;
 }
 
@@ -106,19 +127,16 @@ bool Scene::Serialize(const std::string& path) const {
     SceneFileData sfd;
     sfd.name = m_Name;
 
-    // 相机投影
-    if (m_mainCamera) {
-        auto ortho = dynamic_cast<Graphic::OrthographicCamera*>(m_mainCamera.get());
-        if (ortho) {
-            // 通过读写字符串获取投影（OrthographicCamera 未提供 GetProjection）
-            // 直接用当前投影数值构造
-            // TODO: 当 OrthographicCamera 提供 GetProjection 时直接读取
-        }
-    }
+    // TODO: 相机投影保存
 
-    // GameObject 数据
-    for (auto& go : m_gameObjects) {
-        sfd.gameObjects.push_back(go->GetData());
+    // Node 数据
+    for (auto node : m_nodes) {
+        NodeData nd;
+        nd.name = "Node"; // TODO: 实际名称
+        nd.position = { node.GetX(), node.GetY() };
+        nd.rotation = node.GetRotation();
+        nd.scale = { node.GetScale().x, node.GetScale().y };
+        sfd.nodes.push_back(nd);
     }
 
     auto error = glz::write_file_json(sfd, path, std::string{});
@@ -127,7 +145,7 @@ bool Scene::Serialize(const std::string& path) const {
         return false;
     }
 
-    LOG_INFO("Scene", "场景已保存: {0} ({1} 个对象)", path, m_gameObjects.size());
+    LOG_INFO("Scene", "场景已保存: {0} ({1} 个 Node)", path, m_nodes.size());
     return true;
 }
 

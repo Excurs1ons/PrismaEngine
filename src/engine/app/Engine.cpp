@@ -5,6 +5,7 @@
 #include "JobSystem.h"
 #include "core/AssetManager.h"
 #include "core/AssetDatabase.h"
+#include "core/EntityManager.h"
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/interfaces/IResourceManager.h"
@@ -44,6 +45,7 @@ Engine& Engine::Get() {
 Engine::Engine(const EngineSpecification& spec)
     : m_Spec(spec), m_Initialized(false), m_Running(false) {
     s_Instance = this;
+    m_entityManager = std::make_unique<EntityManager>();
 #if PRISMA_ENABLE_SCRIPTING > 0
     m_coreCLRHost = std::make_unique<Scripting::CoreCLRHost>();
     m_scriptEngine = std::make_unique<Scripting::ScriptEngine>();
@@ -312,6 +314,14 @@ int Engine::Run(std::unique_ptr<Application> app) {
             if (m_scriptEngine->IsInitialized())
                 m_scriptEngine->Update(std::min(deltaTime, 0.1f));
 #endif
+
+            // [正确双缓冲] C++ 是唯一的交换权威。
+            // C# 每帧通过 GetTransformBufferA(Write)/B(Read) 重新查询指针，
+            // C++ 在这里交换，使下一帧 C# 拿到正确的 Read/Write。
+#if PRISMA_ENABLE_SCRIPTING > 0
+            EntityManager::Get().SwapBuffers();
+#endif
+
             if (GetRenderSystem()) {
                 double t0 = Platform::GetTimeSeconds();
                 GetRenderSystem()->BeginFrame();

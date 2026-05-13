@@ -25,6 +25,7 @@ namespace Core::ECS { class World; }
 class SceneManager;
 class PhysicsSystem;
 class ThreadManager;
+class EntityManager;
 
 /**
  * @brief 引擎配置规范
@@ -86,6 +87,7 @@ public:
     Scripting::CoreCLRHost& GetCoreCLRHost() { return *m_coreCLRHost; }
     Scripting::ScriptEngine& GetScriptEngine() { return *m_scriptEngine; }
 #endif
+    EntityManager& GetEntityManager() { return *m_entityManager; }
     Core::ECS::World& GetWorld();
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
@@ -154,6 +156,7 @@ private:
     std::unique_ptr<Scripting::CoreCLRHost> m_coreCLRHost;
     std::unique_ptr<Scripting::ScriptEngine> m_scriptEngine;
 #endif
+    std::unique_ptr<EntityManager> m_entityManager;
 
     static Engine* s_Instance;
 };

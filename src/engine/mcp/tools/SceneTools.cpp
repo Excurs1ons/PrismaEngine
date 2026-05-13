@@ -144,7 +144,7 @@ nlohmann::json SceneDeleteEntityTool::Execute(const nlohmann::json& args) {
         return {{"error", "Index out of range"}};
     }
 
-    scene->RemoveGameObject(allEntities[entityIdx].get());
+    scene->RemoveGameObject(allEntities[entityIdx]);
     return {{"deleted", true}};
 }
 
