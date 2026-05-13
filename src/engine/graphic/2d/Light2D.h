@@ -19,6 +19,13 @@ public:
         Spot          // 聚光灯
     };
 
+    enum class BlendMode {
+        Additive,    // 相加（默认）
+        AlphaBlend,  // Alpha 混合
+        Multiply,    // 正片叠底
+        Subtractive  // 相减
+    };
+
     Light2D(Type type = Type::Point);
     ~Light2D() = default;
 
@@ -47,15 +54,29 @@ public:
     void SetIntensity(float intensity) { m_intensity = glm::max(0.0f, intensity); }
     float GetIntensity() const { return m_intensity; }
 
-    // ========== 范围 ==========
+    void SetVolumetricIntensity(float intensity) { m_volumetricIntensity = glm::max(0.0f, intensity); }
+    float GetVolumetricIntensity() const { return m_volumetricIntensity; }
+
+    // ========== 范围与衰减 ==========
 
     void SetRadius(float radius) { m_radius = glm::max(0.0f, radius); }
     float GetRadius() const { return m_radius; }
+
+    void SetFalloffCurve(float curve) { m_falloffCurve = glm::max(0.01f, curve); }
+    float GetFalloffCurve() const { return m_falloffCurve; }
 
     // ========== 聚光灯 ==========
 
     void SetSpotAngle(float angleDegrees);
     float GetSpotAngle() const { return m_spotAngle; }
+
+    // ========== 混合与排序 ==========
+
+    void SetBlendMode(BlendMode mode) { m_blendMode = mode; }
+    BlendMode GetBlendMode() const { return m_blendMode; }
+
+    void SetLightOrder(int32_t order) { m_lightOrder = order; }
+    int32_t GetLightOrder() const { return m_lightOrder; }
 
     // ========== 阴影 ==========
 
@@ -68,14 +89,18 @@ public:
 
 private:
     Type m_type = Type::Point;
+    BlendMode m_blendMode = BlendMode::Additive;
+    int32_t m_lightOrder = 0;
 
     Vector2 m_position  = {0.0f, 0.0f};
     Vector2 m_direction = {1.0f, 0.0f};
 
     Vector3 m_color   = {1.0f, 1.0f, 1.0f};
     float m_intensity = 1.0f;
+    float m_volumetricIntensity = 0.0f;
 
     float m_radius    = 100.0f;
+    float m_falloffCurve = 1.0f; // 1.0 是线性衰减
     float m_spotAngle = 45.0f;
 
     bool m_castShadows = false;
