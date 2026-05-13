@@ -69,6 +69,10 @@ set(PRISMA_DEP_VMA_VERSION "v3.1.0")
 # GitHub: https://github.com/charles-lunarg/vk-bootstrap
 set(PRISMA_DEP_VK_BOOTSTRAP_VERSION "v1.4.343")
 
+# SPIRV-Reflect - SPIR-V 反射解析库（自动提取 descriptor binding/set）
+# GitHub: https://github.com/KhronosGroup/SPIRV-Reflect
+set(PRISMA_DEP_SPIRV_REFLECT_VERSION "vulkan-sdk-1.4.350.0")
+
 # -------------------------------------------------------------------------------
 # 编辑器工具 / Editor Tools
 # -------------------------------------------------------------------------------

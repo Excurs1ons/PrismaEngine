@@ -127,6 +127,11 @@ endif()
 
 if(PRISMA_ENABLE_RENDER_VULKAN)
     FetchContent_MakeAvailable(Vulkan-Headers vma vk-bootstrap)
+    Prisma_Declare_Dependency(spirv-reflect https://github.com/KhronosGroup/SPIRV-Reflect.git ${PRISMA_DEP_SPIRV_REFLECT_VERSION})
+    set(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "" FORCE)
+    set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
+    set(SPIRV_REFLECT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(spirv-reflect)
 endif()
 
 # ImGui 静态库创建
