@@ -9,13 +9,14 @@
 namespace Prisma::Graphic {
 
 /// @brief 混合状态描述
+/// @note 默认值为标准 alpha 混合（SrcAlpha / InvSrcAlpha），与旧硬编码 Vulkan 行为一致
 struct BlendState {
-    bool blendEnable = false;
+    bool blendEnable = true;
     bool logicOpEnable = false;
     uint32_t writeMask = 0xF;  // RGBA all enabled
     BlendOp blendOp = BlendOp::Add;
-    BlendFactorType srcBlend = BlendFactorType::One;
-    BlendFactorType destBlend = BlendFactorType::Zero;
+    BlendFactorType srcBlend = BlendFactorType::SrcAlpha;
+    BlendFactorType destBlend = BlendFactorType::InvSrcAlpha;
     BlendOp blendOpAlpha = BlendOp::Add;
     BlendFactorType srcBlendAlpha = BlendFactorType::One;
     BlendFactorType destBlendAlpha = BlendFactorType::Zero;

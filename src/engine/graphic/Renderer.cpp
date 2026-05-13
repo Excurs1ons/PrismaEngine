@@ -34,8 +34,25 @@ void Renderer::Submit(Mesh* mesh, Material* material, const PrismaMath::mat4& tr
     s_Data.commands.push_back(command);
 }
 
+void Renderer::SubmitGizmo(Mesh* mesh, Material* material, const PrismaMath::mat4& transform, const Prisma::Color& color) {
+    if (!mesh || !material) return;
+    
+    RenderCommand command;
+    command.mesh = mesh;
+    command.material = material;
+    command.transform = transform;
+    command.boundingBox = mesh->GetBoundingBox();
+    command.color = color;
+    
+    s_Data.gizmoCommands.push_back(command);
+}
+
 const std::vector<RenderCommand>& Renderer::GetCommandQueue() {
     return s_Data.commands;
+}
+
+const std::vector<RenderCommand>& Renderer::GetGizmoQueue() {
+    return s_Data.gizmoCommands;
 }
 
 const Renderer::SceneData& Renderer::GetSceneData() {
@@ -44,6 +61,10 @@ const Renderer::SceneData& Renderer::GetSceneData() {
 
 void Renderer::ClearQueue() {
     s_Data.commands.clear();
+}
+
+void Renderer::ClearGizmoQueue() {
+    s_Data.gizmoCommands.clear();
 }
 
 } // namespace Prisma::Graphic

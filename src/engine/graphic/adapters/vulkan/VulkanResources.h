@@ -266,6 +266,7 @@ public:
     VkImage GetVkImage() const { return m_image; }
     VkImageView GetVkImageView() const { return m_imageView; }
     VkFormat GetVkFormat() const { return m_vkFormat; }
+    VkDevice GetVkDevice() const { return m_device; }
 
     // -----------------------------------------------------------------------
     // [改动] SetDebugName

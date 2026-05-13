@@ -102,6 +102,10 @@ public:
     void SetSkipSwapChainRenderPass(bool skip) { m_skipSwapChainRenderPass = skip; }
     bool IsDefaultRenderPassActive() const { return m_isDefaultRenderPassActive; }
 
+    // 暂停/恢复默认交换链 RenderPass（解决 Light2DPass 等需要离屏 RP 时的嵌套问题）
+    void SuspendDefaultRenderPass();
+    void ResumeDefaultRenderPass();
+
     // 获取当前帧的命令缓冲区（供 Viewport 渲染使用）
     ICommandBuffer* GetCurrentCommandBuffer() const {
         return m_frameActive ? (ICommandBuffer*)m_vulkanCommandBuffers[m_currentFrame].get() : nullptr;

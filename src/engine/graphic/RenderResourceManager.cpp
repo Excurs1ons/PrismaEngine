@@ -1,4 +1,5 @@
 #include "RenderResourceManager.h"
+#include "SpirvReflector.h"
 #include "logger/Logger.h"
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IShader.h"
@@ -667,19 +668,16 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
     desc.defines = defines;
     desc.language = ShaderLanguage::SPIRV;
 
-    // [修复] 为内置的 Renderer2D 着色器提供手动反射信息，
-    // 因为目前引擎还没有自动 SPIR-V 反射解析器。
+    // [重构] 使用 SPIRV-Reflect 自动反射 SPIR-V 着色器，
+    // 取代手动 if/else 维护的反射链。
     ShaderReflection reflection;
-    if (filename.find("Renderer2D.frag.spv") != std::string::npos) {
-        ShaderResource albedoRes;
-        albedoRes.Name = "AlbedoMap";
-        albedoRes.ResourceType = ShaderResource::Type::Sampler2D;
-        albedoRes.Set = 0;
-        albedoRes.Binding = 0;
-        reflection.Resources.push_back(albedoRes);
-        desc.type = ShaderType::Pixel;
-    } else if (filename.find("Renderer2D.vert.spv") != std::string::npos) {
+    SpirvReflector::Reflect(bytecode, reflection);
+    if (filename.find(".vert.spv") != std::string::npos) {
         desc.type = ShaderType::Vertex;
+    } else if (filename.find(".frag.spv") != std::string::npos) {
+        desc.type = ShaderType::Pixel;
+    } else if (filename.find(".comp.spv") != std::string::npos) {
+        desc.type = ShaderType::Compute;
     }
 
     auto shader = m_device->GetResourceFactory()->CreateShaderImpl(desc, bytecode, reflection);

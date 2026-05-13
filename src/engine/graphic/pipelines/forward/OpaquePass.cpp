@@ -127,7 +127,7 @@ bool OpaquePass::EnsureDefaultPipeline() {
 
     // 使用 RenderResourceManager 加载着色器，这会自动处理搜索路径和内置反射
     m_defaultVertexShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.vert.spv", "main");
-    m_defaultPixelShader = resourceManager->LoadShaderSync("assets/shaders/Renderer2D.frag.spv", "main");
+    m_defaultPixelShader = resourceManager->LoadShaderSync("assets/shaders/LitSprite.frag.spv", "main");
 
     // 如果加载失败，尝试使用内置的 Default 着色器作为保底
     if (!m_defaultVertexShader) {

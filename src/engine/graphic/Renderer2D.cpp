@@ -1,4 +1,6 @@
 #include "Renderer2D.h"
+#include "core/Node.h"
+#include "core/EntityManager.h"
 #include "OrthographicCamera.h"
 #include "Renderer.h"
 #include "Mesh.h"
@@ -38,11 +40,14 @@ struct Renderer2D::Renderer2DData {
         Vertex* VertexBufferPtr = nullptr;  
         uint32_t QuadCount = 0;
     };
-    FrameResource Frames[FRAME_SLOTS];
+    FrameResource Frames[FRAME_SLOTS];      // 场景 VBO（受光照影响）
+    FrameResource GizmoFrames[FRAME_SLOTS]; // Gizmo VBO（无光照，纯叠加）
     uint32_t CurrentFrameSlot = 0;
 
     std::shared_ptr<ITexture> CurrentTexture = nullptr;
+    std::shared_ptr<ITexture> LightTexture = nullptr;
     bool BatchingEnabled = true;
+    bool InGizmoMode = false; // 当前是否在 Gizmo 绘制模式
 };
 
 Renderer2D::Renderer2DData* Renderer2D::s_Data = nullptr;
@@ -74,6 +79,7 @@ void Renderer2D::Initialize() {
         auto ibo = rf->CreateBufferImpl(id);
         s_Data->QuadMesh->AddSubMesh({ "Quad", 0, 0, 0, 6, 4, std::move(vbo), std::move(ibo), false });
 
+        // ── 场景 VBO (Frames) ──
         for (uint32_t i = 0; i < FRAME_SLOTS; ++i) {
             auto& f = s_Data->Frames[i];
             BufferDesc bvd; bvd.type = BufferType::Vertex; bvd.size = MAX_BATCH_VERTICES * sizeof(Vertex); bvd.usage = BufferUsage::Dynamic;
@@ -91,6 +97,24 @@ void Renderer2D::Initialize() {
             f.IBO->UpdateData(bI.data(), (uint32_t)bI.size() * sizeof(uint32_t), 0);
             f.MeshObj->AddSubMesh({ "Batch", 0, 0, 0, 0, 0, f.VBO, f.IBO, false });
         }
+        // ── Gizmo VBO (GizmoFrames) — 动态 Ring Buffer，每帧更新 ──
+        for (uint32_t i = 0; i < FRAME_SLOTS; ++i) {
+            auto& f = s_Data->GizmoFrames[i];
+            BufferDesc bvd; bvd.type = BufferType::Vertex; bvd.size = MAX_BATCH_VERTICES * sizeof(Vertex); bvd.usage = BufferUsage::Dynamic;
+            f.VBO = rf->CreateBufferImpl(bvd);
+            BufferDesc bid; bid.type = BufferType::Index; bid.size = MAX_BATCH_INDICES * sizeof(uint32_t); bid.usage = BufferUsage::Dynamic;
+            f.IBO = rf->CreateBufferImpl(bid);
+            f.MeshObj = std::make_shared<Mesh>();
+            f.VertexBufferBase = new Vertex[MAX_BATCH_VERTICES];
+            f.VertexBufferPtr = f.VertexBufferBase;
+            std::vector<uint32_t> bI(MAX_BATCH_INDICES);
+            uint32_t off = 0;
+            for (uint32_t j = 0; j < MAX_BATCH_INDICES; j += 6) {
+                bI[j+0]=off+0; bI[j+1]=off+1; bI[j+2]=off+2; bI[j+3]=off+2; bI[j+4]=off+3; bI[j+5]=off+0; off+=4;
+            }
+            f.IBO->UpdateData(bI.data(), (uint32_t)bI.size() * sizeof(uint32_t), 0);
+            f.MeshObj->AddSubMesh({ "GizmoBatch", 0, 0, 0, 0, 0, f.VBO, f.IBO, false });
+        }
     }
 
     // [核心修复] 手动加载 2D 专用材质
@@ -98,18 +122,25 @@ void Renderer2D::Initialize() {
     if (rm) {
         uint32_t val = 0xFFFFFFFF; TextureDesc wD; wD.width = 1; wD.height = 1; wD.format = TextureFormat::RGBA8_UNorm;
         auto wT = rm->CreateTextureFromMemory(&val, sizeof(val), wD);
-        auto sS = rm->LoadShaderSync("assets/shaders/Renderer2D.frag.spv");
+        auto sS = rm->LoadShaderSync("assets/shaders/LitSprite.frag.spv");
         if (!sS) sS = rm->LoadShaderSync("DefaultPixel");
         if (sS) {
             s_Data->DefaultMaterial = std::make_shared<Material>(sS);
             s_Data->DefaultMaterial->SetParam("AlbedoMap", wT);
+            s_Data->DefaultMaterial->SetParam("LightMap", wT); // 默认白纹理作为 LightMap fallback
         }
     }
     if (!s_Data->DefaultMaterial) s_Data->DefaultMaterial = Material::CreateDefault();
 }
 
 void Renderer2D::Shutdown() {
-    if (s_Data) { for (int i = 0; i < FRAME_SLOTS; ++i) delete[] s_Data->Frames[i].VertexBufferBase; delete s_Data; s_Data = nullptr; }
+    if (s_Data) {
+        for (int i = 0; i < FRAME_SLOTS; ++i) {
+            delete[] s_Data->Frames[i].VertexBufferBase;
+            delete[] s_Data->GizmoFrames[i].VertexBufferBase;
+        }
+        delete s_Data; s_Data = nullptr;
+    }
 }
 
 void Renderer2D::BeginScene(const OrthographicCamera& camera) {
@@ -130,21 +161,82 @@ void Renderer2D::EndScene() {
     if (s_Data) s_Data->LastStats = s_Data->Stats;
 }
 
+void Renderer2D::BeginGizmo(const OrthographicCamera& camera) {
+    if (!s_Data) return;
+    s_Data->ViewProjection = camera.GetViewProjectionMatrix();
+    // 确保前一批次已提交
+    if (s_Data->BatchingEnabled) {
+        if (s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount > 0 ||
+            s_Data->GizmoFrames[s_Data->CurrentFrameSlot].QuadCount > 0) {
+            Flush();
+        }
+    }
+    s_Data->InGizmoMode = true;
+    s_Data->CurrentTexture = nullptr;
+    s_Data->Stats.QuadCount = 0;
+    auto& f = s_Data->GizmoFrames[s_Data->CurrentFrameSlot];
+    f.VertexBufferPtr = f.VertexBufferBase;
+    f.QuadCount = 0;
+}
+
+void Renderer2D::EndGizmo() {
+    if (!s_Data) return;
+    if (s_Data->BatchingEnabled) Flush();
+    s_Data->InGizmoMode = false;
+    s_Data->CurrentTexture = nullptr;
+    // 统计归入 Gizmo 的 Overlay Pass
+}
+
 void Renderer2D::Flush() {
     if (!s_Data) return;
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    auto& f = s_Data->InGizmoMode
+        ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot]
+        : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (f.QuadCount == 0) return;
     f.VBO->UpdateData(f.VertexBufferBase, (uint32_t)(f.VertexBufferPtr - f.VertexBufferBase) * sizeof(Vertex), 0);
     auto& sub = const_cast<std::vector<SubMeshBuffer>&>(f.MeshObj->GetSubMeshes());
     if (!sub.empty()) { sub[0].indexCount = f.QuadCount * 6; sub[0].vertexCount = f.QuadCount * 4; }
-    Material* m = s_Data->DefaultMaterial.get();
-    if (s_Data->CurrentTexture) {
-        auto tM = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader());
-        tM->SetParam("AlbedoMap", s_Data->CurrentTexture);
-        s_Data->FrameMaterials.push_back(tM);
-        m = tM.get();
+    
+    std::shared_ptr<Material> targetMaterial = s_Data->DefaultMaterial;
+    
+    // Gizmo 模式：始终用白色 LightMap（无光照效果），纯叠加
+    if (s_Data->InGizmoMode) {
+        if (s_Data->CurrentTexture) {
+            targetMaterial = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader());
+            targetMaterial->SetParam("AlbedoMap", s_Data->CurrentTexture);
+            // 白色 LightMap = 无光照
+            auto* p = s_Data->DefaultMaterial->GetParam("LightMap");
+            if (p) targetMaterial->SetParam("LightMap", *p);
+            s_Data->FrameMaterials.push_back(targetMaterial);
+        }
+        Renderer::SubmitGizmo(f.MeshObj.get(), targetMaterial.get(),
+            PrismaMath::mat4(1.0f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
+    } else {
+        // 场景模式：使用真实光照纹理
+        if (s_Data->CurrentTexture || s_Data->LightTexture) {
+            targetMaterial = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader());
+            
+            if (s_Data->CurrentTexture) {
+                targetMaterial->SetParam("AlbedoMap", s_Data->CurrentTexture);
+            } else {
+                auto* p = s_Data->DefaultMaterial->GetParam("AlbedoMap");
+                if (p) targetMaterial->SetParam("AlbedoMap", *p);
+            }
+            
+            if (s_Data->LightTexture) {
+                targetMaterial->SetParam("LightMap", s_Data->LightTexture);
+            } else {
+                auto* p = s_Data->DefaultMaterial->GetParam("LightMap");
+                if (p) targetMaterial->SetParam("LightMap", *p);
+            }
+            
+            s_Data->FrameMaterials.push_back(targetMaterial);
+        }
+        
+        Renderer::Submit(f.MeshObj.get(), targetMaterial.get(),
+            PrismaMath::mat4(1.0f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
     }
-    Renderer::Submit(f.MeshObj.get(), m, PrismaMath::mat4(1.0f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
+    
     s_Data->Stats.DrawCalls++;
     f.VertexBufferPtr = f.VertexBufferBase; f.QuadCount = 0;
 }
@@ -160,6 +252,68 @@ void Renderer2D::NextBatch() {
     if (s_Data->BatchingEnabled) Flush();
 }
 
+void Renderer2D::DrawNodesSoA() {
+    auto& em = EntityManager::Get();
+    auto* rb = em.GetRenderBuffer();
+    auto* tb = em.GetTransformBufferRead();
+    uint32_t count = em.GetAliveCount();
+
+    for (uint32_t i = 0; i < count; ++i) {
+        if (!rb->active[i]) continue;
+
+        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i] + rb->sizeW[i] * 0.5f, tb->posY[i] + rb->sizeH[i] * 0.5f, 0.0f));
+        if (std::abs(tb->rotation[i]) > 0.001f)
+            t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
+        t = glm::scale(t, glm::vec3(rb->sizeW[i], rb->sizeH[i], 1.0f));
+
+        DrawQuad(t, {rb->colorR[i], rb->colorG[i], rb->colorB[i], rb->colorA[i]});
+    }
+}
+
+void Renderer2D::DrawNode(Node node, const Prisma::Color& tint) {
+    if (!node.IsValid()) return;
+    uint32_t i = node.GetIndex();
+    auto& em = EntityManager::Get();
+    auto* rb = em.GetRenderBuffer();
+    auto* tb = em.GetTransformBufferRead();
+
+    Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i] + rb->sizeW[i] * 0.5f, tb->posY[i] + rb->sizeH[i] * 0.5f, 0.0f));
+    if (std::abs(tb->rotation[i]) > 0.001f)
+        t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
+    t = glm::scale(t, glm::vec3(rb->sizeW[i], rb->sizeH[i], 1.0f));
+
+    Prisma::Color color = { rb->colorR[i] * tint.r, rb->colorG[i] * tint.g, rb->colorB[i] * tint.b, rb->colorA[i] * tint.a };
+    DrawQuad(t, color);
+}
+
+void Renderer2D::DrawLine(const Vector2& start, const Vector2& end, const Prisma::Color& color, float thickness) {
+    Vector2 dir = end - start;
+    float length = glm::length(dir);
+    if (length < 0.0001f) return;
+
+    Vector2 center = start + dir * 0.5f;
+    float angle = std::atan2(dir.y, dir.x);
+
+    Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(center, 0.0f)) *
+                glm::rotate(glm::mat4(1.0f), angle, glm::vec3(0, 0, 1)) *
+                glm::scale(glm::mat4(1.0f), glm::vec3(length, thickness, 1.0f));
+    DrawQuad(t, color);
+}
+
+void Renderer2D::DrawRect(const Vector2& pos, const Vector2& size, const Prisma::Color& color, float thickness) {
+    float hw = size.x * 0.5f;
+    float hh = size.y * 0.5f;
+
+    // Top
+    DrawLine({pos.x - hw, pos.y + hh}, {pos.x + hw, pos.y + hh}, color, thickness);
+    // Bottom
+    DrawLine({pos.x - hw, pos.y - hh}, {pos.x + hw, pos.y - hh}, color, thickness);
+    // Left
+    DrawLine({pos.x - hw, pos.y - hh}, {pos.x - hw, pos.y + hh}, color, thickness);
+    // Right
+    DrawLine({pos.x + hw, pos.y - hh}, {pos.x + hw, pos.y + hh}, color, thickness);
+}
+
 void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const Prisma::Color& col) {
     if (!s_Data) return;
     if (!s_Data->BatchingEnabled) {
@@ -167,7 +321,7 @@ void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const Prisma:
         Renderer::Submit(s_Data->QuadMesh.get(), s_Data->DefaultMaterial.get(), t, col);
         s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
     }
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (s_Data->CurrentTexture != nullptr || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
     float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
     Vertex* v = f.VertexBufferPtr;
@@ -184,7 +338,7 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const Prisma::Color& col) {
         Renderer::Submit(s_Data->QuadMesh.get(), s_Data->DefaultMaterial.get(), trans, col);
         s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
     }
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (s_Data->CurrentTexture != nullptr || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
     PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
     Vertex* v = f.VertexBufferPtr;
@@ -204,8 +358,9 @@ void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const std::sh
         Renderer::Submit(s_Data->QuadMesh.get(), m.get(), t, tC);
         s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
     }
-    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    bool texChanged = tex != s_Data->CurrentTexture;
+    auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
     Vertex* v = f.VertexBufferPtr;
     v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {0, 1, 0, 0} };
@@ -223,8 +378,9 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>&
         Renderer::Submit(s_Data->QuadMesh.get(), m.get(), trans, tC);
         s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
     }
-    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    bool texChanged = tex != s_Data->CurrentTexture;
+    auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
     Vertex* v = f.VertexBufferPtr;
     v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {0, 1, 0, 0} };
@@ -237,8 +393,9 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>&
 void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const std::shared_ptr<ITexture>& tex, const Vector2 uv[4], const Prisma::Color& tC) {
     if (!s_Data) return;
     if (!s_Data->BatchingEnabled) { DrawQuad(pos, size, tex, tC); return; }
-    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    bool texChanged = tex != s_Data->CurrentTexture;
+    auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
     Vertex* v = f.VertexBufferPtr;
     v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {uv[0].x, uv[0].y, 0, 0} };
@@ -251,8 +408,9 @@ void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const std::sh
 void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>& tex, const Vector2 uv[4], const Prisma::Color& tC) {
     if (!s_Data) return;
     if (!s_Data->BatchingEnabled) { DrawQuad(trans, tex, tC); return; }
-    if (tex != s_Data->CurrentTexture || s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    bool texChanged = tex != s_Data->CurrentTexture;
+    auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
+    if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
     Vertex* v = f.VertexBufferPtr;
     v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {uv[0].x, uv[0].y, 0, 0} };
@@ -281,7 +439,7 @@ void Renderer2D::DrawString(const std::string& text, const Vector2& pos, float s
         }
         return;
     }
-    auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
+    auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (s_Data->CurrentTexture != nullptr) { NextBatch(); s_Data->CurrentTexture = nullptr; }
     float charSpacing = 6.0f * scale, pixelSize = 1.0f * scale; PrismaMath::vec4 tint = {color.r, color.g, color.b, color.a};
     Vector2 cur = pos;
@@ -312,5 +470,9 @@ void Renderer2D::ResetStats() { if (s_Data) s_Data->Stats = Statistics(); }
 Renderer2D::Statistics Renderer2D::GetStats() { return s_Data ? s_Data->LastStats : Statistics(); }
 void Renderer2D::SetBatchingEnabled(bool enabled) { if (s_Data) s_Data->BatchingEnabled = enabled; }
 bool Renderer2D::IsBatchingEnabled() { return s_Data ? s_Data->BatchingEnabled : false; }
+
+void Renderer2D::SetLightTexture(const std::shared_ptr<ITexture>& texture) {
+    if (s_Data) s_Data->LightTexture = texture;
+}
 
 } // namespace Prisma::Graphic

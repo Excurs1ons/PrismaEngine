@@ -310,6 +310,30 @@ void RenderDeviceVulkan::BeginFrame() {
     m_hasPendingPresent = false;
 }
 
+void RenderDeviceVulkan::SuspendDefaultRenderPass() {
+    if (!m_initialized || !m_frameActive || !m_isDefaultRenderPassActive)
+        return;
+    VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+    vkCmdEndRenderPass(cmd);
+    m_isDefaultRenderPassActive = false;
+}
+
+void RenderDeviceVulkan::ResumeDefaultRenderPass() {
+    if (!m_initialized || !m_frameActive || m_isDefaultRenderPassActive || !m_swapChain)
+        return;
+    VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+    VkRenderPassBeginInfo rpInfo{};
+    rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    rpInfo.renderPass        = m_swapChain->GetRenderPass();
+    rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
+    rpInfo.renderArea.extent = m_swapChain->GetExtent();
+    VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
+    rpInfo.clearValueCount   = 1;
+    rpInfo.pClearValues      = &clearColor;
+    vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
+    m_isDefaultRenderPassActive = true;
+}
+
 void RenderDeviceVulkan::EndFrame() {
     if (!m_initialized || !m_frameActive)
         return;

@@ -1,4 +1,5 @@
 #include "VulkanResources.h"
+#include "VulkanCommandBuffer.h"
 #include <algorithm>
 #include "Export.h"
 #include "logger/Logger.h"
@@ -21,6 +22,11 @@ VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage im
 
 VulkanTexture::~VulkanTexture() {
     if (m_device != VK_NULL_HANDLE) {
+        // [修复] 必须先释放离屏缓存中的 RenderPass/Framebuffer
+        // 原因：缓存的 Framebuffer 引用了此 ImageView，必须在 ImageView
+        //       销毁前从缓存中移除并释放，否则驱动会因野句柄而崩溃。
+        VulkanCommandBuffer::ReleaseOffscreenResources(m_imageView);
+
         // [修复] 必须显式销毁 ImageView
         // 原因：ImageView 是由 vkCreateImageView 创建的独立句柄，
         //       VMA 只管理 Image 和 Memory，不会自动销毁 View。

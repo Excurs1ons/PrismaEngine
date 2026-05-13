@@ -55,6 +55,10 @@ public:
 
     VkCommandBuffer GetVkCommandBuffer() const { return m_cmd; }
 
+    // === 离屏渲染资源管理 ===
+    static void ReleaseOffscreenResources(VkImageView imageView);
+    static void ReleaseAllOffscreenResources();
+
 private:
     VkCommandBuffer m_cmd;
     VkPipelineLayout m_currentLayout = VK_NULL_HANDLE;

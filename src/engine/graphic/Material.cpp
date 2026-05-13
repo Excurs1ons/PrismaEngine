@@ -122,42 +122,48 @@ void Material::SetRoughness(float roughness) {
 void Material::Bind(ICommandBuffer* cmd) {
     if (!cmd || !m_Shader) return;
 
-    // 绑定参数逻辑 (目前简化：仅处理 Set 0, Binding 0 为贴图的情况)
-    auto it = m_Params.find("AlbedoMap");
-    if (it != m_Params.end() && std::holds_alternative<std::shared_ptr<ITexture>>(it->second)) {
-        auto texture = std::get<std::shared_ptr<ITexture>>(it->second);
-        if (texture) {
-            // 获取或创建描述符集
-            if (!m_DescriptorSet) {
-                auto* engine = &Engine::Get();
-                auto* rf = engine->GetRenderSystem()->GetDevice()->GetResourceFactory();
-                
-                // 找到 Shader 中的第一个采样器资源信息
-                const ShaderResource* resInfo = m_Shader->FindResourceByBindPoint(0, 0);
-                if (resInfo) {
-                    std::vector<ShaderResource> resources = { *resInfo };
-                    
-                    // [改动] 直接使用成员变量管理生命周期
-                    // 目的：摆脱 void* 强转和全局静态变量 s_KeepAlive。
-                    // 过程：创建布局和描述符集并存入成员 shared_ptr。
-                    m_DescriptorSetLayout = rf->CreateDescriptorSetLayout(resources);
-                    m_DescriptorSet = rf->CreateDescriptorSet(m_DescriptorSetLayout.get());
-                    
-                    if (m_DescriptorSet) {
-                        // [修复] 仅在创建时绑定并更新一次
-                        // 原因：频繁调用 Update (vkUpdateDescriptorSets) 会导致描述符集在录制期间失效。
-                        //       对于静态材质参数，初始化一次即可。
-                        auto defaultSampler = Engine::Get().GetRenderResourceManager()->GetDefaultSampler();
-                        m_DescriptorSet->BindTexture(0, texture.get(), defaultSampler.get());
-                        m_DescriptorSet->Update();
-                    }
-                }
-            }
+    // 获取或创建描述符集（仅一次）
+    if (!m_DescriptorSet) {
+        auto* engine = &Engine::Get();
+        auto* rf = engine->GetRenderSystem()->GetDevice()->GetResourceFactory();
 
-            if (m_DescriptorSet) {
-                cmd->BindDescriptorSet(0, m_DescriptorSet.get());
+        // 收集着色器中所有与材质参数匹配的采样器资源信息
+        std::vector<ShaderResource> shaderResources;
+        for (const auto& [name, value] : m_Params) {
+            if (!std::holds_alternative<std::shared_ptr<ITexture>>(value))
+                continue;
+            const ShaderResource* resInfo = m_Shader->FindResource(name);
+            if (resInfo) {
+                shaderResources.push_back(*resInfo);
             }
         }
+
+        if (!shaderResources.empty()) {
+            m_DescriptorSetLayout = rf->CreateDescriptorSetLayout(shaderResources);
+            m_DescriptorSet = rf->CreateDescriptorSet(m_DescriptorSetLayout.get());
+
+            if (m_DescriptorSet) {
+                auto defaultSampler = Engine::Get().GetRenderResourceManager()->GetDefaultSampler();
+
+                // 遍历所有纹理参数，按资源名找到对应 binding 并绑定
+                for (const auto& [name, value] : m_Params) {
+                    if (!std::holds_alternative<std::shared_ptr<ITexture>>(value))
+                        continue;
+                    auto texture = std::get<std::shared_ptr<ITexture>>(value);
+                    if (!texture) continue;
+
+                    const ShaderResource* resInfo = m_Shader->FindResource(name);
+                    if (resInfo) {
+                        m_DescriptorSet->BindTexture(resInfo->Binding, texture.get(), defaultSampler.get());
+                    }
+                }
+                m_DescriptorSet->Update();
+            }
+        }
+    }
+
+    if (m_DescriptorSet) {
+        cmd->BindDescriptorSet(0, m_DescriptorSet.get());
     }
 }
 

@@ -2,9 +2,14 @@
 #include "DepthPrePass.h"
 #include "OpaquePass.h"
 #include "TransparentPass.h"
+#include "../../2d/Light2DPass.h"
 #include "../SkyboxRenderPass.h"
 #include "graphic/Renderer.h"
+#include "graphic/Renderer2D.h"
 #include "graphic/RenderCommandContext.h"
+#include "graphic/interfaces/IResourceManager.h"
+#include "graphic/interfaces/IResourceFactory.h"
+#include "app/Engine.h"
 #include "Logger.h"
 
 // Vulkan 特定代码支持
@@ -13,6 +18,13 @@
 #include "graphic/interfaces/IRenderTarget.h"
 
 namespace Prisma::Graphic {
+
+namespace {
+struct alignas(16) GizmoPushConstants {
+    PrismaMath::mat4 mvp;
+    Prisma::Color color;
+};
+}
 
 /**
  * @brief 内部渲染目标代理
@@ -62,6 +74,7 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
     m_depthPrePass = std::make_shared<DepthPrePass>();
     m_opaquePass = std::make_shared<OpaquePass>();
     m_opaquePass->SetDevice(device);
+    m_light2DPass = std::make_shared<Light2DPass>();
     m_skyboxPass = std::make_shared<SkyboxPass>();
     m_transparentPass = std::make_shared<TransparentPass>();
     return 0;
@@ -70,8 +83,33 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
 void ForwardPipeline::Shutdown() {
     m_depthPrePass.reset();
     m_opaquePass.reset();
+    m_light2DPass.reset();
     m_skyboxPass.reset();
     m_transparentPass.reset();
+    m_gizmoPSO.reset();
+    m_gizmoVertShader.reset();
+    m_gizmoFragShader.reset();
+}
+
+void ForwardPipeline::EnsureGizmoPSO() {
+    if (m_gizmoPSO) return;
+    auto rm = Engine::Get().GetRenderResourceManager();
+    if (!rm || !m_device) return;
+
+    m_gizmoVertShader = rm->LoadShaderSync("assets/shaders/Renderer2D.vert.spv");
+    m_gizmoFragShader = rm->LoadShaderSync("assets/shaders/UnlitVertex.frag.spv");
+    if (!m_gizmoVertShader || !m_gizmoFragShader) return;
+
+    auto pso = m_device->GetResourceFactory()->CreatePipelineStateImpl();
+    if (!pso) return;
+    pso->SetShader(ShaderType::Vertex, m_gizmoVertShader);
+    pso->SetShader(ShaderType::Pixel, m_gizmoFragShader);
+    pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+    RasterizerState rs; rs.cullMode = CullMode::None;
+    pso->SetRasterizerState(rs);
+    if (pso->Create(m_device)) {
+        m_gizmoPSO = std::shared_ptr<IPipelineState>(std::move(pso));
+    }
 }
 
 void ForwardPipeline::Execute(const RenderContext& ctx) {
@@ -124,6 +162,32 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         m_depthPrePass->Execute(passContext);
     }
 
+    // ⚡ Light2DPass 先于 OpaquePass 执行，确保光照纹理在场景渲染前准备就绪
+    // 渲染结果会通过 SetLightTexture 传递给下一帧的 Renderer2D（一帧延迟可接受）
+    //
+    // [修复] Vulkan 禁止嵌套 RenderPass。BeginFrame 已开启交换链 RP，
+    //        Light2DPass 需要自己的离屏 RP，因此必须先暂停交换链 RP。
+    auto* vkDev = dynamic_cast<Vulkan::RenderDeviceVulkan*>(ctx.device);
+    if (vkDev && !ctx.targetTexture) {
+        vkDev->SuspendDefaultRenderPass();
+    }
+
+    if (m_light2DPass) {
+        m_light2DPass->SetViewMatrix(view);
+        m_light2DPass->SetProjectionMatrix(proj);
+        m_light2DPass->Execute(passContext);
+        if (ctx.commandBuffer) {
+            m_light2DPass->ExecuteLight(ctx.commandBuffer, m_device, ctx.width, ctx.height);
+        }
+        // 将光照纹理传递给 Renderer2D，下一帧 OpaquePass 采样合成
+        Renderer2D::SetLightTexture(m_light2DPass->GetLightTexture());
+    }
+
+    // Light2DPass 完成后，重新开启交换链 RP 供后续 Pass 使用
+    if (vkDev && !ctx.targetTexture) {
+        vkDev->ResumeDefaultRenderPass();
+    }
+
     if (m_opaquePass) {
         m_opaquePass->SetViewMatrix(view);
         m_opaquePass->SetProjectionMatrix(proj);
@@ -145,6 +209,41 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         m_transparentPass->SetViewMatrix(view);
         m_transparentPass->SetProjectionMatrix(proj);
         m_transparentPass->Execute(passContext);
+    }
+
+    // ── Gizmo Overlay Pass ──
+    // 在场景渲染完成后绘制 Gizmo（网格、坐标轴、HUD），
+    // 使用 UnlitVertex 着色器（纯顶点色，无纹理无光照）。
+    if (ctx.commandBuffer) {
+        const auto& gizmoCommands = Renderer::GetGizmoQueue();
+        if (!gizmoCommands.empty()) {
+            EnsureGizmoPSO();
+            if (m_gizmoPSO) {
+                ctx.commandBuffer->SetPipelineState(m_gizmoPSO.get());
+                float w = ctx.width > 0 ? (float)ctx.width : 1.0f;
+                float h = ctx.height > 0 ? (float)ctx.height : 1.0f;
+                ctx.commandBuffer->SetViewport(Viewport{0.0f, 0.0f, w, h, 0.0f, 1.0f});
+                ctx.commandBuffer->SetScissorRect(Rect{0, 0, (int)w, (int)h});
+
+                for (const auto& cmd : gizmoCommands) {
+                    if (!cmd.mesh) continue;
+                    GizmoPushConstants pc{};
+                    pc.mvp = proj * view * cmd.transform;
+                    pc.color = cmd.color;
+                    ctx.commandBuffer->PushConstants(ShaderType::Vertex, &pc, sizeof(pc));
+                    ctx.commandBuffer->PushConstants(ShaderType::Pixel, &pc, sizeof(pc));
+
+                    for (const auto& subMesh : cmd.mesh->GetSubMeshes()) {
+                        if (subMesh.vertexBuffer && subMesh.indexBuffer) {
+                            ctx.commandBuffer->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                            ctx.commandBuffer->SetIndexBuffer(subMesh.indexBuffer.get());
+                            ctx.commandBuffer->DrawIndexed(subMesh.indexCount);
+                        }
+                    }
+                }
+            }
+            Renderer::ClearGizmoQueue();
+        }
     }
 }
 

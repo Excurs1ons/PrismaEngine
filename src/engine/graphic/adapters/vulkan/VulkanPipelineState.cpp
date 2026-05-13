@@ -14,6 +14,46 @@ namespace Prisma::Graphic::Vulkan {
 
 namespace fs = std::filesystem;
 
+// ============================================================
+// 辅助函数：BlendFactorType → VkBlendFactor
+// ============================================================
+static VkBlendFactor ToVkBlendFactor(BlendFactorType factor) {
+    switch (factor) {
+        case BlendFactorType::Zero:         return VK_BLEND_FACTOR_ZERO;
+        case BlendFactorType::One:          return VK_BLEND_FACTOR_ONE;
+        case BlendFactorType::SrcColor:     return VK_BLEND_FACTOR_SRC_COLOR;
+        case BlendFactorType::InvSrcColor:  return VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR;
+        case BlendFactorType::SrcAlpha:     return VK_BLEND_FACTOR_SRC_ALPHA;
+        case BlendFactorType::InvSrcAlpha:  return VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        case BlendFactorType::DstAlpha:     return VK_BLEND_FACTOR_DST_ALPHA;
+        case BlendFactorType::InvDstAlpha:  return VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+        case BlendFactorType::DstColor:     return VK_BLEND_FACTOR_DST_COLOR;
+        case BlendFactorType::InvDstColor:  return VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR;
+        case BlendFactorType::SrcAlphaSat:  return VK_BLEND_FACTOR_SRC_ALPHA_SATURATE;
+        case BlendFactorType::BlendFactor:  return VK_BLEND_FACTOR_CONSTANT_COLOR;
+        case BlendFactorType::InvBlendFactor: return VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR;
+        case BlendFactorType::Src1Color:    return VK_BLEND_FACTOR_SRC1_COLOR;
+        case BlendFactorType::InvSrc1Color: return VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR;
+        case BlendFactorType::Src1Alpha:    return VK_BLEND_FACTOR_SRC1_ALPHA;
+        case BlendFactorType::InvSrc1Alpha: return VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA;
+        default:                            return VK_BLEND_FACTOR_ONE;
+    }
+}
+
+// ============================================================
+// 辅助函数：BlendOp → VkBlendOp
+// ============================================================
+static VkBlendOp ToVkBlendOp(BlendOp op) {
+    switch (op) {
+        case BlendOp::Add:         return VK_BLEND_OP_ADD;
+        case BlendOp::Subtract:    return VK_BLEND_OP_SUBTRACT;
+        case BlendOp::RevSubtract: return VK_BLEND_OP_REVERSE_SUBTRACT;
+        case BlendOp::Min:         return VK_BLEND_OP_MIN;
+        case BlendOp::Max:         return VK_BLEND_OP_MAX;
+        default:                   return VK_BLEND_OP_ADD;
+    }
+}
+
 VulkanPipelineState::VulkanPipelineState() {
     m_blendState = BlendState::Default;
     m_rasterizerState = RasterizerState::Default;
@@ -288,15 +328,17 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     multisampling.sampleShadingEnable = VK_FALSE;
     multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
+    // [修复] 从 m_blendState 读取混合状态，不再硬编码 alpha blending
+    // 此前硬编码为 srcAlpha / oneMinusSrcAlpha，导致 additive blending（如 2D 光照叠加）失效
     VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    colorBlendAttachment.blendEnable = VK_TRUE;
-    colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-    colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    colorBlendAttachment.blendEnable = m_blendState.blendEnable ? VK_TRUE : VK_FALSE;
+    colorBlendAttachment.colorWriteMask = m_blendState.writeMask; // 0xF = RGBA，与 VK 常量值一致
+    colorBlendAttachment.srcColorBlendFactor = ToVkBlendFactor(m_blendState.srcBlend);
+    colorBlendAttachment.dstColorBlendFactor = ToVkBlendFactor(m_blendState.destBlend);
+    colorBlendAttachment.colorBlendOp = ToVkBlendOp(m_blendState.blendOp);
+    colorBlendAttachment.srcAlphaBlendFactor = ToVkBlendFactor(m_blendState.srcBlendAlpha);
+    colorBlendAttachment.dstAlphaBlendFactor = ToVkBlendFactor(m_blendState.destBlendAlpha);
+    colorBlendAttachment.alphaBlendOp = ToVkBlendOp(m_blendState.blendOpAlpha);
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;

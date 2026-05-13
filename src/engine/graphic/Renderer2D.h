@@ -7,6 +7,10 @@
 #include <vector>
 
 namespace Prisma {
+    struct Node;
+}
+
+namespace Prisma {
 namespace Graphic {
 
 class ITexture;
@@ -36,7 +40,19 @@ public:
     static void EndScene();
     static void Flush();
 
+    // Gizmo 覆盖层（不受光照影响）
+    static void BeginGizmo(const OrthographicCamera& camera);
+    static void EndGizmo();
+
     // ========== 绘制接口 ==========
+
+    // 绘制 SoA 节点 (从 EntityManager 自动提取数据)
+    static void DrawNodesSoA();
+    static void DrawNode(Node node, const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
+
+    // 调试与 Gizmos
+    static void DrawLine(const Vector2& start, const Vector2& end, const Prisma::Color& color, float thickness = 1.0f);
+    static void DrawRect(const Vector2& position, const Vector2& size, const Prisma::Color& color, float thickness = 1.0f);
 
     // 绘制实心矩形
     static void DrawQuad(const Vector2& position, const Vector2& size, const Prisma::Color& color);
@@ -62,6 +78,9 @@ public:
     // 控制合批开关
     static void SetBatchingEnabled(bool enabled);
     static bool IsBatchingEnabled();
+
+    // 设置光照纹理
+    static void SetLightTexture(const std::shared_ptr<ITexture>& texture);
 
 private:
     static void StartBatch();
