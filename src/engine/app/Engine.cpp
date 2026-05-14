@@ -322,7 +322,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
 #endif
 
             // [正确双缓冲] C++ 是唯一的交换权威。
-            // C# 每帧通过 GetTransformBufferA(Write)/B(Read) 重新查询指针，
+            // C# 每帧通过 GetTransformA(Write)/GetTransformB(Read) 重新查询指针，
             // C++ 在这里交换，使下一帧 C# 拿到正确的 Read/Write。
 #if PRISMA_ENABLE_SCRIPTING > 0
             EntityManager::Get().SwapBuffers();

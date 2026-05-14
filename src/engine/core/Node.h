@@ -12,8 +12,8 @@ namespace Prisma {
 static constexpr uint32_t kMaxVirtualEntities = 1024 * 1024; // 1M VA 上限
 static constexpr uint32_t kCommitStep = 16384;                // 每次提交 16K 槽位
 
-// Transform 双缓冲 SoA — 字段为指针，指向 VA block 内的固定偏移
-struct TransformBufferSoA {
+// Transform 双缓冲数据布局 — 字段为指针，指向 VA block 内的固定偏移
+struct TransformDataLayout {
     float* posX;
     float* posY;
     float* rotation;
@@ -21,8 +21,8 @@ struct TransformBufferSoA {
     float* scaleY;
 };
 
-// Render SoA（无缓冲）
-struct RenderBufferSoA {
+// Render 数据布局（单缓冲）
+struct RenderDataLayout {
     uint32_t* active;
     uint32_t* generation;
     float*    colorR;
@@ -37,7 +37,7 @@ struct RenderBufferSoA {
 // Node - 轻量级实体句柄
 // ============================================================================
 // 模仿 C# Node 设计，仅包含一个 uint32_t 句柄。
-// 属性访问直接指向底层的 SoA 缓冲区，实现零开销跨语言访问。
+// 属性访问直接指向底层的数据布局缓冲区，实现零开销跨语言访问。
 
 struct ENGINE_API Node {
 public:
@@ -52,7 +52,7 @@ public:
     uint32_t GetIndex() const { return handle & 0xFFFF; }
     uint32_t GetGeneration() const { return handle >> 16; }
 
-    // Transform 属性快捷访问 (自动指向当前活跃的 SoA 缓冲区)
+    // Transform 属性快捷访问 (自动指向当前活跃的数据缓冲区)
     float GetX() const;
     float GetY() const;
     Vector2 GetPosition() const { return { GetX(), GetY() }; }

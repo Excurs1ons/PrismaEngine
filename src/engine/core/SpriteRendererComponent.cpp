@@ -6,7 +6,7 @@ namespace Core {
 
 void SpriteRendererComponent::WriteToSoA(uint32_t entityIndex) const {
     auto& em = EntityManager::Get();
-    auto* rb = em.GetRenderBuffer();
+    auto* rb = em.GetRenderData();
     rb->colorR[entityIndex] = color.r;
     rb->colorG[entityIndex] = color.g;
     rb->colorB[entityIndex] = color.b;

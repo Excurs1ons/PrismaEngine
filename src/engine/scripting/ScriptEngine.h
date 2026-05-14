@@ -18,9 +18,9 @@ struct PrismaAPI {
     uint32_t (*createEntity)();
     void (*destroyEntity)(uint32_t handle);
     
-    TransformBufferSoA* (*getTransformBufferA)();
-    TransformBufferSoA* (*getTransformBufferB)();
-    RenderBufferSoA*    (*getRenderBuffer)();
+    TransformDataLayout* (*getTransformA)();
+    TransformDataLayout* (*getTransformB)();
+    RenderDataLayout*    (*getRenderData)();
     
     bool (*isKeyDown)(int key);
     float (*getMouseX)();
@@ -74,9 +74,9 @@ public:
 private:
     static uint32_t S_CreateEntity();
     static void     S_DestroyEntity(uint32_t handle);
-    static TransformBufferSoA* S_GetTransformBufferA();
-    static TransformBufferSoA* S_GetTransformBufferB();
-    static RenderBufferSoA*    S_GetRenderBuffer();
+    static TransformDataLayout* S_GetTransformA();
+    static TransformDataLayout* S_GetTransformB();
+    static RenderDataLayout*    S_GetRenderData();
     static void     S_SetCameraPos(float x, float y);
     static void     S_GetCameraPos(float* x, float* y);
     static uint32_t S_GetEntityCapacity();

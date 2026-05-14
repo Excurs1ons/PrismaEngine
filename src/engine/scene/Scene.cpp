@@ -149,7 +149,7 @@ bool Scene::Deserialize(const std::string& path) {
         if (ed.spriteRenderer) {
             auto& sr = *ed.spriteRenderer;
             auto& em = EntityManager::Get();
-            auto* rb = em.GetRenderBuffer();
+            auto* rb = em.GetRenderData();
             uint32_t idx = node.GetIndex();
             rb->colorR[idx] = sr.color[0];
             rb->colorG[idx] = sr.color[1];
@@ -179,7 +179,7 @@ bool Scene::Serialize(const std::string& path) const {
 
         // TODO: 从 SoA 读取 spriteRenderer 数据
         // auto& em = EntityManager::Get();
-        // auto* rb = em.GetRenderBuffer();
+        // auto* rb = em.GetRenderData();
         // uint32_t idx = node.GetIndex();
         // SpriteRendererData sr;
         // sr.color = { rb->colorR[idx], rb->colorG[idx], rb->colorB[idx], rb->colorA[idx] };

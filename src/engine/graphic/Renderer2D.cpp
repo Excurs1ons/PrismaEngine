@@ -254,8 +254,8 @@ void Renderer2D::NextBatch() {
 
 void Renderer2D::DrawNodesSoA() {
     auto& em = EntityManager::Get();
-    auto* rb = em.GetRenderBuffer();
-    auto* tb = em.GetTransformBufferRead();
+    auto* rb = em.GetRenderData();
+    auto* tb = em.GetTransformRead();
     uint32_t count = em.GetAliveCount();
 
     for (uint32_t i = 0; i < count; ++i) {
@@ -274,8 +274,8 @@ void Renderer2D::DrawNode(Node node, const Prisma::Color& tint) {
     if (!node.IsValid()) return;
     uint32_t i = node.GetIndex();
     auto& em = EntityManager::Get();
-    auto* rb = em.GetRenderBuffer();
-    auto* tb = em.GetTransformBufferRead();
+    auto* rb = em.GetRenderData();
+    auto* tb = em.GetTransformRead();
 
     Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i] + rb->sizeW[i] * 0.5f, tb->posY[i] + rb->sizeH[i] * 0.5f, 0.0f));
     if (std::abs(tb->rotation[i]) > 0.001f)

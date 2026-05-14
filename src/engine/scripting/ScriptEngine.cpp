@@ -49,18 +49,18 @@ void ScriptEngine::S_DestroyEntity(uint32_t h) {
     EntityManager::Get().DestroyNode(h); 
 }
 
-TransformBufferSoA* ScriptEngine::S_GetTransformBufferA() { 
+TransformDataLayout* ScriptEngine::S_GetTransformA() { 
     // C++ Write 缓冲区：C# 脚本往这里写
-    return EntityManager::Get().GetTransformBufferWrite();
+    return EntityManager::Get().GetTransformWrite();
 }
 
-TransformBufferSoA* ScriptEngine::S_GetTransformBufferB() { 
+TransformDataLayout* ScriptEngine::S_GetTransformB() { 
     // C++ Read 缓冲区：C# 从这里读取上一帧的已提交数据
-    return EntityManager::Get().GetTransformBufferRead();
+    return EntityManager::Get().GetTransformRead();
 }
 
-RenderBufferSoA* ScriptEngine::S_GetRenderBuffer() { 
-    return EntityManager::Get().GetRenderBuffer(); 
+RenderDataLayout* ScriptEngine::S_GetRenderData() { 
+    return EntityManager::Get().GetRenderData(); 
 }
 
 uint32_t ScriptEngine::S_GetEntityCapacity() { 
@@ -154,9 +154,9 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
     m_api.log = S_Log;
     m_api.createEntity = S_CreateEntity;
     m_api.destroyEntity = S_DestroyEntity;
-    m_api.getTransformBufferA = S_GetTransformBufferA;
-    m_api.getTransformBufferB = S_GetTransformBufferB;
-    m_api.getRenderBuffer = S_GetRenderBuffer;
+    m_api.getTransformA = S_GetTransformA;
+    m_api.getTransformB = S_GetTransformB;
+    m_api.getRenderData = S_GetRenderData;
     m_api.isKeyDown = S_IsKeyDown;
     m_api.getMouseX = S_GetMouseX;
     m_api.getMouseY = S_GetMouseY;

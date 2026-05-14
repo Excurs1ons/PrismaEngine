@@ -33,7 +33,7 @@ EntityManager::~EntityManager() {
 }
 
 void EntityManager::initLayoutPointers() {
-    auto initTransform = [](TransformBufferSoA& layout, void* base) {
+    auto initTransform = [](TransformDataLayout& layout, void* base) {
         auto* bytes = (uint8_t*)base;
         layout.posX     = (float*)(bytes + 0 * kFieldStride);
         layout.posY     = (float*)(bytes + 1 * kFieldStride);
@@ -42,7 +42,7 @@ void EntityManager::initLayoutPointers() {
         layout.scaleY   = (float*)(bytes + 4 * kFieldStride);
     };
 
-    auto initRender = [](RenderBufferSoA& layout, void* base) {
+    auto initRender = [](RenderDataLayout& layout, void* base) {
         auto* bytes = (uint8_t*)base;
         layout.active     = (uint32_t*)(bytes + 0 * kFieldStride);
         layout.generation = (uint32_t*)(bytes + 1 * kFieldStride);
@@ -134,11 +134,11 @@ void EntityManager::SwapBuffers() {
     m_writeIndex = 1 - m_writeIndex;
 }
 
-TransformBufferSoA* EntityManager::GetTransformBufferRead() {
+TransformDataLayout* EntityManager::GetTransformRead() {
     return (m_writeIndex == 1) ? &m_layoutA : &m_layoutB;
 }
 
-TransformBufferSoA* EntityManager::GetTransformBufferWrite() {
+TransformDataLayout* EntityManager::GetTransformWrite() {
     return (m_writeIndex == 0) ? &m_layoutA : &m_layoutB;
 }
 
