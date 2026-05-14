@@ -22,13 +22,16 @@ namespace Prisma.Generators
         public sealed override async Task RegisterCodeFixesAsync(CodeFixContext context)
         {
             var root = await context.Document.GetSyntaxRootAsync(context.CancellationToken).ConfigureAwait(false);
+            if (root == null) return;
             var diagnostic = context.Diagnostics.First();
+            var diagnosticSpan = diagnostic.Location.SourceSpan;
             
             // 情况 1：修复缺失的 override
             if (diagnostic.Id == LifecycleAnalyzer.DiagnosticId)
             {
-                var diagnosticSpan = diagnostic.Location.SourceSpan;
-                var methodDeclaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().First();
+                var token = root.FindToken(diagnosticSpan.Start);
+                if (token.Parent == null) return;
+                var methodDeclaration = token.Parent.AncestorsAndSelf().OfType<MethodDeclarationSyntax>().First();
 
                 context.RegisterCodeFix(
                     CodeAction.Create(
@@ -37,11 +40,12 @@ namespace Prisma.Generators
                         equivalenceKey: "Add 'override' modifier"),
                     diagnostic);
             }
-            // 情况 2：在类上提供“生成生命周期模板�?
+            // 情况 2：在类上提供"生成生命周期模板"
             else if (diagnostic.Id == PartialClassAnalyzer.DiagnosticId)
             {
-                var diagnosticSpan = diagnostic.Location.SourceSpan;
-                var classDeclaration = root.FindToken(diagnosticSpan.Start).Parent.AncestorsAndSelf().OfType<ClassDeclarationSyntax>().First();
+                var token = root.FindToken(diagnosticSpan.Start);
+                if (token.Parent == null) return;
+                var classDeclaration = token.Parent.AncestorsAndSelf().OfType<ClassDeclarationSyntax>().First();
 
                 context.RegisterCodeFix(
                     CodeAction.Create(
@@ -59,14 +63,16 @@ namespace Prisma.Generators
             var newMethodDeclaration = methodDeclaration.WithModifiers(newModifiers);
 
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            if (root == null) return document;
             var newRoot = root.ReplaceNode(methodDeclaration, newMethodDeclaration);
+            if (newRoot == null) return document;
 
             return document.WithSyntaxRoot(newRoot);
         }
 
         private async Task<Document> GenerateLifecycleAsync(Document document, ClassDeclarationSyntax classDeclaration, CancellationToken cancellationToken)
         {
-            // 生成 OnStart �?OnUpdate
+            // 生成 OnStart 和 OnUpdate
             var onStart = SyntaxFactory.MethodDeclaration(
                 SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.VoidKeyword)), "OnStart")
                 .AddModifiers(SyntaxFactory.Token(SyntaxKind.PublicKeyword), SyntaxFactory.Token(SyntaxKind.OverrideKeyword))
@@ -80,14 +86,14 @@ namespace Prisma.Generators
                     SyntaxFactory.Parameter(SyntaxFactory.Identifier("input")).WithType(SyntaxFactory.ParseTypeName("InputContext")))
                 .WithBody(SyntaxFactory.Block());
 
-            // 检查是否已经存�?
+            // 检查是否已经存在
             var existingMethods = classDeclaration.Members.OfType<MethodDeclarationSyntax>().Select(m => m.Identifier.Text).ToList();
             var newMembers = classDeclaration.Members;
             
             if (!existingMethods.Contains("OnStart")) newMembers = newMembers.Add(onStart);
             if (!existingMethods.Contains("OnUpdate")) newMembers = newMembers.Add(onUpdate);
 
-            // 同时也补�?partial (因为这个 Fix 是在 PartialAnalyzer 触发�?
+            // 同时也补上 partial (因为这个 Fix 是在 PartialAnalyzer 触发的)
             var newModifiers = classDeclaration.Modifiers;
             if (!newModifiers.Any(SyntaxKind.PartialKeyword))
                 newModifiers = newModifiers.Add(SyntaxFactory.Token(SyntaxKind.PartialKeyword));
@@ -95,7 +101,9 @@ namespace Prisma.Generators
             var newClassDeclaration = classDeclaration.WithMembers(newMembers).WithModifiers(newModifiers);
 
             var root = await document.GetSyntaxRootAsync(cancellationToken).ConfigureAwait(false);
+            if (root == null) return document;
             var newRoot = root.ReplaceNode(classDeclaration, newClassDeclaration);
+            if (newRoot == null) return document;
 
             return document.WithSyntaxRoot(newRoot);
         }

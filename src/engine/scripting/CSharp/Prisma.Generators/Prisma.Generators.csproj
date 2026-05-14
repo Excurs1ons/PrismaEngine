@@ -6,6 +6,7 @@
     <IsRoslynComponent>true</IsRoslynComponent>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
+
     <!-- 源码生成器不是运行时依赖，不参与 publish trimming -->
     <PublishTrimmed>false</PublishTrimmed>
 
