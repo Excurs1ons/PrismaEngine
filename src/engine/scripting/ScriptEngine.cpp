@@ -197,6 +197,17 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
     m_api.srpDestroyTexture = SRP_DestroyTexture;
     m_api.srpBeginFrame = SRP_BeginFrame;
     m_api.srpEndFrame = SRP_EndFrame;
+    m_api.srpCmdBeginRenderPass = SRP_CmdBeginRenderPass;
+    m_api.srpCmdEndRenderPass = SRP_CmdEndRenderPass;
+    m_api.srpCmdBindPipeline = SRP_CmdBindPipeline;
+    m_api.srpCmdBindVertexBuffer = SRP_CmdBindVertexBuffer;
+    m_api.srpCmdBindIndexBuffer = SRP_CmdBindIndexBuffer;
+    m_api.srpCmdSetViewport = SRP_CmdSetViewport;
+    m_api.srpCmdSetScissor = SRP_CmdSetScissor;
+    m_api.srpCmdPushConstants = SRP_CmdPushConstants;
+    m_api.srpCmdDraw = SRP_CmdDraw;
+    m_api.srpCmdDrawIndexed = SRP_CmdDrawIndexed;
+    m_api.srpCmdDrawFullScreenQuad = SRP_CmdDrawFullScreenQuad;
     m_api.srpShutdown = SRP_Shutdown;
 
     const std::string& scriptsDir = host.GetScriptsDir();

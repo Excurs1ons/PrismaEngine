@@ -1,7 +1,7 @@
 namespace Prisma.SRP;
 
 /// <summary>
-/// 单个渲染 Pass。封装 GPU pipeline + uniform 绑定。
+/// 单个渲染 Pass。封装 GPU pipeline + uniform 绑定 + 命令录制。
 /// </summary>
 public class RenderPass : IDisposable
 {
@@ -12,6 +12,10 @@ public class RenderPass : IDisposable
     public bool IsFinal { get; init; }
     public MinecraftUniforms Uniforms { get; }
 
+    // 渲染目标句柄（由管线分配）
+    internal uint ColorRT;
+    internal uint DepthRT;
+
     internal RenderPass(string name, uint vs, uint fs, uint pipeline, MinecraftUniforms uniforms)
     {
         Name = name;
@@ -21,16 +25,39 @@ public class RenderPass : IDisposable
         Uniforms = uniforms;
     }
 
-    /// <summary>执行该 Pass。</summary>
+    /// <summary>
+    /// 录制并提交该 Pass 的渲染命令。
+    /// C# SRP 控制每个 Pass 的完整命令流。
+    /// </summary>
     public virtual void Execute()
     {
         unsafe
         {
-            Interop.API.SrpBeginFrame();
-            // TODO: cmdBeginRenderPass + cmdBindPipeline + push uniforms + draw + cmdEndRenderPass
-            // These command-buffer-level APIs will be added in the next iteration
-            Interop.API.SrpEndFrame();
+            // 绑定管线
+            Interop.API.SrpCmdBindPipeline(Pipeline);
+
+            // Viewport 覆盖全屏
+            int w = 1280, h = 720; // TODO: get from engine
+            Interop.API.SrpCmdSetViewport(0, 0, w, h);
+            Interop.API.SrpCmdSetScissor(0, 0, w, h);
+
+            // 对 composite-style Pass：绘制全屏四边形
+            // 对 gbuffers-style Pass：后续会绑定 VB/IB + 绘制区块
+            if (Name.StartsWith("composite") || Name == "final" || Name == "deferred")
+            {
+                // Push uniforms
+                PushUniforms();
+                Interop.API.SrpCmdDrawFullScreenQuad();
+            }
+            // gbuffers/shadow Pass 由外部额外调用 DrawChunk 系列命令
         }
+    }
+
+    /// <summary>推送 Minecraft uniform 数据到 GPU。</summary>
+    protected virtual void PushUniforms()
+    {
+        // TODO: 填充 UBO / push constants
+        // 通过 Interop.API.SrpCmdPushConstants(...) 或描述符集更新
     }
 
     public void Dispose()

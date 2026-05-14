@@ -99,7 +99,20 @@ void SRPGraphicsAPI::DestroyPipeline(PipelineHandle h) {
 // === Render Target (TODO) ===
 
 RenderTargetHandle SRPGraphicsAPI::CreateRenderTarget(int, int, uint32_t, int) { return 0; }
-DepthTargetHandle SRPGraphicsAPI::CreateDepthTarget(int, int, uint32_t) { return 0; }
+DepthTargetHandle SRPGraphicsAPI::CreateDepthTarget(int w, int h, uint32_t format) {
+    auto* fac = GetFactory(); if (!fac) return 0;
+    G::TextureDesc td;
+    td.type = G::TextureType::Texture2D;
+    td.format = static_cast<G::TextureFormat>(format);
+    td.width = (uint32_t)w; td.height = (uint32_t)h;
+    td.allowRenderTarget = true;
+    td.allowDepthStencil = true;
+    auto tex = fac->CreateTextureImpl(td);
+    if (!tex) return 0;
+    DepthTargetHandle hdl = (DepthTargetHandle)(m_depthTargets.size() + 1);
+    m_depthTargets.push_back(std::shared_ptr<G::ITexture>(std::move(tex)));
+    return hdl;
+}
 void SRPGraphicsAPI::DestroyRenderTarget(RenderTargetHandle) {}
 void SRPGraphicsAPI::DestroyDepthTarget(DepthTargetHandle) {}
 
@@ -129,11 +142,21 @@ TextureHandle SRPGraphicsAPI::CreateTexture2D(int, int, uint32_t, const void*, u
 void SRPGraphicsAPI::DestroyTexture(TextureHandle) {}
 
 // === Frame ===
+void SRPGraphicsAPI::BeginFrame() {}
+void SRPGraphicsAPI::EndFrame() {}
 
-void SRPGraphicsAPI::BeginFrame() {
-    auto* rs = Prisma::Engine::Get().GetRenderSystem();
-    if (rs) rs->BeginFrame();
-}
+// === Command Buffer (stubs - will use srpRender callback instead) ===
+void SRPGraphicsAPI::CmdBeginRenderPass(uint32_t, const uint32_t*, uint32_t, const float*, float, int, int) {}
+void SRPGraphicsAPI::CmdEndRenderPass() {}
+void SRPGraphicsAPI::CmdBindPipeline(PipelineHandle) {}
+void SRPGraphicsAPI::CmdBindVertexBuffer(BufferHandle, uint32_t, uint32_t) {}
+void SRPGraphicsAPI::CmdBindIndexBuffer(BufferHandle, uint32_t, int) {}
+void SRPGraphicsAPI::CmdSetViewport(int, int, int, int) {}
+void SRPGraphicsAPI::CmdSetScissor(int, int, int, int) {}
+void SRPGraphicsAPI::CmdPushConstants(uint32_t, uint32_t, const void*) {}
+void SRPGraphicsAPI::CmdDraw(uint32_t, uint32_t, uint32_t) {}
+void SRPGraphicsAPI::CmdDrawIndexed(uint32_t, uint32_t, uint32_t, int32_t) {}
+void SRPGraphicsAPI::CmdDrawFullScreenQuad() {}
 
 void SRPGraphicsAPI::Shutdown() {
     m_shaders.clear(); m_pipelines.clear();
@@ -157,7 +180,20 @@ void SRP_DestroyBuffer(uint32_t h) { SRPGraphicsAPI::Get().DestroyBuffer(h); }
 uint32_t SRP_CreateTexture2D(int w, int h, uint32_t f, const void* p, uint32_t ps) { return SRPGraphicsAPI::Get().CreateTexture2D(w, h, f, p, ps); }
 void SRP_DestroyTexture(uint32_t h) { SRPGraphicsAPI::Get().DestroyTexture(h); }
 void SRP_BeginFrame() { SRPGraphicsAPI::Get().BeginFrame(); }
-void SRP_EndFrame() {}
+void SRP_EndFrame() { SRPGraphicsAPI::Get().EndFrame(); }
+
+void SRP_CmdBeginRenderPass(uint32_t rc, const uint32_t* rh, uint32_t dh, const float* cc, float dc, int vw, int vh) { SRPGraphicsAPI::Get().CmdBeginRenderPass(rc, rh, dh, cc, dc, vw, vh); }
+void SRP_CmdEndRenderPass() { SRPGraphicsAPI::Get().CmdEndRenderPass(); }
+void SRP_CmdBindPipeline(uint32_t h) { SRPGraphicsAPI::Get().CmdBindPipeline(h); }
+void SRP_CmdBindVertexBuffer(uint32_t h, uint32_t s, uint32_t o) { SRPGraphicsAPI::Get().CmdBindVertexBuffer(h, s, o); }
+void SRP_CmdBindIndexBuffer(uint32_t h, uint32_t o, int is32) { SRPGraphicsAPI::Get().CmdBindIndexBuffer(h, o, is32); }
+void SRP_CmdSetViewport(int x, int y, int w, int h) { SRPGraphicsAPI::Get().CmdSetViewport(x, y, w, h); }
+void SRP_CmdSetScissor(int x, int y, int w, int h) { SRPGraphicsAPI::Get().CmdSetScissor(x, y, w, h); }
+void SRP_CmdPushConstants(uint32_t o, uint32_t sz, const void* d) { SRPGraphicsAPI::Get().CmdPushConstants(o, sz, d); }
+void SRP_CmdDraw(uint32_t vc, uint32_t ic, uint32_t fv) { SRPGraphicsAPI::Get().CmdDraw(vc, ic, fv); }
+void SRP_CmdDrawIndexed(uint32_t ic, uint32_t instc, uint32_t fi, int32_t vo) { SRPGraphicsAPI::Get().CmdDrawIndexed(ic, instc, fi, vo); }
+void SRP_CmdDrawFullScreenQuad() { SRPGraphicsAPI::Get().CmdDrawFullScreenQuad(); }
+
 void SRP_Shutdown() { SRPGraphicsAPI::Get().Shutdown(); }
 
 } // namespace Prisma::Scripting

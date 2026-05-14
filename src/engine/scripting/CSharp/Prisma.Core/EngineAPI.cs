@@ -98,6 +98,20 @@ internal unsafe struct PrismaAPI
     // Frame
     public delegate* unmanaged<void> SrpBeginFrame;
     public delegate* unmanaged<void> SrpEndFrame;
+
+    // Command buffer (called between BeginFrame/EndFrame)
+    public delegate* unmanaged<uint, uint*, uint, float*, float, int, int, void> SrpCmdBeginRenderPass;
+    public delegate* unmanaged<void> SrpCmdEndRenderPass;
+    public delegate* unmanaged<uint, void> SrpCmdBindPipeline;
+    public delegate* unmanaged<uint, uint, uint, void> SrpCmdBindVertexBuffer;
+    public delegate* unmanaged<uint, uint, int, void> SrpCmdBindIndexBuffer;
+    public delegate* unmanaged<int, int, int, int, void> SrpCmdSetViewport;
+    public delegate* unmanaged<int, int, int, int, void> SrpCmdSetScissor;
+    public delegate* unmanaged<uint, uint, void*, void> SrpCmdPushConstants;
+    public delegate* unmanaged<uint, uint, uint, void> SrpCmdDraw;
+    public delegate* unmanaged<uint, uint, uint, int, void> SrpCmdDrawIndexed;
+    public delegate* unmanaged<void> SrpCmdDrawFullScreenQuad;
+
     public delegate* unmanaged<void> SrpShutdown;
 
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验

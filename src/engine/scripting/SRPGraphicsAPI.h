@@ -8,10 +8,9 @@ namespace Prisma::Graphic {
     class IShader;
     class IPipelineState;
     class IRenderTarget;
-    class IDepthStencil;
     class IBuffer;
     class ITexture;
-    class ICommandBuffer;
+
 }
 
 namespace Prisma::Scripting {
@@ -76,7 +75,7 @@ public:
     void DestroyRenderTarget(RenderTargetHandle handle);
     void DestroyDepthTarget(DepthTargetHandle handle);
     Graphic::IRenderTarget* GetRenderTarget(RenderTargetHandle handle);
-    Graphic::IDepthStencil* GetDepthTarget(DepthTargetHandle handle);
+    Graphic::ITexture* GetDepthTarget(DepthTargetHandle handle);
 
     // --- Vertex/Index Buffer ---
     BufferHandle CreateVertexBuffer(const void* data, uint32_t size, uint32_t stride);
@@ -91,7 +90,20 @@ public:
 
     // --- Per-frame state ---
     void BeginFrame();
-    void EndFrame(Graphic::ICommandBuffer* cmdBuffer);
+    void EndFrame();
+
+    // --- Command Buffer Methods (called between BeginFrame/EndFrame) ---
+    void CmdBeginRenderPass(uint32_t rtCount, const uint32_t* rtHandles, uint32_t depthHandle, const float* clearColors, float depthClear, int viewW, int viewH);
+    void CmdEndRenderPass();
+    void CmdBindPipeline(PipelineHandle handle);
+    void CmdBindVertexBuffer(BufferHandle handle, uint32_t slot, uint32_t offset);
+    void CmdBindIndexBuffer(BufferHandle handle, uint32_t offset, int is32Bit);
+    void CmdSetViewport(int x, int y, int w, int h);
+    void CmdSetScissor(int x, int y, int w, int h);
+    void CmdPushConstants(uint32_t offset, uint32_t size, const void* data);
+    void CmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
+    void CmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset);
+    void CmdDrawFullScreenQuad();
 
     // --- Cleanup ---
     void Shutdown();
@@ -102,7 +114,7 @@ private:
     std::vector<std::shared_ptr<Graphic::IShader>> m_shaders;
     std::vector<std::shared_ptr<Graphic::IPipelineState>> m_pipelines;
     std::vector<std::shared_ptr<Graphic::IRenderTarget>> m_renderTargets;
-    std::vector<std::shared_ptr<Graphic::IDepthStencil>> m_depthTargets;
+    std::vector<std::shared_ptr<Graphic::ITexture>> m_depthTargets;
     std::vector<std::shared_ptr<Graphic::IBuffer>> m_buffers;
     std::vector<std::shared_ptr<Graphic::ITexture>> m_textures;
 };
@@ -138,6 +150,19 @@ void SRP_DestroyTexture(uint32_t handle);
 // Frame commands
 void SRP_BeginFrame();
 void SRP_EndFrame();
+
+// Command buffer (called between BeginFrame/EndFrame)
+void SRP_CmdBeginRenderPass(uint32_t rtCount, const uint32_t* rtHandles, uint32_t depthHandle, const float* clearColors, float depthClear, int viewW, int viewH);
+void SRP_CmdEndRenderPass();
+void SRP_CmdBindPipeline(uint32_t handle);
+void SRP_CmdBindVertexBuffer(uint32_t handle, uint32_t slot, uint32_t offset);
+void SRP_CmdBindIndexBuffer(uint32_t handle, uint32_t offset, int is32Bit);
+void SRP_CmdSetViewport(int x, int y, int w, int h);
+void SRP_CmdSetScissor(int x, int y, int w, int h);
+void SRP_CmdPushConstants(uint32_t offset, uint32_t size, const void* data);
+void SRP_CmdDraw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
+void SRP_CmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset);
+void SRP_CmdDrawFullScreenQuad();
 
 // Cleanup
 void SRP_Shutdown();

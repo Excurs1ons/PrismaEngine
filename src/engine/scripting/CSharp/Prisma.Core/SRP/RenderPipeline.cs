@@ -14,12 +14,26 @@ public abstract class RenderPipeline
     /// <summary>执行所有 Pass。</summary>
     public void Render()
     {
-        unsafe { Interop.API.SrpBeginFrame(); }
+        unsafe
+        {
+            Interop.API.SrpBeginFrame();
 
-        for (int i = 0; i < passes.Count; i++)
-            passes[i].Execute();
+            for (int i = 0; i < passes.Count; i++)
+            {
+                var pass = passes[i];
 
-        unsafe { Interop.API.SrpEndFrame(); }
+                // Begin render target (TODO: use actual RT handles from shaderpack config)
+                uint noRT = 0;
+                int w = 1280, h = 720;
+                Interop.API.SrpCmdBeginRenderPass(0, &noRT, 0, null, 1.0f, w, h);
+
+                pass.Execute();
+
+                Interop.API.SrpCmdEndRenderPass();
+            }
+
+            Interop.API.SrpEndFrame();
+        }
     }
 
     /// <summary>释放所有 GPU 资源。</summary>

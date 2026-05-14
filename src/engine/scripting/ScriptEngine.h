@@ -81,6 +81,20 @@ struct PrismaAPI {
     // Frame
     void (*srpBeginFrame)();
     void (*srpEndFrame)();
+
+    // Command buffer (called between BeginFrame/EndFrame)
+    void (*srpCmdBeginRenderPass)(uint32_t rtCount, const uint32_t* rtHandles, uint32_t depthHandle, const float* clearColors, float depthClear, int viewW, int viewH);
+    void (*srpCmdEndRenderPass)();
+    void (*srpCmdBindPipeline)(uint32_t handle);
+    void (*srpCmdBindVertexBuffer)(uint32_t handle, uint32_t slot, uint32_t offset);
+    void (*srpCmdBindIndexBuffer)(uint32_t handle, uint32_t offset, int is32Bit);
+    void (*srpCmdSetViewport)(int x, int y, int w, int h);
+    void (*srpCmdSetScissor)(int x, int y, int w, int h);
+    void (*srpCmdPushConstants)(uint32_t offset, uint32_t size, const void* data);
+    void (*srpCmdDraw)(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex);
+    void (*srpCmdDrawIndexed)(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset);
+    void (*srpCmdDrawFullScreenQuad)();
+
     void (*srpShutdown)();
 
     // [诊断] 结构体大小，用于 C++/C# 版本校验
