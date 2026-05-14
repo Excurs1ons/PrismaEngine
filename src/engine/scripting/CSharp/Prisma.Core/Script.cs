@@ -10,7 +10,6 @@ public abstract class Script
     public Node node { get => _node; internal set => _node = value; }
 
     internal Script? _nextScript;
-    internal uint _entityIndex;
 
     public abstract uint TypeId { get; }
 

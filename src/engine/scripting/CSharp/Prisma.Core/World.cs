@@ -25,6 +25,8 @@ public class World : IDisposable
 
     // 组件池系统：按类型存储，按 entity 索引寻址
     private readonly Dictionary<Type, object> _componentPools = new();
+    // 遍历缓存：避免 ProcessDestructionQueue 中 Dictionary 迭代的 boxing
+    private readonly List<IComponentPool> _componentPoolList = new();
 
     /// <summary>获取或创建组�?T 的组件池。</summary>
     internal ComponentPool<T> GetOrCreatePool<T>() where T : unmanaged
@@ -34,6 +36,7 @@ public class World : IDisposable
         {
             pool = new ComponentPool<T>();
             _componentPools[type] = pool;
+            _componentPoolList.Add((IComponentPool)pool);
         }
         return (ComponentPool<T>)pool;
     }
@@ -60,7 +63,6 @@ public class World : IDisposable
         EnsureNodeScriptsIndex(index);
         s._nextScript = _nodeScripts[index];
         _nodeScripts[index] = s;
-        s._entityIndex = index;
         
         var batches = s.ExecutionPhase == UpdatePhase.Update ? _updateBatches : _lateUpdateBatches;
         var flatBatches = s.ExecutionPhase == UpdatePhase.Update ? _flattenedUpdateBatches : _flattenedLateUpdateBatches;
@@ -228,9 +230,9 @@ public class World : IDisposable
             }
             _nodeScripts[index] = null;
 
-            // 清理所有组件池中的对应槽位
-            foreach (var pool in _componentPools.Values)
-                ((IComponentPool)pool).ClearSlot(handle);
+            // 清理所有组件池中的对应槽位（使用 List 避免 Dictionary 迭代 boxing）
+            for (int i = 0; i < _componentPoolList.Count; i++)
+                _componentPoolList[i].ClearSlot(handle);
 
             unsafe { Interop.API.DestroyEntity(handle); }
         }
@@ -319,8 +321,9 @@ public class World : IDisposable
         _flattenedUpdateBatches.Clear();
         _flattenedLateUpdateBatches.Clear();
         for (int i = 0; i < _nodeScripts.Length; i++) _nodeScripts[i] = null;
-        foreach (var pool in _componentPools.Values)
-            ((IComponentPool)pool).Dispose();
+        for (int i = 0; i < _componentPoolList.Count; i++)
+            _componentPoolList[i].Dispose();
         _componentPools.Clear();
+        _componentPoolList.Clear();
     }
 }

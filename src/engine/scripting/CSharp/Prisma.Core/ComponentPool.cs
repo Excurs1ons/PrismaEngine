@@ -41,6 +41,16 @@ public sealed unsafe class ComponentPool<T> : IComponentPool, IDisposable where 
         return ref _data[idx];
     }
 
+    /// <summary>安全的"存在则获取"模式。返回指针，null 表示不存在。</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public T* TryGet(uint entityHandle)
+    {
+        uint idx = entityHandle & 0xFFFF;
+        if (idx < _capacity && (_mask[idx >> 6] & (1UL << (int)(idx & 0x3F))) != 0)
+            return &_data[idx];
+        return null;
+    }
+
     /// <summary>检查 entity 是否持有该组件。</summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool Has(uint entityHandle)
