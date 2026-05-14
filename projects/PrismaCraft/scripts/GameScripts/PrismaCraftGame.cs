@@ -1,6 +1,7 @@
 using System;
 using Prisma;
 using Prisma.SRP;
+using GameScripts.Minecraft;
 
 namespace GameScripts;
 
@@ -33,22 +34,69 @@ public partial class PrismaCraftGame : Script
 }
 
 /// <summary>
-/// 世界管理器——管理区块、玩家、世界状态。
-/// 后续将包含 ChunkManager、WorldGenerator 等。
+/// 世界管理器——管理 Minecraft World + 区块加载 + 玩家。
 /// </summary>
 [Serializable]
 public partial class WorldManager : Script
 {
-    public int WorldTime { get; set; }
-    public float RainStrength { get; set; }
+    public MinecraftWorld MinecraftWorld { get; private set; } = null!;
+    public WorldGenerator Generator { get; private set; } = null!;
+
+    // 加载半径（区块）
+    public int ViewRadius { get; set; } = 8;
+    private ChunkPos _lastCenter = new(int.MaxValue, int.MaxValue);
 
     public override void OnCreate()
     {
-        Debug.Log("[WorldManager] World created");
+        // 初始化方块注册表
+        Blocks.Initialize();
+
+        // 创建世界和生成器
+        MinecraftWorld = new MinecraftWorld();
+        Generator = new WorldGenerator(Environment.TickCount);
+
+        Debug.Log("[WorldManager] World created with seed: " + Generator.Seed);
+
+        // 在玩家位置周围生成区块
+        var spawnChunk = new ChunkPos(0, 0);
+        EnsureChunksAround(spawnChunk);
     }
 
     public override void OnUpdate(TimeContext time, InputContext input)
     {
-        WorldTime = (WorldTime + 1) % 24000;
+        MinecraftWorld.Tick();
+
+        // 根据玩家位置加载周围区块
+        var playerChunk = new ChunkPos(
+            (int)node.X >> 4,
+            (int)node.Y >> 4
+        );
+        if (!playerChunk.Equals(_lastCenter))
+        {
+            _lastCenter = playerChunk;
+            EnsureChunksAround(playerChunk);
+        }
+    }
+
+    private void EnsureChunksAround(ChunkPos center)
+    {
+        int loaded = 0;
+        for (int dx = -ViewRadius; dx <= ViewRadius; dx++)
+        {
+            for (int dz = -ViewRadius; dz <= ViewRadius; dz++)
+            {
+                var pos = new ChunkPos(center.X + dx, center.Z + dz);
+                var chunk = MinecraftWorld.GetChunk(pos);
+                if (chunk == null || !chunk.IsLoaded)
+                {
+                    if (chunk == null)
+                        chunk = MinecraftWorld.GetOrCreateChunk(pos);
+                    Generator.GenerateChunk(chunk);
+                    loaded++;
+                }
+            }
+        }
+        if (loaded > 0)
+            Debug.Log($"[WorldManager] Generated {loaded} new chunks");
     }
 }
