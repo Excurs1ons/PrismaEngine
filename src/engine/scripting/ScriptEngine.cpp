@@ -214,6 +214,7 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
     std::string assemblyPath = scriptsDir + "/GameScripts.dll";
     m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
     m_onFrameFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "OnFrame");
+    m_srpRenderFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "OnRender");
 
     if (!m_bootstrapFn || !m_onFrameFn) return false;
 
@@ -244,6 +245,13 @@ void ScriptEngine::Update(float dt) {
     if (!m_initialized || !m_onFrameFn) return;
     s_activeEngine = this;
     m_onFrameFn(dt);
+    s_activeEngine = nullptr;
+}
+
+void ScriptEngine::Render(float dt) {
+    if (!m_initialized || !m_srpRenderFn) return;
+    s_activeEngine = this;
+    m_srpRenderFn(dt);
     s_activeEngine = nullptr;
 }
 

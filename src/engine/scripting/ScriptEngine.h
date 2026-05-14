@@ -111,6 +111,7 @@ public:
     bool Initialize(CoreCLRHost& host);
     void Shutdown();
     void Update(float dt);
+    void Render(float dt);
 
     bool IsInitialized() const { return m_initialized; }
     const PrismaAPI& GetAPI() const { return m_api; }
@@ -130,6 +131,7 @@ private:
     bool  m_initialized = false;
     void (*m_bootstrapFn)(void* api) = nullptr;
     void (*m_onFrameFn)(float) = nullptr;
+    void (*m_srpRenderFn)(float) = nullptr;
 
     PrismaAPI m_api = {};
 

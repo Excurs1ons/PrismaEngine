@@ -12,6 +12,9 @@ internal static class ScriptEngine
 {
     private static World? _mainWorld;
 
+    /// <summary>SRP 渲染回调。由游戏脚本在 Bootstrap 中设置。</summary>
+    internal static Action<float>? OnRenderCallback;
+
     /// <summary>
     /// 引导入口。支持热重载时的状态迁移�?
     /// Bootstrap entry point. Supports state migration during Hot Reloading.
@@ -55,6 +58,22 @@ internal static class ScriptEngine
         catch (Exception e)
         {
             Debug.LogError($"CRITICAL: ScriptEngine Execution Failure: {e.Message}\n{e.StackTrace}");
+        }
+    }
+
+    /// <summary>
+    /// 每帧渲染回调。在 C++ BeginFrame/EndFrame 之间调用。
+    /// 由游戏脚本的 OnRender 委托触发 SRP 管线。
+    /// </summary>
+    internal static void OnRender(float dt)
+    {
+        try
+        {
+            OnRenderCallback?.Invoke(dt);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"CRITICAL: SRP Render Failure: {e.Message}\n{e.StackTrace}");
         }
     }
 }
