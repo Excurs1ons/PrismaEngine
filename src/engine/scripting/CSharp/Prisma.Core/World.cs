@@ -20,8 +20,23 @@ public class World : IDisposable
     private readonly ConcurrentQueue<Script> _pendingStartScripts = new();
     private readonly ConcurrentQueue<Script> _scriptsToRemove = new();
     private readonly ConcurrentQueue<uint> _destructionQueue = new();
-    
+
     private Script?[] _nodeScripts = Array.Empty<Script?>();
+
+    // 组件池系统：按类型存储，按 entity 索引寻址
+    private readonly Dictionary<Type, object> _componentPools = new();
+
+    /// <summary>获取或创建组�?T 的组件池。</summary>
+    internal ComponentPool<T> GetOrCreatePool<T>() where T : unmanaged
+    {
+        var type = typeof(T);
+        if (!_componentPools.TryGetValue(type, out var pool))
+        {
+            pool = new ComponentPool<T>();
+            _componentPools[type] = pool;
+        }
+        return (ComponentPool<T>)pool;
+    }
 
     private void EnsureNodeScriptsIndex(uint index)
     {
@@ -85,12 +100,12 @@ public class World : IDisposable
 
         // 0. 同步双缓冲指针——C++ 上帧 SwapBuffers 已交换 Read/Write 含义，
         // 本帧从 C++ 重新获取正确的 Read(GetB) 和 Write(GetA) 指针
-        NativeAPI.SyncBufferPointers();
+        Interop.SyncBufferPointers();
 
         // 1. 将 Read 缓冲区的活跃数据拷贝到 Write 缓冲区
         //    确保脚本只写增量时 Write 总有完整的基线
         int aliveCount;
-        unsafe { aliveCount = (int)NativeAPI.API.GetEntityCapacity(); }
+        unsafe { aliveCount = (int)Interop.API.GetEntityCapacity(); }
         SyncActiveBuffers(aliveCount);
 
         ProcessDestructionQueue();
@@ -122,8 +137,8 @@ public class World : IDisposable
         long bytes = (long)aliveCount * sizeof(float);
         if (bytes <= 0) return;
 
-        var r = NativeAPI.TransformBuffer_Read;
-        var w = NativeAPI.TransformBuffer_Write;
+        var r = Interop.TransformRead;
+        var w = Interop.TransformWrite;
         Buffer.MemoryCopy(r->PosX, w->PosX, bytes, bytes);
         Buffer.MemoryCopy(r->PosY, w->PosY, bytes, bytes);
         Buffer.MemoryCopy(r->Rotation, w->Rotation, bytes, bytes);
@@ -145,8 +160,8 @@ public class World : IDisposable
                 uint handle = _nodes[i].Handle;
                 uint idx = handle & 0xFFFF;
                 SpatialGrid.UpdateEntity(handle,
-                    new Vector2(NativeAPI.TransformBuffer_Write->PosX[idx],
-                                NativeAPI.TransformBuffer_Write->PosY[idx]));
+                    new Vector2(Interop.TransformWrite->PosX[idx],
+                                Interop.TransformWrite->PosY[idx]));
             }
         }
         else
@@ -159,8 +174,8 @@ public class World : IDisposable
                 uint handle = _nodes[i].Handle;
                 uint idx = handle & 0xFFFF;
                 SpatialGrid.UpdateEntity(handle,
-                    new Vector2(NativeAPI.TransformBuffer_Write->PosX[idx],
-                                NativeAPI.TransformBuffer_Write->PosY[idx]));
+                    new Vector2(Interop.TransformWrite->PosX[idx],
+                                Interop.TransformWrite->PosY[idx]));
             });
         }
     }
@@ -202,6 +217,7 @@ public class World : IDisposable
         while (_destructionQueue.TryDequeue(out uint handle))
         {
             uint index = handle & 0xFFFF;
+
             var s = _nodeScripts[index];
             while (s != null)
             {
@@ -211,7 +227,12 @@ public class World : IDisposable
                 s = s._nextScript;
             }
             _nodeScripts[index] = null;
-            unsafe { NativeAPI.API.DestroyEntity(handle); }
+
+            // 清理所有组件池中的对应槽位
+            foreach (var pool in _componentPools.Values)
+                ((IComponentPool)pool).ClearSlot(handle);
+
+            unsafe { Interop.API.DestroyEntity(handle); }
         }
     }
 
@@ -298,5 +319,8 @@ public class World : IDisposable
         _flattenedUpdateBatches.Clear();
         _flattenedLateUpdateBatches.Clear();
         for (int i = 0; i < _nodeScripts.Length; i++) _nodeScripts[i] = null;
+        foreach (var pool in _componentPools.Values)
+            ((IComponentPool)pool).Dispose();
+        _componentPools.Clear();
     }
 }

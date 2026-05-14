@@ -30,26 +30,26 @@ public readonly struct Node : IEquatable<Node>
 #if DEBUG
         uint index = Index;
         uint gen = _handle >> 16;
-        // 动态容量检查：超过当前已分配的实体槽位则无�?
-        if (index >= NativeAPI.API.GetEntityCapacity())
+        // 动态容量检查：超过当前已分配的实体槽位则无�?
+        if (index >= Interop.API.GetEntityCapacity())
             throw new IndexOutOfRangeException("Handle OOB (entity does not exist)");
-        if ((NativeAPI.RenderBuffer->Generation[index] & 0xFFFF) != gen) 
+        if ((Interop.RenderData->Generation[index] & 0xFFFF) != gen) 
             throw new InvalidOperationException("Node Handle is STALE (Entity re-allocated)");
 #endif
     }
 
-    // Cherno Optimization: 属性访问直接指向对应的 SoA 缓冲区（�?冷分离）
-    public float X { get { unsafe { Validate(); return NativeAPI.TransformBuffer_Read->PosX[Index]; } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->PosX[Index] = value; } } }
-    public float Y { get { unsafe { Validate(); return NativeAPI.TransformBuffer_Read->PosY[Index]; } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->PosY[Index] = value; } } }
-    public Vector2 Position { get { unsafe { Validate(); return new Vector2(NativeAPI.TransformBuffer_Read->PosX[Index], NativeAPI.TransformBuffer_Read->PosY[Index]); } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->PosX[Index] = value.X; NativeAPI.TransformBuffer_Write->PosY[Index] = value.Y; } } }
-    public float Rotation { get { unsafe { Validate(); return NativeAPI.TransformBuffer_Read->Rotation[Index]; } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->Rotation[Index] = value; } } }
-    public Vector2 Scale { get { unsafe { Validate(); return new Vector2(NativeAPI.TransformBuffer_Read->ScaleX[Index], NativeAPI.TransformBuffer_Read->ScaleY[Index]); } } set { unsafe { Validate(); NativeAPI.TransformBuffer_Write->ScaleX[Index] = value.X; NativeAPI.TransformBuffer_Write->ScaleY[Index] = value.Y; } } }
+    // 属性访问直接指向底层的数据布局缓冲区（热/冷分离），实现零开销跨语言访问
+    public float X { get { unsafe { Validate(); return Interop.TransformRead->PosX[Index]; } } set { unsafe { Validate(); Interop.TransformWrite->PosX[Index] = value; } } }
+    public float Y { get { unsafe { Validate(); return Interop.TransformRead->PosY[Index]; } } set { unsafe { Validate(); Interop.TransformWrite->PosY[Index] = value; } } }
+    public Vector2 Position { get { unsafe { Validate(); return new Vector2(Interop.TransformRead->PosX[Index], Interop.TransformRead->PosY[Index]); } } set { unsafe { Validate(); Interop.TransformWrite->PosX[Index] = value.X; Interop.TransformWrite->PosY[Index] = value.Y; } } }
+    public float Rotation { get { unsafe { Validate(); return Interop.TransformRead->Rotation[Index]; } } set { unsafe { Validate(); Interop.TransformWrite->Rotation[Index] = value; } } }
+    public Vector2 Scale { get { unsafe { Validate(); return new Vector2(Interop.TransformRead->ScaleX[Index], Interop.TransformRead->ScaleY[Index]); } } set { unsafe { Validate(); Interop.TransformWrite->ScaleX[Index] = value.X; Interop.TransformWrite->ScaleY[Index] = value.Y; } } }
 
     public static Node Create(string name, World? world = null)
     {
         var targetWorld = world ?? World.Active ?? throw new InvalidOperationException("No active world.");
         uint handle;
-        unsafe { handle = NativeAPI.API.CreateEntity(); }
+        unsafe { handle = Interop.API.CreateEntity(); }
         var node = new Node(handle, targetWorld);
         targetWorld.RegisterNode(node);
         return node;
@@ -75,6 +75,38 @@ public readonly struct Node : IEquatable<Node>
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public T? GetScript<T>() where T : Script => _world.GetScriptFromNodeByTypeId<T>(_handle, ScriptType<T>.Id);
+
+    // ===== 组件池访问 =====
+
+    /// <summary>获取 entity 上类型 T 的组件引用。调用前应当用 HasComponent 确认存在性。</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T GetComponent<T>() where T : unmanaged
+    {
+        return ref _world.GetOrCreatePool<T>().Get(_handle);
+    }
+
+    /// <summary>检查 entity 是否持有类型 T 的组件。</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool HasComponent<T>() where T : unmanaged
+    {
+        return _world.GetOrCreatePool<T>().Has(_handle);
+    }
+
+    /// <summary>添加组件到 entity。如已有则覆盖标记，返回引用。</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ref T AddComponent<T>() where T : unmanaged
+    {
+        var pool = _world.GetOrCreatePool<T>();
+        pool.Set(_handle);
+        return ref pool.Get(_handle);
+    }
+
+    /// <summary>从 entity 移除组件并清零数据。</summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void RemoveComponent<T>() where T : unmanaged
+    {
+        _world.GetOrCreatePool<T>().Remove(_handle);
+    }
 
     public bool Equals(Node other) => _handle == other._handle && _world == other._world;
     public override bool Equals(object? obj) => obj is Node other && Equals(other);
