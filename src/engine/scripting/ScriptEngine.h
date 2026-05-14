@@ -7,6 +7,7 @@
 
 #include "Export.h"
 #include "core/Node.h"
+#include "SRPGraphicsAPI.h"
 
 namespace Prisma {
 namespace Scripting {
@@ -51,6 +52,36 @@ struct PrismaAPI {
 
     // 2D 环境光（调节场景基础照明级别）
     void (*setAmbientLight)(float r, float g, float b);
+
+    // ===== SRP Graphics API (C# 可编程渲染管线) =====
+
+    // Shader
+    uint32_t (*srpCreateShader)(const char* source, uint32_t sourceLen, uint32_t stage);
+    void     (*srpDestroyShader)(uint32_t handle);
+
+    // Pipeline
+    uint32_t (*srpCreatePipeline)(const SRPPipelineDesc* desc);
+    void     (*srpDestroyPipeline)(uint32_t handle);
+
+    // Render Target
+    uint32_t (*srpCreateRenderTarget)(int w, int h, uint32_t format, int samples);
+    uint32_t (*srpCreateDepthTarget)(int w, int h, uint32_t format);
+    void     (*srpDestroyRenderTarget)(uint32_t handle);
+    void     (*srpDestroyDepthTarget)(uint32_t handle);
+
+    // Buffers
+    uint32_t (*srpCreateVertexBuffer)(const void* data, uint32_t size, uint32_t stride);
+    uint32_t (*srpCreateIndexBuffer)(const void* data, uint32_t size, int is32Bit);
+    void     (*srpDestroyBuffer)(uint32_t handle);
+
+    // Texture
+    uint32_t (*srpCreateTexture2D)(int w, int h, uint32_t format, const void* pixels, uint32_t pixelSize);
+    void     (*srpDestroyTexture)(uint32_t handle);
+
+    // Frame
+    void (*srpBeginFrame)();
+    void (*srpEndFrame)();
+    void (*srpShutdown)();
 
     // [诊断] 结构体大小，用于 C++/C# 版本校验
     // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)

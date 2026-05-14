@@ -70,8 +70,59 @@ internal unsafe struct PrismaAPI
     // 2D 环境光
     public delegate* unmanaged<float, float, float, void> SetAmbientLight;
 
+    // ===== SRP Graphics API =====
+
+    // Shader
+    public delegate* unmanaged<byte*, uint, uint, uint> SrpCreateShader;
+    public delegate* unmanaged<uint, void> SrpDestroyShader;
+
+    // Pipeline
+    public delegate* unmanaged<SRPPipelineDesc*, uint> SrpCreatePipeline;
+    public delegate* unmanaged<uint, void> SrpDestroyPipeline;
+
+    // Render Target
+    public delegate* unmanaged<int, int, uint, int, uint> SrpCreateRenderTarget;
+    public delegate* unmanaged<int, int, uint, uint> SrpCreateDepthTarget;
+    public delegate* unmanaged<uint, void> SrpDestroyRenderTarget;
+    public delegate* unmanaged<uint, void> SrpDestroyDepthTarget;
+
+    // Buffers
+    public delegate* unmanaged<void*, uint, uint, uint> SrpCreateVertexBuffer;
+    public delegate* unmanaged<void*, uint, int, uint> SrpCreateIndexBuffer;
+    public delegate* unmanaged<uint, void> SrpDestroyBuffer;
+
+    // Texture
+    public delegate* unmanaged<int, int, uint, void*, uint, uint> SrpCreateTexture2D;
+    public delegate* unmanaged<uint, void> SrpDestroyTexture;
+
+    // Frame
+    public delegate* unmanaged<void> SrpBeginFrame;
+    public delegate* unmanaged<void> SrpEndFrame;
+    public delegate* unmanaged<void> SrpShutdown;
+
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
+}
+
+/// <summary>
+/// SRP 管线创建描述。内存布局与 C++ Prisma::Scripting::SRPPipelineDesc 一致。
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct SRPPipelineDesc
+{
+    public uint VertexShader;
+    public uint FragmentShader;
+    public uint NumRenderTargets;
+    public fixed uint RenderTargetFormats[8];
+    public uint DepthStencilFormat;
+    public uint SampleCount;
+    public uint CullMode;
+    public byte DepthTest;
+    public byte DepthWrite;
+    public byte DepthFunc;
+    public byte BlendEnable;
+    public byte BlendColorWriteMask;
+    public fixed float ClearColor[4];
 }
 
 internal static unsafe class Interop

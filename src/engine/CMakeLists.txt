@@ -183,12 +183,14 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         scripting/CoreCLRHost.cpp
         scripting/ScriptEngine.cpp
         scripting/ScriptSystem.cpp
+        scripting/SRPGraphicsAPI.cpp
     )
     set(PRISMA_SCRIPTING_HEADERS
         scripting/MonoRuntime.h
         scripting/CoreCLRHost.h
         scripting/ScriptEngine.h
         scripting/ScriptSystem.h
+        scripting/SRPGraphicsAPI.h
     )
     list(APPEND CORE_SOURCES ${PRISMA_SCRIPTING_SOURCES})
 

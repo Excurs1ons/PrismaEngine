@@ -181,6 +181,24 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
     m_api.setLightBlendMode = S_SetLightBlendMode;
     m_api.setAmbientLight = S_SetAmbientLight;
 
+    // SRP Graphics API
+    m_api.srpCreateShader = SRP_CreateShader;
+    m_api.srpDestroyShader = SRP_DestroyShader;
+    m_api.srpCreatePipeline = SRP_CreatePipeline;
+    m_api.srpDestroyPipeline = SRP_DestroyPipeline;
+    m_api.srpCreateRenderTarget = SRP_CreateRenderTarget;
+    m_api.srpCreateDepthTarget = SRP_CreateDepthTarget;
+    m_api.srpDestroyRenderTarget = SRP_DestroyRenderTarget;
+    m_api.srpDestroyDepthTarget = SRP_DestroyDepthTarget;
+    m_api.srpCreateVertexBuffer = SRP_CreateVertexBuffer;
+    m_api.srpCreateIndexBuffer = SRP_CreateIndexBuffer;
+    m_api.srpDestroyBuffer = SRP_DestroyBuffer;
+    m_api.srpCreateTexture2D = SRP_CreateTexture2D;
+    m_api.srpDestroyTexture = SRP_DestroyTexture;
+    m_api.srpBeginFrame = SRP_BeginFrame;
+    m_api.srpEndFrame = SRP_EndFrame;
+    m_api.srpShutdown = SRP_Shutdown;
+
     const std::string& scriptsDir = host.GetScriptsDir();
     std::string assemblyPath = scriptsDir + "/GameScripts.dll";
     m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
