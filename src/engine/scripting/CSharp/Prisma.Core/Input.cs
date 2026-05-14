@@ -4,12 +4,12 @@ using System.Runtime.CompilerServices;
 namespace Prisma;
 
 /// <summary>
-/// 输入上下文信息�?
+/// 输入上下文信息�?
 /// Input context information.
 /// </summary>
 public class InputContext
 {
-    // Cherno Optimization: 预计算哈希值，干掉热路径上的字符串比较�?
+    // Cherno Optimization: 预计算哈希值，干掉热路径上的字符串比较�?
     public static readonly uint HorizontalHash = HashString("Horizontal");
     public static readonly uint VerticalHash = HashString("Vertical");
 
@@ -26,9 +26,9 @@ public class InputContext
 
     internal unsafe void UpdateState()
     {
-        for (int i = 0; i < _keyStates.Length; i++) _keyStates[i] = NativeAPI.API.IsKeyDown(i);
-        _mouseX = NativeAPI.API.GetMouseX();
-        _mouseY = NativeAPI.API.GetMouseY();
+        for (int i = 0; i < _keyStates.Length; i++) _keyStates[i] = Interop.API.IsKeyDown(i);
+        _mouseX = Interop.API.GetMouseX();
+        _mouseY = Interop.API.GetMouseY();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

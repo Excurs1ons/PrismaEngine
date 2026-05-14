@@ -14,7 +14,7 @@ public static class Gizmos
 
     public static unsafe void DrawLine(Vector2 start, Vector2 end, Color color)
     {
-        NativeAPI.API.DrawGizmoLine(start.X, start.Y, end.X, end.Y, color.R, color.G, color.B, color.A);
+        Interop.API.DrawGizmoLine(start.X, start.Y, end.X, end.Y, color.R, color.G, color.B, color.A);
     }
 
     public static void DrawRect(Vector2 position, Vector2 size)
@@ -24,7 +24,7 @@ public static class Gizmos
 
     public static unsafe void DrawRect(Vector2 position, Vector2 size, Color color)
     {
-        NativeAPI.API.DrawGizmoRect(position.X, position.Y, size.X, size.Y, color.R, color.G, color.B, color.A);
+        Interop.API.DrawGizmoRect(position.X, position.Y, size.X, size.Y, color.R, color.G, color.B, color.A);
     }
 
     public static void DrawString(string text, Vector2 position, float scale = 1.0f)
@@ -39,7 +39,7 @@ public static class Gizmos
         byte[] bytes = Encoding.UTF8.GetBytes(text + "\0");
         fixed (byte* ptr = bytes)
         {
-            NativeAPI.API.DrawGizmoString(ptr, position.X, position.Y, scale, color.R, color.G, color.B, color.A);
+            Interop.API.DrawGizmoString(ptr, position.X, position.Y, scale, color.R, color.G, color.B, color.A);
         }
     }
 }

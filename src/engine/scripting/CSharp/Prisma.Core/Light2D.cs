@@ -27,44 +27,44 @@ public class Light2D : IDisposable
 
     public Light2D(LightType type = LightType.Point)
     {
-        unsafe { _handle = NativeAPI.API.CreateLight((int)type); }
+        unsafe { _handle = Interop.API.CreateLight((int)type); }
     }
 
     public uint Handle => _handle;
 
     public Vector2 Position
     {
-        set { unsafe { NativeAPI.API.SetLightPos(_handle, value.X, value.Y); } }
+        set { unsafe { Interop.API.SetLightPos(_handle, value.X, value.Y); } }
     }
 
     public Vector3 Color
     {
-        set { unsafe { NativeAPI.API.SetLightColor(_handle, value.X, value.Y, value.Z); } }
+        set { unsafe { Interop.API.SetLightColor(_handle, value.X, value.Y, value.Z); } }
     }
 
     public float Intensity
     {
-        set { unsafe { NativeAPI.API.SetLightIntensity(_handle, value); } }
+        set { unsafe { Interop.API.SetLightIntensity(_handle, value); } }
     }
 
     public float Radius
     {
-        set { unsafe { NativeAPI.API.SetLightRadius(_handle, value); } }
+        set { unsafe { Interop.API.SetLightRadius(_handle, value); } }
     }
 
     public float Falloff
     {
-        set { unsafe { NativeAPI.API.SetLightFalloff(_handle, value); } }
+        set { unsafe { Interop.API.SetLightFalloff(_handle, value); } }
     }
 
     public int Order
     {
-        set { unsafe { NativeAPI.API.SetLightOrder(_handle, value); } }
+        set { unsafe { Interop.API.SetLightOrder(_handle, value); } }
     }
 
     public LightBlendMode BlendMode
     {
-        set { unsafe { NativeAPI.API.SetLightBlendMode(_handle, (int)value); } }
+        set { unsafe { Interop.API.SetLightBlendMode(_handle, (int)value); } }
     }
 
     /// <summary>
@@ -75,7 +75,7 @@ public class Light2D : IDisposable
     {
         set
         {
-            unsafe { NativeAPI.API.SetAmbientLight(value.X, value.Y, value.Z); }
+            unsafe { Interop.API.SetAmbientLight(value.X, value.Y, value.Z); }
         }
     }
 
@@ -85,7 +85,7 @@ public class Light2D : IDisposable
         {
             if (_handle != 0)
             {
-                unsafe { NativeAPI.API.DestroyLight(_handle); }
+                unsafe { Interop.API.DestroyLight(_handle); }
                 _handle = 0;
             }
             _disposed = true;

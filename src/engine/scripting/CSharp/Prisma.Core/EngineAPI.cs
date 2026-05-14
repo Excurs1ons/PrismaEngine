@@ -4,10 +4,10 @@ using System.Runtime.InteropServices;
 namespace Prisma;
 
 /// <summary>
-/// 热数据：物理与变�?(动�?SoA 布局，指针指�?C++ vector.data())�?
+/// Transform 数据布局（双缓冲）。内存布局与 C++ Prisma::TransformDataLayout 一致。
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public unsafe struct TransformBufferSoA
+internal unsafe struct TransformDataLayout
 {
     public float* PosX;
     public float* PosY;
@@ -17,10 +17,10 @@ public unsafe struct TransformBufferSoA
 }
 
 /// <summary>
-/// 冷数据：渲染与外�?(动�?SoA 布局)�?
+/// Render 数据布局（单缓冲）。内存布局与 C++ Prisma::RenderDataLayout 一致。
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-public unsafe struct RenderBufferSoA
+internal unsafe struct RenderDataLayout
 {
     public uint*   Active;
     public uint*   Generation;
@@ -38,9 +38,9 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<byte*, byte*, void> Log;
     public delegate* unmanaged<uint> CreateEntity;
     public delegate* unmanaged<uint, void> DestroyEntity;
-    public delegate* unmanaged<TransformBufferSoA*> GetTransformBufferA;
-    public delegate* unmanaged<TransformBufferSoA*> GetTransformBufferB;
-    public delegate* unmanaged<RenderBufferSoA*> GetRenderBuffer;
+    public delegate* unmanaged<TransformDataLayout*> GetTransformA;
+    public delegate* unmanaged<TransformDataLayout*> GetTransformB;
+    public delegate* unmanaged<RenderDataLayout*> GetRenderData;
     public delegate* unmanaged<int, bool> IsKeyDown;
     public delegate* unmanaged<float> GetMouseX;
     public delegate* unmanaged<float> GetMouseY;
@@ -74,14 +74,14 @@ internal unsafe struct PrismaAPI
     public uint StructSize;
 }
 
-internal static unsafe class NativeAPI
+internal static unsafe class Interop
 {
     internal static PrismaAPI API;
 
     // 双缓冲区指针（每帧由 SyncBufferPointers 更新）
-    internal static TransformBufferSoA* TransformBuffer_Read;
-    internal static TransformBufferSoA* TransformBuffer_Write;
-    internal static RenderBufferSoA* RenderBuffer;
+    internal static TransformDataLayout* TransformRead;
+    internal static TransformDataLayout* TransformWrite;
+    internal static RenderDataLayout* RenderData;
 
     internal static void Init(PrismaAPI* api)
     {
@@ -101,9 +101,9 @@ internal static unsafe class NativeAPI
         // 初始指针基于当前 m_writeIndex(=0)：
         //   GetB = GetRead = &layoutB  (C# 从此读)
         //   GetA = GetWrite = &layoutA (C# 往此写)
-        TransformBuffer_Read = API.GetTransformBufferB();
-        TransformBuffer_Write = API.GetTransformBufferA();
-        RenderBuffer = API.GetRenderBuffer();
+        TransformRead = API.GetTransformB();
+        TransformWrite = API.GetTransformA();
+        RenderData = API.GetRenderData();
     }
 
     /// <summary>
@@ -114,8 +114,8 @@ internal static unsafe class NativeAPI
     {
         unsafe
         {
-            TransformBuffer_Read = API.GetTransformBufferB();
-            TransformBuffer_Write = API.GetTransformBufferA();
+            TransformRead = API.GetTransformB();
+            TransformWrite = API.GetTransformA();
         }
     }
 }
