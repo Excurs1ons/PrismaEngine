@@ -27,6 +27,9 @@ internal static class ScriptEntry
         var init = Node.Create("__PrismaCraftInit__");
         init.AddScript<PrismaCraftGame>();
 
+        // SRP 端到端测试
+        SRPTest.Run();
+
         Console.WriteLine("[PrismaCraft] Game initialized with SRP pipeline");
     }
 
