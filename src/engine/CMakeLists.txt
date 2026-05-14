@@ -157,6 +157,7 @@ set(CORE_SOURCES
     graphic/2d/Light2D.cpp
     graphic/2d/LightManager2D.cpp
     graphic/2d/Light2DPass.cpp
+    graphic/2d/ReflectionPass2D.cpp
 
     # Graphic - Vulkan Backend
     graphic/adapters/vulkan/VulkanAdapters.cpp

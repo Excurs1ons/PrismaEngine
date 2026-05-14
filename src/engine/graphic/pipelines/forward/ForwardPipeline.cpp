@@ -3,6 +3,7 @@
 #include "OpaquePass.h"
 #include "TransparentPass.h"
 #include "../../2d/Light2DPass.h"
+#include "../../2d/ReflectionPass2D.h"
 #include "../SkyboxRenderPass.h"
 #include "graphic/Renderer.h"
 #include "graphic/Renderer2D.h"
@@ -75,6 +76,7 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
     m_opaquePass = std::make_shared<OpaquePass>();
     m_opaquePass->SetDevice(device);
     m_light2DPass = std::make_shared<Light2DPass>();
+    m_reflectionPass2D = std::make_shared<ReflectionPass2D>();
     m_skyboxPass = std::make_shared<SkyboxPass>();
     m_transparentPass = std::make_shared<TransparentPass>();
     return 0;
@@ -86,6 +88,7 @@ void ForwardPipeline::Shutdown() {
     m_light2DPass.reset();
     m_skyboxPass.reset();
     m_transparentPass.reset();
+    m_reflectionPass2D.reset();
     m_gizmoPSO.reset();
     m_gizmoVertShader.reset();
     m_gizmoFragShader.reset();
@@ -199,6 +202,18 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         }
     }
 
+    // ── ReflectionPass2D ──
+    // 在 OpaquePass 绘制场景后，使用前一帧捕获的场景颜色
+    // 对反射材质表面采样镜像 UV 坐标，实现水面倒影/镜面效果
+    if (m_reflectionPass2D) {
+        m_reflectionPass2D->SetViewMatrix(view);
+        m_reflectionPass2D->SetProjectionMatrix(proj);
+        m_reflectionPass2D->Execute(passContext);
+        if (ctx.commandBuffer) {
+            m_reflectionPass2D->ExecuteReflection(ctx.commandBuffer, m_device, ctx.width, ctx.height);
+        }
+    }
+
     if (m_skyboxPass) {
         m_skyboxPass->SetViewMatrix(view);
         m_skyboxPass->SetProjectionMatrix(proj);
@@ -244,6 +259,12 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
             }
             Renderer::ClearGizmoQueue();
         }
+    }
+
+    // ── Capture scene for next frame's reflections ──
+    // 必须在所有渲染完成后执行，且不在任何 RenderPass 内部
+    if (m_reflectionPass2D && ctx.commandBuffer) {
+        m_reflectionPass2D->CaptureScene(ctx.commandBuffer, ctx.device, ctx.width, ctx.height);
     }
 }
 
