@@ -23,13 +23,13 @@ public partial class SceneInit : Script
             unsafe
             {
                 uint idx = n.Handle & 0xFFFF;
-                NativeAPI.RenderBuffer->SizeW[idx] = Random.Range(40, 100);
-                NativeAPI.RenderBuffer->SizeH[idx] = Random.Range(40, 100);
+                Interop.RenderData->SizeW[idx] = Random.Range(40, 100);
+                Interop.RenderData->SizeH[idx] = Random.Range(40, 100);
                 
-                NativeAPI.RenderBuffer->ColorR[idx] = Random.value;
-                NativeAPI.RenderBuffer->ColorG[idx] = Random.value;
-                NativeAPI.RenderBuffer->ColorB[idx] = Random.value;
-                NativeAPI.RenderBuffer->ColorA[idx] = 1.0f;
+                Interop.RenderData->ColorR[idx] = Random.value;
+                Interop.RenderData->ColorG[idx] = Random.value;
+                Interop.RenderData->ColorB[idx] = Random.value;
+                Interop.RenderData->ColorA[idx] = 1.0f;
             }
 
             n.AddScript<RotatingSprite>();

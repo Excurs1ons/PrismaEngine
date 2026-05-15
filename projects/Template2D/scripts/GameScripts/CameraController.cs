@@ -20,13 +20,13 @@ public partial class CameraController : Script
 
         // 2. 获取当前相机坐标
         float x = 0, y = 0;
-        unsafe { NativeAPI.API.GetCameraPos(&x, &y); }
+        unsafe { Interop.API.GetCameraPos(&x, &y); }
 
         x += horizontal * MoveSpeed * time.DeltaTime;
         y += vertical * MoveSpeed * time.DeltaTime;
 
         // 3. 应用新的相机坐标
-        unsafe { NativeAPI.API.SetCameraPos(x, y); }
+        unsafe { Interop.API.SetCameraPos(x, y); }
         
         // 4. 演示零分配日志 (修正 .NET 10 下的格式化报错)
         if (input.GetKey(KeyCode.Space))
