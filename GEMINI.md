@@ -85,9 +85,29 @@ Common presets include:
 - **Graphics:** `Renderer` and `RenderGraph` manage the Vulkan pipeline.
 - **Resources:** `AssetManager` handles loading via `AssetSerializer`.
 
+## Engineering Roadmap & TODOs
+
+### 🔴 高优先级 (High Priority)
+- **运行时着色器编译 (Runtime Shader Compilation)**: 
+    - 引入 `shaderc` (Google) 或 `DXC` (Microsoft) 作为引擎内部库依赖。
+    - 实现 `IShader::RecompileFromSource` 接口，支持 GLSL/HLSL 直接编译为 SPIR-V。
+    - 移除对外部 `glslc` 或 `dxc.exe` 的硬性环境依赖，提升工程便携性。
+- **Glaze 迁移与 nlohmann/json 清理**:
+    - 完成从 `nlohmann/json` 到 `Glaze` 的全面迁移。 (已完成构建系统和核心库重构)
+    - 移除所有源文件中对 `nlohmann/json.hpp` 的引用。 (已完成)
+- **Visual Studio 2026 兼容性维护**:
+    - 确保后续新增模块在 MSVC v144 编译器下的零警告编译。
+
+### 🟡 中优先级 (Medium Priority)
+- **依赖便携化 (Dependency Portability)**:
+    - 将 Vulkan Loader 和 .NET SDK 绿色化，放入 `.dependencies` 目录。
+    - 更新 `setup-env.ps1` 支持自动下载上述便携组件。
+
 ## Guidelines for AI Agents
 1. **Always use `-j2` or `-j4` for builds** on ARM/limited resources to avoid memory exhaustion (as per global context).
 2. **Follow the Driver-Device pattern** when adding platform-specific features.
 3. **Update `docs/MODULE_PROGRESS.md`** when completing or modifying major features.
 4. **Refer to `docs/`** for detailed specifications of individual systems before refactoring.
 5. **Check `CMakePresets.json`** for environment-specific configurations before suggesting build fixes.
+6. **Environment Optimization (Encoding)**: 在 Windows 中文环境下，建议 AI Agent 在执行构建命令时带上英文语言包前缀，以确保日志可读：
+    - 组合命令：`$env:VSLANG = '1033'; $env:DOTNET_CLI_UI_LANGUAGE = 'en-US'; chcp 437; ./scripts/build-windows.bat`
