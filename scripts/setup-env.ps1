@@ -240,11 +240,11 @@ if (-not $SkipVS) {
         }
     } else {
         Write-Warn "Visual Studio not found"
-        Write-Host "    Please install Visual Studio 2022 with the 'Desktop development with C++' workload" -ForegroundColor Gray
+        Write-Host "    Please install Visual Studio 2026 with the 'Desktop development with C++' workload" -ForegroundColor Gray
         Write-Host "    Download: https://visualstudio.microsoft.com/downloads/" -ForegroundColor Gray
         Write-Host ""
         Write-Host "    Or install via winget:" -ForegroundColor Gray
-        Write-Host "      winget install Microsoft.VisualStudio.2022.Community" -ForegroundColor DarkGray
+        Write-Host "      winget install Microsoft.VisualStudio.2026.Community" -ForegroundColor DarkGray
         Write-Host "    Then add C++ workload via Visual Studio Installer." -ForegroundColor Gray
     }
 } else {

@@ -251,7 +251,7 @@ cat > "$DOCS_DIR/QuickStart.md" << EOF
 
 - CMake 3.20+
 - C++20 编译器
-  - Windows: MSVC 2022+
+  - Windows: MSVC 2026+
   - Linux: GCC 11+ 或 Clang 13+
   - Android: NDK r25+
 - Vulkan SDK (如果使用 Vulkan 后端)

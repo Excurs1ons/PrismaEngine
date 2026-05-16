@@ -91,7 +91,7 @@ Use explicit Android preset:
 ## Environment Setup
 
 ### Windows
-1. Install Visual Studio 2022 with C++ development tools
+1. Install Visual Studio 2026 with C++ development tools
 2. Install CMake 3.31+
 3. (Optional) Install vcpkg for dependency management
 
