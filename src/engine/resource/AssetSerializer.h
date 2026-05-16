@@ -4,7 +4,8 @@
 #include "../core/Asset.h"
 #include <fstream>
 #include <memory>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 #include <sstream>
 #include <vector>
 
@@ -13,7 +14,7 @@
 #include "SerializationVersion.h"
 #include <filesystem>
 
-using json = nlohmann::json;
+using json = glz::json_t;
 
 namespace Prisma {
 namespace Serialization {
@@ -43,7 +44,11 @@ public:
                 asset.Serialize(archive);
                 
                 // 将JSON写入文件
-                file << archive.GetJson().dump(4);
+                std::string buffer;
+                auto ec = glz::write<glz::opts{.indent = 4}>(archive.GetJson(), buffer);
+                if (!ec) {
+                    file << buffer;
+                }
             }
 
             return true;
@@ -74,7 +79,9 @@ public:
                 // 读取整个JSON文件
                 std::string jsonStr((std::istreambuf_iterator<char>(file)),
                                     std::istreambuf_iterator<char>());
-                json jsonData = json::parse(jsonStr);
+                json jsonData;
+                auto ec = glz::read_json(jsonData, jsonStr);
+                if (ec) return nullptr;
                 
                 JsonInputArchive archive(jsonData);
                 asset->Deserialize(archive);
@@ -107,7 +114,9 @@ public:
                 asset.Serialize(archive);
                 
                 // 将JSON写入流
-                stream << archive.GetJson().dump();
+                std::string buffer;
+                glz::write_json(archive.GetJson(), buffer);
+                stream << buffer;
             }
 
             std::string str = stream.str();
@@ -138,7 +147,9 @@ public:
                 // 读取整个JSON字符串
                 std::string jsonStr((std::istreambuf_iterator<char>(stream)),
                                     std::istreambuf_iterator<char>());
-                json jsonData = json::parse(jsonStr);
+                json jsonData;
+                auto ec = glz::read_json(jsonData, jsonStr);
+                if (ec) return nullptr;
                 
                 JsonInputArchive archive(jsonData);
                 asset->Deserialize(archive);
@@ -163,15 +174,17 @@ private:
             stream.write(reinterpret_cast<const char*>(&version.minor), sizeof(version.minor));
             stream.write(reinterpret_cast<const char*>(&version.patch), sizeof(version.patch));
         } else {
-            json header = {
+            json header = glz::json_t::object_t{
                 {"format", "json"},
-                {"version", {
-                    {"major", version.major},
-                    {"minor", version.minor},
-                    {"patch", version.patch}
+                {"version", glz::json_t::object_t{
+                    {"major", static_cast<double>(version.major)},
+                    {"minor", static_cast<double>(version.minor)},
+                    {"patch", static_cast<double>(version.patch)}
                 }}
             };
-            stream << header.dump() << "\n";
+            std::string buffer;
+            glz::write_json(header, buffer);
+            stream << buffer << "\n";
         }
     }
 
@@ -198,15 +211,18 @@ private:
         } else {
             std::string headerLine;
             std::getline(stream, headerLine);
-            json header = json::parse(headerLine);
+            json header;
+            auto ec = glz::read_json(header, headerLine);
+            if (ec) throw std::runtime_error("Failed to parse header");
             
-            if (header["format"] != "json") {
+            if (header.get_object()["format"].get_string() != "json") {
                 throw std::runtime_error("Format mismatch");
             }
             
-            version.major = header["version"]["major"];
-            version.minor = header["version"]["minor"];
-            version.patch = header["version"]["patch"];
+            auto& ver = header.get_object()["version"].get_object();
+            version.major = static_cast<uint32_t>(ver["major"].get_double());
+            version.minor = static_cast<uint32_t>(ver["minor"].get_double());
+            version.patch = static_cast<uint32_t>(ver["patch"].get_double());
         }
         
         return version;
