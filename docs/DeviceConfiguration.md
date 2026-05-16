@@ -238,6 +238,29 @@ renderDesc.backendType = RenderDeviceType::Vulkan; // 或 DirectX12, OpenGL
 2. **跨平台开发**: 使用 OpenAL + Vulkan 作为统一方案
 3. **移动设备**: 考虑使用专门的移动端后端优化
 
+### 控制台输出乱码 (Garbled Console Output)
+
+在中文 Windows 环境下，MSVC 和 MSBuild 默认使用 GBK 编码，而现代终端倾向于 UTF-8，这会导致输出乱码。
+
+**推荐解决方法：**
+在执行构建前，通过环境变量强制工具链输出英文，这是最稳妥的方案：
+
+```powershell
+# PowerShell
+$env:VSLANG = '1033'                 # 强制 MSVC 使用英文
+$env:DOTNET_CLI_UI_LANGUAGE = 'en-US' # 强制 .NET 使用英文
+chcp 437                              # 切换控制台到美国英语代码页
+./scripts/build-windows.bat
+```
+
+或者使用 UTF-8 强制模式：
+```powershell
+[Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+$OutputEncoding = [System.Text.Encoding]::UTF8
+$env:DOTNET_CLI_FORCE_UTF8_ENCODING = 'true'
+chcp 65001
+```
+
 ## 配置文件示例
 
 创建 `CMakePresets.json` 快速配置：
