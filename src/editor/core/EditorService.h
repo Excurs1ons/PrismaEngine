@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Export.h"
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 #include <string>
 #include <functional>
 
@@ -21,7 +22,7 @@ public:
      * @param params JSON 参数
      * @return 结果 JSON
      */
-    static nlohmann::json Dispatch(const std::string& action, const nlohmann::json& params);
+    static glz::json_t Dispatch(const std::string& action, const glz::json_t& params);
 
     /**
      * @brief 获取视口原始二进制缓冲区 (RGBA)
@@ -31,11 +32,11 @@ public:
 
 private:
     // 具体业务逻辑分发
-    static nlohmann::json GetHierarchy();
-    static nlohmann::json GetEntity(uint32_t id);
-    static nlohmann::json UpdateEntity(const nlohmann::json& params);
-    static nlohmann::json GetAssets();
-    static nlohmann::json GetStatus();
+    static glz::json_t GetHierarchy();
+    static glz::json_t GetEntity(uint32_t id);
+    static glz::json_t UpdateEntity(const glz::json_t& params);
+    static glz::json_t GetAssets();
+    static glz::json_t GetStatus();
 };
 
 } // namespace Prisma

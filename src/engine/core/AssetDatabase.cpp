@@ -7,27 +7,28 @@ namespace Prisma {
 
 namespace fs = std::filesystem;
 
-void AssetMetadata::ToJson(nlohmann::json& j) const {
-    j = nlohmann::json{
+void AssetMetadata::ToJson(glz::json_t& j) const {
+    j = glz::json_t::object_t{
         {"guid", guid.ToString()},
         {"path", path},
         {"type", type},
         {"hash", hash},
-        {"lastSize", lastSize},
-        {"lastModified", lastModified},
+        {"lastSize", static_cast<double>(lastSize)},
+        {"lastModified", static_cast<double>(lastModified)},
         {"customData", customData}
     };
 }
 
-void AssetMetadata::FromJson(const nlohmann::json& j) {
-    guid = UUID::FromString(j.at("guid").get<std::string>());
-    path = j.at("path").get<std::string>();
-    type = j.at("type").get<std::string>();
-    hash = j.at("hash").get<std::string>();
-    lastSize = j.at("lastSize").get<uint64_t>();
-    lastModified = j.at("lastModified").get<int64_t>();
-    if (j.contains("customData")) {
-        customData = j.at("customData");
+void AssetMetadata::FromJson(const glz::json_t& j) {
+    auto& obj = j.get_object();
+    guid = UUID::FromString(obj.at("guid").get_string());
+    path = obj.at("path").get_string();
+    type = obj.at("type").get_string();
+    hash = obj.at("hash").get_string();
+    lastSize = static_cast<uint64_t>(obj.at("lastSize").get_double());
+    lastModified = static_cast<int64_t>(obj.at("lastModified").get_double());
+    if (obj.contains("customData")) {
+        customData = obj.at("customData");
     }
 }
 
@@ -48,10 +49,12 @@ bool AssetDatabase::Load(const std::string& dbPath) {
 
     try {
         std::ifstream file(m_dbPath);
-        nlohmann::json j;
-        file >> j;
+        std::string jsonStr((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        glz::json_t j;
+        auto ec = glz::read_json(j, jsonStr);
+        if (ec) throw std::runtime_error("Parse error");
 
-        for (auto& [key, value] : j.items()) {
+        for (auto& [key, value] : j.get_object()) {
             AssetMetadata meta;
             meta.FromJson(value);
             m_pathMap[meta.path] = meta;
@@ -70,15 +73,17 @@ void AssetDatabase::Save() {
     if (!m_isDirty) return;
 
     try {
-        nlohmann::json j;
+        glz::json_t j = glz::json_t::object_t{};
         for (auto& [path, meta] : m_pathMap) {
-            nlohmann::json metaJson;
+            glz::json_t metaJson;
             meta.ToJson(metaJson);
-            j[path] = metaJson;
+            j.get_object()[path] = metaJson;
         }
 
+        std::string buffer;
+        glz::write<glz::opts{.indent = 4}>(j, buffer);
         std::ofstream file(m_dbPath);
-        file << j.dump(4);
+        file << buffer;
         m_isDirty = false;
         LOG_DEBUG("AssetDB", "元数据库已保存。");
     } catch (const std::exception& e) {

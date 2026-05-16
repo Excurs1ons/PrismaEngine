@@ -2,12 +2,15 @@
 #include "scene/Scene.h"
 #include "graphic/CameraComponent.h"
 #include "Logger.h"
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 #include <fstream>
 
 namespace Prisma::Core {
 
-struct JsonSerializer::JsonDocumentImpl {};
+struct JsonSerializer::JsonDocumentImpl {
+    glz::json_t doc;
+};
 
 JsonSerializer::JsonSerializer() : m_pImpl(std::make_unique<JsonDocumentImpl>()) {}
 JsonSerializer::~JsonSerializer() = default;

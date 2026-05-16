@@ -10,7 +10,8 @@
 #include "graphic/interfaces/IResourceFactory.h"
 #include "logger/Logger.h"
 #include <fstream>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 
 namespace Prisma::Graphic {
 
@@ -25,25 +26,26 @@ bool Material::Load(const std::filesystem::path& path) {
         return false;
     }
 
-    nlohmann::json root;
-    try {
-        file >> root;
-    } catch (const std::exception& ex) {
-        LOG_ERROR("Material", "解析材质文件 {0} 失败: {1}", path.string(), ex.what());
+    std::string jsonStr((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+    glz::json_t root;
+    auto ec = glz::read_json(root, jsonStr);
+    if (ec) {
+        LOG_ERROR("Material", "解析材质文件 {0} 失败", path.string());
         return false;
     }
 
     m_Params.clear();
     SetPath(path);
 
-    if (root.contains("name") && root["name"].is_string()) {
-        SetName(root["name"].get<std::string>());
+    auto& rootObj = root.get_object();
+    if (rootObj.contains("name") && rootObj.at("name").is_string()) {
+        SetName(rootObj.at("name").get_string());
     } else {
         SetName(path.stem().string());
     }
 
-    if (root.contains("shader") && root["shader"].is_string()) {
-        const std::string shaderName = root["shader"].get<std::string>();
+    if (rootObj.contains("shader") && rootObj.at("shader").is_string()) {
+        const std::string shaderName = rootObj.at("shader").get_string();
         auto resourceManager = Engine::Get().GetRenderResourceManager();
         if (resourceManager) {
             auto shaderRes = resourceManager->LoadShaderSync(shaderName);
@@ -53,21 +55,22 @@ bool Material::Load(const std::filesystem::path& path) {
         }
     }
 
-    if (root.contains("properties") && root["properties"].is_object()) {
-        const auto& properties = root["properties"];
+    if (rootObj.contains("properties") && rootObj.at("properties").is_object()) {
+        const auto& properties = rootObj.at("properties").get_object();
 
-        if (properties.contains("albedo") && properties["albedo"].is_array() && properties["albedo"].size() >= 4) {
+        if (properties.contains("albedo") && properties.at("albedo").is_array() && properties.at("albedo").get_array().size() >= 4) {
+            auto& albedoArr = properties.at("albedo").get_array();
             SetBaseColor(
-                properties["albedo"][0].get<float>(),
-                properties["albedo"][1].get<float>(),
-                properties["albedo"][2].get<float>(),
-                properties["albedo"][3].get<float>());
+                static_cast<float>(albedoArr[0].get_double()),
+                static_cast<float>(albedoArr[1].get_double()),
+                static_cast<float>(albedoArr[2].get_double()),
+                static_cast<float>(albedoArr[3].get_double()));
         }
         if (properties.contains("metallic")) {
-            SetMetallic(properties["metallic"].get<float>());
+            SetMetallic(static_cast<float>(properties.at("metallic").get_double()));
         }
         if (properties.contains("roughness")) {
-            SetRoughness(properties["roughness"].get<float>());
+            SetRoughness(static_cast<float>(properties.at("roughness").get_double()));
         }
     }
 

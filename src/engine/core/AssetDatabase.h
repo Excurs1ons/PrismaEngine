@@ -6,7 +6,8 @@
 #include <string>
 #include <unordered_map>
 #include <filesystem>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 
 namespace Prisma {
 
@@ -17,11 +18,11 @@ struct AssetMetadata {
     std::string hash;      // MurmurHash3 128-bit hex string
     uint64_t lastSize;     // Fast fingerprint
     int64_t lastModified;  // Fast fingerprint
-    nlohmann::json customData;
+    glz::json_t customData;
 
     // 序列化逻辑
-    void ToJson(nlohmann::json& j) const;
-    void FromJson(const nlohmann::json& j);
+    void ToJson(glz::json_t& j) const;
+    void FromJson(const glz::json_t& j);
 };
 
 /**

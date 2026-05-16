@@ -5,8 +5,9 @@
 #include <cstring>  // for strncpy
 #include <fstream>
 #include <imgui.h>
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
+using json = glz::json_t;
 
 using namespace Prisma;
 
@@ -75,8 +76,9 @@ void ProjectSettingsWindow::LoadSettings() {
     std::ifstream file(m_settingsPath);
     if (file.is_open()) {
         try {
+            std::string jsonStr((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
             json j;
-            file >> j;
+            glz::read_json(j, jsonStr);
             Prisma::Serialization::JsonInputArchive archive(j);
             m_settings.Deserialize(archive);
         } catch (...) {
@@ -91,6 +93,8 @@ void ProjectSettingsWindow::SaveSettings() {
 
     std::ofstream file(m_settingsPath);
     if (file.is_open()) {
-        file << archive.GetJson().dump(4);
+        std::string buffer;
+        glz::write<glz::opts{.indent = 4}>(archive.GetJson(), buffer);
+        file << buffer;
     }
 }

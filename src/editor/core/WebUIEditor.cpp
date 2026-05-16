@@ -2,7 +2,8 @@
 #include "httplib.h"
 #include "logger/Logger.h"
 #include "EditorService.h"
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 
 namespace Prisma {
 
@@ -28,9 +29,11 @@ bool WebUIEditor::Start(int port) {
 
     m_server->Post(R"(/api/v1/(.*))", [](const httplib::Request& req, httplib::Response& res) {
         std::string action = req.matches[1];
-        nlohmann::json params;
-        try { if (!req.body.empty()) params = nlohmann::json::parse(req.body); } catch (...) {}
-        res.set_content(EditorService::Dispatch(action, params).dump(), "application/json");
+        glz::json_t params;
+        try { if (!req.body.empty()) glz::read_json(params, req.body); } catch (...) {}
+        std::string buffer;
+        glz::write_json(EditorService::Dispatch(action, params), buffer);
+        res.set_content(buffer, "application/json");
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
         res.set_header("Access-Control-Allow-Headers", "Content-Type");
