@@ -44,6 +44,9 @@ public:
     /// @brief 获取反射源纹理
     std::shared_ptr<ITexture> GetReflectionSource() const { return m_reflectionSource; }
 
+    void SetEnabled(bool enabled) { m_enabled = enabled; }
+    bool IsEnabled() const { return m_enabled; }
+
     // === UBO 参数设置 ===
 
     void SetReflectOffset(const PrismaMath::vec2& offset) { m_uboData.reflectOffset = offset; }
@@ -79,6 +82,8 @@ private:
     ReflectionUBOData m_uboData;
     uint32_t m_width = 0;
     uint32_t m_height = 0;
+    bool m_enabled = false; // 默认禁用，因为 CPU 回读严重影响性能
+    float m_logTimer = 5.0f; // 初始为 5.0，确保第一次能打 log
 };
 
 } // namespace Prisma::Graphic

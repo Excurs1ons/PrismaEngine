@@ -29,6 +29,9 @@ ReflectionPass2D::~ReflectionPass2D() {}
 
 void ReflectionPass2D::Update(Prisma::Timestep ts) {
     UpdateTime(ts);
+    if (m_logTimer > 0.0f) {
+        m_logTimer -= (float)ts.GetSeconds();
+    }
 }
 
 void ReflectionPass2D::Execute(const PassExecutionContext& context) {
@@ -170,11 +173,14 @@ void ReflectionPass2D::EnsureResources(uint32_t width, uint32_t height, IRenderD
 // ────────────────────────────────────────────────────────────────────────────
 void ReflectionPass2D::ExecuteReflection(ICommandBuffer* cmd, IRenderDevice* device,
                                           uint32_t width, uint32_t height) {
-    if (!cmd || !device) return;
+    if (!cmd || !device || !m_enabled) return;
 
     EnsureResources(width, height, device);
     if (!m_reflectionPSO || !m_reflectionUBO) {
-        LOG_DEBUG("ReflectionPass2D", "资源未就绪 (缺少 PSO 或 UBO)，跳过反射渲染");
+        if (m_logTimer <= 0.0f) {
+            LOG_DEBUG("ReflectionPass2D", "资源未就绪 (缺少 PSO 或 UBO)，跳过反射渲染");
+            m_logTimer = 5.0f;
+        }
         return;
     }
 
@@ -195,7 +201,10 @@ void ReflectionPass2D::ExecuteReflection(ICommandBuffer* cmd, IRenderDevice* dev
     // v1 暂不绘制 — 反射源纹理可通过 GetReflectionSource() 获取，
     // 由应用层使用标准 Renderer2D 批处理系统进行绘制。
 
-    LOG_DEBUG("ReflectionPass2D", "ExecuteReflection: {}x{} (PSO 已就绪)", width, height);
+    if (m_logTimer <= 0.0f) {
+        LOG_DEBUG("ReflectionPass2D", "ExecuteReflection: {}x{} (PSO 已就绪)", width, height);
+        m_logTimer = 5.0f;
+    }
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -203,13 +212,16 @@ void ReflectionPass2D::ExecuteReflection(ICommandBuffer* cmd, IRenderDevice* dev
 // ────────────────────────────────────────────────────────────────────────────
 void ReflectionPass2D::CaptureScene(ICommandBuffer* cmd, IRenderDevice* device,
                                      uint32_t width, uint32_t height) {
-    if (!cmd || !device) return;
+    if (!cmd || !device || !m_enabled) return;
 
     EnsureResources(width, height, device);
     if (!m_reflectionSource) return;
 
     // v1: 使用 ITexture::CopyFrom 进行简单拷贝
     // (需要后端 VulkanTexture 支持正确的布局转换)
+    //
+    // 性能提示: CopyFrom 目前在 Vulkan 后端可能是 CPU 回读的，
+    // 在 1080p 下会严重拖慢帧率。
     //
     // 完整 Vulkan 拷贝序列 (vkCmdCopyImage):
     //   1. 通过 RenderDeviceVulkan 获取 swapchain 的当前 VkImage
@@ -223,7 +235,10 @@ void ReflectionPass2D::CaptureScene(ICommandBuffer* cmd, IRenderDevice* device,
 
     auto* vkDev = dynamic_cast<Vulkan::RenderDeviceVulkan*>(device);
     if (!vkDev) {
-        LOG_DEBUG("ReflectionPass2D", "非 Vulkan 后端，跳过场景捕获");
+        if (m_logTimer <= 0.0f) {
+            LOG_DEBUG("ReflectionPass2D", "非 Vulkan 后端，跳过场景捕获");
+            m_logTimer = 5.0f;
+        }
         return;
     }
 
@@ -234,10 +249,16 @@ void ReflectionPass2D::CaptureScene(ICommandBuffer* cmd, IRenderDevice* device,
     auto* currentRT = swapChain->GetCurrentRenderTarget();
     if (currentRT) {
         m_reflectionSource->CopyFrom(currentRT, 0, 0, 0, 0);
-        LOG_DEBUG("ReflectionPass2D", "场景捕获 (CopyFrom): {}x{}", width, height);
+        if (m_logTimer <= 0.0f) {
+            LOG_DEBUG("ReflectionPass2D", "场景捕获 (CopyFrom): {}x{}", width, height);
+            m_logTimer = 5.0f;
+        }
     } else {
         // 方法2: 通过 CaptureFrame 回读再上传 (慢路径)
-        LOG_DEBUG("ReflectionPass2D", "场景捕获: 无法获取 swapchain RT ({}x{})", width, height);
+        if (m_logTimer <= 0.0f) {
+            LOG_DEBUG("ReflectionPass2D", "场景捕获: 无法获取 swapchain RT ({}x{})", width, height);
+            m_logTimer = 5.0f;
+        }
     }
 }
 
