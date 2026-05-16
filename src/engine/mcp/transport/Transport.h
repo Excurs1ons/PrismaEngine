@@ -1,13 +1,14 @@
 #pragma once
 #include <string>
 #include <functional>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 #include "Export.h"
 
 namespace Prisma {
 namespace MCP {
 
-using MCPMessageHandler = std::function<void(const nlohmann::json& message)>;
+using MCPMessageHandler = std::function<void(const glz::json_t& message)>;
 
 class ENGINE_API Transport {
 public:
@@ -15,7 +16,7 @@ public:
 
     virtual bool Start(MCPMessageHandler handler) = 0;
     virtual void Stop() = 0;
-    virtual bool Send(const nlohmann::json& message) = 0;
+    virtual bool Send(const glz::json_t& message) = 0;
     virtual bool IsConnected() const = 0;
     virtual std::string_view GetName() const = 0;
 };

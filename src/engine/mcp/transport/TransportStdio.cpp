@@ -41,10 +41,12 @@ void TransportStdio::Stop() {
     }
 }
 
-bool TransportStdio::Send(const nlohmann::json& message) {
+bool TransportStdio::Send(const glz::json_t& message) {
     if (!m_Running) return false;
     try {
-        std::string output = message.dump() + "\n";
+        std::string buffer;
+        glz::write_json(message, buffer);
+        std::string output = buffer + "\n";
         std::cout << output << std::flush;
         return true;
     } catch (...) {
@@ -68,15 +70,18 @@ void TransportStdio::readLoop() {
 void TransportStdio::processLine(const std::string& line) {
     if (line.empty()) return;
     try {
-        auto json = nlohmann::json::parse(line);
+        glz::json_t json;
+        auto ec = glz::read_json(json, line);
+        if (ec) throw std::runtime_error("Parse error");
+
         if (m_Handler) {
             m_Handler(json);
         }
-    } catch (const nlohmann::json::parse_error& e) {
-        nlohmann::json err = {
+    } catch (const std::exception& e) {
+        glz::json_t err = glz::json_t::object_t{
             {"jsonrpc", "2.0"},
-            {"id", nullptr},
-            {"error", {{"code", -32700}, {"message", std::string("Parse error: ") + e.what()}}}
+            {"id", {}},
+            {"error", glz::json_t::object_t{{"code", -32700.0}, {"message", std::string("Parse error: ") + e.what()}}}
         };
         Send(err);
     }

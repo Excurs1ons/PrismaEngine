@@ -14,9 +14,9 @@ bool MCPServer::Start(ToolRegistry* registry) {
     m_Registry = registry;
     m_Running = true;
 
-    m_NotificationHandlers["notifications/initialized"] = [](const nlohmann::json&) {};
+    m_NotificationHandlers["notifications/initialized"] = [](const glz::json_t&) {};
 
-    return m_Transport->Start([this](const nlohmann::json& msg) {
+    return m_Transport->Start([this](const glz::json_t& msg) {
         onMessage(msg);
     });
 }
@@ -26,15 +26,16 @@ void MCPServer::Stop() {
     if (m_Transport) m_Transport->Stop();
 }
 
-void MCPServer::onMessage(const nlohmann::json& msg) {
+void MCPServer::onMessage(const glz::json_t& msg) {
     if (!msg.is_object()) return;
 
+    auto& obj = msg.get_object();
     // Notification (no "id" field)
-    if (!msg.contains("id") || msg["id"].is_null()) {
-        std::string method = msg.value("method", "");
+    if (!obj.contains("id") || obj.at("id").is_null()) {
+        std::string method = obj.contains("method") ? obj.at("method").get_string() : "";
         auto it = m_NotificationHandlers.find(method);
         if (it != m_NotificationHandlers.end()) {
-            it->second(msg.value("params", nlohmann::json::object()));
+            it->second(obj.contains("params") ? obj.at("params") : glz::json_t::object_t{});
         }
         return;
     }
@@ -42,7 +43,7 @@ void MCPServer::onMessage(const nlohmann::json& msg) {
     // Request
     auto req = MCPRequest::fromJson(msg);
     if (!req) {
-        sendResponse(MCPResponse::Error(nullptr, ErrorCode::InvalidRequest, "Invalid request"));
+        sendResponse(MCPResponse::Error({}, ErrorCode::InvalidRequest, "Invalid request"));
         return;
     }
     handleRequest(*req);
@@ -52,7 +53,7 @@ void MCPServer::handleRequest(const MCPRequest& req) {
     if (req.method == "initialize") {
         handleInitialize(req);
     } else if (req.method == "notifications/initialized") {
-        sendResponse(MCPResponse::Success(req.id, {{"ok", true}}));
+        sendResponse(MCPResponse::Success(req.id, glz::json_t::object_t{{"ok", true}}));
     } else if (req.method == "tools/list" || req.method == "mcp/discover_all_tools") {
         handleListTools(req);
     } else if (req.method == "mcp/discover_tools") {
@@ -68,22 +69,23 @@ void MCPServer::handleRequest(const MCPRequest& req) {
 }
 
 void MCPServer::handleInitialize(const MCPRequest& req) {
-    auto clientInfo = req.params.value("clientInfo", nlohmann::json::object());
+    auto& paramsObj = req.params.get_object();
+    auto clientInfo = paramsObj.contains("clientInfo") ? paramsObj.at("clientInfo").get_object() : glz::json_t::object_t{};
 
     LOG_INFO("MCP", "Client connected: {0} v{1}",
-        clientInfo.value("name", "unknown"),
-        clientInfo.value("version", "?"));
+        clientInfo.contains("name") ? clientInfo.at("name").get_string() : "unknown",
+        clientInfo.contains("version") ? clientInfo.at("version").get_string() : "?");
 
-    int maxTokens = req.params.value("maxTokensPerResponse", 2000);
+    int maxTokens = paramsObj.contains("maxTokensPerResponse") ? static_cast<int>(paramsObj.at("maxTokensPerResponse").get_double()) : 2000;
     if (m_Session) {
         m_Session->SetTokenBudget(maxTokens);
     }
 
-    nlohmann::json result = {
+    glz::json_t result = glz::json_t::object_t{
         {"protocolVersion", "2025-03-26"},
-        {"capabilities", {
-            {"tools", {{"listChanged", false}}},
-            {"prisma_extensions", {
+        {"capabilities", glz::json_t::object_t{
+            {"tools", glz::json_t::object_t{{"listChanged", false}}},
+            {"prisma_extensions", glz::json_t::array_t{
                 "delta",
                 "field_filter",
                 "paginate",
@@ -91,7 +93,7 @@ void MCPServer::handleInitialize(const MCPRequest& req) {
                 "session_cache"
             }}
         }},
-        {"serverInfo", {
+        {"serverInfo", glz::json_t::object_t{
             {"name", "PrismaEngine MCP"},
             {"version", "1.0.0"}
         }}
@@ -106,20 +108,21 @@ void MCPServer::handleListTools(const MCPRequest& req) {
         return;
     }
 
-    auto filter = req.params.value("category", std::string());
+    auto& paramsObj = req.params.get_object();
+    auto filter = paramsObj.contains("category") ? paramsObj.at("category").get_string() : std::string();
     auto tools = m_Registry->GetToolList(filter);
 
-    nlohmann::json toolsJson = nlohmann::json::array();
+    glz::json_t::array_t toolsJson;
     for (const auto* tool : tools) {
-        nlohmann::json t;
-        t["name"]        = tool->GetName();
-        t["description"] = tool->GetDescription();
+        glz::json_t::object_t t;
+        t["name"]        = std::string(tool->GetName());
+        t["description"] = std::string(tool->GetDescription());
         t["inputSchema"] = tool->GetInputSchema();
-        t["category"]    = tool->GetCategory();
+        t["category"]    = std::string(tool->GetCategory());
         toolsJson.push_back(std::move(t));
     }
 
-    sendResponse(MCPResponse::Success(req.id, {{"tools", toolsJson}}));
+    sendResponse(MCPResponse::Success(req.id, glz::json_t::object_t{{"tools", std::move(toolsJson)}}));
 }
 
 void MCPServer::handleCallTool(const MCPRequest& req) {
@@ -128,14 +131,16 @@ void MCPServer::handleCallTool(const MCPRequest& req) {
         return;
     }
 
-    std::string toolName = req.params.value("name", "");
-    auto arguments = req.params.value("arguments", nlohmann::json::object());
+    auto& paramsObj = req.params.get_object();
+    std::string toolName = paramsObj.contains("name") ? paramsObj.at("name").get_string() : "";
+    auto arguments = paramsObj.contains("arguments") ? paramsObj.at("arguments") : glz::json_t::object_t{};
 
     // Check for hash-based delta first
-    std::string knownHash = arguments.value("_known_hash", std::string());
+    auto& argsObj = arguments.get_object();
+    std::string knownHash = argsObj.contains("_known_hash") ? argsObj.at("_known_hash").get_string() : std::string();
     if (!knownHash.empty() && m_Session) {
         auto delta = m_Session->TryGetDelta(knownHash, toolName, arguments);
-        if (delta.is_object() && delta.value("_delta", false)) {
+        if (delta.is_object() && delta.get_object().contains("_delta") && delta.get_object().at("_delta").get_bool()) {
             sendResponse(MCPResponse::Success(req.id, delta));
             return;
         }
@@ -162,9 +167,9 @@ void MCPServer::handleGetStateHash(const MCPRequest& req) {
         sendResponse(MCPResponse::Error(req.id, ErrorCode::InternalError, "Session not available"));
         return;
     }
-    sendResponse(MCPResponse::Success(req.id, {
+    sendResponse(MCPResponse::Success(req.id, glz::json_t::object_t{
         {"root_hash", m_Session->GetRootHashString()},
-        {"version",   m_Session->GetVersion()}
+        {"version",   static_cast<double>(m_Session->GetVersion())}
     }));
 }
 

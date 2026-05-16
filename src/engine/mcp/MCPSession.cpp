@@ -6,9 +6,9 @@ namespace MCP {
 
 MCPSession::MCPSession() = default;
 
-nlohmann::json MCPSession::TryGetDelta(const std::string& knownHashStr,
+glz::json_t MCPSession::TryGetDelta(const std::string& knownHashStr,
                                         const std::string& toolName,
-                                        const nlohmann::json& args) {
+                                        const glz::json_t& args) {
     Hash64 knownHash = 0;
     std::string h = knownHashStr;
     if (h.size() > 2 && h.substr(0, 2) == "0x") {
@@ -20,16 +20,17 @@ nlohmann::json MCPSession::TryGetDelta(const std::string& knownHashStr,
 
     auto delta = m_DeltaTracker.ComputeDelta(knownHash, toolName, args);
     if (!delta.hasChanges) {
-        return {{"_unchanged", true}};
+        return glz::json_t::object_t{{"_unchanged", true}};
     }
 
     if (!delta.snapshot.is_null()) {
-        return {{"_full_snapshot", true}, {"root_hash", GetRootHashString()}};
+        return glz::json_t::object_t{{"_full_snapshot", true}, {"root_hash", GetRootHashString()}};
     }
 
-    nlohmann::json result = delta.delta;
-    result["root_hash"] = GetRootHashString();
-    result["_delta"] = true;
+    glz::json_t result = delta.delta;
+    auto& obj = result.get_object();
+    obj["root_hash"] = GetRootHashString();
+    obj["_delta"] = true;
     return result;
 }
 

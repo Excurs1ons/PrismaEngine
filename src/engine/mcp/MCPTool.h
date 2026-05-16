@@ -6,7 +6,8 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <algorithm>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 #include "Export.h"
 
 namespace Prisma {
@@ -19,8 +20,8 @@ public:
     virtual std::string_view GetName() const = 0;
     virtual std::string_view GetDescription() const = 0;
     virtual std::string_view GetCategory() const = 0;
-    virtual nlohmann::json GetInputSchema() const = 0;
-    virtual nlohmann::json Execute(const nlohmann::json& args) = 0;
+    virtual glz::json_t GetInputSchema() const = 0;
+    virtual glz::json_t Execute(const glz::json_t& args) = 0;
 
     virtual bool SupportsFieldFilter() const { return false; }
 };

@@ -4,7 +4,8 @@
 #include <unordered_map>
 #include <vector>
 #include <cstdint>
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 #include <xxhash.h>
 
 namespace Prisma {
@@ -18,8 +19,8 @@ inline Hash64 ComputeHash(std::string_view data) {
 
 struct DeltaResult {
     bool hasChanges = false;
-    nlohmann::json delta;
-    nlohmann::json snapshot;
+    glz::json_t delta;
+    glz::json_t snapshot;
     float changeRatio = 0.0f;
     Hash64 newHash = 0;
 };
@@ -38,7 +39,7 @@ public:
     std::string GetRootHashString() const;
 
     DeltaResult ComputeDelta(Hash64 knownRootHash, const std::string& toolName,
-                             const nlohmann::json& args) const;
+                             const glz::json_t& args) const;
 
     static constexpr float kDeltaThreshold = 0.3f;
 

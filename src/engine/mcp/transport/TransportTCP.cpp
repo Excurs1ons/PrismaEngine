@@ -122,12 +122,14 @@ void TransportTCP::Stop() {
 #endif
 }
 
-bool TransportTCP::Send(const nlohmann::json& message) {
+bool TransportTCP::Send(const glz::json_t& message) {
     if (!m_Running || m_ClientSocket == INVALID_SOCKET_HANDLE)
         return false;
 
     try {
-        std::string output = message.dump() + "\n";
+        std::string buffer;
+        glz::write_json(message, buffer);
+        std::string output = buffer + "\n";
         int sent = static_cast<int>(::send(m_ClientSocket, output.c_str(),
                                             static_cast<int>(output.size()), 0));
         return sent > 0;
@@ -184,15 +186,18 @@ void TransportTCP::acceptLoop() {
 
                 if (!line.empty()) {
                     try {
-                        auto json = nlohmann::json::parse(line);
+                        glz::json_t json;
+                        auto ec = glz::read_json(json, line);
+                        if (ec) throw std::runtime_error("Parse error");
+                        
                         if (m_Handler) {
                             m_Handler(json);
                         }
-                    } catch (const nlohmann::json::parse_error& e) {
-                        nlohmann::json err = {
+                    } catch (const std::exception& e) {
+                        glz::json_t err = glz::json_t::object_t{
                             {"jsonrpc", "2.0"},
-                            {"id", nullptr},
-                            {"error", {{"code", -32700},
+                            {"id", {}},
+                            {"error", glz::json_t::object_t{{"code", -32700.0},
                                        {"message", std::string("Parse error: ") + e.what()}}}
                         };
                         Send(err);

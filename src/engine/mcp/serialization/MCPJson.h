@@ -1,5 +1,6 @@
 #pragma once
-#include <nlohmann/json.hpp>
+#include <glaze/glaze.hpp>
+#include <glaze/json/json_t.hpp>
 #include <string>
 #include <optional>
 
@@ -9,24 +10,24 @@ namespace MCP {
 struct MCPRequest {
     std::string jsonrpc = "2.0";
     std::string method;
-    nlohmann::json params = nlohmann::json::object();
-    nlohmann::json id = nullptr;
+    glz::json_t params = glz::json_t::object_t{};
+    glz::json_t id = {};
 
-    nlohmann::json toJson() const;
-    static std::optional<MCPRequest> fromJson(const nlohmann::json& j);
+    glz::json_t toJson() const;
+    static std::optional<MCPRequest> fromJson(const glz::json_t& j);
 };
 
 struct MCPResponse {
     std::string jsonrpc = "2.0";
-    nlohmann::json id = nullptr;
-    nlohmann::json result = nlohmann::json::object();
-    std::optional<nlohmann::json> error = std::nullopt;
+    glz::json_t id = {};
+    glz::json_t result = glz::json_t::object_t{};
+    std::optional<glz::json_t> error = std::nullopt;
 
-    nlohmann::json toJson() const;
-    static MCPResponse Success(nlohmann::json id, nlohmann::json result);
-    static MCPResponse Error(nlohmann::json id, int code,
+    glz::json_t toJson() const;
+    static MCPResponse Success(glz::json_t id, glz::json_t result);
+    static MCPResponse Error(glz::json_t id, int code,
                              const std::string& message,
-                             nlohmann::json data = nullptr);
+                             glz::json_t data = {});
 };
 
 namespace ErrorCode {

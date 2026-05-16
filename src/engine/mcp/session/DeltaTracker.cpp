@@ -69,13 +69,13 @@ void DeltaTracker::recomputeRootHash() const {
 }
 
 DeltaResult DeltaTracker::ComputeDelta(Hash64 knownRootHash, const std::string& /*toolName*/,
-                                       const nlohmann::json& /*args*/) const {
+                                       const glz::json_t& /*args*/) const {
     DeltaResult result;
     result.newHash = GetRootHash();
 
     if (knownRootHash == result.newHash) {
         result.hasChanges = false;
-        result.delta = {{"_unchanged", true}};
+        result.delta = glz::json_t::object_t{{"_unchanged", true}};
         return result;
     }
 
@@ -102,18 +102,18 @@ DeltaResult DeltaTracker::ComputeDelta(Hash64 knownRootHash, const std::string& 
 
     if (result.changeRatio > kDeltaThreshold && totalCount > 5) {
         result.hasChanges = true;
-        result.snapshot = {
+        result.snapshot = glz::json_t::object_t{
             {"_full_snapshot", true},
             {"reason", "change_ratio_exceeded"},
-            {"ratio", result.changeRatio}
+            {"ratio", static_cast<double>(result.changeRatio)}
         };
     } else {
         result.hasChanges = (changedCount > 0 || deletedCount > 0);
         if (result.hasChanges) {
-            result.delta = {
-                {"_delta_version", result.newHash},
-                {"changed_count", changedCount},
-                {"deleted_count", deletedCount}
+            result.delta = glz::json_t::object_t{
+                {"_delta_version", static_cast<double>(result.newHash)},
+                {"changed_count", static_cast<double>(changedCount)},
+                {"deleted_count", static_cast<double>(deletedCount)}
             };
         }
     }

@@ -3,8 +3,8 @@
 namespace Prisma {
 namespace MCP {
 
-nlohmann::json MCPRequest::toJson() const {
-    return {
+glz::json_t MCPRequest::toJson() const {
+    return glz::json_t::object_t{
         {"jsonrpc", jsonrpc},
         {"method", method},
         {"params", params},
@@ -12,42 +12,43 @@ nlohmann::json MCPRequest::toJson() const {
     };
 }
 
-std::optional<MCPRequest> MCPRequest::fromJson(const nlohmann::json& j) {
-    if (!j.is_object() || !j.contains("method") || !j["method"].is_string())
+std::optional<MCPRequest> MCPRequest::fromJson(const glz::json_t& j) {
+    if (!j.is_object() || !j.get_object().contains("method") || !j.get_object().at("method").is_string())
         return std::nullopt;
 
     MCPRequest req;
-    req.jsonrpc = j.value("jsonrpc", "2.0");
-    req.method  = j["method"].get<std::string>();
-    req.params  = j.value("params", nlohmann::json::object());
-    req.id      = j.value("id", nlohmann::json());  // nullptr deduces nullptr_t - use json() instead
+    auto& obj = j.get_object();
+    if (obj.contains("jsonrpc")) req.jsonrpc = obj.at("jsonrpc").get_string();
+    req.method  = obj.at("method").get_string();
+    if (obj.contains("params")) req.params = obj.at("params");
+    if (obj.contains("id")) req.id = obj.at("id");
     return req;
 }
 
-nlohmann::json MCPResponse::toJson() const {
-    nlohmann::json j = {{"jsonrpc", jsonrpc}, {"id", id}};
+glz::json_t MCPResponse::toJson() const {
+    glz::json_t::object_t obj{{"jsonrpc", jsonrpc}, {"id", id}};
     if (error) {
-        j["error"] = *error;
+        obj["error"] = *error;
     } else {
-        j["result"] = result;
+        obj["result"] = result;
     }
-    return j;
+    return obj;
 }
 
-MCPResponse MCPResponse::Success(nlohmann::json id, nlohmann::json result) {
+MCPResponse MCPResponse::Success(glz::json_t id, glz::json_t result) {
     MCPResponse r;
     r.id     = std::move(id);
     r.result = std::move(result);
     return r;
 }
 
-MCPResponse MCPResponse::Error(nlohmann::json id, int code,
+MCPResponse MCPResponse::Error(glz::json_t id, int code,
                                const std::string& message,
-                               nlohmann::json data) {
+                               glz::json_t data) {
     MCPResponse r;
     r.id    = std::move(id);
-    r.error = {{"code", code}, {"message", message}};
-    if (!data.is_null()) (*r.error)["data"] = std::move(data);
+    r.error = glz::json_t::object_t{{"code", static_cast<double>(code)}, {"message", message}};
+    if (!data.is_null()) (*r.error).get_object()["data"] = std::move(data);
     return r;
 }
 
