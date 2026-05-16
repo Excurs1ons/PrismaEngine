@@ -490,7 +490,6 @@ endif()
 target_link_libraries(Engine
     PUBLIC
         glm::glm-header-only
-        nlohmann_json::nlohmann_json
         glaze::glaze
         stb
         tinyxml2
@@ -626,11 +625,10 @@ if(PRISMA_ENABLE_MCP)
     endif()
 
     # MCP 自测工具 (可选)
-    option(PRISMA_BUILD_MCP_TESTS "Build MCP self-test" ON)
+    option(PRISMA_BUILD_MCP_TESTS "Build MCP self-test (manual: cmake --build --target test_mcp_core)" OFF)
     if(PRISMA_BUILD_MCP_TESTS)
-        # 直接包含 MCP 源文件，不链接 Engine DLL (避免 Vulkan/SDL 依赖)
-        add_executable(test_mcp_core
-            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp/test_mcp_core.cpp"
+        # 公共 MCP 核心源文件 (所有测试共享，不链接 Engine DLL 以避免 Vulkan/SDL 依赖)
+        set(MCP_TEST_COMMON_SOURCES
             "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPServer.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/mcp/serialization/MCPJson.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPTool.cpp"
@@ -638,49 +636,34 @@ if(PRISMA_ENABLE_MCP)
             "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/DeltaTracker.cpp"
             "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/TokenBudget.cpp"
         )
-        target_compile_definitions(test_mcp_core PRIVATE
-            PRISMA_ENABLE_MCP=1
-        )
-        target_include_directories(test_mcp_core PRIVATE
+        set(MCP_TEST_COMMON_INCLUDES
             "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp"  # Logger.h stub (overrides engine Logger.h)
             "${CMAKE_CURRENT_SOURCE_DIR}"
             "${CMAKE_CURRENT_SOURCE_DIR}/mcp"
             "${CMAKE_CURRENT_SOURCE_DIR}/logger"
             "${CMAKE_CURRENT_SOURCE_DIR}/core"
-            "${PRISMA_GLOBAL_DEPS_DIR}/nlohmann_json-src/single_include"
+            "${glaze_SOURCE_DIR}/include"
             "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src"
-        )
-        target_link_libraries(test_mcp_core PRIVATE xxhash)
-        set_target_properties(test_mcp_core PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/mcp"
         )
 
-        # MCP Stdio 集成测试服务器 (被 Python 客户端调用)
-        add_executable(test_mcp_stdio
-            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp/test_mcp_stdio.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPServer.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/serialization/MCPJson.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPTool.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/MCPSession.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/DeltaTracker.cpp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/session/TokenBudget.cpp"
+        # 辅助函数：创建 MCP 测试目标
+        function(add_mcp_test NAME TEST_SOURCE)
+            add_executable(${NAME}
+                "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp/${TEST_SOURCE}"
+                ${MCP_TEST_COMMON_SOURCES}
+                ${ARGN}
+            )
+            target_compile_definitions(${NAME} PRIVATE PRISMA_ENABLE_MCP=1)
+            target_include_directories(${NAME} PRIVATE ${MCP_TEST_COMMON_INCLUDES})
+            target_link_libraries(${NAME} PRIVATE xxhash)
+            set_target_properties(${NAME} PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/mcp"
+            )
+        endfunction()
+
+        add_mcp_test(test_mcp_core test_mcp_core.cpp)
+        add_mcp_test(test_mcp_stdio test_mcp_stdio.cpp
             "${CMAKE_CURRENT_SOURCE_DIR}/mcp/transport/TransportStdio.cpp"
-        )
-        target_compile_definitions(test_mcp_stdio PRIVATE
-            PRISMA_ENABLE_MCP=1
-        )
-        target_include_directories(test_mcp_stdio PRIVATE
-            "${CMAKE_CURRENT_SOURCE_DIR}/../../tests/mcp"
-            "${CMAKE_CURRENT_SOURCE_DIR}"
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp"
-            "${CMAKE_CURRENT_SOURCE_DIR}/logger"
-            "${CMAKE_CURRENT_SOURCE_DIR}/core"
-            "${PRISMA_GLOBAL_DEPS_DIR}/nlohmann_json-src/single_include"
-            "${PRISMA_GLOBAL_DEPS_DIR}/xxhash-src"
-        )
-        target_link_libraries(test_mcp_stdio PRIVATE xxhash)
-        set_target_properties(test_mcp_stdio PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/tests/mcp"
         )
     endif()
 endif()
