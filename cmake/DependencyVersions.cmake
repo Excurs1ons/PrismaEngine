@@ -21,7 +21,7 @@ set(PRISMA_DEP_GLM_VERSION "1.0.2")
 
 # nlohmann/json - JSON库
 # GitHub: https://github.com/nlohmann/json
-set(PRISMA_DEP_NLOHMANN_JSON_VERSION "v3.12.0")
+set(PRISMA_DEP_NLOHMANN_JSON_VERSION "master")
 
 # Glaze - 极速 JSON C++ 库
 # GitHub: https://github.com/stephenberry/glaze
@@ -29,8 +29,7 @@ set(PRISMA_DEP_GLAZE_VERSION "v7.5.0")
 
 # stb - 图像加载库 (header-only)
 # GitHub: https://github.com/nothings/stb
-# 锁定到具体 commit 而非 master 分支
-set(PRISMA_DEP_STB_VERSION "28d546d5eb77d4585506a20480f4de2e706dff4c")  # 2026-04-06 (latest)
+set(PRISMA_DEP_STB_VERSION "master")
 
 # tinyxml2 - XML解析库 (用于 TMX 地图格式)
 # GitHub: https://github.com/leethomason/tinyxml2

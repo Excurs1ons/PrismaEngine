@@ -43,7 +43,7 @@ endmacro()
 # ========== 依赖项声明 ==========
 
 Prisma_Declare_Dependency(glm https://github.com/g-truc/glm.git ${PRISMA_DEP_GLM_VERSION})
-Prisma_Declare_Dependency(nlohmann_json https://github.com/nlohmann/json.git ${PRISMA_DEP_NLOHMANN_JSON_VERSION})
+# nlohmann_json 依赖已移除 (正在迁移至 Glaze)
 Prisma_Declare_Dependency(stb https://github.com/nothings/stb.git ${PRISMA_DEP_STB_VERSION})
 set(tinyxml2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
 set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
@@ -101,7 +101,7 @@ set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
 set(CMAKE_WARN_DEPRECATED OFF)
 
 # 加载依赖 (使用 EXCLUDE_FROM_ALL 进一步隔离不需要的 target)
-FetchContent_MakeAvailable(glm nlohmann_json stb tinyxml2 zstd)
+FetchContent_MakeAvailable(glm stb tinyxml2 zstd)
 
 # STB 总是作为接口库处理
 if(NOT TARGET stb)
