@@ -165,7 +165,7 @@ prisma_create_editor_extension(MyExtension
 - **CMake**: 3.20 或更高版本
 - **C++ 编译器**:
   - Linux: GCC 11+ 或 Clang 13+
-  - Windows: MSVC 2022+
+  - Windows: MSVC 2026+
   - Android: NDK r25+
 - **Vulkan SDK**: 1.3+ (如果使用 Vulkan 后端)
 - **Python**: 3.8+ (用于构建脚本)

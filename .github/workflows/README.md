@@ -184,7 +184,7 @@ git push origin v1.0.0
 2. **本地复现**
    ```bash
    # Windows
-   cmake -B build -G "Visual Studio 17 2022" -A x64
+   cmake -B build -G "Visual Studio 18 2026" -A x64
    cmake --build build --config Release
 
    # Android
