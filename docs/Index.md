@@ -49,9 +49,14 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 - [Development MEMO](MEMO.md) - Random notes and troubleshooting
 - [Unity Legacy Avoidance](UnityLegacyAvoidance.md) - Design philosophy: avoiding Unity's technical debt (8 rules)
 
+## 🌐 WebUI Editor
+- [WebUI Editor](WebUIEditor.md) - Browser-based editor with real-time scene viewport
+- [EditorService](PrismaMCP.md#editor--编辑器) - Transport-agnostic editor backend API
+
 ## 🤖 AI Integration
-- [PrismaMCP](PrismaMCP.md) - Model Context Protocol for AI Agent control (31 tools)
-- [MCP Test Report](MCP_Test_Report.md) - MCP protocol test results and validation
+- [PrismaMCP](PrismaMCP.md) - Model Context Protocol for AI Agent control (17 tools, 7 categories)
+- [MCP Skill](../skills/prisma-mcp/SKILL.md) - AI agent usage skill for Prisma Engine MCP
+- [MCP Test Report](MCP_Test_Report.md) - MCP protocol test results and validation (19 tests)
 
 ---
-*Last Updated: May 2026*
+*Last Updated: 2026-05-16 (Added WebUI Editor + MCP Protocol documentation)*

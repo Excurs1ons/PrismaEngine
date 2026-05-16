@@ -125,9 +125,10 @@ flowchart LR
 | Shaders | ✅ 50% | PBR lighting shaders (lit/unlit) |
 | Android Runtime | ✅ 90% | Optimized Vulkan runtime (integrated GameActivity) |
 | Editor Tools | ⏳ 15% | ImGui-based inspector |
-| MCP Protocol | ✅ 80% | 31 tools for AI Agent integration |
+| MCP Protocol | ✅ 85% | 17 tools, 7 categories, dual transport, hash delta tracking |
+| WebUI Editor | ✅ 80% | Browser-based editor with scene/game viewport, hierarchy, inspector |
 
-**Overall: ~80%**
+**Overall: ~82%**
 
 ## Quick Start
 
@@ -179,7 +180,8 @@ cmake --build build/linux-x64-debug --parallel
 - **Unified Rendering API**: Write once, run on DX12 or Vulkan.
 - **Android Deep Optimization**: Zero-latency input via GameActivity and high-performance Vulkan rendering path.
 - **CoreCLR Scripting**: Full C# scripting with SoA entity pool and self-contained deployment.
-- **MCP Integration**: Full Model Context Protocol support for AI Agent control (31 tools).
+- **MCP Integration**: Full Model Context Protocol support for AI Agent control (17 tools, hash delta tracking, double transport).
+- **WebUI Editor**: Browser-based full editor with real-time scene viewport, hierarchy, inspector and console.
 
 ## License
 

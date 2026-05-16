@@ -2,7 +2,7 @@
 
 本文档跟踪 PrismaEngine 各模块的开发状态。
 
-**最后更新**: 2026-05-10 (性能与 2D 专项优化)
+**最后更新**: 2026-05-16 (WebUI + MCP 编辑器集成)
 
 ---
 
@@ -10,6 +10,8 @@
 
 | 时间 | 模块 | 变更 |
 |------|------|------|
+| 22:00 | MCP 协议 | ✅ 17 个工具，7 类覆盖，19 项测试全部通过 |
+| 21:30 | WebUI 编辑器 | ✅ 浏览器访问编辑，视图 + 层级 + 检查器 + 控制台 |
 | 21:17 | 脚本系统 | ✅ PrismaEngine.Core 迁移至引擎 (src/engine/scripting/CSharp) |
 | 12:45 | 2D 渲染 | ✅ 极致 2D 合批系统 (DC 缩减 >99%, 支持 5万+ Quads) |
 | 12:30 | 性能分析 | ✅ 实时性能 HUD + 瓶颈自动分析 (CPU/GPU/VSync/FPS Limit) |
@@ -191,6 +193,8 @@
 | **着色器** | 50% | ↑10% | 光照着色器添加 |
 | **平台层** | 70% | ↑10% | Android UI 资源完善 |
 | **工具类** | 80% | - | 相机、裁剪等基础工具完成 |
+| **MCP 协议** | 85% | 🆕 | 17 工具、7 分类、双传输、增量哈希 |
+| **WebUI 编辑器** | 80% | 🆕 | 浏览器编辑器，Scene/Game 视口 |
 
 ### 按功能
 
@@ -209,16 +213,187 @@
 
 | 类别 | 数量 | 总行数 |
 |------|------|--------|
-| **头文件** | 26 | ~4,141 |
-| **源文件** | 1 | 334 |
+| **头文件** | 52 | ~8,200 |
+| **源文件** | 26 | ~6,800 |
 | **着色器 (GLSL)** | 9 | ~225 |
 | **着色器 (HLSL)** | 2 | ~600 |
 | **UI 资源** | 4 | ~100 |
-| **总计** | 42 | ~5,400 |
+| **MCP 测试** | 3 | ~600 |
+| **技能文件** | 1 | ~160 |
+| **总计** | 97 | ~16,685 |
 
 ---
 
-## 八、近期计划
+## 八、MCP 协议 (Model Context Protocol)
+
+### 8.1 架构
+
+| 组件 | 状态 | 完成度 | 说明 |
+|------|------|--------|------|
+| **MCPSubSystem** | ✅ 已实现 | 100% | ISubSystem 注册，引擎生命周期管理 |
+| **MCPServer** | ✅ 已实现 | 100% | JSON-RPC 路由，方法派发 |
+| **TransportStdio** | ✅ 已实现 | 100% | 子进程 stdio 模式 |
+| **TransportTCP** | ✅ 已实现 | 90% | TCP socket 模式 (单客户端) |
+| **MCPSession** | ✅ 已实现 | 90% | 会话管理 + 哈希增量追踪 |
+| **DeltaTracker** | ✅ 已实现 | 100% | xxh3_64 哈希树，变化比阈值检测 |
+| **TokenBudget** | ✅ 已实现 | 100% | Agent token 预算管理 |
+| **ComponentSerializer** | ✅ 已实现 | 60% | 默认值省略框架，待具体组件补齐 |
+| **ToolRegistry** | ✅ 已实现 | 100% | 分层注册，分类过滤，排序输出 |
+| **MCPJson** | ✅ 已实现 | 100% | JSON-RPC 2.0 请求/响应序列化 |
+
+### 8.2 工具清单 (共 17 个)
+
+#### scene — 场景操作 (4 工具)
+
+| 工具 | 方法 | 参数 | 状态 |
+|------|------|------|------|
+| 层级 | `scene_get_hierarchy` | `fields` | ✅ 已实现 |
+| 详情 | `scene_get_entity` | `entity_id`, `fields` | ✅ 已实现 |
+| 创建 | `scene_create_entity` | `name`, `parent_id` | ✅ 已实现 |
+| 删除 | `scene_delete_entity` | `entity_id` | ✅ 已实现 |
+
+#### ecs — 组件操作 (3 工具)
+
+| 工具 | 方法 | 参数 | 状态 |
+|------|------|------|------|
+| 列表 | `ecs_component_list` | `entity_id` | ✅ 已实现 |
+| 获取 | `ecs_component_get` | `entity_id`, `component_type` | ✅ 已实现 |
+| 设置 | `ecs_component_set` | `entity_id`, `component_type`, `data` | ✅ 已实现 |
+
+#### engine — 引擎 (3 工具)
+
+| 工具 | 方法 | 描述 | 状态 |
+|------|------|------|------|
+| 状态 | `engine_get_status` | 引擎运行状态、FPS、场景信息 | ✅ 已实现 |
+| 哈希 | `mcp/get_state_hash` | 根状态哈希（增量入口） | ✅ 已实现 |
+| 构建 | `engine_get_build_info` | 编译器、平台、构建类型 | ✅ 已实现 |
+
+#### debug — 调试 (2 工具)
+
+| 工具 | 方法 | 描述 | 状态 |
+|------|------|------|------|
+| 帧数据 | `debug_frame_stats` | FPS、Draw Calls、三角面数 | ✅ 已实现 |
+| 日志 | `debug_log_get` | 引擎日志（级别过滤 + 分页） | ✅ 已实现 |
+
+#### asset — 资源 (2 工具)
+
+| 工具 | 方法 | 描述 | 状态 |
+|------|------|------|------|
+| 列表 | `asset_list` | 按类型过滤、分页 | ✅ 已实现 |
+| 详情 | `asset_get_info` | 资源元数据 | ✅ 已实现 |
+
+#### editor — 编辑器 (2 工具)
+
+| 工具 | 方法 | 描述 | 状态 |
+|------|------|------|------|
+| 选区 | `editor_get_selection` | 当前选中实体 | ✅ 已实现 |
+| 控制台 | `editor_console_get` | 编辑器控制台输出 | ✅ 已实现 |
+
+#### game — 运行时 (2 工具)
+
+| 工具 | 方法 | 描述 | 状态 |
+|------|------|------|------|
+| 状态 | `game_get_state` | 游戏运行状态 | ✅ 已实现 |
+| 推进 | `game_simulate` | 推进 N 帧 | ✅ 已实现 |
+
+### 8.3 传输模式
+
+| 模式 | CLI 参数 | 状态 | 说明 |
+|------|----------|------|------|
+| Stdio | `--mcp --mcp-transport=stdio` | ✅ 就绪 | 开发模式，Agent 管理子进程 |
+| TCP | `--mcp --mcp-transport=tcp --mcp-port=3100` | ✅ 就绪 | 独立进程/远程调试 |
+
+### 8.4 编译控制
+
+```cmake
+option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
+```
+
+通过 CMake 选项 `PRISMA_ENABLE_MCP=OFF` 可完全禁用。
+
+### 8.5 测试
+
+| 测试模块 | 文件 | 测试数 | 状态 |
+|----------|------|--------|------|
+| JSON-RPC 序列化 | `tests/mcp/test_mcp_core.cpp` | 4 | ✅ 通过 |
+| 工具注册 | `tests/mcp/test_mcp_core.cpp` | 3 | ✅ 通过 |
+| 哈希增量 | `tests/mcp/test_mcp_core.cpp` | 5 | ✅ 通过 |
+| 服务器路由 | `tests/mcp/test_mcp_core.cpp` | 5 | ✅ 通过 |
+| Token 预算 | `tests/mcp/test_mcp_core.cpp` | 1 | ✅ 通过 |
+| 会话管理 | `tests/mcp/test_mcp_core.cpp` | 1 | ✅ 通过 |
+| Stdio 传输 | `tests/mcp/test_mcp_stdio.cpp` | — | ✅ 通过 |
+| Python 集成 | `tests/mcp/test_mcp_client.py` | — | ✅ 通过 |
+
+---
+
+## 九、WebUI 编辑器
+
+### 9.1 架构
+
+| 组件 | 状态 | 完成度 | 说明 |
+|------|------|--------|------|
+| **WebUIEditor** | ✅ 已实现 | 90% | HTTP 服务器 + 前端页面宿主 |
+| **httplib** | ✅ 已集成 | 100% | 内嵌 C++ HTTP 服务器 (header-only) |
+| **EditorService** | ✅ 已实现 | 80% | 传输无关的编辑器服务接口 |
+| **EditorSharedMemory** | ✅ 已实现 | 100% | 视口帧缓冲共享内存 |
+
+### 9.2 功能
+
+| 功能 | 状态 | 说明 |
+|------|------|------|
+| **场景视口 (Scene Viewport)** | ✅ 已实现 | 1280×720 RGBA 实时帧缓冲流，60fps 刷新 |
+| **游戏视口 (Game Viewport)** | ✅ 已实现 | 独立游戏帧缓冲通道 |
+| **层级面板 (Hierarchy)** | ✅ 已实现 | 实体列表，支持选中高亮 |
+| **检查器 (Inspector)** | ✅ 已实现 | Transform 编辑 (X/Y/Z) |
+| **控制台 (Console)** | ✅ 已实现 | 引擎日志实时输出 |
+| **资源浏览器 (Asset Browser)** | ✅ 已实现 | 按路径浏览资产 |
+| **状态栏 (Status Bar)** | ✅ 已实现 | FPS、场景名、物体数 |
+| **视口交互** | ✅ 已实现 | 鼠标拖拽平移、滚轮缩放 |
+| **响应式布局** | ✅ 已实现 | 移动端单栏/桌面端三栏自适应 |
+| **实体创建** | ✅ 已实现 | New Entity 按钮 |
+| **CORS 支持** | ✅ 已实现 | `Access-Control-Allow-Origin: *` |
+
+### 9.3 API 端点
+
+| 端点 | 方法 | 描述 |
+|------|------|------|
+| `/` | GET | 主页面 (内嵌完整 HTML5 编辑器) |
+| `/api/v1/viewport/scene` | GET | 场景视口帧缓冲 (RGBA raw) |
+| `/api/v1/hierarchy/get` | POST | 获取层级 |
+| `/api/v1/entity/get` | POST | 获取实体详情 |
+| `/api/v1/entity/update` | POST | 更新实体属性 |
+| `/api/v1/entity/create` | POST | 创建实体 |
+| `/api/v1/engine/status` | POST | 引擎运行状态 |
+| `/api/v1/console/get` | POST | 控制台日志 |
+| `/api/v1/assets/list` | POST | 资源列表 |
+| `/api/v1/viewport/input` | POST | 视口输入事件 (鼠标/滚轮) |
+| `/(.*)` | POST | 通用动作分发 (通配路由) |
+
+### 9.4 启动方式
+
+```bash
+./bin/PrismaEditor --webui --webui-port=8080
+```
+
+然后浏览器访问 `http://localhost:8080`。
+
+### 9.5 技术栈
+
+- **WebUIEditor**: C++ httplib (header-only HTTP server)
+- **前端**: 原生 HTML5 + CSS3 Grid + Canvas 2D + 原生 JavaScript (无框架依赖)
+- **序列化**: glaze (glz::json_t)
+- **帧缓冲**: EditorSharedMemory (共享内存)
+- **通信**: RESTful JSON API + Canvas RGBA 流
+
+### 9.6 已知限制
+
+- 视口渲染目前为软件模拟 (Unity 蓝色背景 + 白色方块)，待接入真实 GPU 帧缓冲
+- 单个客户端连接
+- Inspector 仅支持 Transform 编辑
+
+---
+
+## 十、近期计划
 
 1. **Pass 实现** - 完成 OpaquePass/TransparentPass 等 .cpp 实现
 2. **Feature 实现** - 选择 1-2 个 Feature 完整实现（建议 Bloom 或 PostProcess）
@@ -228,7 +403,7 @@
 
 ---
 
-## 九、图例
+## 十一、图例
 
 - ✅ **已完成** - 头文件和实现文件都完成
 - 📋 **已规划** - 头文件存在，待实现
