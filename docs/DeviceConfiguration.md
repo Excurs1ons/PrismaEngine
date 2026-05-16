@@ -248,7 +248,7 @@ renderDesc.backendType = RenderDeviceType::Vulkan; // 或 DirectX12, OpenGL
   "configurePresets": [
     {
       "name": "Windows-Release",
-      "generator": "Visual Studio 17 2022",
+      "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/build/${presetName}",
       "cacheVariables": {
         "PRISMA_ENABLE_AUDIO_XAUDIO2": "ON",

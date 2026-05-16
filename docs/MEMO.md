@@ -7,7 +7,7 @@ YAGE (Yet Another Game Engine) 是一个跨平台游戏引擎，支持Windows和
 - **编程语言**: C++20
 - **图形API**: DirectX 12, Vulkan (计划中)
 - **窗口和输入**: SDL3
-- **构建系统**: Visual Studio 2022
+- **构建系统**: Visual Studio 2026
 - **包管理**: vcpkg
 - **依赖管理**: 通过vcpkg.json文件
 

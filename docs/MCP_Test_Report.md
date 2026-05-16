@@ -30,7 +30,7 @@ test_mcp_core.exe EXIT=-2147483645 (0x80000003 = STATUS_BREAKPOINT)
 
 ### 环境
 
-- MSVC 19.44 (Visual Studio 2022 Community 18)
+- MSVC 19.50 (Visual Studio 2026 Community)
 - C++20
 - Debug 模式 (CMAKE_CONFIGURATION=Debug)
 - `ENGINE_EXPORTS=1` (使 `ENGINE_API = __declspec(dllexport)`)

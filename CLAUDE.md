@@ -38,7 +38,7 @@ cmake --build --preset launcher-windows-x64-release
 ```
 
 Using Visual Studio:
-1. Open the PrismaEngine root folder in Visual Studio 2022
+1. Open the PrismaEngine root folder in Visual Studio 2026
 2. Visual Studio automatically detects CMake configuration
 3. Build solution (Ctrl+Shift+B)
 

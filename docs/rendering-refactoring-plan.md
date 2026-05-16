@@ -470,7 +470,7 @@ public:
 - 可以根据团队大小调整并行度
 
 ### 工具和环境
-- Visual Studio 2022
+- Visual Studio 2026
 - DirectX 12 SDK
 - Vulkan SDK
 - 性能分析工具（PIX, RenderDoc等）
