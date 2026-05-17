@@ -76,7 +76,7 @@ void MCPServer::handleInitialize(const MCPRequest& req) {
         clientInfo.contains("name") ? clientInfo.at("name").get_string() : "unknown",
         clientInfo.contains("version") ? clientInfo.at("version").get_string() : "?");
 
-    int maxTokens = paramsObj.contains("maxTokensPerResponse") ? static_cast<int>(paramsObj.at("maxTokensPerResponse").get_double()) : 2000;
+    int maxTokens = paramsObj.contains("maxTokensPerResponse") ? static_cast<int>(paramsObj.at("maxTokensPerResponse").get_number()) : 2000;
     if (m_Session) {
         m_Session->SetTokenBudget(maxTokens);
     }
@@ -140,7 +140,7 @@ void MCPServer::handleCallTool(const MCPRequest& req) {
     std::string knownHash = argsObj.contains("_known_hash") ? argsObj.at("_known_hash").get_string() : std::string();
     if (!knownHash.empty() && m_Session) {
         auto delta = m_Session->TryGetDelta(knownHash, toolName, arguments);
-        if (delta.is_object() && delta.get_object().contains("_delta") && delta.get_object().at("_delta").get_bool()) {
+        if (delta.is_object() && delta.get_object().contains("_delta") && delta.get_object().at("_delta").get_boolean()) {
             sendResponse(MCPResponse::Success(req.id, delta));
             return;
         }

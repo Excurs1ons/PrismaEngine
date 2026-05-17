@@ -13,7 +13,7 @@ namespace MCP {
 
 SceneHierarchyTool::SceneHierarchyTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json SceneHierarchyTool::GetInputSchema() const {
+glz::json_t SceneHierarchyTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -23,34 +23,42 @@ nlohmann::json SceneHierarchyTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json SceneHierarchyTool::Execute(const nlohmann::json& args) {
+glz::json_t SceneHierarchyTool::Execute(const glz::json_t& args) {
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) {
-        return {{"error", "No active scene"}, {"entities", nlohmann::json::array()}};
+        return {{"error", "No active scene"}, {"entities", std::vector<glz::json_t>{}}};
     }
 
-    auto fields = args.value("fields", std::vector<std::string>{"name"});
+    std::vector<std::string> fields;
+    if (args.get_object().contains("fields")) {
+        auto fields_json = args["fields"].get_array();
+        for (const auto& f : fields_json) {
+            fields.push_back(f.get_string());
+        }
+    } else {
+        fields = {"name"};
+    }
     const auto& allEntities = scene->GetGameObjects();
 
-    nlohmann::json entities = nlohmann::json::array();
+    glz::json_t entities = std::vector<glz::json_t>{};
     uint32_t idCounter = 1;
     for (const auto& entity : allEntities) {
-        nlohmann::json e;
+        glz::json_t e;
         if (fields.empty() || std::find(fields.begin(), fields.end(), "name") != fields.end())
             e["name"] = entity->name;
-        e["id"] = idCounter++;
-        entities.push_back(std::move(e));
+        e["id"] = static_cast<double>(idCounter++);
+        entities.get_array().push_back(std::move(e));
     }
 
-    return {{"scene_name", scene->GetName()}, {"entity_count", allEntities.size()}, {"entities", entities}};
+    return {{"scene_name", scene->GetName()}, {"entity_count", static_cast<double>(allEntities.size())}, {"entities", std::move(entities)}};
 }
 
 // ---- SceneEntityTool ----
 
 SceneEntityTool::SceneEntityTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json SceneEntityTool::GetInputSchema() const {
+glz::json_t SceneEntityTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -61,23 +69,29 @@ nlohmann::json SceneEntityTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json SceneEntityTool::Execute(const nlohmann::json& args) {
-    auto entityIdx = args["entity_index"].get<size_t>();
+glz::json_t SceneEntityTool::Execute(const glz::json_t& args) {
+    auto entityIdx = static_cast<size_t>(args["entity_index"].get_number());
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
     const auto& allEntities = scene->GetGameObjects();
     if (entityIdx >= allEntities.size()) {
-        return {{"error", "Entity index out of range"}, {"max_index", allEntities.size() - 1}};
+        return {{"error", "Entity index out of range"}, {"max_index", static_cast<double>(allEntities.size() - 1)}};
     }
 
     auto entity = allEntities[entityIdx];
-    auto fields = args.value("fields", std::vector<std::string>{});
+    std::vector<std::string> fields;
+    if (args.get_object().contains("fields")) {
+        auto fields_json = args["fields"].get_array();
+        for (const auto& f : fields_json) {
+            fields.push_back(f.get_string());
+        }
+    }
     bool allFields = fields.empty();
 
-    nlohmann::json result;
-    result["entity_index"] = entityIdx;
+    glz::json_t result;
+    result["entity_index"] = static_cast<double>(entityIdx);
 
     if (allFields || std::find(fields.begin(), fields.end(), "name") != fields.end())
         result["name"] = entity->name;
@@ -85,7 +99,11 @@ nlohmann::json SceneEntityTool::Execute(const nlohmann::json& args) {
     if (allFields || std::find(fields.begin(), fields.end(), "transform") != fields.end()) {
         auto* transform = entity->GetTransform().get();
         if (transform) {
-            result["position"] = {transform->GetPosition().x, transform->GetPosition().y, transform->GetPosition().z};
+            result["position"] = std::vector<glz::json_t>{
+                transform->GetPosition().x, 
+                transform->GetPosition().y, 
+                transform->GetPosition().z
+            };
         }
     }
 
@@ -96,7 +114,7 @@ nlohmann::json SceneEntityTool::Execute(const nlohmann::json& args) {
 
 SceneCreateEntityTool::SceneCreateEntityTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json SceneCreateEntityTool::GetInputSchema() const {
+glz::json_t SceneCreateEntityTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -106,12 +124,12 @@ nlohmann::json SceneCreateEntityTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json SceneCreateEntityTool::Execute(const nlohmann::json& args) {
+glz::json_t SceneCreateEntityTool::Execute(const glz::json_t& args) {
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    auto name = args["name"].get<std::string>();
+    auto name = args["name"].get_string();
     auto entity = std::make_shared<GameObject>(name);
     entity->Initialize();
     scene->AddGameObject(entity);
@@ -123,7 +141,7 @@ nlohmann::json SceneCreateEntityTool::Execute(const nlohmann::json& args) {
 
 SceneDeleteEntityTool::SceneDeleteEntityTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json SceneDeleteEntityTool::GetInputSchema() const {
+glz::json_t SceneDeleteEntityTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -133,8 +151,8 @@ nlohmann::json SceneDeleteEntityTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json SceneDeleteEntityTool::Execute(const nlohmann::json& args) {
-    auto entityIdx = args["entity_index"].get<size_t>();
+glz::json_t SceneDeleteEntityTool::Execute(const glz::json_t& args) {
+    auto entityIdx = static_cast<size_t>(args["entity_index"].get_number());
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};

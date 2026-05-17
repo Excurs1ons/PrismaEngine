@@ -30,7 +30,9 @@ public class Block
     public BlockId Id { get; }
     public string Name { get; }
     public BlockState DefaultState { get; }
+#pragma warning disable CS0649
     internal BlockState[]? StatesByProperty;
+#pragma warning restore CS0649
 
     public float DestroySpeed { get; set; } = 1.0f;
     public float ExplosionResistance { get; set; } = 1.0f;

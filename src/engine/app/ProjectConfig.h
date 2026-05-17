@@ -36,11 +36,21 @@ struct ProjectConfig {
     std::vector<std::string> assets;
     WindowConfig window;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
+    Graphic::StandardPipelineType pipelineType = Graphic::StandardPipelineType::Forward3D; // 新增：管线类型
 };
 
 } // namespace Prisma
 
 // ── Glaze 映射 ──
+
+template <>
+struct glz::meta<Prisma::Graphic::StandardPipelineType> {
+    using enum Prisma::Graphic::StandardPipelineType;
+    static constexpr auto value = glz::enumerate(
+        "Forward3D", Forward3D,
+        "Standard2D", Standard2D
+    );
+};
 
 template <>
 struct glz::meta<Prisma::ScriptingBackend> {
@@ -82,6 +92,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "entryScene", &Prisma::ProjectConfig::entryScene,
         "assets", &Prisma::ProjectConfig::assets,
         "window", &Prisma::ProjectConfig::window,
-        "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend
+        "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,
+        "pipelineType", &Prisma::ProjectConfig::pipelineType
     );
 };

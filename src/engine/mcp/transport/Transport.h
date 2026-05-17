@@ -2,7 +2,7 @@
 #include <string>
 #include <functional>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 #include "Export.h"
 
 namespace Prisma {

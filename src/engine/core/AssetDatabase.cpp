@@ -25,8 +25,8 @@ void AssetMetadata::FromJson(const glz::json_t& j) {
     path = obj.at("path").get_string();
     type = obj.at("type").get_string();
     hash = obj.at("hash").get_string();
-    lastSize = static_cast<uint64_t>(obj.at("lastSize").get_double());
-    lastModified = static_cast<int64_t>(obj.at("lastModified").get_double());
+    lastSize = static_cast<uint64_t>(obj.at("lastSize").get_number());
+    lastModified = static_cast<int64_t>(obj.at("lastModified").get_number());
     if (obj.contains("customData")) {
         customData = obj.at("customData");
     }
@@ -81,7 +81,7 @@ void AssetDatabase::Save() {
         }
 
         std::string buffer;
-        glz::write<glz::opts{.indent = 4}>(j, buffer);
+        glz::write<glz::opts{.prettify = true}>(j, buffer);
         std::ofstream file(m_dbPath);
         file << buffer;
         m_isDirty = false;

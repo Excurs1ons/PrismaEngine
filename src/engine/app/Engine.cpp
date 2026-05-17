@@ -126,158 +126,160 @@ int Engine::Run(std::unique_ptr<Application> app) {
     m_CurrentApp = std::move(app);
     m_Running = true;
 
-    // 从 project.json 读取项目配置（窗口参数、入口场景、资产路径、脚本后端）
+    auto& appSpec = m_CurrentApp->GetSpecification();
     auto scriptingBackend = ScriptingBackend::CoreCLR;
-    {
-        auto& spec = m_CurrentApp->GetSpecification();
-        std::vector<std::string> projPaths = {
-            "assets/project.json",
-            "project.json",
-            "projects/Template2D/assets/project.json"
-        };
-        for (const auto& p : projPaths) {
-            if (std::filesystem::exists(p)) {
-                ProjectConfig config;
-                std::string buf;
-                auto err = glz::read_file_json(config, p, buf);
-                if (!err) {
-                    spec.Name        = config.name;
-                    spec.EntryScene  = config.entryScene;
-                    spec.Width       = config.window.width;
-                    spec.Height      = config.window.height;
-                    spec.Fullscreen  = config.window.fullscreen;
-                    spec.Resizable   = config.window.resizable;
-                    spec.PresentMode = config.window.vsync;
-                    spec.MaxFPS      = config.window.maxFPS;
-                    if (m_AssetManager) {
-                        for (auto& ap : config.assets)
-                            m_AssetManager->AddSearchPath(ap);
-                    }
-                    scriptingBackend = config.scriptingBackend;
-                    LOG_INFO("Engine", "项目配置已加载: {0} ({1}x{2}), 脚本后端: {3}",
-                             config.name, config.window.width, config.window.height,
-                             scriptingBackend == ScriptingBackend::Off ? "Off" :
-                             scriptingBackend == ScriptingBackend::Mono ? "Mono" : "CoreCLR");
+    Graphic::StandardPipelineType pipelineType = Graphic::StandardPipelineType::Forward3D;
+
+    // 从 project.json 读取项目配置
+    std::vector<std::string> projPaths = {
+        "assets/project.json",
+        "project.json",
+        "projects/Template2D/assets/project.json"
+    };
+
+    bool configLoaded = false;
+    for (const auto& p : projPaths) {
+        if (std::filesystem::exists(p)) {
+            ProjectConfig config;
+            std::string buf;
+            auto err = glz::read_file_json(config, p, buf);
+            if (!err) {
+                appSpec.Name        = config.name;
+                appSpec.EntryScene  = config.entryScene;
+                appSpec.Width       = config.window.width;
+                appSpec.Height      = config.window.height;
+                appSpec.Fullscreen  = config.window.fullscreen;
+                appSpec.Resizable   = config.window.resizable;
+                appSpec.PresentMode = config.window.vsync;
+                appSpec.MaxFPS      = config.window.maxFPS;
+                if (m_AssetManager) {
+                    for (auto& ap : config.assets)
+                        m_AssetManager->AddSearchPath(ap);
                 }
+                scriptingBackend = config.scriptingBackend;
+                pipelineType = config.pipelineType;
+                LOG_INFO("Engine", "项目配置已加载: {0} ({1}x{2}), 脚本后端: {3}, 管线: {4}",
+                         config.name, config.window.width, config.window.height,
+                         scriptingBackend == ScriptingBackend::Off ? "Off" :
+                         scriptingBackend == ScriptingBackend::Mono ? "Mono" : "CoreCLR",
+                         pipelineType == Graphic::StandardPipelineType::Standard2D ? "Standard2D" : "Forward3D");
+                configLoaded = true;
                 break;
             }
         }
     }
 
-    if (!m_Spec.Headless) {
-        WindowProps props;
-        auto& appSpec = m_CurrentApp->GetSpecification();
-        props.Title = appSpec.Name;
-        props.Width = appSpec.Width;
-        props.Height = appSpec.Height;
-        props.Resizable = appSpec.Resizable;
-        props.fullScreenMode = appSpec.Fullscreen ? FullScreenMode::FullScreen : FullScreenMode::Window;
+    if (!configLoaded) {
+        LOG_WARNING("Engine", "未找到有效的 project.json，使用默认应用配置");
+    }
 
-        m_Window = Window::Create(props);
-        if (!m_Window) {
-            LOG_FATAL("Engine", "创建窗口失败！");
-            return -1;
-        }
+    // 1. 创建窗口
+    WindowProps winProps;
+    winProps.Title = appSpec.Name;
+    winProps.Width = appSpec.Width;
+    winProps.Height = appSpec.Height;
+    winProps.Resizable = appSpec.Resizable;
+    winProps.fullScreenMode = appSpec.Fullscreen ? FullScreenMode::FullScreen : FullScreenMode::Window;
+    
+    m_Window = Window::Create(winProps);
+    if (!m_Window) {
+        LOG_FATAL("Engine", "创建窗口失败！");
+        return -1;
+    }
 
-        m_CurrentApp->GetSpecification().Width  = m_Window->GetWidth();
-        m_CurrentApp->GetSpecification().Height = m_Window->GetHeight();
+    // 2. 初始化渲染系统
+    Graphic::RenderSystemDesc rDesc;
+    rDesc.windowHandle = m_Window->GetNativeWindow();
+    rDesc.width = m_Window->GetWidth();
+    rDesc.height = m_Window->GetHeight();
+    rDesc.enableDebug      = false;
+    rDesc.presentMode      = appSpec.PresentMode;
+    rDesc.enableValidation = false;
+    rDesc.pipelineType     = pipelineType;
+    
+    m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
+    if (m_RenderSystem->Initialize() != 0) {
+        LOG_FATAL("Engine", "初始化渲染系统失败！");
+        return -1;
+    }
 
-        Graphic::RenderSystemDesc rDesc;
-        rDesc.windowHandle = m_Window->GetNativeWindow();
-        rDesc.width = m_Window->GetWidth();
-        rDesc.height = m_Window->GetHeight();
-        rDesc.enableDebug      = false;
-        rDesc.presentMode      = appSpec.PresentMode;
-        rDesc.enableValidation = false;
+    if (m_RenderSystem->GetDevice()) {
+        m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
+    }
+
+    // 3. 设置窗口事件回调
+    m_Window->SetEventCallback([this](Event& e) {
+        EventDispatcher dispatcher(e);
         
-        m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
-        if (m_RenderSystem->Initialize() != 0) {
-            LOG_FATAL("Engine", "初始化渲染系统失败！");
-            return -1;
-        }
+        dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& [[maybe_unused]] event) {
+            m_Running = false;
+            return true;
+        });
 
-        if (m_RenderSystem->GetDevice()) {
-            m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
-        }
+        dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
+            if (event.GetWidth() == 0 || event.GetHeight() == 0) {
+                m_Minimized = true;
+                return false;
+            }
+            m_Minimized = false;
+            if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
+            if (m_SceneManager) {
+                auto* scene = m_SceneManager->GetCurrentScene();
+                if (scene) {
+                    auto camera = scene->GetMainCamera();
+                    if (camera) camera->SetViewport(event.GetWidth(), event.GetHeight());
+                }
+            }
+            if (m_CurrentApp) {
+                m_CurrentApp->GetSpecification().Width  = event.GetWidth();
+                m_CurrentApp->GetSpecification().Height = event.GetHeight();
+            }
+            return false;
+        });
+
+        if (m_CurrentApp) m_CurrentApp->OnEvent(e);
+    });
 
 #if PRISMA_ENABLE_SCRIPTING > 0
-        // 初始化 C# 脚本引擎（根据项目设置决定）
-        if (scriptingBackend == ScriptingBackend::CoreCLR) {
-            std::vector<std::string> scriptPaths = {
-                ".",
-                "scripts",
-                "../scripts",
-                "../projects/Template2D/scripts/GameScripts/bin/Debug/net10.0/win-x64/publish",
-                "../projects/Template2D/scripts/GameScripts/bin/Release/net10.0/win-x64/publish",
-            };
-            std::string scriptsDir;
-            for (const auto& p : scriptPaths) {
-                if (std::filesystem::exists(p + "/GameScripts.runtimeconfig.json")) {
-                    scriptsDir = std::filesystem::canonical(p).string();
-                    break;
-                }
+    // 初始化 C# 脚本引擎
+    if (scriptingBackend == ScriptingBackend::CoreCLR) {
+        std::vector<std::string> scriptPaths = {
+            ".",
+            "scripts",
+            "../scripts",
+            "../projects/Template2D/scripts/GameScripts/bin/Debug/net10.0/win-x64/publish",
+            "../projects/Template2D/scripts/GameScripts/bin/Release/net10.0/win-x64/publish",
+        };
+        std::string scriptsDir;
+        for (const auto& p : scriptPaths) {
+            if (std::filesystem::exists(p + "/GameScripts.runtimeconfig.json")) {
+                scriptsDir = std::filesystem::canonical(p).string();
+                break;
             }
-            if (!scriptsDir.empty()) {
-                if (m_coreCLRHost->Initialize(scriptsDir)) {
-                    if (m_scriptEngine->Initialize(*m_coreCLRHost)) {
-                        LOG_INFO("Engine", "C# 脚本系统已启动 (CoreCLR)");
-                    }
-                }
-            } else {
-                LOG_WARNING("Engine", "未找到 C# 脚本输出目录（先执行 dotnet publish --self-contained）");
-            }
-        } else if (scriptingBackend == ScriptingBackend::Mono) {
-#if PRISMA_ENABLE_MONO
-            // TODO: Mono 运行时初始化
-            LOG_INFO("Engine", "Mono 脚本后端将在后续版本实现");
-#else
-            LOG_WARNING("Engine", "项目配置为 Mono 后端，但引擎编译时未启用 Mono 支持");
-#endif
-        } else {
-            LOG_INFO("Engine", "C# 脚本已关闭（项目配置）");
         }
+        if (!scriptsDir.empty()) {
+            if (m_coreCLRHost->Initialize(scriptsDir)) {
+                if (m_scriptEngine->Initialize(*m_coreCLRHost)) {
+                    LOG_INFO("Engine", "C# 脚本系统已启动 (CoreCLR)");
+                }
+            }
+        } else {
+            LOG_WARNING("Engine", "未找到 C# 脚本输出目录");
+        }
+    } else if (scriptingBackend == ScriptingBackend::Mono) {
+#if PRISMA_ENABLE_MONO
+        LOG_INFO("Engine", "Mono 脚本后端将在后续版本实现");
+#else
+        LOG_WARNING("Engine", "项目配置为 Mono 后端，但引擎编译时未启用 Mono 支持");
 #endif
-
-        m_Window->SetEventCallback([this](Event& e) {
-            EventDispatcher dispatcher(e);
-            
-            dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& [[maybe_unused]] event) {
-                m_Running = false;
-                return true;
-            });
-
-            dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
-                if (event.GetWidth() == 0 || event.GetHeight() == 0) {
-                    m_Minimized = true;
-                    return false;
-                }
-                m_Minimized = false;
-                if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
-                if (m_SceneManager) {
-                    auto* scene = m_SceneManager->GetCurrentScene();
-                    if (scene) {
-                        auto camera = scene->GetMainCamera();
-                        if (camera) camera->SetViewport(event.GetWidth(), event.GetHeight());
-                    }
-                }
-                if (m_CurrentApp) {
-                    m_CurrentApp->GetSpecification().Width  = event.GetWidth();
-                    m_CurrentApp->GetSpecification().Height = event.GetHeight();
-                }
-                return false;
-            });
-
-            if (m_CurrentApp) m_CurrentApp->OnEvent(e);
-        });
     }
+#endif
 
     // 自动加载入口场景
     if (m_SceneManager) {
-        auto& spec = m_CurrentApp->GetSpecification();
-        if (!spec.EntryScene.empty()) {
-            m_SceneManager->LoadFromFile(spec.EntryScene);
+        if (!appSpec.EntryScene.empty()) {
+            m_SceneManager->LoadFromFile(appSpec.EntryScene);
         }
-        // 相机视口同步到实际窗口尺寸
         auto* scene = m_SceneManager->GetCurrentScene();
         if (scene) {
             auto camera = scene->GetMainCamera();
@@ -285,16 +287,11 @@ int Engine::Run(std::unique_ptr<Application> app) {
         }
     }
 
-    // [修复] 所有初始化数据（场景 + C# Bootstrap）已写入 Write (layout A)，
-    // 交换一次使 Read 获得完整数据。
-    // 若不交换：第一帧 World::Step 的 SyncActiveBuffers 从空 Read 覆盖 Write，
-    // 导致场景方块位置丢失（永远在 0,0）。
     EntityManager::Get().SwapBuffers();
 
     if (m_CurrentApp->OnInitialize() != 0) return -1;
 
-    auto& actualAppSpec = m_CurrentApp->GetSpecification();
-    if (m_Spec.MaxFPS == 0) m_Spec.MaxFPS = actualAppSpec.MaxFPS;
+    if (m_Spec.MaxFPS == 0) m_Spec.MaxFPS = appSpec.MaxFPS;
 
     double lastFrameTime = Platform::GetTimeSeconds();
 
@@ -302,7 +299,6 @@ int Engine::Run(std::unique_ptr<Application> app) {
         if (m_Window) m_Window->OnUpdate();
         else {
             Platform::PumpEvents();
-            // 无头模式下手动限制帧率，防止 CPU 空转
             std::this_thread::sleep_for(std::chrono::milliseconds(16));
         }
         
@@ -315,16 +311,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
         if (m_Spec.Headless || !m_Minimized) {
             Update(Timestep(std::min(deltaTime, 0.1f)));
-            // C# 脚本更新（在 App OnUpdate 之后、渲染之前）
 #if PRISMA_ENABLE_SCRIPTING > 0
             if (m_scriptEngine->IsInitialized())
                 m_scriptEngine->Update(std::min(deltaTime, 0.1f));
-#endif
-
-            // [正确双缓冲] C++ 是唯一的交换权威。
-            // C# 每帧通过 GetTransformA(Write)/GetTransformB(Read) 重新查询指针，
-            // C++ 在这里交换，使下一帧 C# 拿到正确的 Read/Write。
-#if PRISMA_ENABLE_SCRIPTING > 0
             EntityManager::Get().SwapBuffers();
 #endif
 

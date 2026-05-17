@@ -6,7 +6,7 @@ namespace MCP {
 
 AssetListTool::AssetListTool() = default;
 
-nlohmann::json AssetListTool::GetInputSchema() const {
+glz::json_t AssetListTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -17,28 +17,29 @@ nlohmann::json AssetListTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json AssetListTool::Execute(const nlohmann::json& args) {
-    std::string typeFilter = args.value("type", "");
+glz::json_t AssetListTool::Execute(const glz::json_t& args) {
+    std::string typeFilter = args.get_object().contains("type") ? args["type"].get_string() : "";
     auto& db = AssetDatabase::Get();
     const auto& allAssets = db.GetAllMetadata();
 
-    nlohmann::json assets = nlohmann::json::array();
+    glz::json_t assets = std::vector<glz::json_t>{};
     for (const auto& [path, meta] : allAssets) {
         if (!typeFilter.empty() && meta.type != typeFilter) continue;
 
-        assets.push_back({
+        assets.get_array().push_back(glz::json_t{
             {"path", meta.path},
             {"type", meta.type},
             {"guid", meta.guid.ToString()}
         });
     }
 
-    return {{"assets", assets}, {"total", assets.size()}};
+    size_t total = assets.get_array().size();
+    return {{"assets", std::move(assets)}, {"total", static_cast<double>(total)}};
 }
 
 AssetGetInfoTool::AssetGetInfoTool() = default;
 
-nlohmann::json AssetGetInfoTool::GetInputSchema() const {
+glz::json_t AssetGetInfoTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -48,12 +49,12 @@ nlohmann::json AssetGetInfoTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json AssetGetInfoTool::Execute(const nlohmann::json& args) {
-    std::string path = args["path"].get<std::string>();
+glz::json_t AssetGetInfoTool::Execute(const glz::json_t& args) {
+    std::string path = args["path"].get_string();
     auto* meta = AssetDatabase::Get().GetMetadata(path);
     if (!meta) return {{"error", "Asset not found"}};
 
-    nlohmann::json j;
+    glz::json_t j;
     meta->ToJson(j);
     return {{"metadata", j}};
 }

@@ -5,7 +5,7 @@ namespace MCP {
 
 DebugFrameStatsTool::DebugFrameStatsTool() = default;
 
-nlohmann::json DebugFrameStatsTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t DebugFrameStatsTool::Execute(const glz::json_t& /*args*/) {
     // TODO: Hook into actual engine frame stat counters
     return {{"note", "Frame stats not yet implemented - placeholder"},
             {"fps", 0},
@@ -15,7 +15,7 @@ nlohmann::json DebugFrameStatsTool::Execute(const nlohmann::json& /*args*/) {
 
 DebugLogGetTool::DebugLogGetTool() = default;
 
-nlohmann::json DebugLogGetTool::GetInputSchema() const {
+glz::json_t DebugLogGetTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -26,9 +26,9 @@ nlohmann::json DebugLogGetTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json DebugLogGetTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t DebugLogGetTool::Execute(const glz::json_t& /*args*/) {
     // TODO: Hook into Logger ring buffer
-    return {{"entries", nlohmann::json::array()}};
+    return {{"entries", std::vector<glz::json_t>{}}};
 }
 
 } // namespace MCP

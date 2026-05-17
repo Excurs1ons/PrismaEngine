@@ -11,11 +11,11 @@ namespace MCP {
 
 EngineStatusTool::EngineStatusTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json EngineStatusTool::GetInputSchema() const {
+glz::json_t EngineStatusTool::GetInputSchema() const {
     return {{"type", "object"}, {"properties", {}}};
 }
 
-nlohmann::json EngineStatusTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t EngineStatusTool::Execute(const glz::json_t& /*args*/) {
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
 
@@ -37,11 +37,11 @@ nlohmann::json EngineStatusTool::Execute(const nlohmann::json& /*args*/) {
 
 EngineStateHashTool::EngineStateHashTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json EngineStateHashTool::GetInputSchema() const {
+glz::json_t EngineStateHashTool::GetInputSchema() const {
     return {{"type", "object"}, {"properties", {}}};
 }
 
-nlohmann::json EngineStateHashTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t EngineStateHashTool::Execute(const glz::json_t& /*args*/) {
     // This is handled by the MCPServer directly via handleGetStateHash
     // This tool exists so it appears in tool discovery
     return {{"note", "Use mcp/get_state_hash directly for session hash access"}};
@@ -51,11 +51,11 @@ nlohmann::json EngineStateHashTool::Execute(const nlohmann::json& /*args*/) {
 
 EngineBuildInfoTool::EngineBuildInfoTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json EngineBuildInfoTool::GetInputSchema() const {
+glz::json_t EngineBuildInfoTool::GetInputSchema() const {
     return {{"type", "object"}, {"properties", {}}};
 }
 
-nlohmann::json EngineBuildInfoTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t EngineBuildInfoTool::Execute(const glz::json_t& /*args*/) {
     return {
         {"platform",
 #if defined(_WIN32)

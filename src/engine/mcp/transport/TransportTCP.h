@@ -13,7 +13,7 @@ public:
 
     bool Start(MCPMessageHandler handler) override;
     void Stop() override;
-    bool Send(const nlohmann::json& message) override;
+    bool Send(const glz::json_t& message) override;
     bool IsConnected() const override;
     std::string_view GetName() const override { return "tcp"; }
 

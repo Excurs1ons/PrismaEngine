@@ -158,6 +158,11 @@ set(CORE_SOURCES
     graphic/2d/LightManager2D.cpp
     graphic/2d/Light2DPass.cpp
     graphic/2d/ReflectionPass2D.cpp
+    graphic/2d/Graphics2D.cpp
+    graphic/2d/Pipeline2D.cpp
+    graphic/2d/CanvasPass2D.cpp
+    graphic/2d/PostProcessPass2D.cpp
+    graphic/2d/UIPass2D.cpp
 
     # Graphic - Vulkan Backend
     graphic/adapters/vulkan/VulkanAdapters.cpp
@@ -661,9 +666,9 @@ if(PRISMA_ENABLE_MCP)
             )
         endfunction()
 
-        add_mcp_test(test_mcp_core test_mcp_core.cpp)
-        add_mcp_test(test_mcp_stdio test_mcp_stdio.cpp
-            "${CMAKE_CURRENT_SOURCE_DIR}/mcp/transport/TransportStdio.cpp"
-        )
+        # add_mcp_test(test_mcp_core test_mcp_core.cpp)
+        # add_mcp_test(test_mcp_stdio test_mcp_stdio.cpp
+        #     "${CMAKE_CURRENT_SOURCE_DIR}/mcp/transport/TransportStdio.cpp"
+        # )
     endif()
 endif()

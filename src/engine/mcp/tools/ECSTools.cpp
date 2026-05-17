@@ -12,7 +12,7 @@ namespace MCP {
 
 ECSComponentListTool::ECSComponentListTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json ECSComponentListTool::GetInputSchema() const {
+glz::json_t ECSComponentListTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -22,8 +22,8 @@ nlohmann::json ECSComponentListTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json ECSComponentListTool::Execute(const nlohmann::json& args) {
-    auto entityIdx = args["entity_index"].get<size_t>();
+glz::json_t ECSComponentListTool::Execute(const glz::json_t& args) {
+    auto entityIdx = static_cast<size_t>(args["entity_index"].get_number());
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
@@ -34,19 +34,19 @@ nlohmann::json ECSComponentListTool::Execute(const nlohmann::json& args) {
     }
 
     auto entity = allEntities[entityIdx];
-    nlohmann::json comps = nlohmann::json::array();
-    comps.push_back("Transform");  // All entities have Transform
+    glz::json_t comps = std::vector<glz::json_t>{};
+    comps.get_array().push_back("Transform");  // All entities have Transform
 
     // Try to detect common component types via casts
     if (entity->GetComponent<Graphic::SpriteRenderer>())
-        comps.push_back("SpriteRenderer");
+        comps.get_array().push_back("SpriteRenderer");
 
-    return {{"entity_index", entityIdx}, {"components", comps}};
+    return {{"entity_index", static_cast<double>(entityIdx)}, {"components", std::move(comps)}};
 }
 
 ECSComponentGetTool::ECSComponentGetTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json ECSComponentGetTool::GetInputSchema() const {
+glz::json_t ECSComponentGetTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -57,9 +57,9 @@ nlohmann::json ECSComponentGetTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json ECSComponentGetTool::Execute(const nlohmann::json& args) {
-    auto entityIdx = args["entity_index"].get<size_t>();
-    auto compType = args["component_type"].get<std::string>();
+glz::json_t ECSComponentGetTool::Execute(const glz::json_t& args) {
+    auto entityIdx = static_cast<size_t>(args["entity_index"].get_number());
+    auto compType = args["component_type"].get_string();
 
     auto* sceneManager = m_Engine->GetSceneManager();
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
@@ -71,7 +71,7 @@ nlohmann::json ECSComponentGetTool::Execute(const nlohmann::json& args) {
     }
 
     auto entity = allEntities[entityIdx];
-    nlohmann::json data;
+    glz::json_t data;
 
     if (compType == "Transform") {
         auto* transform = entity->GetTransform().get();
@@ -79,25 +79,25 @@ nlohmann::json ECSComponentGetTool::Execute(const nlohmann::json& args) {
         auto pos = transform->GetPosition();
         auto rot = transform->GetRotation();
         auto scale = transform->GetScale();
-        data = {
-            {"position", {pos.x, pos.y, pos.z}},
-            {"rotation", {rot.x, rot.y, rot.z, rot.w}},
-            {"scale", {scale.x, scale.y, scale.z}}
+        data = glz::json_t::object_t{
+            {"position", glz::json_t::array_t{static_cast<double>(pos.x), static_cast<double>(pos.y), static_cast<double>(pos.z)}},
+            {"rotation", glz::json_t::array_t{static_cast<double>(rot.x), static_cast<double>(rot.y), static_cast<double>(rot.z), static_cast<double>(rot.w)}},
+            {"scale", glz::json_t::array_t{static_cast<double>(scale.x), static_cast<double>(scale.y), static_cast<double>(scale.z)}}
         };
     } else if (compType == "SpriteRenderer") {
         auto* sr = entity->GetComponent<Graphic::SpriteRenderer>().get();
         if (!sr) return {{"error", "SpriteRenderer not found"}};
-        data = {{"type", "SpriteRenderer"}};
+        data = glz::json_t::object_t{{"type", "SpriteRenderer"}};
     } else {
         return {{"error", "Unknown component type"}, {"component_type", compType}};
     }
 
-    return {{"entity_index", entityIdx}, {"component_type", compType}, {"data", data}};
+    return {{"entity_index", static_cast<double>(entityIdx)}, {"component_type", compType}, {"data", std::move(data)}};
 }
 
 ECSComponentSetTool::ECSComponentSetTool(Engine* engine) : m_Engine(engine) {}
 
-nlohmann::json ECSComponentSetTool::GetInputSchema() const {
+glz::json_t ECSComponentSetTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -109,9 +109,9 @@ nlohmann::json ECSComponentSetTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json ECSComponentSetTool::Execute(const nlohmann::json& args) {
-    auto entityIdx = args["entity_index"].get<size_t>();
-    auto compType = args["component_type"].get<std::string>();
+glz::json_t ECSComponentSetTool::Execute(const glz::json_t& args) {
+    auto entityIdx = static_cast<size_t>(args["entity_index"].get_number());
+    auto compType = args["component_type"].get_string();
     auto data = args["data"];
 
     auto* sceneManager = m_Engine->GetSceneManager();
@@ -128,19 +128,23 @@ nlohmann::json ECSComponentSetTool::Execute(const nlohmann::json& args) {
     if (compType == "Transform") {
         auto transform = entity->GetTransform();
         m_Engine->SubmitToMainThread([transform, data]() {
-            if (data.contains("position")) {
+            if (data.get_object().contains("position")) {
                 auto p = data["position"];
-                transform->SetPosition({p[0], p[1], p[2]});
+                transform->SetPosition({static_cast<float>(p[0].get_number()), 
+                                        static_cast<float>(p[1].get_number()), 
+                                        static_cast<float>(p[2].get_number())});
             }
-            if (data.contains("scale")) {
+            if (data.get_object().contains("scale")) {
                 auto s = data["scale"];
-                transform->SetScale({s[0], s[1], s[2]});
+                transform->SetScale({static_cast<float>(s[0].get_number()), 
+                                     static_cast<float>(s[1].get_number()), 
+                                     static_cast<float>(s[2].get_number())});
             }
         });
         return {{"success", true}, {"deferred", true}};
     } else if (compType == "GameObject") {
-        if (data.contains("name")) {
-            std::string name = data["name"].get<std::string>();
+        if (data.get_object().contains("name")) {
+            std::string name = data["name"].get_string();
             m_Engine->SubmitToMainThread([entity, name]() {
                 entity->name = name;
             });

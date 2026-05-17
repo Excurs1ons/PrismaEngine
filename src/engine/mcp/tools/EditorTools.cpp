@@ -5,14 +5,14 @@ namespace MCP {
 
 EditorSelectionTool::EditorSelectionTool() = default;
 
-nlohmann::json EditorSelectionTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t EditorSelectionTool::Execute(const glz::json_t& /*args*/) {
     // TODO: Integrate with Editor selection state
     return {{"selected_entity_id", 0}, {"selected_entity_name", ""}};
 }
 
 EditorConsoleTool::EditorConsoleTool() = default;
 
-nlohmann::json EditorConsoleTool::GetInputSchema() const {
+glz::json_t EditorConsoleTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -21,8 +21,8 @@ nlohmann::json EditorConsoleTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json EditorConsoleTool::Execute(const nlohmann::json& /*args*/) {
-    return {{"entries", nlohmann::json::array()}};
+glz::json_t EditorConsoleTool::Execute(const glz::json_t& /*args*/) {
+    return {{"entries", std::vector<glz::json_t>{}}};
 }
 
 } // namespace MCP

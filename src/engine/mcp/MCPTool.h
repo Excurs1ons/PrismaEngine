@@ -7,7 +7,7 @@
 #include <unordered_set>
 #include <algorithm>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 #include "Export.h"
 
 namespace Prisma {

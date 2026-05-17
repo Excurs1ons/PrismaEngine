@@ -43,7 +43,9 @@ void Template2DApp::OnRender() {
 
     // 从 ScriptEngine 同步相机位置到渲染相机
     float camX = 0, camY = 0;
+    #if PRISMA_ENABLE_SCRIPTING
     Engine::Get().GetScriptEngine().GetCameraPos(&camX, &camY);
+    #endif
     ortho->SetPosition({camX, camY});
 
     Graphic::Renderer2D::BeginScene(*ortho);

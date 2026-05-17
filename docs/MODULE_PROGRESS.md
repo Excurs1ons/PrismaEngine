@@ -395,11 +395,12 @@ option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 ## 十、近期计划
 
-1. **Pass 实现** - 完成 OpaquePass/TransparentPass 等 .cpp 实现
-2. **Feature 实现** - 选择 1-2 个 Feature 完整实现（建议 Bloom 或 PostProcess）
-3. **PBR 集成** - 将 lit.frag/vert 集成到 OpaquePass
-4. **阴影系统** - 完成 ShadowPass 实现
-5. **Android 平台** - 完善 Vulkan 初始化和交换链
+1. **2D 渲染增强** - 实施 `docs/plans/2026-05-16-advanced-2d-rendering-enhancements.md` 中的方案，优先优化反射性能。
+2. **Pass 实现** - 完成 OpaquePass/TransparentPass 等 .cpp 实现
+3. **Feature 实现** - 选择 1-2 个 Feature 完整实现（建议 Bloom 或 PostProcess）
+4. **PBR 集成** - 将 lit.frag/vert 集成到 OpaquePass
+5. **阴影系统** - 完成 ShadowPass 实现
+6. **Android 平台** - 完善 Vulkan 初始化和交换链
 
 ---
 

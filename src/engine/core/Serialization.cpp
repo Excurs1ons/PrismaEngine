@@ -3,7 +3,7 @@
 #include "graphic/CameraComponent.h"
 #include "Logger.h"
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 #include <fstream>
 
 namespace Prisma::Core {

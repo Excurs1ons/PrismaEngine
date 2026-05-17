@@ -14,6 +14,8 @@ class SkyboxPass;
 class TransparentPass;
 class Light2DPass;
 class ReflectionPass2D;
+class PostProcessPass2D;
+class UIPass2D;
 
 /**
  * @brief 基础前向渲染管线
@@ -38,6 +40,8 @@ private:
     std::shared_ptr<OpaquePass> m_opaquePass;
     std::shared_ptr<Light2DPass> m_light2DPass;
     std::shared_ptr<ReflectionPass2D> m_reflectionPass2D;
+    std::shared_ptr<PostProcessPass2D> m_postProcessPass;
+    std::shared_ptr<UIPass2D> m_uiPass;
     std::shared_ptr<SkyboxPass> m_skyboxPass;
     std::shared_ptr<TransparentPass> m_transparentPass;
 

@@ -4,7 +4,7 @@
 #include "../math/MathTypes.h"
 #include <filesystem>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 
 namespace Prisma::Serialization {
     // Note: Glaze uses glz::meta for custom types. 

@@ -12,8 +12,8 @@ public:
         return "Get frame statistics: FPS, draw calls, triangles, VRAM usage.";
     }
     std::string_view GetCategory() const override { return "debug"; }
-    nlohmann::json GetInputSchema() const override { return {{"type", "object"}, {"properties", {}}}; }
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override { return {{"type", "object"}, {"properties", glz::json_t::object_t{}}}; }
+    glz::json_t Execute(const glz::json_t& args) override;
 };
 
 class DebugLogGetTool : public MCPTool {
@@ -24,8 +24,8 @@ public:
         return "Get engine log entries with level filtering and since-tick pagination.";
     }
     std::string_view GetCategory() const override { return "debug"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 };
 
 } // namespace MCP

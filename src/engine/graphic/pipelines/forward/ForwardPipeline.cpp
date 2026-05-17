@@ -4,6 +4,8 @@
 #include "TransparentPass.h"
 #include "../../2d/Light2DPass.h"
 #include "../../2d/ReflectionPass2D.h"
+#include "../../2d/PostProcessPass2D.h"
+#include "../../2d/UIPass2D.h"
 #include "../SkyboxRenderPass.h"
 #include "graphic/Renderer.h"
 #include "graphic/Renderer2D.h"
@@ -77,6 +79,8 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
     m_opaquePass->SetDevice(device);
     m_light2DPass = std::make_shared<Light2DPass>();
     m_reflectionPass2D = std::make_shared<ReflectionPass2D>();
+    m_postProcessPass = std::make_shared<PostProcessPass2D>();
+    m_uiPass = std::make_shared<UIPass2D>();
     m_skyboxPass = std::make_shared<SkyboxPass>();
     m_transparentPass = std::make_shared<TransparentPass>();
     return 0;
@@ -89,6 +93,8 @@ void ForwardPipeline::Shutdown() {
     m_skyboxPass.reset();
     m_transparentPass.reset();
     m_reflectionPass2D.reset();
+    m_postProcessPass.reset();
+    m_uiPass.reset();
     m_gizmoPSO.reset();
     m_gizmoVertShader.reset();
     m_gizmoFragShader.reset();
@@ -265,6 +271,18 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
     // 必须在所有渲染完成后执行，且不在任何 RenderPass 内部
     if (m_reflectionPass2D && ctx.commandBuffer) {
         m_reflectionPass2D->CaptureScene(ctx.commandBuffer, ctx.device, ctx.width, ctx.height);
+    }
+
+    // ── Post Processing 2D ──
+    // [规划中] 在所有 2D 和场景渲染完成后应用后处理
+    if (m_postProcessPass && ctx.commandBuffer) {
+        // m_postProcessPass->Process(ctx.commandBuffer, ctx.device, sceneResultTexture);
+    }
+
+    // ── UI Pass 2D ──
+    // [规划中] UI 应该在最后渲染，且不受后处理影响
+    if (m_uiPass && ctx.commandBuffer) {
+        m_uiPass->RenderUI(ctx.commandBuffer, ctx.device, ctx.width, ctx.height);
     }
 }
 

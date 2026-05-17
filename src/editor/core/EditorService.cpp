@@ -22,64 +22,122 @@ struct EditorCamera {
     float x = 0, y = 0, zoom = 1.0f;
 } g_EditorCam;
 
-nlohmann::json EditorService::Dispatch(const std::string& action, const nlohmann::json& params) {
+glz::json_t EditorService::Dispatch(const std::string& action, const glz::json_t& params) {
     auto& engine = Engine::Get();
     auto* s = engine.GetSceneManager()->GetCurrentScene();
 
     if (action == "console/get") {
         auto logs = Logger::Get().GetRecentLogs(30);
-        nlohmann::json res = nlohmann::json::array();
-        for(auto& l : logs) res.push_back({{"level", (int)l.level}, {"msg", l.message}, {"tag", l.category}});
-        return {{"logs", res}};
-    }
-    if (action == "assets/list") {
-        nlohmann::json res = nlohmann::json::array();
-        for(const auto& [p, m] : AssetDatabase::Get().GetAllMetadata()) res.push_back({{"path", p}, {"type", m.type}});
-        return {{"assets", res}};
-    }
-    if (action == "engine/status") {
-        return {{"fps", engine.GetFrameStats().FPS}, {"gpu", engine.GetGPUName()}, {"scene", s?s->GetName():"None"}, {"objects", s?(int)s->GetGameObjects().size():0}};
+        glz::json_t::array_t res;
+        for(auto& l : logs) {
+            res.push_back(glz::json_t::object_t{
+                {"level", static_cast<double>(l.level)}, 
+                {"msg", l.message}, 
+                {"tag", l.category}
+            });
+        }
+        return glz::json_t::object_t{{"logs", std::move(res)}};
     }
     if (action == "viewport/input") {
-        std::string type = params.value("type", "");
-        if (type == "mouseMove") { g_EditorCam.x += params.value("dx", 0.0f) * 0.05f; g_EditorCam.y -= params.value("dy", 0.0f) * 0.05f; }
-        else if (type == "wheel") { g_EditorCam.zoom *= (params.value("delta", 0.0f) > 0 ? 0.9f : 1.1f); }
-        return {{"success", true}};
+        auto& obj = params.get_object();
+        std::string type = obj.contains("type") ? obj.at("type").get_string() : "";
+        if (type == "mouseMove") { 
+            g_EditorCam.x += (obj.contains("dx") ? obj.at("dx").get_number() : 0.0) * 0.05f; 
+            g_EditorCam.y -= (obj.contains("dy") ? obj.at("dy").get_number() : 0.0) * 0.05f; 
+        }
+        else if (type == "wheel") { 
+            g_EditorCam.zoom *= ((obj.contains("delta") ? obj.at("delta").get_number() : 0.0) > 0 ? 0.9f : 1.1f); 
+        }
+        return glz::json_t::object_t{{"success", true}};
     }
     if (action == "hierarchy/get") return GetHierarchy();
-    if (action == "entity/get") return GetEntity(params.value("id", 0u));
+    if (action == "entity/get") {
+        auto& obj = params.get_object();
+        uint32_t id = obj.contains("id") ? static_cast<uint32_t>(obj.at("id").get_number()) : 0u;
+        return GetEntity(id);
+    }
     if (action == "entity/update") return UpdateEntity(params);
-    return {{"error", "NA"}};
+    if (action == "assets/list") return GetAssets();
+    if (action == "engine/status") return GetStatus();
+    return glz::json_t::object_t{{"error", "NA"}};
 }
 
-nlohmann::json EditorService::GetHierarchy() {
-    auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
-    nlohmann::json res = nlohmann::json::array();
-    if(s) for(size_t i=0; i<s->GetGameObjects().size(); ++i) res.push_back({{"id", (uint32_t)i}, {"name", s->GetGameObjects()[i]->name}});
-    return {{"entities", res}};
+glz::json_t EditorService::GetStatus() {
+    auto& engine = Engine::Get();
+    auto* s = engine.GetSceneManager()->GetCurrentScene();
+    return glz::json_t::object_t{
+        {"fps", engine.GetFrameStats().FPS}, 
+        {"gpu", engine.GetGPUName()}, 
+        {"scene", s ? s->GetName() : "None"}, 
+        {"objects", s ? static_cast<double>(s->GetGameObjects().size()) : 0.0}
+    };
 }
 
-nlohmann::json EditorService::GetEntity(uint32_t id) {
+glz::json_t EditorService::GetAssets() {
+    glz::json_t::array_t res;
+    for(const auto& [p, m] : AssetDatabase::Get().GetAllMetadata()) {
+        res.push_back(glz::json_t::object_t{{"path", p}, {"type", m.type}});
+    }
+    return glz::json_t::object_t{{"assets", std::move(res)}};
+}
+
+glz::json_t EditorService::GetHierarchy() {
     auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
-    if(!s || id >= s->GetGameObjects().size()) return {{"error", "NA"}};
+    glz::json_t::array_t res;
+    if(s) {
+        for(size_t i=0; i<s->GetGameObjects().size(); ++i) {
+            res.push_back(glz::json_t::object_t{
+                {"id", static_cast<double>(i)}, 
+                {"name", s->GetGameObjects()[i]->name}
+            });
+        }
+    }
+    return glz::json_t::object_t{{"entities", std::move(res)}};
+}
+
+glz::json_t EditorService::GetEntity(uint32_t id) {
+    auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
+    if(!s || id >= s->GetGameObjects().size()) return glz::json_t::object_t{{"error", "NA"}};
     auto ent = s->GetGameObjects()[id];
     auto p = ent->GetTransform()->GetPosition();
-    return {{"name", ent->name}, {"components", {{{"type","Transform"},{"data",{{"position",{p.x,p.y,p.z}}}}}}}};
+    
+    glz::json_t::array_t posArr = { p.x, p.y, p.z };
+    glz::json_t::object_t transformData = {{"position", std::move(posArr)}};
+    glz::json_t::object_t component = {{"type", "Transform"}, {"data", std::move(transformData)}};
+    glz::json_t::array_t components;
+    components.push_back(std::move(component));
+
+    return glz::json_t::object_t{
+        {"name", ent->name}, 
+        {"components", std::move(components)}
+    };
 }
 
-nlohmann::json EditorService::UpdateEntity(const nlohmann::json& params) {
-    uint32_t id = params.value("id", 0u);
+glz::json_t EditorService::UpdateEntity(const glz::json_t& params) {
+    auto& obj = params.get_object();
+    uint32_t id = obj.contains("id") ? static_cast<uint32_t>(obj.at("id").get_number()) : 0u;
     auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
-    if(!s || id >= s->GetGameObjects().size()) return {{"success",false}};
-    auto data = params["data"];
+    if(!s || id >= s->GetGameObjects().size()) return glz::json_t::object_t{{"success", false}};
+    
+    if (!obj.contains("data")) return glz::json_t::object_t{{"success", false}};
+    auto data = obj.at("data");
+    
     Engine::Get().SubmitToMainThread([ent = s->GetGameObjects()[id], data](){
-        if(data.contains("transform")) {
-            auto p = data["transform"]["position"];
-            ent->GetTransform()->SetPosition({p[0], p[1], p[2]});
+        auto& dataObj = data.get_object();
+        if(dataObj.contains("transform")) {
+            auto& trans = dataObj.at("transform").get_object();
+            if (trans.contains("position")) {
+                auto& p = trans.at("position").get_array();
+                ent->GetTransform()->SetPosition({
+                    static_cast<float>(p[0].get_number()), 
+                    static_cast<float>(p[1].get_number()), 
+                    static_cast<float>(p[2].get_number())
+                });
+            }
         }
-        if(data.contains("name")) ent->name = data["name"].get<std::string>();
+        if(dataObj.contains("name")) ent->name = dataObj.at("name").get_string();
     });
-    return {{"success",true}};
+    return glz::json_t::object_t{{"success", true}};
 }
 
 void InternalDoRender() {

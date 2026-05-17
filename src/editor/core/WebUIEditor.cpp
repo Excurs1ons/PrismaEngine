@@ -3,7 +3,7 @@
 #include "logger/Logger.h"
 #include "EditorService.h"
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 
 namespace Prisma {
 

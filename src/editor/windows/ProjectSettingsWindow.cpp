@@ -6,7 +6,7 @@
 #include <fstream>
 #include <imgui.h>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 using json = glz::json_t;
 
 using namespace Prisma;
@@ -94,7 +94,7 @@ void ProjectSettingsWindow::SaveSettings() {
     std::ofstream file(m_settingsPath);
     if (file.is_open()) {
         std::string buffer;
-        glz::write<glz::opts{.indent = 4}>(archive.GetJson(), buffer);
+        glz::write<glz::opts{.prettify = true}>(archive.GetJson(), buffer);
         file << buffer;
     }
 }

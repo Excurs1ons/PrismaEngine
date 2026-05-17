@@ -27,7 +27,7 @@ public:
     MCPSession* GetSession() { return m_Session.get(); }
 
 private:
-    void onMessage(const nlohmann::json& msg);
+    void onMessage(const glz::json_t& msg);
     void handleRequest(const MCPRequest& req);
     void handleInitialize(const MCPRequest& req);
     void handleListTools(const MCPRequest& req);
@@ -40,7 +40,7 @@ private:
     std::shared_ptr<MCPSession> m_Session;
     std::atomic<bool> m_Running{false};
 
-    using NotificationHandler = std::function<void(const nlohmann::json&)>;
+    using NotificationHandler = std::function<void(const glz::json_t&)>;
     std::unordered_map<std::string, NotificationHandler> m_NotificationHandlers;
 };
 

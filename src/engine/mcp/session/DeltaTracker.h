@@ -5,7 +5,7 @@
 #include <vector>
 #include <cstdint>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 #include <xxhash.h>
 
 namespace Prisma {

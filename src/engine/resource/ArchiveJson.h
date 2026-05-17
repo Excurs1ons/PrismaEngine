@@ -2,7 +2,7 @@
 #include "SerializationVersion.h"
 #include "Serializable.h"
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 #include <stack>
 
 namespace Prisma {
@@ -86,7 +86,7 @@ public:
 
     bool Read(const std::string& key, float& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
-            value = static_cast<float>(m_stack.top()->get_object().at(key).get_double());
+            value = static_cast<float>(m_stack.top()->get_object().at(key).get_number());
             return true;
         }
         return false;
@@ -94,7 +94,7 @@ public:
 
     bool Read(const std::string& key, int32_t& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
-            value = static_cast<int32_t>(m_stack.top()->get_object().at(key).get_double());
+            value = static_cast<int32_t>(m_stack.top()->get_object().at(key).get_number());
             return true;
         }
         return false;
@@ -102,7 +102,7 @@ public:
 
     bool Read(const std::string& key, uint32_t& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
-            value = static_cast<uint32_t>(m_stack.top()->get_object().at(key).get_double());
+            value = static_cast<uint32_t>(m_stack.top()->get_object().at(key).get_number());
             return true;
         }
         return false;
@@ -110,7 +110,7 @@ public:
 
     bool Read(const std::string& key, uint64_t& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
-            value = static_cast<uint64_t>(m_stack.top()->get_object().at(key).get_double());
+            value = static_cast<uint64_t>(m_stack.top()->get_object().at(key).get_number());
             return true;
         }
         return false;
@@ -118,7 +118,7 @@ public:
 
     bool Read(const std::string& key, bool& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
-            value = m_stack.top()->get_object().at(key).get_bool();
+            value = m_stack.top()->get_object().at(key).get_boolean();
             return true;
         }
         return false;
@@ -135,8 +135,8 @@ public:
     bool Read(const std::string& key, PrismaMath::vec2& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
             const auto& j = m_stack.top()->get_object().at(key).get_array();
-            value.x = static_cast<float>(j[0].get_double()); 
-            value.y = static_cast<float>(j[1].get_double());
+            value.x = static_cast<float>(j[0].get_number()); 
+            value.y = static_cast<float>(j[1].get_number());
             return true;
         }
         return false;
@@ -145,9 +145,9 @@ public:
     bool Read(const std::string& key, PrismaMath::vec3& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
             const auto& j = m_stack.top()->get_object().at(key).get_array();
-            value.x = static_cast<float>(j[0].get_double()); 
-            value.y = static_cast<float>(j[1].get_double()); 
-            value.z = static_cast<float>(j[2].get_double());
+            value.x = static_cast<float>(j[0].get_number()); 
+            value.y = static_cast<float>(j[1].get_number()); 
+            value.z = static_cast<float>(j[2].get_number());
             return true;
         }
         return false;
@@ -156,10 +156,10 @@ public:
     bool Read(const std::string& key, PrismaMath::vec4& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
             const auto& j = m_stack.top()->get_object().at(key).get_array();
-            value.x = static_cast<float>(j[0].get_double()); 
-            value.y = static_cast<float>(j[1].get_double()); 
-            value.z = static_cast<float>(j[2].get_double()); 
-            value.w = static_cast<float>(j[3].get_double());
+            value.x = static_cast<float>(j[0].get_number()); 
+            value.y = static_cast<float>(j[1].get_number()); 
+            value.z = static_cast<float>(j[2].get_number()); 
+            value.w = static_cast<float>(j[3].get_number());
             return true;
         }
         return false;
@@ -168,10 +168,10 @@ public:
     bool Read(const std::string& key, PrismaMath::quat& value) override {
         if (m_stack.top()->is_object() && m_stack.top()->get_object().contains(key)) {
             const auto& j = m_stack.top()->get_object().at(key).get_array();
-            value.w = static_cast<float>(j[0].get_double()); 
-            value.x = static_cast<float>(j[1].get_double()); 
-            value.y = static_cast<float>(j[2].get_double()); 
-            value.z = static_cast<float>(j[3].get_double());
+            value.w = static_cast<float>(j[0].get_number()); 
+            value.x = static_cast<float>(j[1].get_number()); 
+            value.y = static_cast<float>(j[2].get_number()); 
+            value.z = static_cast<float>(j[3].get_number());
             return true;
         }
         return false;

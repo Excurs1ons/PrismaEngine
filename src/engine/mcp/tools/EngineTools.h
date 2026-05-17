@@ -14,8 +14,8 @@ public:
         return "Get current engine status: running, FPS, scene info, build configuration.";
     }
     std::string_view GetCategory() const override { return "engine"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 private:
     Engine* m_Engine;
 };
@@ -28,8 +28,8 @@ public:
         return "Get the current root state hash for delta-based incremental queries.";
     }
     std::string_view GetCategory() const override { return "engine"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 private:
     Engine* m_Engine;
 };
@@ -42,8 +42,8 @@ public:
         return "Get build configuration info: compiler, platform, build type, feature flags.";
     }
     std::string_view GetCategory() const override { return "engine"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 private:
     Engine* m_Engine;
 };

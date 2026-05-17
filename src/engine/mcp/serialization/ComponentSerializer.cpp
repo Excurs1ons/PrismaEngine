@@ -3,23 +3,23 @@
 namespace Prisma {
 namespace MCP {
 
-nlohmann::json ComponentSerializer::Serialize(void* /*componentData*/,
+glz::json_t ComponentSerializer::Serialize(void* /*componentData*/,
                                                 const std::string& /*typeName*/,
                                                 const std::vector<std::string>& /*fields*/,
                                                 bool /*omitDefaults*/) {
     // TODO: Implement per-component-type serialization
     // For now returns empty object - framework is in place for implementation
-    return nlohmann::json::object();
+    return glz::json_t::object_t{};
 }
 
 bool ComponentSerializer::Deserialize(void* /*componentData*/,
                                         const std::string& /*typeName*/,
-                                        const nlohmann::json& /*data*/) {
+                                        const glz::json_t& /*data*/) {
     return false;
 }
 
-nlohmann::json ComponentSerializer::GetFieldSchema(const std::string& /*typeName*/) {
-    return nlohmann::json::object();
+glz::json_t ComponentSerializer::GetFieldSchema(const std::string& /*typeName*/) {
+    return glz::json_t::object_t{};
 }
 
 } // namespace MCP

@@ -12,8 +12,8 @@ public:
         return "List assets with optional type filter and pagination.";
     }
     std::string_view GetCategory() const override { return "asset"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 };
 
 class AssetGetInfoTool : public MCPTool {
@@ -22,8 +22,8 @@ public:
     std::string_view GetName() const override { return "asset_get_info"; }
     std::string_view GetDescription() const override { return "Get detailed metadata for an asset."; }
     std::string_view GetCategory() const override { return "asset"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 };
 
 } // namespace MCP

@@ -20,8 +20,10 @@ void PrismaCraftApp::OnUpdate(Timestep ts) {
 
 void PrismaCraftApp::OnRender() {
     // 由 C# SRP 管线控制渲染，传递 delta time
+#if PRISMA_ENABLE_SCRIPTING
     auto& se = Engine::Get().GetScriptEngine();
     se.Render(0.016f);
+#endif
 }
 
 void PrismaCraftApp::OnEvent(Event& e) {

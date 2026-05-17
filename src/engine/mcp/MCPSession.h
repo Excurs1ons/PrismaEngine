@@ -2,6 +2,8 @@
 #include "Export.h"
 #include "session/DeltaTracker.h"
 #include "session/TokenBudget.h"
+#include <glaze/glaze.hpp>
+#include <glaze/json/generic.hpp>
 #include <memory>
 #include <atomic>
 
@@ -23,8 +25,8 @@ public:
     int GetTokenBudget() const { return m_TokenBudget.GetMaxTokens(); }
 
     // Delta computation
-    nlohmann::json TryGetDelta(const std::string& knownHashStr, const std::string& toolName,
-                               const nlohmann::json& args);
+    glz::json_t TryGetDelta(const std::string& knownHashStr, const std::string& toolName,
+                               const glz::json_t& args);
 
     // Period refresh
     void RefreshHashes();

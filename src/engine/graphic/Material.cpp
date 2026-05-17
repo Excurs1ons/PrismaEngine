@@ -11,7 +11,7 @@
 #include "logger/Logger.h"
 #include <fstream>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 
 namespace Prisma::Graphic {
 
@@ -61,17 +61,17 @@ bool Material::Load(const std::filesystem::path& path) {
         if (properties.contains("albedo") && properties.at("albedo").is_array() && properties.at("albedo").get_array().size() >= 4) {
             auto& albedoArr = properties.at("albedo").get_array();
             SetBaseColor(
-                static_cast<float>(albedoArr[0].get_double()),
-                static_cast<float>(albedoArr[1].get_double()),
-                static_cast<float>(albedoArr[2].get_double()),
-                static_cast<float>(albedoArr[3].get_double()));
-        }
-        if (properties.contains("metallic")) {
-            SetMetallic(static_cast<float>(properties.at("metallic").get_double()));
-        }
-        if (properties.contains("roughness")) {
-            SetRoughness(static_cast<float>(properties.at("roughness").get_double()));
-        }
+                static_cast<float>(albedoArr[0].get_number()),
+                static_cast<float>(albedoArr[1].get_number()),
+                static_cast<float>(albedoArr[2].get_number()),
+                static_cast<float>(albedoArr[3].get_number()));
+            }
+            if (properties.contains("metallic")) {
+            SetMetallic(static_cast<float>(properties.at("metallic").get_number()));
+            }
+            if (properties.contains("roughness")) {
+            SetRoughness(static_cast<float>(properties.at("roughness").get_number()));
+            }
     }
 
     m_IsLoaded = true;

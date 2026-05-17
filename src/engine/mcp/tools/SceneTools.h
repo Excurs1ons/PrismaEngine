@@ -14,8 +14,8 @@ public:
         return "Get the scene entity hierarchy tree with entity IDs, names, and parent relationships.";
     }
     std::string_view GetCategory() const override { return "scene"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
     bool SupportsFieldFilter() const override { return true; }
 private:
     Engine* m_Engine;
@@ -29,8 +29,8 @@ public:
         return "Get detailed information about a specific entity by ID. Supports field-level filtering.";
     }
     std::string_view GetCategory() const override { return "scene"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
     bool SupportsFieldFilter() const override { return true; }
 private:
     Engine* m_Engine;
@@ -42,8 +42,8 @@ public:
     std::string_view GetName() const override { return "scene_create_entity"; }
     std::string_view GetDescription() const override { return "Create a new entity in the current scene."; }
     std::string_view GetCategory() const override { return "scene"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 private:
     Engine* m_Engine;
 };
@@ -54,8 +54,8 @@ public:
     std::string_view GetName() const override { return "scene_delete_entity"; }
     std::string_view GetDescription() const override { return "Delete an entity from the current scene."; }
     std::string_view GetCategory() const override { return "scene"; }
-    nlohmann::json GetInputSchema() const override;
-    nlohmann::json Execute(const nlohmann::json& args) override;
+    glz::json_t GetInputSchema() const override;
+    glz::json_t Execute(const glz::json_t& args) override;
 private:
     Engine* m_Engine;
 };

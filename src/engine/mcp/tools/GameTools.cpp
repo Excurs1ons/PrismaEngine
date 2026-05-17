@@ -5,13 +5,13 @@ namespace MCP {
 
 GameGetStateTool::GameGetStateTool() = default;
 
-nlohmann::json GameGetStateTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t GameGetStateTool::Execute(const glz::json_t& /*args*/) {
     return {{"state", "unknown"}, {"running", false}};
 }
 
 GameSimulateTool::GameSimulateTool() = default;
 
-nlohmann::json GameSimulateTool::GetInputSchema() const {
+glz::json_t GameSimulateTool::GetInputSchema() const {
     return {
         {"type", "object"},
         {"properties", {
@@ -21,7 +21,7 @@ nlohmann::json GameSimulateTool::GetInputSchema() const {
     };
 }
 
-nlohmann::json GameSimulateTool::Execute(const nlohmann::json& /*args*/) {
+glz::json_t GameSimulateTool::Execute(const glz::json_t& /*args*/) {
     return {{"error", "Not implemented"}};
 }
 

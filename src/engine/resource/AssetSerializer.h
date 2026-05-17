@@ -5,7 +5,7 @@
 #include <fstream>
 #include <memory>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 #include <sstream>
 #include <vector>
 
@@ -220,9 +220,9 @@ private:
             }
             
             auto& ver = header.get_object()["version"].get_object();
-            version.major = static_cast<uint32_t>(ver["major"].get_double());
-            version.minor = static_cast<uint32_t>(ver["minor"].get_double());
-            version.patch = static_cast<uint32_t>(ver["patch"].get_double());
+            version.major = static_cast<uint32_t>(ver["major"].get_number());
+            version.minor = static_cast<uint32_t>(ver["minor"].get_number());
+            version.patch = static_cast<uint32_t>(ver["patch"].get_number());
         }
         
         return version;

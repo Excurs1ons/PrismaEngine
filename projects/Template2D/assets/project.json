@@ -9,5 +9,6 @@
         "resizable": true,
         "vsync": "Mailbox",
         "maxFPS": 0
-    }
+    },
+    "pipelineType": "Standard2D"
 }

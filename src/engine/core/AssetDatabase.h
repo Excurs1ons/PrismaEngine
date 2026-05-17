@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <filesystem>
 #include <glaze/glaze.hpp>
-#include <glaze/json/json_t.hpp>
+#include <glaze/json/generic.hpp>
 
 namespace Prisma {
 
