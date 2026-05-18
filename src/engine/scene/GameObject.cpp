@@ -80,7 +80,12 @@ GameObject::Data GameObject::GetData() const {
         ComponentEntry entry;
         entry.type = std::string(typeName);
         auto json = reg.SerializeComponent(*comp);
-        if (!json.empty()) glz::read_json(entry.data, json);
+        if (!json.empty()) {
+            auto ec = glz::read_json(entry.data, json);
+            if (ec) {
+                LOG_WARN("GameObject", "反序列化组件数据失败，保留原始数据");
+            }
+        }
         d.components.push_back(std::move(entry));
     }
     return d;

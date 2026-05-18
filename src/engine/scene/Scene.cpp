@@ -92,7 +92,7 @@ Scene::~Scene() {
     }
 }
 
-Node Scene::CreateNode(const std::string& name) {
+Node Scene::CreateNode([[maybe_unused]] const std::string& name) {
     Node node = EntityManager::Get().CreateNode();
     // TODO: 存储名称到 SoA 或额外的名称表
     m_nodes.push_back(node);

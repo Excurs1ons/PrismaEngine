@@ -16,8 +16,8 @@ void CanvasPass2D::Update(Prisma::Timestep ts) {
     UpdateTime(ts);
 }
 
-void CanvasPass2D::Execute(const PassExecutionContext& context) {
-    // 默认由 Pipeline 显式调用 Render
+void CanvasPass2D::Execute([[maybe_unused]] const PassExecutionContext& context) {
+    // 无需在此处执行逻辑：该 Pass 的渲染由 Pipeline 通过 Render() 显式调用
 }
 
 void CanvasPass2D::Render(ICommandBuffer* cmd, IRenderDevice* device) {

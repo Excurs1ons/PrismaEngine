@@ -507,7 +507,7 @@ void RenderResourceManager::ProcessLoadTask(const ResourceLoadTask& task) {
     }
 }
 
-std::shared_ptr<ITexture> RenderResourceManager::LoadTextureSync(const std::string& filename, bool generateMips) {
+std::shared_ptr<ITexture> RenderResourceManager::LoadTextureSync(const std::string& filename, [[maybe_unused]] bool generateMips) {
     if (!m_device || !m_device->GetResourceFactory()) return nullptr;
     TextureDesc desc;
     std::vector<uint8_t> data;

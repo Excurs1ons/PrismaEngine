@@ -345,15 +345,15 @@ void TilemapRenderer::BuildLayerGeometry(
 
             if (flipD) {
                 // 对角翻转 (旋转)
-                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
-                v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
+                v1 = TileVertex(worldX, worldY + static_cast<float>(tileHeight), flipH ? u1 : u0, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                v2 = TileVertex(worldX + static_cast<float>(tileWidth), worldY + static_cast<float>(tileHeight), flipH ? u0 : u1, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                v3 = TileVertex(worldX + static_cast<float>(tileWidth), worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
             } else {
-                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
-                v1 = TileVertex(worldX, worldY + tileHeight, flipH ? u1 : u0, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                v2 = TileVertex(worldX + tileWidth, worldY + tileHeight, flipH ? u0 : u1, flipV ? texV0 : texV1, textureIndex, r, g, b, a);
-                v3 = TileVertex(worldX + tileWidth, worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, textureIndex, r, g, b, a);
+                v0 = TileVertex(worldX, worldY, flipH ? u1 : u0, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
+                v1 = TileVertex(worldX, worldY + static_cast<float>(tileHeight), flipH ? u1 : u0, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                v2 = TileVertex(worldX + static_cast<float>(tileWidth), worldY + static_cast<float>(tileHeight), flipH ? u0 : u1, flipV ? texV0 : texV1, static_cast<float>(textureIndex), r, g, b, a);
+                v3 = TileVertex(worldX + static_cast<float>(tileWidth), worldY, flipH ? u0 : u1, flipV ? texV1 : texV0, static_cast<float>(textureIndex), r, g, b, a);
             }
 
             vertices.insert(vertices.end(), {v0, v1, v2, v3});

@@ -5,7 +5,9 @@
 
 // Platform-specific socket includes
 #if defined(_WIN32)
+    #ifndef WIN32_LEAN_AND_MEAN
     #define WIN32_LEAN_AND_MEAN
+    #endif
     #include <winsock2.h>
     #include <ws2tcpip.h>
     using SOCKADDR_IN = struct sockaddr_in;
@@ -29,8 +31,8 @@ namespace MCP {
 
 TransportTCP::TransportTCP(uint16_t port)
     : m_Port(port)
-    , m_ServerSocket(INVALID_SOCKET_HANDLE)
-    , m_ClientSocket(INVALID_SOCKET_HANDLE) {}
+    , m_ServerSocket(-1)
+    , m_ClientSocket(-1) {}
 
 TransportTCP::~TransportTCP() { Stop(); }
 
@@ -74,7 +76,7 @@ bool TransportTCP::Start(MCPMessageHandler handler) {
              sizeof(serverAddr)) == SOCKET_ERROR_RET) {
         LOG_ERROR("MCP", "Failed to bind TCP socket to port {}", m_Port);
         CLOSE_SOCKET(m_ServerSocket);
-        m_ServerSocket = INVALID_SOCKET_HANDLE;
+        m_ServerSocket = -1;
         m_Running = false;
         return false;
     }
@@ -83,7 +85,7 @@ bool TransportTCP::Start(MCPMessageHandler handler) {
     if (listen(m_ServerSocket, 1) == SOCKET_ERROR_RET) {
         LOG_ERROR("MCP", "Failed to listen on TCP socket");
         CLOSE_SOCKET(m_ServerSocket);
-        m_ServerSocket = INVALID_SOCKET_HANDLE;
+        m_ServerSocket = -1;
         m_Running = false;
         return false;
     }
@@ -103,11 +105,11 @@ void TransportTCP::Stop() {
     // Close sockets to unblock accept/recv
     if (m_ClientSocket != INVALID_SOCKET_HANDLE) {
         CLOSE_SOCKET(m_ClientSocket);
-        m_ClientSocket = INVALID_SOCKET_HANDLE;
+        m_ClientSocket = -1;
     }
-    if (m_ServerSocket != INVALID_SOCKET_HANDLE) {
+    if (m_ServerSocket != -1) {
         CLOSE_SOCKET(m_ServerSocket);
-        m_ServerSocket = INVALID_SOCKET_HANDLE;
+        m_ServerSocket = -1;
     }
 
     if (m_AcceptThread.joinable()) {
@@ -128,7 +130,8 @@ bool TransportTCP::Send(const glz::json_t& message) {
 
     try {
         std::string buffer;
-        glz::write_json(message, buffer);
+        auto wEc = glz::write_json(message, buffer);
+        if (wEc) return false;
         std::string output = buffer + "\n";
         int sent = static_cast<int>(::send(m_ClientSocket, output.c_str(),
                                             static_cast<int>(output.size()), 0));
@@ -154,7 +157,7 @@ void TransportTCP::acceptLoop() {
         return;
     }
 
-    m_ClientSocket = client;
+    m_ClientSocket = static_cast<int>(client);
 
     char clientIP[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIP, INET_ADDRSTRLEN);
@@ -207,7 +210,7 @@ void TransportTCP::acceptLoop() {
         }
 
         CLOSE_SOCKET(m_ClientSocket);
-        m_ClientSocket = INVALID_SOCKET_HANDLE;
+        m_ClientSocket = -1;
     });
 }
 

@@ -209,6 +209,7 @@ void SRPGraphicsAPI::CmdSetScissor(int x, int y, int w, int h) {
     m_cmdBuffer->SetScissorRect(r);
 }
 void SRPGraphicsAPI::CmdPushConstants(uint32_t o, uint32_t sz, const void* d) {
+    LOG_DEBUG("SRP", "PushConstants: offset={}, size={}", o, sz);
     if (m_cmdBuffer) {
         m_cmdBuffer->PushConstants(G::ShaderType::Vertex, d, sz);
         m_cmdBuffer->PushConstants(G::ShaderType::Pixel, d, sz);

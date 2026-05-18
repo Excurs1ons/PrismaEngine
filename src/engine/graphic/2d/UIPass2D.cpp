@@ -18,8 +18,8 @@ void UIPass2D::Update(Prisma::Timestep ts) {
     UpdateTime(ts);
 }
 
-void UIPass2D::Execute(const PassExecutionContext& context) {
-    // 默认由 Pipeline 显式调用 RenderUI
+void UIPass2D::Execute([[maybe_unused]] const PassExecutionContext& context) {
+    // 无需在此处执行逻辑：该 Pass 的渲染由 Pipeline 通过 RenderUI() 显式调用
 }
 
 void UIPass2D::RenderUI(ICommandBuffer* cmd, IRenderDevice* device, uint32_t width, uint32_t height) {

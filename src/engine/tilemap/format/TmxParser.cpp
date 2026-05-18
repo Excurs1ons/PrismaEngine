@@ -558,9 +558,9 @@ std::unique_ptr<Tileset> TmxParser::ParseTileset(
         }
 
         // 图像 (Image Collection)
-        tinyxml2::XMLElement* imgElem = tileElem->FirstChildElement("image");
-        if (imgElem) {
-            tile.imagePath = imgElem->Attribute("source") ? imgElem->Attribute("source") : "";
+        tinyxml2::XMLElement* tileImgElem = tileElem->FirstChildElement("image");
+        if (tileImgElem) {
+            tile.imagePath = tileImgElem->Attribute("source") ? tileImgElem->Attribute("source") : "";
         }
 
         tileset->tiles[id] = tile;

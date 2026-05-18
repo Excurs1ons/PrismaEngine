@@ -149,31 +149,31 @@ bool FontAtlas::LoadFromTTF(const std::string& ttfPath, float fontSize, const ui
                 glyph.v1 = static_cast<float>(rect.y + gh) / m_atlasHeight;
 
                 // 保存打包信息
-                pc.x0 = rect.x;
-                pc.y0 = rect.y;
-                pc.x1 = rect.x + gw;
-                pc.y1 = rect.y + gh;
-                pc.xoff = ix0;
-                pc.yoff = iy0;
+                pc.x0 = static_cast<unsigned short>(rect.x);
+                pc.y0 = static_cast<unsigned short>(rect.y);
+                pc.x1 = static_cast<unsigned short>(rect.x + gw);
+                pc.y1 = static_cast<unsigned short>(rect.y + gh);
+                pc.xoff = static_cast<float>(ix0);
+                pc.yoff = static_cast<float>(iy0);
                 // 使用 stbtt_GetCodepointHMetrics 获取 advance 值
                 int advanceWidth;
                 stbtt_GetCodepointHMetrics(&fontInfo, codepoint, &advanceWidth, nullptr);
-                pc.xadvance = static_cast<int>(advanceWidth * scale);
-                pc.xoff2 = ix1;
-                pc.yoff2 = iy1;
+                pc.xadvance = static_cast<float>(advanceWidth * scale);
+                pc.xoff2 = static_cast<float>(ix1);
+                pc.yoff2 = static_cast<float>(iy1);
             } else {
                 // 未打包或空字符
                 glyph.u0 = glyph.u1 = 0.0f;
                 glyph.v0 = glyph.v1 = 0.0f;
 
-                pc.xoff = ix0;
-                pc.yoff = iy0;
+                pc.xoff = static_cast<float>(ix0);
+                pc.yoff = static_cast<float>(iy0);
                 // 使用 stbtt_GetCodepointHMetrics 获取 advance 值
                 int advanceWidth;
                 stbtt_GetCodepointHMetrics(&fontInfo, codepoint, &advanceWidth, nullptr);
-                pc.xadvance = static_cast<int>(advanceWidth * scale);
-                pc.xoff2 = ix1;
-                pc.yoff2 = iy1;
+                pc.xadvance = static_cast<float>(advanceWidth * scale);
+                pc.xoff2 = static_cast<float>(ix1);
+                pc.yoff2 = static_cast<float>(iy1);
             }
 
             glyph.xBearing = static_cast<float>(ix0);
