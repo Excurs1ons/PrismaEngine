@@ -80,6 +80,11 @@ set_target_properties(Editor PROPERTIES
     OUTPUT_NAME "PrismaEditor"
 )
 
+# 压制第三方库（glaze 等）的内部警告
+if(MSVC)
+    target_compile_options(Editor PRIVATE /wd4702)
+endif()
+
 # Windows 平台特定
 if(WIN32)
     target_link_libraries(Editor PRIVATE dwmapi.lib)
