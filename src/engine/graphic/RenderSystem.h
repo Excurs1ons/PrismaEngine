@@ -12,28 +12,24 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include "app/ProjectConfig.h"
 namespace Prisma {
 // 前向声明
 class Scene;
 }  // namespace Prisma
 
 namespace Prisma::Graphic {
+
 class ForwardPipeline;
-
-enum class StandardPipelineType {
-    Forward3D,   // 传统前向渲染 (3D/通用)
-    Standard2D   // 工业级 2D 渲染管线 (支持光照、后处理等)
-};
-
 struct RenderSystemDesc {
     RenderAPIType backendType  = RenderAPIType::Vulkan;
-    StandardPipelineType pipelineType = StandardPipelineType::Forward3D; // 新增：管线类型选择
     void* windowHandle         = nullptr;
     void* surface              = nullptr;
     uint32_t width             = 1600;
     uint32_t height            = 900;
     bool enableDebug           = true;
     bool enableValidation      = true;
+    RenderMode renderMode      = RenderMode::Mode3D_Forward;
     PresentMode presentMode    = PresentMode::VSync;
     uint32_t maxFramesInFlight = 3;
     std::string name           = "PrismaApp";

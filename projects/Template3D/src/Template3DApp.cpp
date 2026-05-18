@@ -1,4 +1,4 @@
-#include "Template3DApp.h"
+﻿#include "Template3DApp.h"
 #include "PathtraceCompSPIRV.h"
 #include "FullscreenVertSPIRV.h"
 #include "PresentFragSPIRV.h"
@@ -280,8 +280,8 @@ int Template3DApp::OnInitialize() {
     InitForwardResources();
     InitPathTracingResources();
 
-    // 加载场景文件（相对于工作目录，assets 在 bin 子目录下）
-    std::string scenePath = "bin/assets/scenes/pt_scene.json";
+    // 加载场景文件（相对于可执行文件目录）
+    std::string scenePath = "assets/scenes/pt_scene.json";
     LOG_INFO("Template3D", "工作目录: {} 场景路径: {}", std::filesystem::current_path().string(), scenePath);
     LoadSceneFromJSON(scenePath);
     LOG_INFO("Template3D", "场景加载状态: m_sceneLoaded={}", m_sceneLoaded);
@@ -727,7 +727,7 @@ void Template3DApp::OnRender() {
 void Template3DApp::RenderPathTracing() {
     auto& pt = m_ptRes;
 
-    LOG_DEBUG("Template3D", "渲染路径追踪帧 #{}", pt.frameCount);
+    //LOG_DEBUG("Template3D", "渲染路径追踪帧 #{}", pt.frameCount);
 
     auto vkRenderDev = dynamic_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
     if (!vkRenderDev) return;

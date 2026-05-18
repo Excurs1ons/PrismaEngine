@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+﻿cmake_minimum_required(VERSION 3.20)
 
 project(Template3D
     VERSION 1.0.0
@@ -17,6 +17,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(TEMPLATE3D_SOURCES
     src/Template3DApp.cpp
     src/stb_image_write_impl.cpp
+    src/vma_impl.cpp
 )
 
 set(TEMPLATE3D_HEADERS
@@ -27,6 +28,7 @@ set(TEMPLATE3D_HEADERS
 
 set(TEMPLATE3D_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/engine
     ${CMAKE_SOURCE_DIR}/src/engine/app
     ${CMAKE_SOURCE_DIR}/src/engine/core
     ${CMAKE_SOURCE_DIR}/src/engine/graphic
@@ -111,23 +113,6 @@ set_target_properties(${TEMPLATE3D_PLUGIN_NAME} PROPERTIES
 setup_target_defaults(${TEMPLATE3D_PLUGIN_NAME})
 target_compile_definitions(${TEMPLATE3D_PLUGIN_NAME} PRIVATE TEMPLATE3D_PLUGIN_EXPORTS=1)
 
-# ============================================================
-# VS 额外调试入口
-# ============================================================
-
-if(MSVC)
-    set(DEBUG_HELPER "${CMAKE_CURRENT_BINARY_DIR}/__vs_debug_template3d_main.cpp")
-    if(NOT EXISTS "${DEBUG_HELPER}")
-        file(WRITE "${DEBUG_HELPER}" "int main(){return 0;}\n")
-    endif()
-    add_executable(Template3D_Launcher_Debug EXCLUDE_FROM_ALL "${DEBUG_HELPER}")
-    target_link_libraries(Template3D_Launcher_Debug PRIVATE Engine)
-    add_dependencies(Template3D_Launcher_Debug ${TEMPLATE3D_PLUGIN_NAME} Launcher)
-    set_target_properties(Template3D_Launcher_Debug PROPERTIES
-        VS_DEBUGGER_COMMAND "$<TARGET_FILE:Launcher>"
-        VS_DEBUGGER_COMMAND_ARGUMENTS "$<TARGET_FILE:${TEMPLATE3D_PLUGIN_NAME}>"
-    )
-endif()
 
 # ============================================================
 # 复制项目资源

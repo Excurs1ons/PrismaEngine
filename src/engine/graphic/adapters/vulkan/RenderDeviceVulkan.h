@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "interfaces/ICommandBuffer.h"
 #include "interfaces/IFence.h"
 #include "interfaces/IRenderDevice.h"
@@ -28,7 +29,7 @@ class VulkanResourceFactory;
 
 /// @brief Vulkan渲染设备
 /// 实现IRenderDevice接口，基于Vulkan 1.3+，使用 vk-bootstrap 和 VMA
-class RenderDeviceVulkan : public IRenderDevice {
+class ENGINE_API RenderDeviceVulkan : public IRenderDevice {
 public:
     RenderDeviceVulkan();
     ~RenderDeviceVulkan() override;
@@ -183,8 +184,6 @@ private:
     // 资源
     std::unique_ptr<VulkanSwapChain> m_swapChain;
     std::unique_ptr<VulkanResourceFactory> m_resourceFactory;
-
-
 
     bool m_headless = false;
 

@@ -41,6 +41,20 @@ static VkBlendFactor ToVkBlendFactor(BlendFactorType factor) {
 }
 
 // ============================================================
+// 辅助函数：PrimitiveTopology → VkPrimitiveTopology
+// ============================================================
+static VkPrimitiveTopology ToVkPrimitiveTopology(PrimitiveTopology topology) {
+    switch (topology) {
+        case PrimitiveTopology::PointList:   return VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        case PrimitiveTopology::LineList:    return VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        case PrimitiveTopology::LineStrip:   return VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        case PrimitiveTopology::TriangleList: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        case PrimitiveTopology::TriangleStrip: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        default: return VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    }
+}
+
+// ============================================================
 // 辅助函数：BlendOp → VkBlendOp
 // ============================================================
 static VkBlendOp ToVkBlendOp(BlendOp op) {
@@ -305,7 +319,7 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    inputAssembly.topology = ToVkPrimitiveTopology(m_topology);
     inputAssembly.primitiveRestartEnable = VK_FALSE;
 
     VkPipelineViewportStateCreateInfo viewportState{};
@@ -352,17 +366,68 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
     dynamicState.pDynamicStates = dynamicStates.data();
 
-    // 需要一个有效的 RenderPass
+    // ========== 前置校验 ==========
+
     if (!deviceVulkan || !deviceVulkan->GetSwapChain()) {
         m_errors = "RenderPass required for pipeline creation";
+        m_isValid = false;
         return false;
     }
 
     auto vkSwapChain = dynamic_cast<VulkanSwapChain*>(deviceVulkan->GetSwapChain());
     if (!vkSwapChain) {
         m_errors = "VulkanSwapChain required for pipeline creation";
+        m_isValid = false;
         return false;
     }
+
+    if (shaderStages.empty()) {
+        m_errors = "No shader stages available for pipeline creation";
+        m_isValid = false;
+        return false;
+    }
+
+    // 检查 shader module 有效性
+    for (size_t i = 0; i < shaderStages.size(); ++i) {
+        if (shaderStages[i].module == VK_NULL_HANDLE) {
+            m_errors = "Shader module " + std::to_string(i) + " is VK_NULL_HANDLE";
+            m_isValid = false;
+            return false;
+        }
+    }
+
+    VkRenderPass renderPass = vkSwapChain->GetRenderPass();
+    if (renderPass == VK_NULL_HANDLE) {
+        m_errors = "SwapChain RenderPass is not initialized";
+        m_isValid = false;
+        return false;
+    }
+
+    // ========== 构建图形管线 ==========
+
+    VkPipelineDepthStencilStateCreateInfo depthStencil{};
+    depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depthStencil.depthTestEnable = m_depthStencilState.depthEnable ? VK_TRUE : VK_FALSE;
+    depthStencil.depthWriteEnable = m_depthStencilState.depthWriteEnable ? VK_TRUE : VK_FALSE;
+    depthStencil.depthCompareOp = static_cast<VkCompareOp>(m_depthStencilState.depthFunc);
+    depthStencil.depthBoundsTestEnable = VK_FALSE;
+    depthStencil.stencilTestEnable = m_depthStencilState.stencilEnable ? VK_TRUE : VK_FALSE;
+    depthStencil.front.failOp = static_cast<VkStencilOp>(m_depthStencilState.frontFace.failOp);
+    depthStencil.front.passOp = static_cast<VkStencilOp>(m_depthStencilState.frontFace.passOp);
+    depthStencil.front.depthFailOp = static_cast<VkStencilOp>(m_depthStencilState.frontFace.depthFailOp);
+    depthStencil.front.compareOp = static_cast<VkCompareOp>(m_depthStencilState.frontFace.func);
+    depthStencil.front.compareMask = m_depthStencilState.stencilReadMask;
+    depthStencil.front.writeMask = m_depthStencilState.stencilWriteMask;
+    depthStencil.front.reference = m_depthStencilState.stencilRef;
+    depthStencil.back.failOp = static_cast<VkStencilOp>(m_depthStencilState.backFace.failOp);
+    depthStencil.back.passOp = static_cast<VkStencilOp>(m_depthStencilState.backFace.passOp);
+    depthStencil.back.depthFailOp = static_cast<VkStencilOp>(m_depthStencilState.backFace.depthFailOp);
+    depthStencil.back.compareOp = static_cast<VkCompareOp>(m_depthStencilState.backFace.func);
+    depthStencil.back.compareMask = m_depthStencilState.stencilReadMask;
+    depthStencil.back.writeMask = m_depthStencilState.stencilWriteMask;
+    depthStencil.back.reference = m_depthStencilState.stencilRef;
+    depthStencil.minDepthBounds = 0.0f;
+    depthStencil.maxDepthBounds = 1.0f;
 
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -373,10 +438,11 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
+    pipelineInfo.pDepthStencilState = &depthStencil;
     pipelineInfo.pColorBlendState = &colorBlending;
     pipelineInfo.pDynamicState = &dynamicState;
     pipelineInfo.layout = m_pipelineLayout;
-    pipelineInfo.renderPass = vkSwapChain->GetRenderPass();
+    pipelineInfo.renderPass = renderPass;
     pipelineInfo.subpass = 0;
 
     if (vkCreateGraphicsPipelines(m_device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {

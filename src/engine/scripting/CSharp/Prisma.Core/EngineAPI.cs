@@ -95,6 +95,13 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<int, int, uint, void*, uint, uint> SrpCreateTexture2D;
     public delegate* unmanaged<uint, void> SrpDestroyTexture;
 
+    // Sampler
+    public delegate* unmanaged<SRPSamplerDesc*, uint> SrpCreateSampler;
+    public delegate* unmanaged<uint, void> SrpDestroySampler;
+
+    // Texture binding
+    public delegate* unmanaged<uint, uint, uint, void> SrpCmdBindTexture;
+
     // Frame
     public delegate* unmanaged<void> SrpBeginFrame;
     public delegate* unmanaged<void> SrpEndFrame;
@@ -137,6 +144,20 @@ internal unsafe struct SRPPipelineDesc
     public byte BlendEnable;
     public byte BlendColorWriteMask;
     public fixed float ClearColor[4];
+}
+
+/// <summary>
+/// 采样器创建描述。内存布局与 C++ Prisma::Scripting::SRPSamplerDesc 一致。
+/// </summary>
+[StructLayout(LayoutKind.Sequential)]
+internal unsafe struct SRPSamplerDesc
+{
+    public uint MinFilter;
+    public uint MagFilter;
+    public uint MipFilter;
+    public uint AddressU;
+    public uint AddressV;
+    public uint AddressW;
 }
 
 internal static unsafe class Interop

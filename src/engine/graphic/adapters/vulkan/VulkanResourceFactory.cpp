@@ -368,8 +368,13 @@ std::unique_ptr<IBuffer> VulkanResourceFactory::CreateDynamicBuffer(uint64_t siz
 std::unique_ptr<IShader> VulkanResourceFactory::CreateShaderImpl(const ShaderDesc& desc, const std::vector<uint8_t>& bytecode, const ShaderReflection& reflection) {
     std::vector<uint32_t> spirv;
     if (bytecode.size() % 4 == 0) { spirv.resize(bytecode.size() / 4); memcpy(spirv.data(), bytecode.data(), bytecode.size()); }
+    auto shader = std::make_unique<VulkanShader>(m_device, desc, spirv, reflection);
+    if (shader->GetShaderModule() == VK_NULL_HANDLE) {
+        LOG_ERROR("Vulkan", "CreateShaderImpl failed: shader module is VK_NULL_HANDLE ({0})", desc.filename);
+        return nullptr;
+    }
     ++m_creationStats.shadersCreated;
-    return std::make_unique<VulkanShader>(m_device, desc, spirv, reflection);
+    return shader;
 }
 
 std::unique_ptr<IPipelineState> VulkanResourceFactory::CreatePipelineStateImpl() { ++m_creationStats.pipelinesCreated; return std::make_unique<VulkanPipelineState>(); }
