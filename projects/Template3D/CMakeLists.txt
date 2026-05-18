@@ -16,7 +16,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(TEMPLATE3D_SOURCES
     src/Template3DApp.cpp
-    src/stb_image_write_impl.cpp
 )
 
 set(TEMPLATE3D_HEADERS
