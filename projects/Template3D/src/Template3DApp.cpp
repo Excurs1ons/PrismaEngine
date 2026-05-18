@@ -8,7 +8,8 @@
 #include "graphic/Renderer.h"
 #include "graphic/OrthographicCamera.h"
 #include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
-#include "graphic/adapters/vulkan/VulkanCommandBuffer.h"
+#include "graphic/adapters/vulkan/VulkanResources.h"
+#include "graphic/RenderDesc.h"
 #include "app/Engine.h"
 #include "core/EntityManager.h"
 #include "SceneManager.h"
@@ -39,27 +40,6 @@ static VkShaderModule CreateShaderModule(VkDevice device, const uint32_t* code, 
     VkShaderModule sm = VK_NULL_HANDLE;
     vkCreateShaderModule(device, &ci, nullptr, &sm);
     return sm;
-}
-
-static void TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
-                                   VkImageLayout oldLayout, VkImageLayout newLayout,
-                                   VkAccessFlags srcAccess, VkAccessFlags dstAccess,
-                                   VkPipelineStageFlags srcStage, VkPipelineStageFlags dstStage) {
-    VkImageMemoryBarrier barrier{};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.oldLayout = oldLayout;
-    barrier.newLayout = newLayout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.image = image;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = 1;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-    barrier.srcAccessMask = srcAccess;
-    barrier.dstAccessMask = dstAccess;
-    vkCmdPipelineBarrier(cmd, srcStage, dstStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 } // namespace Prisma
@@ -116,6 +96,7 @@ template<> struct meta<SceneConfig> {
 } // namespace glz
 
 namespace Prisma {
+using namespace Graphic;
 
 // ============================================================================
 // Template3DApp
@@ -224,24 +205,15 @@ void Template3DApp::LoadSceneFromJSON(const std::string& path) {
         ptObj.color[3] = (float)obj.emissive;
     }
 
-    // 上传 SSBO 数据
-    if (m_ptRes.sceneSSBOMapped) {
-        std::memcpy(m_ptRes.sceneSSBOMapped, &ssboData, sizeof(ssboData));
-
-        VmaAllocationInfo allocInfo{};
-        vmaGetAllocationInfo(m_ptRes.vmaAllocator, m_ptRes.sceneSSBOAllocation, &allocInfo);
-        VkMappedMemoryRange range{};
-        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range.memory = allocInfo.deviceMemory;
-        range.offset = allocInfo.offset;
-        range.size = sizeof(ssboData);
-        vkFlushMappedMemoryRanges(m_ptRes.vkDevice, 1, &range);
+    // 上传 SSBO 数据（通过抽象接口自动处理 map/flush/unmap）
+    if (m_ptRes.sceneSSBO) {
+        m_ptRes.sceneSSBO->UpdateData(&ssboData, sizeof(ssboData), 0);
 
         LOG_INFO("Template3D", "  上传 {} 个场景对象到 SSBO ({} bytes)", ssboData.objectCount, sizeof(ssboData));
 
         // 验证回读 SSBO 数据
         SceneDataSSBO checkData{};
-        std::memcpy(&checkData, m_ptRes.sceneSSBOMapped, sizeof(checkData));
+        m_ptRes.sceneSSBO->ReadData(&checkData, sizeof(checkData), 0);
         LOG_INFO("Template3D", "  SSBO 回读: count={} sizeof={}", checkData.objectCount, (int)sizeof(checkData));
         if (checkData.objectCount > 0) {
             LOG_INFO("Template3D", "  首对象: p0=({:.1f},{:.1f},{:.1f}) c=({:.1f},{:.1f},{:.1f}) e={:.1f}",
@@ -305,242 +277,114 @@ void Template3DApp::InitPathTracingResources() {
     pt.width = m_Spec.Width;
     pt.height = m_Spec.Height;
 
-    VkDevice vkDev = m_device->GetVkDevice();
-    pt.vkDevice = vkDev;
-    pt.vmaAllocator = m_device->GetVmaAllocator();
-    pt.vkPhysicalDevice = m_device->GetPhysicalDevice();
-    pt.graphicsQueue = m_device->GetGraphicsQueue();
-    pt.graphicsQueueFamily = m_device->GetGraphicsQueueFamily();
-
-    if (!vkDev || !pt.vmaAllocator) {
-        LOG_ERROR("Template3D", "无法获取 Vulkan 设备句柄");
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("Template3D", "无法获取资源工厂");
         return;
     }
 
-    VkResult err;
-
-    pt.computeShaderModule = CreateShaderModule(vkDev, PATHTRACE_COMP_SPV_SPV, PATHTRACE_COMP_SPV_SPV_SIZE);
-    if (!pt.computeShaderModule) {
-        LOG_ERROR("Template3D", "创建计算着色器模块失败");
+    // 1. 创建存储纹理（计算着色器写入，片段着色器采样）
+    TextureDesc texDesc{};
+    texDesc.type = TextureType::Texture2D;
+    texDesc.format = TextureFormat::RGBA32_Float;
+    texDesc.width = pt.width;
+    texDesc.height = pt.height;
+    texDesc.depth = 1;
+    texDesc.mipLevels = 1;
+    texDesc.arraySize = 1;
+    texDesc.allowShaderResource = true;
+    texDesc.allowUnorderedAccess = true;
+    pt.storageTexture = factory->CreateTextureImpl(texDesc);
+    if (!pt.storageTexture) {
+        LOG_ERROR("Template3D", "创建存储纹理失败");
         return;
     }
 
-    VkImageCreateInfo imgCI{};
-    imgCI.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imgCI.imageType = VK_IMAGE_TYPE_2D;
-    imgCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    imgCI.extent = { pt.width, pt.height, 1 };
-    imgCI.mipLevels = 1;
-    imgCI.arrayLayers = 1;
-    imgCI.samples = VK_SAMPLE_COUNT_1_BIT;
-    imgCI.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imgCI.usage = VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
-    imgCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    VmaAllocationCreateInfo allocCI{};
-    allocCI.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
-
-    err = vmaCreateImage(pt.vmaAllocator, &imgCI, &allocCI,
-                         &pt.storageImage, &pt.storageImageAllocation, nullptr);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建存储图像失败: {}", (int)err);
-        return;
-    }
-
-    VkImageViewCreateInfo viewCI{};
-    viewCI.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewCI.image = pt.storageImage;
-    viewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    viewCI.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    viewCI.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    viewCI.subresourceRange.levelCount = 1;
-    viewCI.subresourceRange.layerCount = 1;
-    err = vkCreateImageView(vkDev, &viewCI, nullptr, &pt.storageImageView);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建图像视图失败");
-        return;
-    }
-
-    // --- Camera UBO (仅相机 + 累积参数) ---
-    VkBufferCreateInfo bufCI{};
-    bufCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    bufCI.size = sizeof(CameraUBO);
-    bufCI.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-
-    VmaAllocationCreateInfo bufAllocCI{};
-    bufAllocCI.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
-    bufAllocCI.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-
-    err = vmaCreateBuffer(pt.vmaAllocator, &bufCI, &bufAllocCI,
-                          &pt.cameraUBO, &pt.cameraUBOAllocation, nullptr);
-    if (err != VK_SUCCESS) {
+    // 2. 创建 Camera UBO
+    BufferDesc uboDesc{};
+    uboDesc.type = BufferType::Constant;
+    uboDesc.size = sizeof(CameraUBO);
+    uboDesc.usage = BufferUsage::Dynamic;
+    pt.cameraUBO = factory->CreateBufferImpl(uboDesc);
+    if (!pt.cameraUBO) {
         LOG_ERROR("Template3D", "创建 Camera UBO 失败");
         return;
     }
-    vmaMapMemory(pt.vmaAllocator, pt.cameraUBOAllocation, &pt.cameraUBOMapped);
 
-    // --- Scene SSBO (场景对象数据) ---
-    VkBufferCreateInfo ssboBufCI{};
-    ssboBufCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    ssboBufCI.size = sizeof(SceneDataSSBO);
-    ssboBufCI.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-
-    VmaAllocationCreateInfo ssboAllocCI{};
-    ssboAllocCI.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
-    ssboAllocCI.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
-
-    err = vmaCreateBuffer(pt.vmaAllocator, &ssboBufCI, &ssboAllocCI,
-                          &pt.sceneSSBO, &pt.sceneSSBOAllocation, nullptr);
-    if (err != VK_SUCCESS) {
+    // 3. 创建 Scene SSBO
+    BufferDesc ssboDesc{};
+    ssboDesc.type = BufferType::Structured;
+    ssboDesc.size = sizeof(SceneDataSSBO);
+    ssboDesc.usage = BufferUsage::Dynamic;
+    pt.sceneSSBO = factory->CreateBufferImpl(ssboDesc);
+    if (!pt.sceneSSBO) {
         LOG_ERROR("Template3D", "创建 Scene SSBO 失败");
         return;
     }
-    vmaMapMemory(pt.vmaAllocator, pt.sceneSSBOAllocation, &pt.sceneSSBOMapped);
 
     // 清空 SSBO（防止未初始化的对象数据）
     SceneDataSSBO emptySSBO{};
-    std::memcpy(pt.sceneSSBOMapped, &emptySSBO, sizeof(emptySSBO));
-    VmaAllocationInfo ssboInfo{};
-    vmaGetAllocationInfo(pt.vmaAllocator, pt.sceneSSBOAllocation, &ssboInfo);
-    VkMappedMemoryRange ssboRange{};
-    ssboRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-    ssboRange.memory = ssboInfo.deviceMemory;
-    ssboRange.offset = ssboInfo.offset;
-    ssboRange.size = sizeof(SceneDataSSBO);
-    vkFlushMappedMemoryRanges(pt.vkDevice, 1, &ssboRange);
+    pt.sceneSSBO->UpdateData(&emptySSBO, sizeof(emptySSBO), 0);
 
-    // --- 描述符集布局: binding 0=output image, 1=accum image, 2=camera UBO, 3=scene SSBO ---
-    VkDescriptorSetLayoutBinding computeBindings[4] = {};
-    computeBindings[0].binding = 0;
-    computeBindings[0].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    computeBindings[0].descriptorCount = 1;
-    computeBindings[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    computeBindings[1].binding = 1;
-    computeBindings[1].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    computeBindings[1].descriptorCount = 1;
-    computeBindings[1].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    computeBindings[2].binding = 2;
-    computeBindings[2].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    computeBindings[2].descriptorCount = 1;
-    computeBindings[2].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
-    computeBindings[3].binding = 3;
-    computeBindings[3].descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    computeBindings[3].descriptorCount = 1;
-    computeBindings[3].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+    // 4. 从 SPIRV 创建计算着色器
+    std::vector<uint8_t> bytecode(
+        reinterpret_cast<const uint8_t*>(PATHTRACE_COMP_SPV_SPV),
+        reinterpret_cast<const uint8_t*>(PATHTRACE_COMP_SPV_SPV + PATHTRACE_COMP_SPV_SPV_SIZE));
 
-    VkDescriptorSetLayoutCreateInfo dslCI{};
-    dslCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dslCI.bindingCount = 4;
-    dslCI.pBindings = computeBindings;
-    err = vkCreateDescriptorSetLayout(vkDev, &dslCI, nullptr, &pt.computeDescriptorSetLayout);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建计算描述符集布局失败");
+    ShaderReflection reflection;
+    reflection.Resources = {
+        {"outputImage", ShaderResource::Type::Image2D, 0, 0, 1, 0},
+        {"accumImage",  ShaderResource::Type::Image2D, 0, 1, 1, 0},
+        {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(CameraUBO)},
+        {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(SceneDataSSBO)},
+    };
+
+    ShaderDesc shaderDesc{};
+    shaderDesc.type = ShaderType::Compute;
+    shaderDesc.entryPoint = "main";
+    shaderDesc.language = ShaderLanguage::SPIRV;
+    shaderDesc.filename = "pathtrace.comp";
+
+    auto shader = factory->CreateShaderImpl(shaderDesc, bytecode, reflection);
+    if (!shader) {
+        LOG_ERROR("Template3D", "创建计算着色器失败");
         return;
     }
 
-    VkPipelineLayoutCreateInfo plCI{};
-    plCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    plCI.setLayoutCount = 1;
-    plCI.pSetLayouts = &pt.computeDescriptorSetLayout;
-    err = vkCreatePipelineLayout(vkDev, &plCI, nullptr, &pt.computePipelineLayout);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建计算管线布局失败");
+    // 5. 创建计算管线（封装 ShaderModule + PipelineLayout + ComputePipeline）
+    pt.computePipeline = factory->CreateComputePipelineImpl();
+    if (!pt.computePipeline) {
+        LOG_ERROR("Template3D", "创建计算管线对象失败");
         return;
     }
 
-    VkComputePipelineCreateInfo cpCI{};
-    cpCI.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    cpCI.stage.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    cpCI.stage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
-    cpCI.stage.module = pt.computeShaderModule;
-    cpCI.stage.pName = "main";
-    cpCI.layout = pt.computePipelineLayout;
-    err = vkCreateComputePipelines(vkDev, VK_NULL_HANDLE, 1, &cpCI, nullptr, &pt.computePipeline);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建计算管线失败");
+    pt.computePipeline->SetShader(std::move(shader));
+    if (!pt.computePipeline->Create(m_device)) {
+        LOG_ERROR("Template3D", "编译计算管线失败");
         return;
     }
 
-    VkDescriptorPoolSize poolSizes[4] = {};
-    poolSizes[0].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    poolSizes[0].descriptorCount = 2;
-    poolSizes[1].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[1].descriptorCount = 1;
-    poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    poolSizes[2].descriptorCount = 1;
-    poolSizes[3].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[3].descriptorCount = 1;
-
-    VkDescriptorPoolCreateInfo dpCI{};
-    dpCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    dpCI.poolSizeCount = 4;
-    dpCI.pPoolSizes = poolSizes;
-    dpCI.maxSets = 2;
-    dpCI.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    err = vkCreateDescriptorPool(vkDev, &dpCI, nullptr, &pt.descriptorPool);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建描述符池失败");
+    // 6. 创建描述符集
+    const auto& layouts = pt.computePipeline->GetDescriptorSetLayouts();
+    if (layouts.empty()) {
+        LOG_ERROR("Template3D", "计算管线没有描述符集布局");
         return;
     }
 
-    VkDescriptorSetAllocateInfo dsaCI{};
-    dsaCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    dsaCI.descriptorPool = pt.descriptorPool;
-    dsaCI.descriptorSetCount = 1;
-    dsaCI.pSetLayouts = &pt.computeDescriptorSetLayout;
-    err = vkAllocateDescriptorSets(vkDev, &dsaCI, &pt.descriptorSet);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "分配计算描述符集失败");
+    pt.descriptorSet = factory->CreateDescriptorSet(layouts[0].get());
+    if (!pt.descriptorSet) {
+        LOG_ERROR("Template3D", "创建描述符集失败");
         return;
     }
 
-    // --- 写入描述符集 ---
-    VkDescriptorImageInfo imgInfo{};
-    imgInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-    imgInfo.imageView = pt.storageImageView;
-
-    VkWriteDescriptorSet writeOutput{};
-    writeOutput.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeOutput.dstSet = pt.descriptorSet;
-    writeOutput.dstBinding = 0;
-    writeOutput.descriptorCount = 1;
-    writeOutput.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    writeOutput.pImageInfo = &imgInfo;
-
-    VkWriteDescriptorSet writeAccum{};
-    writeAccum.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeAccum.dstSet = pt.descriptorSet;
-    writeAccum.dstBinding = 1;
-    writeAccum.descriptorCount = 1;
-    writeAccum.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-    writeAccum.pImageInfo = &imgInfo;
-
-    VkDescriptorBufferInfo uboInfo{};
-    uboInfo.buffer = pt.cameraUBO;
-    uboInfo.range = sizeof(CameraUBO);
-
-    VkWriteDescriptorSet writeUBO{};
-    writeUBO.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeUBO.dstSet = pt.descriptorSet;
-    writeUBO.dstBinding = 2;
-    writeUBO.descriptorCount = 1;
-    writeUBO.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    writeUBO.pBufferInfo = &uboInfo;
-
-    VkDescriptorBufferInfo ssboInfoDesc{};
-    ssboInfoDesc.buffer = pt.sceneSSBO;
-    ssboInfoDesc.range = sizeof(SceneDataSSBO);
-
-    VkWriteDescriptorSet writeSSBO{};
-    writeSSBO.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeSSBO.dstSet = pt.descriptorSet;
-    writeSSBO.dstBinding = 3;
-    writeSSBO.descriptorCount = 1;
-    writeSSBO.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-    writeSSBO.pBufferInfo = &ssboInfoDesc;
-
-    VkWriteDescriptorSet writes[] = { writeOutput, writeAccum, writeUBO, writeSSBO };
-    vkUpdateDescriptorSets(vkDev, 4, writes, 0, nullptr);
+    // 7. 绑定资源到描述符集
+    pt.descriptorSet->BindStorageImage(0, pt.storageTexture.get());
+    pt.descriptorSet->BindStorageImage(1, pt.storageTexture.get());
+    pt.descriptorSet->BindBuffer(2, pt.cameraUBO.get(), 0, sizeof(CameraUBO),
+                                 DescriptorType::UniformBuffer);
+    pt.descriptorSet->BindBuffer(3, pt.sceneSSBO.get(), 0, sizeof(SceneDataSSBO),
+                                 DescriptorType::StorageBuffer);
+    pt.descriptorSet->Update();
 
     pt.initialized = true;
     LOG_INFO("Template3D", "路径追踪资源初始化完成 ({}x{})", pt.width, pt.height);
@@ -553,6 +397,12 @@ void Template3DApp::InitPresentResources() {
     pr.vkDevice = vkDev;
     VkResult err;
 
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("Template3D", "无法获取资源工厂");
+        return;
+    }
+
     pr.vertShaderModule = CreateShaderModule(vkDev, FULLSCREEN_VERT_SPV_SPV, FULLSCREEN_VERT_SPV_SPV_SIZE);
     pr.fragShaderModule = CreateShaderModule(vkDev, PRESENT_FRAG_SPV_SPV, PRESENT_FRAG_SPV_SPV_SIZE);
     if (!pr.vertShaderModule || !pr.fragShaderModule) {
@@ -560,43 +410,34 @@ void Template3DApp::InitPresentResources() {
         return;
     }
 
-    VkDescriptorSetLayoutBinding bind{};
-    bind.binding = 0;
-    bind.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    bind.descriptorCount = 1;
-    bind.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-    VkDescriptorSetLayoutCreateInfo dslCI{};
-    dslCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dslCI.bindingCount = 1;
-    dslCI.pBindings = &bind;
-    err = vkCreateDescriptorSetLayout(vkDev, &dslCI, nullptr, &pr.descriptorSetLayout);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建 present 描述符集布局失败");
-        return;
+    // 通过工厂创建抽象描述符集布局
+    {
+        std::vector<ShaderResource> presentResources;
+        presentResources.push_back({"presentTexture", ShaderResource::Type::Sampler2D, 0, 0, 1, 0});
+        pr.descriptorSetLayout = factory->CreateDescriptorSetLayout(presentResources);
+        if (!pr.descriptorSetLayout) {
+            LOG_ERROR("Template3D", "创建 present 描述符集布局失败");
+            return;
+        }
     }
 
-    VkSamplerCreateInfo sampCI{};
-    sampCI.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    sampCI.magFilter = VK_FILTER_LINEAR;
-    sampCI.minFilter = VK_FILTER_LINEAR;
-    sampCI.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampCI.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampCI.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-    sampCI.maxLod = VK_LOD_CLAMP_NONE;
-    err = vkCreateSampler(vkDev, &sampCI, nullptr, &pr.sampler);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建 sampler 失败");
-        return;
+    // 通过工厂创建抽象采样器
+    {
+        SamplerDesc samplerDesc{};
+        samplerDesc.filter = TextureFilter::Linear;
+        samplerDesc.addressU = TextureAddressMode::Clamp;
+        samplerDesc.addressV = TextureAddressMode::Clamp;
+        samplerDesc.addressW = TextureAddressMode::Clamp;
+        pr.sampler = factory->CreateSamplerImpl(samplerDesc);
+        if (!pr.sampler) {
+            LOG_ERROR("Template3D", "创建 sampler 失败");
+            return;
+        }
     }
 
-    VkDescriptorSetAllocateInfo dsaCI{};
-    dsaCI.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    dsaCI.descriptorPool = m_ptRes.descriptorPool;
-    dsaCI.descriptorSetCount = 1;
-    dsaCI.pSetLayouts = &pr.descriptorSetLayout;
-    err = vkAllocateDescriptorSets(vkDev, &dsaCI, &pr.descriptorSet);
-    if (err != VK_SUCCESS) {
+    // 通过工厂创建抽象描述符集
+    pr.descriptorSet = factory->CreateDescriptorSet(pr.descriptorSetLayout.get());
+    if (!pr.descriptorSet) {
         LOG_ERROR("Template3D", "分配 present 描述符集失败");
         return;
     }
@@ -604,7 +445,8 @@ void Template3DApp::InitPresentResources() {
     VkPipelineLayoutCreateInfo plCI{};
     plCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     plCI.setLayoutCount = 1;
-    plCI.pSetLayouts = &pr.descriptorSetLayout;
+    VkDescriptorSetLayout vkLayout = (VkDescriptorSetLayout)pr.descriptorSetLayout->GetNativeHandle();
+    plCI.pSetLayouts = &vkLayout;
     err = vkCreatePipelineLayout(vkDev, &plCI, nullptr, &pr.pipelineLayout);
     if (err != VK_SUCCESS) {
         LOG_ERROR("Template3D", "创建 present 管线布局失败");
@@ -689,19 +531,9 @@ void Template3DApp::InitPresentResources() {
         return;
     }
 
-    VkDescriptorImageInfo presentImgInfo{};
-    presentImgInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    presentImgInfo.imageView = m_ptRes.storageImageView;
-    presentImgInfo.sampler = pr.sampler;
-
-    VkWriteDescriptorSet writeSet{};
-    writeSet.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    writeSet.dstSet = pr.descriptorSet;
-    writeSet.dstBinding = 0;
-    writeSet.descriptorCount = 1;
-    writeSet.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    writeSet.pImageInfo = &presentImgInfo;
-    vkUpdateDescriptorSets(vkDev, 1, &writeSet, 0, nullptr);
+    // 通过抽象接口绑定纹理到描述符集
+    pr.descriptorSet->BindTexture(0, m_ptRes.storageTexture.get(), pr.sampler.get());
+    pr.descriptorSet->Update();
 
     auto vkRenderDev = dynamic_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
     if (vkRenderDev) {
@@ -727,35 +559,27 @@ void Template3DApp::OnRender() {
 void Template3DApp::RenderPathTracing() {
     auto& pt = m_ptRes;
 
-    //LOG_DEBUG("Template3D", "渲染路径追踪帧 #{}", pt.frameCount);
-
     auto vkRenderDev = dynamic_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
     if (!vkRenderDev) return;
 
-    auto* vkCmdBuf = dynamic_cast<Graphic::Vulkan::VulkanCommandBuffer*>(
-        vkRenderDev->GetCurrentCommandBuffer());
-    if (!vkCmdBuf) return;
-    VkCommandBuffer cmd = vkCmdBuf->GetVkCommandBuffer();
+    // 获取抽象命令缓冲区（无需 dynamic_cast 到 VulkanCommandBuffer）
+    auto* cmdBuffer = vkRenderDev->GetCurrentCommandBuffer();
+    if (!cmdBuffer) return;
 
     if (!vkRenderDev->IsHeadless()) {
         vkRenderDev->SuspendDefaultRenderPass();
     }
 
     bool firstFrame = (pt.frameCount == 0);
-    VkImageLayout srcLayout = firstFrame
-        ? VK_IMAGE_LAYOUT_UNDEFINED
-        : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-    TransitionImageLayout(cmd, pt.storageImage,
-                          srcLayout,
-                          VK_IMAGE_LAYOUT_GENERAL,
-                          firstFrame ? 0 : VK_ACCESS_SHADER_READ_BIT,
-                          VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-                          firstFrame ? VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT
-                                     : VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    // 1. 管线屏障：将存储图像转换到 GENERAL 布局供计算着色器写入
+    cmdBuffer->PipelineBarrier({{
+        pt.storageTexture.get(),
+        firstFrame ? Graphic::ResourceState::Undefined : Graphic::ResourceState::ShaderRead,
+        Graphic::ResourceState::UnorderedAccess
+    }});
 
-    // 填充 Camera UBO
+    // 2. 填充 Camera UBO（通过抽象接口自动处理 map/flush/unmap）
     {
         glm::vec3 dir = glm::normalize(m_camera.target - m_camera.position);
         glm::vec3 right = glm::normalize(glm::cross(dir, m_camera.up));
@@ -775,33 +599,23 @@ void Template3DApp::RenderPathTracing() {
         ubo.resetAccumulation = m_pathTracingDirty ? 1 : 0;
         ubo.padUBO = 0;
 
-        std::memcpy(pt.cameraUBOMapped, &ubo, sizeof(ubo));
-
-        VmaAllocationInfo allocInfo{};
-        vmaGetAllocationInfo(pt.vmaAllocator, pt.cameraUBOAllocation, &allocInfo);
-        VkMappedMemoryRange range{};
-        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range.memory = allocInfo.deviceMemory;
-        range.offset = allocInfo.offset;
-        range.size = sizeof(ubo);
-        vkFlushMappedMemoryRanges(pt.vkDevice, 1, &range);
+        pt.cameraUBO->UpdateData(&ubo, sizeof(ubo), 0);
     }
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_COMPUTE, pt.computePipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_COMPUTE,
-                            pt.computePipelineLayout, 0, 1, &pt.descriptorSet, 0, nullptr);
+    // 3. 绑定计算管线和描述符集，调度
+    cmdBuffer->SetComputePipeline(pt.computePipeline.get());
+    cmdBuffer->BindDescriptorSet(0, pt.descriptorSet.get());
 
     uint32_t groupX = (pt.width + 7) / 8;
     uint32_t groupY = (pt.height + 7) / 8;
-    vkCmdDispatch(cmd, groupX, groupY, 1);
+    cmdBuffer->Dispatch(groupX, groupY, 1);
 
-    TransitionImageLayout(cmd, pt.storageImage,
-                          VK_IMAGE_LAYOUT_GENERAL,
-                          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                          VK_ACCESS_SHADER_WRITE_BIT,
-                          VK_ACCESS_SHADER_READ_BIT,
-                          VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                          VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    // 4. 管线屏障：将存储图像转换到 ShaderRead 供展示
+    cmdBuffer->PipelineBarrier({{
+        pt.storageTexture.get(),
+        Graphic::ResourceState::UnorderedAccess,
+        Graphic::ResourceState::ShaderRead
+    }});
 
     pt.frameCount++;
     m_pathTracingDirty = false;
@@ -822,8 +636,10 @@ void Template3DApp::OnPresentOverlay(VkCommandBuffer cmd) {
     vkCmdSetScissor(cmd, 0, 1, &sc);
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pr.pipeline);
+    // 通过抽象描述符集的原生句柄进行 Vulkan 绑定
+    VkDescriptorSet vkDescSet = (VkDescriptorSet)pr.descriptorSet->GetNativeHandle();
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pr.pipelineLayout, 0, 1, &pr.descriptorSet, 0, nullptr);
+                            pr.pipelineLayout, 0, 1, &vkDescSet, 0, nullptr);
     vkCmdDraw(cmd, 3, 1, 0, 0);
 }
 
@@ -845,9 +661,15 @@ void Template3DApp::SavePathTracingOutput() {
     size_t pixelCount = size_t(w) * h;
     size_t bufSize = pixelCount * 4 * sizeof(float);
 
+    auto* vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(pt.storageTexture.get());
+    if (!vkTexture) {
+        LOG_ERROR("Template3D", "无法获取 Vulkan 纹理句柄");
+        return;
+    }
+
     std::vector<float> pixels(pixelCount * 4);
 
-    if (!vkRenderDev->ReadbackImage(pt.storageImage, w, h, VK_FORMAT_R32G32B32A32_SFLOAT,
+    if (!vkRenderDev->ReadbackImage(vkTexture->GetVkImage(), w, h, VK_FORMAT_R32G32B32A32_SFLOAT,
                                     pixels.data(), bufSize)) {
         LOG_ERROR("Template3D", "图像回读失败");
         return;
@@ -955,58 +777,12 @@ void Template3DApp::OnShutdown() {
 
 void Template3DApp::CleanupPathTracingResources() {
     auto& pt = m_ptRes;
-    VkDevice vkDev = pt.vkDevice;
-    if (!vkDev) return;
-
-    if (pt.computePipeline) {
-        vkDestroyPipeline(vkDev, pt.computePipeline, nullptr);
-        pt.computePipeline = VK_NULL_HANDLE;
-    }
-    if (pt.computePipelineLayout) {
-        vkDestroyPipelineLayout(vkDev, pt.computePipelineLayout, nullptr);
-        pt.computePipelineLayout = VK_NULL_HANDLE;
-    }
-    if (pt.computeDescriptorSetLayout) {
-        vkDestroyDescriptorSetLayout(vkDev, pt.computeDescriptorSetLayout, nullptr);
-        pt.computeDescriptorSetLayout = VK_NULL_HANDLE;
-    }
-    if (pt.descriptorPool) {
-        vkDestroyDescriptorPool(vkDev, pt.descriptorPool, nullptr);
-        pt.descriptorPool = VK_NULL_HANDLE;
-    }
-    if (pt.computeShaderModule) {
-        vkDestroyShaderModule(vkDev, pt.computeShaderModule, nullptr);
-        pt.computeShaderModule = VK_NULL_HANDLE;
-    }
-    if (pt.storageImageView) {
-        vkDestroyImageView(vkDev, pt.storageImageView, nullptr);
-        pt.storageImageView = VK_NULL_HANDLE;
-    }
-    if (pt.storageImage && pt.vmaAllocator) {
-        vmaDestroyImage(pt.vmaAllocator, pt.storageImage, pt.storageImageAllocation);
-        pt.storageImage = VK_NULL_HANDLE;
-        pt.storageImageAllocation = VK_NULL_HANDLE;
-    }
-    // Camera UBO
-    if (pt.cameraUBOMapped) {
-        vmaUnmapMemory(pt.vmaAllocator, pt.cameraUBOAllocation);
-        pt.cameraUBOMapped = nullptr;
-    }
-    if (pt.cameraUBO && pt.vmaAllocator) {
-        vmaDestroyBuffer(pt.vmaAllocator, pt.cameraUBO, pt.cameraUBOAllocation);
-        pt.cameraUBO = VK_NULL_HANDLE;
-        pt.cameraUBOAllocation = VK_NULL_HANDLE;
-    }
-    // Scene SSBO
-    if (pt.sceneSSBOMapped) {
-        vmaUnmapMemory(pt.vmaAllocator, pt.sceneSSBOAllocation);
-        pt.sceneSSBOMapped = nullptr;
-    }
-    if (pt.sceneSSBO && pt.vmaAllocator) {
-        vmaDestroyBuffer(pt.vmaAllocator, pt.sceneSSBO, pt.sceneSSBOAllocation);
-        pt.sceneSSBO = VK_NULL_HANDLE;
-        pt.sceneSSBOAllocation = VK_NULL_HANDLE;
-    }
+    // 所有资源由 unique_ptr/shared_ptr 自动销毁，无需手动 Vulkan 清理
+    pt.descriptorSet.reset();
+    pt.computePipeline.reset();
+    pt.sceneSSBO.reset();
+    pt.cameraUBO.reset();
+    pt.storageTexture.reset();
     pt.initialized = false;
 }
 
@@ -1015,6 +791,7 @@ void Template3DApp::CleanupPresentResources() {
     VkDevice vkDev = pr.vkDevice;
     if (!vkDev) return;
 
+    // 原生 Vulkan 资源需要手动销毁
     if (pr.pipeline) {
         vkDestroyPipeline(vkDev, pr.pipeline, nullptr);
         pr.pipeline = VK_NULL_HANDLE;
@@ -1022,14 +799,6 @@ void Template3DApp::CleanupPresentResources() {
     if (pr.pipelineLayout) {
         vkDestroyPipelineLayout(vkDev, pr.pipelineLayout, nullptr);
         pr.pipelineLayout = VK_NULL_HANDLE;
-    }
-    if (pr.descriptorSetLayout) {
-        vkDestroyDescriptorSetLayout(vkDev, pr.descriptorSetLayout, nullptr);
-        pr.descriptorSetLayout = VK_NULL_HANDLE;
-    }
-    if (pr.sampler) {
-        vkDestroySampler(vkDev, pr.sampler, nullptr);
-        pr.sampler = VK_NULL_HANDLE;
     }
     if (pr.vertShaderModule) {
         vkDestroyShaderModule(vkDev, pr.vertShaderModule, nullptr);
@@ -1039,7 +808,10 @@ void Template3DApp::CleanupPresentResources() {
         vkDestroyShaderModule(vkDev, pr.fragShaderModule, nullptr);
         pr.fragShaderModule = VK_NULL_HANDLE;
     }
-    pr.descriptorSet = VK_NULL_HANDLE;
+    // sampler / descriptorSetLayout / descriptorSet 由 shared_ptr/unique_ptr 自动清理
+    pr.descriptorSet.reset();
+    pr.sampler.reset();
+    pr.descriptorSetLayout.reset();
     pr.initialized = false;
 }
 
