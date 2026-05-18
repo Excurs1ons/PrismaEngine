@@ -89,7 +89,7 @@ set(CORE_SOURCES
     core/EntityManager.cpp
     core/Node.cpp
     core/ECS.cpp
-    core/Serialization.cpp
+    # core/Serialization.cpp (removed - unused)
     core/Layer.cpp
     core/LayerStack.cpp
     core/ComponentRegistry.cpp
@@ -174,6 +174,7 @@ set(CORE_SOURCES
     graphic/adapters/vulkan/VulkanFence.cpp
     graphic/adapters/vulkan/VulkanSampler.cpp
     graphic/adapters/vulkan/VulkanPipelineState.cpp
+    graphic/adapters/vulkan/VulkanComputePipeline.cpp
     graphic/adapters/vulkan/VulkanCommandBuffer.cpp
 
     # Precompiled header
@@ -369,7 +370,7 @@ set(CORE_HEADERS
     core/UUID.h
     core/ECS.h
     core/ProjectSettings.h
-    core/Serialization.h
+    # core/Serialization.h (removed - unused)
     core/Layer.h
     core/LayerStack.h
     core/Event.h
@@ -409,6 +410,7 @@ set(CORE_HEADERS
 
     # Graphic
     graphic/CameraComponent.h
+    graphic/interfaces/IComputePipeline.h
 
     # PCH
     pch.h
@@ -489,6 +491,10 @@ if(MSVC)
     # Release 也生成 PDB 符号文件（用于崩溃转储分析）
     target_compile_options(Engine PRIVATE $<$<CONFIG:Release>:/Zi>)
     target_link_options(Engine PRIVATE $<$<CONFIG:Release>:/DEBUG>)
+    # SPIRV-Tools 预编译库不提供 PDB，压制无害的 LNK4099
+    target_link_options(Engine PRIVATE /ignore:4099)
+    # 压制第三方库（glaze、VMA、STL实例化等）的内部警告
+    target_compile_options(Engine PRIVATE /wd4702 /wd4324 /wd4251 /wd4100 /wd4189 /wd4244)
 endif()
 
 # ========== 链接依赖项 ==========

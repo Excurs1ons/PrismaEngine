@@ -1,6 +1,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanResources.h"
 #include "VulkanPipelineState.h"
+#include "VulkanComputePipeline.h"
 #include "VulkanSwapChain.h"
 #include "VulkanShader.h"
 #include <algorithm>
@@ -207,6 +208,7 @@ void VulkanCommandBuffer::SetPipelineState(IPipelineState* pipelineState) {
     if (vkPipeline) {
         vkCmdBindPipeline(m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline->GetVkPipeline());
         m_currentLayout = vkPipeline->GetVkPipelineLayout();
+        m_currentBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     }
 }
 
@@ -247,7 +249,7 @@ void VulkanCommandBuffer::SetIndexBuffer(IBuffer* buffer, bool is32Bit, uint32_t
 void VulkanCommandBuffer::BindDescriptorSet(uint32_t set, IDescriptorSet* descriptorSet) {
     if (!m_currentLayout || !descriptorSet) return;
     VkDescriptorSet ds = static_cast<VkDescriptorSet>(descriptorSet->GetNativeHandle());
-    vkCmdBindDescriptorSets(m_cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, m_currentLayout, set, 1, &ds, 0, nullptr);
+    vkCmdBindDescriptorSets(m_cmd, m_currentBindPoint, m_currentLayout, set, 1, &ds, 0, nullptr);
 }
 
 void VulkanCommandBuffer::PushConstants([[maybe_unused]] ShaderType stage, const void* data, uint32_t size) {
@@ -260,6 +262,140 @@ void VulkanCommandBuffer::DrawIndexedIndirect(IBuffer* indirectBuffer, uint32_t 
     auto vkBuf = dynamic_cast<VulkanBuffer*>(indirectBuffer);
     if (vkBuf) {
         vkCmdDrawIndexedIndirect(m_cmd, vkBuf->GetVkBuffer(), offset, 1, sizeof(VkDrawIndexedIndirectCommand));
+    }
+}
+
+void VulkanCommandBuffer::SetComputePipeline(IComputePipeline* pipeline) {
+    auto* vkPipeline = dynamic_cast<VulkanComputePipeline*>(pipeline);
+    if (vkPipeline) {
+        vkCmdBindPipeline(m_cmd, VK_PIPELINE_BIND_POINT_COMPUTE, vkPipeline->GetVkPipeline());
+        m_currentLayout = vkPipeline->GetVkPipelineLayout();
+        m_currentBindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
+    }
+}
+
+// === PipelineBarrier with explicit image barriers ===
+
+static VkImageLayout ResourceStateToVkLayout(ResourceState state) {
+    switch (state) {
+        case ResourceState::Undefined:      return VK_IMAGE_LAYOUT_UNDEFINED;
+        case ResourceState::Common:         return VK_IMAGE_LAYOUT_GENERAL;
+        case ResourceState::ShaderRead:     return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        case ResourceState::UnorderedAccess:return VK_IMAGE_LAYOUT_GENERAL;
+        case ResourceState::CopySrc:        return VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        case ResourceState::CopyDst:        return VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        case ResourceState::RenderTarget:   return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        case ResourceState::DepthStencil:   return VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        case ResourceState::Present:        return VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        default:                            return VK_IMAGE_LAYOUT_UNDEFINED;
+    }
+}
+
+void VulkanCommandBuffer::PipelineBarrier(const std::vector<ImageBarrier>& imageBarriers) {
+    if (imageBarriers.empty()) {
+        PipelineBarrier();
+        return;
+    }
+
+    std::vector<VkImageMemoryBarrier> barriers;
+    barriers.reserve(imageBarriers.size());
+
+    for (const auto& ib : imageBarriers) {
+        auto* vkTex = dynamic_cast<VulkanTexture*>(ib.texture);
+        if (!vkTex) continue;
+
+        VkImageMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+        barrier.oldLayout = ResourceStateToVkLayout(ib.oldState);
+        barrier.newLayout = ResourceStateToVkLayout(ib.newState);
+        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        barrier.image = vkTex->GetVkImage();
+        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.baseMipLevel = ib.mipLevel;
+        barrier.subresourceRange.levelCount = 1;
+        barrier.subresourceRange.baseArrayLayer = ib.arraySlice;
+        barrier.subresourceRange.layerCount = 1;
+
+        // Map resource states to access masks and pipeline stages
+        VkAccessFlags srcAccess = 0, dstAccess = 0;
+        VkPipelineStageFlags srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+
+        // oldState -> srcAccess + srcStage
+        switch (ib.oldState) {
+            case ResourceState::Undefined:
+                srcAccess = 0;
+                srcStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                break;
+            case ResourceState::ShaderRead:
+                srcAccess = VK_ACCESS_SHADER_READ_BIT;
+                srcStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                break;
+            case ResourceState::UnorderedAccess:
+                srcAccess = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+                srcStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                break;
+            case ResourceState::CopySrc:
+                srcAccess = VK_ACCESS_TRANSFER_READ_BIT;
+                srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case ResourceState::CopyDst:
+                srcAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+                srcStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case ResourceState::RenderTarget:
+                srcAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+                srcStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                break;
+            case ResourceState::Present:
+                srcAccess = 0;
+                srcStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+                break;
+            default:
+                break;
+        }
+
+        // newState -> dstAccess + dstStage
+        switch (ib.newState) {
+            case ResourceState::ShaderRead:
+                dstAccess = VK_ACCESS_SHADER_READ_BIT;
+                dstStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                break;
+            case ResourceState::UnorderedAccess:
+                dstAccess = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+                dstStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                break;
+            case ResourceState::CopySrc:
+                dstAccess = VK_ACCESS_TRANSFER_READ_BIT;
+                dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case ResourceState::CopyDst:
+                dstAccess = VK_ACCESS_TRANSFER_WRITE_BIT;
+                dstStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+                break;
+            case ResourceState::RenderTarget:
+                dstAccess = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+                dstStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                break;
+            case ResourceState::Present:
+                dstAccess = 0;
+                dstStage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+                break;
+            default:
+                break;
+        }
+
+        barrier.srcAccessMask = srcAccess;
+        barrier.dstAccessMask = dstAccess;
+
+        barriers.push_back(barrier);
+    }
+
+    if (!barriers.empty()) {
+        VkPipelineStageFlags srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        VkPipelineStageFlags dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        vkCmdPipelineBarrier(m_cmd, srcStageMask, dstStageMask, 0, 0, nullptr, 0, nullptr, (uint32_t)barriers.size(), barriers.data());
     }
 }
 

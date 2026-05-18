@@ -9,6 +9,7 @@
 #include "interfaces/ISwapChain.h"
 #include "interfaces/IFence.h"
 #include "VulkanResources.h"
+#include "VulkanComputePipeline.h"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <unordered_map>
@@ -36,6 +37,7 @@ public:
 
     std::unique_ptr<IShader> CreateShaderImpl(const ShaderDesc& desc, const std::vector<uint8_t>& bytecode, const ShaderReflection& reflection) override;
     std::unique_ptr<IPipelineState> CreatePipelineStateImpl() override;
+    std::unique_ptr<IComputePipeline> CreateComputePipelineImpl() override;
     std::unique_ptr<ISampler> CreateSamplerImpl(const SamplerDesc& desc) override;
 
     std::unique_ptr<ISwapChain> CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, PresentMode presentMode) override;

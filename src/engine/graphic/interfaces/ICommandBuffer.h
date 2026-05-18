@@ -11,6 +11,28 @@ namespace Prisma::Graphic {
 class IBuffer;
 class ITexture;
 class ISampler;
+class IComputePipeline;
+
+// === Pipeline Barrier 类型定义 ===
+enum class ResourceState {
+    Undefined,
+    Common,
+    ShaderRead,
+    UnorderedAccess,
+    CopySrc,
+    CopyDst,
+    RenderTarget,
+    DepthStencil,
+    Present,
+};
+
+struct ImageBarrier {
+    ITexture* texture = nullptr;
+    ResourceState oldState = ResourceState::Undefined;
+    ResourceState newState = ResourceState::Common;
+    uint32_t mipLevel = 0;
+    uint32_t arraySlice = 0;
+};
 
 struct RenderPassDesc {
     ITexture* renderTarget = nullptr;
@@ -42,6 +64,7 @@ public:
 
     // === 状态与管线 ===
     virtual void SetPipelineState(IPipelineState* pipelineState) = 0;
+    virtual void SetComputePipeline(IComputePipeline* pipeline) = 0;
     virtual void SetViewport(const Viewport& viewport) = 0;
     virtual void SetScissorRect(const Rect& rect) = 0;
 
@@ -69,7 +92,8 @@ public:
     virtual void DrawIndexedIndirect(IBuffer* indirectBuffer, uint32_t offset = 0) = 0;
 
     // === 资源同步与屏障 ===
-    virtual void PipelineBarrier() = 0; // 抽象的屏障接口
+    virtual void PipelineBarrier() = 0;
+    virtual void PipelineBarrier(const std::vector<ImageBarrier>& imageBarriers) = 0;
 
     // === 调试 ===
     virtual void BeginDebugGroup(const std::string& name) = 0;
