@@ -60,6 +60,8 @@ int RenderSystem::InitializeDevice() {
         devDesc.height           = m_desc.height;
         devDesc.presentMode      = m_desc.presentMode;
         devDesc.enableValidation = m_desc.enableValidation;
+        devDesc.windowHandle     = m_desc.windowHandle;
+        devDesc.headless         = (m_desc.windowHandle == nullptr);
 
         return m_device->Initialize(devDesc);
     }

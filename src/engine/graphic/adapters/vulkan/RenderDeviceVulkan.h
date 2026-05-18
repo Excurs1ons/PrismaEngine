@@ -106,6 +106,12 @@ public:
     void SuspendDefaultRenderPass();
     void ResumeDefaultRenderPass();
 
+    bool IsHeadless() const { return m_headless; }
+
+    // GPU 图像回读到 host 内存（用于头模式离屏输出）
+    bool ReadbackImage(VkImage image, uint32_t width, uint32_t height, VkFormat format,
+                       void* outBuffer, size_t bufferSize);
+
     // 获取当前帧的命令缓冲区（供 Viewport 渲染使用）
     ICommandBuffer* GetCurrentCommandBuffer() const {
         return m_frameActive ? (ICommandBuffer*)m_vulkanCommandBuffers[m_currentFrame].get() : nullptr;
@@ -179,6 +185,8 @@ private:
     std::unique_ptr<VulkanResourceFactory> m_resourceFactory;
 
 
+
+    bool m_headless = false;
 
     // 设备能力
     struct DeviceFeatures {
