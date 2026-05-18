@@ -237,7 +237,9 @@ std::string Logger::FormatEntry(const LogEntry& entry, bool useColors) {
         oss << "[" << entry.category << "] ";
     }
 
-    if (m_Config.enableSourceLocation && entry.location.file && entry.location.file[0] != '\0') {
+    bool showSource = m_Config.enableSourceLocation && entry.level > LogLevel::Info && entry.location.file && entry.location.file[0] != '\0';
+
+    if (showSource) {
         std::filesystem::path filePath(entry.location.file);
         oss << "(" << filePath.filename().string() << ":" << entry.location.line << ") ";
     }
