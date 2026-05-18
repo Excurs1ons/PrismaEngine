@@ -20,7 +20,7 @@ namespace Prisma::Graphic::Vulkan {
 
 class ENGINE_API VulkanTexture : public ITexture {
 public:
-    VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc);
+    VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc, VkImageView defaultUAV = VK_NULL_HANDLE);
     ~VulkanTexture() override;
 
     ResourceType GetResourceType() const override { return ResourceType::Texture; }
@@ -66,6 +66,8 @@ public:
             m_lastTextureMapType = 0;
         }
     }
+
+    VkImageView GetUAVImageView() const { return m_defaultUAV != VK_NULL_HANDLE ? m_defaultUAV : m_imageView; }
 
     void UpdateData(const void* data, uint64_t dataSize, uint32_t mipLevel, uint32_t arraySlice,
                    uint32_t left, uint32_t top, uint32_t front, uint64_t width, uint64_t height, uint64_t depth) override {
@@ -158,13 +160,17 @@ public:
         m_lastDescriptorType = descType;
         m_lastDescriptorMipLevel = mipLevel;
         m_lastDescriptorArraySize = arraySize == 0 ? m_desc.arraySize : arraySize;
+
+        if (descType == TextureDescriptorType::UnorderedAccessView && m_defaultUAV != VK_NULL_HANDLE) {
+            return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_defaultUAV));
+        }
         return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_imageView));
     }
 
     uint64_t GetDefaultSRV() const override { return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_imageView)); }
     uint64_t GetDefaultRTV() const override { return IsRenderTarget() ? static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_imageView)) : 0; }
     uint64_t GetDefaultDSV() const override { return IsDepthStencil() ? static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_imageView)) : 0; }
-    uint64_t GetDefaultUAV() const override { return IsUnorderedAccess() ? static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_imageView)) : 0; }
+    uint64_t GetDefaultUAV() const override { return IsUnorderedAccess() ? static_cast<uint64_t>(reinterpret_cast<uintptr_t>(m_defaultUAV != VK_NULL_HANDLE ? m_defaultUAV : m_imageView)) : 0; }
 
     void Clear(const Color& color, uint32_t mipLevel = 0, uint32_t arraySlice = 0) override {
         TextureMapDesc mapDesc = Map(mipLevel, arraySlice, 1);
@@ -287,6 +293,7 @@ private:
     VkImage m_image = VK_NULL_HANDLE;
     VmaAllocation m_allocation = VK_NULL_HANDLE;
     VkImageView m_imageView = VK_NULL_HANDLE;
+    VkImageView m_defaultUAV = VK_NULL_HANDLE;  // For compute storage image access
 
     // -----------------------------------------------------------------------
     // [改动] m_vkFormat
@@ -563,7 +570,9 @@ public:
     ~VulkanDescriptorSet() override {} // Pool manages destruction
 
     void BindTexture(uint32_t binding, ITexture* texture, ISampler* sampler) override;
-    void BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size) override;
+    void BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size,
+                    DescriptorType type = DescriptorType::UniformBuffer) override;
+    void BindStorageImage(uint32_t binding, ITexture* texture) override;
     void* GetNativeHandle() const override { return (void*)m_set; }
     void Update() override;
 
@@ -577,6 +586,7 @@ private:
         VkDescriptorImageInfo imageInfo;
         VkDescriptorBufferInfo bufferInfo;
         bool isImage;
+        bool isStorageImage = false;
     };
     std::vector<WriteInfo> m_writes;
 };
