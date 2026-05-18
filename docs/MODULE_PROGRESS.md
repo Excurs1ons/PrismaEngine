@@ -2,7 +2,7 @@
 
 本文档跟踪 PrismaEngine 各模块的开发状态。
 
-**最后更新**: 2026-05-16 (WebUI + MCP 编辑器集成)
+**最后更新**: 2026-05-18 (Template3D + SSBO 路径追踪)
 
 ---
 
@@ -10,6 +10,10 @@
 
 | 时间 | 模块 | 变更 |
 |------|------|------|
+| 09:22 | 路径追踪 | ✅ Template3D Cornell Box 路径追踪成功渲染（SSBO 架构） |
+| 09:15 | 路径追踪 | ✅ UBO → SSBO 迁移（场景对象放入 SSBO，突破 UBO 65536 限制） |
+| 09:10 | 路径追踪 | ✅ JSON 场景文件系统（Glaze 解析，支持 plane/sphere/box） |
+| 09:00 | 路径追踪 | ✅ SPIR-V 重新编译，pathtrace.comp 重写为 SSBO 遍历 |
 | 22:00 | MCP 协议 | ✅ 17 个工具，7 类覆盖，19 项测试全部通过 |
 | 21:30 | WebUI 编辑器 | ✅ 浏览器访问编辑，视图 + 层级 + 检查器 + 控制台 |
 | 21:17 | 脚本系统 | ✅ PrismaEngine.Core 迁移至引擎 (src/engine/scripting/CSharp) |
@@ -195,6 +199,7 @@
 | **工具类** | 80% | - | 相机、裁剪等基础工具完成 |
 | **MCP 协议** | 85% | 🆕 | 17 工具、7 分类、双传输、增量哈希 |
 | **WebUI 编辑器** | 80% | 🆕 | 浏览器编辑器，Scene/Game 视口 |
+| **路径追踪 (Template3D)** | 30% | 🆕 | Cornell Box SSBO 路径追踪，待 NEE + 降噪 |
 
 ### 按功能
 
@@ -213,14 +218,16 @@
 
 | 类别 | 数量 | 总行数 |
 |------|------|--------|
-| **头文件** | 52 | ~8,200 |
-| **源文件** | 26 | ~6,800 |
-| **着色器 (GLSL)** | 9 | ~225 |
+| **头文件** | 55 | ~8,400 |
+| **源文件** | 29 | ~7,400 |
+| **着色器 (GLSL)** | 10 | ~525 |
 | **着色器 (HLSL)** | 2 | ~600 |
+| **着色器 (Compute)** | 1 | ~289 |
 | **UI 资源** | 4 | ~100 |
 | **MCP 测试** | 3 | ~600 |
 | **技能文件** | 1 | ~160 |
-| **总计** | 97 | ~16,685 |
+| **场景配置** | 1 | ~73 |
+| **总计** | 106 | ~18,147 |
 
 ---
 
@@ -393,14 +400,59 @@ option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 ---
 
-## 十、近期计划
+## 十、Template3D / 路径追踪
 
-1. **2D 渲染增强** - 实施 `docs/plans/2026-05-16-advanced-2d-rendering-enhancements.md` 中的方案，优先优化反射性能。
-2. **Pass 实现** - 完成 OpaquePass/TransparentPass 等 .cpp 实现
-3. **Feature 实现** - 选择 1-2 个 Feature 完整实现（建议 Bloom 或 PostProcess）
-4. **PBR 集成** - 将 lit.frag/vert 集成到 OpaquePass
-5. **阴影系统** - 完成 ShadowPass 实现
-6. **Android 平台** - 完善 Vulkan 初始化和交换链
+### 10.1 Template3D 项目
+
+| 组件 | 状态 | 说明 |
+|------|------|------|
+| **Template3D** | ✅ 已完成 | 3D 路径追踪模板项目 |
+| **CMake 构建** | ✅ 已完成 | 独立 CMakeLists，post-build 复制资产 |
+| **SPIR-V 嵌入** | ✅ 已完成 | pathtrace.comp → PathtraceCompSPIRV.h |
+| **全屏呈现管线** | ✅ 已完成 | fullscreen.vert + present.frag 呈现 |
+
+### 10.2 SSBO 架构
+
+| 组件 | 状态 | 说明 |
+|------|------|------|
+| **SceneDataSSBO** | ✅ 已完成 | std430 SSBO，存储 <32 个场景对象 |
+| **CameraUBO** | ✅ 已完成 | std140 UBO，仅含相机 + 帧数据（96 bytes） |
+| **对象类型** | ✅ 已完成 | Plane (0)、Sphere (1)、Box (2) |
+| **JSON 场景** | ✅ 已完成 | Glaze 解析 pt_scene.json |
+| **SSBO 回读验证** | ✅ 已完成 | GPU/CPU 数据一致性验证 |
+
+### 10.3 路径追踪着色器
+
+| 组件 | 状态 | 说明 |
+|------|------|------|
+| **intersectPlane** | ✅ 已完成 | AABB 限定的平面求交 |
+| **intersectSphere** | ✅ 已完成 | 球体求交 |
+| **intersectBox** | ✅ 已完成 | Y 轴旋转 AABB 求交 |
+| **cosineSampleHemisphere** | ✅ 已完成 | Lambertian 漫反射采样 |
+| **traceScene** | ✅ 已完成 | SSBO 对象遍历 + <= 优先级 |
+| **gamma/tonemap** | ✅ 已完成 | Reinhard + 2.2 gamma |
+
+### 10.4 已知问题
+
+| 问题 | 级别 | 说明 |
+|------|------|------|
+| **Firefly 噪点** | 中等 | Monte Carlo 方差，需 firefly clamping |
+| **低采样效率** | 中等 | Random walk 找不到光源 |
+| **软件渲染** | 环境 | proot 下仅 llvmpipe，需真机硬件 |
+| **退出时 crash** | 低 | "terminate called without an active exception" |
+
+---
+
+## 十一、近期计划
+
+1. **Template3D NEE** - 实现 Next Event Estimation，提高采样效率 10-100x
+2. **Firefly Clamping** - 颜色累积前 clamp 异常值
+3. **Windows 硬件验证** - 在 Windows GPU 上测试实时性能
+4. **更多几何体** - 支持三角形网格、变换矩阵
+5. **2D 渲染增强** - 实施 `docs/plans/2026-05-16-advanced-2d-rendering-enhancements.md` 中的方案
+6. **Pass 实现** - 完成 OpaquePass/TransparentPass 等 .cpp 实现
+7. **Feature 实现** - 选择 1-2 个 Feature 完整实现
+8. **PBR 集成** - 将 lit.frag/vert 集成到 OpaquePass
 
 ---
 

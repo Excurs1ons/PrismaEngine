@@ -14,11 +14,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added / 新增
 
+- **Template3D project** - Cornell Box path tracing template / Cornell Box 路径追踪模板项目
+- **SSBO scene storage** - Scene objects moved from UBO to SSBO (std430) / 场景对象从 UBO 迁移到 SSBO
+- **JSON scene config** - Glaze-based scene file parsing (pt_scene.json) / 基于 Glaze 的场景文件解析
+- **Compute path tracer** - `pathtrace.comp` with plane/sphere/box intersection / 计算着色器路径追踪
+- **Embedded SPIR-V** - PathtraceCompSPIRV.h generated from pathtrace.comp / 内嵌 SPIR-V 着色器
 - Android runtime support with Vulkan rendering backend / Android 运行时支持，使用 Vulkan 渲染后端
 - Cross-platform resource management system / 跨平台资源管理系统
 - Unified shader resource directory structure (`resources/common/shaders/`) / 统一的着色器资源目录结构
 - Automatic GLSL to SPIR-V compilation for Android / Android 自动 GLSL 到 SPIR-V 编译
 - Gradle asset copying task for Android builds / Android 构建的 Gradle 资产复制任务
+
+### Changed / 变更
+
+- **BREAKING**: Scene data layout changed (UBO → SSBO binding=3) / 场景数据布局变更
+- CameraUBO reduced to 96 bytes (camera + frame data only) / CameraUBO 缩减到 96 字节
 
 ### Changed / 变更
 
