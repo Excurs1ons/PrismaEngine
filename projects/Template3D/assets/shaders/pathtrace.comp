@@ -1,0 +1,289 @@
+#version 460
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(rgba32f, binding = 0) uniform image2D outputImage;
+layout(rgba32f, binding = 1) uniform image2D accumImage;
+
+// Camera UBO (std140) - only camera + frame data, no scene objects
+layout(std140, binding = 2) uniform CameraUBO {
+    vec4 cameraPos;        // 0
+    vec4 cameraDir;        // 16
+    vec4 cameraUp;         // 32
+    vec4 cameraRight;      // 48
+    float fov;             // 64
+    float aspectRatio;     // 68
+    int frameCount;        // 72
+    int maxBounces;        // 76
+    int samplesPerPixel;   // 80
+    int useAccumulation;   // 84
+    int resetAccumulation; // 88
+} ubo;
+
+// Scene object stored in SSBO (std430) - 64 bytes per object
+struct SceneObject {
+    vec4 p0;    // type=0(plane): point; type=1(sphere): center; type=2(box): center
+    vec4 p1;    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0)
+    vec4 p2;    // plane: (umin,vmin,umax,vmax); box: (cosA,sinA,0,0); sphere: unused
+    vec4 color; // rgb + emissive in w
+};
+
+layout(std430, binding = 3) readonly buffer SceneData {
+    int objectCount;
+    SceneObject objects[];
+} scene;
+
+uint randState;
+
+uint wangHash(uint seed) {
+    seed = (seed ^ 61u) ^ (seed >> 16u);
+    seed *= 9u;
+    seed = seed ^ (seed >> 4u);
+    seed *= 0x27d4eb2du;
+    seed = seed ^ (seed >> 15u);
+    return seed;
+}
+
+float randFloat() {
+    randState = randState * 747796405u + 2891336453u;
+    uint result = randState >> 16u;
+    return float(result) / 65535.0;
+}
+
+struct HitResult {
+    float t;
+    vec3 normal;
+    vec3 color;
+    float emissive;
+};
+
+// ============ Plane intersection (type=0) ============
+bool intersectPlane(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 point = obj.p0.xyz;
+    vec3 normal = obj.p1.xyz;
+    vec4 bounds = obj.p2; // (umin, vmin, umax, vmax)
+
+    float denom = dot(dir, normal);
+    if (abs(denom) < 1e-8) return false;
+    float t = dot(point - origin, normal) / denom;
+    if (t < 0.001) return false;
+
+    vec3 pt = origin + t * dir;
+
+    // Bounds check based on which axis the normal is aligned to
+    bool valid = false;
+    vec3 an = abs(normal);
+    if (an.x > 0.5) {
+        // YZ plane: bounds in Y and Z
+        valid = pt.y >= bounds.x && pt.y <= bounds.z &&
+                pt.z >= bounds.y && pt.z <= bounds.w;
+    } else if (an.y > 0.5) {
+        // XZ plane: bounds in X and Z
+        valid = pt.x >= bounds.x && pt.x <= bounds.z &&
+                pt.z >= bounds.y && pt.z <= bounds.w;
+    } else {
+        // XY plane: bounds in X and Y
+        valid = pt.x >= bounds.x && pt.x <= bounds.z &&
+                pt.y >= bounds.y && pt.y <= bounds.w;
+    }
+    if (!valid) return false;
+
+    hit.t = t;
+    hit.normal = normal;
+    hit.color = obj.color.rgb;
+    hit.emissive = obj.color.w;
+    return true;
+}
+
+// ============ Sphere intersection (type=1) ============
+bool intersectSphere(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    float radius = obj.p1.x;
+
+    vec3 oc = origin - center;
+    float a = dot(dir, dir);
+    float b = 2.0 * dot(oc, dir);
+    float c = dot(oc, oc) - radius * radius;
+    float disc = b * b - 4.0 * a * c;
+    if (disc < 0.0) return false;
+
+    float sqrtDisc = sqrt(disc);
+    float t = (-b - sqrtDisc) / (2.0 * a);
+    if (t < 0.001) {
+        t = (-b + sqrtDisc) / (2.0 * a);
+        if (t < 0.001) return false;
+    }
+
+    vec3 pt = origin + t * dir;
+    hit.t = t;
+    hit.normal = normalize(pt - center);
+    hit.color = obj.color.rgb;
+    hit.emissive = 0.0;
+    return true;
+}
+
+// ============ Box intersection (type=2, with Y-axis rotation) ============
+bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    vec3 hs = obj.p1.xyz;
+    float cosA = obj.p2.x;
+    float sinA = obj.p2.y;
+
+    // Transform ray to box local space
+    vec3 rel = origin - center;
+    vec3 lo = vec3(
+        rel.x * cosA - rel.z * sinA, rel.y, rel.x * sinA + rel.z * cosA);
+    vec3 ld = vec3(
+        dir.x * cosA - dir.z * sinA, dir.y, dir.x * sinA + dir.z * cosA);
+
+    vec3 tMin = (-hs - lo) / ld;
+    vec3 tMax = (hs - lo) / ld;
+    vec3 t1 = min(tMin, tMax);
+    vec3 t2 = max(tMin, tMax);
+    float tNear = max(t1.x, max(t1.y, t1.z));
+    float tFar = min(t2.x, min(t2.y, t2.z));
+    if (tNear > tFar || tFar < 0.001) return false;
+
+    float t = tNear;
+    if (t < 0.001) {
+        t = tFar;
+        if (t < 0.001) return false;
+    }
+
+    vec3 localPos = lo + t * ld;
+    vec3 localNormal = vec3(0.0);
+    vec3 cd = localPos / hs;
+    float ax = abs(cd.x), ay = abs(cd.y), az = abs(cd.z);
+    if (ax >= ay && ax >= az)      localNormal = vec3(sign(cd.x), 0.0, 0.0);
+    else if (ay >= ax && ay >= az) localNormal = vec3(0.0, sign(cd.y), 0.0);
+    else                           localNormal = vec3(0.0, 0.0, sign(cd.z));
+
+    // Transform back to world space
+    vec3 worldNormal = vec3(
+        localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
+        -localNormal.x * sinA + localNormal.z * cosA);
+
+    hit.t = t;
+    hit.normal = normalize(worldNormal);
+    hit.color = obj.color.rgb;
+    hit.emissive = 0.0;
+    return true;
+}
+
+// ============ Scene trace: iterate all SSBO objects ============
+bool traceScene(vec3 origin, vec3 dir, out HitResult hit) {
+    hit.t = 1e30;
+    hit.emissive = 0.0;
+    bool found = false;
+
+    for (int i = 0; i < scene.objectCount; i++) {
+        SceneObject obj = scene.objects[i];
+        HitResult r;
+        bool hitObj = false;
+        int type = int(obj.p0.w);
+
+        if (type == 0) {
+            hitObj = intersectPlane(origin, dir, obj, r);
+        } else if (type == 1) {
+            hitObj = intersectSphere(origin, dir, obj, r);
+        } else if (type == 2) {
+            hitObj = intersectBox(origin, dir, obj, r);
+        }
+
+        // Use <= so overlapping objects at same t (e.g. ceiling + light)
+        // use the later one (light has emissive)
+        if (hitObj && r.t <= hit.t) {
+            hit = r;
+            found = true;
+        }
+    }
+
+    return found;
+}
+
+// ============ Path tracing ============
+
+vec3 sampleHemisphere(vec3 normal) {
+    float u1 = randFloat();
+    float u2 = randFloat();
+
+    float r = sqrt(u1);
+    float theta = 6.283185307 * u2;
+
+    vec3 tangent = abs(normal.y) < 0.999 ?
+                   vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 bitangent = cross(normal, tangent);
+    tangent = cross(bitangent, normal);
+
+    vec3 sampleDir = tangent * r * cos(theta) +
+                     bitangent * r * sin(theta) +
+                     normal * sqrt(1.0 - u1);
+    return normalize(sampleDir);
+}
+
+vec3 tracePath(vec3 origin, vec3 dir) {
+    vec3 radiance = vec3(0.0);
+    vec3 throughput = vec3(1.0);
+
+    for (int bounce = 0; bounce < 10; bounce++) {
+        HitResult hit;
+        if (!traceScene(origin, dir, hit)) break;
+
+        vec3 hitPos = origin + hit.t * dir;
+
+        if (hit.emissive > 0.0) {
+            radiance += throughput * hit.color * hit.emissive;
+            break;
+        }
+
+        vec3 newDir = sampleHemisphere(hit.normal);
+        if (dot(newDir, hit.normal) < 0.0) break;
+
+        throughput *= hit.color / 3.14159265;
+
+        if (bounce > 5) {
+            float survival = max(max(throughput.r, throughput.g), throughput.b);
+            if (randFloat() > survival) break;
+            throughput /= survival;
+        }
+
+        origin = hitPos;
+        dir = newDir;
+    }
+
+    return radiance;
+}
+
+void main() {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outputImage);
+    if (pix.x >= size.x || pix.y >= size.y) return;
+
+    randState = wangHash(uint(pix.x + pix.y * size.x) + uint(ubo.frameCount * 1234567u));
+
+    float px = (float(pix.x) + randFloat()) / float(size.x) * 2.0 - 1.0;
+    float py = -((float(pix.y) + randFloat()) / float(size.y) * 2.0 - 1.0);
+
+    float tanHalfFov = tan(ubo.fov * 0.5);
+    px *= tanHalfFov * ubo.aspectRatio;
+    py *= tanHalfFov;
+
+    vec3 rayDir = normalize(ubo.cameraDir.xyz +
+                            px * ubo.cameraRight.xyz +
+                            py * ubo.cameraUp.xyz);
+
+    vec3 color = tracePath(ubo.cameraPos.xyz, rayDir);
+
+    color = color / (color + vec3(1.0));
+    color = pow(clamp(color, 0.0, 1.0), vec3(1.0 / 2.2));
+
+    vec4 prev = vec4(0.0);
+    if (ubo.useAccumulation > 0 && ubo.frameCount > 0) {
+        prev = imageLoad(accumImage, pix);
+        float w = 1.0 / float(ubo.frameCount + 1);
+        color = mix(prev.rgb, color, w);
+    }
+
+    imageStore(outputImage, pix, vec4(color, 1.0));
+    imageStore(accumImage, pix, vec4(color, 1.0));
+}

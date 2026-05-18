@@ -1,0 +1,14 @@
+{
+    "name": "Template3D（3D路径追踪模板）",
+    "entryScene": "scenes/3d_scene.jsonc",
+    "assets": ["assets", "projects/Template3D/assets"],
+    "window": {
+        "width": 1280,
+        "height": 720,
+        "fullscreen": false,
+        "resizable": true,
+        "vsync": "Mailbox",
+        "maxFPS": 0
+    },
+    "pipelineType": "Forward3D"
+}
