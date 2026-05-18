@@ -15,8 +15,8 @@ namespace Prisma::Graphic::Vulkan {
 // 过程：
 //   初始化列表中新增 m_vkFormat(vkFormat)。
 // -----------------------------------------------------------------------
-VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc)
-    : m_device(device), m_allocator(allocator), m_image(image), m_allocation(allocation), m_imageView(imageView), m_vkFormat(vkFormat), m_desc(desc) {
+VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc, VkImageView defaultUAV)
+    : m_device(device), m_allocator(allocator), m_image(image), m_allocation(allocation), m_imageView(imageView), m_defaultUAV(defaultUAV), m_vkFormat(vkFormat), m_desc(desc) {
     // 构造函数现在接收并存储 VMA 相关对象，以便在析构时能够正确释放资源。
 }
 
@@ -32,8 +32,18 @@ VulkanTexture::~VulkanTexture() {
         //       VMA 只管理 Image 和 Memory，不会自动销毁 View。
         //       漏掉此步骤会导致 vkDestroyDevice 时报资源泄露错误。
         if (m_imageView != VK_NULL_HANDLE) {
+            // 如果 UAV 视图与主视图是同一句柄，避免后续重复销毁
+            if (m_defaultUAV == m_imageView) {
+                m_defaultUAV = VK_NULL_HANDLE;
+            }
             vkDestroyImageView(m_device, m_imageView, nullptr);
             m_imageView = VK_NULL_HANDLE;
+        }
+
+        // 销毁独立的 UAV ImageView
+        if (m_defaultUAV != VK_NULL_HANDLE) {
+            vkDestroyImageView(m_device, m_defaultUAV, nullptr);
+            m_defaultUAV = VK_NULL_HANDLE;
         }
     }
 
@@ -71,6 +81,13 @@ void VulkanTexture::SetDebugName(const std::string& name) {
         if (m_imageView != VK_NULL_HANDLE) {
             nameInfo.objectType = VK_OBJECT_TYPE_IMAGE_VIEW;
             nameInfo.objectHandle = (uint64_t)m_imageView;
+            func(m_device, &nameInfo);
+        }
+
+        if (m_defaultUAV != VK_NULL_HANDLE && m_defaultUAV != m_imageView) {
+            nameInfo.objectType = VK_OBJECT_TYPE_IMAGE_VIEW;
+            nameInfo.objectHandle = (uint64_t)m_defaultUAV;
+            nameInfo.pObjectName = (name + "_UAV").c_str();
             func(m_device, &nameInfo);
         }
     }
@@ -133,17 +150,46 @@ void VulkanDescriptorSet::BindTexture(uint32_t binding, ITexture* texture, ISamp
     m_writes.push_back(write);
 }
 
-void VulkanDescriptorSet::BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size) {
+void VulkanDescriptorSet::BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size,
+                                     DescriptorType type) {
     auto vkBuf = dynamic_cast<VulkanBuffer*>(buffer);
     if (!vkBuf) return;
 
+    VkDescriptorType vkType;
+    switch (type) {
+        case DescriptorType::UniformBuffer:
+            vkType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            break;
+        case DescriptorType::StorageBuffer:
+            vkType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            break;
+        default:
+            vkType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            break;
+    }
+
     WriteInfo write{};
     write.binding = binding;
-    write.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    write.type = vkType;
     write.bufferInfo.buffer = vkBuf->GetVkBuffer();
     write.bufferInfo.offset = offset;
     write.bufferInfo.range = size;
     write.isImage = false;
+    m_writes.push_back(write);
+}
+
+void VulkanDescriptorSet::BindStorageImage(uint32_t binding, ITexture* texture) {
+    auto vkTex = dynamic_cast<VulkanTexture*>(texture);
+    if (!vkTex) return;
+
+    WriteInfo write{};
+    write.binding = binding;
+    write.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+    write.imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    write.imageInfo.imageView = vkTex->GetUAVImageView();
+    write.imageInfo.sampler = VK_NULL_HANDLE;
+    write.isImage = true;
+    write.isStorageImage = true;
     m_writes.push_back(write);
 }
 

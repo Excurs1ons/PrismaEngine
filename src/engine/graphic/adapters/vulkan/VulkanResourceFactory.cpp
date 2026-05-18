@@ -145,7 +145,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
     if (desc.allowShaderResource)  imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     if (desc.allowUnorderedAccess) imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;
     imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    if (desc.allowRenderTarget || desc.allowDepthStencil) imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+    if (desc.allowRenderTarget || desc.allowDepthStencil || desc.allowUnorderedAccess) imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     if (imageInfo.usage == VK_IMAGE_USAGE_TRANSFER_DST_BIT) imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 
     const uint32_t sc = desc.sampleCount > 0 ? desc.sampleCount : 1;
@@ -179,7 +179,27 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
         return nullptr;
     }
 
-    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, imageInfo.format, desc);
+    // 创建 UAV ImageView（用于 compute storage image 访问）
+    VkImageView uavView = VK_NULL_HANDLE;
+    if (desc.allowUnorderedAccess) {
+        VkImageViewCreateInfo uavViewInfo{};
+        uavViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        uavViewInfo.image = image;
+        uavViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        uavViewInfo.format = imageInfo.format;
+        uavViewInfo.subresourceRange.aspectMask = desc.allowDepthStencil ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        uavViewInfo.subresourceRange.baseMipLevel = 0;
+        uavViewInfo.subresourceRange.levelCount = 1;
+        uavViewInfo.subresourceRange.baseArrayLayer = 0;
+        uavViewInfo.subresourceRange.layerCount = 1;
+        if (vkCreateImageView(m_vkDevice, &uavViewInfo, nullptr, &uavView) != VK_SUCCESS) {
+            vkDestroyImageView(m_vkDevice, imageView, nullptr);
+            vmaDestroyImage(m_vmaAllocator, image, allocation);
+            return nullptr;
+        }
+    }
+
+    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, imageInfo.format, desc, uavView);
 
     if (desc.allowShaderResource) {
         VkCommandPool tempPool;
@@ -380,6 +400,7 @@ std::unique_ptr<IShader> VulkanResourceFactory::CreateShaderImpl(const ShaderDes
 std::unique_ptr<IPipelineState> VulkanResourceFactory::CreatePipelineStateImpl() { ++m_creationStats.pipelinesCreated; return std::make_unique<VulkanPipelineState>(); }
 std::unique_ptr<ISampler> VulkanResourceFactory::CreateSamplerImpl(const SamplerDesc& desc) { ++m_creationStats.samplersCreated; return std::make_unique<VulkanSampler>(m_vkDevice, desc); }
 std::unique_ptr<ISwapChain> VulkanResourceFactory::CreateSwapChainImpl(void* windowHandle, uint32_t width, uint32_t height, TextureFormat format, uint32_t bufferCount, PresentMode presentMode) {
+    LOG_DEBUG("Vulkan", "CreateSwapChain: {}x{} fmt={} bufs={}", width, height, static_cast<int>(format), bufferCount);
     if (!m_device || !windowHandle || width == 0 || height == 0) return nullptr;
     auto swapChain = std::make_unique<VulkanSwapChain>(m_device);
     if (swapChain->Initialize(windowHandle, width, height, presentMode) != 0) return nullptr;
@@ -455,7 +476,9 @@ std::unique_ptr<ITexture> VulkanResourceFactory::AllocateFromTexturePool(uint64_
     auto descIt = m_texturePoolDescs.find(poolId); return descIt != m_texturePoolDescs.end() ? CreateTextureImpl(descIt->second) : nullptr;
 }
 
-void VulkanResourceFactory::DeallocateToTexturePool(uint64_t poolId, ITexture* texture) {}
+void VulkanResourceFactory::DeallocateToTexturePool(uint64_t poolId, ITexture* texture) {
+    LOG_DEBUG("Vulkan", "DeallocateToTexturePool: pool={}, tex={}", poolId, (void*)texture);
+}
 void VulkanResourceFactory::CleanupResourcePools() {}
 
 bool VulkanResourceFactory::ValidateTextureDesc(const TextureDesc& desc, std::string& errorMsg) {
@@ -485,5 +508,10 @@ void VulkanResourceFactory::EnableResourcePooling(bool enable) { m_resourcePooli
 void VulkanResourceFactory::SetPoolingThreshold(uint64_t threshold) { m_poolingThreshold = threshold; }
 void VulkanResourceFactory::EnableDeferredDestruction(bool enable, uint32_t delayFrames) { m_deferredDestructionEnabled = enable; m_deferredDestructionDelayFrames = delayFrames; }
 void VulkanResourceFactory::ProcessDeferredDestructions() {}
+
+std::unique_ptr<IComputePipeline> VulkanResourceFactory::CreateComputePipelineImpl() {
+    ++m_creationStats.pipelinesCreated;
+    return std::make_unique<VulkanComputePipeline>();
+}
 
 } // namespace Prisma::Graphic::Vulkan

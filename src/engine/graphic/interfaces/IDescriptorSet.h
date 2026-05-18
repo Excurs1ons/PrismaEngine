@@ -10,6 +10,15 @@ class ITexture;
 class IBuffer;
 class ISampler;
 
+/// @brief 描述符类型枚举
+enum class DescriptorType {
+    UniformBuffer,      // VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER
+    StorageBuffer,      // VK_DESCRIPTOR_TYPE_STORAGE_BUFFER (SSBO)
+    StorageImage,       // VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+    SampledImage,       // VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
+    Sampler,            // VK_DESCRIPTOR_TYPE_SAMPLER
+};
+
 /**
  * @brief 描述符集抽象接口 (Vulkan VkDescriptorSet 的包装)
  * 这是一个轻量级的对象，由 RHI 内部进行池化管理。
@@ -20,7 +29,9 @@ public:
 
     // 资源绑定接口 (由 Material 调用)
     virtual void BindTexture(uint32_t binding, ITexture* texture, ISampler* sampler) = 0;
-    virtual void BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size) = 0;
+    virtual void BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size,
+                            DescriptorType type = DescriptorType::UniformBuffer) = 0;
+    virtual void BindStorageImage(uint32_t binding, ITexture* texture) = 0;
 
     // 获取原生句柄 (供后端执行)
     virtual void* GetNativeHandle() const = 0;
