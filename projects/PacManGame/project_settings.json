@@ -1,5 +1,5 @@
-{
-  "companyName": "PacManGames",
+﻿{
+  "companyName": "Prisma",
   "productName": "PacManGame",
   "version": "1.0.0",
   "screenWidth": 896,
@@ -8,7 +8,7 @@
   "resizable": true,
   "gameSettings": {
     "enableLighting": true,
-    "enableParticles":2 true,
+    "enableParticles": true,
     "enableSound": true,
     "masterVolume": 0.8,
     "sfxVolume": 0.8,
