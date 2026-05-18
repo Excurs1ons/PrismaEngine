@@ -747,10 +747,21 @@ void Template3DApp::OnRender() {
 void Template3DApp::RenderPathTracing() {
     auto& pt = m_ptRes;
 
-    auto vkRenderDev = dynamic_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
+    // ── 已收敛：跳过所有计算，保留上次结果 ──
+    if (m_ptConverged) {
+        m_pathTracingDirty = false;
+        // 仍需提交 gizmo stats（覆盖层文字）
+        if (m_gizmoCamera) {
+            Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
+            DrawStatsOverlay();
+            Graphic::Renderer2D::EndGizmo();
+        }
+        return;
+    }
+
+    auto vkRenderDev = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
     if (!vkRenderDev) return;
 
-    // 获取抽象命令缓冲区（无需 dynamic_cast 到 VulkanCommandBuffer）
     auto* cmdBuffer = vkRenderDev->GetCurrentCommandBuffer();
     if (!cmdBuffer) return;
 
@@ -805,17 +816,15 @@ void Template3DApp::RenderPathTracing() {
         Graphic::ResourceState::ShaderRead
     }});
 
-    // 收敛检测：达到最大采样数后停止累积（冻结 frameCount）
+    // 收敛检测：达到最大采样数后停止累积
     if (m_ptMaxSamples > 0 && pt.frameCount >= m_ptMaxSamples) {
         m_ptConverged = true;
     } else {
         pt.frameCount++;
-        m_ptConverged = false;
     }
     m_pathTracingDirty = false;
 
     // 提交 stats 文字到 gizmo 队列（在 overlay pass 中统一处理）
-    // BeginGizmo/EndGizmo 是纯 CPU 操作，不需要活跃的 render pass
     if (m_gizmoCamera) {
         Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
         DrawStatsOverlay();
@@ -901,8 +910,7 @@ void Template3DApp::SavePathTracingOutput() {
     }
 
     const std::string& outPath = m_headlessCfg.outputPath;
-    int result = stbi_write_png(outPath.c_str(), int(w), int(h), 4, rgba8.data(), int(w) * 4);
-    if (result) {
+    if (Utils::ImageUtils::SavePNG(outPath, int(w), int(h), 4, rgba8.data(), int(w) * 4)) {
         LOG_INFO("Template3D", "路径追踪输出已保存: {} ({}x{}, {} frames)",
                  outPath, w, h, m_ptRes.frameCount);
     } else {
