@@ -15,60 +15,44 @@ Prisma Engine（原 YAGE - Yet Another Game Engine）是一个使用现代 C++20
 ### Windows Builds
 Using CMake presets (recommended):
 ```bash
-# Engine only (no editor, no launcher app)
-cmake --preset engine-windows-x64-debug
-cmake --build --preset engine-windows-x64-debug
+# 1. Configure (creates Visual Studio solution in build/windows-x64-debug)
+cmake --preset windows-x64-debug
 
-cmake --preset engine-windows-x64-release
-cmake --build --preset engine-windows-x64-release
+# 2. Build all targets (from the build directory directly)
+cmake --build build/windows-x64-debug
 
-# Editor (includes ImGui debug UI and Vulkan)
-cmake --preset editor-windows-x64-debug
-cmake --build --preset editor-windows-x64-debug
+# Or build specific targets only
+cmake --build build/windows-x64-debug --target Engine
+cmake --build build/windows-x64-debug --target Editor
+cmake --build build/windows-x64-debug --target Launcher
+cmake --build build/windows-x64-debug --target Template3D
 
-cmake --preset editor-windows-x64-release
-cmake --build --preset editor-windows-x64-release
-
-# Launcher
-cmake --preset launcher-windows-x64-debug
-cmake --build --preset launcher-windows-x64-debug
-
-cmake --preset launcher-windows-x64-release
-cmake --build --preset launcher-windows-x64-release
+# Release
+cmake --preset windows-x64-release
+cmake --build build/windows-x64-release
 ```
 
 Using Visual Studio:
 1. Open the PrismaEngine root folder in Visual Studio 2026
-2. Visual Studio automatically detects CMake configuration
+2. Visual Studio automatically detects CMake configuration (opens build/windows-x64-debug)
 3. Build solution (Ctrl+Shift+B)
 
 ### Linux Builds
 Using CMake presets:
 ```bash
-# Engine
-cmake --preset engine-linux-x64-debug
-cmake --build --preset engine-linux-x64-debug
+# 1. Configure
+cmake --preset linux-x64-debug
 
-cmake --preset engine-linux-x64-release
-cmake --build --preset engine-linux-x64-release
+# 2. Build all
+cmake --build build/linux-x64-debug
 
-# Engine ARM64
-cmake --preset engine-linux-arm64-debug
-cmake --build --preset engine-linux-arm64-debug
+# Release
+cmake --preset linux-x64-release
+cmake --build build/linux-x64-release
 
-# Editor
-cmake --preset editor-linux-x64-debug
-cmake --build --preset editor-linux-x64-debug
-
-cmake --preset editor-linux-arm64-debug
-cmake --build --preset editor-linux-arm64-debug
-
-# Launcher
-cmake --preset launcher-linux-x64-debug
-cmake --build --preset launcher-linux-x64-debug
-
-cmake --preset launcher-linux-x64-release
-cmake --build --preset launcher-linux-x64-release
+# ARM64 cross-compile
+cmake --preset linux-arm64-debug
+cmake --build build/linux-arm64-debug
 ```
 
 ### Android Builds
@@ -251,6 +235,11 @@ Dependencies are configured in `cmake/FetchThirdPartyDeps.cmake`.
 - **Mixed language comments** / 中英文注释混用
 - Member variables prefixed with `m_` / 成员变量前缀 `m_`
 - **Namespace**: `PrismaEngine` for all engine code / 引擎代码使用 PrismaEngine 命名空间
+
+### Warning Rules / 警告处理规则
+- **禁止使用 `(void)` 消除未引用参数/变量警告** — 优先判断参数是否有语义价值。有意义的参数保留 + `[[maybe_unused]]`，无意义才删参数名
+- **未引用参数如果来自空函数，应添加真实逻辑而不是仅打 LOG_DEBUG** — 函数必须有实际行为（如 Platform 窗口函数应实现真实窗口操作）；完全死代码（无外部引用）可以直接删除
+- 第三方库（VMA、glaze、SPIRV-Tools 等）的内部警告用宏压制（`#pragma warning` 或 CMake `/wd`），不得修改库源码
 
 ### Conditional Compilation / 条件编译
 Engine modules are conditionally compiled based on platform and feature flags:
