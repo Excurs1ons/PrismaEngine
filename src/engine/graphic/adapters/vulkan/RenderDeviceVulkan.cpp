@@ -294,6 +294,9 @@ void RenderDeviceVulkan::BeginFrame() {
         m_isDefaultRenderPassActive = false;
         m_currentFrameIndex = m_currentFrame;
         m_hasPendingPresent = false;
+        // 同步重置 VulkanCommandBuffer 的命令计数器（BeginFrame 走原始 Vulkan API，未调用 Begin()）
+        if (auto* vkCmdBuf = m_vulkanCommandBuffers[m_currentFrame].get())
+            vkCmdBuf->GetAndResetCommandCount();
         return;
     }
 
@@ -316,6 +319,10 @@ void RenderDeviceVulkan::BeginFrame() {
     // 目的：即使跳过了默认 RenderPass，命令缓冲区依然在录制（由调用方负责开启自己的 RenderPass），
     //       必须保持活动状态以确保 EndFrame 能够执行提交。
     m_frameActive = true;
+
+    // 同步重置 VulkanCommandBuffer 的命令计数器（BeginFrame 走原始 Vulkan API，未调用 Begin()）
+    if (auto* vkCmdBuf = m_vulkanCommandBuffers[m_currentFrame].get())
+        vkCmdBuf->GetAndResetCommandCount();
 
     // 如果不跳过交换链RenderPass，则开始它
     if (!m_skipSwapChainRenderPass) {
@@ -552,7 +559,18 @@ bool RenderDeviceVulkan::ReadbackImage(VkImage image, uint32_t width, uint32_t h
                                         VkFormat format, void* outBuffer, size_t bufferSize) {
     if (!m_device || !image || !outBuffer) return false;
 
-    VkDeviceSize imageSize = VkDeviceSize(width) * height * 4 * sizeof(float); // RGBA32F
+    // 根据 format 计算像素字节数 (默认 RGBA32F)
+    uint32_t pixelSize = 4 * sizeof(float); // RGBA32F
+    switch (format) {
+        case VK_FORMAT_R8G8B8A8_UNORM:
+        case VK_FORMAT_B8G8R8A8_UNORM:     pixelSize = 4; break;
+        case VK_FORMAT_R8G8B8A8_SRGB:      pixelSize = 4; break;
+        case VK_FORMAT_R32G32B32A32_SFLOAT: pixelSize = 16; break;
+        case VK_FORMAT_R16G16B16A16_SFLOAT: pixelSize = 8; break;
+        case VK_FORMAT_R8_UNORM:            pixelSize = 1; break;
+        default: break; // 保持默认 RGBA32F
+    }
+    VkDeviceSize imageSize = VkDeviceSize(width) * height * pixelSize;
 
     // 创建 staging buffer
     VkBufferCreateInfo bufCI{};

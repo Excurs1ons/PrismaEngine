@@ -1,4 +1,4 @@
-#include "RenderSystem.h"
+﻿#include "RenderSystem.h"
 #include "../app/Engine.h"
 #include "../platform/Platform.h"
 #include "../logger/Logger.h"
@@ -8,6 +8,7 @@
 #include "Renderer.h"
 #include "Renderer2D.h"
 #include "adapters/vulkan/RenderDeviceVulkan.h"
+#include "adapters/vulkan/VulkanCommandBuffer.h"
 #include "pipelines/forward/ForwardPipeline.h"
 
 namespace Prisma::Graphic {
@@ -152,8 +153,15 @@ void RenderSystem::EndFrame() {
         static double lastLogTime = 0.0;
         double now = Platform::GetTimeSeconds();
         if (now - lastLogTime >= 5.0) {
-            LOG_DEBUG("RenderSystem", "EndFrame: {} 条命令, 管线已初始化={}, device={}",
-                     cmdCount, m_mainRenderPipeline != nullptr, m_device != nullptr);
+            // 额外统计：直接从命令缓冲区获取 GPU Draw/Dispatch 次数
+            uint32_t gpuCmdCount = 0;
+            auto* vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+            if (vkDevice) {
+                auto* vkCmd = dynamic_cast<Vulkan::VulkanCommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+                if (vkCmd) gpuCmdCount = vkCmd->GetAndResetCommandCount();
+            }
+            LOG_DEBUG("RenderSystem", "EndFrame: {} 条(渲染器) + {} 条(GPU命令)",
+                     cmdCount, gpuCmdCount);
             lastLogTime = now;
         }
 
