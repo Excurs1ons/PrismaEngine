@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Generators/">
+    <Project Path="PrismaEngine.Generators\PrismaEngine.Generators.csproj" />
+  </Folder>
+  <Project Path="PrismaEngine.Core\PrismaEngine.Core.csproj" />
+  <Project Path="GameScripts\GameScripts.csproj" />
+</Solution>
