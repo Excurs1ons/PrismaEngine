@@ -1,4 +1,4 @@
-// [修复] 不在此包含 imgui_impl_vulkan.h
+﻿// [修复] 不在此包含 imgui_impl_vulkan.h
 // 目的：Engine.dll 不再直接使用 ImGui Vulkan 后端 API，
 //         渲染通过由 PrismaEditor.dll 注册的回调执行，
 //         避免两份独立的编译单元共享状态导致指针崩溃。
@@ -41,9 +41,10 @@ RenderDeviceVulkan::~RenderDeviceVulkan() {
 int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     m_desc = desc;
     m_headless = desc.headless;
-    LOG_INFO("Vulkan", "正在初始化 Vulkan 设备{0}", m_headless ? " (头模式)" : "");
+    LOG_INFO("Vulkan", "正在初始化 Vulkan 设备{0}", m_headless ? " (headless)" : "");
 
     try {
+        // 1. 创建实例
         vkb::InstanceBuilder inst_builder;
         auto inst_ret = inst_builder.set_app_name(desc.name.c_str())
                             .request_validation_layers(desc.enableValidation)
@@ -175,6 +176,7 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
             vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]);
         }
 
+        // 9. SwapChain (headless模式跳过)
         if (!m_headless) {
             m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.presentMode);
 
@@ -258,7 +260,7 @@ void RenderDeviceVulkan::Shutdown() {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         m_surface = VK_NULL_HANDLE;
     } else {
-        LOG_DEBUG("Vulkan", "无 surface 需要销毁（头模式）");
+        LOG_DEBUG("Vulkan", "无 surface 需要销毁（headless模式）");
     }
 
     // 4. 最后销毁设备和实例
@@ -310,8 +312,12 @@ void RenderDeviceVulkan::BeginFrame() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vkBeginCommandBuffer(cmd, &beginInfo);
 
+    // [改动] 统一保持 m_frameActive 为 true
+    // 目的：即使跳过了默认 RenderPass，命令缓冲区依然在录制（由调用方负责开启自己的 RenderPass），
+    //       必须保持活动状态以确保 EndFrame 能够执行提交。
     m_frameActive = true;
 
+    // 如果不跳过交换链RenderPass，则开始它
     if (!m_skipSwapChainRenderPass) {
         VkRenderPassBeginInfo rpInfo{};
         rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -325,6 +331,7 @@ void RenderDeviceVulkan::BeginFrame() {
         vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_isDefaultRenderPassActive = true;
     } else {
+        // 重置标志，下一帧恢复默认行为
         m_skipSwapChainRenderPass = false;
         m_isDefaultRenderPassActive = false;
     }
@@ -376,6 +383,10 @@ void RenderDeviceVulkan::EndFrame() {
         return;
     }
 
+    // [修复] 如果还没有开启 RenderPass (说明之前被跳过了)，现在为了 Overlay 开启它。
+    // 这样可以确保 ImGui 的绘制指令处于合法的 RenderPass 中，
+    // 同时通过 RenderPass 的 finalLayout 自动将交换链图像转换到 PRESENT_SRC_KHR 布局，
+    // 彻底解决 VUID-vkCmdDrawIndexed-renderpass 和 VUID-VkPresentInfoKHR-pImageIndices-01430。
     if (!m_isDefaultRenderPassActive) {
         VkRenderPassBeginInfo rpInfo{};
         rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -394,6 +405,7 @@ void RenderDeviceVulkan::EndFrame() {
         m_overlayRenderCallback(cmd);
     }
 
+    // 无论如何都要结束活动中的默认 RenderPass
     if (m_isDefaultRenderPassActive) {
         vkCmdEndRenderPass(cmd);
         m_isDefaultRenderPassActive = false;

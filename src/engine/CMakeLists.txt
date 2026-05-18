@@ -533,6 +533,23 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     elseif(TARGET spirv-reflect)
         target_link_libraries(Engine PUBLIC spirv-reflect)
     endif()
+    # glslang — GLSL→SPIR-V 编译
+    if(TARGET glslang::glslang)
+        target_link_libraries(Engine PRIVATE
+            glslang::glslang
+            glslang::SPIRV
+            glslang::OSDependent
+            glslang::MachineIndependent
+            glslang::GenericCodeGen
+            glslang::glslang-default-resource-limits
+            SPIRV-Tools
+            SPIRV-Tools-opt
+        )
+        target_compile_definitions(Engine PRIVATE PRISMA_HAS_GLSLANG=1)
+        message(STATUS "  Engine links glslang: GLSL→SPIR-V enabled")
+    else()
+        message(STATUS "  Engine: GLSL→SPIR-V disabled (glslang not found)")
+    endif()
 endif()
 
 target_include_directories(Engine

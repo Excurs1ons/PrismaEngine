@@ -9,7 +9,6 @@
 #include "Renderer2D.h"
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "pipelines/forward/ForwardPipeline.h"
-#include "2d/Pipeline2D.h"
 
 namespace Prisma::Graphic {
 RenderSystem::RenderSystem(const RenderSystemDesc& desc) : m_desc(desc) {}
@@ -34,16 +33,24 @@ int RenderSystem::Initialize() {
     }
     LOG_DEBUG("Renderer", "渲染资源管理器初始化成功。");
 
-    int pipeline_init_result = InitializeRenderPipelines();
-    if (pipeline_init_result != 0) {
-        LOG_ERROR("Renderer", "渲染管线初始化失败！ {0}", pipeline_init_result);
-        return pipeline_init_result;
+    if (m_desc.renderMode != RenderMode::SRP) {
+        int pipeline_init_result = InitializeRenderPipelines();
+        if (pipeline_init_result != 0) {
+            LOG_ERROR("Renderer", "渲染管线初始化失败！ {0}", pipeline_init_result);
+            return pipeline_init_result;
+        }
+        LOG_DEBUG("Renderer", "管线初始化成功。");
+    } else {
+        LOG_INFO("Renderer", "SRP 模式：跳过内置渲染管线");
     }
-    LOG_DEBUG("Renderer", "管线初始化成功。");
 
-    // 初始化 2D 渲染器
-    Renderer2D::Initialize();
-    LOG_DEBUG("Renderer", "2D 渲染器初始化成功。");
+    // 2D 渲染器：SRP 模式不初始化，由 C# 管线完全接管
+    if (m_desc.renderMode != RenderMode::SRP) {
+        Renderer2D::Initialize();
+        LOG_DEBUG("Renderer", "2D 渲染器初始化成功。");
+    } else {
+        LOG_DEBUG("Renderer", "SRP 模式：跳过 2D 渲染器初始化");
+    }
 
     LOG_INFO("Renderer", "渲染系统初始化成功。");
     return 0;
@@ -60,8 +67,6 @@ int RenderSystem::InitializeDevice() {
         devDesc.height           = m_desc.height;
         devDesc.presentMode      = m_desc.presentMode;
         devDesc.enableValidation = m_desc.enableValidation;
-        devDesc.windowHandle     = m_desc.windowHandle;
-        devDesc.headless         = (m_desc.windowHandle == nullptr);
 
         return m_device->Initialize(devDesc);
     }
@@ -80,14 +85,8 @@ int RenderSystem::InitializeRenderResourceManager() {
 }
 
 int RenderSystem::InitializeRenderPipelines() {
-    // 根据项目设置选择渲染管线
-    if (m_desc.pipelineType == StandardPipelineType::Standard2D) {
-        LOG_INFO("RenderSystem", "正在创建标准 2D 渲染管线...");
-        m_mainRenderPipeline = std::make_shared<Pipeline2D>();
-    } else {
-        LOG_INFO("RenderSystem", "正在创建通用前向渲染管线 (3D)...");
-        m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
-    }
+    // 默认创建前向渲染管线
+    m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
     return m_mainRenderPipeline->Initialize(m_device.get());
 }
 

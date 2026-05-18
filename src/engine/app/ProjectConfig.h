@@ -15,6 +15,15 @@ namespace Prisma {
  *   Mono   = 1：Mono 运行时
  *   CoreCLR = 2：.NET CoreCLR 宿主
  */
+enum class RenderMode : uint8_t {
+    Mode2D = 0,
+    Mode3D_Forward = 1,
+    Mode3D_ForwardPlus = 2,
+    Mode3D_Deferred = 3,
+    Mode3D_DeferredPlus = 4,
+    SRP = 5
+};
+
 enum class ScriptingBackend : uint8_t {
     Off     = 0,
     Mono    = 1,
@@ -35,8 +44,8 @@ struct ProjectConfig {
     std::string entryScene;
     std::vector<std::string> assets;
     WindowConfig window;
+    RenderMode renderMode = RenderMode::Mode3D_Forward;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
-    Graphic::StandardPipelineType pipelineType = Graphic::StandardPipelineType::Forward3D; // 新增：管线类型
 };
 
 } // namespace Prisma
@@ -44,11 +53,15 @@ struct ProjectConfig {
 // ── Glaze 映射 ──
 
 template <>
-struct glz::meta<Prisma::Graphic::StandardPipelineType> {
-    using enum Prisma::Graphic::StandardPipelineType;
+struct glz::meta<Prisma::RenderMode> {
+    using enum Prisma::RenderMode;
     static constexpr auto value = glz::enumerate(
-        "Forward3D", Forward3D,
-        "Standard2D", Standard2D
+        "2D", Mode2D,
+        "Forward", Mode3D_Forward,
+        "Forward+", Mode3D_ForwardPlus,
+        "Deferred", Mode3D_Deferred,
+        "Deferred+", Mode3D_DeferredPlus,
+        "SRP", SRP
     );
 };
 
@@ -92,7 +105,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "entryScene", &Prisma::ProjectConfig::entryScene,
         "assets", &Prisma::ProjectConfig::assets,
         "window", &Prisma::ProjectConfig::window,
-        "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,
-        "pipelineType", &Prisma::ProjectConfig::pipelineType
+        "renderMode", &Prisma::ProjectConfig::renderMode,
+        "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend
     );
 };

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
+#include <unordered_map>
 
 namespace Prisma::Graphic {
     class IShader;
@@ -11,6 +12,9 @@ namespace Prisma::Graphic {
     class IBuffer;
     class ITexture;
     class ICommandBuffer;
+    class ISampler;
+    class IDescriptorSet;
+    class IDescriptorSetLayout;
 }
 
 namespace Prisma::Scripting {
@@ -22,6 +26,17 @@ using RenderTargetHandle = uint32_t;
 using DepthTargetHandle = uint32_t;
 using BufferHandle = uint32_t;
 using TextureHandle = uint32_t;
+using SamplerHandle = uint32_t;
+
+// Sampler desc - binary compatible with C#
+struct SRPSamplerDesc {
+    uint32_t minFilter;   // 0=Nearest, 1=Linear
+    uint32_t magFilter;
+    uint32_t mipFilter;
+    uint32_t addressU;    // 0=Wrap, 1=Mirror, 2=Clamp, 3=Border, 4=MirrorOnce
+    uint32_t addressV;
+    uint32_t addressW;
+};
 
 // Pipeline creation desc - binary compatible with C#
 struct SRPPipelineDesc {
@@ -38,6 +53,8 @@ struct SRPPipelineDesc {
     uint8_t  blendEnable;
     uint8_t  blendColorWriteMask;
     float    clearColor[4];
+    uint32_t topology;  // 0=PointList,1=LineList,2=LineStrip,3=TriangleList,4=TriangleStrip (PrimitiveTopology)
+    uint8_t  padding[4]; // align to 8 bytes
 };
 
 // Shader stage
@@ -89,6 +106,13 @@ public:
     void CmdDrawIndexed(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset);
     void CmdDrawFullScreenQuad();
 
+    // Texture & sampler
+    std::shared_ptr<Graphic::ITexture> GetTexturePtr(TextureHandle h);
+    SamplerHandle CreateSampler(const SRPSamplerDesc& desc);
+    void DestroySampler(SamplerHandle h);
+    std::shared_ptr<Graphic::ISampler> GetSamplerPtr(SamplerHandle h);
+    void CmdBindTexture(uint32_t slot, TextureHandle tex, SamplerHandle sampler);
+
     void Shutdown();
 
 private:
@@ -100,6 +124,9 @@ private:
     std::vector<std::shared_ptr<Graphic::ITexture>> m_depthTargets;
     std::vector<std::shared_ptr<Graphic::IBuffer>> m_buffers;
     std::vector<std::shared_ptr<Graphic::ITexture>> m_textures;
+    std::vector<std::shared_ptr<Graphic::ISampler>> m_samplers;
+    std::unordered_map<PipelineHandle, std::shared_ptr<Graphic::IDescriptorSet>> m_frameDescriptorSets;
+    PipelineHandle m_currentPipeline = 0;
 
     // Current frame command buffer (not owned - from device)
     Graphic::ICommandBuffer* m_cmdBuffer = nullptr;
@@ -120,6 +147,9 @@ extern "C" {
     void SRP_DestroyBuffer(uint32_t h);
     uint32_t SRP_CreateTexture2D(int w, int h, uint32_t f, const void* p, uint32_t ps);
     void SRP_DestroyTexture(uint32_t h);
+    uint32_t SRP_CreateSampler(const SRPSamplerDesc* d);
+    void SRP_DestroySampler(uint32_t h);
+    void SRP_CmdBindTexture(uint32_t slot, uint32_t tex, uint32_t sampler);
     void SRP_BeginFrame();
     void SRP_EndFrame();
     void SRP_CmdBeginRenderPass(uint32_t rc, const uint32_t* rh, uint32_t dh, const float* cc, float dc, int vw, int vh);

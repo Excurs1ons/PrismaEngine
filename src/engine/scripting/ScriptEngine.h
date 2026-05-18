@@ -78,6 +78,13 @@ struct PrismaAPI {
     uint32_t (*srpCreateTexture2D)(int w, int h, uint32_t format, const void* pixels, uint32_t pixelSize);
     void     (*srpDestroyTexture)(uint32_t handle);
 
+    // Sampler
+    uint32_t (*srpCreateSampler)(const SRPSamplerDesc* desc);
+    void     (*srpDestroySampler)(uint32_t handle);
+
+    // Texture binding
+    void     (*srpCmdBindTexture)(uint32_t slot, uint32_t tex, uint32_t sampler);
+
     // Frame
     void (*srpBeginFrame)();
     void (*srpEndFrame)();

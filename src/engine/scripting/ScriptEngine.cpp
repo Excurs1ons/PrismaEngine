@@ -91,7 +91,15 @@ static float S_GetMouseY() {
     return (float)spec.Height - m->GetMousePosition().y;
 }
 static float S_GetDeltaTime() { return 0.016f; }
-static void S_Log(const char* s, const char* m) { if (s && m) printf("[%s] %s\n", s, m); }
+static void S_Log(const char* levelStr, const char* msg) {
+    if (!levelStr || !msg) return;
+    Prisma::LogLevel level = Prisma::LogLevel::Info;
+    if (std::strcmp(levelStr, "WARN") == 0)
+        level = Prisma::LogLevel::Warning;
+    else if (std::strcmp(levelStr, "ERR") == 0 || std::strcmp(levelStr, "ERROR") == 0)
+        level = Prisma::LogLevel::Error;
+    Prisma::Logger::Get().LogInternal(level, "Script", msg, Prisma::SourceLocation("", 0, ""));
+}
 
 // ========== 2D Lighting API ==========
 
@@ -195,6 +203,9 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
     m_api.srpDestroyBuffer = SRP_DestroyBuffer;
     m_api.srpCreateTexture2D = SRP_CreateTexture2D;
     m_api.srpDestroyTexture = SRP_DestroyTexture;
+    m_api.srpCreateSampler = SRP_CreateSampler;
+    m_api.srpDestroySampler = SRP_DestroySampler;
+    m_api.srpCmdBindTexture = SRP_CmdBindTexture;
     m_api.srpBeginFrame = SRP_BeginFrame;
     m_api.srpEndFrame = SRP_EndFrame;
     m_api.srpCmdBeginRenderPass = SRP_CmdBeginRenderPass;

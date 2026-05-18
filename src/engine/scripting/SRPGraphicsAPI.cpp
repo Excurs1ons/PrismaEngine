@@ -66,7 +66,8 @@ PipelineHandle SRPGraphicsAPI::CreatePipeline(const SRPPipelineDesc& d) {
     auto pso = fac->CreatePipelineStateImpl(); if (!pso) return 0;
     pso->SetShader(G::ShaderType::Vertex, vs);
     pso->SetShader(G::ShaderType::Pixel, fs);
-    pso->SetPrimitiveTopology(G::PrimitiveTopology::TriangleList);
+    // topology: 3=TriangleList, 4=TriangleStrip, else default TriangleList
+    pso->SetPrimitiveTopology(d.topology == 4 ? G::PrimitiveTopology::TriangleStrip : G::PrimitiveTopology::TriangleList);
     pso->SetSampleCount(d.sampleCount);
     G::BlendState bs; bs.blendEnable = d.blendEnable != 0; bs.writeMask = d.blendColorWriteMask;
     pso->SetBlendState(bs);
@@ -78,7 +79,7 @@ PipelineHandle SRPGraphicsAPI::CreatePipeline(const SRPPipelineDesc& d) {
     for (uint32_t i = 0; i < d.numRenderTargets && i < 8; i++) rtf.push_back((G::TextureFormat)d.renderTargetFormats[i]);
     pso->SetRenderTargetFormats(rtf);
     pso->SetDepthStencilFormat((G::TextureFormat)d.depthStencilFormat);
-    if (!pso->Create(dev)) return 0;
+    if (!pso->Create(dev)) { LOG_ERROR("SRP", "PSO Create failed: {0}", pso->GetErrors()); return 0; }
     PipelineHandle h = (PipelineHandle)(m_pipelines.size() + 1);
     m_pipelines.push_back(std::move(pso)); return h;
 }
@@ -129,27 +130,48 @@ void SRPGraphicsAPI::DestroyBuffer(BufferHandle h) {
 
 // === Texture (stub) ===
 
-TextureHandle SRPGraphicsAPI::CreateTexture2D(int, int, uint32_t, const void*, uint32_t) { return 0; }
-void SRPGraphicsAPI::DestroyTexture(TextureHandle) {}
+TextureHandle SRPGraphicsAPI::CreateTexture2D(int w, int h, uint32_t format, const void* data, uint32_t dataSize) {
+    auto* fac = GetFac();
+    if (!fac || !data || w <= 0 || h <= 0) return 0;
+    G::TextureDesc td;
+    td.type = G::TextureType::Texture2D;
+    td.format = (G::TextureFormat)format;
+    td.width = (uint32_t)w;
+    td.height = (uint32_t)h;
+    td.allowShaderResource = true;
+    td.initialData = data;
+    td.dataSize = dataSize;
+    auto tex = fac->CreateTextureImpl(td);
+    if (!tex) return 0;
+    TextureHandle hdl = (TextureHandle)(m_textures.size() + 1);
+    m_textures.push_back(std::move(tex));
+    return hdl;
+}
+
+void SRPGraphicsAPI::DestroyTexture(TextureHandle h) {
+    if (h > 0 && h - 1 < m_textures.size()) m_textures[h - 1].reset();
+}
+
+std::shared_ptr<G::ITexture> SRPGraphicsAPI::GetTexturePtr(TextureHandle h) {
+    return (h > 0 && h - 1 < m_textures.size()) ? m_textures[h - 1] : nullptr;
+}
 
 // === Frame & Command Recording ===
 
 void SRPGraphicsAPI::BeginFrame() {
     auto* dev = GetDev();
     if (!dev) { m_cmdBuffer = nullptr; return; }
-    // Get device's current command buffer (recording after BeginFrame)
+    // Get device's current command buffer (swap chain render pass is already active)
+    // SRP draws directly into the swap chain's render pass
     auto* vkDev = dynamic_cast<Vk::RenderDeviceVulkan*>(dev);
     if (vkDev) {
-        vkDev->SuspendDefaultRenderPass();
         m_cmdBuffer = vkDev->GetCurrentCommandBuffer();
     }
 }
 
 void SRPGraphicsAPI::EndFrame() {
-    auto* dev = dynamic_cast<Vk::RenderDeviceVulkan*>(GetDev());
-    if (dev && m_cmdBuffer) {
-        dev->ResumeDefaultRenderPass();
-    }
+    // Don't resume the render pass - SRP draws into the swap chain's
+    // already-active render pass; RenderDeviceVulkan::EndFrame() will end it.
     m_cmdBuffer = nullptr;
 }
 
@@ -166,6 +188,7 @@ void SRPGraphicsAPI::CmdEndRenderPass() { if (m_cmdBuffer) m_cmdBuffer->EndRende
 void SRPGraphicsAPI::CmdBindPipeline(PipelineHandle h) {
     if (!m_cmdBuffer || !(h > 0 && h - 1 < m_pipelines.size())) return;
     m_cmdBuffer->SetPipelineState(m_pipelines[h - 1].get());
+    m_currentPipeline = h;
 }
 void SRPGraphicsAPI::CmdBindVertexBuffer(BufferHandle h, uint32_t s, uint32_t o) {
     if (!m_cmdBuffer || !(h > 0 && h - 1 < m_buffers.size())) return;
@@ -185,15 +208,84 @@ void SRPGraphicsAPI::CmdSetScissor(int x, int y, int w, int h) {
     G::Rect r; r.x = x; r.y = y; r.width = w; r.height = h;
     m_cmdBuffer->SetScissorRect(r);
 }
-void SRPGraphicsAPI::CmdPushConstants(uint32_t o, uint32_t sz, const void* d) { if (m_cmdBuffer) m_cmdBuffer->PushConstants(G::ShaderType::Vertex, d, sz); }
+void SRPGraphicsAPI::CmdPushConstants(uint32_t o, uint32_t sz, const void* d) {
+    if (m_cmdBuffer) {
+        m_cmdBuffer->PushConstants(G::ShaderType::Vertex, d, sz);
+        m_cmdBuffer->PushConstants(G::ShaderType::Pixel, d, sz);
+    }
+}
 void SRPGraphicsAPI::CmdDraw(uint32_t vc, uint32_t ic, uint32_t fv) { if (m_cmdBuffer) m_cmdBuffer->Draw(vc, ic, fv); }
 void SRPGraphicsAPI::CmdDrawIndexed(uint32_t ic, uint32_t instc, uint32_t fi, int32_t vo) { if (m_cmdBuffer) m_cmdBuffer->DrawIndexed(ic, instc, fi, vo); }
 void SRPGraphicsAPI::CmdDrawFullScreenQuad() { if (m_cmdBuffer) m_cmdBuffer->Draw(4, 1, 0); }
 
+// === Sampler ===
+
+SamplerHandle SRPGraphicsAPI::CreateSampler(const SRPSamplerDesc& d) {
+    auto* fac = GetFac(); if (!fac) return 0;
+    G::SamplerDesc sd;
+    sd.filter = (d.minFilter == 1 || d.magFilter == 1) ? G::TextureFilter::Linear : G::TextureFilter::Point;
+    auto mapAddr = [](uint32_t a) -> G::TextureAddressMode {
+        switch (a) {
+            case 0: return G::TextureAddressMode::Wrap;
+            case 1: return G::TextureAddressMode::Mirror;
+            case 2: return G::TextureAddressMode::Clamp;
+            case 3: return G::TextureAddressMode::Border;
+            default: return G::TextureAddressMode::MirrorOnce;
+        }
+    };
+    sd.addressU = mapAddr(d.addressU);
+    sd.addressV = mapAddr(d.addressV);
+    sd.addressW = mapAddr(d.addressW);
+    auto sam = fac->CreateSamplerImpl(sd);
+    if (!sam) return 0;
+    SamplerHandle h = (SamplerHandle)(m_samplers.size() + 1);
+    m_samplers.push_back(std::move(sam));
+    return h;
+}
+
+void SRPGraphicsAPI::DestroySampler(SamplerHandle h) {
+    if (h > 0 && h - 1 < m_samplers.size()) m_samplers[h - 1].reset();
+}
+
+std::shared_ptr<G::ISampler> SRPGraphicsAPI::GetSamplerPtr(SamplerHandle h) {
+    return (h > 0 && h - 1 < m_samplers.size()) ? m_samplers[h - 1] : nullptr;
+}
+
+// === Texture binding ===
+
+void SRPGraphicsAPI::CmdBindTexture(uint32_t slot, TextureHandle tex, SamplerHandle sampler) {
+    if (!m_cmdBuffer) return;
+    auto* fac = GetFac(); if (!fac) return;
+    auto texPtr = GetTexturePtr(tex); if (!texPtr) return;
+    auto samPtr = GetSamplerPtr(sampler); if (!samPtr) return;
+
+    // Get descriptor set layout from current pipeline
+    if (m_currentPipeline == 0) return;
+    auto& pso = m_pipelines[m_currentPipeline - 1];
+    const auto& layouts = pso->GetDescriptorSetLayouts();
+    if (layouts.empty()) return;
+
+    // Cache descriptor set per pipeline (reuse each frame)
+    auto it = m_frameDescriptorSets.find(m_currentPipeline);
+    std::shared_ptr<G::IDescriptorSet> descSet;
+    if (it != m_frameDescriptorSets.end()) {
+        descSet = it->second;
+    } else {
+        descSet = fac->CreateDescriptorSet(layouts[0].get());
+        if (!descSet) return;
+        m_frameDescriptorSets[m_currentPipeline] = descSet;
+    }
+
+    descSet->BindTexture(slot, texPtr.get(), samPtr.get());
+    descSet->Update();
+    m_cmdBuffer->BindDescriptorSet(0, descSet.get());
+}
+
 void SRPGraphicsAPI::Shutdown() {
     m_shaders.clear(); m_pipelines.clear(); m_renderTargets.clear();
     m_depthTargets.clear(); m_buffers.clear(); m_textures.clear();
-    m_cmdBuffer = nullptr;
+    m_samplers.clear(); m_frameDescriptorSets.clear();
+    m_cmdBuffer = nullptr; m_currentPipeline = 0;
 }
 
 // ===== C Wrappers =====
@@ -213,6 +305,9 @@ uint32_t SRP_CreateIndexBuffer(const void* d, uint32_t sz, int is32) { return SR
 void SRP_DestroyBuffer(uint32_t h) { SRPGraphicsAPI::Get().DestroyBuffer(h); }
 uint32_t SRP_CreateTexture2D(int w, int h, uint32_t f, const void* p, uint32_t ps) { return SRPGraphicsAPI::Get().CreateTexture2D(w, h, f, p, ps); }
 void SRP_DestroyTexture(uint32_t h) { SRPGraphicsAPI::Get().DestroyTexture(h); }
+uint32_t SRP_CreateSampler(const SRPSamplerDesc* d) { return d ? SRPGraphicsAPI::Get().CreateSampler(*d) : 0; }
+void SRP_DestroySampler(uint32_t h) { SRPGraphicsAPI::Get().DestroySampler(h); }
+void SRP_CmdBindTexture(uint32_t slot, uint32_t tex, uint32_t sampler) { SRPGraphicsAPI::Get().CmdBindTexture(slot, tex, sampler); }
 void SRP_BeginFrame() { SRPGraphicsAPI::Get().BeginFrame(); }
 void SRP_EndFrame() { SRPGraphicsAPI::Get().EndFrame(); }
 void SRP_CmdBeginRenderPass(uint32_t rc, const uint32_t* rh, uint32_t dh, const float* cc, float dc, int vw, int vh) { SRPGraphicsAPI::Get().CmdBeginRenderPass(rc, rh, dh, cc, dc, vw, vh); }

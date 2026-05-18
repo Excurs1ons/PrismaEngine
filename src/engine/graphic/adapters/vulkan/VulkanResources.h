@@ -344,6 +344,7 @@ public:
             void* mappedData = nullptr;
             if (vmaMapMemory(m_allocator, m_allocation, &mappedData) == VK_SUCCESS) {
                 std::memcpy(static_cast<uint8_t*>(mappedData) + clampedOffset, m_shadowData.data() + clampedOffset, static_cast<size_t>(clampedSize));
+                vmaFlushAllocation(m_allocator, m_allocation, clampedOffset, clampedSize);
                 vmaUnmapMemory(m_allocator, m_allocation);
             }
         }
@@ -368,6 +369,7 @@ public:
         void* mappedData = nullptr;
         if (vmaMapMemory(m_allocator, m_allocation, &mappedData) == VK_SUCCESS) {
             std::memcpy(static_cast<uint8_t*>(mappedData) + offset, data, static_cast<size_t>(clampedSize));
+            vmaFlushAllocation(m_allocator, m_allocation, offset, clampedSize);
             vmaUnmapMemory(m_allocator, m_allocation);
         }
     }

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20)
+﻿cmake_minimum_required(VERSION 3.20)
 
 project(Template2D
     VERSION 1.0.0
@@ -110,23 +110,6 @@ set_target_properties(${TEMPLATE2D_PLUGIN_NAME} PROPERTIES
 setup_target_defaults(${TEMPLATE2D_PLUGIN_NAME})
 target_compile_definitions(${TEMPLATE2D_PLUGIN_NAME} PRIVATE TEMPLATE2D_PLUGIN_EXPORTS=1)
 
-# ============================================================
-# VS 额外调试入口：Launcher + Plugin
-# ============================================================
-
-if(MSVC)
-    set(DEBUG_HELPER "${CMAKE_CURRENT_BINARY_DIR}/__vs_debug_template2d_main.cpp")
-    if(NOT EXISTS "${DEBUG_HELPER}")
-        file(WRITE "${DEBUG_HELPER}" "int main(){return 0;}\n")
-    endif()
-    add_executable(Template2D_Launcher_Debug EXCLUDE_FROM_ALL "${DEBUG_HELPER}")
-    target_link_libraries(Template2D_Launcher_Debug PRIVATE Engine)
-    add_dependencies(Template2D_Launcher_Debug ${TEMPLATE2D_PLUGIN_NAME} Launcher)
-    set_target_properties(Template2D_Launcher_Debug PROPERTIES
-        VS_DEBUGGER_COMMAND "$<TARGET_FILE:Launcher>"
-        VS_DEBUGGER_COMMAND_ARGUMENTS "$<TARGET_FILE:${TEMPLATE2D_PLUGIN_NAME}>"
-    )
-endif()
 
 # ============================================================
 # 复制项目资源

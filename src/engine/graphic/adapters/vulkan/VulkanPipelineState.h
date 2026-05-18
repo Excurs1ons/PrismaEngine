@@ -64,6 +64,10 @@ public:
 
     std::unique_ptr<IPipelineState> Clone() const override;
 
+    const std::vector<std::shared_ptr<IDescriptorSetLayout>>& GetDescriptorSetLayouts() const override {
+        return m_descriptorSetLayouts;
+    }
+
     // Vulkan-specific
     VkPipeline GetVkPipeline() const { return m_pipeline; }
     VkPipelineLayout GetVkPipelineLayout() const { return m_pipelineLayout; }

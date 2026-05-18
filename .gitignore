@@ -102,3 +102,4 @@ PrismaEngine-SDK-*
 .cache/
 build_*/
 /.pipeline_cache
+/third_party/

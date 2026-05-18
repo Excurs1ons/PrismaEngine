@@ -2,6 +2,7 @@
 
 #include "RenderTypes.h"
 #include "IShader.h"
+#include "IDescriptorSet.h"
 #include <memory>
 #include <vector>
 #include "IRenderDevice.h"
@@ -253,6 +254,10 @@ public:
     /// @brief 克隆管线状态
     /// @return 新的管线状态对象
     virtual std::unique_ptr<IPipelineState> Clone() const = 0;
+
+    /// @brief 获取描述符集布局列表
+    /// @return 描述符集布局数组
+    [[nodiscard]] virtual const std::vector<std::shared_ptr<IDescriptorSetLayout>>& GetDescriptorSetLayouts() const = 0;
 
 protected:
     PipelineType m_type = PipelineType::Graphics;

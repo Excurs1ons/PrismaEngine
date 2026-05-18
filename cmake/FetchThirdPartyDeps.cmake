@@ -132,6 +132,59 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     set(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "" FORCE)
     set(SPIRV_REFLECT_BUILD_TESTS OFF CACHE BOOL "" FORCE)
     FetchContent_MakeAvailable(spirv-reflect)
+
+    # glslang — GLSL→SPIR-V 编译（来自 Vulkan SDK）
+    # 手动创建 IMPORTED 目标（SDK 自带 cmake config 因 SPIRV-Tools 路径 bug 不可用）
+    if(DEFINED ENV{VULKAN_SDK})
+        set(_VK_SDK "$ENV{VULKAN_SDK}")
+        if(EXISTS "${_VK_SDK}/Lib/glslang.lib" OR EXISTS "${_VK_SDK}/lib/libglslang.a")
+            message(STATUS "  glslang: configuring from ${_VK_SDK}")
+            set(_VK_LIB "${_VK_SDK}/Lib")
+            set(_VK_INC "${_VK_SDK}/Include/glslang")
+
+            # 为 Debug 与 RelWithDebInfo/Release 指定不同向后缀
+            macro(_add_glslang_target _name)
+                if(NOT TARGET "glslang::${_name}")
+                    add_library("glslang::${_name}" STATIC IMPORTED)
+                    set_target_properties("glslang::${_name}" PROPERTIES
+                        IMPORTED_LOCATION_DEBUG         "${_VK_LIB}/${_name}d.lib"
+                        IMPORTED_LOCATION_RELWITHDEBINFO "${_VK_LIB}/${_name}.lib"
+                        IMPORTED_LOCATION_RELEASE        "${_VK_LIB}/${_name}.lib"
+                        IMPORTED_LOCATION_MINSIZEREL     "${_VK_LIB}/${_name}.lib"
+                        INTERFACE_INCLUDE_DIRECTORIES    "${_VK_INC}"
+                    )
+                endif()
+            endmacro()
+
+            _add_glslang_target(glslang)
+            _add_glslang_target(SPIRV)
+            _add_glslang_target(OSDependent)
+            _add_glslang_target(MachineIndependent)
+            _add_glslang_target(GenericCodeGen)
+            _add_glslang_target(glslang-default-resource-limits)
+
+            # SPIRV-Tools (glslang 的 SpvTools.obj 引用其符号)
+            foreach(_spv_tgt SPIRV-Tools SPIRV-Tools-opt)
+                if(NOT TARGET "${_spv_tgt}")
+                    add_library("${_spv_tgt}" STATIC IMPORTED)
+                    string(REPLACE "-" "_" _prop_name "${_spv_tgt}")
+                    set_target_properties("${_spv_tgt}" PROPERTIES
+                        IMPORTED_LOCATION_DEBUG         "${_VK_LIB}/${_spv_tgt}d.lib"
+                        IMPORTED_LOCATION_RELWITHDEBINFO "${_VK_LIB}/${_spv_tgt}.lib"
+                        IMPORTED_LOCATION_RELEASE        "${_VK_LIB}/${_spv_tgt}.lib"
+                        IMPORTED_LOCATION_MINSIZEREL     "${_VK_LIB}/${_spv_tgt}.lib"
+                    )
+                endif()
+            endforeach()
+
+            set(glslang_FOUND TRUE)
+        endif()
+    endif()
+    if(glslang_FOUND)
+        message(STATUS "  glslang: FOUND (${glslang_DIR})")
+    else()
+        message(STATUS "  glslang: NOT FOUND (GLSL→SPIR-V compilation disabled)")
+    endif()
 endif()
 
 # ImGui 静态库创建

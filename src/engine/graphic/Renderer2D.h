@@ -1,64 +1,97 @@
 #pragma once
 
-#include "2d/Graphics2D.h"
-#include "core/Node.h"
+#include "Export.h"
+#include "math/MathTypes.h"
+#include "interfaces/RenderTypes.h"
+#include <memory>
+#include <vector>
+
+namespace Prisma {
+    struct Node;
+}
 
 namespace Prisma {
 namespace Graphic {
 
+class ITexture;
+class RenderCommandContext;
+class OrthographicCamera;
+
 /**
- * @brief 兼容层：将 Renderer2D 映射到 Graphics2D
+ * @brief 2D 渲染器 (静态接口)
+ * 提供高性能的 2D 形状和精灵渲染功能，支持批处理
  */
 class ENGINE_API Renderer2D {
 public:
-    using Statistics = Graphics2D::Statistics;
+    struct Statistics {
+        uint32_t DrawCalls = 0;
+        uint32_t QuadCount = 0;
 
-    static void Initialize() { Graphics2D::Initialize(); }
-    static void Shutdown() { Graphics2D::Shutdown(); }
+        uint32_t GetTotalVertexCount() const { return QuadCount * 4; }
+        uint32_t GetTotalIndexCount() const { return QuadCount * 6; }
+    };
 
-    static void BeginScene(const OrthographicCamera& camera) { Graphics2D::Begin(camera); }
-    static void EndScene() { Graphics2D::End(); }
-    static void Flush() { /* Graphics2D 内部自动管理 Flush */ }
+    static void Initialize();
+    static void Shutdown();
 
-    static void BeginGizmo(const OrthographicCamera& camera) { Graphics2D::Begin(camera); }
-    static void EndGizmo() { Graphics2D::End(); }
+    // ========== 渲染生命周期 ==========
 
-    static void BeginUI() { Graphics2D::BeginUI(); }
-    static void EndUI() { Graphics2D::EndUI(); }
+    static void BeginScene(const OrthographicCamera& camera);
+    static void EndScene();
+    static void Flush();
 
-    static void DrawNodesSoA(); // 保持原 SoA 实现
-    static void DrawNode(Node node, int layer = 0, const Prisma::Color& tint = {1,1,1,1});
+    // UI 覆盖层
+    static void BeginUI();
+    static void EndUI();
 
-    static void DrawLine(const Vector2& s, const Vector2& e, const Prisma::Color& c, float t = 1.0f, int l = 0);
-    static void DrawRect(const Vector2& p, const Vector2& s, const Prisma::Color& c, float t = 1.0f, int l = 0);
+    // Gizmo 覆盖层（不受光照影响）
+    static void BeginGizmo(const OrthographicCamera& camera);
+    static void EndGizmo();
 
-    static void DrawQuad(const Vector2& p, const Vector2& s, const Prisma::Color& c, int l = 0) { Graphics2D::DrawQuad(p, s, c, l); }
-    static void DrawQuad(const Matrix4& t, const Prisma::Color& c, int l = 0) { Graphics2D::DrawQuad(t, c, l); }
+    // ========== 绘制接口 ==========
 
-    static void DrawQuad(const Vector2& p, const Vector2& s, const std::shared_ptr<ITexture>& tex, const Prisma::Color& c) 
-    { Graphics2D::DrawSprite(p, s, tex, 0, c); }
+    // 绘制 SoA 节点 (从 EntityManager 自动提取数据)
+    static void DrawNodesSoA();
+    static void DrawNode(Node node, const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
 
-    static void DrawQuad(const Vector2& p, const Vector2& s, const std::shared_ptr<ITexture>& tex, int l = 0, const Prisma::Color& c = {1,1,1,1}) 
-    { Graphics2D::DrawSprite(p, s, tex, l, c); }
-    
-    static void DrawQuad(const Matrix4& t, const std::shared_ptr<ITexture>& tex, int l = 0, const Prisma::Color& c = {1,1,1,1}) 
-    { Graphics2D::DrawSprite(t, tex, l, c); }
+    // 调试与 Gizmos
+    static void DrawLine(const Vector2& start, const Vector2& end, const Prisma::Color& color, float thickness = 1.0f);
+    static void DrawRect(const Vector2& position, const Vector2& size, const Prisma::Color& color, float thickness = 1.0f);
 
-    static void DrawQuad(const Vector2& p, const Vector2& s, const std::shared_ptr<ITexture>& tex, const Vector2 uv[4], const Prisma::Color& c = {1,1,1,1}) 
-    { Graphics2D::DrawSprite(p, s, tex, uv, 0, c); }
+    // 绘制实心矩形
+    static void DrawQuad(const Vector2& position, const Vector2& size, const Prisma::Color& color);
+    static void DrawQuad(const Matrix4& transform, const Prisma::Color& color);
 
-    static void DrawQuad(const Matrix4& t, const std::shared_ptr<ITexture>& tex, const Vector2 uv[4], const Prisma::Color& c = {1,1,1,1}) 
-    { Graphics2D::DrawSprite(t, tex, uv, 0, c); }
+    // 绘制纹理矩形 (Sprite)
+    static void DrawQuad(const Vector2& position, const Vector2& size, const std::shared_ptr<ITexture>& texture, const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
+    static void DrawQuad(const Matrix4& transform, const std::shared_ptr<ITexture>& texture, const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
 
-    static void DrawString(const std::string& t, const Vector2& p, float s = 1.0f, const Prisma::Color& c = {1,1,1,1}) 
-    { Graphics2D::DrawString(t, p, s, c, 0); }
+    // 绘制纹理矩形 (带 UV)
+    static void DrawQuad(const Vector2& position, const Vector2& size, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
+    static void DrawQuad(const Matrix4& transform, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
 
-    static float GetStringWidth(const std::string& t, float s = 1.0f) { return Graphics2D::GetStringWidth(t, s); }
+    // 绘制文本 (使用内置像素字体或提供的图集)
+    static void DrawString(const std::string& text, const Vector2& position, float scale = 1.0f, const Prisma::Color& color = {1.0f, 1.0f, 1.0f, 1.0f});
+    static float GetStringWidth(const std::string& text, float scale = 1.0f);
 
-    static Statistics GetStats() { return Graphics2D::GetStats(); }
-    static void SetBatchingEnabled(bool) {}
-    static bool IsBatchingEnabled() { return true; }
-    static void SetLightTexture(const std::shared_ptr<ITexture>& t) { Graphics2D::SetLightTexture(t); }
+    // ========== 统计数据 ==========
+
+    static void ResetStats();
+    static Statistics GetStats();
+
+    // 控制合批开关
+    static void SetBatchingEnabled(bool enabled);
+    static bool IsBatchingEnabled();
+
+    // 设置光照纹理
+    static void SetLightTexture(const std::shared_ptr<ITexture>& texture);
+
+private:
+    static void StartBatch();
+    static void NextBatch();
+
+    struct Renderer2DData;
+    static Renderer2DData* s_Data;
 };
 
 } // namespace Graphic
