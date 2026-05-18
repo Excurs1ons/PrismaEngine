@@ -362,7 +362,102 @@ int Template3DApp::OnInitialize() {
 }
 
 void Template3DApp::InitForwardResources() {
-    LOG_INFO("Template3D", "Forward3D 资源初始化（占位）");
+    LOG_INFO("Template3D", "Forward3D Cornell Box 网格初始化");
+
+    if (!m_device) return;
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) return;
+
+    // ── Helper: 生成一个面的 4 个顶点 ──
+    struct FaceInput {
+        glm::vec3 v0, v1, v2, v3;    // 4 个角的位置
+        glm::vec4 color;              // 面的颜色
+    };
+
+    // 每面 4 个顶点，每顶点 6 个 vec4 = 96 字节
+    // 使用 Vertex 结构（定义于 RenderTypes.h）
+    std::vector<Graphic::Vertex> vertices;
+    std::vector<uint16_t> indices;
+
+    auto addFace = [&](const FaceInput& f) {
+        uint16_t base = static_cast<uint16_t>(vertices.size());
+        // 添加 4 个顶点
+        vertices.emplace_back(glm::vec4(f.v0, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
+        vertices.emplace_back(glm::vec4(f.v1, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
+        vertices.emplace_back(glm::vec4(f.v2, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
+        vertices.emplace_back(glm::vec4(f.v3, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
+        // 2 个三角形: 0-1-2, 0-2-3
+        indices.push_back(base); indices.push_back(base + 1); indices.push_back(base + 2);
+        indices.push_back(base); indices.push_back(base + 2); indices.push_back(base + 3);
+    };
+
+    auto addBox = [&](const glm::vec3& min, const glm::vec3& max, const glm::vec4& color) {
+        // 6 个面: -X, +X, -Y, +Y, -Z, +Z
+        addFace({glm::vec3(min.x, min.y, min.z), glm::vec3(min.x, max.y, min.z),
+                 glm::vec3(min.x, max.y, max.z), glm::vec3(min.x, min.y, max.z), color}); // -X
+        addFace({glm::vec3(max.x, min.y, max.z), glm::vec3(max.x, max.y, max.z),
+                 glm::vec3(max.x, max.y, min.z), glm::vec3(max.x, min.y, min.z), color}); // +X
+        addFace({glm::vec3(min.x, min.y, max.z), glm::vec3(max.x, min.y, max.z),
+                 glm::vec3(max.x, min.y, min.z), glm::vec3(min.x, min.y, min.z), color}); // -Y
+        addFace({glm::vec3(min.x, max.y, min.z), glm::vec3(max.x, max.y, min.z),
+                 glm::vec3(max.x, max.y, max.z), glm::vec3(min.x, max.y, max.z), color}); // +Y
+        addFace({glm::vec3(min.x, min.y, min.z), glm::vec3(max.x, min.y, min.z),
+                 glm::vec3(max.x, max.y, min.z), glm::vec3(min.x, max.y, min.z), color}); // -Z
+        addFace({glm::vec3(max.x, min.y, max.z), glm::vec3(min.x, min.y, max.z),
+                 glm::vec3(min.x, max.y, max.z), glm::vec3(max.x, max.y, max.z), color}); // +Z
+    };
+
+    // ── Cornell Box 墙面 ──
+    glm::vec4 white(0.7f, 0.7f, 0.7f, 1.0f);
+    glm::vec4 red(0.8f, 0.05f, 0.05f, 1.0f);
+    glm::vec4 green(0.05f, 0.5f, 0.05f, 1.0f);
+    glm::vec4 lightCol(15.0f, 15.0f, 15.0f, 1.0f);
+
+    // 后墙 z=-1
+    addFace({{-1,-1,-1}, { 1,-1,-1}, { 1, 1,-1}, {-1, 1,-1}, white});
+    // 左墙 x=-1
+    addFace({{-1,-1,-1}, {-1,-1, 1}, {-1, 1, 1}, {-1, 1,-1}, red});
+    // 右墙 x=1
+    addFace({{ 1,-1, 1}, { 1,-1,-1}, { 1, 1,-1}, { 1, 1, 1}, green});
+    // 天花板 y=1
+    addFace({{-1, 1,-1}, { 1, 1,-1}, { 1, 1, 1}, {-1, 1, 1}, white});
+    // 地板 y=-1
+    addFace({{-1,-1, 1}, { 1,-1, 1}, { 1,-1,-1}, {-1,-1,-1}, white});
+
+    // 光源 (天花板上的小发光面板)
+    addFace({{-0.3f, 0.999f, -0.3f}, { 0.3f, 0.999f, -0.3f},
+             { 0.3f, 0.999f,  0.3f}, {-0.3f, 0.999f,  0.3f}, lightCol});
+
+    // 内部方块: 左(红色), 右(绿色)
+    addBox(glm::vec3(-0.6f, -1.0f, -0.15f), glm::vec3(-0.3f, -0.4f, 0.15f), red);
+    addBox(glm::vec3( 0.3f, -1.0f, -0.15f), glm::vec3( 0.6f, -0.7f, 0.15f), green);
+
+    // ── 创建 GPU 缓冲 ──
+    size_t vbSize = vertices.size() * sizeof(Graphic::Vertex);
+    size_t ibSize = indices.size() * sizeof(uint16_t);
+
+    BufferDesc vbDesc{};
+    vbDesc.type = BufferType::Vertex;
+    vbDesc.size = static_cast<uint32_t>(vbSize);
+    vbDesc.usage = BufferUsage::Default;
+    m_cornellBoxVB = factory->CreateBufferImpl(vbDesc);
+    if (m_cornellBoxVB) {
+        m_cornellBoxVB->UpdateData(vertices.data(), static_cast<uint32_t>(vbSize), 0);
+    }
+
+    BufferDesc ibDesc{};
+    ibDesc.type = BufferType::Index;
+    ibDesc.size = static_cast<uint32_t>(ibSize);
+    ibDesc.usage = BufferUsage::Default;
+    m_cornellBoxIB = factory->CreateBufferImpl(ibDesc);
+    if (m_cornellBoxIB) {
+        m_cornellBoxIB->UpdateData(indices.data(), static_cast<uint32_t>(ibSize), 0);
+    }
+
+    m_cornellBoxIndexCount = static_cast<uint32_t>(indices.size());
+
+    LOG_INFO("Template3D", "Cornell Box 网格创建完成: {} 顶点, {} 索引",
+             vertices.size(), indices.size());
 }
 
 void Template3DApp::InitPathTracingResources() {
@@ -936,6 +1031,10 @@ void Template3DApp::OnEvent(Event& e) {
     Application::OnEvent(e);
 
     EventDispatcher d(e);
+    d.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) {
+        OnWindowResize(ev.GetWidth(), ev.GetHeight());
+        return false; // 不阻止事件传播
+    });
     d.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) {
         if (ev.GetKeyCode() == SDL_SCANCODE_ESCAPE) {
             Close();
@@ -959,6 +1058,28 @@ void Template3DApp::OnEvent(Event& e) {
         }
         return false;
     });
+}
+
+void Template3DApp::OnWindowResize(uint32_t w, uint32_t h) {
+    // 更新 spec
+    m_Spec.Width = w;
+    m_Spec.Height = h;
+
+    // 更新 gizmo 屏幕空间相机
+    if (m_gizmoCamera) {
+        m_gizmoCamera->SetProjection(0.0f, static_cast<float>(w), 0.0f, static_cast<float>(h));
+    }
+
+    // 更新 present 视口尺寸
+    m_presentRes.extent = { w, h };
+
+    // 更新路径追踪尺寸标记（下次进入 PT 模式时重新创建资源）
+    m_ptRes.width = w;
+    m_ptRes.height = h;
+    m_pathTracingDirty = true;
+    m_ptRes.frameCount = 0;
+
+    LOG_INFO("Template3D", "窗口大小变化: {}x{}", w, h);
 }
 
 void Template3DApp::OnShutdown() {
