@@ -40,15 +40,16 @@ RenderDeviceVulkan::~RenderDeviceVulkan() {
 
 int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     m_desc = desc;
-    LOG_INFO("Vulkan", "正在初始化 Vulkan 设备");
+    m_headless = desc.headless;
+    LOG_INFO("Vulkan", "正在初始化 Vulkan 设备{0}", m_headless ? " (头模式)" : "");
 
     try {
-        // 1. 创建实例
         vkb::InstanceBuilder inst_builder;
         auto inst_ret = inst_builder.set_app_name(desc.name.c_str())
                             .request_validation_layers(desc.enableValidation)
                             .use_default_debug_messenger()
                             .require_api_version(1, 3, 0)
+                            .set_headless(m_headless)
                             .build();
 
         if (!inst_ret)
@@ -56,10 +57,12 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         m_vkbInstance = inst_ret.value();
         m_instance    = m_vkbInstance.instance;
 
-        auto& window          = Engine::Get().GetWindow();
-        SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
-        if (!SDL_Vulkan_CreateSurface(sdlWindow, m_instance, nullptr, &m_surface)) {
-            return -1;
+        if (!m_headless) {
+            auto& window          = Engine::Get().GetWindow();
+            SDL_Window* sdlWindow = static_cast<SDL_Window*>(window.GetNativeWindow());
+            if (!SDL_Vulkan_CreateSurface(sdlWindow, m_instance, nullptr, &m_surface)) {
+                return -1;
+            }
         }
 
         // 2. 选择物理设备
@@ -67,8 +70,10 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         features.samplerAnisotropy = VK_TRUE;
 
         vkb::PhysicalDeviceSelector selector{m_vkbInstance};
-        auto phys_ret = selector.set_surface(m_surface)
-                            .set_minimum_version(1, 3)
+        if (!m_headless) {
+            selector.set_surface(m_surface);
+        }
+        auto phys_ret = selector.set_minimum_version(1, 3)
                             .set_required_features(features)
                             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
                             .select();
@@ -170,16 +175,17 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
             vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]);
         }
 
-        // 9. SwapChain
-        m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.presentMode);
+        if (!m_headless) {
+            m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.presentMode);
 
-        // 确保 renderFinishedSemaphores 足够大
-        uint32_t imageCount = m_swapChain->GetBufferCount();
-        if (m_renderFinishedSemaphores.size() < imageCount) {
-            size_t oldSize = m_renderFinishedSemaphores.size();
-            m_renderFinishedSemaphores.resize(imageCount);
-            for (size_t i = oldSize; i < imageCount; i++) {
-                vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+            // 确保 renderFinishedSemaphores 足够大
+            uint32_t imageCount = m_swapChain->GetBufferCount();
+            if (m_renderFinishedSemaphores.size() < imageCount) {
+                size_t oldSize = m_renderFinishedSemaphores.size();
+                m_renderFinishedSemaphores.resize(imageCount);
+                for (size_t i = oldSize; i < imageCount; i++) {
+                    vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+                }
             }
         }
 
@@ -248,9 +254,11 @@ void RenderDeviceVulkan::Shutdown() {
     }
 
     if (m_surface) {
-        LOG_DEBUG("VulkanDevice", "销毁表面...");
+        LOG_DEBUG("Vulkan", "销毁表面...");
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
         m_surface = VK_NULL_HANDLE;
+    } else {
+        LOG_DEBUG("Vulkan", "无 surface 需要销毁（头模式）");
     }
 
     // 4. 最后销毁设备和实例
@@ -268,6 +276,25 @@ void RenderDeviceVulkan::Shutdown() {
 void RenderDeviceVulkan::BeginFrame() {
     if (!m_initialized)
         return;
+
+    if (m_headless) {
+        vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
+        vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
+
+        VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+        vkResetCommandBuffer(cmd, 0);
+
+        VkCommandBufferBeginInfo beginInfo{};
+        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        vkBeginCommandBuffer(cmd, &beginInfo);
+
+        m_frameActive = true;
+        m_isDefaultRenderPassActive = false;
+        m_currentFrameIndex = m_currentFrame;
+        m_hasPendingPresent = false;
+        return;
+    }
+
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 
     if (!m_swapChain->AcquireNextImage(m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE)) {
@@ -283,12 +310,8 @@ void RenderDeviceVulkan::BeginFrame() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vkBeginCommandBuffer(cmd, &beginInfo);
 
-    // [改动] 统一保持 m_frameActive 为 true
-    // 目的：即使跳过了默认 RenderPass，命令缓冲区依然在录制（由调用方负责开启自己的 RenderPass），
-    //       必须保持活动状态以确保 EndFrame 能够执行提交。
     m_frameActive = true;
 
-    // 如果不跳过交换链RenderPass，则开始它
     if (!m_skipSwapChainRenderPass) {
         VkRenderPassBeginInfo rpInfo{};
         rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -302,7 +325,6 @@ void RenderDeviceVulkan::BeginFrame() {
         vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_isDefaultRenderPassActive = true;
     } else {
-        // 重置标志，下一帧恢复默认行为
         m_skipSwapChainRenderPass = false;
         m_isDefaultRenderPassActive = false;
     }
@@ -339,10 +361,21 @@ void RenderDeviceVulkan::EndFrame() {
         return;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
 
-    // [修复] 如果还没有开启 RenderPass (说明之前被跳过了)，现在为了 Overlay 开启它。
-    // 这样可以确保 ImGui 的绘制指令处于合法的 RenderPass 中，
-    // 同时通过 RenderPass 的 finalLayout 自动将交换链图像转换到 PRESENT_SRC_KHR 布局，
-    // 彻底解决 VUID-vkCmdDrawIndexed-renderpass 和 VUID-VkPresentInfoKHR-pImageIndices-01430。
+    if (m_headless) {
+        vkEndCommandBuffer(cmd);
+
+        VkSubmitInfo submitInfo{};
+        submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers    = &cmd;
+
+        vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]);
+        m_frameActive             = false;
+        m_hasPendingPresent       = true;
+        m_skipSwapChainRenderPass = false;
+        return;
+    }
+
     if (!m_isDefaultRenderPassActive) {
         VkRenderPassBeginInfo rpInfo{};
         rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -361,7 +394,6 @@ void RenderDeviceVulkan::EndFrame() {
         m_overlayRenderCallback(cmd);
     }
 
-    // 无论如何都要结束活动中的默认 RenderPass
     if (m_isDefaultRenderPassActive) {
         vkCmdEndRenderPass(cmd);
         m_isDefaultRenderPassActive = false;
@@ -390,7 +422,17 @@ void RenderDeviceVulkan::EndFrame() {
 }
 
 void RenderDeviceVulkan::Present() {
-    if (!m_initialized || !m_hasPendingPresent || !m_swapChain) {
+    if (!m_initialized || !m_hasPendingPresent)
+        return;
+
+    if (m_headless) {
+        m_hasPendingPresent = false;
+        m_currentFrame = (m_currentFrame + 1) % static_cast<uint32_t>(m_commandBuffers.size());
+        return;
+    }
+
+    if (!m_swapChain) {
+        m_hasPendingPresent = false;
         return;
     }
 
@@ -490,7 +532,112 @@ std::string RenderDeviceVulkan::GetGPUName() const {
     return m_gpuName.empty() ? "Unknown GPU" : m_gpuName;
 }
 VkRenderPass RenderDeviceVulkan::GetOverlayRenderPass() const {
+    if (m_headless) return VK_NULL_HANDLE;
     return m_swapChain ? m_swapChain->GetRenderPass() : VK_NULL_HANDLE;
+}
+
+bool RenderDeviceVulkan::ReadbackImage(VkImage image, uint32_t width, uint32_t height,
+                                        VkFormat format, void* outBuffer, size_t bufferSize) {
+    if (!m_device || !image || !outBuffer) return false;
+
+    VkDeviceSize imageSize = VkDeviceSize(width) * height * 4 * sizeof(float); // RGBA32F
+
+    // 创建 staging buffer
+    VkBufferCreateInfo bufCI{};
+    bufCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufCI.size = imageSize;
+    bufCI.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    VmaAllocationCreateInfo allocCI{};
+    allocCI.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+    allocCI.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT |
+                    VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    VkBuffer stagingBuffer = VK_NULL_HANDLE;
+    VmaAllocation stagingAlloc = VK_NULL_HANDLE;
+    VmaAllocationInfo allocInfo{};
+    if (vmaCreateBuffer(m_allocator, &bufCI, &allocCI,
+                        &stagingBuffer, &stagingAlloc, &allocInfo) != VK_SUCCESS) {
+        return false;
+    }
+
+    // 使用临时命令缓冲区执行拷贝
+    VkCommandBufferAllocateInfo cmdAI{};
+    cmdAI.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    cmdAI.commandPool = m_commandPool;
+    cmdAI.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    cmdAI.commandBufferCount = 1;
+
+    VkCommandBuffer cmd = VK_NULL_HANDLE;
+    vkAllocateCommandBuffers(m_device, &cmdAI, &cmd);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(cmd, &beginInfo);
+
+    // image 转换到 TRANSFER_SRC_OPTIMAL
+    VkImageMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.levelCount = 1;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    vkCmdPipelineBarrier(cmd,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    // 拷贝图像到 staging buffer
+    VkBufferImageCopy copyRegion{};
+    copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    copyRegion.imageSubresource.layerCount = 1;
+    copyRegion.imageExtent = { width, height, 1 };
+    vkCmdCopyImageToBuffer(cmd, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           stagingBuffer, 1, &copyRegion);
+
+    // 恢复 image 布局
+    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    vkCmdPipelineBarrier(cmd,
+        VK_PIPELINE_STAGE_TRANSFER_BIT,
+        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+        0, 0, nullptr, 0, nullptr, 1, &barrier);
+
+    vkEndCommandBuffer(cmd);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &cmd;
+
+    VkFence fence = VK_NULL_HANDLE;
+    VkFenceCreateInfo fenceCI{};
+    fenceCI.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    vkCreateFence(m_device, &fenceCI, nullptr, &fence);
+
+    vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, fence);
+    vkWaitForFences(m_device, 1, &fence, VK_TRUE, UINT64_MAX);
+
+    vkDestroyFence(m_device, fence, nullptr);
+    vkFreeCommandBuffers(m_device, m_commandPool, 1, &cmd);
+
+    // 从 staging buffer 拷贝到输出
+    void* mapped = allocInfo.pMappedData;
+    if (mapped) {
+        memcpy(outBuffer, mapped, std::min(imageSize, VkDeviceSize(bufferSize)));
+    }
+
+    vmaDestroyBuffer(m_allocator, stagingBuffer, stagingAlloc);
+    return true;
 }
 
 }  // namespace Prisma::Graphic::Vulkan

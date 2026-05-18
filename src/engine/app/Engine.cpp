@@ -134,7 +134,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
     std::vector<std::string> projPaths = {
         "assets/project.json",
         "project.json",
-        "projects/Template2D/assets/project.json"
+        "projects/Template2D/assets/project.json",
+        "projects/Template3D/assets/project.json"
     };
 
     bool configLoaded = false;
@@ -173,25 +174,28 @@ int Engine::Run(std::unique_ptr<Application> app) {
         LOG_WARNING("Engine", "未找到有效的 project.json，使用默认应用配置");
     }
 
-    // 1. 创建窗口
-    WindowProps winProps;
-    winProps.Title = appSpec.Name;
-    winProps.Width = appSpec.Width;
-    winProps.Height = appSpec.Height;
-    winProps.Resizable = appSpec.Resizable;
-    winProps.fullScreenMode = appSpec.Fullscreen ? FullScreenMode::FullScreen : FullScreenMode::Window;
-    
-    m_Window = Window::Create(winProps);
-    if (!m_Window) {
-        LOG_FATAL("Engine", "创建窗口失败！");
-        return -1;
+    if (!m_Spec.Headless) {
+        WindowProps winProps;
+        winProps.Title = appSpec.Name;
+        winProps.Width = appSpec.Width;
+        winProps.Height = appSpec.Height;
+        winProps.Resizable = appSpec.Resizable;
+        winProps.fullScreenMode = appSpec.Fullscreen ? FullScreenMode::FullScreen : FullScreenMode::Window;
+
+        m_Window = Window::Create(winProps);
+        if (!m_Window) {
+            LOG_FATAL("Engine", "创建窗口失败！");
+            return -1;
+        }
+    } else {
+        LOG_INFO("Engine", "头模式：跳过窗口创建");
     }
 
     // 2. 初始化渲染系统
     Graphic::RenderSystemDesc rDesc;
-    rDesc.windowHandle = m_Window->GetNativeWindow();
-    rDesc.width = m_Window->GetWidth();
-    rDesc.height = m_Window->GetHeight();
+    rDesc.windowHandle = m_Window ? m_Window->GetNativeWindow() : nullptr;
+    rDesc.width = m_Window ? m_Window->GetWidth() : appSpec.Width;
+    rDesc.height = m_Window ? m_Window->GetHeight() : appSpec.Height;
     rDesc.enableDebug      = false;
     rDesc.presentMode      = appSpec.PresentMode;
     rDesc.enableValidation = false;
@@ -208,37 +212,40 @@ int Engine::Run(std::unique_ptr<Application> app) {
     }
 
     // 3. 设置窗口事件回调
-    m_Window->SetEventCallback([this](Event& e) {
-        EventDispatcher dispatcher(e);
-        
-        dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& [[maybe_unused]] event) {
-            m_Running = false;
-            return true;
-        });
+    if (m_Window) {
+        m_Window->SetEventCallback([this](Event& e) {
+            EventDispatcher dispatcher(e);
 
-        dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
-            if (event.GetWidth() == 0 || event.GetHeight() == 0) {
-                m_Minimized = true;
-                return false;
-            }
-            m_Minimized = false;
-            if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
-            if (m_SceneManager) {
-                auto* scene = m_SceneManager->GetCurrentScene();
-                if (scene) {
-                    auto camera = scene->GetMainCamera();
-                    if (camera) camera->SetViewport(event.GetWidth(), event.GetHeight());
+            dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& event) {
+                (void)event;
+                m_Running = false;
+                return true;
+            });
+
+            dispatcher.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& event) {
+                if (event.GetWidth() == 0 || event.GetHeight() == 0) {
+                    m_Minimized = true;
+                    return false;
                 }
-            }
-            if (m_CurrentApp) {
-                m_CurrentApp->GetSpecification().Width  = event.GetWidth();
-                m_CurrentApp->GetSpecification().Height = event.GetHeight();
-            }
-            return false;
-        });
+                m_Minimized = false;
+                if (m_RenderSystem) m_RenderSystem->Resize(event.GetWidth(), event.GetHeight());
+                if (m_SceneManager) {
+                    auto* scene = m_SceneManager->GetCurrentScene();
+                    if (scene) {
+                        auto camera = scene->GetMainCamera();
+                        if (camera) camera->SetViewport(event.GetWidth(), event.GetHeight());
+                    }
+                }
+                if (m_CurrentApp) {
+                    m_CurrentApp->GetSpecification().Width  = event.GetWidth();
+                    m_CurrentApp->GetSpecification().Height = event.GetHeight();
+                }
+                return false;
+            });
 
-        if (m_CurrentApp) m_CurrentApp->OnEvent(e);
-    });
+            if (m_CurrentApp) m_CurrentApp->OnEvent(e);
+        });
+    }
 
 #if PRISMA_ENABLE_SCRIPTING > 0
     // 初始化 C# 脚本引擎
@@ -283,7 +290,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
         auto* scene = m_SceneManager->GetCurrentScene();
         if (scene) {
             auto camera = scene->GetMainCamera();
-            if (camera && m_Window) camera->SetViewport(m_Window->GetWidth(), m_Window->GetHeight());
+            if (camera) {
+                camera->SetViewport(m_Window ? m_Window->GetWidth() : appSpec.Width,
+                                    m_Window ? m_Window->GetHeight() : appSpec.Height);
+            }
         }
     }
 
@@ -299,7 +309,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         if (m_Window) m_Window->OnUpdate();
         else {
             Platform::PumpEvents();
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+            std::this_thread::yield();
         }
         
         double time = Platform::GetTimeSeconds();

@@ -325,6 +325,7 @@ struct DeviceDesc {
     bool enableDebug = false;
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;
+    bool headless = false;
 };
 
 // 纹理过滤模式
