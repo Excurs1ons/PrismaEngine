@@ -76,6 +76,9 @@ private:
     void InitGizmoResources();
     void ProcessGizmoOverlay(VkCommandBuffer cmd);
 
+    // 窗口 resize 处理
+    void OnWindowResize(uint32_t w, uint32_t h);
+
     // 场景加载
     void LoadSceneFromJSON(const std::string& path);
 
@@ -83,11 +86,9 @@ private:
     RenderMode m_renderMode = RenderMode::PathTracing;
 
     // ========== Forward 3D ==========
-    std::shared_ptr<Graphic::Mesh> m_cornellBoxMesh;
-    std::shared_ptr<Graphic::Material> m_redMaterial;
-    std::shared_ptr<Graphic::Material> m_greenMaterial;
-    std::shared_ptr<Graphic::Material> m_grayMaterial;
-    std::shared_ptr<Graphic::Material> m_lightMaterial;
+    std::unique_ptr<Graphic::IBuffer> m_cornellBoxVB;      // 顶点缓冲 (Vertex 格式)
+    std::unique_ptr<Graphic::IBuffer> m_cornellBoxIB;      // 索引缓冲
+    uint32_t m_cornellBoxIndexCount = 0;                   // 总索引数
 
     // ========== 路径追踪（抽象接口） ==========
     struct PathTracingResources {
