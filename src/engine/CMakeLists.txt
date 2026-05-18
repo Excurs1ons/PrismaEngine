@@ -76,13 +76,6 @@ set(CORE_SOURCES
     resource/ResourceFallbackImpl.cpp
     resource/TextureAsset.cpp
 
-    # Tilemap
-    tilemap/TilemapAsset.cpp
-    tilemap/format/TileDataDecoder.cpp
-    tilemap/format/TmxParser.cpp
-    tilemap/format/TsxParser.cpp
-    tilemap/renderer/TilemapRenderer.cpp
-
     # Core
     core/AssetManager.cpp
     core/AssetDatabase.cpp
@@ -104,6 +97,9 @@ set(CORE_SOURCES
 
     # Math
     math/MurmurHash3.cpp
+
+    # Utils
+    utils/ImageUtils.cpp
 
     # Graphic
     graphic/Renderer.cpp
@@ -337,7 +333,6 @@ set(CORE_HEADERS
     resource/ResourceFallback.h
     resource/ResourceSerializer.h
     resource/TextureAsset.h
-    resource/TilemapAsset.h
     resource/Archive.h
     resource/ArchiveBinary.h
     resource/ArchiveJson.h
@@ -345,24 +340,6 @@ set(CORE_HEADERS
     resource/OBJParser.h
     resource/ResourceFallbackImpl.h
     resource/embedded/EmbeddedResources.h
-
-    # Tilemap
-    tilemap/TilemapAsset.h
-    tilemap/core/GroupLayer.h
-    tilemap/core/ImageLayer.h
-    tilemap/core/Map.h
-    tilemap/core/ObjectLayer.h
-    tilemap/core/Tile.h
-    tilemap/core/TileLayer.h
-    tilemap/core/Tileset.h
-    tilemap/core/Types.h
-    tilemap/format/TileDataDecoder.h
-    tilemap/format/TmxParser.h
-    tilemap/format/TsxParser.h
-    tilemap/renderer/AnimatedTileManager.h
-    tilemap/renderer/TileChunk.h
-    tilemap/renderer/TileGeometryBuilder.h
-    tilemap/renderer/TilemapRenderer.h
 
     # Core
     core/AssetManager.h
@@ -402,6 +379,9 @@ set(CORE_HEADERS
     math/MathTypes.h
     math/MatrixUtils.h
     math/MurmurHash3.h
+
+    # Utils
+    utils/ImageUtils.h
 
     # Config
     config/AudioBackendConfig.h
@@ -503,24 +483,20 @@ target_link_libraries(Engine
         glm::glm-header-only
         glaze::glaze
         stb
-        tinyxml2
-        imgui::imgui
 )
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
     # SDL3 库链接
-    # 此处使用 PRIVATE 链接，原因如下：
-    # 1. 封装性：SDL3 是 Engine 的内部实现细节，外界（如游戏逻辑）应通过 Engine 接口操作窗口/音频。
-    # 2. 避免污染：防止所有链接 Engine 的目标自动获得 SDL3 的所有符号，保持依赖链简洁。
-    # 3. 符号一致性：插件（如 Editor）若需直接调用 SDL，应自行显式链接 SDL3-shared 目标以确保正确解析头文件路径。
+    # 此处使用 PUBLIC 链接，因为 Engine 的公有头文件 (如 Window.h) 和 
+    # 外部项目 (如 Template3D) 需要引用 SDL3 的头文件。
     if(TARGET SDL3-shared)
-        target_link_libraries(Engine PRIVATE SDL3-shared)
+        target_link_libraries(Engine PUBLIC SDL3-shared)
     elseif(TARGET SDL3::SDL3-shared)
-        target_link_libraries(Engine PRIVATE SDL3::SDL3-shared)
+        target_link_libraries(Engine PUBLIC SDL3::SDL3-shared)
     elseif(TARGET SDL3-static)
-        target_link_libraries(Engine PRIVATE SDL3-static)
+        target_link_libraries(Engine PUBLIC SDL3-static)
     elseif(TARGET SDL3)
-        target_link_libraries(Engine PRIVATE SDL3)
+        target_link_libraries(Engine PUBLIC SDL3)
     endif()
 endif()
 
@@ -569,7 +545,6 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/2d>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/input>
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tilemap>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/app>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scene>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/object>
