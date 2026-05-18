@@ -3,6 +3,7 @@
 #include "RenderTypes.h"
 #include "IResourceManager.h"
 #include "IPipelineState.h"
+#include "IComputePipeline.h"
 #include "IDescriptorSet.h"
 #include <memory>
 
@@ -82,6 +83,10 @@ public:
     /// @param desc 管线描述
     /// @return 管线智能指针
     virtual std::unique_ptr<IPipelineState> CreatePipelineStateImpl() = 0;
+
+    /// @brief 创建计算管线实现
+    /// @return 计算管线智能指针
+    virtual std::unique_ptr<IComputePipeline> CreateComputePipelineImpl() = 0;
 
     // === 采样器创建 ===
 
