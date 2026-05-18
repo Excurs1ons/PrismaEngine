@@ -45,9 +45,6 @@ endmacro()
 Prisma_Declare_Dependency(glm https://github.com/g-truc/glm.git ${PRISMA_DEP_GLM_VERSION})
 # nlohmann_json 依赖已移除 (正在迁移至 Glaze)
 Prisma_Declare_Dependency(stb https://github.com/nothings/stb.git ${PRISMA_DEP_STB_VERSION})
-set(tinyxml2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
-Prisma_Declare_Dependency(tinyxml2 https://github.com/leethomason/tinyxml2.git ${PRISMA_DEP_TINYXML2_VERSION})
 Prisma_Declare_Dependency(zstd https://github.com/facebook/zstd.git ${PRISMA_DEP_ZSTD_VERSION})
 Prisma_Declare_Dependency(SDL3 https://github.com/libsdl-org/SDL.git ${PRISMA_DEP_SDL3_VERSION})
 Prisma_Declare_Dependency(Vulkan-Headers https://github.com/KhronosGroup/Vulkan-Headers.git ${PRISMA_DEP_VULKAN_HEADERS_VERSION})
@@ -92,16 +89,13 @@ set(ZSTD_BUILD_PROGRAMS OFF CACHE BOOL "" FORCE)
 # 强制开启相关依赖的位置无关代码 (PIC)
 set(VK_BOOTSTRAP_POSITION_INDEPENDENT_CODE ON CACHE BOOL "" FORCE)
 
-# 针对 tinyxml2 的专项屏蔽
-set(TINYXML2_BUILD_TESTING OFF CACHE BOOL "" FORCE)
-
 # 暂时提升消息等级以压制第三方库的繁杂输出
 set(OLD_LOG_LEVEL ${CMAKE_MESSAGE_LOG_LEVEL})
 set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
 set(CMAKE_WARN_DEPRECATED OFF)
 
 # 加载依赖 (使用 EXCLUDE_FROM_ALL 进一步隔离不需要的 target)
-FetchContent_MakeAvailable(glm stb tinyxml2 zstd)
+FetchContent_MakeAvailable(glm stb zstd)
 
 # STB 总是作为接口库处理
 if(NOT TARGET stb)
