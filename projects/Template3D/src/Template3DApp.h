@@ -6,6 +6,10 @@
 #include "graphic/Mesh.h"
 #include "graphic/Material.h"
 #include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/ITexture.h"
+#include "graphic/interfaces/IBuffer.h"
+#include "graphic/interfaces/IComputePipeline.h"
+#include "graphic/interfaces/IDescriptorSet.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -73,37 +77,22 @@ private:
     std::shared_ptr<Graphic::Material> m_grayMaterial;
     std::shared_ptr<Graphic::Material> m_lightMaterial;
 
-    // ========== 路径追踪（Vulkan 原生句柄） ==========
+    // ========== 路径追踪（抽象接口） ==========
     struct PathTracingResources {
-        // 通过 IRenderDevice 获取的 Vulkan 句柄
-        VkDevice vkDevice = VK_NULL_HANDLE;
-        VkPhysicalDevice vkPhysicalDevice = VK_NULL_HANDLE;
-        VmaAllocator vmaAllocator = VK_NULL_HANDLE;
-        VkQueue graphicsQueue = VK_NULL_HANDLE;
-        uint32_t graphicsQueueFamily = 0;
+        // 存储纹理（计算着色器写入，片段着色器采样，由 ResourceFactory 创建）
+        std::unique_ptr<Graphic::ITexture> storageTexture;
 
-        // 计算着色器管线
-        VkShaderModule computeShaderModule = VK_NULL_HANDLE;
-        VkPipeline computePipeline = VK_NULL_HANDLE;
-        VkPipelineLayout computePipelineLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout computeDescriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-        VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
+        // Uniform 缓冲 (Camera UBO)
+        std::unique_ptr<Graphic::IBuffer> cameraUBO;
 
-        // 存储图像（路径追踪输出，计算着色器写入，片段着色器采样）
-        VkImage storageImage = VK_NULL_HANDLE;
-        VkImageView storageImageView = VK_NULL_HANDLE;
-        VmaAllocation storageImageAllocation = VK_NULL_HANDLE;
+        // SSBO (场景对象数据)
+        std::unique_ptr<Graphic::IBuffer> sceneSSBO;
 
-        // Uniform 缓冲: 只有相机 + 累积参数
-        VkBuffer cameraUBO = VK_NULL_HANDLE;
-        VmaAllocation cameraUBOAllocation = VK_NULL_HANDLE;
-        void* cameraUBOMapped = nullptr;
+        // 计算管线（封装 VkPipeline + VkPipelineLayout + VkDescriptorSetLayout）
+        std::unique_ptr<Graphic::IComputePipeline> computePipeline;
 
-        // SSBO: 场景对象数据
-        VkBuffer sceneSSBO = VK_NULL_HANDLE;
-        VmaAllocation sceneSSBOAllocation = VK_NULL_HANDLE;
-        void* sceneSSBOMapped = nullptr;
+        // 描述符集
+        std::shared_ptr<Graphic::IDescriptorSet> descriptorSet;
 
         // 累积帧计数器
         uint32_t frameCount = 0;
@@ -116,14 +105,16 @@ private:
     struct PresentResources {
         VkDevice vkDevice = VK_NULL_HANDLE;
 
-        // 全屏四边形绘制管线
+        // 全屏四边形绘制管线（保持原生，需 VkRenderPass 创建）
         VkShaderModule vertShaderModule = VK_NULL_HANDLE;
         VkShaderModule fragShaderModule = VK_NULL_HANDLE;
         VkPipeline pipeline = VK_NULL_HANDLE;
         VkPipelineLayout pipelineLayout = VK_NULL_HANDLE;
-        VkDescriptorSetLayout descriptorSetLayout = VK_NULL_HANDLE;
-        VkDescriptorSet descriptorSet = VK_NULL_HANDLE;
-        VkSampler sampler = VK_NULL_HANDLE;
+
+        // 抽象资源
+        std::shared_ptr<Graphic::IDescriptorSetLayout> descriptorSetLayout;
+        std::unique_ptr<Graphic::ISampler> sampler;
+        std::shared_ptr<Graphic::IDescriptorSet> descriptorSet;
 
         // 当前帧图像信息
         VkExtent2D extent = {};
