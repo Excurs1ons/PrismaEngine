@@ -2,8 +2,6 @@
 #include "DepthPrePass.h"
 #include "OpaquePass.h"
 #include "TransparentPass.h"
-#include "../../2d/Light2DPass.h"
-#include "../../2d/ReflectionPass2D.h"
 #include "../../2d/PostProcessPass2D.h"
 #include "../../2d/UIPass2D.h"
 #include "../SkyboxRenderPass.h"
@@ -77,8 +75,6 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
     m_depthPrePass = std::make_shared<DepthPrePass>();
     m_opaquePass = std::make_shared<OpaquePass>();
     m_opaquePass->SetDevice(device);
-    m_light2DPass = std::make_shared<Light2DPass>();
-    m_reflectionPass2D = std::make_shared<ReflectionPass2D>();
     m_postProcessPass = std::make_shared<PostProcessPass2D>();
     m_uiPass = std::make_shared<UIPass2D>();
     m_skyboxPass = std::make_shared<SkyboxPass>();
@@ -89,10 +85,8 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
 void ForwardPipeline::Shutdown() {
     m_depthPrePass.reset();
     m_opaquePass.reset();
-    m_light2DPass.reset();
     m_skyboxPass.reset();
     m_transparentPass.reset();
-    m_reflectionPass2D.reset();
     m_postProcessPass.reset();
     m_uiPass.reset();
     m_gizmoPSO.reset();
@@ -171,32 +165,6 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         m_depthPrePass->Execute(passContext);
     }
 
-    // ⚡ Light2DPass 先于 OpaquePass 执行，确保光照纹理在场景渲染前准备就绪
-    // 渲染结果会通过 SetLightTexture 传递给下一帧的 Renderer2D（一帧延迟可接受）
-    //
-    // [修复] Vulkan 禁止嵌套 RenderPass。BeginFrame 已开启交换链 RP，
-    //        Light2DPass 需要自己的离屏 RP，因此必须先暂停交换链 RP。
-    auto* vkDev = dynamic_cast<Vulkan::RenderDeviceVulkan*>(ctx.device);
-    if (vkDev && !ctx.targetTexture) {
-        vkDev->SuspendDefaultRenderPass();
-    }
-
-    if (m_light2DPass) {
-        m_light2DPass->SetViewMatrix(view);
-        m_light2DPass->SetProjectionMatrix(proj);
-        m_light2DPass->Execute(passContext);
-        if (ctx.commandBuffer) {
-            m_light2DPass->ExecuteLight(ctx.commandBuffer, m_device, ctx.width, ctx.height);
-        }
-        // 将光照纹理传递给 Renderer2D，下一帧 OpaquePass 采样合成
-        Renderer2D::SetLightTexture(m_light2DPass->GetLightTexture());
-    }
-
-    // Light2DPass 完成后，重新开启交换链 RP 供后续 Pass 使用
-    if (vkDev && !ctx.targetTexture) {
-        vkDev->ResumeDefaultRenderPass();
-    }
-
     if (m_opaquePass) {
         m_opaquePass->SetViewMatrix(view);
         m_opaquePass->SetProjectionMatrix(proj);
@@ -205,18 +173,6 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         if (ctx.commandBuffer) {
             // [修复] ICommandBuffer* 现在直接传递
             m_opaquePass->Execute(ctx.commandBuffer, commands);
-        }
-    }
-
-    // ── ReflectionPass2D ──
-    // 在 OpaquePass 绘制场景后，使用前一帧捕获的场景颜色
-    // 对反射材质表面采样镜像 UV 坐标，实现水面倒影/镜面效果
-    if (m_reflectionPass2D) {
-        m_reflectionPass2D->SetViewMatrix(view);
-        m_reflectionPass2D->SetProjectionMatrix(proj);
-        m_reflectionPass2D->Execute(passContext);
-        if (ctx.commandBuffer) {
-            m_reflectionPass2D->ExecuteReflection(ctx.commandBuffer, m_device, ctx.width, ctx.height);
         }
     }
 
@@ -265,12 +221,6 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
             }
             Renderer::ClearGizmoQueue();
         }
-    }
-
-    // ── Capture scene for next frame's reflections ──
-    // 必须在所有渲染完成后执行，且不在任何 RenderPass 内部
-    if (m_reflectionPass2D && ctx.commandBuffer) {
-        m_reflectionPass2D->CaptureScene(ctx.commandBuffer, ctx.device, ctx.width, ctx.height);
     }
 
     // ── Post Processing 2D ──

@@ -10,6 +10,7 @@
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "adapters/vulkan/VulkanCommandBuffer.h"
 #include "pipelines/forward/ForwardPipeline.h"
+#include "2d/Pipeline2D.h"
 
 namespace Prisma::Graphic {
 RenderSystem::RenderSystem(const RenderSystemDesc& desc) : m_desc(desc) {}
@@ -86,8 +87,12 @@ int RenderSystem::InitializeRenderResourceManager() {
 }
 
 int RenderSystem::InitializeRenderPipelines() {
-    // 默认创建前向渲染管线
-    m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+    // 根据渲染模式选择管线
+    if (m_desc.renderMode == RenderMode::Mode2D) {
+        m_mainRenderPipeline = std::make_shared<Pipeline2D>();
+    } else {
+        m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+    }
     return m_mainRenderPipeline->Initialize(m_device.get());
 }
 
