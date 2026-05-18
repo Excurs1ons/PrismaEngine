@@ -12,6 +12,7 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 - [Architecture Overview](architecture.md) - High-level system design
 - [Architecture Optimization](ArchitectureOptimization.md) - Recent core improvements (2024)
 - [Implementation Summary](ImplementationSummary.md) - Technical implementation details
+- [Path Tracing Plan](plans/2026-05-18-pathtracing-next-steps.md) - Path tracing roadmap (NEE, denoising, ReSTIR)
 - [Lifecycle Management](LifecycleManagement.md) - Engine and object lifecycle
 - [Lifecycle Management Implementation](LifecycleManagement_Implementation.md) - Deep dive into lifecycle code
 
@@ -59,4 +60,4 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 - [MCP Test Report](MCP_Test_Report.md) - MCP protocol test results and validation (19 tests)
 
 ---
-*Last Updated: 2026-05-16 (Added WebUI Editor + MCP Protocol documentation)*
+*Last Updated: 2026-05-18 (Added Template3D Path Tracing)*
