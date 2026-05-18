@@ -62,7 +62,8 @@ void Light2DPass::Update(Prisma::Timestep ts) {
 }
 
 void Light2DPass::Execute(const PassExecutionContext& context) {
-    // 基础 Execute 逻辑，可以用于非 CommandBuffer 驱动的渲染 (如需要)
+    LOG_DEBUG("Light2D", "Execute: rt={}, depth={}", 
+              (void*)context.renderTarget, (void*)context.depthStencil);
 }
 
 void Light2DPass::ExecuteLight(ICommandBuffer* cmd, IRenderDevice* device, uint32_t width, uint32_t height) {

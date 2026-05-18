@@ -81,7 +81,11 @@ void AssetDatabase::Save() {
         }
 
         std::string buffer;
-        glz::write<glz::opts{.prettify = true}>(j, buffer);
+        auto ec = glz::write<glz::opts{.prettify = true}>(j, buffer);
+        if (ec) {
+            LOG_ERROR("AssetDB", "元数据库 JSON 序列化失败");
+            return;
+        }
         std::ofstream file(m_dbPath);
         file << buffer;
         m_isDirty = false;

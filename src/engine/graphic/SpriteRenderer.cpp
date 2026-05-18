@@ -28,14 +28,15 @@ namespace {
                 const auto& typed = static_cast<const Prisma::Graphic::SpriteRenderer&>(comp);
                 auto data = typed.GetData();
                 std::string json;
-                glz::write_json(data, json);
+                auto ec = glz::write_json(data, json);
+                if (ec) json.clear();
                 return json;
             },
             [](Prisma::Component& comp, const std::string& json) {
                 auto& typed = static_cast<Prisma::Graphic::SpriteRenderer&>(comp);
                 Prisma::Graphic::SpriteRenderer::Data data;
-                glz::read_json(data, json);
-                typed.SetData(data);
+                auto ec = glz::read_json(data, json);
+                if (!ec) typed.SetData(data);
             }
         );
         return true;
@@ -67,7 +68,7 @@ void SpriteRenderer::SetData(const Data& d) {
     m_rotation = d.rotation;
 }
 
-void SpriteRenderer::Render(RenderCommandContext* context) {
+void SpriteRenderer::Render([[maybe_unused]] RenderCommandContext* context) {
     if (!m_visible || !m_texture) {
         return;
     }

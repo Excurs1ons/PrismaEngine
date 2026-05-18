@@ -229,11 +229,11 @@ void Platform::PumpEvents() {
     }
 }
 
-bool Platform::ShouldClose(WindowHandle window) {
+bool Platform::ShouldClose([[maybe_unused]] WindowHandle window) {
     return s_shouldClose;
 }
 
-void Platform::SetShouldClose(WindowHandle window, bool shouldClose) {
+void Platform::SetShouldClose([[maybe_unused]] WindowHandle window, bool shouldClose) {
     s_shouldClose = shouldClose;
 }
 

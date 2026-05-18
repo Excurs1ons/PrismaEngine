@@ -2,6 +2,7 @@
 #include "../UIStrings.h"
 #include "../core/Editor.h"
 #include "resource/ArchiveJson.h"
+#include "logger/Logger.h"
 #include <cstring>  // for strncpy
 #include <fstream>
 #include <imgui.h>
@@ -78,11 +79,14 @@ void ProjectSettingsWindow::LoadSettings() {
         try {
             std::string jsonStr((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
             json j;
-            glz::read_json(j, jsonStr);
-            Prisma::Serialization::JsonInputArchive archive(j);
-            m_settings.Deserialize(archive);
-        } catch (...) {
-            // Handle error or use defaults
+            if (auto ec = glz::read_json(j, jsonStr)) {
+                LOG_WARN("ProjectSettings", "解析设置 JSON 失败: {}", ec.custom_error_message);
+            } else {
+                Prisma::Serialization::JsonInputArchive archive(j);
+                m_settings.Deserialize(archive);
+            }
+        } catch (const std::exception& e) {
+            LOG_WARN("ProjectSettings", "加载设置异常: {}", e.what());
         }
     }
 }
@@ -94,7 +98,9 @@ void ProjectSettingsWindow::SaveSettings() {
     std::ofstream file(m_settingsPath);
     if (file.is_open()) {
         std::string buffer;
-        glz::write<glz::opts{.prettify = true}>(archive.GetJson(), buffer);
+        if (auto ec = glz::write<glz::opts{.prettify = true}>(archive.GetJson(), buffer)) {
+            LOG_WARN("ProjectSettings", "序列化设置 JSON 失败: {}", ec.custom_error_message);
+        }
         file << buffer;
     }
 }

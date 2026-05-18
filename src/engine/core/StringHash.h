@@ -64,6 +64,6 @@ private:
 /**
  * @brief 字面量支持: "path/to/asset"_hash
  */
-constexpr Prisma::Core::StringHash::HashType operator"" _hash(const char* str, size_t) {
+constexpr Prisma::Core::StringHash::HashType operator""_hash(const char* str, size_t) {
     return Prisma::Core::StringHash::HashCompileTime(str);
 }

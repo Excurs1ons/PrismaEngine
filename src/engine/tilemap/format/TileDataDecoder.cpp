@@ -214,7 +214,7 @@ std::vector<uint8_t> TileDataDecoder::DecompressZlib(
     std::array<uint8_t, 16384> buffer;
     do {
         stream.next_out = buffer.data();
-        stream.avail_out = buffer.size();
+        stream.avail_out = static_cast<uInt>(buffer.size());
 
         ret = inflate(&stream, Z_NO_FLUSH);
 
@@ -369,7 +369,7 @@ std::vector<uint8_t> TileDataDecoder::DecompressGzip(
     std::array<uint8_t, 16384> buffer;
     do {
         stream.next_out = buffer.data();
-        stream.avail_out = buffer.size();
+        stream.avail_out = static_cast<uInt>(buffer.size());
 
         ret = inflate(&stream, Z_NO_FLUSH);
 
@@ -465,7 +465,7 @@ std::vector<uint8_t> TileDataDecoder::CompressZlib(const uint8_t* data, size_t d
     int ret;
     do {
         stream.next_out = buffer.data();
-        stream.avail_out = buffer.size();
+        stream.avail_out = static_cast<uInt>(buffer.size());
 
         ret = deflate(&stream, Z_FINISH);
 
@@ -529,7 +529,7 @@ std::vector<uint8_t> TileDataDecoder::CompressGzip(const uint8_t* data, size_t d
     int ret;
     do {
         stream.next_out = buffer.data();
-        stream.avail_out = buffer.size();
+        stream.avail_out = static_cast<uInt>(buffer.size());
 
         ret = deflate(&stream, Z_FINISH);
 

@@ -30,9 +30,11 @@ bool WebUIEditor::Start(int port) {
     m_server->Post(R"(/api/v1/(.*))", [](const httplib::Request& req, httplib::Response& res) {
         std::string action = req.matches[1];
         glz::json_t params;
-        try { if (!req.body.empty()) glz::read_json(params, req.body); } catch (...) {}
+        try { if (!req.body.empty()) { if (auto ec = glz::read_json(params, req.body)) { LOG_WARN("WebUI", "API JSON 解析失败: {}", ec.custom_error_message); } } } catch (const std::exception& e) { LOG_WARN("WebUI", "API JSON 异常: {}", e.what()); }
         std::string buffer;
-        glz::write_json(EditorService::Dispatch(action, params), buffer);
+        if (auto ec = glz::write_json(EditorService::Dispatch(action, params), buffer)) {
+            LOG_WARN("WebUI", "API JSON 序列化失败: {}", ec.custom_error_message);
+        }
         res.set_content(buffer, "application/json");
         res.set_header("Access-Control-Allow-Origin", "*");
         res.set_header("Access-Control-Allow-Methods", "POST, GET, OPTIONS");

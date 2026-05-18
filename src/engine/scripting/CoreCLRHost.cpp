@@ -19,13 +19,13 @@ namespace Scripting {
     using char_t = wchar_t;
     #define STR(s) L##s
     static std::string hostfxrFilename() { return "hostfxr.dll"; }
-    static std::string runtimeConfigFilename() { return "GameScripts.runtimeconfig.json"; }
+    [[maybe_unused]] static std::string runtimeConfigFilename() { return "GameScripts.runtimeconfig.json"; }
 #else
     #include <dlfcn.h>
     using char_t = char;
     #define STR(s) s
     static std::string hostfxrFilename() { return "libhostfxr.so"; }
-    static std::string runtimeConfigFilename() { return "GameScripts.runtimeconfig.json"; }
+    [[maybe_unused]] static std::string runtimeConfigFilename() { return "GameScripts.runtimeconfig.json"; }
 #endif
 
 using hostfxr_handle = void*;

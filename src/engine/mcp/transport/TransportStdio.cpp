@@ -45,7 +45,8 @@ bool TransportStdio::Send(const glz::json_t& message) {
     if (!m_Running) return false;
     try {
         std::string buffer;
-        glz::write_json(message, buffer);
+        auto wEc = glz::write_json(message, buffer);
+        if (wEc) return false;
         std::string output = buffer + "\n";
         std::cout << output << std::flush;
         return true;

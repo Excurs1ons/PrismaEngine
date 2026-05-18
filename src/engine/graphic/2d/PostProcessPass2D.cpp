@@ -25,7 +25,8 @@ void PostProcessPass2D::Update(Prisma::Timestep ts) {
 }
 
 void PostProcessPass2D::Execute(const PassExecutionContext& context) {
-    // 默认不通过此接口执行，而是由 Pipeline 显式调用 Process
+    LOG_DEBUG("PostProcess2D", "Execute: rt={} (use Process() instead)", 
+              (void*)context.renderTarget);
 }
 
 void PostProcessPass2D::EnsureResources(uint32_t width, uint32_t height, IRenderDevice* device) {
@@ -67,7 +68,7 @@ void PostProcessPass2D::EnsureResources(uint32_t width, uint32_t height, IRender
 void PostProcessPass2D::Process(ICommandBuffer* cmd, IRenderDevice* device, ITexture* input, IRenderTarget* output) {
     if (!cmd || !device || !input) return;
 
-    EnsureResources(input->GetWidth(), input->GetHeight(), device);
+    EnsureResources(static_cast<uint32_t>(input->GetWidth()), static_cast<uint32_t>(input->GetHeight()), device);
     if (!m_pso) return;
 
     // 设置渲染目标

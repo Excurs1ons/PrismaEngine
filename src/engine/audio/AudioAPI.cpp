@@ -67,7 +67,7 @@ std::shared_ptr<AudioClip> AudioAPI::LoadWAV(const std::string& path) {
     auto clip = std::make_shared<AudioClip>();
     clip->path = path;
     clip->format.sampleRate = static_cast<uint32_t>(spec.freq);
-    clip->format.channels = static_cast<uint32_t>(spec.channels);
+    clip->format.channels = static_cast<uint16_t>(spec.channels);
     
     // SDL3 spec.format 转换
     if (spec.format == SDL_AUDIO_F32) {

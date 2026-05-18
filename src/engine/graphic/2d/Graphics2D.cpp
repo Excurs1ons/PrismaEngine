@@ -297,6 +297,8 @@ float Graphics2D::GetStringWidth(const std::string& text, float scale) {
 }
 
 void Graphics2D::Execute(ICommandBuffer* cmd, IRenderDevice* device) {
+    LOG_DEBUG("Graphics2D", "Execute: cmd={}, device={}, batch={}",
+              (void*)cmd, (void*)device, s_Data ? (int)s_Data->BatchQueue.size() : -1);
     if (!s_Data || s_Data->BatchQueue.empty()) return;
 
     auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
