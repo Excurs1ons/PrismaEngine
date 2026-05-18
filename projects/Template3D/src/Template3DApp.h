@@ -189,6 +189,8 @@ private:
 
     // 状态
     bool m_pathTracingDirty = true;  // true → 重置累积
+    bool m_ptConverged = false;      // 是否已收敛（达到最大采样数）
+    uint32_t m_ptMaxSamples = 4096;  // 路径追踪最大采样帧数（0 = 无限制）
     bool m_sceneLoaded = false;
 
     // IRenderDevice 缓存
