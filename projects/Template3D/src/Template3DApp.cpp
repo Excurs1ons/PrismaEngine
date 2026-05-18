@@ -15,6 +15,9 @@
 #include "SceneManager.h"
 #include "scene/Scene.h"
 #include "core/Event.h"
+#include "platform/Platform.h"
+#include "graphic/RenderResourceManager.h"
+#include "graphic/interfaces/IResourceFactory.h"
 #include "Logger.h"
 
 #include <vulkan/vulkan.h>
@@ -98,6 +101,14 @@ template<> struct meta<SceneConfig> {
 namespace Prisma {
 using namespace Graphic;
 
+// Gizmo push constants (must match ForwardPipeline's layout for Renderer2D.vert)
+namespace {
+struct alignas(16) GizmoPushConstants {
+    PrismaMath::mat4 mvp;
+    Prisma::Color color;
+};
+}
+
 // ============================================================================
 // Template3DApp
 // ============================================================================
@@ -108,6 +119,85 @@ Template3DApp::Template3DApp()
 }
 
 Template3DApp::~Template3DApp() {
+}
+
+void Template3DApp::InitGizmoResources() {
+    auto rm = Engine::Get().GetRenderResourceManager();
+    if (!rm || !m_device) return;
+
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) return;
+
+    // 加载 gizmo shader (与 ForwardPipeline 共享)
+    m_gizmoVertShader = rm->LoadShaderSync("assets/shaders/Renderer2D.vert.spv");
+    m_gizmoFragShader = rm->LoadShaderSync("assets/shaders/UnlitVertex.frag.spv");
+    if (!m_gizmoVertShader || !m_gizmoFragShader) {
+        LOG_ERROR("Template3D", "加载 gizmo shader 失败");
+        return;
+    }
+
+    auto pso = factory->CreatePipelineStateImpl();
+    if (!pso) return;
+    pso->SetShader(ShaderType::Vertex, m_gizmoVertShader);
+    pso->SetShader(ShaderType::Pixel, m_gizmoFragShader);
+    pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+    RasterizerState rs{};
+    rs.cullMode = CullMode::None;
+    pso->SetRasterizerState(rs);
+    if (pso->Create(m_device)) {
+        m_gizmoPSO = std::shared_ptr<IPipelineState>(std::move(pso));
+        LOG_INFO("Template3D", "gizmo PSO 创建成功");
+    } else {
+        LOG_ERROR("Template3D", "gizmo PSO 创建失败");
+    }
+
+    // 创建屏幕空间正交相机
+    // 注意参数顺序: (left, right, BOTTOM, TOP), 传入 bottom=0, top=Height 得到 Y 向下
+    m_gizmoCamera = std::make_shared<OrthographicCamera>(
+        0.0f, static_cast<float>(m_Spec.Width), 0.0f, static_cast<float>(m_Spec.Height)
+    );
+}
+
+void Template3DApp::ProcessGizmoOverlay(VkCommandBuffer /*cmd*/) {
+    const auto& gizmoCommands = Renderer::GetGizmoQueue();
+    if (gizmoCommands.empty()) return;
+    if (!m_gizmoPSO) return;
+
+    // m_device 已知是 RenderDeviceVulkan（由 Template3D 的初始化保证）
+    auto* vkRenderDev = static_cast<Vulkan::RenderDeviceVulkan*>(m_device);
+    auto* cmdBuffer = vkRenderDev->GetCurrentCommandBuffer();
+    if (!cmdBuffer) return;
+
+    cmdBuffer->SetPipelineState(m_gizmoPSO.get());
+
+    float w = static_cast<float>(m_Spec.Width);
+    float h = static_cast<float>(m_Spec.Height);
+    cmdBuffer->SetViewport(Viewport{0.0f, 0.0f, w, h, 0.0f, 1.0f});
+    cmdBuffer->SetScissorRect(Rect{0, 0, static_cast<int>(w), static_cast<int>(h)});
+
+    // 使用 gizmo 相机的投影矩阵（与 BeginGizmo 时一致）
+    // 注意：必须用唯一的投影矩阵来处理 gizmo 队列，否则文字位置错乱
+    auto vp = m_gizmoCamera ? m_gizmoCamera->GetViewProjectionMatrix() : glm::mat4(1.0f);
+
+    for (const auto& gc : gizmoCommands) {
+        if (!gc.mesh) continue;
+
+        GizmoPushConstants pc{};
+        pc.mvp = vp * gc.transform;
+        pc.color = gc.color;
+        cmdBuffer->PushConstants(ShaderType::Vertex, &pc, sizeof(pc));
+        cmdBuffer->PushConstants(ShaderType::Pixel, &pc, sizeof(pc));
+
+        for (const auto& subMesh : gc.mesh->GetSubMeshes()) {
+            if (subMesh.vertexBuffer && subMesh.indexBuffer) {
+                cmdBuffer->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                cmdBuffer->SetIndexBuffer(subMesh.indexBuffer.get());
+                cmdBuffer->DrawIndexed(subMesh.indexCount);
+            }
+        }
+    }
+
+    Renderer::ClearGizmoQueue();
 }
 
 void Template3DApp::LoadSceneFromJSON(const std::string& path) {
@@ -248,6 +338,9 @@ int Template3DApp::OnInitialize() {
         LOG_ERROR("Template3D", "无法获取渲染设备");
         return -1;
     }
+
+    // 初始化 gizmo overlay（处理 stats 文字的渲染）
+    InitGizmoResources();
 
     InitForwardResources();
     InitPathTracingResources();
@@ -619,28 +712,42 @@ void Template3DApp::RenderPathTracing() {
 
     pt.frameCount++;
     m_pathTracingDirty = false;
+
+    // 提交 stats 文字到 gizmo 队列（在 overlay pass 中统一处理）
+    // BeginGizmo/EndGizmo 是纯 CPU 操作，不需要活跃的 render pass
+    if (m_gizmoCamera) {
+        Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
+        DrawStatsOverlay();
+        Graphic::Renderer2D::EndGizmo();
+    }
 }
 
 void Template3DApp::OnPresentOverlay(VkCommandBuffer cmd) {
-    auto& pr = m_presentRes;
-    if (!pr.initialized) return;
+    // ── 1. 路径追踪模式：绘制全屏四边形显示计算结果 ──
+    if (m_renderMode == RenderMode::PathTracing) {
+        auto& pr = m_presentRes;
+        if (pr.initialized) {
+            VkViewport vp{};
+            vp.width = (float)pr.extent.width;
+            vp.height = (float)pr.extent.height;
+            vp.maxDepth = 1.0f;
+            vkCmdSetViewport(cmd, 0, 1, &vp);
 
-    VkViewport vp{};
-    vp.width = (float)pr.extent.width;
-    vp.height = (float)pr.extent.height;
-    vp.maxDepth = 1.0f;
-    vkCmdSetViewport(cmd, 0, 1, &vp);
+            VkRect2D sc{};
+            sc.extent = pr.extent;
+            vkCmdSetScissor(cmd, 0, 1, &sc);
 
-    VkRect2D sc{};
-    sc.extent = pr.extent;
-    vkCmdSetScissor(cmd, 0, 1, &sc);
+            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pr.pipeline);
+            VkDescriptorSet vkDescSet = (VkDescriptorSet)pr.descriptorSet->GetNativeHandle();
+            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
+                                    pr.pipelineLayout, 0, 1, &vkDescSet, 0, nullptr);
+            vkCmdDraw(cmd, 3, 1, 0, 0);
+        }
+    }
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pr.pipeline);
-    // 通过抽象描述符集的原生句柄进行 Vulkan 绑定
-    VkDescriptorSet vkDescSet = (VkDescriptorSet)pr.descriptorSet->GetNativeHandle();
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                            pr.pipelineLayout, 0, 1, &vkDescSet, 0, nullptr);
-    vkCmdDraw(cmd, 3, 1, 0, 0);
+    // ── 2. 处理 gizmo 队列（HUD / stats 文字） ──
+    // 在同一个 render pass 中处理，显示在路径追踪结果（或纯色背景）之上
+    ProcessGizmoOverlay(cmd);
 }
 
 void Template3DApp::SavePathTracingOutput() {
@@ -702,16 +809,113 @@ void Template3DApp::SavePathTracingOutput() {
     }
 }
 
-void Template3DApp::RenderForward3D() {
-    auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
-    auto camera = scene ? scene->GetMainCamera() : nullptr;
-    if (!camera) return;
+void Template3DApp::DrawStatsOverlay() {
+    float winW = static_cast<float>(m_Spec.Width);
+    float winH = static_cast<float>(m_Spec.Height);
 
-    Graphic::Renderer2D::BeginGizmo(*std::dynamic_pointer_cast<Graphic::OrthographicCamera>(camera).get());
+    // ── 每秒刷新一次统计数据 ──
+    static std::string timingInfo = "Calculating...";
+    static std::string statusStr = "Loading...";
+    static std::string resInfo = "";
+    static Prisma::Color statusColor = {0.2f, 1.0f, 0.2f, 1.0f};
+    static float refreshTimer = 0.0f;
+    static double lastTime = 0.0;
 
-    Graphic::Renderer2D::DrawString("Forward3D Mode — Press P for Path Tracing",
+    double now = Platform::GetTimeSeconds();
+    float dt = (lastTime > 0.0) ? static_cast<float>(now - lastTime) : 0.016f;
+    lastTime = now;
+
+    uint32_t totalNodes = EntityManager::Get().GetAliveCount();
+    const auto& st = Engine::Get().GetFrameStats();
+    refreshTimer += dt;
+
+    if (refreshTimer >= 1.0f) {
+        // 帧时序
+        char buf[256];
+        snprintf(buf, sizeof(buf), "BF=%.2f Render=%.2f EF=%.2f Present=%.2f Total=%.2f (ms)",
+                 st.BeginFrameTime, st.RenderTime, st.EndFrameTime, st.PresentTime, st.TotalTime);
+        timingInfo = buf;
+
+        // 性能瓶颈分析
+        double maxTime = st.BeginFrameTime;
+        std::string leadStage = "BF";
+        if (st.RenderTime > maxTime) { maxTime = st.RenderTime; leadStage = "Render(CPU)"; }
+        if (st.EndFrameTime > maxTime) { maxTime = st.EndFrameTime; leadStage = "EF(GPU)"; }
+        if (st.PresentTime > maxTime) { maxTime = st.PresentTime; leadStage = "Present"; }
+        if (st.TotalTime < 2.0) {
+            statusStr = "Status: Balanced (Lead: " + leadStage + ")";
+            statusColor = {0.2f, 1.0f, 0.2f, 1.0f};
+        } else {
+            statusStr = "Status: LEAD " + leadStage;
+            statusColor = (leadStage.find("CPU") != std::string::npos)
+                              ? Prisma::Color{1.0f, 0.2f, 0.8f, 1.0f}
+                              : Prisma::Color{1.0f, 0.2f, 0.2f, 1.0f};
+        }
+
+        // 分辨率 & FPS
+        resInfo = std::to_string(m_Spec.Width) + "x" + std::to_string(m_Spec.Height)
+                + " @ " + std::to_string(static_cast<int>(Engine::Get().GetFPS())) + " FPS";
+
+        refreshTimer = 0.0f;
+    }
+
+    // ── 绘制覆盖层 ──
+    // 左下：帧时序
+    Graphic::Renderer2D::DrawString(timingInfo, {30.0f, winH - 45.0f}, 1.5f,
+                                    {0.2f, 1.0f, 0.2f, 1.0f});
+    Graphic::Renderer2D::DrawString(statusStr, {30.0f, winH - 85.0f}, 1.5f,
+                                    statusColor);
+
+    // 右上：分辨率 & FPS
+    float resW = Graphic::Renderer2D::GetStringWidth(resInfo, 3.0f);
+    Graphic::Renderer2D::DrawString(resInfo, {winW - resW - 30.0f, winH - 50.0f}, 3.0f,
+                                    {0.4f, 0.7f, 0.4f, 1.0f});
+
+    // GPU 名称
+    std::string gpuName = Engine::Get().GetGPUName();
+    if (!gpuName.empty()) {
+        float gW = Graphic::Renderer2D::GetStringWidth(gpuName, 2.0f);
+        Graphic::Renderer2D::DrawString(gpuName, {winW - gW - 30.0f, winH - 95.0f}, 2.0f,
+                                        {0.5f, 0.5f, 0.5f, 1.0f});
+    }
+
+    // 右上提示
+    float escW = Graphic::Renderer2D::GetStringWidth("ESC to exit", 2.0f);
+    Graphic::Renderer2D::DrawString("ESC to exit", {winW - escW - 30.0f, 30.0f}, 2.0f,
+                                    {0.4f, 0.4f, 0.4f, 1.0f});
+
+    // 左上：模板名称 & 节点数
+    Graphic::Renderer2D::DrawString("Template3D (Nodes: " + std::to_string(totalNodes) + ")",
                                     {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
 
+    // 渲染模式
+    std::string modeStr = (m_renderMode == RenderMode::PathTracing) ? "PathTracing" : "Forward3D";
+    Graphic::Renderer2D::DrawString("Mode: " + modeStr + "  [P] Switch  [R] Reset",
+                                    {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
+
+    // 相机位置
+    Graphic::Renderer2D::DrawString(
+        "Cam: (" + std::to_string(static_cast<int>(m_camera.position.x)) + ", "
+                 + std::to_string(static_cast<int>(m_camera.position.y)) + ", "
+                 + std::to_string(static_cast<int>(m_camera.position.z)) + ")",
+        {30.0f, 95.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
+
+    // 路径追踪累积帧数
+    if (m_renderMode == RenderMode::PathTracing) {
+        std::string ptInfo = "PathTrace Frames: " + std::to_string(m_ptRes.frameCount)
+                           + "  |  Resolution: " + std::to_string(m_ptRes.width)
+                           + "x" + std::to_string(m_ptRes.height);
+        Graphic::Renderer2D::DrawString(ptInfo, {30.0f, 130.0f}, 1.5f,
+                                        {0.9f, 0.6f, 0.2f, 1.0f});
+    }
+}
+
+void Template3DApp::RenderForward3D() {
+    if (!m_gizmoCamera) return;
+
+    // 提交 stats 文字到 gizmo 队列（在 overlay pass 中统一处理）
+    Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
+    DrawStatsOverlay();
     Graphic::Renderer2D::EndGizmo();
 }
 
