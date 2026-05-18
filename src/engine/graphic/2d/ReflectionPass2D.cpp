@@ -34,9 +34,7 @@ void ReflectionPass2D::Update(Prisma::Timestep ts) {
     }
 }
 
-void ReflectionPass2D::Execute(const PassExecutionContext& context) {
-    LOG_DEBUG("Reflection2D", "Execute: rt={}, depth={}", 
-              (void*)context.renderTarget, (void*)context.depthStencil);
+void ReflectionPass2D::Execute(const PassExecutionContext& /*context*/) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────

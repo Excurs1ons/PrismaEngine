@@ -61,9 +61,7 @@ void Light2DPass::Update(Prisma::Timestep ts) {
     UpdateTime(ts);
 }
 
-void Light2DPass::Execute(const PassExecutionContext& context) {
-    LOG_DEBUG("Light2D", "Execute: rt={}, depth={}", 
-              (void*)context.renderTarget, (void*)context.depthStencil);
+void Light2DPass::Execute(const PassExecutionContext& /*context*/) {
 }
 
 void Light2DPass::ExecuteLight(ICommandBuffer* cmd, IRenderDevice* device, uint32_t width, uint32_t height) {
