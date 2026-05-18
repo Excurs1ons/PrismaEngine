@@ -10,11 +10,16 @@
 #include "graphic/interfaces/IBuffer.h"
 #include "graphic/interfaces/IComputePipeline.h"
 #include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/interfaces/IPipelineState.h"
+#include "graphic/interfaces/IShader.h"
 #include <memory>
 #include <vector>
 #include <functional>
 
 namespace Prisma {
+namespace Graphic {
+    class OrthographicCamera;
+}
 
 class Template3DApp : public Application {
 public:
@@ -60,9 +65,16 @@ private:
 
     void SavePathTracingOutput();
 
+    // 调试统计覆盖层
+    void DrawStatsOverlay();
+
     // 清理
     void CleanupPathTracingResources();
     void CleanupPresentResources();
+
+    // Gizmo overlay 渲染（处理 Renderer gizmo 队列）
+    void InitGizmoResources();
+    void ProcessGizmoOverlay(VkCommandBuffer cmd);
 
     // 场景加载
     void LoadSceneFromJSON(const std::string& path);
@@ -180,6 +192,12 @@ private:
 
     // IRenderDevice 缓存
     Graphic::IRenderDevice* m_device = nullptr;
+
+    // Gizmo overlay 资源
+    std::shared_ptr<Graphic::IShader> m_gizmoVertShader;
+    std::shared_ptr<Graphic::IShader> m_gizmoFragShader;
+    std::shared_ptr<Graphic::IPipelineState> m_gizmoPSO;
+    std::shared_ptr<Graphic::OrthographicCamera> m_gizmoCamera;
 };
 
 } // namespace Prisma
