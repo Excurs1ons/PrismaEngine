@@ -18,11 +18,11 @@
 #include "platform/Platform.h"
 #include "graphic/RenderResourceManager.h"
 #include "graphic/interfaces/IResourceFactory.h"
+#include "utils/ImageUtils.h"
 #include "Logger.h"
 
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
-#include <stb_image_write.h>
 
 #include <glaze/glaze.hpp>
 #include <SDL3/SDL_scancode.h>
@@ -805,7 +805,13 @@ void Template3DApp::RenderPathTracing() {
         Graphic::ResourceState::ShaderRead
     }});
 
-    pt.frameCount++;
+    // 收敛检测：达到最大采样数后停止累积（冻结 frameCount）
+    if (m_ptMaxSamples > 0 && pt.frameCount >= m_ptMaxSamples) {
+        m_ptConverged = true;
+    } else {
+        pt.frameCount++;
+        m_ptConverged = false;
+    }
     m_pathTracingDirty = false;
 
     // 提交 stats 文字到 gizmo 队列（在 overlay pass 中统一处理）
@@ -997,11 +1003,22 @@ void Template3DApp::DrawStatsOverlay() {
 
     // 路径追踪累积帧数
     if (m_renderMode == RenderMode::PathTracing) {
-        std::string ptInfo = "PathTrace Frames: " + std::to_string(m_ptRes.frameCount)
-                           + "  |  Resolution: " + std::to_string(m_ptRes.width)
-                           + "x" + std::to_string(m_ptRes.height);
-        Graphic::Renderer2D::DrawString(ptInfo, {30.0f, 130.0f}, 1.5f,
-                                        {0.9f, 0.6f, 0.2f, 1.0f});
+        std::string ptInfo;
+        glm::vec4 ptColor;
+        if (m_ptConverged) {
+            ptInfo = "Converged: " + std::to_string(m_ptRes.frameCount)
+                   + "/" + std::to_string(m_ptMaxSamples) + " samples"
+                   + "  |  " + std::to_string(m_ptRes.width) + "x" + std::to_string(m_ptRes.height);
+            ptColor = {0.2f, 1.0f, 0.2f, 1.0f}; // 绿色 = 已收敛
+        } else {
+            std::string maxStr = m_ptMaxSamples > 0
+                ? "/" + std::to_string(m_ptMaxSamples) : "+";
+            ptInfo = "PathTrace: " + std::to_string(m_ptRes.frameCount)
+                   + maxStr + " samples"
+                   + "  |  " + std::to_string(m_ptRes.width) + "x" + std::to_string(m_ptRes.height);
+            ptColor = {0.9f, 0.6f, 0.2f, 1.0f}; // 橙色 = 采样中
+        }
+        Graphic::Renderer2D::DrawString(ptInfo, {30.0f, 130.0f}, 1.5f, ptColor);
     }
 }
 
@@ -1045,6 +1062,7 @@ void Template3DApp::OnEvent(Event& e) {
                            ? RenderMode::Forward3D
                            : RenderMode::PathTracing;
             m_pathTracingDirty = true;
+            m_ptConverged = false;
             m_ptRes.frameCount = 0;
             LOG_INFO("Template3D", "切换到 {} 模式",
                      m_renderMode == RenderMode::PathTracing ? "路径追踪" : "Forward3D");
@@ -1052,6 +1070,7 @@ void Template3DApp::OnEvent(Event& e) {
         }
         if (ev.GetKeyCode() == SDL_SCANCODE_R && !ev.IsRepeat()) {
             m_pathTracingDirty = true;
+            m_ptConverged = false;
             m_ptRes.frameCount = 0;
             LOG_INFO("Template3D", "重置路径追踪累积");
             return true;
@@ -1077,6 +1096,7 @@ void Template3DApp::OnWindowResize(uint32_t w, uint32_t h) {
     m_ptRes.width = w;
     m_ptRes.height = h;
     m_pathTracingDirty = true;
+    m_ptConverged = false;
     m_ptRes.frameCount = 0;
 
     LOG_INFO("Template3D", "窗口大小变化: {}x{}", w, h);
