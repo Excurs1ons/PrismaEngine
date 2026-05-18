@@ -69,11 +69,4 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
     )
 endif()
 
-# UI 系统依赖
-if(PRISMA_ENABLE_IMGUI_DEBUG)
-    list(APPEND PRISMA_ENGINE_PUBLIC_DEPENDENCIES
-        "imgui::imgui"
-    )
-endif()
-
 message(STATUS "Engine 公共依赖: ${PRISMA_ENGINE_PUBLIC_DEPENDENCIES}")
