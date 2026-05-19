@@ -78,6 +78,7 @@ public:
     AssetHandle(std::shared_ptr<T> asset) : m_Asset(asset) {}
 
     bool IsValid() const { return m_Asset != nullptr; }
+    explicit operator bool() const { return m_Asset != nullptr; }
     T* operator->() { return m_Asset.get(); }
     const T* operator->() const { return m_Asset.get(); }
     T& operator*() { return *m_Asset; }

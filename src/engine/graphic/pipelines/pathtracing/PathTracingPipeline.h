@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "interfaces/IPipeline.h"
 #include "interfaces/IShader.h"
 #include "interfaces/IPipelineState.h"
@@ -46,7 +47,7 @@ struct PathTracingCameraUBO {
     int enableNEE = 0;
 };
 
-class PathTracingPipeline : public IPipeline {
+class ENGINE_API PathTracingPipeline : public IPipeline {
 public:
     using OverlayCallback = std::function<void(ICommandBuffer*)>;
 
@@ -119,7 +120,7 @@ private:
     uint32_t m_frameCount = 0;
     uint32_t m_maxSamples = 512;
     uint32_t m_maxBounces = 8;
-    bool m_enableNEE = false;
+    bool m_enableNEE = true;
     bool m_converged = false;
     bool m_resetAccumulation = false;
     bool m_initialized = false;

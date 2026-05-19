@@ -1,7 +1,4 @@
 ﻿#include "Template3DApp.h"
-#include "FullscreenVertSPIRV.h"
-#include "PresentFragSPIRV.h"
-#include "PathtraceCompSPIRV.h"
 
 #include "graphic/RenderSystem.h"
 #include "graphic/Renderer2D.h"
@@ -14,67 +11,20 @@
 #include "core/EntityManager.h"
 #include "platform/Platform.h"
 #include "utils/ImageUtils.h"
+#include "core/AssetManager.h"
 #include "Logger.h"
+#include "graphic/MeshRenderer.h"
+#include "transform/Transform.h"
 
 #include <SDL3/SDL_scancode.h>
 #include <glm/gtc/matrix_transform.hpp>
-#include <glaze/glaze.hpp>
 #include <vector>
 #include <string>
 #include <cstring>
 #include <fstream>
-#include <sstream>
+#include "scene/Scene.h"
+#include "scene/SceneManager.h"
 
-// JSON scene structs for Glaze deserialization (global scope)
-struct CameraConfig {
-    std::array<double, 3> position = {0.0, 0.0, 2.5};
-    double fov = 70.0;
-};
-
-struct ObjectConfig {
-    std::string type = "plane";
-    std::array<double, 3> point = {0.0, 0.0, 0.0};
-    std::array<double, 3> normal = {0.0, 1.0, 0.0};
-    std::array<double, 4> bounds = {-1.0, -1.0, 1.0, 1.0};
-    std::array<double, 3> center = {0.0, 0.0, 0.0};
-    std::array<double, 3> halfSize = {0.2, 0.2, 0.2};
-    double radius = 0.25;
-    double rotation = 0.0;
-    std::array<double, 3> axis = {0.0, 1.0, 0.0};
-    std::array<double, 3> color = {0.5, 0.5, 0.5};
-    double emissive = 0.0;
-};
-
-struct SceneConfig {
-    int version = 1;
-    CameraConfig camera;
-    std::vector<ObjectConfig> objects;
-};
-
-namespace glz {
-template<> struct meta<CameraConfig> {
-    using T = CameraConfig;
-    static constexpr auto value = object(
-        &T::position, &T::fov
-    );
-};
-
-template<> struct meta<ObjectConfig> {
-    using T = ObjectConfig;
-    static constexpr auto value = object(
-        &T::type, &T::point, &T::normal, &T::bounds,
-        &T::center, &T::halfSize, &T::radius, &T::rotation,
-        &T::axis, &T::color, &T::emissive
-    );
-};
-
-template<> struct meta<SceneConfig> {
-    using T = SceneConfig;
-    static constexpr auto value = object(
-        &T::version, &T::camera, &T::objects
-    );
-};
-} // namespace glz
 
 namespace Prisma {
 using namespace Graphic;
@@ -165,89 +115,119 @@ void Template3DApp::ProcessGizmoOverlay(ICommandBuffer* cmd) {
     Renderer::ClearGizmoQueue();
 }
 
-void Template3DApp::LoadSceneFromJSON(const std::string& path) {
-    LOG_INFO("Template3D", "加载场景文件: {}", path);
-
-    std::ifstream f(path);
-    if (!f.is_open()) {
-        LOG_ERROR("Template3D", "无法打开场景文件: {}", path);
+void Template3DApp::BuildPathTracingScene() {
+    auto* sceneManager = Engine::Get().GetSceneManager();
+    if (!sceneManager) {
+        LOG_ERROR("Template3D", "无法获取 SceneManager");
         return;
     }
-    std::stringstream buf;
-    buf << f.rdbuf();
-    std::string jsonStr = buf.str();
-
-    SceneConfig cfg;
-    auto ec = glz::read_json(cfg, jsonStr);
-    if (ec) {
-        LOG_ERROR("Template3D", "场景 JSON 解析失败: {}", glz::format_error(ec, jsonStr));
+    auto* scene = sceneManager->GetCurrentScene();
+    if (!scene) {
+        LOG_ERROR("Template3D", "没有当前场景");
         return;
     }
 
-    m_camera.position = glm::vec3(
-        (float)cfg.camera.position[0],
-        (float)cfg.camera.position[1],
-        (float)cfg.camera.position[2]
-    );
-    m_camera.fov = (float)cfg.camera.fov;
-    LOG_INFO("Template3D", "  相机: pos=({:.1f},{:.1f},{:.1f}) fov={:.1f}",
-             m_camera.position.x, m_camera.position.y, m_camera.position.z, m_camera.fov);
+    // 从场景相机配置更新相机
+    const auto& camConfig = scene->GetCameraConfig();
+    m_camera.position = glm::vec3(camConfig.position.x, camConfig.position.y, camConfig.position.z);
+    m_camera.target   = glm::vec3(camConfig.target.x,   camConfig.target.y,   camConfig.target.z);
+    m_camera.fov      = camConfig.fov;
+    LOG_INFO("Template3D", "相机: pos=({:.1f},{:.1f},{:.1f}) target=({:.1f},{:.1f},{:.1f}) fov={:.1f}",
+             m_camera.position.x, m_camera.position.y, m_camera.position.z,
+             m_camera.target.x, m_camera.target.y, m_camera.target.z, m_camera.fov);
 
     SceneDataSSBO ssboData{};
-    uint32_t objCount = std::min((uint32_t)cfg.objects.size(), (uint32_t)32);
-    ssboData.objectCount = (int)objCount;
+    uint32_t objCount = 0;
 
-    for (uint32_t i = 0; i < objCount; i++) {
-        auto& obj = cfg.objects[i];
-        auto& ptObj = ssboData.objects[i];
+    for (const auto& node : scene->GetNodes()) {
+        if (objCount >= 32) {
+            LOG_WARN("Template3D", "超出最大对象数(32)，忽略剩余节点");
+            break;
+        }
 
-        if (obj.type == "plane") {
-            ptObj.p0[0] = (float)obj.point[0];
-            ptObj.p0[1] = (float)obj.point[1];
-            ptObj.p0[2] = (float)obj.point[2];
-            ptObj.p0[3] = 0.0f;
-            ptObj.p1[0] = (float)obj.normal[0];
-            ptObj.p1[1] = (float)obj.normal[1];
-            ptObj.p1[2] = (float)obj.normal[2];
+        auto transform = scene->GetComponent<Transform>(node);
+        auto meshRenderer = scene->GetComponent<Graphic::MeshRenderer>(node);
+        if (!transform || !meshRenderer) continue;
+
+        auto mesh = meshRenderer->GetMesh();
+        if (!mesh) continue;
+
+        auto bb = mesh->GetBoundingBox();
+        float meshHx = (bb.maxBounds.x - bb.minBounds.x) * 0.5f;
+        float meshHy = (bb.maxBounds.y - bb.minBounds.y) * 0.5f;
+        float meshHz = (bb.maxBounds.z - bb.minBounds.z) * 0.5f;
+
+        auto renderData = meshRenderer->GetData();
+        auto meshPath = renderData.meshPath;
+        auto& ptObj = ssboData.objects[objCount];
+
+        ptObj.color[0] = renderData.color[0];
+        ptObj.color[1] = renderData.color[1];
+        ptObj.color[2] = renderData.color[2];
+        ptObj.color[3] = renderData.emissive[0]; // SSBO stores single emissive float
+
+        auto pos = transform->GetPosition();
+        auto scale = transform->GetScale();
+        auto rot = transform->GetRotation();
+
+        if (meshPath.find("plane") != std::string::npos) {
+            ptObj.p0[0] = pos.x;
+            ptObj.p0[1] = pos.y;
+            ptObj.p0[2] = pos.z;
+            ptObj.p0[3] = 0.0f; // type: plane
+
+            glm::vec3 normal = rot * glm::vec3(0.0f, 1.0f, 0.0f);
+            ptObj.p1[0] = normal.x;
+            ptObj.p1[1] = normal.y;
+            ptObj.p1[2] = normal.z;
             ptObj.p1[3] = 0.0f;
-            ptObj.p2[0] = (float)obj.bounds[0];
-            ptObj.p2[1] = (float)obj.bounds[1];
-            ptObj.p2[2] = (float)obj.bounds[2];
-            ptObj.p2[3] = (float)obj.bounds[3];
-        } else if (obj.type == "sphere") {
-            ptObj.p0[0] = (float)obj.center[0];
-            ptObj.p0[1] = (float)obj.center[1];
-            ptObj.p0[2] = (float)obj.center[2];
-            ptObj.p0[3] = 1.0f;
-            ptObj.p1[0] = (float)obj.radius;
+
+            ptObj.p2[0] = -meshHx * scale.x;
+            ptObj.p2[1] = -meshHz * scale.z;
+            ptObj.p2[2] =  meshHx * scale.x;
+            ptObj.p2[3] =  meshHz * scale.z;
+        } else if (meshPath.find("sphere") != std::string::npos) {
+            ptObj.p0[0] = pos.x;
+            ptObj.p0[1] = pos.y;
+            ptObj.p0[2] = pos.z;
+            ptObj.p0[3] = 1.0f; // type: sphere
+
+            float radius = meshHx * scale.x;
+            ptObj.p1[0] = radius;
             ptObj.p1[1] = 0.0f;
             ptObj.p1[2] = 0.0f;
             ptObj.p1[3] = 0.0f;
-        } else if (obj.type == "box") {
-            ptObj.p0[0] = (float)obj.center[0];
-            ptObj.p0[1] = (float)obj.center[1];
-            ptObj.p0[2] = (float)obj.center[2];
-            ptObj.p0[3] = 2.0f;
-            ptObj.p1[0] = (float)obj.halfSize[0];
-            ptObj.p1[1] = (float)obj.halfSize[1];
-            ptObj.p1[2] = (float)obj.halfSize[2];
+
+            ptObj.p2[0] = 0.0f;
+            ptObj.p2[1] = 0.0f;
+            ptObj.p2[2] = 0.0f;
+            ptObj.p2[3] = 0.0f;
+        } else if (meshPath.find("cube") != std::string::npos) {
+            ptObj.p0[0] = pos.x;
+            ptObj.p0[1] = pos.y;
+            ptObj.p0[2] = pos.z;
+            ptObj.p0[3] = 2.0f; // type: box
+
+            ptObj.p1[0] = meshHx * scale.x;
+            ptObj.p1[1] = meshHy * scale.y;
+            ptObj.p1[2] = meshHz * scale.z;
             ptObj.p1[3] = 0.0f;
-            float angleRad = glm::radians((float)obj.rotation);
-            ptObj.p2[0] = cos(angleRad);
-            ptObj.p2[1] = sin(angleRad);
+
+            // 从四元数提取 Y 轴旋转
+            float angle = 2.0f * std::atan2(rot.y, rot.w);
+            ptObj.p2[0] = std::cos(angle);
+            ptObj.p2[1] = std::sin(angle);
             ptObj.p2[2] = 0.0f;
             ptObj.p2[3] = 0.0f;
         } else {
-            LOG_WARN("Template3D", "  未知类型 '{}'，跳过", obj.type);
-            ssboData.objectCount--;
+            LOG_WARN("Template3D", "未知网格类型 '{}'，跳过", meshPath);
             continue;
         }
 
-        ptObj.color[0] = (float)obj.color[0];
-        ptObj.color[1] = (float)obj.color[1];
-        ptObj.color[2] = (float)obj.color[2];
-        ptObj.color[3] = (float)obj.emissive;
+        objCount++;
     }
+
+    ssboData.objectCount = (int)objCount;
 
     // 设置场景数据到管线
     if (m_ptPipeline) {
@@ -258,7 +238,19 @@ void Template3DApp::LoadSceneFromJSON(const std::string& path) {
     }
 
     m_sceneLoaded = true;
-    LOG_INFO("Template3D", "场景加载完成，{} 个对象", objCount);
+    LOG_INFO("Template3D", "场景 GetNodes()={} 个节点, 找到 {} 个可渲染对象", scene->GetNodes().size(), objCount);
+    if (objCount == 0) {
+        LOG_ERROR("Template3D", "没有找到任何可渲染对象！可能原因：组件未正确附加或网格加载失败");
+        for (const auto& n : scene->GetNodes()) {
+            auto t = scene->GetComponent<Transform>(n);
+            auto m = scene->GetComponent<Graphic::MeshRenderer>(n);
+            LOG_INFO("Template3D", "  节点 '{}': Transform={}, MeshRenderer={}, Mesh={}",
+                scene->GetNodeName(n),
+                t ? "有" : "无",
+                m ? "有" : "无",
+                m && m->GetMesh() ? "有" : "无");
+        }
+    }
 }
 
 int Template3DApp::OnInitialize() {
@@ -276,14 +268,32 @@ int Template3DApp::OnInitialize() {
         return -1;
     }
 
-    // 创建路径追踪管线
+    // 优先从文件加载最新的着色器 SPIR-V，实现热更新支持
     auto ptPipeline = std::make_shared<PathTracingPipeline>();
 
-    // 传递着色器 SPIR-V 数据（嵌入在 SPIRV header 中）
-    ptPipeline->SetComputeShaderSPIRV(PATHTRACE_COMP_SPV_SPV, PATHTRACE_COMP_SPV_SPV_SIZE * sizeof(uint32_t));
+    auto loadShaderData = [&](const std::string& path) -> std::vector<uint32_t> {
+        std::ifstream file(path, std::ios::binary);
+        if (file.is_open()) {
+            file.seekg(0, std::ios::end);
+            size_t size = file.tellg();
+            file.seekg(0, std::ios::beg);
+            std::vector<uint32_t> data(size / 4);
+            file.read(reinterpret_cast<char*>(data.data()), size);
+            LOG_INFO("Template3D", "已从文件加载着色器: {}", path);
+            return data;
+        }
+        LOG_WARN("Template3D", "无法读取着色器文件 {}，回退到嵌入版本", path);
+        throw;
+    };
+
+    std::vector<uint32_t> compSPV = loadShaderData("assets/shaders/pathtrace.comp.spv");
+    std::vector<uint32_t> vertSPV = loadShaderData("assets/shaders/fullscreen.vert.spv");
+    std::vector<uint32_t> fragSPV = loadShaderData("assets/shaders/present.frag.spv");
+
+    ptPipeline->SetComputeShaderSPIRV(compSPV.data(), compSPV.size() * 4);
     ptPipeline->SetPresentShadersSPIRV(
-        FULLSCREEN_VERT_SPV_SPV, FULLSCREEN_VERT_SPV_SPV_SIZE * sizeof(uint32_t),
-        PRESENT_FRAG_SPV_SPV, PRESENT_FRAG_SPV_SPV_SIZE * sizeof(uint32_t)
+        vertSPV.data(), vertSPV.size() * 4,
+        fragSPV.data(), fragSPV.size() * 4
     );
 
     // 设置 overlay 回调（gizmo/HUD）
@@ -304,10 +314,12 @@ int Template3DApp::OnInitialize() {
     // Forward 资源（Cornell Box 网格，仍然保留为切换选项）
     InitForwardResources();
 
-    // 加载场景
-    std::string scenePath = "assets/scenes/pt_scene.json";
-    LOG_INFO("Template3D", "工作目录: {}", std::filesystem::current_path().string());
-    LoadSceneFromJSON(scenePath);
+    // 通过 SceneManager 加载场景（新 ECS 场景系统）
+    auto* sceneManager = Engine::Get().GetSceneManager();
+    if (sceneManager) {
+        sceneManager->LoadFromFile("assets/scenes/cornell_box.scene.json");
+        BuildPathTracingScene();
+    }
 
     m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
 
@@ -423,7 +435,14 @@ void Template3DApp::RenderPathTracing() {
     ctx.camera.position = m_camera.position;
     ctx.camera.fov = m_camera.fov;
 
-    // 执行管线
+    // 排队 stats 文字四边形，由 OnPresentOverlay 回调在 swapchain RP 内渲染
+    if (m_gizmoCamera) {
+        Renderer2D::BeginGizmo(*m_gizmoCamera);
+        DrawStatsOverlay();
+        Renderer2D::EndGizmo();
+    }
+
+    // 执行管线（内部结束/重开 swapchain RP → 全屏四边形 → overlay 回调渲染 gizmo+文字）
     m_ptPipeline->Execute(ctx);
 }
 
@@ -501,7 +520,7 @@ void Template3DApp::DrawStatsOverlay() {
                            {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
 
     std::string modeStr = (m_renderMode == RenderMode::PathTracing) ? "PathTracing" : "Forward3D";
-    Renderer2D::DrawString("Mode: " + modeStr + "  [P] Switch  [R] Reset",
+    Renderer2D::DrawString("Mode: " + modeStr + "  [P] Switch  [R] Reset  [ -Samples+ ]",
                            {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
     Renderer2D::DrawString(
         "Cam: (" + std::to_string(static_cast<int>(m_camera.position.x)) + ", "
@@ -540,7 +559,7 @@ void Template3DApp::OnUpdate(Timestep ts) {
     (void)ts;
     if (m_headlessCfg.enabled && m_ptPipeline) {
         if (m_ptPipeline->GetFrameCount() >= m_headlessCfg.totalFrames) {
-            LOG_INFO("Template3D", "头模式完成，保存输出...");
+            LOG_INFO("Template3D", "headless模式完成，保存输出...");
             SavePathTracingOutput();
             Close();
         }
@@ -561,13 +580,12 @@ void Template3DApp::OnEvent(Event& e) {
             return true;
         }
         if (ev.GetKeyCode() == SDL_SCANCODE_P && !ev.IsRepeat()) {
-            m_renderMode = (m_renderMode == RenderMode::PathTracing)
-                           ? RenderMode::Forward3D
-                           : RenderMode::PathTracing;
-            m_pathTracingDirty = true;
-            if (m_ptPipeline) m_ptPipeline->ResetAccumulation();
-            LOG_INFO("Template3D", "切换到 {} 模式",
-                     m_renderMode == RenderMode::PathTracing ? "路径追踪" : "Forward3D");
+            // P 键仅在 PathTracing 模式重置累积（Forward3D 未实现完整渲染）
+            if (m_renderMode == RenderMode::PathTracing && m_ptPipeline) {
+                m_pathTracingDirty = true;
+                m_ptPipeline->ResetAccumulation();
+                LOG_INFO("Template3D", "重置路径追踪累积");
+            }
             return true;
         }
         if (ev.GetKeyCode() == SDL_SCANCODE_R && !ev.IsRepeat()) {
@@ -583,6 +601,25 @@ void Template3DApp::OnEvent(Event& e) {
                 m_ptPipeline->ResetAccumulation();
             }
             LOG_INFO("Template3D", "NEE {}", m_enableNEE ? "启用" : "禁用");
+            return true;
+        }
+        // [ / ] 调整收敛帧数上限
+        if (ev.GetKeyCode() == SDL_SCANCODE_LEFTBRACKET && !ev.IsRepeat()) {
+            m_ptMaxSamples = (m_ptMaxSamples > 16) ? m_ptMaxSamples - 16 : 0;
+            if (m_ptPipeline) {
+                m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
+                m_ptPipeline->ResetAccumulation();
+            }
+            LOG_INFO("Template3D", "最大采样帧数: {}", m_ptMaxSamples);
+            return true;
+        }
+        if (ev.GetKeyCode() == SDL_SCANCODE_RIGHTBRACKET && !ev.IsRepeat()) {
+            m_ptMaxSamples = std::min(m_ptMaxSamples + 16, 4096u);
+            if (m_ptPipeline) {
+                m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
+                m_ptPipeline->ResetAccumulation();
+            }
+            LOG_INFO("Template3D", "最大采样帧数: {}", m_ptMaxSamples);
             return true;
         }
         return false;

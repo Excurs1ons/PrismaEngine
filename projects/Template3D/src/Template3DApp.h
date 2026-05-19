@@ -64,7 +64,7 @@ private:
     void ProcessGizmoOverlay(Graphic::ICommandBuffer* cmd);
 
     void OnWindowResize(uint32_t w, uint32_t h);
-    void LoadSceneFromJSON(const std::string& path);
+    void BuildPathTracingScene();
 
     bool m_autoQuit = false;
     RenderMode m_renderMode = RenderMode::PathTracing;
@@ -77,7 +77,6 @@ private:
     // Path tracing pipeline（引擎原生管线）
     std::shared_ptr<Graphic::PathTracingPipeline> m_ptPipeline;
 
-    // 场景 SSBO 数据结构（用于 JSON 加载）
     struct PTSceneObject {
         float p0[4];
         float p1[4];

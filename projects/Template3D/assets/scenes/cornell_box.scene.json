@@ -1,0 +1,122 @@
+{
+    "name": "Cornell Box",
+    "camera": {
+        "position": [0.0, 0.0, 3.5],
+        "target": [0.0, 0.0, 0.0],
+        "fov": 70.0
+    },
+    "nodes": [
+        {
+            "name": "Floor",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/plane.obj",
+                    "color": [0.7, 0.7, 0.7, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [0.0, -1.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.25, 1.0, 1.25]
+        },
+        {
+            "name": "Ceiling",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/plane.obj",
+                    "color": [0.7, 0.7, 0.7, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [0.0, 1.0, 0.0],
+            "rotation": [1.0, 0.0, 0.0, 0.0],
+            "scale": [1.25, 1.0, 1.25]
+        },
+        {
+            "name": "LeftWall",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/plane.obj",
+                    "color": [0.8, 0.05, 0.05, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [-1.25, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.7071, 0.7071],
+            "scale": [1.0, 1.0, 1.25]
+        },
+        {
+            "name": "RightWall",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/plane.obj",
+                    "color": [0.05, 0.5, 0.05, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [1.25, 0.0, 0.0],
+            "rotation": [0.0, 0.0, -0.7071, 0.7071],
+            "scale": [1.0, 1.0, 1.25]
+        },
+        {
+            "name": "BackWall",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/plane.obj",
+                    "color": [0.7, 0.7, 0.7, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [0.0, 0.0, -1.25],
+            "rotation": [-0.7071, 0.0, 0.0, 0.7071],
+            "scale": [1.25, 1.0, 1.0]
+        },
+        {
+            "name": "Light",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/plane.obj",
+                    "color": [1.0, 1.0, 1.0, 1.0],
+                    "emissive": [10.0, 10.0, 10.0]
+                }
+            }],
+            "position": [0.0, 0.995, 0.0],
+            "rotation": [1.0, 0.0, 0.0, 0.0],
+            "scale": [0.3, 1.0, 0.3]
+        },
+        {
+            "name": "ShortBox",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/cube.obj",
+                    "color": [0.8, 0.05, 0.05, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [-0.7, -0.7, 0.35],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [0.6, 0.6, 0.6]
+        },
+        {
+            "name": "TallBox",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/cube.obj",
+                    "color": [0.05, 0.5, 0.05, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [0.6, -0.5, -0.35],
+            "rotation": [0.0, 0.1305, 0.0, 0.9914],
+            "scale": [1.0, 1.0, 1.0]
+        }
+    ]
+}
