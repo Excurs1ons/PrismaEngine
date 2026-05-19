@@ -21,7 +21,8 @@ enum class RenderMode : uint8_t {
     Mode3D_ForwardPlus = 2,
     Mode3D_Deferred = 3,
     Mode3D_DeferredPlus = 4,
-    SRP = 5
+    Mode3D_PathTracing = 5,
+    SRP = 6
 };
 
 enum class ScriptingBackend : uint8_t {
@@ -61,6 +62,7 @@ struct glz::meta<Prisma::RenderMode> {
         "Forward+", Mode3D_ForwardPlus,
         "Deferred", Mode3D_Deferred,
         "Deferred+", Mode3D_DeferredPlus,
+        "PathTracing", Mode3D_PathTracing,
         "SRP", SRP
     );
 };

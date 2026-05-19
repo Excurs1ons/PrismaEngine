@@ -29,6 +29,7 @@ struct RenderSystemDesc {
     uint32_t height            = 900;
     bool enableDebug           = true;
     bool enableValidation      = true;
+    bool headless              = false;
     RenderMode renderMode      = RenderMode::Mode3D_Forward;
     PresentMode presentMode    = PresentMode::VSync;
     uint32_t maxFramesInFlight = 3;

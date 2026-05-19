@@ -107,6 +107,11 @@ private:
         // 描述符集
         std::shared_ptr<Graphic::IDescriptorSet> descriptorSet;
 
+        // Pixel output buffer (绕开 llvmpipe imageStore bug)
+        VkBuffer pixelOutputBuffer = VK_NULL_HANDLE;
+        VmaAllocation pixelOutputAllocation = VK_NULL_HANDLE;
+        void* pixelOutputMapped = nullptr;
+
         // 累积帧计数器
         uint32_t frameCount = 0;
         uint32_t width = 0;

@@ -100,6 +100,9 @@ public:
 
     // === 帧管理 ===
 
+    /// @brief 获取当前帧的命令缓冲区
+    virtual ICommandBuffer* GetCurrentCommandBuffer() const = 0;
+
     /// @brief 开始帧
     virtual void BeginFrame() = 0;
 
@@ -188,6 +191,19 @@ public:
     /// @brief 获取图形队列族索引
     virtual uint32_t GetGraphicsQueueFamily() const = 0;
 
+    /// @brief 是否无头模式
+    virtual bool IsHeadless() const { return false; }
+
+    /// @brief 从 GPU 纹理回读像素数据
+    /// @param texture 源纹理
+    /// @param width 宽度
+    /// @param height 高度
+    /// @param outBuffer 输出缓冲区（RGBA32F）
+    /// @param bufferSize 缓冲区大小
+    /// @return 是否成功
+    virtual bool ReadbackTexture(class ITexture* texture, uint32_t width, uint32_t height,
+                                 void* outBuffer, size_t bufferSize) { return false; }
+
     /// @brief 是否已初始化
     virtual bool IsInitialized() const = 0;
     /// @brief 获取当前帧索引
@@ -195,6 +211,17 @@ public:
 
     /// @brief 获取附加渲染(UI等)的 RenderPass
     virtual VkRenderPass GetOverlayRenderPass() const = 0;
+
+    // === 交换链 RenderPass 生命周期 ===
+
+    /// @brief 开始交换链 RenderPass（Pipeline 显式调用，不再由 BeginFrame 自动开）
+    virtual void BeginSwapChainRenderPass() {}
+
+    /// @brief 结束交换链 RenderPass（替代旧 SuspendDefaultRenderPass）
+    virtual void EndSwapChainRenderPass() {}
+
+    /// @brief 当前交换链 RenderPass 是否活跃
+    virtual bool IsSwapChainRenderPassActive() const { return false; }
 };
 
 }  // namespace Prisma::Graphic

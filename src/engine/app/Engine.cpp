@@ -279,6 +279,28 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
             if (m_CurrentApp) m_CurrentApp->OnEvent(e);
         });
+    } else {
+        // 无头模式：创建无窗口渲染系统
+        auto& appSpec = m_CurrentApp->GetSpecification();
+        Graphic::RenderSystemDesc rDesc;
+        rDesc.windowHandle         = nullptr;
+        rDesc.width                = appSpec.Width;
+        rDesc.height               = appSpec.Height;
+        rDesc.enableDebug          = false;
+        rDesc.enableValidation     = false;
+        rDesc.headless             = true;
+        rDesc.renderMode           = renderMode;
+        rDesc.presentMode          = appSpec.PresentMode;
+
+        m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
+        if (m_RenderSystem->Initialize() != 0) {
+            LOG_FATAL("Engine", "无头渲染系统初始化失败！");
+            return -1;
+        }
+
+        if (m_RenderSystem->GetDevice()) {
+            m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
+        }
     }
 
     // 自动加载入口场景

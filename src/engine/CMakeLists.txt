@@ -134,6 +134,9 @@ set(CORE_SOURCES
     graphic/pipelines/forward/OpaquePass.cpp
     graphic/pipelines/forward/TransparentPass.cpp
 
+    # Graphic - PathTracing Pipeline
+    graphic/pipelines/pathtracing/PathTracingPipeline.cpp
+
     # Graphic - Deferred Pipeline
     graphic/pipelines/deferred/DeferredPipeline.cpp
     graphic/pipelines/deferred/GeometryPass.cpp

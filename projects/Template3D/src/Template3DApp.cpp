@@ -514,7 +514,32 @@ void Template3DApp::InitPathTracingResources() {
     SceneDataSSBO emptySSBO{};
     pt.sceneSSBO->UpdateData(&emptySSBO, sizeof(emptySSBO), 0);
 
-    // 4. 从 SPIRV 创建计算着色器
+    // 4. 创建 Pixel Output SSBO（绕开 llvmpipe imageStore bug, binding 4）
+    VkDevice vkDev = m_device->GetVkDevice();
+    VmaAllocator vmaAlloc = m_device->GetVmaAllocator();
+    {
+        VkBufferCreateInfo bufCI{};
+        bufCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        bufCI.size = VkDeviceSize(pt.width) * pt.height * 4 * sizeof(float);
+        bufCI.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+
+        VmaAllocationCreateInfo allocCI{};
+        allocCI.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
+        allocCI.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT |
+                        VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+        VkResult err = vmaCreateBuffer(vmaAlloc, &bufCI, &allocCI,
+                                       &pt.pixelOutputBuffer, &pt.pixelOutputAllocation, nullptr);
+        if (err != VK_SUCCESS) {
+            LOG_ERROR("Template3D", "创建 Pixel Output SSBO 失败");
+            return;
+        }
+        VmaAllocationInfo info{};
+        vmaGetAllocationInfo(vmaAlloc, pt.pixelOutputAllocation, &info);
+        pt.pixelOutputMapped = info.pMappedData;
+    }
+
+    // 5. 从 SPIRV 创建计算着色器
     std::vector<uint8_t> bytecode(
         reinterpret_cast<const uint8_t*>(PATHTRACE_COMP_SPV_SPV),
         reinterpret_cast<const uint8_t*>(PATHTRACE_COMP_SPV_SPV + PATHTRACE_COMP_SPV_SPV_SIZE));
@@ -525,6 +550,7 @@ void Template3DApp::InitPathTracingResources() {
         {"accumImage",  ShaderResource::Type::Image2D, 0, 1, 1, 0},
         {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(CameraUBO)},
         {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(SceneDataSSBO)},
+        {"pixelBuf",    ShaderResource::Type::StorageBuffer, 0, 4, 1, 0},
     };
 
     ShaderDesc shaderDesc{};
@@ -539,7 +565,7 @@ void Template3DApp::InitPathTracingResources() {
         return;
     }
 
-    // 5. 创建计算管线（封装 ShaderModule + PipelineLayout + ComputePipeline）
+    // 6. 创建计算管线（封装 ShaderModule + PipelineLayout + ComputePipeline）
     pt.computePipeline = factory->CreateComputePipelineImpl();
     if (!pt.computePipeline) {
         LOG_ERROR("Template3D", "创建计算管线对象失败");
@@ -552,7 +578,7 @@ void Template3DApp::InitPathTracingResources() {
         return;
     }
 
-    // 6. 创建描述符集
+    // 7. 创建描述符集
     const auto& layouts = pt.computePipeline->GetDescriptorSetLayouts();
     if (layouts.empty()) {
         LOG_ERROR("Template3D", "计算管线没有描述符集布局");
@@ -565,7 +591,7 @@ void Template3DApp::InitPathTracingResources() {
         return;
     }
 
-    // 7. 绑定资源到描述符集
+    // 8. 绑定资源到描述符集（抽象 API 绑定 0-3）
     pt.descriptorSet->BindStorageImage(0, pt.storageTexture.get());
     pt.descriptorSet->BindStorageImage(1, pt.storageTexture.get());
     pt.descriptorSet->BindBuffer(2, pt.cameraUBO.get(), 0, sizeof(CameraUBO),
@@ -573,6 +599,23 @@ void Template3DApp::InitPathTracingResources() {
     pt.descriptorSet->BindBuffer(3, pt.sceneSSBO.get(), 0, sizeof(SceneDataSSBO),
                                  DescriptorType::StorageBuffer);
     pt.descriptorSet->Update();
+
+    // 额外绑定 pixelBuf (binding 4) 到同一个描述符集
+    {
+        VkDescriptorBufferInfo pixelBufInfo{};
+        pixelBufInfo.buffer = pt.pixelOutputBuffer;
+        pixelBufInfo.range = VkDeviceSize(pt.width) * pt.height * 4 * sizeof(float);
+
+        VkWriteDescriptorSet writePixelBuf{};
+        writePixelBuf.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writePixelBuf.dstSet = (VkDescriptorSet)pt.descriptorSet->GetNativeHandle();
+        writePixelBuf.dstBinding = 4;
+        writePixelBuf.descriptorCount = 1;
+        writePixelBuf.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        writePixelBuf.pBufferInfo = &pixelBufInfo;
+
+        vkUpdateDescriptorSets(m_device->GetVkDevice(), 1, &writePixelBuf, 0, nullptr);
+    }
 
     pt.initialized = true;
     LOG_INFO("Template3D", "路径追踪资源初始化完成 ({}x{})", pt.width, pt.height);
@@ -750,12 +793,14 @@ void Template3DApp::RenderPathTracing() {
     // ── 已收敛：跳过所有计算，保留上次结果 ──
     if (m_ptConverged) {
         m_pathTracingDirty = false;
-        // 仍需提交 gizmo stats（覆盖层文字）
         if (m_gizmoCamera) {
             Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
             DrawStatsOverlay();
             Graphic::Renderer2D::EndGizmo();
         }
+        return;
+    }
+    if (m_headlessCfg.enabled && pt.frameCount >= m_headlessCfg.totalFrames) {
         return;
     }
 
@@ -793,11 +838,16 @@ void Template3DApp::RenderPathTracing() {
         ubo.aspectRatio = (float)pt.width / (float)pt.height;
         ubo.frameCount = (int)pt.frameCount;
         ubo.maxBounces = 8;
-        ubo.samplesPerPixel = 1;
-        ubo.useAccumulation = 1;
-        ubo.resetAccumulation = m_pathTracingDirty ? 1 : 0;
+        ubo.resetAccumulation = 0;
         ubo.padUBO = 0;
 
+        if (m_headlessCfg.enabled) {
+            ubo.samplesPerPixel = (int)m_headlessCfg.totalFrames;
+            ubo.useAccumulation = 0;
+        } else {
+            ubo.samplesPerPixel = 1;
+            ubo.useAccumulation = 1;
+        }
         pt.cameraUBO->UpdateData(&ubo, sizeof(ubo), 0);
     }
 
@@ -809,6 +859,20 @@ void Template3DApp::RenderPathTracing() {
     uint32_t groupY = (pt.height + 7) / 8;
     cmdBuffer->Dispatch(groupX, groupY, 1);
 
+    // GPU→Host 内存屏障让 pixel output SSBO 写入对 CPU 可见
+    {
+        auto* vkCmdBuf = static_cast<Graphic::Vulkan::VulkanCommandBuffer*>(cmdBuffer);
+        VkCommandBuffer cmd = vkCmdBuf->GetVkCommandBuffer();
+        VkMemoryBarrier bufBarrier{};
+        bufBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        bufBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+        bufBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
+        vkCmdPipelineBarrier(cmd,
+                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                             VK_PIPELINE_STAGE_HOST_BIT,
+                             0, 1, &bufBarrier, 0, nullptr, 0, nullptr);
+    }
+
     // 4. 管线屏障：将存储图像转换到 ShaderRead 供展示
     cmdBuffer->PipelineBarrier({{
         pt.storageTexture.get(),
@@ -819,6 +883,9 @@ void Template3DApp::RenderPathTracing() {
     // 收敛检测：达到最大采样数后停止累积
     if (m_ptMaxSamples > 0 && pt.frameCount >= m_ptMaxSamples) {
         m_ptConverged = true;
+    }
+    if (m_headlessCfg.enabled) {
+        pt.frameCount = m_headlessCfg.totalFrames;
     } else {
         pt.frameCount++;
     }
@@ -861,47 +928,42 @@ void Template3DApp::OnPresentOverlay(VkCommandBuffer cmd) {
 }
 
 void Template3DApp::SavePathTracingOutput() {
-    auto vkRenderDev = dynamic_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
-    if (!vkRenderDev || !vkRenderDev->IsInitialized()) {
-        LOG_ERROR("Template3D", "保存输出失败：渲染设备未初始化");
+    if (!m_ptRes.pixelOutputMapped) {
+        LOG_ERROR("Template3D", "保存输出失败：pixelOutputMapped 为空");
         return;
     }
 
-    VkDevice vkDev = vkRenderDev->GetVkDevice();
+    VkDevice vkDev = m_ptRes.vkDevice;
     if (!vkDev) return;
 
     vkDeviceWaitIdle(vkDev);
 
+    // Invalidate mapped memory to ensure SSBO writes are visible to host
     auto& pt = m_ptRes;
+    {
+        VmaAllocationInfo allocInfo{};
+        vmaGetAllocationInfo(pt.vmaAllocator, pt.pixelOutputAllocation, &allocInfo);
+        VkMappedMemoryRange range{};
+        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+        range.memory = allocInfo.deviceMemory;
+        range.offset = allocInfo.offset;
+        range.size = VK_WHOLE_SIZE;
+        vkInvalidateMappedMemoryRanges(pt.vkDevice, 1, &range);
+    }
+
     uint32_t w = pt.width;
     uint32_t h = pt.height;
     size_t pixelCount = size_t(w) * h;
-    size_t bufSize = pixelCount * 4 * sizeof(float);
 
-    auto* vkTexture = dynamic_cast<Graphic::Vulkan::VulkanTexture*>(pt.storageTexture.get());
-    if (!vkTexture) {
-        LOG_ERROR("Template3D", "无法获取 Vulkan 纹理句柄");
-        return;
-    }
-
-    std::vector<float> pixels(pixelCount * 4);
-
-    if (!vkRenderDev->ReadbackImage(vkTexture->GetVkImage(), w, h, VK_FORMAT_R32G32B32A32_SFLOAT,
-                                    pixels.data(), bufSize)) {
-        LOG_ERROR("Template3D", "图像回读失败");
-        return;
-    }
+    const float* pixelData = static_cast<const float*>(pt.pixelOutputMapped);
 
     std::vector<uint8_t> rgba8(pixelCount * 4);
     for (size_t i = 0; i < pixelCount; i++) {
-        float r = std::clamp(pixels[i * 4 + 0], 0.0f, 1.0f);
-        float g = std::clamp(pixels[i * 4 + 1], 0.0f, 1.0f);
-        float b = std::clamp(pixels[i * 4 + 2], 0.0f, 1.0f);
-        float a = std::clamp(pixels[i * 4 + 3], 0.0f, 1.0f);
-
-        r = powf(r, 1.0f / 2.2f);
-        g = powf(g, 1.0f / 2.2f);
-        b = powf(b, 1.0f / 2.2f);
+        float r = std::clamp(pixelData[i * 4 + 0], 0.0f, 1.0f);
+        float g = std::clamp(pixelData[i * 4 + 1], 0.0f, 1.0f);
+        float b = std::clamp(pixelData[i * 4 + 2], 0.0f, 1.0f);
+        float a = std::clamp(pixelData[i * 4 + 3], 0.0f, 1.0f);
+        // Gamma already applied in shader — no powf() here
 
         rgba8[i * 4 + 0] = uint8_t(r * 255.0f + 0.5f);
         rgba8[i * 4 + 1] = uint8_t(g * 255.0f + 0.5f);
@@ -1130,12 +1192,23 @@ void Template3DApp::OnShutdown() {
 
 void Template3DApp::CleanupPathTracingResources() {
     auto& pt = m_ptRes;
-    // 所有资源由 unique_ptr/shared_ptr 自动销毁，无需手动 Vulkan 清理
+    // Abstract 资源由 unique_ptr/shared_ptr 自动销毁
     pt.descriptorSet.reset();
     pt.computePipeline.reset();
     pt.sceneSSBO.reset();
     pt.cameraUBO.reset();
     pt.storageTexture.reset();
+
+    // 清理 raw Vulkan pixel output SSBO
+    if (pt.pixelOutputBuffer != VK_NULL_HANDLE && m_device) {
+        VmaAllocator vmaAlloc = m_device->GetVmaAllocator();
+        if (vmaAlloc) {
+            vmaDestroyBuffer(vmaAlloc, pt.pixelOutputBuffer, pt.pixelOutputAllocation);
+            pt.pixelOutputBuffer = VK_NULL_HANDLE;
+            pt.pixelOutputAllocation = VK_NULL_HANDLE;
+            pt.pixelOutputMapped = nullptr;
+        }
+    }
     pt.initialized = false;
 }
 

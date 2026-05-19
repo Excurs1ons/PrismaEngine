@@ -100,14 +100,16 @@ public:
     VkRenderPass GetOverlayRenderPass() const override;
 
     // 离屏渲染支持
-    void SetSkipSwapChainRenderPass(bool skip) { m_skipSwapChainRenderPass = skip; }
+    bool IsSwapChainRenderPassActive() const override { return m_isDefaultRenderPassActive; }
     bool IsDefaultRenderPassActive() const { return m_isDefaultRenderPassActive; }
 
-    // 暂停/恢复默认交换链 RenderPass（解决 Light2DPass 等需要离屏 RP 时的嵌套问题）
-    void SuspendDefaultRenderPass();
-    void ResumeDefaultRenderPass();
+    void BeginSwapChainRenderPass() override;
+    void EndSwapChainRenderPass() override;
 
-    bool IsHeadless() const { return m_headless; }
+    bool IsHeadless() const override { return m_headless; }
+
+    bool ReadbackTexture(class ITexture* texture, uint32_t width, uint32_t height,
+                         void* outBuffer, size_t bufferSize) override;
 
     // GPU 图像回读到 host 内存（用于头模式离屏输出）
     bool ReadbackImage(VkImage image, uint32_t width, uint32_t height, VkFormat format,
@@ -208,7 +210,6 @@ private:
     OverlayRenderCallback m_overlayRenderCallback;
 
     // 离屏渲染支持
-    bool m_skipSwapChainRenderPass = false;
     bool m_isDefaultRenderPassActive = false;
 };
 
