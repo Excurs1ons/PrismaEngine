@@ -229,7 +229,7 @@ The scene capture requires:
 5. Transitioning back for subsequent use
 6. Resuming the swapchain render pass
 
-This follows the existing `SuspendDefaultRenderPass()`/`ResumeDefaultRenderPass()` pattern used by Light2DPass.
+This follows the existing `EndSwapChainRenderPass()`/`BeginSwapChainRenderPass()` pattern used by Light2DPass.
 
 ### Pipeline State
 
@@ -256,7 +256,7 @@ A simple 2D demo scene to verify:
 
 ## Open Questions (Resolved)
 
-- **Q**: How to capture scene content on Vulkan? **A**: Use `vkCmdBlitImage` between the swapchain and `ReflectionSource` texture, following the existing `SuspendDefaultRenderPass/ResumeDefaultRenderPass` pattern from Light2DPass.
+- **Q**: How to capture scene content on Vulkan? **A**: Use `vkCmdBlitImage` between the swapchain and `ReflectionSource` texture, following the existing `EndSwapChainRenderPass/BeginSwapChainRenderPass` pattern from Light2DPass.
 - **Q**: Should reflections be a separate material or an extension of LitSprite? **A**: Separate material (`ReflectionSprite.frag`) for clean separation and maintainability.
 - **Q**: Where in the pipeline order? **A**: After OpaquePass (scene is rendered), before SkyboxPass and TransparentPass (reflections should not reflect skybox or transparent objects for simplicity in v1).
 
