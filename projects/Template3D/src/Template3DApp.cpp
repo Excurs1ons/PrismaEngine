@@ -1,51 +1,29 @@
 ﻿#include "Template3DApp.h"
-#include "PathtraceCompSPIRV.h"
 #include "FullscreenVertSPIRV.h"
 #include "PresentFragSPIRV.h"
+#include "PathtraceCompSPIRV.h"
 
 #include "graphic/RenderSystem.h"
 #include "graphic/Renderer2D.h"
 #include "graphic/Renderer.h"
 #include "graphic/OrthographicCamera.h"
-#include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
-#include "graphic/adapters/vulkan/VulkanResources.h"
 #include "graphic/RenderDesc.h"
+#include "graphic/interfaces/IResourceFactory.h"
+#include "graphic/interfaces/ICommandBuffer.h"
 #include "app/Engine.h"
 #include "core/EntityManager.h"
-#include "SceneManager.h"
-#include "scene/Scene.h"
-#include "core/Event.h"
 #include "platform/Platform.h"
-#include "graphic/RenderResourceManager.h"
-#include "graphic/interfaces/IResourceFactory.h"
 #include "utils/ImageUtils.h"
 #include "Logger.h"
 
-#include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
-
-#include <glaze/glaze.hpp>
 #include <SDL3/SDL_scancode.h>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glaze/glaze.hpp>
 #include <vector>
 #include <string>
 #include <cstring>
 #include <fstream>
 #include <sstream>
-
-namespace Prisma {
-
-static VkShaderModule CreateShaderModule(VkDevice device, const uint32_t* code, uint32_t size) {
-    VkShaderModuleCreateInfo ci{};
-    ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    ci.codeSize = size * sizeof(uint32_t);
-    ci.pCode = code;
-    VkShaderModule sm = VK_NULL_HANDLE;
-    vkCreateShaderModule(device, &ci, nullptr, &sm);
-    return sm;
-}
-
-} // namespace Prisma
 
 // JSON scene structs for Glaze deserialization (global scope)
 struct CameraConfig {
@@ -101,7 +79,7 @@ template<> struct meta<SceneConfig> {
 namespace Prisma {
 using namespace Graphic;
 
-// Gizmo push constants (must match ForwardPipeline's layout for Renderer2D.vert)
+// Gizmo push constants
 namespace {
 struct alignas(16) GizmoPushConstants {
     PrismaMath::mat4 mvp;
@@ -128,16 +106,14 @@ void Template3DApp::InitGizmoResources() {
     auto* factory = m_device->GetResourceFactory();
     if (!factory) return;
 
-    // 加载 gizmo shader (与 ForwardPipeline 共享)
     m_gizmoVertShader = rm->LoadShaderSync("assets/shaders/Renderer2D.vert.spv");
     m_gizmoFragShader = rm->LoadShaderSync("assets/shaders/UnlitVertex.frag.spv");
     if (!m_gizmoVertShader || !m_gizmoFragShader) {
-        LOG_ERROR("Template3D", "加载 gizmo shader 失败");
+        LOG_ERROR("Template3D", "gizmo shader 加载失败");
         return;
     }
 
     auto pso = factory->CreatePipelineStateImpl();
-    if (!pso) return;
     pso->SetShader(ShaderType::Vertex, m_gizmoVertShader);
     pso->SetShader(ShaderType::Pixel, m_gizmoFragShader);
     pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
@@ -151,48 +127,37 @@ void Template3DApp::InitGizmoResources() {
         LOG_ERROR("Template3D", "gizmo PSO 创建失败");
     }
 
-    // 创建屏幕空间正交相机
-    // 注意参数顺序: (left, right, BOTTOM, TOP), 传入 bottom=0, top=Height 得到 Y 向下
     m_gizmoCamera = std::make_shared<OrthographicCamera>(
         0.0f, static_cast<float>(m_Spec.Width), 0.0f, static_cast<float>(m_Spec.Height)
     );
 }
 
-void Template3DApp::ProcessGizmoOverlay(VkCommandBuffer /*cmd*/) {
+void Template3DApp::ProcessGizmoOverlay(ICommandBuffer* cmd) {
     const auto& gizmoCommands = Renderer::GetGizmoQueue();
-    if (gizmoCommands.empty()) return;
-    if (!m_gizmoPSO) return;
+    if (gizmoCommands.empty() || !m_gizmoPSO) return;
 
-    // m_device 已知是 RenderDeviceVulkan（由 Template3D 的初始化保证）
-    auto* vkRenderDev = static_cast<Vulkan::RenderDeviceVulkan*>(m_device);
-    auto* cmdBuffer = vkRenderDev->GetCurrentCommandBuffer();
-    if (!cmdBuffer) return;
-
-    cmdBuffer->SetPipelineState(m_gizmoPSO.get());
+    cmd->SetPipelineState(m_gizmoPSO.get());
 
     float w = static_cast<float>(m_Spec.Width);
     float h = static_cast<float>(m_Spec.Height);
-    cmdBuffer->SetViewport(Viewport{0.0f, 0.0f, w, h, 0.0f, 1.0f});
-    cmdBuffer->SetScissorRect(Rect{0, 0, static_cast<int>(w), static_cast<int>(h)});
+    cmd->SetViewport(Viewport{0.0f, 0.0f, w, h, 0.0f, 1.0f});
+    cmd->SetScissorRect(Rect{0, 0, static_cast<int>(w), static_cast<int>(h)});
 
-    // 使用 gizmo 相机的投影矩阵（与 BeginGizmo 时一致）
-    // 注意：必须用唯一的投影矩阵来处理 gizmo 队列，否则文字位置错乱
     auto vp = m_gizmoCamera ? m_gizmoCamera->GetViewProjectionMatrix() : glm::mat4(1.0f);
 
     for (const auto& gc : gizmoCommands) {
         if (!gc.mesh) continue;
-
         GizmoPushConstants pc{};
         pc.mvp = vp * gc.transform;
         pc.color = gc.color;
-        cmdBuffer->PushConstants(ShaderType::Vertex, &pc, sizeof(pc));
-        cmdBuffer->PushConstants(ShaderType::Pixel, &pc, sizeof(pc));
+        cmd->PushConstants(ShaderType::Vertex, &pc, sizeof(pc));
+        cmd->PushConstants(ShaderType::Pixel, &pc, sizeof(pc));
 
         for (const auto& subMesh : gc.mesh->GetSubMeshes()) {
             if (subMesh.vertexBuffer && subMesh.indexBuffer) {
-                cmdBuffer->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
-                cmdBuffer->SetIndexBuffer(subMesh.indexBuffer.get());
-                cmdBuffer->DrawIndexed(subMesh.indexCount);
+                cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                cmd->SetIndexBuffer(subMesh.indexBuffer.get());
+                cmd->DrawIndexed(subMesh.indexCount);
             }
         }
     }
@@ -219,7 +184,6 @@ void Template3DApp::LoadSceneFromJSON(const std::string& path) {
         return;
     }
 
-    // 相机
     m_camera.position = glm::vec3(
         (float)cfg.camera.position[0],
         (float)cfg.camera.position[1],
@@ -229,7 +193,6 @@ void Template3DApp::LoadSceneFromJSON(const std::string& path) {
     LOG_INFO("Template3D", "  相机: pos=({:.1f},{:.1f},{:.1f}) fov={:.1f}",
              m_camera.position.x, m_camera.position.y, m_camera.position.z, m_camera.fov);
 
-    // 填充 SSBO 数据
     SceneDataSSBO ssboData{};
     uint32_t objCount = std::min((uint32_t)cfg.objects.size(), (uint32_t)32);
     ssboData.objectCount = (int)objCount;
@@ -242,7 +205,7 @@ void Template3DApp::LoadSceneFromJSON(const std::string& path) {
             ptObj.p0[0] = (float)obj.point[0];
             ptObj.p0[1] = (float)obj.point[1];
             ptObj.p0[2] = (float)obj.point[2];
-            ptObj.p0[3] = 0.0f; // type=0
+            ptObj.p0[3] = 0.0f;
             ptObj.p1[0] = (float)obj.normal[0];
             ptObj.p1[1] = (float)obj.normal[1];
             ptObj.p1[2] = (float)obj.normal[2];
@@ -251,40 +214,31 @@ void Template3DApp::LoadSceneFromJSON(const std::string& path) {
             ptObj.p2[1] = (float)obj.bounds[1];
             ptObj.p2[2] = (float)obj.bounds[2];
             ptObj.p2[3] = (float)obj.bounds[3];
-            LOG_INFO("Template3D", "  对象[{}]: plane point=({:.2f},{:.2f},{:.2f}) normal=({:.2f},{:.2f},{:.2f})",
-                     i, ptObj.p0[0], ptObj.p0[1], ptObj.p0[2],
-                     ptObj.p1[0], ptObj.p1[1], ptObj.p1[2]);
         } else if (obj.type == "sphere") {
             ptObj.p0[0] = (float)obj.center[0];
             ptObj.p0[1] = (float)obj.center[1];
             ptObj.p0[2] = (float)obj.center[2];
-            ptObj.p0[3] = 1.0f; // type=1
+            ptObj.p0[3] = 1.0f;
             ptObj.p1[0] = (float)obj.radius;
             ptObj.p1[1] = 0.0f;
             ptObj.p1[2] = 0.0f;
             ptObj.p1[3] = 0.0f;
-            LOG_INFO("Template3D", "  对象[{}]: sphere center=({:.2f},{:.2f},{:.2f}) r={:.2f}",
-                     i, ptObj.p0[0], ptObj.p0[1], ptObj.p0[2], ptObj.p1[0]);
         } else if (obj.type == "box") {
             ptObj.p0[0] = (float)obj.center[0];
             ptObj.p0[1] = (float)obj.center[1];
             ptObj.p0[2] = (float)obj.center[2];
-            ptObj.p0[3] = 2.0f; // type=2
+            ptObj.p0[3] = 2.0f;
             ptObj.p1[0] = (float)obj.halfSize[0];
             ptObj.p1[1] = (float)obj.halfSize[1];
             ptObj.p1[2] = (float)obj.halfSize[2];
             ptObj.p1[3] = 0.0f;
-            // 旋转矩阵
             float angleRad = glm::radians((float)obj.rotation);
             ptObj.p2[0] = cos(angleRad);
             ptObj.p2[1] = sin(angleRad);
             ptObj.p2[2] = 0.0f;
             ptObj.p2[3] = 0.0f;
-            LOG_INFO("Template3D", "  对象[{}]: box center=({:.2f},{:.2f},{:.2f}) hs=({:.2f},{:.2f},{:.2f}) rot={:.1f}",
-                     i, ptObj.p0[0], ptObj.p0[1], ptObj.p0[2],
-                     ptObj.p1[0], ptObj.p1[1], ptObj.p1[2], obj.rotation);
         } else {
-            LOG_WARN("Template3D", "  对象[{}]: 未知类型 '{}'，跳过", i, obj.type);
+            LOG_WARN("Template3D", "  未知类型 '{}'，跳过", obj.type);
             ssboData.objectCount--;
             continue;
         }
@@ -295,37 +249,20 @@ void Template3DApp::LoadSceneFromJSON(const std::string& path) {
         ptObj.color[3] = (float)obj.emissive;
     }
 
-    // 上传 SSBO 数据（通过抽象接口自动处理 map/flush/unmap）
-    if (m_ptRes.sceneSSBO) {
-        m_ptRes.sceneSSBO->UpdateData(&ssboData, sizeof(ssboData), 0);
-
-        LOG_INFO("Template3D", "  上传 {} 个场景对象到 SSBO ({} bytes)", ssboData.objectCount, sizeof(ssboData));
-
-        // 验证回读 SSBO 数据
-        SceneDataSSBO checkData{};
-        m_ptRes.sceneSSBO->ReadData(&checkData, sizeof(checkData), 0);
-        LOG_INFO("Template3D", "  SSBO 回读: count={} sizeof={}", checkData.objectCount, (int)sizeof(checkData));
-        if (checkData.objectCount > 0) {
-            LOG_INFO("Template3D", "  首对象: p0=({:.1f},{:.1f},{:.1f}) c=({:.1f},{:.1f},{:.1f}) e={:.1f}",
-                     checkData.objects[0].p0[0], checkData.objects[0].p0[1], checkData.objects[0].p0[2],
-                     checkData.objects[0].color[0], checkData.objects[0].color[1], checkData.objects[0].color[2],
-                     checkData.objects[0].color[3]);
-            // Check light object
-            for (int i = 0; i < checkData.objectCount; i++) {
-                if (checkData.objects[i].color[3] > 1.0f) {
-                    LOG_INFO("Template3D", "  找到光源对象[{}]: emissive={}", i, checkData.objects[i].color[3]);
-                }
-            }
-        } else {
-            LOG_WARN("Template3D", "  警告: SSBO 对象数为零或负数!");
-        }
+    // 设置场景数据到管线
+    if (m_ptPipeline) {
+        Graphic::PathTracingSceneData ptData;
+        ptData.objectCount = ssboData.objectCount;
+        std::memcpy(ptData.objects, ssboData.objects, sizeof(PTSceneObject) * objCount);
+        m_ptPipeline->SetSceneData(ptData);
     }
 
     m_sceneLoaded = true;
+    LOG_INFO("Template3D", "场景加载完成，{} 个对象", objCount);
 }
 
 int Template3DApp::OnInitialize() {
-    LOG_INFO("Template3D", "3D 模板初始化 (路径追踪场景 SSBO)");
+    LOG_INFO("Template3D", "3D 模板初始化（路径追踪引擎管线版）");
 
     if (m_headlessCfg.enabled) {
         m_Spec.Width = m_headlessCfg.width;
@@ -339,448 +276,118 @@ int Template3DApp::OnInitialize() {
         return -1;
     }
 
-    // 初始化 gizmo overlay（处理 stats 文字的渲染）
+    // 创建路径追踪管线
+    auto ptPipeline = std::make_shared<PathTracingPipeline>();
+
+    // 传递着色器 SPIR-V 数据（嵌入在 SPIRV header 中）
+    ptPipeline->SetComputeShaderSPIRV(PATHTRACE_COMP_SPV_SPV, PATHTRACE_COMP_SPV_SPV_SIZE * sizeof(uint32_t));
+    ptPipeline->SetPresentShadersSPIRV(
+        FULLSCREEN_VERT_SPV_SPV, FULLSCREEN_VERT_SPV_SPV_SIZE * sizeof(uint32_t),
+        PRESENT_FRAG_SPV_SPV, PRESENT_FRAG_SPV_SPV_SIZE * sizeof(uint32_t)
+    );
+
+    // 设置 overlay 回调（gizmo/HUD）
+    ptPipeline->SetOverlayCallback([this](ICommandBuffer* cmd) {
+        OnPresentOverlay(cmd);
+    });
+
+    // 初始化管线
+    if (ptPipeline->Initialize(m_device) != 0) {
+        LOG_ERROR("Template3D", "路径追踪管线初始化失败");
+        return -1;
+    }
+    m_ptPipeline = ptPipeline;
+
+    // 初始化 gizmo overlay
     InitGizmoResources();
 
+    // Forward 资源（Cornell Box 网格，仍然保留为切换选项）
     InitForwardResources();
-    InitPathTracingResources();
 
-    // 加载场景文件（相对于可执行文件目录）
+    // 加载场景
     std::string scenePath = "assets/scenes/pt_scene.json";
-    LOG_INFO("Template3D", "工作目录: {} 场景路径: {}", std::filesystem::current_path().string(), scenePath);
+    LOG_INFO("Template3D", "工作目录: {}", std::filesystem::current_path().string());
     LoadSceneFromJSON(scenePath);
-    LOG_INFO("Template3D", "场景加载状态: m_sceneLoaded={}", m_sceneLoaded);
 
-    if (!m_headlessCfg.enabled) {
-        InitPresentResources();
-    } else {
-        LOG_INFO("Template3D", "头模式：跳过 present 资源初始化");
-    }
+    m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
 
     LOG_INFO("Template3D", "按 P 切换渲染模式，R 重置路径追踪累积");
     return 0;
 }
 
 void Template3DApp::InitForwardResources() {
-    LOG_INFO("Template3D", "Forward3D Cornell Box 网格初始化");
-
     if (!m_device) return;
     auto* factory = m_device->GetResourceFactory();
     if (!factory) return;
 
-    // ── Helper: 生成一个面的 4 个顶点 ──
     struct FaceInput {
-        glm::vec3 v0, v1, v2, v3;    // 4 个角的位置
-        glm::vec4 color;              // 面的颜色
+        glm::vec3 v0, v1, v2, v3;
+        glm::vec4 color;
     };
 
-    // 每面 4 个顶点，每顶点 6 个 vec4 = 96 字节
-    // 使用 Vertex 结构（定义于 RenderTypes.h）
     std::vector<Graphic::Vertex> vertices;
     std::vector<uint16_t> indices;
 
     auto addFace = [&](const FaceInput& f) {
         uint16_t base = static_cast<uint16_t>(vertices.size());
-        // 添加 4 个顶点
         vertices.emplace_back(glm::vec4(f.v0, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
         vertices.emplace_back(glm::vec4(f.v1, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
         vertices.emplace_back(glm::vec4(f.v2, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
         vertices.emplace_back(glm::vec4(f.v3, 1.0f), f.color, glm::vec4(0), glm::vec4(0), glm::vec4(0), glm::vec4(0));
-        // 2 个三角形: 0-1-2, 0-2-3
         indices.push_back(base); indices.push_back(base + 1); indices.push_back(base + 2);
         indices.push_back(base); indices.push_back(base + 2); indices.push_back(base + 3);
     };
 
     auto addBox = [&](const glm::vec3& min, const glm::vec3& max, const glm::vec4& color) {
-        // 6 个面: -X, +X, -Y, +Y, -Z, +Z
         addFace({glm::vec3(min.x, min.y, min.z), glm::vec3(min.x, max.y, min.z),
-                 glm::vec3(min.x, max.y, max.z), glm::vec3(min.x, min.y, max.z), color}); // -X
+                 glm::vec3(min.x, max.y, max.z), glm::vec3(min.x, min.y, max.z), color});
         addFace({glm::vec3(max.x, min.y, max.z), glm::vec3(max.x, max.y, max.z),
-                 glm::vec3(max.x, max.y, min.z), glm::vec3(max.x, min.y, min.z), color}); // +X
+                 glm::vec3(max.x, max.y, min.z), glm::vec3(max.x, min.y, min.z), color});
         addFace({glm::vec3(min.x, min.y, max.z), glm::vec3(max.x, min.y, max.z),
-                 glm::vec3(max.x, min.y, min.z), glm::vec3(min.x, min.y, min.z), color}); // -Y
+                 glm::vec3(max.x, min.y, min.z), glm::vec3(min.x, min.y, min.z), color});
         addFace({glm::vec3(min.x, max.y, min.z), glm::vec3(max.x, max.y, min.z),
-                 glm::vec3(max.x, max.y, max.z), glm::vec3(min.x, max.y, max.z), color}); // +Y
+                 glm::vec3(max.x, max.y, max.z), glm::vec3(min.x, max.y, max.z), color});
         addFace({glm::vec3(min.x, min.y, min.z), glm::vec3(max.x, min.y, min.z),
-                 glm::vec3(max.x, max.y, min.z), glm::vec3(min.x, max.y, min.z), color}); // -Z
+                 glm::vec3(max.x, max.y, min.z), glm::vec3(min.x, max.y, min.z), color});
         addFace({glm::vec3(max.x, min.y, max.z), glm::vec3(min.x, min.y, max.z),
-                 glm::vec3(min.x, max.y, max.z), glm::vec3(max.x, max.y, max.z), color}); // +Z
+                 glm::vec3(min.x, max.y, max.z), glm::vec3(max.x, max.y, max.z), color});
     };
 
-    // ── Cornell Box 墙面 ──
     glm::vec4 white(0.7f, 0.7f, 0.7f, 1.0f);
     glm::vec4 red(0.8f, 0.05f, 0.05f, 1.0f);
     glm::vec4 green(0.05f, 0.5f, 0.05f, 1.0f);
     glm::vec4 lightCol(15.0f, 15.0f, 15.0f, 1.0f);
 
-    // 后墙 z=-1
     addFace({{-1,-1,-1}, { 1,-1,-1}, { 1, 1,-1}, {-1, 1,-1}, white});
-    // 左墙 x=-1
     addFace({{-1,-1,-1}, {-1,-1, 1}, {-1, 1, 1}, {-1, 1,-1}, red});
-    // 右墙 x=1
     addFace({{ 1,-1, 1}, { 1,-1,-1}, { 1, 1,-1}, { 1, 1, 1}, green});
-    // 天花板 y=1
     addFace({{-1, 1,-1}, { 1, 1,-1}, { 1, 1, 1}, {-1, 1, 1}, white});
-    // 地板 y=-1
     addFace({{-1,-1, 1}, { 1,-1, 1}, { 1,-1,-1}, {-1,-1,-1}, white});
-
-    // 光源 (天花板上的小发光面板)
     addFace({{-0.3f, 0.999f, -0.3f}, { 0.3f, 0.999f, -0.3f},
              { 0.3f, 0.999f,  0.3f}, {-0.3f, 0.999f,  0.3f}, lightCol});
-
-    // 内部方块: 左(红色), 右(绿色)
     addBox(glm::vec3(-0.6f, -1.0f, -0.15f), glm::vec3(-0.3f, -0.4f, 0.15f), red);
     addBox(glm::vec3( 0.3f, -1.0f, -0.15f), glm::vec3( 0.6f, -0.7f, 0.15f), green);
 
-    // ── 创建 GPU 缓冲 ──
-    size_t vbSize = vertices.size() * sizeof(Graphic::Vertex);
-    size_t ibSize = indices.size() * sizeof(uint16_t);
-
     BufferDesc vbDesc{};
     vbDesc.type = BufferType::Vertex;
-    vbDesc.size = static_cast<uint32_t>(vbSize);
+    vbDesc.size = static_cast<uint32_t>(vertices.size() * sizeof(Graphic::Vertex));
     vbDesc.usage = BufferUsage::Default;
     m_cornellBoxVB = factory->CreateBufferImpl(vbDesc);
-    if (m_cornellBoxVB) {
-        m_cornellBoxVB->UpdateData(vertices.data(), static_cast<uint32_t>(vbSize), 0);
-    }
+    if (m_cornellBoxVB) m_cornellBoxVB->UpdateData(vertices.data(), vbDesc.size, 0);
 
     BufferDesc ibDesc{};
     ibDesc.type = BufferType::Index;
-    ibDesc.size = static_cast<uint32_t>(ibSize);
+    ibDesc.size = static_cast<uint32_t>(indices.size() * sizeof(uint16_t));
     ibDesc.usage = BufferUsage::Default;
     m_cornellBoxIB = factory->CreateBufferImpl(ibDesc);
-    if (m_cornellBoxIB) {
-        m_cornellBoxIB->UpdateData(indices.data(), static_cast<uint32_t>(ibSize), 0);
-    }
+    if (m_cornellBoxIB) m_cornellBoxIB->UpdateData(indices.data(), ibDesc.size, 0);
 
     m_cornellBoxIndexCount = static_cast<uint32_t>(indices.size());
-
-    LOG_INFO("Template3D", "Cornell Box 网格创建完成: {} 顶点, {} 索引",
-             vertices.size(), indices.size());
-}
-
-void Template3DApp::InitPathTracingResources() {
-    auto& pt = m_ptRes;
-    pt.width = m_Spec.Width;
-    pt.height = m_Spec.Height;
-
-    auto* factory = m_device->GetResourceFactory();
-    if (!factory) {
-        LOG_ERROR("Template3D", "无法获取资源工厂");
-        return;
-    }
-
-    // 1. 创建存储纹理（计算着色器写入，片段着色器采样）
-    TextureDesc texDesc{};
-    texDesc.type = TextureType::Texture2D;
-    texDesc.format = TextureFormat::RGBA32_Float;
-    texDesc.width = pt.width;
-    texDesc.height = pt.height;
-    texDesc.depth = 1;
-    texDesc.mipLevels = 1;
-    texDesc.arraySize = 1;
-    texDesc.allowShaderResource = true;
-    texDesc.allowUnorderedAccess = true;
-    pt.storageTexture = factory->CreateTextureImpl(texDesc);
-    if (!pt.storageTexture) {
-        LOG_ERROR("Template3D", "创建存储纹理失败");
-        return;
-    }
-
-    // 2. 创建 Camera UBO
-    BufferDesc uboDesc{};
-    uboDesc.type = BufferType::Constant;
-    uboDesc.size = sizeof(CameraUBO);
-    uboDesc.usage = BufferUsage::Dynamic;
-    pt.cameraUBO = factory->CreateBufferImpl(uboDesc);
-    if (!pt.cameraUBO) {
-        LOG_ERROR("Template3D", "创建 Camera UBO 失败");
-        return;
-    }
-
-    // 3. 创建 Scene SSBO
-    BufferDesc ssboDesc{};
-    ssboDesc.type = BufferType::Structured;
-    ssboDesc.size = sizeof(SceneDataSSBO);
-    ssboDesc.usage = BufferUsage::Dynamic;
-    pt.sceneSSBO = factory->CreateBufferImpl(ssboDesc);
-    if (!pt.sceneSSBO) {
-        LOG_ERROR("Template3D", "创建 Scene SSBO 失败");
-        return;
-    }
-
-    // 清空 SSBO（防止未初始化的对象数据）
-    SceneDataSSBO emptySSBO{};
-    pt.sceneSSBO->UpdateData(&emptySSBO, sizeof(emptySSBO), 0);
-
-    // 4. 创建 Pixel Output SSBO（绕开 llvmpipe imageStore bug, binding 4）
-    VkDevice vkDev = m_device->GetVkDevice();
-    VmaAllocator vmaAlloc = m_device->GetVmaAllocator();
-    {
-        VkBufferCreateInfo bufCI{};
-        bufCI.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        bufCI.size = VkDeviceSize(pt.width) * pt.height * 4 * sizeof(float);
-        bufCI.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-
-        VmaAllocationCreateInfo allocCI{};
-        allocCI.usage = VMA_MEMORY_USAGE_AUTO_PREFER_HOST;
-        allocCI.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT |
-                        VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-        VkResult err = vmaCreateBuffer(vmaAlloc, &bufCI, &allocCI,
-                                       &pt.pixelOutputBuffer, &pt.pixelOutputAllocation, nullptr);
-        if (err != VK_SUCCESS) {
-            LOG_ERROR("Template3D", "创建 Pixel Output SSBO 失败");
-            return;
-        }
-        VmaAllocationInfo info{};
-        vmaGetAllocationInfo(vmaAlloc, pt.pixelOutputAllocation, &info);
-        pt.pixelOutputMapped = info.pMappedData;
-    }
-
-    // 5. 从 SPIRV 创建计算着色器
-    std::vector<uint8_t> bytecode(
-        reinterpret_cast<const uint8_t*>(PATHTRACE_COMP_SPV_SPV),
-        reinterpret_cast<const uint8_t*>(PATHTRACE_COMP_SPV_SPV + PATHTRACE_COMP_SPV_SPV_SIZE));
-
-    ShaderReflection reflection;
-    reflection.Resources = {
-        {"outputImage", ShaderResource::Type::Image2D, 0, 0, 1, 0},
-        {"accumImage",  ShaderResource::Type::Image2D, 0, 1, 1, 0},
-        {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(CameraUBO)},
-        {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(SceneDataSSBO)},
-        {"pixelBuf",    ShaderResource::Type::StorageBuffer, 0, 4, 1, 0},
-    };
-
-    ShaderDesc shaderDesc{};
-    shaderDesc.type = ShaderType::Compute;
-    shaderDesc.entryPoint = "main";
-    shaderDesc.language = ShaderLanguage::SPIRV;
-    shaderDesc.filename = "pathtrace.comp";
-
-    auto shader = factory->CreateShaderImpl(shaderDesc, bytecode, reflection);
-    if (!shader) {
-        LOG_ERROR("Template3D", "创建计算着色器失败");
-        return;
-    }
-
-    // 6. 创建计算管线（封装 ShaderModule + PipelineLayout + ComputePipeline）
-    pt.computePipeline = factory->CreateComputePipelineImpl();
-    if (!pt.computePipeline) {
-        LOG_ERROR("Template3D", "创建计算管线对象失败");
-        return;
-    }
-
-    pt.computePipeline->SetShader(std::move(shader));
-    if (!pt.computePipeline->Create(m_device)) {
-        LOG_ERROR("Template3D", "编译计算管线失败");
-        return;
-    }
-
-    // 7. 创建描述符集
-    const auto& layouts = pt.computePipeline->GetDescriptorSetLayouts();
-    if (layouts.empty()) {
-        LOG_ERROR("Template3D", "计算管线没有描述符集布局");
-        return;
-    }
-
-    pt.descriptorSet = factory->CreateDescriptorSet(layouts[0].get());
-    if (!pt.descriptorSet) {
-        LOG_ERROR("Template3D", "创建描述符集失败");
-        return;
-    }
-
-    // 8. 绑定资源到描述符集（抽象 API 绑定 0-3）
-    pt.descriptorSet->BindStorageImage(0, pt.storageTexture.get());
-    pt.descriptorSet->BindStorageImage(1, pt.storageTexture.get());
-    pt.descriptorSet->BindBuffer(2, pt.cameraUBO.get(), 0, sizeof(CameraUBO),
-                                 DescriptorType::UniformBuffer);
-    pt.descriptorSet->BindBuffer(3, pt.sceneSSBO.get(), 0, sizeof(SceneDataSSBO),
-                                 DescriptorType::StorageBuffer);
-    pt.descriptorSet->Update();
-
-    // 额外绑定 pixelBuf (binding 4) 到同一个描述符集
-    {
-        VkDescriptorBufferInfo pixelBufInfo{};
-        pixelBufInfo.buffer = pt.pixelOutputBuffer;
-        pixelBufInfo.range = VkDeviceSize(pt.width) * pt.height * 4 * sizeof(float);
-
-        VkWriteDescriptorSet writePixelBuf{};
-        writePixelBuf.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writePixelBuf.dstSet = (VkDescriptorSet)pt.descriptorSet->GetNativeHandle();
-        writePixelBuf.dstBinding = 4;
-        writePixelBuf.descriptorCount = 1;
-        writePixelBuf.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        writePixelBuf.pBufferInfo = &pixelBufInfo;
-
-        vkUpdateDescriptorSets(m_device->GetVkDevice(), 1, &writePixelBuf, 0, nullptr);
-    }
-
-    pt.initialized = true;
-    LOG_INFO("Template3D", "路径追踪资源初始化完成 ({}x{})", pt.width, pt.height);
-}
-
-void Template3DApp::InitPresentResources() {
-    auto& pr = m_presentRes;
-    VkDevice vkDev = m_device->GetVkDevice();
-    if (!vkDev) return;
-    pr.vkDevice = vkDev;
-    VkResult err;
-
-    auto* factory = m_device->GetResourceFactory();
-    if (!factory) {
-        LOG_ERROR("Template3D", "无法获取资源工厂");
-        return;
-    }
-
-    pr.vertShaderModule = CreateShaderModule(vkDev, FULLSCREEN_VERT_SPV_SPV, FULLSCREEN_VERT_SPV_SPV_SIZE);
-    pr.fragShaderModule = CreateShaderModule(vkDev, PRESENT_FRAG_SPV_SPV, PRESENT_FRAG_SPV_SPV_SIZE);
-    if (!pr.vertShaderModule || !pr.fragShaderModule) {
-        LOG_ERROR("Template3D", "创建 present 着色器模块失败");
-        return;
-    }
-
-    // 通过工厂创建抽象描述符集布局
-    {
-        std::vector<ShaderResource> presentResources;
-        presentResources.push_back({"presentTexture", ShaderResource::Type::Sampler2D, 0, 0, 1, 0});
-        pr.descriptorSetLayout = factory->CreateDescriptorSetLayout(presentResources);
-        if (!pr.descriptorSetLayout) {
-            LOG_ERROR("Template3D", "创建 present 描述符集布局失败");
-            return;
-        }
-    }
-
-    // 通过工厂创建抽象采样器
-    {
-        SamplerDesc samplerDesc{};
-        samplerDesc.filter = TextureFilter::Linear;
-        samplerDesc.addressU = TextureAddressMode::Clamp;
-        samplerDesc.addressV = TextureAddressMode::Clamp;
-        samplerDesc.addressW = TextureAddressMode::Clamp;
-        pr.sampler = factory->CreateSamplerImpl(samplerDesc);
-        if (!pr.sampler) {
-            LOG_ERROR("Template3D", "创建 sampler 失败");
-            return;
-        }
-    }
-
-    // 通过工厂创建抽象描述符集
-    pr.descriptorSet = factory->CreateDescriptorSet(pr.descriptorSetLayout.get());
-    if (!pr.descriptorSet) {
-        LOG_ERROR("Template3D", "分配 present 描述符集失败");
-        return;
-    }
-
-    VkPipelineLayoutCreateInfo plCI{};
-    plCI.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    plCI.setLayoutCount = 1;
-    VkDescriptorSetLayout vkLayout = (VkDescriptorSetLayout)pr.descriptorSetLayout->GetNativeHandle();
-    plCI.pSetLayouts = &vkLayout;
-    err = vkCreatePipelineLayout(vkDev, &plCI, nullptr, &pr.pipelineLayout);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建 present 管线布局失败");
-        return;
-    }
-
-    VkPipelineShaderStageCreateInfo stages[2] = {};
-    stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    stages[0].module = pr.vertShaderModule;
-    stages[0].pName = "main";
-    stages[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    stages[1].module = pr.fragShaderModule;
-    stages[1].pName = "main";
-
-    VkPipelineVertexInputStateCreateInfo viCI{};
-    viCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    VkPipelineInputAssemblyStateCreateInfo iaCI{};
-    iaCI.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    iaCI.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-    VkDynamicState dynStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-    VkPipelineDynamicStateCreateInfo dynCI{};
-    dynCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynCI.dynamicStateCount = 2;
-    dynCI.pDynamicStates = dynStates;
-
-    VkPipelineViewportStateCreateInfo vpCI{};
-    vpCI.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vpCI.viewportCount = 1;
-    vpCI.scissorCount = 1;
-
-    VkPipelineRasterizationStateCreateInfo rasCI{};
-    rasCI.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rasCI.polygonMode = VK_POLYGON_MODE_FILL;
-    rasCI.cullMode = VK_CULL_MODE_NONE;
-    rasCI.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    rasCI.lineWidth = 1.0f;
-
-    VkPipelineMultisampleStateCreateInfo msCI{};
-    msCI.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    msCI.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-    VkPipelineDepthStencilStateCreateInfo dsCI{};
-    dsCI.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    dsCI.depthTestEnable = VK_FALSE;
-    dsCI.depthWriteEnable = VK_FALSE;
-
-    VkPipelineColorBlendAttachmentState cbAtt{};
-    cbAtt.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-                           VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    cbAtt.blendEnable = VK_FALSE;
-
-    VkPipelineColorBlendStateCreateInfo cbCI{};
-    cbCI.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    cbCI.attachmentCount = 1;
-    cbCI.pAttachments = &cbAtt;
-
-    VkRenderPass overlayRP = m_device->GetOverlayRenderPass();
-
-    VkGraphicsPipelineCreateInfo gpCI{};
-    gpCI.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    gpCI.stageCount = 2;
-    gpCI.pStages = stages;
-    gpCI.pVertexInputState = &viCI;
-    gpCI.pInputAssemblyState = &iaCI;
-    gpCI.pViewportState = &vpCI;
-    gpCI.pRasterizationState = &rasCI;
-    gpCI.pMultisampleState = &msCI;
-    gpCI.pDepthStencilState = &dsCI;
-    gpCI.pColorBlendState = &cbCI;
-    gpCI.pDynamicState = &dynCI;
-    gpCI.layout = pr.pipelineLayout;
-    gpCI.renderPass = overlayRP;
-    gpCI.subpass = 0;
-
-    err = vkCreateGraphicsPipelines(vkDev, VK_NULL_HANDLE, 1, &gpCI, nullptr, &pr.pipeline);
-    if (err != VK_SUCCESS) {
-        LOG_ERROR("Template3D", "创建 present 图形管线失败");
-        return;
-    }
-
-    // 通过抽象接口绑定纹理到描述符集
-    pr.descriptorSet->BindTexture(0, m_ptRes.storageTexture.get(), pr.sampler.get());
-    pr.descriptorSet->Update();
-
-    auto vkRenderDev = dynamic_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
-    if (vkRenderDev) {
-        vkRenderDev->SetOverlayRenderCallback([this](VkCommandBuffer cmd) {
-            OnPresentOverlay(cmd);
-        });
-    }
-
-    pr.extent = { m_Spec.Width, m_Spec.Height };
-    pr.initialized = true;
-    LOG_INFO("Template3D", "Present 资源初始化完成");
+    LOG_INFO("Template3D", "Cornell Box 网格: {} 顶点, {} 索引", vertices.size(), indices.size());
 }
 
 void Template3DApp::OnRender() {
-    if (m_renderMode == RenderMode::PathTracing && m_ptRes.initialized &&
-        (m_headlessCfg.enabled || m_presentRes.initialized)) {
+    if (m_renderMode == RenderMode::PathTracing && m_ptPipeline) {
         RenderPathTracing();
     } else {
         RenderForward3D();
@@ -788,195 +395,46 @@ void Template3DApp::OnRender() {
 }
 
 void Template3DApp::RenderPathTracing() {
-    auto& pt = m_ptRes;
+    if (!m_ptPipeline || !m_device) return;
 
-    // ── 已收敛：跳过所有计算，保留上次结果 ──
-    if (m_ptConverged) {
-        m_pathTracingDirty = false;
-        if (m_gizmoCamera) {
-            Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
-            DrawStatsOverlay();
-            Graphic::Renderer2D::EndGizmo();
-        }
-        return;
-    }
-    if (m_headlessCfg.enabled && pt.frameCount >= m_headlessCfg.totalFrames) {
-        return;
-    }
-
-    auto vkRenderDev = static_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
-    if (!vkRenderDev) return;
-
-    auto* cmdBuffer = vkRenderDev->GetCurrentCommandBuffer();
-    if (!cmdBuffer) return;
-
-    if (!vkRenderDev->IsHeadless()) {
-        vkRenderDev->SuspendDefaultRenderPass();
-    }
-
-    bool firstFrame = (pt.frameCount == 0);
-
-    // 1. 管线屏障：将存储图像转换到 GENERAL 布局供计算着色器写入
-    cmdBuffer->PipelineBarrier({{
-        pt.storageTexture.get(),
-        firstFrame ? Graphic::ResourceState::Undefined : Graphic::ResourceState::ShaderRead,
-        Graphic::ResourceState::UnorderedAccess
-    }});
-
-    // 2. 填充 Camera UBO（通过抽象接口自动处理 map/flush/unmap）
-    {
-        glm::vec3 dir = glm::normalize(m_camera.target - m_camera.position);
-        glm::vec3 right = glm::normalize(glm::cross(dir, m_camera.up));
-        glm::vec3 up = glm::normalize(glm::cross(right, dir));
-
-        CameraUBO ubo{};
-        std::memcpy(ubo.cameraPos, &m_camera.position, sizeof(float) * 3);
-        std::memcpy(ubo.cameraDir, &dir, sizeof(float) * 3);
-        std::memcpy(ubo.cameraUp, &up, sizeof(float) * 3);
-        std::memcpy(ubo.cameraRight, &right, sizeof(float) * 3);
-        ubo.fov = glm::radians(m_camera.fov);
-        ubo.aspectRatio = (float)pt.width / (float)pt.height;
-        ubo.frameCount = (int)pt.frameCount;
-        ubo.maxBounces = 8;
-        ubo.resetAccumulation = 0;
-        ubo.padUBO = 0;
-
-        if (m_headlessCfg.enabled) {
-            ubo.samplesPerPixel = (int)m_headlessCfg.totalFrames;
-            ubo.useAccumulation = 0;
-        } else {
-            ubo.samplesPerPixel = 1;
-            ubo.useAccumulation = 1;
-        }
-        pt.cameraUBO->UpdateData(&ubo, sizeof(ubo), 0);
-    }
-
-    // 3. 绑定计算管线和描述符集，调度
-    cmdBuffer->SetComputePipeline(pt.computePipeline.get());
-    cmdBuffer->BindDescriptorSet(0, pt.descriptorSet.get());
-
-    uint32_t groupX = (pt.width + 7) / 8;
-    uint32_t groupY = (pt.height + 7) / 8;
-    cmdBuffer->Dispatch(groupX, groupY, 1);
-
-    // GPU→Host 内存屏障让 pixel output SSBO 写入对 CPU 可见
-    {
-        auto* vkCmdBuf = static_cast<Graphic::Vulkan::VulkanCommandBuffer*>(cmdBuffer);
-        VkCommandBuffer cmd = vkCmdBuf->GetVkCommandBuffer();
-        VkMemoryBarrier bufBarrier{};
-        bufBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-        bufBarrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-        bufBarrier.dstAccessMask = VK_ACCESS_HOST_READ_BIT;
-        vkCmdPipelineBarrier(cmd,
-                             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                             VK_PIPELINE_STAGE_HOST_BIT,
-                             0, 1, &bufBarrier, 0, nullptr, 0, nullptr);
-    }
-
-    // 4. 管线屏障：将存储图像转换到 ShaderRead 供展示
-    cmdBuffer->PipelineBarrier({{
-        pt.storageTexture.get(),
-        Graphic::ResourceState::UnorderedAccess,
-        Graphic::ResourceState::ShaderRead
-    }});
-
-    // 收敛检测：达到最大采样数后停止累积
-    if (m_ptMaxSamples > 0 && pt.frameCount >= m_ptMaxSamples) {
-        m_ptConverged = true;
-    }
+    // 头模式：累积到指定帧数后保存退出
     if (m_headlessCfg.enabled) {
-        pt.frameCount = m_headlessCfg.totalFrames;
-    } else {
-        pt.frameCount++;
+        uint32_t frame = m_ptPipeline->GetFrameCount();
+        if (frame >= m_headlessCfg.totalFrames) return;
     }
-    m_pathTracingDirty = false;
 
-    // 提交 stats 文字到 gizmo 队列（在 overlay pass 中统一处理）
-    if (m_gizmoCamera) {
-        Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
-        DrawStatsOverlay();
-        Graphic::Renderer2D::EndGizmo();
-    }
+    // 构建渲染上下文
+    RenderContext ctx;
+    ctx.device = m_device;
+    ctx.commandBuffer = m_device->GetCurrentCommandBuffer();
+    ctx.width = m_Spec.Width;
+    ctx.height = m_Spec.Height;
+    ctx.frameIndex = m_device->GetCurrentFrameIndex();
+
+    // 从 Template3D 的自定义相机计算 view matrix
+    glm::vec3 dir = glm::normalize(m_camera.target - m_camera.position);
+    glm::vec3 right = glm::normalize(glm::cross(dir, m_camera.up));
+    glm::vec3 up = glm::normalize(glm::cross(right, dir));
+    ctx.camera.viewMatrix = glm::lookAt(m_camera.position, m_camera.target, m_camera.up);
+    ctx.camera.projectionMatrix = glm::perspective(
+        glm::radians(m_camera.fov),
+        (float)m_Spec.Width / (float)m_Spec.Height, 0.1f, 100.0f
+    );
+    ctx.camera.position = m_camera.position;
+    ctx.camera.fov = m_camera.fov;
+
+    // 执行管线
+    m_ptPipeline->Execute(ctx);
 }
 
-void Template3DApp::OnPresentOverlay(VkCommandBuffer cmd) {
-    // ── 1. 路径追踪模式：绘制全屏四边形显示计算结果 ──
-    if (m_renderMode == RenderMode::PathTracing) {
-        auto& pr = m_presentRes;
-        if (pr.initialized) {
-            VkViewport vp{};
-            vp.width = (float)pr.extent.width;
-            vp.height = (float)pr.extent.height;
-            vp.maxDepth = 1.0f;
-            vkCmdSetViewport(cmd, 0, 1, &vp);
-
-            VkRect2D sc{};
-            sc.extent = pr.extent;
-            vkCmdSetScissor(cmd, 0, 1, &sc);
-
-            vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pr.pipeline);
-            VkDescriptorSet vkDescSet = (VkDescriptorSet)pr.descriptorSet->GetNativeHandle();
-            vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                                    pr.pipelineLayout, 0, 1, &vkDescSet, 0, nullptr);
-            vkCmdDraw(cmd, 3, 1, 0, 0);
-        }
-    }
-
-    // ── 2. 处理 gizmo 队列（HUD / stats 文字） ──
-    // 在同一个 render pass 中处理，显示在路径追踪结果（或纯色背景）之上
+void Template3DApp::OnPresentOverlay(ICommandBuffer* cmd) {
+    // 在 swapchain render pass 中绘制 gizmo/HUD
     ProcessGizmoOverlay(cmd);
 }
 
 void Template3DApp::SavePathTracingOutput() {
-    if (!m_ptRes.pixelOutputMapped) {
-        LOG_ERROR("Template3D", "保存输出失败：pixelOutputMapped 为空");
-        return;
-    }
-
-    VkDevice vkDev = m_ptRes.vkDevice;
-    if (!vkDev) return;
-
-    vkDeviceWaitIdle(vkDev);
-
-    // Invalidate mapped memory to ensure SSBO writes are visible to host
-    auto& pt = m_ptRes;
-    {
-        VmaAllocationInfo allocInfo{};
-        vmaGetAllocationInfo(pt.vmaAllocator, pt.pixelOutputAllocation, &allocInfo);
-        VkMappedMemoryRange range{};
-        range.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range.memory = allocInfo.deviceMemory;
-        range.offset = allocInfo.offset;
-        range.size = VK_WHOLE_SIZE;
-        vkInvalidateMappedMemoryRanges(pt.vkDevice, 1, &range);
-    }
-
-    uint32_t w = pt.width;
-    uint32_t h = pt.height;
-    size_t pixelCount = size_t(w) * h;
-
-    const float* pixelData = static_cast<const float*>(pt.pixelOutputMapped);
-
-    std::vector<uint8_t> rgba8(pixelCount * 4);
-    for (size_t i = 0; i < pixelCount; i++) {
-        float r = std::clamp(pixelData[i * 4 + 0], 0.0f, 1.0f);
-        float g = std::clamp(pixelData[i * 4 + 1], 0.0f, 1.0f);
-        float b = std::clamp(pixelData[i * 4 + 2], 0.0f, 1.0f);
-        float a = std::clamp(pixelData[i * 4 + 3], 0.0f, 1.0f);
-        // Gamma already applied in shader — no powf() here
-
-        rgba8[i * 4 + 0] = uint8_t(r * 255.0f + 0.5f);
-        rgba8[i * 4 + 1] = uint8_t(g * 255.0f + 0.5f);
-        rgba8[i * 4 + 2] = uint8_t(b * 255.0f + 0.5f);
-        rgba8[i * 4 + 3] = uint8_t(a * 255.0f + 0.5f);
-    }
-
-    const std::string& outPath = m_headlessCfg.outputPath;
-    if (Utils::ImageUtils::SavePNG(outPath, int(w), int(h), 4, rgba8.data(), int(w) * 4)) {
-        LOG_INFO("Template3D", "路径追踪输出已保存: {} ({}x{}, {} frames)",
-                 outPath, w, h, m_ptRes.frameCount);
-    } else {
-        LOG_ERROR("Template3D", "保存 PNG 失败: {}", outPath);
+    if (m_ptPipeline) {
+        m_ptPipeline->SaveOutput(m_headlessCfg.outputPath);
     }
 }
 
@@ -984,7 +442,6 @@ void Template3DApp::DrawStatsOverlay() {
     float winW = static_cast<float>(m_Spec.Width);
     float winH = static_cast<float>(m_Spec.Height);
 
-    // ── 每秒刷新一次统计数据 ──
     static std::string timingInfo = "Calculating...";
     static std::string statusStr = "Loading...";
     static std::string resInfo = "";
@@ -1001,13 +458,11 @@ void Template3DApp::DrawStatsOverlay() {
     refreshTimer += dt;
 
     if (refreshTimer >= 1.0f) {
-        // 帧时序
         char buf[256];
         snprintf(buf, sizeof(buf), "BF=%.2f Render=%.2f EF=%.2f Present=%.2f Total=%.2f (ms)",
                  st.BeginFrameTime, st.RenderTime, st.EndFrameTime, st.PresentTime, st.TotalTime);
         timingInfo = buf;
 
-        // 性能瓶颈分析
         double maxTime = st.BeginFrameTime;
         std::string leadStage = "BF";
         if (st.RenderTime > maxTime) { maxTime = st.RenderTime; leadStage = "Render(CPU)"; }
@@ -1023,91 +478,69 @@ void Template3DApp::DrawStatsOverlay() {
                               : Prisma::Color{1.0f, 0.2f, 0.2f, 1.0f};
         }
 
-        // 分辨率 & FPS
         resInfo = std::to_string(m_Spec.Width) + "x" + std::to_string(m_Spec.Height)
                 + " @ " + std::to_string(static_cast<int>(Engine::Get().GetFPS())) + " FPS";
-
         refreshTimer = 0.0f;
     }
 
-    // ── 绘制覆盖层 ──
-    // 左下：帧时序
-    Graphic::Renderer2D::DrawString(timingInfo, {30.0f, winH - 45.0f}, 1.5f,
-                                    {0.2f, 1.0f, 0.2f, 1.0f});
-    Graphic::Renderer2D::DrawString(statusStr, {30.0f, winH - 85.0f}, 1.5f,
-                                    statusColor);
+    Renderer2D::DrawString(timingInfo, {30.0f, winH - 45.0f}, 1.5f, {0.2f, 1.0f, 0.2f, 1.0f});
+    Renderer2D::DrawString(statusStr, {30.0f, winH - 85.0f}, 1.5f, statusColor);
 
-    // 右上：分辨率 & FPS
-    float resW = Graphic::Renderer2D::GetStringWidth(resInfo, 3.0f);
-    Graphic::Renderer2D::DrawString(resInfo, {winW - resW - 30.0f, winH - 50.0f}, 3.0f,
-                                    {0.4f, 0.7f, 0.4f, 1.0f});
+    float resW = Renderer2D::GetStringWidth(resInfo, 3.0f);
+    Renderer2D::DrawString(resInfo, {winW - resW - 30.0f, winH - 50.0f}, 3.0f, {0.4f, 0.7f, 0.4f, 1.0f});
 
-    // GPU 名称
     std::string gpuName = Engine::Get().GetGPUName();
     if (!gpuName.empty()) {
-        float gW = Graphic::Renderer2D::GetStringWidth(gpuName, 2.0f);
-        Graphic::Renderer2D::DrawString(gpuName, {winW - gW - 30.0f, winH - 95.0f}, 2.0f,
-                                        {0.5f, 0.5f, 0.5f, 1.0f});
+        float gW = Renderer2D::GetStringWidth(gpuName, 2.0f);
+        Renderer2D::DrawString(gpuName, {winW - gW - 30.0f, winH - 95.0f}, 2.0f, {0.5f, 0.5f, 0.5f, 1.0f});
     }
 
-    // 右上提示
-    float escW = Graphic::Renderer2D::GetStringWidth("ESC to exit", 2.0f);
-    Graphic::Renderer2D::DrawString("ESC to exit", {winW - escW - 30.0f, 30.0f}, 2.0f,
-                                    {0.4f, 0.4f, 0.4f, 1.0f});
+    float escW = Renderer2D::GetStringWidth("ESC to exit", 2.0f);
+    Renderer2D::DrawString("ESC to exit", {winW - escW - 30.0f, 30.0f}, 2.0f, {0.4f, 0.4f, 0.4f, 1.0f});
+    Renderer2D::DrawString("Template3D (Nodes: " + std::to_string(totalNodes) + ")",
+                           {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
 
-    // 左上：模板名称 & 节点数
-    Graphic::Renderer2D::DrawString("Template3D (Nodes: " + std::to_string(totalNodes) + ")",
-                                    {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
-
-    // 渲染模式
     std::string modeStr = (m_renderMode == RenderMode::PathTracing) ? "PathTracing" : "Forward3D";
-    Graphic::Renderer2D::DrawString("Mode: " + modeStr + "  [P] Switch  [R] Reset",
-                                    {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
-
-    // 相机位置
-    Graphic::Renderer2D::DrawString(
+    Renderer2D::DrawString("Mode: " + modeStr + "  [P] Switch  [R] Reset",
+                           {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
+    Renderer2D::DrawString(
         "Cam: (" + std::to_string(static_cast<int>(m_camera.position.x)) + ", "
                  + std::to_string(static_cast<int>(m_camera.position.y)) + ", "
                  + std::to_string(static_cast<int>(m_camera.position.z)) + ")",
         {30.0f, 95.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
 
-    // 路径追踪累积帧数
-    if (m_renderMode == RenderMode::PathTracing) {
+    if (m_renderMode == RenderMode::PathTracing && m_ptPipeline) {
+        uint32_t frameCount = m_ptPipeline->GetFrameCount();
         std::string ptInfo;
         glm::vec4 ptColor;
-        if (m_ptConverged) {
-            ptInfo = "Converged: " + std::to_string(m_ptRes.frameCount)
+        if (m_ptPipeline->IsConverged()) {
+            ptInfo = "Converged: " + std::to_string(frameCount)
                    + "/" + std::to_string(m_ptMaxSamples) + " samples"
-                   + "  |  " + std::to_string(m_ptRes.width) + "x" + std::to_string(m_ptRes.height);
-            ptColor = {0.2f, 1.0f, 0.2f, 1.0f}; // 绿色 = 已收敛
+                   + "  |  " + std::to_string(m_Spec.Width) + "x" + std::to_string(m_Spec.Height);
+            ptColor = {0.2f, 1.0f, 0.2f, 1.0f};
         } else {
-            std::string maxStr = m_ptMaxSamples > 0
-                ? "/" + std::to_string(m_ptMaxSamples) : "+";
-            ptInfo = "PathTrace: " + std::to_string(m_ptRes.frameCount)
+            std::string maxStr = m_ptMaxSamples > 0 ? "/" + std::to_string(m_ptMaxSamples) : "+";
+            ptInfo = "PathTrace: " + std::to_string(frameCount)
                    + maxStr + " samples"
-                   + "  |  " + std::to_string(m_ptRes.width) + "x" + std::to_string(m_ptRes.height);
-            ptColor = {0.9f, 0.6f, 0.2f, 1.0f}; // 橙色 = 采样中
+                   + "  |  " + std::to_string(m_Spec.Width) + "x" + std::to_string(m_Spec.Height);
+            ptColor = {0.9f, 0.6f, 0.2f, 1.0f};
         }
-        Graphic::Renderer2D::DrawString(ptInfo, {30.0f, 130.0f}, 1.5f, ptColor);
+        Renderer2D::DrawString(ptInfo, {30.0f, 130.0f}, 1.5f, ptColor);
     }
 }
 
 void Template3DApp::RenderForward3D() {
     if (!m_gizmoCamera) return;
-
-    // 提交 stats 文字到 gizmo 队列（在 overlay pass 中统一处理）
-    Graphic::Renderer2D::BeginGizmo(*m_gizmoCamera);
+    Renderer2D::BeginGizmo(*m_gizmoCamera);
     DrawStatsOverlay();
-    Graphic::Renderer2D::EndGizmo();
+    Renderer2D::EndGizmo();
 }
 
 void Template3DApp::OnUpdate(Timestep ts) {
     (void)ts;
-
-    if (m_headlessCfg.enabled && m_ptRes.initialized) {
-        if (m_ptRes.frameCount >= m_headlessCfg.totalFrames) {
-            LOG_INFO("Template3D", "头模式：累积完成 ({} 帧)，正在保存输出...",
-                     m_ptRes.frameCount);
+    if (m_headlessCfg.enabled && m_ptPipeline) {
+        if (m_ptPipeline->GetFrameCount() >= m_headlessCfg.totalFrames) {
+            LOG_INFO("Template3D", "头模式完成，保存输出...");
             SavePathTracingOutput();
             Close();
         }
@@ -1120,7 +553,7 @@ void Template3DApp::OnEvent(Event& e) {
     EventDispatcher d(e);
     d.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) {
         OnWindowResize(ev.GetWidth(), ev.GetHeight());
-        return false; // 不阻止事件传播
+        return false;
     });
     d.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) {
         if (ev.GetKeyCode() == SDL_SCANCODE_ESCAPE) {
@@ -1132,17 +565,24 @@ void Template3DApp::OnEvent(Event& e) {
                            ? RenderMode::Forward3D
                            : RenderMode::PathTracing;
             m_pathTracingDirty = true;
-            m_ptConverged = false;
-            m_ptRes.frameCount = 0;
+            if (m_ptPipeline) m_ptPipeline->ResetAccumulation();
             LOG_INFO("Template3D", "切换到 {} 模式",
                      m_renderMode == RenderMode::PathTracing ? "路径追踪" : "Forward3D");
             return true;
         }
         if (ev.GetKeyCode() == SDL_SCANCODE_R && !ev.IsRepeat()) {
             m_pathTracingDirty = true;
-            m_ptConverged = false;
-            m_ptRes.frameCount = 0;
+            if (m_ptPipeline) m_ptPipeline->ResetAccumulation();
             LOG_INFO("Template3D", "重置路径追踪累积");
+            return true;
+        }
+        if (ev.GetKeyCode() == SDL_SCANCODE_N && !ev.IsRepeat() && m_renderMode == RenderMode::PathTracing) {
+            m_enableNEE = !m_enableNEE;
+            if (m_ptPipeline) {
+                m_ptPipeline->EnableNEE(m_enableNEE);
+                m_ptPipeline->ResetAccumulation();
+            }
+            LOG_INFO("Template3D", "NEE {}", m_enableNEE ? "启用" : "禁用");
             return true;
         }
         return false;
@@ -1150,95 +590,22 @@ void Template3DApp::OnEvent(Event& e) {
 }
 
 void Template3DApp::OnWindowResize(uint32_t w, uint32_t h) {
-    // 更新 spec
     m_Spec.Width = w;
     m_Spec.Height = h;
 
-    // 更新 gizmo 屏幕空间相机
     if (m_gizmoCamera) {
         m_gizmoCamera->SetProjection(0.0f, static_cast<float>(w), 0.0f, static_cast<float>(h));
     }
 
-    // 更新 present 视口尺寸
-    m_presentRes.extent = { w, h };
-
-    // 更新路径追踪尺寸标记（下次进入 PT 模式时重新创建资源）
-    m_ptRes.width = w;
-    m_ptRes.height = h;
     m_pathTracingDirty = true;
-    m_ptConverged = false;
-    m_ptRes.frameCount = 0;
-
-    LOG_INFO("Template3D", "窗口大小变化: {}x{}", w, h);
 }
 
 void Template3DApp::OnShutdown() {
-    if (m_device) {
-        m_device->WaitForIdle();
-    }
-
-    auto vkRenderDev = dynamic_cast<Graphic::Vulkan::RenderDeviceVulkan*>(m_device);
-    if (vkRenderDev) {
-        vkRenderDev->SetOverlayRenderCallback(nullptr);
-    }
-
-    if (!m_headlessCfg.enabled) {
-        CleanupPresentResources();
-    }
-    CleanupPathTracingResources();
+    // 路径追踪管线由 RenderSystem 管理（如果是主管线）或 shared_ptr 自动析构
+    m_ptPipeline.reset();
+    m_gizmoPSO.reset();
 
     LOG_INFO("Template3D", "应用已关闭");
-}
-
-void Template3DApp::CleanupPathTracingResources() {
-    auto& pt = m_ptRes;
-    // Abstract 资源由 unique_ptr/shared_ptr 自动销毁
-    pt.descriptorSet.reset();
-    pt.computePipeline.reset();
-    pt.sceneSSBO.reset();
-    pt.cameraUBO.reset();
-    pt.storageTexture.reset();
-
-    // 清理 raw Vulkan pixel output SSBO
-    if (pt.pixelOutputBuffer != VK_NULL_HANDLE && m_device) {
-        VmaAllocator vmaAlloc = m_device->GetVmaAllocator();
-        if (vmaAlloc) {
-            vmaDestroyBuffer(vmaAlloc, pt.pixelOutputBuffer, pt.pixelOutputAllocation);
-            pt.pixelOutputBuffer = VK_NULL_HANDLE;
-            pt.pixelOutputAllocation = VK_NULL_HANDLE;
-            pt.pixelOutputMapped = nullptr;
-        }
-    }
-    pt.initialized = false;
-}
-
-void Template3DApp::CleanupPresentResources() {
-    auto& pr = m_presentRes;
-    VkDevice vkDev = pr.vkDevice;
-    if (!vkDev) return;
-
-    // 原生 Vulkan 资源需要手动销毁
-    if (pr.pipeline) {
-        vkDestroyPipeline(vkDev, pr.pipeline, nullptr);
-        pr.pipeline = VK_NULL_HANDLE;
-    }
-    if (pr.pipelineLayout) {
-        vkDestroyPipelineLayout(vkDev, pr.pipelineLayout, nullptr);
-        pr.pipelineLayout = VK_NULL_HANDLE;
-    }
-    if (pr.vertShaderModule) {
-        vkDestroyShaderModule(vkDev, pr.vertShaderModule, nullptr);
-        pr.vertShaderModule = VK_NULL_HANDLE;
-    }
-    if (pr.fragShaderModule) {
-        vkDestroyShaderModule(vkDev, pr.fragShaderModule, nullptr);
-        pr.fragShaderModule = VK_NULL_HANDLE;
-    }
-    // sampler / descriptorSetLayout / descriptorSet 由 shared_ptr/unique_ptr 自动清理
-    pr.descriptorSet.reset();
-    pr.sampler.reset();
-    pr.descriptorSetLayout.reset();
-    pr.initialized = false;
 }
 
 } // namespace Prisma

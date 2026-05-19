@@ -22,10 +22,11 @@ int main(int argc, char* argv[]) {
     spec.Headless = false;
 
     bool autoQuit = false;
-    uint32_t headlessFrames = 100;
-    uint32_t headlessWidth = 80;
-    uint32_t headlessHeight = 60;
-    std::string outputPath = "output.png";
+    uint32_t headlessFrames = 500;
+    uint32_t headlessWidth = 1080;
+    uint32_t headlessHeight = 1080;
+    uint32_t samples = 500;
+    std::string outputPath = "/sdcard/pt_output.png";
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
@@ -41,15 +42,19 @@ int main(int argc, char* argv[]) {
             headlessWidth = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
         } else if (arg == "--height" && i + 1 < argc) {
             headlessHeight = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
+        } else if (arg == "--samples" && i + 1 < argc) {
+            samples = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
         }
     }
 
     spec.RefreshAssetDatabaseOnStartup = false;
     auto app = std::make_unique<Prisma::Template3DApp>();
     app->SetAutoQuit(autoQuit);
+    app->SetSamples(samples);
     if (spec.Headless) {
         app->SetHeadlessConfig(headlessFrames, outputPath, headlessWidth, headlessHeight);
         std::cout << "Template3D 头模式: frames=" << headlessFrames
+                  << " samples=" << samples
                   << " output=" << outputPath
                   << " " << headlessWidth << "x" << headlessHeight << std::endl;
     }
