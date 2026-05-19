@@ -219,6 +219,23 @@ void Template3DApp::BuildPathTracingScene() {
             ptObj.p2[1] = std::sin(angle);
             ptObj.p2[2] = 0.0f;
             ptObj.p2[3] = 0.0f;
+        } else if (meshPath.find("cone") != std::string::npos) {
+            ptObj.p0[0] = pos.x;
+            ptObj.p0[1] = pos.y;
+            ptObj.p0[2] = pos.z;
+            ptObj.p0[3] = 3.0f; // type: cone
+
+            ptObj.p1[0] = meshHx * scale.x; // radius (cone base)
+            ptObj.p1[1] = meshHy * scale.y; // halfHeight
+            ptObj.p1[2] = 0.0f;
+            ptObj.p1[3] = 0.0f;
+
+            // Y 轴旋转
+            float angle = 2.0f * std::atan2(rot.y, rot.w);
+            ptObj.p2[0] = std::cos(angle);
+            ptObj.p2[1] = std::sin(angle);
+            ptObj.p2[2] = 0.0f;
+            ptObj.p2[3] = 0.0f;
         } else {
             LOG_WARN("Template3D", "未知网格类型 '{}'，跳过", meshPath);
             continue;
