@@ -4,7 +4,6 @@
 #include "ui/TextRendererComponent.h"
 #include <string>
 #include <time.h>
-#include "GameObject.h"
 
 using namespace Prisma;
 
@@ -16,7 +15,7 @@ public:
     ~FPSCounter() override = default;
 
     void Initialize() override {
-        m_textRenderer = GetOwner()->GetComponent<Prisma::TextRendererComponent>();
+        m_textRenderer = GetSiblingComponent<Prisma::TextRendererComponent>();
         if (m_textRenderer) {
             m_textRenderer->SetText("FPS: --");
             m_textRenderer->SetColor({0.0f, 1.0f, 0.0f, 1.0f}); // 绿色

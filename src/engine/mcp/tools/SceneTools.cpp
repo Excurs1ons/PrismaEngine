@@ -2,7 +2,7 @@
 #include "app/Engine.h"
 #include "scene/SceneManager.h"
 #include "scene/Scene.h"
-#include "scene/GameObject.h"
+#include "transform/Transform.h"
 #include <set>
 #include <cstdint>
 
@@ -39,14 +39,14 @@ glz::json_t SceneHierarchyTool::Execute(const glz::json_t& args) {
     } else {
         fields = {"name"};
     }
-    const auto& allEntities = scene->GetGameObjects();
+    const auto& allEntities = scene->GetNodes();
 
     glz::json_t entities = std::vector<glz::json_t>{};
     uint32_t idCounter = 1;
     for (const auto& entity : allEntities) {
         glz::json_t e;
         if (fields.empty() || std::find(fields.begin(), fields.end(), "name") != fields.end())
-            e["name"] = entity->name;
+            e["name"] = scene->GetNodeName(entity);
         e["id"] = static_cast<double>(idCounter++);
         entities.get_array().push_back(std::move(e));
     }
@@ -75,7 +75,7 @@ glz::json_t SceneEntityTool::Execute(const glz::json_t& args) {
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    const auto& allEntities = scene->GetGameObjects();
+    const auto& allEntities = scene->GetNodes();
     if (entityIdx >= allEntities.size()) {
         return {{"error", "Entity index out of range"}, {"max_index", static_cast<double>(allEntities.size() - 1)}};
     }
@@ -94,10 +94,10 @@ glz::json_t SceneEntityTool::Execute(const glz::json_t& args) {
     result["entity_index"] = static_cast<double>(entityIdx);
 
     if (allFields || std::find(fields.begin(), fields.end(), "name") != fields.end())
-        result["name"] = entity->name;
+        result["name"] = scene->GetNodeName(entity);
 
     if (allFields || std::find(fields.begin(), fields.end(), "transform") != fields.end()) {
-        auto* transform = entity->GetTransform().get();
+        auto* transform = scene->GetComponent<Transform>(entity).get();
         if (transform) {
             result["position"] = std::vector<glz::json_t>{
                 transform->GetPosition().x, 
@@ -130,9 +130,7 @@ glz::json_t SceneCreateEntityTool::Execute(const glz::json_t& args) {
     if (!scene) return {{"error", "No active scene"}};
 
     auto name = args["name"].get_string();
-    auto entity = std::make_shared<GameObject>(name);
-    entity->Initialize();
-    scene->AddGameObject(entity);
+    auto entity = scene->CreateNode(name);
 
     return {{"name", name}};
 }
@@ -157,12 +155,12 @@ glz::json_t SceneDeleteEntityTool::Execute(const glz::json_t& args) {
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    const auto& allEntities = scene->GetGameObjects();
+    const auto& allEntities = scene->GetNodes();
     if (entityIdx >= allEntities.size()) {
         return {{"error", "Index out of range"}};
     }
 
-    scene->RemoveGameObject(allEntities[entityIdx]);
+    scene->RemoveNode(allEntities[entityIdx]);
     return {{"deleted", true}};
 }
 

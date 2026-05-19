@@ -58,7 +58,7 @@ void RenderComponent::Render(RenderCommandContext *context) {
     }
 
     // Set World Matrix
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         Prisma::Matrix4x4 worldMatrix = transform->GetMatrix();
         context->SetConstantBuffer("World", reinterpret_cast<const float *>(&worldMatrix), 16);
     }
@@ -110,8 +110,8 @@ std::shared_ptr<Material> RenderComponent::GetOrCreateMaterial() {
 }
 
 void RenderComponent::Initialize() {
-    LOG_DEBUG("RenderComponent", "游戏对象 '{0}' 的渲染组件已初始化",
-              GetOwner() ? GetOwner()->name : "Unknown");
+    LOG_DEBUG("RenderComponent", "节点 '{0}' 的渲染组件已初始化",
+              GetNodeName());
 }
 
 void RenderComponent::Update(Timestep /*ts*/) {

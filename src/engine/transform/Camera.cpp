@@ -1,5 +1,5 @@
 #include "Camera.h"
-#include "GameObject.h"
+#include "Transform.h"
 #include "Logger.h"
 
 namespace Prisma {
@@ -21,10 +21,10 @@ Camera::Camera()
 Camera::~Camera() {}
 
 void Camera::Initialize() {
-    LOG_DEBUG("Camera3D", "GameObject '{0}' 的 Camera3D 组件已初始化", GetOwner()->name);
+    LOG_DEBUG("Camera3D", "Node '{0}' 的 Camera3D 组件已初始化", GetNodeName());
 
     // 初始化Transform的旋转（相机默认看向-Z方向）
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         // 设置初始旋转为 Identity
         transform->SetRotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
         MarkViewDirty();
@@ -74,7 +74,7 @@ PrismaMath::mat4 Camera::GetViewProjectionMatrix() const {
 }
 
 PrismaMath::vec3 Camera::GetPosition() const {
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         return transform->GetPosition();
     }
     return PrismaMath::vec3(0.0f, 0.0f, 0.0f);
@@ -112,7 +112,7 @@ void Camera::SetAspectRatio(float aspectRatio) {
 }
 
 void Camera::MoveWorld(float x, float y, float z) {
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         Prisma::Vector3 pos = transform->GetPosition();
         pos.x += x;
         pos.y += y;
@@ -123,7 +123,7 @@ void Camera::MoveWorld(float x, float y, float z) {
 }
 
 void Camera::MoveWorld(const PrismaMath::vec3& direction) {
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         transform->SetPosition(transform->GetPosition() + direction);
         MarkViewDirty();
     }
@@ -145,7 +145,7 @@ void Camera::MoveLocal(float forward, float right, float up) {
 }
 
 void Camera::Rotate(float pitch, float yaw, float roll) {
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         // 创建旋转增量（弧度）
         glm::quat deltaRotation = glm::quat(glm::vec3(glm::radians(pitch), glm::radians(yaw), glm::radians(roll)));
 
@@ -158,7 +158,7 @@ void Camera::Rotate(float pitch, float yaw, float roll) {
 }
 
 void Camera::LookAt(const PrismaMath::vec3& target) {
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         PrismaMath::vec3 position  = GetPosition();
         PrismaMath::vec3 direction = glm::normalize(target - position);
 
@@ -198,7 +198,7 @@ void Camera::UpdateViewMatrix() const {
         return;
     }
 
-    if (auto transform = GetOwner()->GetTransform()) {
+    if (auto transform = GetTransform()) {
         // 获取位置和旋转
         PrismaMath::vec3 position = transform->GetPosition();
         glm::quat rotation = transform->GetRotation();

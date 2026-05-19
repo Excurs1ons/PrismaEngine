@@ -56,10 +56,10 @@ private:
         float y = 0.0f;
     } m_viewportSize;
 
-    std::shared_ptr<GameObject> m_selectedEntity  = nullptr;
+    Node m_selectedEntity;
     std::filesystem::path m_currentAssetDirectory = "assets";
 
-    std::shared_ptr<GameObject> m_editorCameraObject = nullptr;
+    Node m_editorCameraNode;
     std::shared_ptr<Graphic::Camera> m_editorCamera  = nullptr;
     float m_cameraSpeed                              = 5.0f;
     float m_cameraSensitivity                        = 0.1f;

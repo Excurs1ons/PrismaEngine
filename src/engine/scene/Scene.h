@@ -5,56 +5,93 @@
 #include "graphic/RenderComponent.h"
 #include "graphic/ICamera.h"
 #include "core/Timestep.h"
+#include "math/MathTypes.h"
 #include <memory>
 #include <vector>
 #include <string>
+#include <unordered_map>
+#include <optional>
 
 namespace Prisma {
+
+class Component;
 
 class ENGINE_API Scene
 {
 public:
+    // ── 场景相机数据（JSON 序列化用） ──
+    struct CameraConfigData {
+        PrismaMath::vec3 position = {0.0f, 0.0f, 2.5f};
+        PrismaMath::vec3 target   = {0.0f, 0.0f, 0.0f};
+        float fov = 70.0f;
+    };
+
+    // ── Node 层级数据 ──
+    struct SceneNodeData {
+        uint32_t parent = UINT32_MAX;     // UINT32_MAX = 根节点
+        std::vector<uint32_t> children;
+    };
+
     Scene();
     ~Scene();
 
-    // 创建并添加 Node 到场景
+    // 基本 Node 管理
     Node CreateNode(const std::string& name = "Node");
-    
-    // 从场景中移除 Node
     void RemoveNode(Node node);
-    
-    // 更新场景中的所有 Node
     void Update(Timestep ts);
-    
-    // 场景名称与脏标记
-    void SetName(const std::string& name) { m_Name = name; }
-    const std::string& GetName() const { return m_Name; }
-    void SetDirty(bool dirty) { m_IsDirty = dirty; }
-    bool IsDirty() const { return m_IsDirty; }
-      
-    // 获取场景中的所有 Node
-    const std::vector<Node>& GetNodes() const { return m_nodes; }
 
-    // 兼容性接口：获取旧版 GameObject 列表（当前返回空）
-    const std::vector<std::shared_ptr<class GameObject>>& GetGameObjects() const { 
-        static std::vector<std::shared_ptr<class GameObject>> dummy;
-        return dummy; 
+    // 名称与状态
+    void SetName(const std::string& name) noexcept { m_Name = name; }
+    const std::string& GetName() const noexcept { return m_Name; }
+    void SetDirty(bool dirty) noexcept { m_IsDirty = dirty; }
+    bool IsDirty() const noexcept { return m_IsDirty; }
+    const std::vector<Node>& GetNodes() const noexcept { return m_nodes; }
+
+    // ── Node 名称 ──
+    std::string GetNodeName(Node node) const;
+    void SetNodeName(Node node, const std::string& name);
+
+    // ── 层级 API ──
+    void SetParent(Node child, Node parent);
+    std::vector<Node> GetChildren(Node node) const;
+    Node GetParent(Node node) const;
+    std::vector<Node> GetRootNodes() const;
+    Matrix4x4 GetWorldTransform(Node node) const;
+
+    // ── 组件 API ──
+    template<typename T, typename... Args>
+    std::shared_ptr<T> AddComponent(Node node, Args&&... args) {
+        static_assert(std::is_base_of_v<Component, T>, "T must derive from Component");
+        auto comp = std::make_shared<T>(std::forward<Args>(args)...);
+        comp->SetOwnerNode(node, this);
+        comp->Initialize();
+        m_nodeComponents[node.handle].push_back(comp);
+        return comp;
     }
 
-    // 兼容性接口
-    void AddGameObject(std::shared_ptr<class GameObject> obj) { (void)obj; }
-    void RemoveGameObject(std::shared_ptr<class GameObject> obj) { (void)obj; }
-    
-    // 获取主相机
+    template<typename T>
+    std::shared_ptr<T> GetComponent(Node node) const {
+        auto it = m_nodeComponents.find(node.handle);
+        if (it != m_nodeComponents.end()) {
+            for (auto& comp : it->second) {
+                auto result = std::dynamic_pointer_cast<T>(comp);
+                if (result) return result;
+            }
+        }
+        return nullptr;
+    }
+
+    const std::vector<std::shared_ptr<Component>>& GetComponents(Node node) const;
+    void RemoveComponent(Node node, Component* comp);
+
+    // ── 场景相机 ──
     std::shared_ptr<Prisma::Graphic::ICamera> GetMainCamera();
-
-    // 设置主相机 (非拥有引用)
     void SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera);
+    const CameraConfigData& GetCameraConfig() const noexcept { return m_cameraConfig; }
+    void SetCameraConfig(const CameraConfigData& data) noexcept { m_cameraConfig = data; }
 
-    // 从 JSONC 文件加载场景
+    // ── 序列化 ──
     bool Deserialize(const std::string& path);
-    
-    // 序列化场景到 JSON 文件
     bool Serialize(const std::string& path) const;
 
 private:
@@ -62,6 +99,14 @@ private:
     bool m_IsDirty = false;
     std::vector<Node> m_nodes;
     std::shared_ptr<Prisma::Graphic::ICamera> m_mainCamera;
+
+    // 层级与组件
+    std::vector<SceneNodeData> m_nodeData;       // indexed by node index
+    std::vector<std::string> m_nodeNames;        // indexed by node index
+    std::unordered_map<uint32_t, std::vector<std::shared_ptr<Component>>> m_nodeComponents;
+
+    // 场景级配置（相机等）
+    CameraConfigData m_cameraConfig;
 };
 
 } // namespace Prisma

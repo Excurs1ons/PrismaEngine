@@ -44,7 +44,6 @@ set(CORE_SOURCES
     # Scene
     scene/Scene.cpp
     scene/SceneManager.cpp
-    scene/GameObject.cpp
 
     # Serialization
     serialization/Serializable.cpp
@@ -86,6 +85,7 @@ set(CORE_SOURCES
     core/Layer.cpp
     core/LayerStack.cpp
     core/ComponentRegistry.cpp
+    core/Component.cpp
     core/UUID.cpp
     core/SpriteRendererComponent.cpp
 
@@ -291,7 +291,6 @@ set(CORE_HEADERS
     scene/Scene.h
     scene/SceneManager.h
     scene/SceneNode.h
-    scene/GameObject.h
 
     # Serialization
     serialization/Serializable.h

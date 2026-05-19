@@ -1,6 +1,5 @@
 #include "CameraController.h"
 #include "Camera.h"
-#include "GameObject.h"
 #include "Logger.h"
 #include "Platform.h"
 #include "input/InputManager.h"
@@ -19,12 +18,12 @@ CameraController::CameraController() : Component() {
 }
 
 void CameraController::Initialize() {
-    // 获取同一GameObject上的Camera组件
-    m_camera = GetOwner()->GetComponent<Camera>();
+    // 获取同一Node上的Camera组件
+    m_camera = GetSiblingComponent<Camera>();
     if (!m_camera) {
-        LOG_WARNING("CameraController", "在 GameObject '{0}' 上未找到 Camera 组件", GetOwner()->name);
+        LOG_WARNING("CameraController", "在节点 '{0}' 上未找到 Camera 组件", GetNodeName());
     } else {
-        LOG_DEBUG("CameraController", "GameObject '{0}' 的 CameraController 已初始化", GetOwner()->name);
+        LOG_DEBUG("CameraController", "节点 '{0}' 的 CameraController 已初始化", GetNodeName());
     }
 
     // 获取初始鼠标位置
