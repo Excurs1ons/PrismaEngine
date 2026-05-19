@@ -1,5 +1,4 @@
 #include "CameraComponent.h"
-#include "scene/GameObject.h"
 
 namespace Prisma {
 

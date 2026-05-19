@@ -3,12 +3,18 @@
 #include "../graphic/ImGuiVulkanResourceManager.h"
 #include "../graphic/ViewportRenderPass.h"
 #include "graphic/adapters/vulkan/VulkanCommandBuffer.h"
+#include "transform/Transform.h"
 
 Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
-    m_editorCameraObject = std::make_shared<GameObject>("Editor Camera");
-    m_editorCamera       = m_editorCameraObject->AddComponent<Graphic::Camera>();
-    m_editorCamera->SetPerspectiveProjection(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 1000.0f);
-    m_editorCameraObject->GetTransform()->SetPosition({0, 2, 5});
+    auto* sceneMgr = Engine::Get().GetSceneManager();
+    auto* scene = sceneMgr ? sceneMgr->GetCurrentScene() : nullptr;
+    if (scene) {
+        m_editorCameraNode = scene->CreateNode("Editor Camera");
+        m_editorCamera = scene->AddComponent<Graphic::Camera>(m_editorCameraNode);
+        m_editorCamera->SetPerspectiveProjection(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 1000.0f);
+        auto t = scene->GetComponent<Transform>(m_editorCameraNode);
+        if (t) t->SetPosition({0, 2, 5});
+    }
 }
 
 void Prisma::EditorLayer::OnUpdate(Timestep ts) {
@@ -16,7 +22,9 @@ void Prisma::EditorLayer::OnUpdate(Timestep ts) {
         return;
 
     float dt       = ts.GetSeconds();
-    auto transform = m_editorCameraObject->GetTransform();
+    auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
+    auto transform = scene ? scene->GetComponent<Transform>(m_editorCameraNode) : nullptr;
+    if (!transform) return;
     Vector3 pos    = transform->GetPosition();
 
     const uint8_t* state = (const uint8_t*)SDL_GetKeyboardState(NULL);
@@ -152,7 +160,7 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 if (ImGui::MenuItem(UI::ITEM_NEW_SCENE, "Ctrl+L")) {
                     if (auto sceneManager = Engine::Get().GetSceneManager()) {
                         sceneManager->CreateNewScene();
-                        m_selectedEntity = nullptr;
+                        m_selectedEntity = Node{};
                         LOG_INFO("Editor", "新场景已创建");
                     }
                 }
@@ -326,14 +334,14 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
     if (auto sceneManager = Engine::Get().GetSceneManager()) {
         if (auto scene = sceneManager->GetCurrentScene()) {
-            auto& objects = scene->GetGameObjects();
-            for (auto& obj : objects) {
+            const auto& nodes = scene->GetNodes();
+            for (auto& node : nodes) {
                 ImGuiTreeNodeFlags flags =
-                    ((m_selectedEntity == obj) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow;
+                    ((m_selectedEntity.handle == node.handle) ? ImGuiTreeNodeFlags_Selected : 0) | ImGuiTreeNodeFlags_OpenOnArrow;
                 flags |= ImGuiTreeNodeFlags_SpanAvailWidth;
-                bool opened = ImGui::TreeNodeEx((void*)(uint64_t)obj.get(), flags, "%s", obj->name.c_str());
+                bool opened = ImGui::TreeNodeEx((void*)(uint64_t)node.handle, flags, "%s", scene->GetNodeName(node).c_str());
                 if (ImGui::IsItemClicked()) {
-                    m_selectedEntity = obj;
+                    m_selectedEntity = node;
                 }
                 if (opened) {
                     ImGui::TreePop();
@@ -343,9 +351,8 @@ void Prisma::EditorLayer::OnImGuiRender() {
             // Right-click on blank space
             if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight)) {
                 if (ImGui::MenuItem("Create Empty GameObject")) {
-                    auto newObj = std::make_shared<GameObject>("New GameObject");
-                    scene->AddGameObject(newObj);
-                    m_selectedEntity = newObj;
+                    auto newNode = scene->CreateNode("New GameObject");
+                    m_selectedEntity = newNode;
                 }
                 ImGui::EndPopup();
             }
@@ -354,68 +361,63 @@ void Prisma::EditorLayer::OnImGuiRender() {
     ImGui::End();
 
     ImGui::Begin(UI::WINDOW_PROPERTIES);
-    if (m_selectedEntity) {
-        auto scene = Engine::Get().GetSceneManager()->GetCurrentScene();
+    auto propsScene = Engine::Get().GetSceneManager()->GetCurrentScene();
+    if (m_selectedEntity.IsValid() && propsScene) {
         char buffer[256];
         memset(buffer, 0, sizeof(buffer));
-        strncpy(buffer, m_selectedEntity->name.c_str(), sizeof(buffer));
+        std::string nodeName = propsScene->GetNodeName(m_selectedEntity);
+        strncpy(buffer, nodeName.c_str(), sizeof(buffer));
         if (ImGui::InputText("Name", buffer, sizeof(buffer))) {
-            m_selectedEntity->name = std::string(buffer);
-            if (scene)
-                scene->SetDirty(true);
+            propsScene->SetNodeName(m_selectedEntity, std::string(buffer));
+            propsScene->SetDirty(true);
         }
 
         ImGui::Separator();
 
-        auto transform = m_selectedEntity->GetTransform();
+        auto transform = propsScene->GetComponent<Transform>(m_selectedEntity);
         if (transform) {
             if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen)) {
                 Vector3 pos = transform->GetPosition();
                 if (ImGui::DragFloat3("Position", &pos.x, 0.1f)) {
                     transform->SetPosition(pos);
-                    if (scene)
-                        scene->SetDirty(true);
+                    propsScene->SetDirty(true);
                 }
 
                 Vector3 rotation = glm::degrees(glm::eulerAngles(transform->GetRotation()));
                 if (ImGui::DragFloat3("Rotation", &rotation.x, 0.1f)) {
                     transform->SetRotation(rotation);
-                    if (scene)
-                        scene->SetDirty(true);
+                    propsScene->SetDirty(true);
                 }
 
                 Vector3 scale = transform->GetScale();
                 if (ImGui::DragFloat3("Scale", &scale.x, 0.1f)) {
                     transform->SetScale(scale);
-                    if (scene)
-                        scene->SetDirty(true);
+                    propsScene->SetDirty(true);
                 }
             }
         }
 
         // Camera Component display
-        auto camera = m_selectedEntity->GetComponent<Graphic::Camera>();
+        auto camera = propsScene->GetComponent<Graphic::Camera>(m_selectedEntity);
         if (camera) {
             if (ImGui::CollapsingHeader("Camera", ImGuiTreeNodeFlags_DefaultOpen)) {
                 float fov = glm::degrees(camera->GetFOV());
                 if (ImGui::DragFloat("Field of View", &fov, 1.0f, 10.0f, 120.0f)) {
                     camera->SetPerspectiveProjection(
                         glm::radians(fov), camera->GetAspectRatio(), camera->GetNearPlane(), camera->GetFarPlane());
-                    if (scene)
-                        scene->SetDirty(true);
+                    propsScene->SetDirty(true);
                 }
             }
         }
 
         // RigidBody Component display
-        auto rb = m_selectedEntity->GetComponent<RigidBodyComponent>();
+        auto rb = propsScene->GetComponent<RigidBodyComponent>(m_selectedEntity);
         if (rb) {
             if (ImGui::CollapsingHeader("RigidBody", ImGuiTreeNodeFlags_DefaultOpen)) {
                 Vector3 vel = rb->GetVelocity();
                 if (ImGui::DragFloat3("Velocity", &vel.x, 0.1f)) {
                     rb->SetVelocity(vel);
-                    if (scene)
-                        scene->SetDirty(true);
+                    propsScene->SetDirty(true);
                 }
             }
         }
@@ -429,17 +431,15 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
         if (ImGui::BeginPopup(UI::POPUP_ADD_COMPONENT)) {
             if (ImGui::MenuItem("Camera")) {
-                if (!m_selectedEntity->GetComponent<Graphic::Camera>()) {
-                    m_selectedEntity->AddComponent<Graphic::Camera>();
-                    if (scene)
-                        scene->SetDirty(true);
+                if (!propsScene->GetComponent<Graphic::Camera>(m_selectedEntity)) {
+                    propsScene->AddComponent<Graphic::Camera>(m_selectedEntity);
+                    propsScene->SetDirty(true);
                 }
             }
             if (ImGui::MenuItem("RigidBody")) {
-                if (!m_selectedEntity->GetComponent<RigidBodyComponent>()) {
-                    m_selectedEntity->AddComponent<RigidBodyComponent>();
-                    if (scene)
-                        scene->SetDirty(true);
+                if (!propsScene->GetComponent<RigidBodyComponent>(m_selectedEntity)) {
+                    propsScene->AddComponent<RigidBodyComponent>(m_selectedEntity);
+                    propsScene->SetDirty(true);
                 }
             }
             ImGui::EndPopup();

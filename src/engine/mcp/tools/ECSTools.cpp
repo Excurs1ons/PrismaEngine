@@ -2,7 +2,6 @@
 #include "app/Engine.h"
 #include "scene/SceneManager.h"
 #include "scene/Scene.h"
-#include "scene/GameObject.h"
 #include "transform/Transform.h"
 #include "graphic/SpriteRenderer.h"
 #include <set>
@@ -28,7 +27,7 @@ glz::json_t ECSComponentListTool::Execute(const glz::json_t& args) {
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    const auto& allEntities = scene->GetGameObjects();
+    const auto& allEntities = scene->GetNodes();
     if (entityIdx >= allEntities.size()) {
         return {{"error", "Entity index out of range"}};
     }
@@ -38,7 +37,7 @@ glz::json_t ECSComponentListTool::Execute(const glz::json_t& args) {
     comps.get_array().push_back("Transform");  // All entities have Transform
 
     // Try to detect common component types via casts
-    if (entity->GetComponent<Graphic::SpriteRenderer>())
+    if (scene->GetComponent<Graphic::SpriteRenderer>(entity))
         comps.get_array().push_back("SpriteRenderer");
 
     return {{"entity_index", static_cast<double>(entityIdx)}, {"components", std::move(comps)}};
@@ -65,7 +64,7 @@ glz::json_t ECSComponentGetTool::Execute(const glz::json_t& args) {
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    const auto& allEntities = scene->GetGameObjects();
+    const auto& allEntities = scene->GetNodes();
     if (entityIdx >= allEntities.size()) {
         return {{"error", "Entity index out of range"}};
     }
@@ -74,7 +73,7 @@ glz::json_t ECSComponentGetTool::Execute(const glz::json_t& args) {
     glz::json_t data;
 
     if (compType == "Transform") {
-        auto* transform = entity->GetTransform().get();
+        auto* transform = scene->GetComponent<Transform>(entity).get();
         if (!transform) return {{"error", "Transform not found"}};
         auto pos = transform->GetPosition();
         auto rot = transform->GetRotation();
@@ -85,7 +84,7 @@ glz::json_t ECSComponentGetTool::Execute(const glz::json_t& args) {
             {"scale", glz::json_t::array_t{static_cast<double>(scale.x), static_cast<double>(scale.y), static_cast<double>(scale.z)}}
         };
     } else if (compType == "SpriteRenderer") {
-        auto* sr = entity->GetComponent<Graphic::SpriteRenderer>().get();
+        auto* sr = scene->GetComponent<Graphic::SpriteRenderer>(entity).get();
         if (!sr) return {{"error", "SpriteRenderer not found"}};
         data = glz::json_t::object_t{{"type", "SpriteRenderer"}};
     } else {
@@ -118,7 +117,7 @@ glz::json_t ECSComponentSetTool::Execute(const glz::json_t& args) {
     auto* scene = sceneManager ? sceneManager->GetCurrentScene() : nullptr;
     if (!scene) return {{"error", "No active scene"}};
 
-    const auto& allEntities = scene->GetGameObjects();
+    const auto& allEntities = scene->GetNodes();
     if (entityIdx >= allEntities.size()) {
         return {{"error", "Entity index out of range"}};
     }
@@ -126,7 +125,7 @@ glz::json_t ECSComponentSetTool::Execute(const glz::json_t& args) {
     auto entity = allEntities[entityIdx];
 
     if (compType == "Transform") {
-        auto transform = entity->GetTransform();
+        auto transform = scene->GetComponent<Transform>(entity);
         m_Engine->SubmitToMainThread([transform, data]() {
             if (data.get_object().contains("position")) {
                 auto p = data["position"];
@@ -142,11 +141,11 @@ glz::json_t ECSComponentSetTool::Execute(const glz::json_t& args) {
             }
         });
         return {{"success", true}, {"deferred", true}};
-    } else if (compType == "GameObject") {
+    } else if (compType == "Node") {
         if (data.get_object().contains("name")) {
             std::string name = data["name"].get_string();
-            m_Engine->SubmitToMainThread([entity, name]() {
-                entity->name = name;
+            m_Engine->SubmitToMainThread([scene, entity, name]() {
+                scene->SetNodeName(entity, name);
             });
         }
         return {{"success", true}, {"deferred", true}};

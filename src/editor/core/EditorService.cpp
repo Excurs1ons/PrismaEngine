@@ -2,7 +2,6 @@
 #include "app/Engine.h"
 #include "scene/SceneManager.h"
 #include "scene/Scene.h"
-#include "scene/GameObject.h"
 #include "core/AssetDatabase.h"
 #include "transform/Transform.h"
 #include "transform/Camera.h"
@@ -69,7 +68,7 @@ glz::json_t EditorService::GetStatus() {
         {"fps", engine.GetFrameStats().FPS}, 
         {"gpu", engine.GetGPUName()}, 
         {"scene", s ? s->GetName() : "None"}, 
-        {"objects", s ? static_cast<double>(s->GetGameObjects().size()) : 0.0}
+        {"objects", s ? static_cast<double>(s->GetNodes().size()) : 0.0}
     };
 }
 
@@ -85,10 +84,11 @@ glz::json_t EditorService::GetHierarchy() {
     auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
     glz::json_t::array_t res;
     if(s) {
-        for(size_t i=0; i<s->GetGameObjects().size(); ++i) {
+        const auto& nodes = s->GetNodes();
+        for(size_t i=0; i<nodes.size(); ++i) {
             res.push_back(glz::json_t::object_t{
                 {"id", static_cast<double>(i)}, 
-                {"name", s->GetGameObjects()[i]->name}
+                {"name", s->GetNodeName(nodes[i])}
             });
         }
     }
@@ -97,9 +97,11 @@ glz::json_t EditorService::GetHierarchy() {
 
 glz::json_t EditorService::GetEntity(uint32_t id) {
     auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
-    if(!s || id >= s->GetGameObjects().size()) return glz::json_t::object_t{{"error", "NA"}};
-    auto ent = s->GetGameObjects()[id];
-    auto p = ent->GetTransform()->GetPosition();
+    const auto& nodes = s->GetNodes();
+    if(!s || id >= nodes.size()) return glz::json_t::object_t{{"error", "NA"}};
+    auto ent = nodes[id];
+    auto transform = s->GetComponent<Transform>(ent);
+    auto p = transform ? transform->GetPosition() : PrismaMath::vec3(0);
     
     glz::json_t::array_t posArr = { p.x, p.y, p.z };
     glz::json_t::object_t transformData = {{"position", std::move(posArr)}};
@@ -108,7 +110,7 @@ glz::json_t EditorService::GetEntity(uint32_t id) {
     components.push_back(std::move(component));
 
     return glz::json_t::object_t{
-        {"name", ent->name}, 
+        {"name", s->GetNodeName(ent)}, 
         {"components", std::move(components)}
     };
 }
@@ -117,25 +119,29 @@ glz::json_t EditorService::UpdateEntity(const glz::json_t& params) {
     auto& obj = params.get_object();
     uint32_t id = obj.contains("id") ? static_cast<uint32_t>(obj.at("id").get_number()) : 0u;
     auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
-    if(!s || id >= s->GetGameObjects().size()) return glz::json_t::object_t{{"success", false}};
+    const auto& nodes = s->GetNodes();
+    if(!s || id >= nodes.size()) return glz::json_t::object_t{{"success", false}};
     
     if (!obj.contains("data")) return glz::json_t::object_t{{"success", false}};
     auto data = obj.at("data");
     
-    Engine::Get().SubmitToMainThread([ent = s->GetGameObjects()[id], data](){
+    Engine::Get().SubmitToMainThread([s, ent = nodes[id], data](){
         auto& dataObj = data.get_object();
         if(dataObj.contains("transform")) {
             auto& trans = dataObj.at("transform").get_object();
             if (trans.contains("position")) {
                 auto& p = trans.at("position").get_array();
-                ent->GetTransform()->SetPosition({
-                    static_cast<float>(p[0].get_number()), 
-                    static_cast<float>(p[1].get_number()), 
-                    static_cast<float>(p[2].get_number())
-                });
+                auto transform = s->GetComponent<Transform>(ent);
+                if (transform) {
+                    transform->SetPosition({
+                        static_cast<float>(p[0].get_number()), 
+                        static_cast<float>(p[1].get_number()), 
+                        static_cast<float>(p[2].get_number())
+                    });
+                }
             }
         }
-        if(dataObj.contains("name")) ent->name = dataObj.at("name").get_string();
+        if(dataObj.contains("name")) s->SetNodeName(ent, dataObj.at("name").get_string());
     });
     return glz::json_t::object_t{{"success", true}};
 }
@@ -166,8 +172,10 @@ void InternalDoRender() {
 
     auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
     if(!s) return;
-    for(size_t i=0; i<s->GetGameObjects().size(); i++){
-        auto p = s->GetGameObjects()[i]->GetTransform()->GetPosition();
+    const auto& nodes = s->GetNodes();
+    for(size_t i=0; i<nodes.size(); i++){
+        auto transform = s->GetComponent<Transform>(nodes[i]);
+        auto p = transform ? transform->GetPosition() : PrismaMath::vec3(0);
         // Scene View 物体渲染
         int sx=(int)((p.x+g_EditorCam.x)*50*g_EditorCam.zoom)+640, sy=(int)(-(p.y+g_EditorCam.y)*50*g_EditorCam.zoom)+360;
         for(int dy=-15; dy<15; dy++) for(int dx=-15; dx<15; dx++){

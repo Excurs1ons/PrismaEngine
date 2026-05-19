@@ -3,86 +3,95 @@
 #include "Camera.h"
 #include "Logger.h"
 #include "core/EntityManager.h"
+#include "core/ComponentRegistry.h"
+#include "transform/Transform.h"
 #include "graphic/OrthographicCamera.h"
 #include <glaze/glaze.hpp>
+#include <glaze/json/generic.hpp>
 #include <array>
 #include <vector>
+#include <string>
 #include <optional>
+#include <unordered_map>
+#include <algorithm>
+
+// ═══════════════════════════════════════════════════════════
+// 场景文件格式数据结构（JSON 序列化用）
+// ═══════════════════════════════════════════════════════════
 
 namespace Prisma {
 
-// ── 场景文件实体-组件结构 ──
-/// SpriteRenderer 组件数据（JSON 序列化用 std::array，再写入 SoA）
-struct SpriteRendererData {
-    std::array<float, 4> color = {1.0f, 1.0f, 1.0f, 1.0f}; // RGBA
-    std::array<float, 2> size = {100.0f, 100.0f};            // width, height
+struct SceneCameraFileData {
+    std::array<float, 3> position = {0, 0, 2.5f};
+    std::array<float, 3> target = {0, 0, 0};
+    float fov = 70.0f;
 };
 
-/// 实体变换数据
-struct EntityTransformData {
-    std::array<float, 2> position = {0.0f, 0.0f};
-    float rotation = 0.0f;
+struct SceneComponentEntry {
+    std::string type;
+    glz::generic data;
 };
 
-/// 实体数据（含可选组件）
-struct EntityData {
+struct SceneNodeFileData {
     std::string name;
-    EntityTransformData transform;
-    std::optional<SpriteRendererData> spriteRenderer;
-};
-
-struct SceneCameraData {
-    std::array<float, 4> projection = {0.0f, 1920.0f, 0.0f, 1080.0f};
+    std::optional<std::string> parent;
+    std::optional<std::array<float, 3>> position;  // 3D 位置
+    std::optional<std::array<float, 4>> rotation;  // 四元数 x,y,z,w
+    std::optional<std::array<float, 3>> scale;     // 3D 缩放
+    std::vector<SceneComponentEntry> components;
 };
 
 struct SceneFileData {
     std::string name;
-    SceneCameraData camera;
-    std::vector<EntityData> entities;
+    std::optional<SceneCameraFileData> camera;
+    std::vector<SceneNodeFileData> nodes;
 };
 
 } // namespace Prisma
 
+// ── Glaze 元数据（全局命名空间） ──
+
 template <>
-struct glz::meta<Prisma::SpriteRendererData> {
+struct glz::meta<Prisma::SceneCameraFileData> {
     static constexpr auto value = glz::object(
-        "color", &Prisma::SpriteRendererData::color,
-        "size",  &Prisma::SpriteRendererData::size
+        "position", &Prisma::SceneCameraFileData::position,
+        "target",   &Prisma::SceneCameraFileData::target,
+        "fov",      &Prisma::SceneCameraFileData::fov
     );
 };
 
 template <>
-struct glz::meta<Prisma::EntityTransformData> {
+struct glz::meta<Prisma::SceneComponentEntry> {
     static constexpr auto value = glz::object(
-        "position", &Prisma::EntityTransformData::position,
-        "rotation", &Prisma::EntityTransformData::rotation
+        "type", &Prisma::SceneComponentEntry::type,
+        "data", &Prisma::SceneComponentEntry::data
     );
 };
 
 template <>
-struct glz::meta<Prisma::EntityData> {
+struct glz::meta<Prisma::SceneNodeFileData> {
     static constexpr auto value = glz::object(
-        "name",           &Prisma::EntityData::name,
-        "transform",      &Prisma::EntityData::transform,
-        "spriteRenderer", &Prisma::EntityData::spriteRenderer
+        "name",       &Prisma::SceneNodeFileData::name,
+        "parent",     &Prisma::SceneNodeFileData::parent,
+        "position",   &Prisma::SceneNodeFileData::position,
+        "rotation",   &Prisma::SceneNodeFileData::rotation,
+        "scale",      &Prisma::SceneNodeFileData::scale,
+        "components", &Prisma::SceneNodeFileData::components
     );
-};
-
-template <>
-struct glz::meta<Prisma::SceneCameraData> {
-    static constexpr auto value = glz::object("projection", &Prisma::SceneCameraData::projection);
 };
 
 template <>
 struct glz::meta<Prisma::SceneFileData> {
     static constexpr auto value = glz::object(
-        "name",     &Prisma::SceneFileData::name,
-        "camera",   &Prisma::SceneFileData::camera,
-        "entities", &Prisma::SceneFileData::entities
+        "name",   &Prisma::SceneFileData::name,
+        "camera", &Prisma::SceneFileData::camera,
+        "nodes",  &Prisma::SceneFileData::nodes
     );
 };
 
 namespace Prisma {
+
+// ── 生命周期 ──
 
 Scene::Scene() {}
 
@@ -92,27 +101,172 @@ Scene::~Scene() {
     }
 }
 
-Node Scene::CreateNode([[maybe_unused]] const std::string& name) {
+Node Scene::CreateNode(const std::string& name) {
     Node node = EntityManager::Get().CreateNode();
-    // TODO: 存储名称到 SoA 或额外的名称表
     m_nodes.push_back(node);
+
+    uint32_t idx = node.GetIndex();
+    if (idx >= m_nodeData.size()) {
+        m_nodeData.resize(idx + 1);
+        m_nodeNames.resize(idx + 1);
+    }
+    m_nodeNames[idx] = name;
+    m_nodeData[idx] = SceneNodeData{};  // 重置层级数据
+
     m_IsDirty = true;
     return node;
 }
 
 void Scene::RemoveNode(Node node) {
+    if (!node.IsValid()) return;
+    uint32_t idx = node.GetIndex();
+
+    // 从父节点的 children 列表中移除
+    if (idx < m_nodeData.size() && m_nodeData[idx].parent != UINT32_MAX) {
+        auto& siblings = m_nodeData[m_nodeData[idx].parent].children;
+        siblings.erase(std::remove(siblings.begin(), siblings.end(), idx), siblings.end());
+    }
+
+    // 递归销毁子节点
+    if (idx < m_nodeData.size()) {
+        auto childrenCopy = m_nodeData[idx].children;
+        for (uint32_t childIdx : childrenCopy) {
+            Node child;
+            child.handle = childIdx | (EntityManager::Get().GetRenderData()->generation[childIdx] << 16);
+            RemoveNode(child);
+        }
+        m_nodeData[idx] = SceneNodeData{};
+    }
+
+    // 清除组件
+    m_nodeComponents.erase(node.handle);
+
+    // 从场景节点列表中移除
     auto it = std::find(m_nodes.begin(), m_nodes.end(), node);
     if (it != m_nodes.end()) {
-        node.Destroy();
         m_nodes.erase(it);
-        m_IsDirty = true;
     }
+
+    node.Destroy();
+    m_IsDirty = true;
 }
 
 void Scene::Update(Timestep /*ts*/) {
-    // 逻辑更新现在主要由 ScriptEngine 或 System 处理
-    // Scene 仅负责维护 Node 列表的有效性
+    // 逻辑更新由 ScriptEngine 或 System 处理
 }
+
+// ── Node 名称 ──
+
+std::string Scene::GetNodeName(Node node) const {
+    uint32_t idx = node.GetIndex();
+    if (idx < m_nodeNames.size()) {
+        return m_nodeNames[idx];
+    }
+    return "";
+}
+
+void Scene::SetNodeName(Node node, const std::string& name) {
+    uint32_t idx = node.GetIndex();
+    if (idx < m_nodeNames.size()) {
+        m_nodeNames[idx] = name;
+    }
+}
+
+// ── 层级 API ──
+
+void Scene::SetParent(Node child, Node parent) {
+    if (!child.IsValid()) return;
+    uint32_t childIdx = child.GetIndex();
+    uint32_t parentIdx = parent.IsValid() ? parent.GetIndex() : UINT32_MAX;
+
+    if (childIdx >= m_nodeData.size()) return;
+    if (parentIdx != UINT32_MAX && parentIdx >= m_nodeData.size()) return;
+
+    // 从旧父节点移除
+    auto& oldParent = m_nodeData[childIdx].parent;
+    if (oldParent != UINT32_MAX && oldParent < m_nodeData.size()) {
+        auto& siblings = m_nodeData[oldParent].children;
+        siblings.erase(std::remove(siblings.begin(), siblings.end(), childIdx), siblings.end());
+    }
+
+    // 设置新父节点
+    m_nodeData[childIdx].parent = parentIdx;
+    if (parentIdx != UINT32_MAX) {
+        m_nodeData[parentIdx].children.push_back(childIdx);
+    }
+}
+
+std::vector<Node> Scene::GetChildren(Node node) const {
+    std::vector<Node> result;
+    if (!node.IsValid()) return result;
+    uint32_t idx = node.GetIndex();
+    if (idx >= m_nodeData.size()) return result;
+
+    for (uint32_t childIdx : m_nodeData[idx].children) {
+        Node child;
+        child.handle = childIdx | (EntityManager::Get().GetRenderData()->generation[childIdx] << 16);
+        result.push_back(child);
+    }
+    return result;
+}
+
+Node Scene::GetParent(Node node) const {
+    if (!node.IsValid()) return Node{};
+    uint32_t idx = node.GetIndex();
+    if (idx >= m_nodeData.size() || m_nodeData[idx].parent == UINT32_MAX) return Node{};
+
+    uint32_t parentIdx = m_nodeData[idx].parent;
+    Node parent;
+    parent.handle = parentIdx | (EntityManager::Get().GetRenderData()->generation[parentIdx] << 16);
+    return parent;
+}
+
+std::vector<Node> Scene::GetRootNodes() const {
+    std::vector<Node> result;
+    for (auto& node : m_nodes) {
+        uint32_t idx = node.GetIndex();
+        if (idx < m_nodeData.size() && m_nodeData[idx].parent == UINT32_MAX) {
+            result.push_back(node);
+        }
+    }
+    return result;
+}
+
+Matrix4x4 Scene::GetWorldTransform(Node node) const {
+    Matrix4x4 world(1.0f);
+    Node current = node;
+    while (current.IsValid()) {
+        auto transform = GetComponent<Transform>(current);
+        if (transform) {
+            world = transform->GetMatrix() * world;
+        }
+        current = GetParent(current);
+    }
+    return world;
+}
+
+// ── 组件 API ──
+
+const std::vector<std::shared_ptr<Component>>& Scene::GetComponents(Node node) const {
+    static std::vector<std::shared_ptr<Component>> empty;
+    auto it = m_nodeComponents.find(node.handle);
+    if (it != m_nodeComponents.end()) {
+        return it->second;
+    }
+    return empty;
+}
+
+void Scene::RemoveComponent(Node node, Component* comp) {
+    auto it = m_nodeComponents.find(node.handle);
+    if (it != m_nodeComponents.end()) {
+        auto& vec = it->second;
+        vec.erase(std::remove_if(vec.begin(), vec.end(),
+            [comp](const auto& ptr) { return ptr.get() == comp; }),
+            vec.end());
+    }
+}
+
+// ── 相机 ──
 
 std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
     return m_mainCamera;
@@ -120,8 +274,9 @@ std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
 
 void Scene::SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera) {
     m_mainCamera = std::move(camera);
-    LOG_DEBUG("Scene", "主相机已设置为 {0}", m_mainCamera ? "有效相机" : "nullptr");
 }
+
+// ── 序列化 ──
 
 bool Scene::Deserialize(const std::string& path) {
     SceneFileData sfd;
@@ -133,34 +288,64 @@ bool Scene::Deserialize(const std::string& path) {
 
     SetName(sfd.name);
 
-    // 创建正交相机并设为主相机
-    auto& p = sfd.camera.projection;
-    auto camera = std::make_shared<Graphic::OrthographicCamera>();
-    camera->SetProjection(p[0], p[1], p[2], p[3]);
-    SetMainCamera(camera);
+    // 解析相机配置
+    if (sfd.camera) {
+        m_cameraConfig.position = {sfd.camera->position[0], sfd.camera->position[1], sfd.camera->position[2]};
+        m_cameraConfig.target   = {sfd.camera->target[0],   sfd.camera->target[1],   sfd.camera->target[2]};
+        m_cameraConfig.fov      = sfd.camera->fov;
+    }
 
-    // 创建 Entity 并恢复数据
-    for (auto& ed : sfd.entities) {
-        Node node = CreateNode(ed.name);
-        node.SetPosition({ed.transform.position[0], ed.transform.position[1]});
-        node.SetRotation(ed.transform.rotation);
+    // 第一遍：创建所有 Node，建立 name→node 映射
+    std::unordered_map<std::string, Node> nameToNode;
+    for (auto& nfd : sfd.nodes) {
+        Node node = CreateNode(nfd.name);
+        nameToNode[nfd.name] = node;
+    }
 
-        // 加载 SpriteRenderer 组件（颜色 + 大小写入 SoA）
-        if (ed.spriteRenderer) {
-            auto& sr = *ed.spriteRenderer;
-            auto& em = EntityManager::Get();
-            auto* rb = em.GetRenderData();
-            uint32_t idx = node.GetIndex();
-            rb->colorR[idx] = sr.color[0];
-            rb->colorG[idx] = sr.color[1];
-            rb->colorB[idx] = sr.color[2];
-            rb->colorA[idx] = sr.color[3];
-            rb->sizeW[idx] = sr.size[0];
-            rb->sizeH[idx] = sr.size[1];
+    // 第二遍：设置层级关系 + 组件
+    for (auto& nfd : sfd.nodes) {
+        Node node = nameToNode[nfd.name];
+        uint32_t idx = node.GetIndex();
+
+        // ── 层级 ──
+        if (nfd.parent && !nfd.parent->empty()) {
+            auto it = nameToNode.find(*nfd.parent);
+            if (it != nameToNode.end()) {
+                uint32_t pIdx = it->second.GetIndex();
+                m_nodeData[idx].parent = pIdx;
+                m_nodeData[pIdx].children.push_back(idx);
+            }
+        }
+
+        // ── Transform 组件（3D 变换） ──
+        auto transform = AddComponent<Transform>(node);
+        Transform::Data td;
+        if (nfd.position) td.position = *nfd.position;
+        if (nfd.rotation) td.rotation = *nfd.rotation;
+        if (nfd.scale)    td.scale    = *nfd.scale;
+        transform->SetData(td);
+
+        // ── 其他组件（通过 ComponentRegistry 反序列化） ──
+        auto& reg = ComponentRegistry::Get();
+        for (auto& compEntry : nfd.components) {
+            auto comp = reg.Create(compEntry.type);
+            if (!comp) {
+                LOG_WARN("Scene", "创建组件失败: {0}", compEntry.type);
+                continue;
+            }
+            comp->SetOwnerNode(node, this);
+            comp->Initialize();
+
+            auto json = compEntry.data.dump();
+            if (json) {
+                reg.DeserializeComponent(*comp, compEntry.type, *json);
+            }
+
+            m_nodeComponents[node.handle].push_back(std::move(comp));
         }
     }
 
-    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个 Entity)", sfd.name, m_nodes.size());
+    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个 Node)", sfd.name, m_nodes.size());
     return true;
 }
 
@@ -168,25 +353,65 @@ bool Scene::Serialize(const std::string& path) const {
     SceneFileData sfd;
     sfd.name = m_Name;
 
-    // TODO: 相机投影保存
+    // ── 相机 ──
+    SceneCameraFileData cf;
+    cf.position = {m_cameraConfig.position.x, m_cameraConfig.position.y, m_cameraConfig.position.z};
+    cf.target   = {m_cameraConfig.target.x,   m_cameraConfig.target.y,   m_cameraConfig.target.z};
+    cf.fov      = m_cameraConfig.fov;
+    sfd.camera  = cf;
 
-    // Entity 数据
-    for (auto node : m_nodes) {
-        EntityData ed;
-        ed.name = "Node"; // TODO: 实际名称
-        ed.transform.position = { node.GetX(), node.GetY() };
-        ed.transform.rotation = node.GetRotation();
+    // 构建 index→name 映射
+    std::unordered_map<uint32_t, std::string> idxToName;
+    for (size_t i = 0; i < m_nodeNames.size(); i++) {
+        idxToName[static_cast<uint32_t>(i)] = m_nodeNames[i];
+    }
 
-        // TODO: 从 SoA 读取 spriteRenderer 数据
-        // auto& em = EntityManager::Get();
-        // auto* rb = em.GetRenderData();
-        // uint32_t idx = node.GetIndex();
-        // SpriteRendererData sr;
-        // sr.color = { rb->colorR[idx], rb->colorG[idx], rb->colorB[idx], rb->colorA[idx] };
-        // sr.size  = { rb->sizeW[idx], rb->sizeH[idx] };
-        // ed.spriteRenderer = sr;
+    auto& reg = ComponentRegistry::Get();
 
-        sfd.entities.push_back(ed);
+    for (auto& node : m_nodes) {
+        uint32_t idx = node.GetIndex();
+        SceneNodeFileData nfd;
+        nfd.name = (idx < m_nodeNames.size()) ? m_nodeNames[idx] : "Node";
+
+        // ── 父节点 ──
+        if (idx < m_nodeData.size() && m_nodeData[idx].parent != UINT32_MAX) {
+            auto it = idxToName.find(m_nodeData[idx].parent);
+            if (it != idxToName.end()) {
+                nfd.parent = it->second;
+            }
+        }
+
+        // ── Transform 组件 ──
+        auto transform = GetComponent<Transform>(node);
+        if (transform) {
+            auto td = transform->GetData();
+            nfd.position = td.position;
+            nfd.rotation = td.rotation;
+            nfd.scale    = td.scale;
+        }
+
+        // ── 其他组件 ──
+        auto comps = GetComponents(node);
+        for (auto& comp : comps) {
+            auto typeName = reg.GetTypeName(*comp);
+            if (typeName.empty()) continue;
+
+            std::string tn(typeName);
+            if (!reg.CanSerialize(tn)) continue;
+
+            SceneComponentEntry entry;
+            entry.type = tn;
+            auto json = reg.SerializeComponent(*comp);
+            if (!json.empty()) {
+                auto ec = glz::read_json(entry.data, json);
+                if (ec) {
+                    LOG_WARN("Scene", "组件数据序列化失败: {0}", tn);
+                }
+            }
+            nfd.components.push_back(std::move(entry));
+        }
+
+        sfd.nodes.push_back(std::move(nfd));
     }
 
     auto error = glz::write_file_json(sfd, path, std::string{});
@@ -195,7 +420,7 @@ bool Scene::Serialize(const std::string& path) const {
         return false;
     }
 
-    LOG_INFO("Scene", "场景已保存: {0} ({1} 个 Entity)", path, m_nodes.size());
+    LOG_INFO("Scene", "场景已保存: {0} ({1} 个 Node)", path, m_nodes.size());
     return true;
 }
 

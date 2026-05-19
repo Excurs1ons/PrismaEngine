@@ -4,7 +4,6 @@
 #include "math/MathTypes.h"
 #include <array>
 namespace Prisma {
-class GameObject;  // 前向声明以避免循环依赖
 
 class ENGINE_API Transform : public Component
 {

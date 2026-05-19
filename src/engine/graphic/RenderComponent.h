@@ -1,7 +1,6 @@
 #pragma once
 #include "Component.h"
 #include "math/MathTypes.h"
-#include "GameObject.h"
 #include <memory>
 #include <vector>
 #include "Material.h"
