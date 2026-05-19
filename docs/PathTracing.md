@@ -11,7 +11,7 @@ Template3D 包含一个纯 compute shader 实现的路径追踪器，位于 `pro
         │
         ▼
    RenderPathTracing()
-        ├── SuspendDefaultRenderPass()    ← 暂停交换链 RP
+        ├── EndSwapChainRenderPass()      ← 结束交换链 RP（compute 不能在 RP 内）
         ├── PipelineBarrier (Undefined → UAV)
         ├── 填充 Camera UBO (位置/方向/fov/帧计数)
         ├── SetComputePipeline / BindDescriptorSet
@@ -91,7 +91,7 @@ class PathTracingPipeline : public IPipeline {
 
 好处：
 - 统一 `BeginFrame/EndFrame/Present` 流程
-- 不需要手动 `SuspendDefaultRenderPass`
+- Pipeline 显式控制 RP 生命周期，不再依赖 `BeginFrame` 的默认行为
 - 与 Forward3D 共用同一套 overlay 机制
 - app 代码只需要 `SetMainPipeline<PathTracingPipeline>()`
 
