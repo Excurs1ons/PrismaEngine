@@ -120,7 +120,7 @@ private:
     uint32_t m_frameCount = 0;
     uint32_t m_maxSamples = 512;
     uint32_t m_maxBounces = 8;
-    bool m_enableNEE = true;
+    bool m_enableNEE = false;
     bool m_converged = false;
     bool m_resetAccumulation = false;
     bool m_initialized = false;
