@@ -20,6 +20,7 @@ struct CameraData {
     PrismaMath::vec3 position;
     float nearPlane;
     float farPlane;
+    float fov = 70.0f;
 };
 
 class ITexture;

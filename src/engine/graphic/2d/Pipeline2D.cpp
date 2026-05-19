@@ -7,7 +7,6 @@
 #include "graphic/Renderer2D.h"
 #include "graphic/RenderCommandContext.h"
 #include "graphic/pipelines/forward/OpaquePass.h"
-#include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "Logger.h"
 
 namespace Prisma::Graphic {
@@ -45,11 +44,13 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
     auto view = ctx.camera.viewMatrix;
     auto proj = ctx.camera.projectionMatrix;
 
-    // ── 1. 2D 光照预处理 (生成 LightMap) ──
-    // 离屏 RP，需要暂停交换链 RenderPass (Vulkan)
-    auto* vkDev = dynamic_cast<Vulkan::RenderDeviceVulkan*>(ctx.device);
-    if (vkDev && !ctx.targetTexture) {
-        vkDev->SuspendDefaultRenderPass();
+    if (!ctx.targetTexture) {
+        ctx.device->BeginSwapChainRenderPass();
+    }
+
+    // ── 1. 2D 光照预处理 (离屏) ──
+    if (!ctx.targetTexture) {
+        ctx.device->EndSwapChainRenderPass();
     }
 
     if (m_lightPass) {
@@ -60,8 +61,8 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
         Renderer2D::SetLightTexture(m_lightPass->GetLightTexture());
     }
 
-    if (vkDev && !ctx.targetTexture) {
-        vkDev->ResumeDefaultRenderPass();
+    if (!ctx.targetTexture) {
+        ctx.device->BeginSwapChainRenderPass();
     }
 
     // ── 2. 渲染 Renderer2D 内容 (Sprite batching) ──

@@ -23,6 +23,7 @@
 #endif
 
 
+#include "VulkanResources.h"
 #include "app/Engine.h"
 
 namespace Prisma::Graphic::Vulkan {
@@ -315,38 +316,19 @@ void RenderDeviceVulkan::BeginFrame() {
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     vkBeginCommandBuffer(cmd, &beginInfo);
 
-    // [改动] 统一保持 m_frameActive 为 true
-    // 目的：即使跳过了默认 RenderPass，命令缓冲区依然在录制（由调用方负责开启自己的 RenderPass），
-    //       必须保持活动状态以确保 EndFrame 能够执行提交。
     m_frameActive = true;
 
     // 同步重置 VulkanCommandBuffer 的命令计数器（BeginFrame 走原始 Vulkan API，未调用 Begin()）
     if (auto* vkCmdBuf = m_vulkanCommandBuffers[m_currentFrame].get())
         vkCmdBuf->GetAndResetCommandCount();
 
-    // 如果不跳过交换链RenderPass，则开始它
-    if (!m_skipSwapChainRenderPass) {
-        VkRenderPassBeginInfo rpInfo{};
-        rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-        rpInfo.renderPass        = m_swapChain->GetRenderPass();
-        rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
-        rpInfo.renderArea.extent = m_swapChain->GetExtent();
-        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
-        rpInfo.clearValueCount   = 1;
-        rpInfo.pClearValues      = &clearColor;
+    m_isDefaultRenderPassActive = false;
 
-        vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
-        m_isDefaultRenderPassActive = true;
-    } else {
-        // 重置标志，下一帧恢复默认行为
-        m_skipSwapChainRenderPass = false;
-        m_isDefaultRenderPassActive = false;
-    }
     m_currentFrameIndex = m_currentFrame;
     m_hasPendingPresent = false;
 }
 
-void RenderDeviceVulkan::SuspendDefaultRenderPass() {
+void RenderDeviceVulkan::EndSwapChainRenderPass() {
     if (!m_initialized || !m_frameActive || !m_isDefaultRenderPassActive)
         return;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
@@ -354,7 +336,7 @@ void RenderDeviceVulkan::SuspendDefaultRenderPass() {
     m_isDefaultRenderPassActive = false;
 }
 
-void RenderDeviceVulkan::ResumeDefaultRenderPass() {
+void RenderDeviceVulkan::BeginSwapChainRenderPass() {
     if (!m_initialized || !m_frameActive || m_isDefaultRenderPassActive || !m_swapChain)
         return;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
@@ -386,14 +368,9 @@ void RenderDeviceVulkan::EndFrame() {
         vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]);
         m_frameActive             = false;
         m_hasPendingPresent       = true;
-        m_skipSwapChainRenderPass = false;
         return;
     }
 
-    // [修复] 如果还没有开启 RenderPass (说明之前被跳过了)，现在为了 Overlay 开启它。
-    // 这样可以确保 ImGui 的绘制指令处于合法的 RenderPass 中，
-    // 同时通过 RenderPass 的 finalLayout 自动将交换链图像转换到 PRESENT_SRC_KHR 布局，
-    // 彻底解决 VUID-vkCmdDrawIndexed-renderpass 和 VUID-VkPresentInfoKHR-pImageIndices-01430。
     if (!m_isDefaultRenderPassActive) {
         VkRenderPassBeginInfo rpInfo{};
         rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -436,8 +413,7 @@ void RenderDeviceVulkan::EndFrame() {
     vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]);
     m_pendingPresentImageIndex = imageIndex;
     m_hasPendingPresent        = true;
-    m_frameActive              = false;
-    m_skipSwapChainRenderPass  = false;
+    m_frameActive = false;
 }
 
 void RenderDeviceVulkan::Present() {
@@ -668,6 +644,14 @@ bool RenderDeviceVulkan::ReadbackImage(VkImage image, uint32_t width, uint32_t h
 
     vmaDestroyBuffer(m_allocator, stagingBuffer, stagingAlloc);
     return true;
+}
+
+bool RenderDeviceVulkan::ReadbackTexture(ITexture* texture, uint32_t width, uint32_t height,
+                                          void* outBuffer, size_t bufferSize) {
+    if (!texture || !outBuffer) return false;
+    auto* vkTex = static_cast<VulkanTexture*>(texture);
+    if (!vkTex || !vkTex->GetVkImage()) return false;
+    return ReadbackImage(vkTex->GetVkImage(), width, height, vkTex->GetVkFormat(), outBuffer, bufferSize);
 }
 
 }  // namespace Prisma::Graphic::Vulkan

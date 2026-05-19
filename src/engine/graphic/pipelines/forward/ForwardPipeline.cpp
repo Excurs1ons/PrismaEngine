@@ -13,10 +13,8 @@
 #include "app/Engine.h"
 #include "Logger.h"
 
-// Vulkan 特定代码支持
-#include "adapters/vulkan/RenderDeviceVulkan.h"
-#include "adapters/vulkan/VulkanResources.h"
 #include "graphic/interfaces/IRenderTarget.h"
+#include "graphic/adapters/vulkan/VulkanResources.h"
 
 namespace Prisma::Graphic {
 
@@ -118,15 +116,8 @@ void ForwardPipeline::EnsureGizmoPSO() {
 void ForwardPipeline::Execute(const RenderContext& ctx) {
     if (!m_device) return;
 
-    // -----------------------------------------------------------------------
-    // [修复] 处理目标重定向
-    // -----------------------------------------------------------------------
-    if (ctx.targetTexture) {
-        auto vulkanDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(ctx.device);
-        if (vulkanDevice) {
-            // 确保不开启默认交换链 Pass
-            vulkanDevice->SetSkipSwapChainRenderPass(true);
-        }
+    if (!ctx.targetTexture) {
+        ctx.device->BeginSwapChainRenderPass();
     }
 
     TextureRenderTargetProxy proxy(ctx.targetTexture);

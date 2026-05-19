@@ -10,6 +10,7 @@
 #include "adapters/vulkan/RenderDeviceVulkan.h"
 #include "adapters/vulkan/VulkanCommandBuffer.h"
 #include "pipelines/forward/ForwardPipeline.h"
+#include "pipelines/pathtracing/PathTracingPipeline.h"
 #include "2d/Pipeline2D.h"
 
 namespace Prisma::Graphic {
@@ -69,6 +70,7 @@ int RenderSystem::InitializeDevice() {
         devDesc.height           = m_desc.height;
         devDesc.presentMode      = m_desc.presentMode;
         devDesc.enableValidation = m_desc.enableValidation;
+        devDesc.headless         = m_desc.headless;
 
         return m_device->Initialize(devDesc);
     }
@@ -88,6 +90,8 @@ int RenderSystem::InitializeRenderResourceManager() {
 
 int RenderSystem::InitializeRenderPipelines() {
     // 根据渲染模式选择管线
+    // 注意：Mode3D_PathTracing 需要外部传入 SPIR-V 数据，
+    // 应由 app 手动创建 PathTracingPipeline 并通过 SetMainPipeline 传入。
     if (m_desc.renderMode == RenderMode::Mode2D) {
         m_mainRenderPipeline = std::make_shared<Pipeline2D>();
     } else {
