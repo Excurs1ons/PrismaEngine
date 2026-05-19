@@ -296,7 +296,7 @@ vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
 
             if (cosAtHit > 0.0 && cosAtLight > 0.0 && lightPdf > 0.0 && distSq > 0.0001) {
                 // Shadow ray: offset along light direction to prevent self-intersection
-                float vis = traceShadow(hitPos + EPS * lightDir, lightDir, dist, hit.objIndex);
+                float vis = traceShadow(hitPos + EPS * lightDir, lightDir, dist, hit.objIndex, lightIndex);
                 if (vis > 0.0) {
                     // Le * (albedo/pi) * G * V / p_area
                     // = Le * hit.color * cosAtHit * cosAtLight * V / (pi * distSq * lightPdf)
