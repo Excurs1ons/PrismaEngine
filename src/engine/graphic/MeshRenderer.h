@@ -6,13 +6,21 @@
 #include "RenderComponent.h"
 #include <memory>
 #include <utility>
+#include <string>
+#include <array>
 #include "Model.h"
 
 namespace Prisma::Graphic {
 
-class MeshRenderer : public RenderComponent
+class ENGINE_API MeshRenderer : public RenderComponent
 {
 public:
+    struct Data {
+        std::string meshPath;
+        std::array<float, 4> color = {0.7f, 0.7f, 0.7f, 1.0f};
+        std::array<float, 3> emissive = {0.0f, 0.0f, 0.0f};
+    };
+
     MeshRenderer();
     MeshRenderer(std::shared_ptr<Model> model) : model_(model) {}
     ~MeshRenderer() override;
@@ -40,6 +48,15 @@ public:
         return m_material;
     }
 
+    // 序列化
+    const char* GetComponentTypeName() const override { return "MeshRenderer"; }
+    Data GetData() const;
+    void SetData(const Data& d);
+
+    // 渲染属性（序列化 + 路径追踪用）
+    void SetEmissive(const PrismaMath::vec3& emissive) { m_emissive = emissive; }
+    PrismaMath::vec3 GetEmissive() const { return m_emissive; }
+
 protected:
     void DrawMesh(RenderCommandContext* context, std::shared_ptr<Mesh> mesh);
 
@@ -47,6 +64,8 @@ private:
     std::shared_ptr<Model> model_;
     std::shared_ptr<Mesh> m_mesh;
     std::shared_ptr<Material> m_material;
+    std::string m_meshPath;
+    PrismaMath::vec3 m_emissive = {0.0f, 0.0f, 0.0f};
 };
 
 } // namespace Prisma::Graphic

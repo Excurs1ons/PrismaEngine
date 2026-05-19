@@ -1,4 +1,4 @@
-#include "PathTracingPipeline.h"
+﻿#include "PathTracingPipeline.h"
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IResourceFactory.h"
@@ -251,6 +251,8 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         if (m_cachedSceneData.objectCount > 0 && m_sceneSSBO) {
             m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
         }
+        // 重建纹理后 accumImage 已归零，必须重置帧计数从 0 开始累积
+        ResetAccumulation();
     }
 
     if (!m_storageTexture || !m_computePipeline) return;
@@ -382,7 +384,7 @@ bool PathTracingPipeline::SaveOutput(const std::string& path) {
     std::vector<uint8_t> rgba8(w * h * 4);
     for (size_t i = 0; i < (size_t)w * h; i++) {
         for (int c = 0; c < 4; c++) {
-            float v = std::clamp(pixelData[i * 4 + c], 0.0f, 1.0f);
+            float v = glm::clamp(pixelData[i * 4 + c], 0.0f, 1.0f);
             rgba8[i * 4 + c] = (uint8_t)(v * 255.0f + 0.5f);
         }
     }

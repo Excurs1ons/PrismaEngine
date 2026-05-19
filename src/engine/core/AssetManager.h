@@ -56,8 +56,8 @@ public:
         }
 
         auto asset  = std::make_shared<T>(std::forward<Args>(args)...);
-        asset->Name = relativePath;
-        asset->Path = *fullPath;
+        asset->SetName(relativePath);
+        asset->SetPath(*fullPath);
 
         if (!asset->Load(*fullPath)) {
             LOG_ERROR("AssetManager", "加载资源失败: {0}", relativePath);
@@ -92,8 +92,8 @@ public:
         // 使用引擎统一管理的 JobSystem
         Engine::Get().GetJobSystem()->SubmitJob([this, hash, relativePath, path, callback, args...]() {
             auto asset  = std::make_shared<T>(args...);
-            asset->Name = relativePath;
-            asset->Path = path;
+            asset->SetName(relativePath);
+            asset->SetPath(path);
 
             if (!asset->Load(path)) {
                 LOG_ERROR("AssetManager", "异步加载失败: {0}", relativePath);
