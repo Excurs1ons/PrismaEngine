@@ -23,9 +23,9 @@ layout(std140, binding = 2) uniform CameraUBO {
 
 // Scene objects SSBO
 struct SceneObject {
-    vec4 p0;    // type=0(plane): point; type=1(sphere): center; type=2(box): center
-    vec4 p1;    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0)
-    vec4 p2;    // plane: (umin,vmin,umax,vmax); box: (cosA,sinA,0,0); sphere: unused
+    vec4 p0;    // type=0(plane): point; type=1(sphere): center; type=2(box): center; type=3(cone): center
+    vec4 p1;    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0); cone: (radius,halfHeight,0,0)
+    vec4 p2;    // plane: (umin,vmin,umax,vmax); box/cone: (cosA,sinA,0,0); sphere: unused
     vec4 color; // rgb + emissive in w
 };
 
@@ -123,6 +123,109 @@ bool intersectSphere(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) 
     return true;
 }
 
+// ============ Cone intersection (type=3, with Y-axis rotation) ============
+// Cone centered at obj.p0.xyz, apex at (+halfHeight along Y), base at (-halfHeight along Y)
+// obj.p1.x = radius, obj.p1.y = halfHeight
+// obj.p2.x = cosA, obj.p2.y = sinA (Y-axis rotation)
+bool intersectCone(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    float radius = obj.p1.x;
+    float halfHeight = obj.p1.y;
+    float cosA = obj.p2.x;
+    float sinA = obj.p2.y;
+
+    if (halfHeight <= 0.0 || radius <= 0.0) return false;
+
+    // Transform ray to local space (Y-axis aligned)
+    vec3 lo = origin - center;
+    vec3 localO = vec3(
+        lo.x * cosA - lo.z * sinA, lo.y, lo.x * sinA + lo.z * cosA);
+    vec3 localD = vec3(
+        dir.x * cosA - dir.z * sinA, dir.y, dir.x * sinA + dir.z * cosA);
+
+    float k = radius / (2.0 * halfHeight); // slope: radius per unit height from apex
+    float k2 = k * k;
+
+    float ox = localO.x, oy = localO.y, oz = localO.z;
+    float dx = localD.x, dy = localD.y, dz = localD.z;
+
+    // Quadratic: A*t² + B*t + C = 0 for cone side
+    float A = dx*dx + dz*dz - k2 * dy*dy;
+    float B = 2.0 * (ox*dx + oz*dz) - 2.0 * k2 * dy * (oy - halfHeight);
+    float C = ox*ox + oz*oz - k2 * (halfHeight - oy) * (halfHeight - oy);
+
+    float tSide = 1e30;
+    float tBase = 1e30;
+
+    // Solve cone side
+    if (abs(A) > 1e-10) {
+        float disc = B*B - 4.0*A*C;
+        if (disc >= 0.0) {
+            float sqrtDisc = sqrt(disc);
+            float t1 = (-B - sqrtDisc) / (2.0 * A);
+            float t2 = (-B + sqrtDisc) / (2.0 * A);
+            // Try the closer one first
+            for (int i = 0; i < 2; i++) {
+                float t = (i == 0) ? t1 : t2;
+                if (t < EPS) continue;
+                float y = oy + t * dy;
+                if (y >= -halfHeight && y <= halfHeight) {
+                    tSide = t;
+                    break;
+                }
+            }
+        }
+    } else if (abs(B) > 1e-10) {
+        // Linear case (A ≈ 0, grazing ray)
+        float t = -C / B;
+        if (t >= EPS) {
+            float y = oy + t * dy;
+            if (y >= -halfHeight && y <= halfHeight) {
+                tSide = t;
+            }
+        }
+    }
+
+    // Solve base cap (disk at y = -halfHeight)
+    if (abs(dy) > 1e-10) {
+        float t = (-halfHeight - oy) / dy;
+        if (t >= EPS) {
+            vec3 pt = localO + t * localD;
+            if (pt.x*pt.x + pt.z*pt.z <= radius*radius) {
+                tBase = t;
+            }
+        }
+    }
+
+    // Pick the nearest valid intersection
+    float t = min(tSide, tBase);
+    if (t >= 1e29) return false;
+
+    vec3 localPos = localO + t * localD;
+    bool isSide = (t == tSide);
+
+    vec3 localNormal;
+    if (isSide) {
+        // Side normal: gradient of cone surface, points outward
+        float y = localPos.y;
+        localNormal = normalize(vec3(localPos.x, k2 * (halfHeight - y), localPos.z));
+    } else {
+        // Base normal: points downward
+        localNormal = vec3(0.0, -1.0, 0.0);
+    }
+
+    // Transform normal back to world space
+    vec3 worldNormal = vec3(
+        localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
+        -localNormal.x * sinA + localNormal.z * cosA);
+
+    hit.t = t;
+    hit.normal = normalize(worldNormal);
+    hit.color = obj.color.rgb;
+    hit.emissive = 0.0;
+    return true;
+}
+
 // ============ Box intersection (type=2, with Y-axis rotation) ============
 bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
     vec3 center = obj.p0.xyz;
@@ -191,6 +294,8 @@ bool traceScene(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
             hitObj = intersectSphere(origin, dir, obj, r);
         } else if (type == 2) {
             hitObj = intersectBox(origin, dir, obj, r);
+        } else if (type == 3) {
+            hitObj = intersectCone(origin, dir, obj, r);
         }
 
         if (hitObj && r.t <= hit.t) {
@@ -213,6 +318,7 @@ float traceShadow(vec3 origin, vec3 dir, float maxT, int skipIndex1, int skipInd
         if (type == 0) hitObj = intersectPlane(origin, dir, obj, r);
         else if (type == 1) hitObj = intersectSphere(origin, dir, obj, r);
         else if (type == 2) hitObj = intersectBox(origin, dir, obj, r);
+        else if (type == 3) hitObj = intersectCone(origin, dir, obj, r);
         
         if (hitObj && r.t < maxT - EPS) return 0.0;
     }

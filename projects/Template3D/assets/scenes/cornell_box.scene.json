@@ -117,6 +117,34 @@
             "position": [0.6, -0.5, -0.35],
             "rotation": [0.0, 0.1305, 0.0, 0.9914],
             "scale": [1.0, 1.0, 1.0]
+        },
+        {
+            "name": "Sphere",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/sphere.obj",
+                    "color": [1.0, 1.0, 1.0, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [0.0, -0.6, 0.9],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [0.35, 0.35, 0.35]
+        },
+        {
+            "name": "Cone",
+            "components": [{
+                "type": "MeshRenderer",
+                "data": {
+                    "mesh": "assets/models/cone.obj",
+                    "color": [0.8, 0.8, 0.8, 1.0],
+                    "emissive": [0.0, 0.0, 0.0]
+                }
+            }],
+            "position": [0.6, 0.25, -0.35],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [0.2, 0.25, 0.2]
         }
     ]
 }
