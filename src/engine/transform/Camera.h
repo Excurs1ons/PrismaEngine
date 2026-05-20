@@ -4,6 +4,7 @@
 #include "math/MathTypes.h"
 #include "Component.h"
 #include "graphic/ICamera.h"
+#include <array>
 
 namespace Prisma::Graphic {
 

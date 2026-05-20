@@ -54,7 +54,7 @@ public:
     Vector3 GetEulerAngles() const {
         // 来自 glm::eulerAngles(quat)
         float sinPitch = -2.0f * (m_Rotation.y * m_Rotation.z - m_Rotation.w * m_Rotation.x);
-        float pitch = std::asin(std::clamp(sinPitch, -1.0f, 1.0f));
+        float pitch    = glm::asin(glm::clamp(sinPitch, -1.0f, 1.0f));
         float yaw   = std::atan2(2.0f * (m_Rotation.w * m_Rotation.z + m_Rotation.x * m_Rotation.y),
                                  1.0f - 2.0f * (m_Rotation.y * m_Rotation.y + m_Rotation.z * m_Rotation.z));
         float roll  = std::atan2(2.0f * (m_Rotation.w * m_Rotation.y + m_Rotation.z * m_Rotation.x),

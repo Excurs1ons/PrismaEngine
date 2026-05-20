@@ -83,8 +83,9 @@ static bool LoadOBJ(Mesh* mesh, const std::filesystem::path& path)
     if (positions.empty() || indices.empty()) return false;
 
     // 写入 Mesh
-    BoundingBox bb(Prisma::Vector3(std::numeric_limits<float>::max()),
-                   Prisma::Vector3(std::numeric_limits<float>::lowest()));
+    constexpr float kMaxVal = (std::numeric_limits<float>::max)();
+    constexpr float kLowVal = (std::numeric_limits<float>::lowest)();
+    BoundingBox bb{Prisma::Vector3(kMaxVal), Prisma::Vector3(kLowVal)};
     for (const auto& p : positions) bb.Encapsulate(p);
     mesh->SetBoundingBox(bb);
 

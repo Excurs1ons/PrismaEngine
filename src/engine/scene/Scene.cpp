@@ -265,7 +265,25 @@ std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
 
 bool Scene::Deserialize(const std::string& path) {
     SceneFileData sfd;
-    auto error = glz::read_file_jsonc(sfd, path, std::string{});
+
+    // 手动读取文件内容（而非使用 read_file_jsonc），以便预处理 BOM
+    std::string buffer;
+    auto file_ec = glz::file_to_buffer(buffer, path);
+    if (bool(file_ec)) {
+        LOG_ERROR("Scene", "读取场景文件失败: {}", path);
+        return false;
+    }
+
+    // 跳过 UTF-8 BOM (EF BB BF)，某些编辑器会附带
+    if (buffer.size() >= 3 &&
+        (static_cast<uint8_t>(buffer[0]) == 0xEF) &&
+        (static_cast<uint8_t>(buffer[1]) == 0xBB) &&
+        (static_cast<uint8_t>(buffer[2]) == 0xBF)) {
+        buffer.erase(0, 3);
+    }
+
+    // 解析 JSON（支持注释，同 read_file_jsonc 行为一致）
+    auto error = glz::read_jsonc(sfd, buffer);
     if (error) {
         LOG_ERROR("Scene", "解析场景文件失败: {0}", glz::format_error(error, ""));
         return false;
