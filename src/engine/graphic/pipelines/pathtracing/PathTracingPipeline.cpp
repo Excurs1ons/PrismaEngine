@@ -139,14 +139,22 @@ void PathTracingPipeline::OnSceneLoaded(::Prisma::Scene* scene) {
             int triCnt = (int)obj.p1[1];
             glm::mat4 worldMat;
             std::memcpy(&worldMat, obj.worldMatrix, sizeof(float) * 16);
+            glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(worldMat)));
             for (int t = 0; t < triCnt; t++) {
                 auto& tri = m_cachedTriangleData.triangles[firstTri + t];
-                glm::vec4 v0 = worldMat * glm::vec4(tri.v0[0], tri.v0[1], tri.v0[2], 1.0f);
-                glm::vec4 v1 = worldMat * glm::vec4(tri.v1[0], tri.v1[1], tri.v1[2], 1.0f);
-                glm::vec4 v2 = worldMat * glm::vec4(tri.v2[0], tri.v2[1], tri.v2[2], 1.0f);
-                tri.v0[0] = v0.x; tri.v0[1] = v0.y; tri.v0[2] = v0.z;
-                tri.v1[0] = v1.x; tri.v1[1] = v1.y; tri.v1[2] = v1.z;
-                tri.v2[0] = v2.x; tri.v2[1] = v2.y; tri.v2[2] = v2.z;
+                glm::vec4 v0 = worldMat * glm::vec4(tri.vertices[0].pos[0], tri.vertices[0].pos[1], tri.vertices[0].pos[2], 1.0f);
+                glm::vec4 v1 = worldMat * glm::vec4(tri.vertices[1].pos[0], tri.vertices[1].pos[1], tri.vertices[1].pos[2], 1.0f);
+                glm::vec4 v2 = worldMat * glm::vec4(tri.vertices[2].pos[0], tri.vertices[2].pos[1], tri.vertices[2].pos[2], 1.0f);
+                tri.vertices[0].pos[0] = v0.x; tri.vertices[0].pos[1] = v0.y; tri.vertices[0].pos[2] = v0.z;
+                tri.vertices[1].pos[0] = v1.x; tri.vertices[1].pos[1] = v1.y; tri.vertices[1].pos[2] = v1.z;
+                tri.vertices[2].pos[0] = v2.x; tri.vertices[2].pos[1] = v2.y; tri.vertices[2].pos[2] = v2.z;
+                // 法线使用逆转置矩阵变换（均匀缩放+旋转时 normalMat = mat3(worldMat)）
+                glm::vec3 n0 = normalMat * glm::vec3(tri.vertices[0].nrm[0], tri.vertices[0].nrm[1], tri.vertices[0].nrm[2]);
+                glm::vec3 n1 = normalMat * glm::vec3(tri.vertices[1].nrm[0], tri.vertices[1].nrm[1], tri.vertices[1].nrm[2]);
+                glm::vec3 n2 = normalMat * glm::vec3(tri.vertices[2].nrm[0], tri.vertices[2].nrm[1], tri.vertices[2].nrm[2]);
+                tri.vertices[0].nrm[0] = n0.x; tri.vertices[0].nrm[1] = n0.y; tri.vertices[0].nrm[2] = n0.z;
+                tri.vertices[1].nrm[0] = n1.x; tri.vertices[1].nrm[1] = n1.y; tri.vertices[1].nrm[2] = n1.z;
+                tri.vertices[2].nrm[0] = n2.x; tri.vertices[2].nrm[1] = n2.y; tri.vertices[2].nrm[2] = n2.z;
             }
         }
         BuildBVH();
@@ -469,9 +477,9 @@ void PathTracingPipeline::BuildBVH() {
     std::vector<int> triOrder(totalTris);
     for (int i = 0; i < totalTris; i++) {
         auto& tri = m_cachedTriangleData.triangles[i];
-        triInfos[i] = {(tri.v0[0] + tri.v1[0] + tri.v2[0]) / 3.0f,
-                       (tri.v0[1] + tri.v1[1] + tri.v2[1]) / 3.0f,
-                       (tri.v0[2] + tri.v1[2] + tri.v2[2]) / 3.0f};
+        triInfos[i] = {(tri.vertices[0].pos[0] + tri.vertices[1].pos[0] + tri.vertices[2].pos[0]) / 3.0f,
+                       (tri.vertices[0].pos[1] + tri.vertices[1].pos[1] + tri.vertices[2].pos[1]) / 3.0f,
+                       (tri.vertices[0].pos[2] + tri.vertices[1].pos[2] + tri.vertices[2].pos[2]) / 3.0f};
         triOrder[i] = i;
     }
 
@@ -484,7 +492,7 @@ void PathTracingPipeline::BuildBVH() {
         for (int i = 0; i < totalTris; i++) {
             auto& tri = m_cachedTriangleData.triangles[i];
             for (int v = 0; v < 3; v++) {
-                float* vert = (v == 0) ? tri.v0 : (v == 1) ? tri.v1 : tri.v2;
+                float* vert = (v == 0) ? tri.vertices[0].pos : (v == 1) ? tri.vertices[1].pos : tri.vertices[2].pos;
                 root.aabbMin[0] = (std::min)(root.aabbMin[0], vert[0]);
                 root.aabbMin[1] = (std::min)(root.aabbMin[1], vert[1]);
                 root.aabbMin[2] = (std::min)(root.aabbMin[2], vert[2]);
@@ -513,7 +521,7 @@ void PathTracingPipeline::BuildBVH() {
             int ti = triOrder[start + i];
             auto& tri = m_cachedTriangleData.triangles[ti];
             for (int v = 0; v < 3; v++) {
-                float* vert = (v == 0) ? tri.v0 : (v == 1) ? tri.v1 : tri.v2;
+                float* vert = (v == 0) ? tri.vertices[0].pos : (v == 1) ? tri.vertices[1].pos : tri.vertices[2].pos;
                 node.aabbMin[0] = (std::min)(node.aabbMin[0], vert[0]);
                 node.aabbMin[1] = (std::min)(node.aabbMin[1], vert[1]);
                 node.aabbMin[2] = (std::min)(node.aabbMin[2], vert[2]);
@@ -780,6 +788,7 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
         for (const auto& cpuMesh : mesh->GetCPUSubMeshes()) {
             const auto& indices = cpuMesh.indices;
             const auto& positions = cpuMesh.positions;
+            const auto& normals = cpuMesh.normals;
             if (indices.empty() || positions.empty()) continue;
 
             uint32_t triCount = (uint32_t)(indices.size() / 3);
@@ -798,12 +807,25 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
 
                 auto& tri = m_cachedTriangleData.triangles[triOffset + ti];
                 // 写入 4 个 float 匹配 GPU std430 的 vec3 对齐（16 字节/顶点）
-                std::memcpy(tri.v0, &v0, sizeof(float) * 3);
-                tri.v0[3] = 0.0f;
-                std::memcpy(tri.v1, &v1, sizeof(float) * 3);
-                tri.v1[3] = 0.0f;
-                std::memcpy(tri.v2, &v2, sizeof(float) * 3);
-                tri.v2[3] = 0.0f;
+                std::memcpy(tri.vertices[0].pos, &v0, sizeof(float) * 3);
+                tri.vertices[0].pos[3] = 0.0f;
+                std::memcpy(tri.vertices[1].pos, &v1, sizeof(float) * 3);
+                tri.vertices[1].pos[3] = 0.0f;
+                std::memcpy(tri.vertices[2].pos, &v2, sizeof(float) * 3);
+                tri.vertices[2].pos[3] = 0.0f;
+
+                // 写入顶点法线（来自 OBJ vn，或为空时用面法线在 shader 中自动计算）
+                if (!normals.empty() && i0 < normals.size() && i1 < normals.size() && i2 < normals.size()) {
+                    glm::vec3 n0 = glm::vec3(normals[i0]);
+                    glm::vec3 n1 = glm::vec3(normals[i1]);
+                    glm::vec3 n2 = glm::vec3(normals[i2]);
+                    std::memcpy(tri.vertices[0].nrm, &n0, sizeof(float) * 3);
+                    tri.vertices[0].nrm[3] = 0.0f;
+                    std::memcpy(tri.vertices[1].nrm, &n1, sizeof(float) * 3);
+                    tri.vertices[1].nrm[3] = 0.0f;
+                    std::memcpy(tri.vertices[2].nrm, &n2, sizeof(float) * 3);
+                    tri.vertices[2].nrm[3] = 0.0f;
+                }
             }
 
             totalTris += triCount;
@@ -932,12 +954,12 @@ void PathTracingPipeline::ToggleBVH() {
             std::memcpy(&worldMat, obj.worldMatrix, sizeof(float) * 16);
             for (int t = 0; t < triCnt; t++) {
                 auto& tri = m_cachedTriangleData.triangles[firstTri + t];
-                glm::vec4 v0 = worldMat * glm::vec4(tri.v0[0], tri.v0[1], tri.v0[2], 1.0f);
-                glm::vec4 v1 = worldMat * glm::vec4(tri.v1[0], tri.v1[1], tri.v1[2], 1.0f);
-                glm::vec4 v2 = worldMat * glm::vec4(tri.v2[0], tri.v2[1], tri.v2[2], 1.0f);
-                tri.v0[0] = v0.x; tri.v0[1] = v0.y; tri.v0[2] = v0.z;
-                tri.v1[0] = v1.x; tri.v1[1] = v1.y; tri.v1[2] = v1.z;
-                tri.v2[0] = v2.x; tri.v2[1] = v2.y; tri.v2[2] = v2.z;
+                glm::vec4 v0 = worldMat * glm::vec4(tri.vertices[0].pos[0], tri.vertices[0].pos[1], tri.vertices[0].pos[2], 1.0f);
+                glm::vec4 v1 = worldMat * glm::vec4(tri.vertices[1].pos[0], tri.vertices[1].pos[1], tri.vertices[1].pos[2], 1.0f);
+                glm::vec4 v2 = worldMat * glm::vec4(tri.vertices[2].pos[0], tri.vertices[2].pos[1], tri.vertices[2].pos[2], 1.0f);
+                tri.vertices[0].pos[0] = v0.x; tri.vertices[0].pos[1] = v0.y; tri.vertices[0].pos[2] = v0.z;
+                tri.vertices[1].pos[0] = v1.x; tri.vertices[1].pos[1] = v1.y; tri.vertices[1].pos[2] = v1.z;
+                tri.vertices[2].pos[0] = v2.x; tri.vertices[2].pos[1] = v2.y; tri.vertices[2].pos[2] = v2.z;
             }
         }
         BuildBVH();

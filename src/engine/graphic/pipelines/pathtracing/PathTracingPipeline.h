@@ -26,7 +26,8 @@ struct PTSceneObject {
     float p1[4];    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0); mesh: (firstTriangle,triangleCount,0,0)
     float p2[4];    // plane: (umin,vmin,umax,vmax); box/cone: (cosA,sinA,0,0); sphere/mesh: unused
     float color[4]; // rgb + emissive in w
-    float worldMatrix[16]; // 4x4 列主序世界矩阵，每帧由 UpdateTransforms 更新
+    float worldMatrix[16];    // 4x4 列主序世界矩阵
+    float invWorldMatrix[16]; // 4x4 列主序世界矩阵的逆
 };
 
 struct PathTracingSceneData {
@@ -37,10 +38,14 @@ struct PathTracingSceneData {
 
 // 三角形 SSBO 数据结构 — 必须与 pathtrace.comp 中的 Triangle 布局完全一致（std430）
 // 注意：GLSL std430 中 vec3 对齐为 16 字节，所以每顶点必须使用 4 个 float 来填充对齐
+// 每个顶点 32 字节：position (vec3 + pad) + normal (vec3 + pad)
+struct PTVertex {
+    float pos[4];  // position xyz + padding
+    float nrm[4];  // normal xyz + padding
+};
+
 struct PTTriangle {
-    float v0[4];  // xyz + padding (匹配 GPU vec3 的 16 字节对齐)
-    float v1[4];
-    float v2[4];
+    PTVertex vertices[3];
 };
 
 struct PathTracingTriangleData {

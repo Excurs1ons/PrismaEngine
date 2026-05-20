@@ -27,7 +27,8 @@ struct SceneObject {
     vec4 p1;    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0); cone: (radius,halfHeight,0,0)
     vec4 p2;    // plane: (umin,vmin,umax,vmax); box/cone: (cosA,sinA,0,0); sphere: unused
     vec4 color; // rgb + emissive in w
-    mat4 transform; // 世界矩阵（每帧更新），mesh 顶点由此从本地空间变换到世界空间
+    mat4 worldMatrix;    // 世界矩阵
+    mat4 invWorldMatrix; // 逆矩阵（用于 local space tracing）
 };
 
 layout(std430, binding = 3) readonly buffer SceneData {
@@ -36,8 +37,15 @@ layout(std430, binding = 3) readonly buffer SceneData {
 } scene;
 
 // Triangle mesh buffer (type=4 objects reference ranges here)
+struct Vertex {
+    vec3 pos;
+    float pad0;
+    vec3 nrm;
+    float pad1;
+};
+
 struct Triangle {
-    vec3 v0, v1, v2;
+    Vertex vertices[3];
 };
 
 layout(std430, binding = 4) readonly buffer TriangleBuffer {
@@ -301,7 +309,8 @@ bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
 
 // ============ Triangle mesh intersection (type=4) ============
 // Möller-Trumbore 射线-三角形求交
-bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2, out HitResult hit) {
+bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2,
+                       vec3 n0, vec3 n1, vec3 n2, out HitResult hit) {
     vec3 e1 = v1 - v0;
     vec3 e2 = v2 - v0;
     vec3 p = cross(dir, e2);
@@ -320,12 +329,17 @@ bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2, out Hit
     float t = dot(e2, q) * invDet;
     if (t < EPS) return false;
 
-    vec3 faceNormal = normalize(cross(e1, e2));
-    if (dot(dir, faceNormal) > 0.0) {
-        faceNormal = -faceNormal;
+    // 双线性插值顶点法线（当法线为零时退化为面法线）
+    vec3 interpNormal = (1.0 - u - v) * n0 + u * n1 + v * n2;
+    if (dot(interpNormal, interpNormal) < 0.001) {
+        interpNormal = cross(e1, e2);
+    }
+    interpNormal = normalize(interpNormal);
+    if (dot(dir, interpNormal) > 0.0) {
+        interpNormal = -interpNormal;
     }
     hit.t = t;
-    hit.normal = faceNormal;
+    hit.normal = interpNormal;
     return true;
 }
 
@@ -367,7 +381,10 @@ bool traverseBVH(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
                 if (oi == skipIndex || oi < 0) continue;
                 Triangle tri = triBuf.triangles[ti];
                 HitResult rt;
-                if (intersectTriangle(origin, dir, tri.v0, tri.v1, tri.v2, rt) && rt.t < closestT) {
+                if (intersectTriangle(origin, dir,
+                    tri.vertices[0].pos, tri.vertices[1].pos, tri.vertices[2].pos,
+                    tri.vertices[0].nrm, tri.vertices[1].nrm, tri.vertices[2].nrm, rt)
+                    && rt.t < closestT) {
                     closestT = rt.t;
                     rt.color = scene.objects[oi].color.rgb;
                     rt.emissive = scene.objects[oi].color.w;
@@ -402,7 +419,10 @@ bool traverseBVHShadow(vec3 origin, vec3 dir, float maxT, int skip1, int skip2) 
                 if (oi == skip1 || oi == skip2) continue;
                 Triangle tri = triBuf.triangles[ti];
                 HitResult rt;
-                if (intersectTriangle(origin, dir, tri.v0, tri.v1, tri.v2, rt) && rt.t < maxT - EPS) return true;
+                if (intersectTriangle(origin, dir,
+                    tri.vertices[0].pos, tri.vertices[1].pos, tri.vertices[2].pos,
+                    tri.vertices[0].nrm, tri.vertices[1].nrm, tri.vertices[2].nrm, rt)
+                    && rt.t < maxT - EPS) return true;
             }
         } else {
             int left = nIdx + 1, right = int(node.aabbMax.w);
