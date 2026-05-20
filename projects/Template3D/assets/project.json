@@ -12,7 +12,7 @@
     },
     "rendering": {
         "maxSamples": 512,
-        "maxBounces": 8
+        "maxBounces": 4
     },
     "headless": {
         "frames": 500,

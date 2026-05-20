@@ -32,7 +32,7 @@ struct ApplicationSpecification {
     Graphic::PresentMode PresentMode = Graphic::PresentMode::VSync;
     uint32_t MaxFPS = 0;
     uint32_t MaxSamples = 512;
-    uint32_t MaxBounces = 8;
+    uint32_t MaxBounces = 4;
     bool HardwareRayTracing = false;
     uint32_t HeadlessFrames = 500;
     uint32_t HeadlessWidth = 1080;
