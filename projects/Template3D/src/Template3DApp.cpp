@@ -1,5 +1,6 @@
 ﻿#include "Template3DApp.h"
 
+#include "graphic/PerspectiveCamera.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/Renderer2D.h"
 #include "graphic/interfaces/ICommandBuffer.h"
@@ -24,10 +25,6 @@ using namespace Graphic;
 Template3DApp::Template3DApp()
     : Application()
 {
-    m_camera = std::make_shared<PerspectiveCamera>(
-        glm::radians(70.0f), static_cast<float>(m_Spec.Width) / m_Spec.Height, 0.1f, 100.0f
-    );
-    m_camera->SetLookAt({0.0f, 0.0f, 3.5f}, {0.0f, 0.0f, 0.0f});
 }
 
 Template3DApp::~Template3DApp() = default;
@@ -43,16 +40,21 @@ void Template3DApp::BuildPathTracingScene() {
         LOG_ERROR("Template3D", "没有当前场景");
         return;
     }
+    m_scene = scene;
 
-    // 从场景相机配置更新相机
+    // 从场景相机配置创建 PerspectiveCamera 并托管于 Scene
     const auto& camConfig = scene->GetCameraConfig();
-    m_camera->SetLookAt(
-        {camConfig.position.x, camConfig.position.y, camConfig.position.z},
-        {camConfig.target.x,   camConfig.target.y,   camConfig.target.z},
-        m_cameraUp
+    auto camera = std::make_shared<PerspectiveCamera>(
+        glm::radians(camConfig.fov),
+        static_cast<float>(m_Spec.Width) / m_Spec.Height,
+        0.1f, 100.0f
     );
-    m_camera->SetFOV(glm::radians(camConfig.fov));
-    m_camera->SetViewport(m_Spec.Width, m_Spec.Height);
+    camera->SetLookAt(
+        {camConfig.position.x, camConfig.position.y, camConfig.position.z},
+        {camConfig.target.x,   camConfig.target.y,   camConfig.target.z}
+    );
+    scene->SetMainCamera(camera);
+
     LOG_INFO("Template3D", "相机: pos=({:.1f},{:.1f},{:.1f}) target=({:.1f},{:.1f},{:.1f}) fov={:.1f}",
              camConfig.position.x, camConfig.position.y, camConfig.position.z,
              camConfig.target.x, camConfig.target.y, camConfig.target.z, camConfig.fov);
@@ -117,16 +119,19 @@ void Template3DApp::RenderPathTracing() {
         if (frame >= m_headlessCfg.totalFrames) return;
     }
 
-    // 用引擎 PerspectiveCamera 填充渲染上下文（H1）
-    m_camera->SetViewport(m_Spec.Width, m_Spec.Height);
+    // 从当前场景获取相机（Scene 托管）
+    auto camera = m_scene ? m_scene->GetMainCamera() : nullptr;
+    if (!camera) return;
+
+    camera->SetViewport(m_Spec.Width, m_Spec.Height);
 
     RenderContext ctx;
     ctx.device            = m_device;
     ctx.commandBuffer     = m_device->GetCurrentCommandBuffer();
-    ctx.camera.viewMatrix = m_camera->GetViewMatrix();
-    ctx.camera.projectionMatrix = m_camera->GetProjectionMatrix();
-    ctx.camera.position   = m_camera->GetPosition();
-    ctx.camera.fov        = m_camera->GetFOV();
+    ctx.camera.viewMatrix = camera->GetViewMatrix();
+    ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
+    ctx.camera.position   = camera->GetPosition();
+    ctx.camera.fov        = camera->GetFOV();
     ctx.frameIndex        = m_device->GetCurrentFrameIndex();
     ctx.width             = m_Spec.Width;
     ctx.height            = m_Spec.Height;
@@ -187,7 +192,8 @@ void Template3DApp::DrawStatsOverlay() {
         m_overlayRefreshTimer = 0.0f;
     }
 
-    auto pos = m_camera->GetPosition();
+    auto camera = m_scene ? m_scene->GetMainCamera() : nullptr;
+    auto pos = camera ? camera->GetPosition() : PrismaMath::vec3{0.0f};
 
     Renderer2D::DrawString(m_overlayTimingInfo, {30.0f, winH - 45.0f}, 1.5f, {0.2f, 1.0f, 0.2f, 1.0f});
     Renderer2D::DrawString(m_overlayStatusStr, {30.0f, winH - 85.0f}, 1.5f, m_overlayStatusColor);
@@ -303,8 +309,8 @@ void Template3DApp::OnEvent(Event& e) {
 void Template3DApp::OnWindowResize(uint32_t w, uint32_t h) {
     m_Spec.Width = w;
     m_Spec.Height = h;
-    if (m_camera) {
-        m_camera->SetViewport(w, h);
+    if (auto camera = m_scene ? m_scene->GetMainCamera() : nullptr) {
+        camera->SetViewport(w, h);
     }
 }
 
