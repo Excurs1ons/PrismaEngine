@@ -34,9 +34,19 @@ layout(std430, binding = 3) readonly buffer SceneData {
     SceneObject objects[];
 } scene;
 
+// Triangle mesh buffer (type=4 objects reference ranges here)
+struct Triangle {
+    vec3 v0, v1, v2;
+};
+
+layout(std430, binding = 4) readonly buffer TriangleBuffer {
+    int triangleCount;
+    Triangle triangles[];
+} triBuf;
+
 uint randState;
 
-// TODO: replace fixed-offset self-intersection prevention with world-scale-aware relative offset
+// 固定偏移防自相交（适用于 Cornell Box 规模，整体缩放需改用相对偏移）
 const float EPS = 0.001;
 
 uint wangHash(uint seed) {
@@ -71,7 +81,7 @@ bool intersectPlane(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
     float denom = dot(dir, normal);
     if (abs(denom) < 1e-8) return false;
     float t = dot(point - origin, normal) / denom;
-    if (t < EPS) return false; // TODO: use world-scale-aware relative offset instead of fixed EPS
+    if (t < EPS) return false;
 
     vec3 pt = origin + t * dir;
 
@@ -273,6 +283,32 @@ bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
     return true;
 }
 
+// ============ Triangle mesh intersection (type=4) ============
+// Möller-Trumbore 射线-三角形求交
+bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2, out HitResult hit) {
+    vec3 e1 = v1 - v0;
+    vec3 e2 = v2 - v0;
+    vec3 p = cross(dir, e2);
+    float det = dot(e1, p);
+    if (abs(det) < 1e-10) return false;
+    float invDet = 1.0 / det;
+
+    vec3 tVec = origin - v0;
+    float u = dot(tVec, p) * invDet;
+    if (u < 0.0 || u > 1.0) return false;
+
+    vec3 q = cross(tVec, e1);
+    float v = dot(dir, q) * invDet;
+    if (v < 0.0 || u + v > 1.0) return false;
+
+    float t = dot(e2, q) * invDet;
+    if (t < EPS) return false;
+
+    hit.t = t;
+    hit.normal = normalize(cross(e1, e2)); // face normal
+    return true;
+}
+
 // ============ Scene trace: iterate all SSBO objects ============
 bool traceScene(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
     hit.t = 1e30;
@@ -296,6 +332,26 @@ bool traceScene(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
             hitObj = intersectBox(origin, dir, obj, r);
         } else if (type == 3) {
             hitObj = intersectCone(origin, dir, obj, r);
+        } else if (type == 4) {
+            // Triangle mesh: p1.x = firstTriangle, p1.y = triangleCount
+            int firstTri = int(obj.p1.x);
+            int triCount = int(obj.p1.y);
+            for (int ti = 0; ti < triCount; ti++) {
+                int idx = firstTri + ti;
+                if (idx >= triBuf.triangleCount) break;
+                Triangle tri = triBuf.triangles[idx];
+                HitResult rt;
+                if (intersectTriangle(origin, dir, tri.v0, tri.v1, tri.v2, rt)) {
+                    if (rt.t < hit.t) {
+                        rt.color = obj.color.rgb;
+                        rt.emissive = obj.color.w;
+                        hit = rt;
+                        hit.objIndex = i;
+                        found = true;
+                    }
+                }
+            }
+            continue; // already scanned all triangles for this object
         }
 
         if (hitObj && r.t <= hit.t) {
@@ -319,6 +375,19 @@ float traceShadow(vec3 origin, vec3 dir, float maxT, int skipIndex1, int skipInd
         else if (type == 1) hitObj = intersectSphere(origin, dir, obj, r);
         else if (type == 2) hitObj = intersectBox(origin, dir, obj, r);
         else if (type == 3) hitObj = intersectCone(origin, dir, obj, r);
+        else if (type == 4) {
+            int firstTri = int(obj.p1.x);
+            int triCount = int(obj.p1.y);
+            for (int ti = 0; ti < triCount; ti++) {
+                int idx = firstTri + ti;
+                if (idx >= triBuf.triangleCount) break;
+                Triangle tri = triBuf.triangles[idx];
+                if (intersectTriangle(origin, dir, tri.v0, tri.v1, tri.v2, r)) {
+                    if (r.t < maxT - EPS) return 0.0;
+                }
+            }
+            continue; // skip common hit check
+        }
         
         if (hitObj && r.t < maxT - EPS) return 0.0;
     }
