@@ -71,10 +71,17 @@ void Template3DApp::BuildPathTracingScene() {
 int Template3DApp::OnInitialize() {
     LOG_INFO("Template3D", "3D 模板初始化（路径追踪引擎管线版）");
 
-    if (m_headlessCfg.enabled) {
-        m_Spec.Width = m_headlessCfg.width;
+    // 无头模式：CLI 值优先，未提供的从 project.json 补全
+    if (m_Spec.Headless) {
+        m_headlessCfg.enabled = true;
+        m_headlessCfg.totalFrames   = m_headlessCfg.totalFrames   ? m_headlessCfg.totalFrames   : m_Spec.HeadlessFrames;
+        m_headlessCfg.width         = m_headlessCfg.width         ? m_headlessCfg.width         : m_Spec.HeadlessWidth;
+        m_headlessCfg.height        = m_headlessCfg.height        ? m_headlessCfg.height        : m_Spec.HeadlessHeight;
+        m_headlessCfg.outputPath    = m_headlessCfg.outputPath.empty() ? m_Spec.HeadlessOutputPath : m_headlessCfg.outputPath;
+        m_Spec.Width  = m_headlessCfg.width;
         m_Spec.Height = m_headlessCfg.height;
-        LOG_INFO("Template3D", "头模式分辨率: {}x{}", m_Spec.Width, m_Spec.Height);
+        LOG_INFO("Template3D", "头模式分辨率: {}x{} (frames={}, output={})",
+                 m_Spec.Width, m_Spec.Height, m_headlessCfg.totalFrames, m_headlessCfg.outputPath);
     }
 
     m_device = Engine::Get().GetRenderSystem()->GetDevice();

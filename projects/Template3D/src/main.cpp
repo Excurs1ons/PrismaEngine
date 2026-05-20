@@ -21,11 +21,11 @@ int main(int argc, char* argv[]) {
     spec.Headless = false;
 
     bool autoQuit = false;
-    uint32_t headlessFrames = 500;
-    uint32_t headlessWidth = 1080;
-    uint32_t headlessHeight = 1080;
-    uint32_t samples = 500;
-    std::string outputPath = "pt_output.png";
+    uint32_t headlessFrames = 0;     // 0 = 从 project.json 读取
+    uint32_t headlessWidth = 0;
+    uint32_t headlessHeight = 0;
+    uint32_t samples = 0;            // 0 = 从 project.json 读取
+    std::string outputPath;          // 空 = 从 project.json 读取
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
@@ -52,9 +52,8 @@ int main(int argc, char* argv[]) {
     if (spec.Headless) {
         app->SetHeadlessConfig(headlessFrames, outputPath, headlessWidth, headlessHeight);
         std::cout << "Template3D 头模式: frames=" << headlessFrames
-                  << " samples=" << samples
                   << " output=" << outputPath
-                  << " " << headlessWidth << "x" << headlessHeight << std::endl;
+                  << " " << (headlessWidth ? std::to_string(headlessWidth) : "?") << "x" << (headlessHeight ? std::to_string(headlessHeight) : "?") << std::endl;
     }
 
     int result = Prisma::RunApplication(

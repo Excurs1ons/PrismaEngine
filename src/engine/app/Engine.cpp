@@ -156,6 +156,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
                     spec.MaxFPS      = config.window.maxFPS;
                     spec.MaxSamples  = config.rendering.maxSamples;
                     spec.MaxBounces  = config.rendering.maxBounces;
+                    spec.HeadlessFrames  = config.headless.frames;
+                    spec.HeadlessWidth   = config.headless.width;
+                    spec.HeadlessHeight  = config.headless.height;
+                    spec.HeadlessOutputPath = config.headless.outputPath;
                     if (m_AssetManager) {
                         for (auto& ap : config.assets)
                             m_AssetManager->AddSearchPath(ap);

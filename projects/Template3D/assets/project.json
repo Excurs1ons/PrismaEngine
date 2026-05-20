@@ -14,5 +14,11 @@
         "maxSamples": 512,
         "maxBounces": 8
     },
+    "headless": {
+        "frames": 500,
+        "width": 1080,
+        "height": 1080,
+        "outputPath": "pt_output.png"
+    },
     "pipelineType": "PathTracing"
 }
