@@ -1,13 +1,14 @@
 ﻿#pragma once
 
 #include "app/Application.h"
-#include "graphic/PerspectiveCamera.h"
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 #include <memory>
 #include <string>
 
 namespace Prisma {
+
+class Scene;
 
 class Template3DApp : public Application {
 public:
@@ -44,10 +45,8 @@ private:
     // Path tracing pipeline
     std::shared_ptr<Graphic::PathTracingPipeline> m_ptPipeline;
 
-    // 3D 透视相机（独立于 ECS）
-    std::shared_ptr<Graphic::PerspectiveCamera> m_camera;
-    PrismaMath::vec3 m_cameraTarget = PrismaMath::vec3(0.0f, 0.0f, 0.0f);
-    PrismaMath::vec3 m_cameraUp    = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
+    // 当前场景（相机托管于 Scene 中）
+    Scene* m_scene = nullptr;
 
     struct HeadlessConfig {
         bool enabled = false;
