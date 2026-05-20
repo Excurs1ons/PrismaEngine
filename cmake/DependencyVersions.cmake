@@ -96,6 +96,10 @@ set(PRISMA_DEP_LAST_VERIFIED "2025-01-24")
 # GitHub: https://github.com/Cyan4973/xxHash
 set(PRISMA_DEP_XXHASH_VERSION "v0.8.2")
 
+# cgltf - 单文件 glTF 2.0 加载器 (C99, MIT)
+# GitHub: https://github.com/jkuhlmann/cgltf
+set(PRISMA_DEP_CGLTF_VERSION "v1.15")
+
 # 已知问题 / Known Issues
 set(PRISMA_DEP_KNOWN_ISSUES
     "SDL3 3.2.28+: Android 构建需要 NDK r25+"

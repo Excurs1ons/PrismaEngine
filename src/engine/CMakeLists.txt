@@ -116,9 +116,11 @@ set(CORE_SOURCES
     graphic/VoxelRenderer.cpp
     graphic/GeometryRenderPass.cpp
     graphic/Material.cpp
-    graphic/Mesh.cpp
-    graphic/MeshRenderer.cpp
+graphic/Mesh.cpp
+graphic/glTFLoader.cpp
+graphic/MeshRenderer.cpp
     graphic/OrthographicCamera.cpp
+    graphic/PerspectiveCamera.cpp
     graphic/SpriteRenderer.cpp
     graphic/SpriteAnimation.cpp
     graphic/stb_impl.cpp
@@ -485,6 +487,7 @@ target_link_libraries(Engine
         glm::glm-header-only
         glaze::glaze
         stb
+        cgltf::cgltf
 )
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
