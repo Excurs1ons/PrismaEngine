@@ -12,6 +12,7 @@
 #include "pipelines/forward/ForwardPipeline.h"
 #include "pipelines/pathtracing/PathTracingPipeline.h"
 #include "2d/Pipeline2D.h"
+#include "../scene/SceneManager.h"
 
 namespace Prisma::Graphic {
 RenderSystem::RenderSystem(const RenderSystemDesc& desc) : m_desc(desc) {}
@@ -165,7 +166,6 @@ void RenderSystem::EndFrame() {
         static double lastLogTime = 0.0;
         double now = Platform::GetTimeSeconds();
         if (now - lastLogTime >= 5.0) {
-            // 额外统计：直接从命令缓冲区获取 GPU Draw/Dispatch 次数
             uint32_t gpuCmdCount = 0;
             auto* vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
             if (vkDevice) {
@@ -177,28 +177,53 @@ void RenderSystem::EndFrame() {
             lastLogTime = now;
         }
 
-        if (!commands.empty()) {
-            RenderContext ctx;
-            ctx.device = m_device.get();
+        // 构建上下文并始终执行主渲染管线
+        RenderContext ctx;
+        ctx.device = m_device.get();
 
-            auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
-            if (vkDevice) {
-                ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+        auto vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+        if (vkDevice) {
+            ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+        }
+
+        // 优先从当前场景获取相机数据（适用于所有管线类型）
+        bool hasSceneCamera = false;
+        auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
+        if (sceneMgr) {
+            auto* scene = sceneMgr->GetCurrentScene();
+            if (scene) {
+                auto camera = scene->GetMainCamera();
+                if (camera) {
+                    ctx.camera.viewMatrix       = camera->GetViewMatrix();
+                    ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
+                    ctx.camera.position         = camera->GetPosition();
+                    ctx.camera.nearPlane        = camera->GetNearPlane();
+                    ctx.camera.farPlane         = camera->GetFarPlane();
+                    ctx.camera.fov              = camera->GetFOV();
+                    hasSceneCamera = true;
+                }
             }
+        }
 
-            const auto& sceneData       = Renderer::GetSceneData();
+        // 降级：使用 Renderer::GetSceneData()（Forward/2D 管线场景）
+        if (!hasSceneCamera) {
+            const auto& sceneData = Renderer::GetSceneData();
             ctx.camera.viewMatrix       = sceneData.camera.viewMatrix;
             ctx.camera.projectionMatrix = sceneData.camera.projectionMatrix;
             ctx.camera.position         = sceneData.camera.position;
             ctx.camera.nearPlane        = sceneData.camera.nearPlane;
             ctx.camera.farPlane         = sceneData.camera.farPlane;
+            ctx.camera.fov              = sceneData.camera.fov;
+        }
 
-            ctx.frameIndex = m_device->GetCurrentFrameIndex();
-            ctx.width      = m_desc.width;
-            ctx.height     = m_desc.height;
-            ctx.deltaTime  = 0.016f;
+        ctx.frameIndex = m_device->GetCurrentFrameIndex();
+        ctx.width      = m_desc.width;
+        ctx.height     = m_desc.height;
+        ctx.deltaTime  = 0.016f;
 
-            m_mainRenderPipeline->Execute(ctx);
+        m_mainRenderPipeline->Execute(ctx);
+
+        if (!commands.empty()) {
             Renderer::ClearQueue();
         }
     }
