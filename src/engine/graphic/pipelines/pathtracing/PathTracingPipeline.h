@@ -160,6 +160,7 @@ private:
     // 内部辅助方法
     void InitOverlayResources();
     void RenderOverlay(ICommandBuffer* cmd);
+    void LoadDefaultShaders();
 
     // 场景数据缓存（用于延迟初始化后重上传）
     PathTracingSceneData m_cachedSceneData{};

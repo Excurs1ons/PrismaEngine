@@ -101,24 +101,8 @@ int Template3DApp::OnInitialize() {
         return -1;
     }
 
-    // 使用 Material Asset 加载着色器
+    // 路径追踪管线内部自动加载着色器（LoadDefaultShaders）
     auto ptPipeline = std::make_shared<PathTracingPipeline>();
-
-    auto computeMat = std::make_shared<Graphic::Material>(nullptr);
-    if (computeMat->Load("assets/materials/pt_compute.mat")) {
-        ptPipeline->SetComputeShader(computeMat->GetShader());
-    } else {
-        return -1;
-    }
-
-    auto vertMat = std::make_shared<Graphic::Material>(nullptr);
-    auto fragMat = std::make_shared<Graphic::Material>(nullptr);
-    if (vertMat->Load("assets/materials/pt_present_vert.mat") &&
-        fragMat->Load("assets/materials/pt_present_frag.mat")) {
-        ptPipeline->SetPresentShaders(vertMat->GetShader(), fragMat->GetShader());
-    } else {
-        return -1;
-    }
 
     if (ptPipeline->Initialize(m_device) != 0) {
         LOG_ERROR("Template3D", "路径追踪管线初始化失败");
