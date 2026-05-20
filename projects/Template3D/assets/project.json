@@ -10,5 +10,5 @@
         "vsync": "Mailbox",
         "maxFPS": 0
     },
-    "pipelineType": "Forward3D"
+    "pipelineType": "PathTracing"
 }
