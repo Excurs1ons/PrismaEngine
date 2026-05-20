@@ -287,8 +287,10 @@ std::string Logger::GetTimestamp(const std::chrono::system_clock::time_point& ti
 #else
     localtime_r(&timeT, &tm);
 #endif
+    auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                  time.time_since_epoch()) % 1000;
     std::ostringstream oss;
-    oss << std::put_time(&tm, "%H:%M:%S");
+    oss << std::put_time(&tm, "%H:%M:%S") << "." << std::setfill('0') << std::setw(3) << ms.count();
     return oss.str();
 }
 
