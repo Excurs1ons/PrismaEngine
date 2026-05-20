@@ -58,7 +58,7 @@ void Template2DApp::OnRender() {
     // Gizmo 覆盖层（不受光照影响，纯叠加渲染）
     // 使用独立 VBO + 白色 LightMap，OpaquePass 后由 GizmoPass 处理
     // ═══════════════════════════════════════════════
-    Graphic::Renderer2D::BeginGizmo(*ortho);
+    Graphic::Renderer2D::BeginGizmo();
 
     float winW = (float)m_Spec.Width, winH = (float)m_Spec.Height;
     const float step = 50.0f;
