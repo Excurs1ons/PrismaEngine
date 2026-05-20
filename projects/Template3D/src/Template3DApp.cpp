@@ -32,7 +32,7 @@ int Template3DApp::OnInitialize() {
     LOG_INFO("Template3D", "3D 模板初始化（路径追踪引擎管线版）");
 
     // 无头模式：CLI 值优先，未提供的从 project.json 补全
-    if (m_Spec.Headless) {
+    if (Engine::Get().GetSpecification().Headless) {
         m_headlessCfg.enabled = true;
         m_headlessCfg.totalFrames   = m_headlessCfg.totalFrames   ? m_headlessCfg.totalFrames   : m_Spec.HeadlessFrames;
         m_headlessCfg.width         = m_headlessCfg.width         ? m_headlessCfg.width         : m_Spec.HeadlessWidth;
@@ -61,7 +61,6 @@ int Template3DApp::OnInitialize() {
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (sceneManager) {
         m_scene = sceneManager->GetCurrentScene();
-    }
     }
 
     // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
