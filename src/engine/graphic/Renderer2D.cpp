@@ -173,9 +173,8 @@ void Renderer2D::EndUI() {
     Flush();
 }
 
-void Renderer2D::BeginGizmo(const OrthographicCamera& camera) {
+void Renderer2D::BeginGizmo() {
     if (!s_Data) return;
-    s_Data->ViewProjection = camera.GetViewProjectionMatrix();
     // 确保前一批次已提交
     if (s_Data->BatchingEnabled) {
         if (s_Data->Frames[s_Data->CurrentFrameSlot].QuadCount > 0 ||

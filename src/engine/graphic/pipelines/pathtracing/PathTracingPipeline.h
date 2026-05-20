@@ -119,8 +119,7 @@ public:
         m_gizmoFragShader = std::move(frag);
     }
 
-    // 获取管线内部 gizmo 相机（用于 BeginGizmo 前的 camera reference）
-    std::shared_ptr<ICamera> GetGizmoCamera() const { return m_gizmoCamera; }
+
 
 private:
     bool CreateResources();

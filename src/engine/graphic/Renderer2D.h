@@ -44,8 +44,8 @@ public:
     static void BeginUI();
     static void EndUI();
 
-    // Gizmo 覆盖层（不受光照影响）
-    static void BeginGizmo(const OrthographicCamera& camera);
+    // Gizmo 覆盖层（不受光照影响，使用管线内部 gizmo 相机）
+    static void BeginGizmo();
     static void EndGizmo();
 
     // ========== 绘制接口 ==========
