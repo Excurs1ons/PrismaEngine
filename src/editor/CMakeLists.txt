@@ -29,6 +29,7 @@ set(EDITOR_SOURCES
         core/EditorService.cpp
         core/main.cpp
         panels/EditorLayer.cpp
+        panels/ProfilerPanel.cpp
         windows/ProjectSettingsWindow.cpp
         graphic/ImGuiVulkanResourceManager.cpp
         graphic/ViewportRenderPass.cpp
@@ -45,6 +46,7 @@ set(EDITOR_HEADERS
         core/WebUIEditor.h
         core/EditorService.h
         panels/EditorLayer.h
+        panels/ProfilerPanel.h
         windows/ProjectSettingsWindow.h
         Export.h
         graphic/ImGuiVulkanResourceManager.h

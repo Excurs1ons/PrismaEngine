@@ -1,4 +1,5 @@
 #include "EditorLayer.h"
+#include "ProfilerPanel.h"
 #include "../UIStrings.h"
 #include "../graphic/ImGuiVulkanResourceManager.h"
 #include "../graphic/ViewportRenderPass.h"
@@ -196,6 +197,11 @@ void Prisma::EditorLayer::OnImGuiRender() {
         }
         if (ImGui::BeginMenu(UI::MENU_VIEW)) {
             if (ImGui::MenuItem(UI::ITEM_IMGUI_DEMO, nullptr, &m_showDemoWindow)) {
+            }
+            ImGui::Separator();
+            bool profilerOpen = ProfilerPanel::IsVisible();
+            if (ImGui::MenuItem("Profiler", nullptr, &profilerOpen)) {
+                ProfilerPanel::Toggle();
             }
             ImGui::EndMenu();
         }
@@ -507,6 +513,8 @@ void Prisma::EditorLayer::OnImGuiRender() {
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
     }
+
+    ProfilerPanel::OnImGuiRender();
 
     // -----------------------------------------------------------------------
     // 文件操作弹窗 (Stubs)
