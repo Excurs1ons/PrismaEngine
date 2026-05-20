@@ -27,6 +27,7 @@ struct SceneObject {
     vec4 p1;    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0); cone: (radius,halfHeight,0,0)
     vec4 p2;    // plane: (umin,vmin,umax,vmax); box/cone: (cosA,sinA,0,0); sphere: unused
     vec4 color; // rgb + emissive in w
+    mat4 transform; // 世界矩阵（每帧更新），mesh 顶点由此从本地空间变换到世界空间
 };
 
 layout(std430, binding = 3) readonly buffer SceneData {
@@ -334,14 +335,19 @@ bool traceScene(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
             hitObj = intersectCone(origin, dir, obj, r);
         } else if (type == 4) {
             // Triangle mesh: p1.x = firstTriangle, p1.y = triangleCount
+            // 顶点在本地空间，通过 transform 变换到世界空间
             int firstTri = int(obj.p1.x);
             int triCount = int(obj.p1.y);
+            mat4 objToWorld = obj.transform;
             for (int ti = 0; ti < triCount; ti++) {
                 int idx = firstTri + ti;
                 if (idx >= triBuf.triangleCount) break;
                 Triangle tri = triBuf.triangles[idx];
+                vec3 wv0 = (objToWorld * vec4(tri.v0, 1.0)).xyz;
+                vec3 wv1 = (objToWorld * vec4(tri.v1, 1.0)).xyz;
+                vec3 wv2 = (objToWorld * vec4(tri.v2, 1.0)).xyz;
                 HitResult rt;
-                if (intersectTriangle(origin, dir, tri.v0, tri.v1, tri.v2, rt)) {
+                if (intersectTriangle(origin, dir, wv0, wv1, wv2, rt)) {
                     if (rt.t < hit.t) {
                         rt.color = obj.color.rgb;
                         rt.emissive = obj.color.w;
@@ -378,11 +384,15 @@ float traceShadow(vec3 origin, vec3 dir, float maxT, int skipIndex1, int skipInd
         else if (type == 4) {
             int firstTri = int(obj.p1.x);
             int triCount = int(obj.p1.y);
+            mat4 objToWorld = obj.transform;
             for (int ti = 0; ti < triCount; ti++) {
                 int idx = firstTri + ti;
                 if (idx >= triBuf.triangleCount) break;
                 Triangle tri = triBuf.triangles[idx];
-                if (intersectTriangle(origin, dir, tri.v0, tri.v1, tri.v2, r)) {
+                vec3 wv0 = (objToWorld * vec4(tri.v0, 1.0)).xyz;
+                vec3 wv1 = (objToWorld * vec4(tri.v1, 1.0)).xyz;
+                vec3 wv2 = (objToWorld * vec4(tri.v2, 1.0)).xyz;
+                if (intersectTriangle(origin, dir, wv0, wv1, wv2, r)) {
                     if (r.t < maxT - EPS) return 0.0;
                 }
             }

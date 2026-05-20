@@ -326,6 +326,11 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
 
     if (!m_storageTexture || !m_computePipeline) return;
 
+    // 每帧更新场景对象的 worldMatrix（本地空间 → 世界空间变换）
+    if (m_scene) {
+        UpdateTransforms(m_scene);
+    }
+
     if (m_converged) {
         if (!headless) {
             m_device->BeginSwapChainRenderPass();
@@ -440,6 +445,7 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
 
     m_cachedSceneData = {};
     m_cachedTriangleData = {};
+    m_scene = scene;
 
     uint32_t triOffset = 0;
     uint32_t objectIdx = 0;
@@ -464,9 +470,7 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
             }
         }
 
-        // 世界变换（CPU 侧将顶点预变换到世界空间，shader 中无需矩阵运算）
-        Matrix4x4 worldMat = scene->GetWorldTransform(node);
-
+        // 顶点上传到本地空间，由 shader 每帧通过 worldMatrix 变换到世界空间
         uint32_t totalTris = 0;
         for (const auto& cpuMesh : mesh->GetCPUSubMeshes()) {
             const auto& indices = cpuMesh.indices;
@@ -482,9 +486,10 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
                 uint32_t i1 = indices[ti * 3 + 1];
                 uint32_t i2 = indices[ti * 3 + 2];
 
-                glm::vec3 v0 = glm::vec3(worldMat * glm::vec4(glm::vec3(positions[i0]), 1.0f));
-                glm::vec3 v1 = glm::vec3(worldMat * glm::vec4(glm::vec3(positions[i1]), 1.0f));
-                glm::vec3 v2 = glm::vec3(worldMat * glm::vec4(glm::vec3(positions[i2]), 1.0f));
+                // 本地空间顶点（不上世界变换，shader 中每帧通过 worldMatrix 转换）
+                glm::vec3 v0 = glm::vec3(positions[i0]);
+                glm::vec3 v1 = glm::vec3(positions[i1]);
+                glm::vec3 v2 = glm::vec3(positions[i2]);
 
                 auto& tri = m_cachedTriangleData.triangles[triOffset + ti];
                 std::memcpy(tri.v0, &v0, sizeof(float) * 3);
@@ -505,7 +510,14 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
         obj.p1[2] = 0.0f; obj.p1[3] = 0.0f;
         obj.p2[0] = 0.0f; obj.p2[1] = 0.0f; obj.p2[2] = 0.0f; obj.p2[3] = 0.0f;
         obj.color[0] = r; obj.color[1] = g; obj.color[2] = b;
-        obj.color[3] = emissive.x + emissive.y + emissive.z; // 以标量发射强度近似
+        obj.color[3] = emissive.x + emissive.y + emissive.z;
+
+        // worldMatrix 将每帧由 UpdateTransforms 填充，初始为 identity
+        Matrix4x4 identity(1.0f);
+        std::memcpy(obj.worldMatrix, &identity, sizeof(float) * 16);
+
+        // 记录 node handle 用于每帧 transform 更新
+        m_cachedNodeHandles[objectIdx] = node.handle;
 
         triOffset += totalTris;
         objectIdx++;
@@ -524,6 +536,20 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
 
     LOG_INFO("PathTracingPipeline", "BuildFromScene: {} 个对象, {} 个三角形",
              objectIdx, triOffset);
+}
+
+void PathTracingPipeline::UpdateTransforms(Scene* scene) {
+    if (!scene || !m_sceneSSBO || m_cachedSceneData.objectCount == 0) return;
+
+    for (int i = 0; i < m_cachedSceneData.objectCount; i++) {
+        Node node(m_cachedNodeHandles[i]);
+        if (!node.IsValid()) continue;
+
+        Matrix4x4 worldMat = scene->GetWorldTransform(node);
+        std::memcpy(m_cachedSceneData.objects[i].worldMatrix, &worldMat, sizeof(float) * 16);
+    }
+
+    m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
 }
 
 void PathTracingPipeline::ResetAccumulation() {

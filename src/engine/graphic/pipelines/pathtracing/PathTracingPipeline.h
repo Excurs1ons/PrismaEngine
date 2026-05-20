@@ -26,6 +26,7 @@ struct PTSceneObject {
     float p1[4];    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0); mesh: (firstTriangle,triangleCount,0,0)
     float p2[4];    // plane: (umin,vmin,umax,vmax); box/cone: (cosA,sinA,0,0); sphere/mesh: unused
     float color[4]; // rgb + emissive in w
+    float worldMatrix[16]; // 4x4 列主序世界矩阵，每帧由 UpdateTransforms 更新
 };
 
 struct PathTracingSceneData {
@@ -92,6 +93,9 @@ public:
 
     // 从引擎 ECS 场景构建路径追踪数据
     void BuildFromScene(::Prisma::Scene* scene);
+
+    // 每帧更新场景对象的 worldMatrix（本地空间顶点 → 世界空间变换）
+    void UpdateTransforms(::Prisma::Scene* scene);
 
     void ResetAccumulation();
     void EnableNEE(bool enabled) { m_enableNEE = enabled; }
@@ -165,6 +169,8 @@ private:
     // 场景数据缓存（用于延迟初始化后重上传）
     PathTracingSceneData m_cachedSceneData{};
     PathTracingTriangleData m_cachedTriangleData{};
+    uint32_t m_cachedNodeHandles[32]{}; // objectIdx → node handle (用于每帧 UpdateTransforms)
+    Scene* m_scene = nullptr;           // 当前关联场景（用于每帧读取世界变换）
 
     // 状态
     uint32_t m_width = 0;
