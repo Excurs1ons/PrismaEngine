@@ -48,11 +48,19 @@ struct ProjectConfig {
     RenderMode renderMode = RenderMode::Mode3D_Forward;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
     RenderingConfig rendering;
+    HeadlessConfig headless;
 };
 
 struct RenderingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
+};
+
+struct HeadlessConfig {
+    uint32_t frames = 500;
+    uint32_t width = 1080;
+    uint32_t height = 1080;
+    std::string outputPath = "pt_output.png";
 };
 
 } // namespace Prisma
@@ -115,6 +123,16 @@ struct glz::meta<Prisma::RenderingConfig> {
 };
 
 template <>
+struct glz::meta<Prisma::HeadlessConfig> {
+    static constexpr auto value = glz::object(
+        "frames",     &Prisma::HeadlessConfig::frames,
+        "width",      &Prisma::HeadlessConfig::width,
+        "height",     &Prisma::HeadlessConfig::height,
+        "outputPath", &Prisma::HeadlessConfig::outputPath
+    );
+};
+
+template <>
 struct glz::meta<Prisma::ProjectConfig> {
     static constexpr auto value = glz::object(
         "name", &Prisma::ProjectConfig::name,
@@ -123,6 +141,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "window", &Prisma::ProjectConfig::window,
         "renderMode", &Prisma::ProjectConfig::renderMode,
         "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,
-        "rendering", &Prisma::ProjectConfig::rendering
+        "rendering", &Prisma::ProjectConfig::rendering,
+        "headless", &Prisma::ProjectConfig::headless
     );
 };
