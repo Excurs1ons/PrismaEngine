@@ -615,8 +615,17 @@ void PathTracingPipeline::InitOverlayResources() {
     auto* factory = m_device->GetResourceFactory();
     if (!factory) return;
 
+    // 内部自动加载 gizmo overlay 着色器（如未被外部设置）
     if (!m_gizmoVertShader || !m_gizmoFragShader) {
-        LOG_WARN("PathTracingPipeline", "gizmo 着色器未设置，跳过 overlay 初始化");
+        auto* rm = Engine::Get().GetRenderResourceManager();
+        if (rm) {
+            m_gizmoVertShader = rm->LoadShaderSync("assets/shaders/Renderer2D.vert.spv");
+            m_gizmoFragShader = rm->LoadShaderSync("assets/shaders/UnlitVertex.frag.spv");
+        }
+    }
+
+    if (!m_gizmoVertShader || !m_gizmoFragShader) {
+        LOG_WARN("PathTracingPipeline", "gizmo 着色器加载失败，跳过 overlay 初始化");
         return;
     }
 
