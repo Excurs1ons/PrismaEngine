@@ -8,21 +8,11 @@
 
 template <>
 struct glz::meta<Prisma::Graphic::ProjectionMode> {
-    static constexpr auto value = glz::meta<
-        std::underlying_type_t<Prisma::Graphic::ProjectionMode>
-    >{};
-    // 序列化为 "perspective" / "orthographic"
-    static constexpr std::string_view name(Prisma::Graphic::ProjectionMode mode) {
-        switch (mode) {
-            case Prisma::Graphic::ProjectionMode::Perspective:  return "perspective";
-            case Prisma::Graphic::ProjectionMode::Orthographic: return "orthographic";
-        }
-        return "perspective";
-    }
-    static constexpr auto from(std::string_view s) {
-        if (s == "orthographic") return Prisma::Graphic::ProjectionMode::Orthographic;
-        return Prisma::Graphic::ProjectionMode::Perspective;
-    }
+    using enum Prisma::Graphic::ProjectionMode;
+    static constexpr auto value = glz::enumerate(
+        "perspective",  Perspective,
+        "orthographic", Orthographic
+    );
 };
 
 template <>
