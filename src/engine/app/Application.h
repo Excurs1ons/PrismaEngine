@@ -33,6 +33,7 @@ struct ApplicationSpecification {
     uint32_t MaxFPS = 0;
     uint32_t MaxSamples = 512;
     uint32_t MaxBounces = 8;
+    bool HardwareRayTracing = false;
     uint32_t HeadlessFrames = 500;
     uint32_t HeadlessWidth = 1080;
     uint32_t HeadlessHeight = 1080;

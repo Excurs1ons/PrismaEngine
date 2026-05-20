@@ -10,6 +10,7 @@
 #include "graphic/RenderSystem.h"
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/Shader.h"
+#include "graphic/Renderer2D.h"
 #include "SceneManager.h"
 #include "PhysicsSystem.h"
 #include "core/ECS.h"
@@ -58,7 +59,7 @@ Engine::~Engine() {
 
 int Engine::Initialize() {
     if (m_Initialized) return 0;
-    
+
     Logger::Get().Initialize();
     Logger::Get().SetMinLevel(m_Spec.MinLogLevel);
     LOG_INFO("Engine", "Prisma 引擎正在初始化: {0}", m_Spec.Name);
@@ -93,7 +94,8 @@ int Engine::Initialize() {
     if (transportType == "tcp") {
         LOG_INFO("MCP", "TCP transport selected (port: {})", tcpPort);
         mcp->SetTransport(std::make_unique<MCP::TransportTCP>(tcpPort));
-    } else {
+    }
+    else {
         LOG_INFO("MCP", "Stdio transport selected (default)");
     }
     mcp->RegisterTool<MCP::SceneHierarchyTool>(this);
@@ -107,7 +109,7 @@ int Engine::Initialize() {
     mcp->RegisterTool<MCP::EngineStateHashTool>(this);
     mcp->RegisterTool<MCP::EngineBuildInfoTool>(this);
 #endif
-    
+
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {
             LOG_FATAL("Engine", "系统初始化失败！");
@@ -121,7 +123,7 @@ int Engine::Initialize() {
 
 int Engine::Run(std::unique_ptr<Application> app) {
     if (!m_Initialized || !app) return -1;
-    
+
     m_CurrentApp = std::move(app);
     m_Running = true;
 
@@ -130,15 +132,15 @@ int Engine::Run(std::unique_ptr<Application> app) {
     auto renderMode = RenderMode::Mode3D_Forward;
     {
         auto& spec = m_CurrentApp->GetSpecification();
-            std::vector<std::string> projPaths = {
-                "assets/project.json",
-                "project.json",
-                "projects/PrismaCraft/assets/project.json",
-                "../projects/PrismaCraft/assets/project.json",
-                "projects/Template2D/assets/project.json",
-                "../projects/Template2D/assets/project.json",
-                "projects/Template3D/assets/project.json",
-            };
+        std::vector<std::string> projPaths = {
+            "assets/project.json",
+            "project.json",
+            "projects/PrismaCraft/assets/project.json",
+            "../projects/PrismaCraft/assets/project.json",
+            "projects/Template2D/assets/project.json",
+            "../projects/Template2D/assets/project.json",
+            "projects/Template3D/assets/project.json",
+        };
         for (const auto& p : projPaths) {
             if (std::filesystem::exists(p)) {
                 ProjectConfig config;
@@ -153,8 +155,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
                     spec.Resizable   = config.window.resizable;
                     spec.PresentMode = config.window.vsync;
                     spec.MaxFPS      = config.window.maxFPS;
-                    spec.MaxSamples  = config.rendering.maxSamples;
-                    spec.MaxBounces  = config.rendering.maxBounces;
+                    spec.MaxSamples      = config.rendering.maxSamples;
+                    spec.MaxBounces      = config.rendering.maxBounces;
+                    spec.HardwareRayTracing = config.rendering.hardwareRayTracing;
                     spec.HeadlessFrames  = config.headless.frames;
                     spec.HeadlessWidth   = config.headless.width;
                     spec.HeadlessHeight  = config.headless.height;
@@ -202,9 +205,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
         rDesc.enableDebug      = false;
         rDesc.presentMode      = appSpec.PresentMode;
         rDesc.renderMode       = renderMode;
-        rDesc.maxSamples       = appSpec.MaxSamples;
-        rDesc.maxBounces       = appSpec.MaxBounces;
-        rDesc.enableValidation = false;
+        rDesc.maxSamples         = appSpec.MaxSamples;
+        rDesc.maxBounces         = appSpec.MaxBounces;
+        rDesc.hardwareRayTracing = appSpec.HardwareRayTracing;
+        rDesc.enableValidation   = false;
         
         m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
         if (m_RenderSystem->Initialize() != 0) {
@@ -322,6 +326,11 @@ int Engine::Run(std::unique_ptr<Application> app) {
             auto camera = scene->GetMainCamera();
             if (camera && m_Window) camera->SetViewport(m_Window->GetWidth(), m_Window->GetHeight());
         }
+        // 通知主渲染管线场景已加载（自动构建几何数据）
+        if (scene && m_RenderSystem) {
+            auto pipeline = m_RenderSystem->GetMainPipeline();
+            if (pipeline) pipeline->OnSceneLoaded(scene);
+        }
     }
 
     // [修复] 所有初始化数据（场景 + C# Bootstrap）已写入 Write (layout A)，
@@ -371,7 +380,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 double t0 = Platform::GetTimeSeconds();
                 GetRenderSystem()->BeginFrame();
                 double t1 = Platform::GetTimeSeconds();
+                Graphic::Renderer2D::BeginGizmo();
                 m_CurrentApp->OnRender(); 
+                Graphic::Renderer2D::EndGizmo();
                 double t2 = Platform::GetTimeSeconds();
                 GetRenderSystem()->EndFrame();
                 double t3 = Platform::GetTimeSeconds();

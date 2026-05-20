@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+namespace Prisma { class Scene; }
+
 namespace Prisma::Graphic {
 
 class IRenderDevice;
@@ -58,6 +60,9 @@ public:
 
     // 执行渲染逻辑
     virtual void Execute(const RenderContext& ctx) = 0;
+
+    // 场景加载后自动回调（引擎层在加载入口场景后调用）
+    virtual void OnSceneLoaded(Scene* scene) {}
 
     // 基础管线不再需要 AddRenderPass 这种灵活得过头的接口，
     // 具体的管线（如 ForwardPipeline）应该内部固定好自己的 Pass。

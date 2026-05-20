@@ -55,10 +55,8 @@ void Template2DApp::OnRender() {
     Graphic::Renderer2D::EndScene();
 
     // ═══════════════════════════════════════════════
-    // Gizmo 覆盖层（不受光照影响，纯叠加渲染）
-    // 使用独立 VBO + 白色 LightMap，OpaquePass 后由 GizmoPass 处理
+    // Gizmo 覆盖层（BeginGizmo/EndGizmo 由 Engine 帧循环自动管理）
     // ═══════════════════════════════════════════════
-    Graphic::Renderer2D::BeginGizmo();
 
     float winW = (float)m_Spec.Width, winH = (float)m_Spec.Height;
     const float step = 50.0f;
@@ -141,7 +139,6 @@ void Template2DApp::OnRender() {
                                         hud(30.0f, 65.0f), 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
     }
 
-    Graphic::Renderer2D::EndGizmo();
 }
 
 void Template2DApp::OnEvent(Event& e) {

@@ -1,4 +1,4 @@
-#include "SceneManager.h"
+﻿#include "SceneManager.h"
 #include "Scene.h"
 #include "logger/Logger.h"
 #include "core/AssetManager.h"
@@ -8,7 +8,7 @@
 namespace Prisma {
 
 int SceneManager::Initialize() {
-    CreateNewScene();
+    //CreateNewScene();
     LOG_DEBUG("Scene", "场景管理器已初始化。");
     return 0;
 }

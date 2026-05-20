@@ -43,6 +43,7 @@ struct WindowConfig {
 struct RenderingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
+    bool hardwareRayTracing = false; // DXR 硬件加速预留
 };
 
 struct HeadlessConfig {
@@ -118,7 +119,8 @@ template <>
 struct glz::meta<Prisma::RenderingConfig> {
     static constexpr auto value = glz::object(
         "maxSamples", &Prisma::RenderingConfig::maxSamples,
-        "maxBounces", &Prisma::RenderingConfig::maxBounces
+        "maxBounces", &Prisma::RenderingConfig::maxBounces,
+        "hardwareRayTracing", &Prisma::RenderingConfig::hardwareRayTracing
     );
 };
 
