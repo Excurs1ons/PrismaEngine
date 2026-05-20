@@ -305,8 +305,14 @@ bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2, out Hit
     float t = dot(e2, q) * invDet;
     if (t < EPS) return false;
 
+    // 始终将法线翻转向入射射线方向（路径追踪需要法线指向入射侧）
+    // 否则 hemisphere sampling 会生成穿入表面的方向，导致路径即刻终止
+    vec3 faceNormal = normalize(cross(e1, e2));
+    if (dot(dir, faceNormal) > 0.0) {
+        faceNormal = -faceNormal;
+    }
     hit.t = t;
-    hit.normal = normalize(cross(e1, e2)); // face normal
+    hit.normal = faceNormal;
     return true;
 }
 
