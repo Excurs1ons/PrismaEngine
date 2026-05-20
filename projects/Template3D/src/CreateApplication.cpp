@@ -6,7 +6,7 @@
 
 extern "C" {
 
-PRISMA_PLUGIN_API Prisma::Application* CreateApplication() {
+GAME_API Prisma::Application* CreateApplication() {
     return new Prisma::Template3DApp();
 }
 
