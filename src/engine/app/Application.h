@@ -22,6 +22,8 @@ struct ApplicationSpecification {
     bool Resizable = true;
     Graphic::PresentMode PresentMode = Graphic::PresentMode::VSync;
     uint32_t MaxFPS = 0;
+    uint32_t MaxSamples = 512;
+    uint32_t MaxBounces = 8;
 };
 
 class ENGINE_API Application {

@@ -100,7 +100,8 @@ int Template3DApp::OnInitialize() {
         BuildPathTracingScene();
     }
 
-    m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
+    // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
+    m_ptPipeline->SetMaxSamples(m_ptMaxSamples > 0 ? m_ptMaxSamples : m_Spec.MaxSamples);
 
     LOG_INFO("Template3D", "P/R 重置累积，[/] 调整采样帧数，N 切换 NEE");
     return 0;

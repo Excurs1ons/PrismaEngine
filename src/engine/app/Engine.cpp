@@ -154,6 +154,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
                     spec.Resizable   = config.window.resizable;
                     spec.PresentMode = config.window.vsync;
                     spec.MaxFPS      = config.window.maxFPS;
+                    spec.MaxSamples  = config.rendering.maxSamples;
+                    spec.MaxBounces  = config.rendering.maxBounces;
                     if (m_AssetManager) {
                         for (auto& ap : config.assets)
                             m_AssetManager->AddSearchPath(ap);

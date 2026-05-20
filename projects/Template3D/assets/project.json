@@ -10,5 +10,9 @@
         "vsync": "Mailbox",
         "maxFPS": 0
     },
+    "rendering": {
+        "maxSamples": 512,
+        "maxBounces": 8
+    },
     "pipelineType": "PathTracing"
 }

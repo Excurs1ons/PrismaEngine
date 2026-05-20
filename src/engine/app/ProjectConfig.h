@@ -47,6 +47,12 @@ struct ProjectConfig {
     WindowConfig window;
     RenderMode renderMode = RenderMode::Mode3D_Forward;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
+    RenderingConfig rendering;
+};
+
+struct RenderingConfig {
+    uint32_t maxSamples = 512;
+    uint32_t maxBounces = 8;
 };
 
 } // namespace Prisma
@@ -101,6 +107,14 @@ struct glz::meta<Prisma::WindowConfig> {
 };
 
 template <>
+struct glz::meta<Prisma::RenderingConfig> {
+    static constexpr auto value = glz::object(
+        "maxSamples", &Prisma::RenderingConfig::maxSamples,
+        "maxBounces", &Prisma::RenderingConfig::maxBounces
+    );
+};
+
+template <>
 struct glz::meta<Prisma::ProjectConfig> {
     static constexpr auto value = glz::object(
         "name", &Prisma::ProjectConfig::name,
@@ -108,6 +122,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "assets", &Prisma::ProjectConfig::assets,
         "window", &Prisma::ProjectConfig::window,
         "renderMode", &Prisma::ProjectConfig::renderMode,
-        "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend
+        "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,
+        "rendering", &Prisma::ProjectConfig::rendering
     );
 };
