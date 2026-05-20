@@ -45,7 +45,7 @@ void Template3DApp::BuildPathTracingScene() {
     // 从场景相机配置创建 PerspectiveCamera 并托管于 Scene
     const auto& camConfig = scene->GetCameraConfig();
     auto camera = std::make_shared<PerspectiveCamera>(
-        glm::radians(camConfig.fov),
+        Prisma::Deg2Rad(camConfig.fov),
         static_cast<float>(m_Spec.Width) / m_Spec.Height,
         0.1f, 100.0f
     );
@@ -230,7 +230,7 @@ void Template3DApp::DrawStatsOverlay() {
     if (m_ptPipeline) {
         uint32_t frameCount = m_ptPipeline->GetFrameCount();
         std::string ptInfo;
-        glm::vec4 ptColor;
+        Prisma::Vector4 ptColor;
         if (m_ptPipeline->IsConverged()) {
             ptInfo = std::format("Converged: {}/{} samples  |  {}x{}",
                                  frameCount, m_ptMaxSamples, m_Spec.Width, m_Spec.Height);
