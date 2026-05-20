@@ -51,6 +51,9 @@ Prisma_Declare_Dependency(Vulkan-Headers https://github.com/KhronosGroup/Vulkan-
 Prisma_Declare_Dependency(vma https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git ${PRISMA_DEP_VMA_VERSION})
 Prisma_Declare_Dependency(vk-bootstrap https://github.com/charles-lunarg/vk-bootstrap.git ${PRISMA_DEP_VK_BOOTSTRAP_VERSION})
 
+# cgltf - 单文件 glTF 2.0 加载/写入库 (header-only, C99)
+Prisma_Declare_Dependency(cgltf https://github.com/jkuhlmann/cgltf.git ${PRISMA_DEP_CGLTF_VERSION})
+
 Prisma_Declare_Dependency(imgui https://github.com/ocornut/imgui.git ${PRISMA_DEP_IMGUI_VERSION})
 
 # xxhash - 极快哈希 (MCP 增量追踪)
@@ -95,7 +98,7 @@ set(CMAKE_MESSAGE_LOG_LEVEL WARNING)
 set(CMAKE_WARN_DEPRECATED OFF)
 
 # 加载依赖 (使用 EXCLUDE_FROM_ALL 进一步隔离不需要的 target)
-FetchContent_MakeAvailable(glm stb zstd)
+FetchContent_MakeAvailable(glm stb zstd cgltf)
 
 # STB 总是作为接口库处理
 if(NOT TARGET stb)
@@ -104,6 +107,15 @@ if(NOT TARGET stb)
 endif()
 if(NOT TARGET stb::stb)
     add_library(stb::stb ALIAS stb)
+endif()
+
+# cgltf 总是作为接口库处理（单头文件，无编译单元）
+if(NOT TARGET cgltf)
+    add_library(cgltf INTERFACE)
+    target_include_directories(cgltf INTERFACE "${cgltf_SOURCE_DIR}")
+endif()
+if(NOT TARGET cgltf::cgltf)
+    add_library(cgltf::cgltf ALIAS cgltf)
 endif()
 
 if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_RENDER_VULKAN)
