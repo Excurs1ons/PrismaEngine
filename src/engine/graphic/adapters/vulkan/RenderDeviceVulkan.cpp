@@ -505,7 +505,24 @@ ISwapChain* RenderDeviceVulkan::GetSwapChain() const {
     return m_swapChain.get();
 }
 IRenderDevice::GPUMemoryInfo RenderDeviceVulkan::GetGPUMemoryInfo() const {
-    return {};
+    GPUMemoryInfo info;
+
+#if defined(PRISMA_ENABLE_MEMORY_TRACKING) && PRISMA_ENABLE_MEMORY_TRACKING > 0
+    VkPhysicalDeviceMemoryProperties memProps;
+    vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProps);
+    for (uint32_t i = 0; i < memProps.memoryHeapCount; ++i) {
+        if (memProps.memoryHeaps[i].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+            info.totalMemory += memProps.memoryHeaps[i].size;
+        }
+    }
+    VmaStats vmaStats;
+    vmaCalculateStats(m_allocator, &vmaStats);
+    info.usedMemory = vmaStats.total.usedBytes;
+    info.availableMemory = (info.totalMemory > info.usedMemory)
+        ? (info.totalMemory - info.usedMemory) : 0;
+#endif
+
+    return info;
 }
 IRenderDevice::RenderStats RenderDeviceVulkan::GetRenderStats() const {
     return m_stats;
