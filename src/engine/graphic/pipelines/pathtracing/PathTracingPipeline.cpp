@@ -5,14 +5,30 @@
 #include "graphic/interfaces/IBuffer.h"
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/ISampler.h"
+#include "graphic/interfaces/IPipelineState.h"
+#include "graphic/Renderer.h"
 #include "graphic/RenderDesc.h"
+#include "graphic/OrthographicCamera.h"
 #include "graphic/interfaces/ShaderReflection.h"
+#include "graphic/interfaces/IMesh.h"
+#include "graphic/MeshRenderer.h"
+#include "scene/Scene.h"
+#include "transform/Transform.h"
 #include "Logger.h"
 #include "utils/ImageUtils.h"
+#include "graphic/ICamera.h"
 #include <glm/glm.hpp>
 #include <cstring>
 #include <fstream>
 #include <sstream>
+
+// Gizmo push constants — 必须与 gizmo shader 布局一致
+namespace {
+struct alignas(16) GizmoPushConstants {
+    PrismaMath::mat4 mvp;
+    Prisma::Color color;
+};
+}
 
 namespace Prisma::Graphic {
 
@@ -37,8 +53,11 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
         LOG_ERROR("PathTracingPipeline", "设备为空");
         return -1;
     }
-    if (m_computeSPIRV.empty() || m_presentVertSPIRV.empty() || m_presentFragSPIRV.empty()) {
-        LOG_ERROR("PathTracingPipeline", "着色器 SPIR-V 数据未设置");
+    bool hasCompute = m_computeShader || !m_computeSPIRV.empty();
+    bool hasPresent = (m_presentVertShader && m_presentFragShader) ||
+                      (!m_presentVertSPIRV.empty() && !m_presentFragSPIRV.empty());
+    if (!hasCompute || !hasPresent) {
+        LOG_ERROR("PathTracingPipeline", "着色器数据未设置（需要 SPIR-V 或 IShader）");
         return -1;
     }
 
@@ -103,35 +122,54 @@ bool PathTracingPipeline::CreateResources() {
         m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
     }
 
-    // 4. 创建计算着色器
-    ShaderReflection reflection;
-    reflection.Resources = {
-        {"outputImage", ShaderResource::Type::Image2D, 0, 0, 1, 0},
-        {"accumImage",  ShaderResource::Type::Image2D, 0, 1, 1, 0},
-        {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(PathTracingCameraUBO)},
-        {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(PathTracingSceneData)},
-    };
-
-    ShaderDesc shaderDesc{};
-    shaderDesc.type = ShaderType::Compute;
-    shaderDesc.entryPoint = "main";
-    shaderDesc.language = ShaderLanguage::SPIRV;
-    shaderDesc.filename = "pathtrace.comp";
-
-    auto computeShader = factory->CreateShaderImpl(shaderDesc, m_computeSPIRV, reflection);
-    if (!computeShader) {
-        LOG_ERROR("PathTracingPipeline", "创建计算着色器失败");
+    // 3b. 创建 Triangle SSBO
+    BufferDesc triSSBODesc{};
+    triSSBODesc.type = BufferType::Structured;
+    triSSBODesc.size = sizeof(PathTracingTriangleData);
+    triSSBODesc.usage = BufferUsage::Default;
+    m_triangleBuffer = factory->CreateBufferImpl(triSSBODesc);
+    if (!m_triangleBuffer) {
+        LOG_ERROR("PathTracingPipeline", "创建 Triangle SSBO 失败");
         return false;
     }
+    if (m_cachedTriangleData.triangleCount > 0) {
+        m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+    }
 
-    // 5. 创建计算管线
+    // 4. 创建计算着色器 & 管线
     m_computePipeline = factory->CreateComputePipelineImpl();
     if (!m_computePipeline) {
         LOG_ERROR("PathTracingPipeline", "创建计算管线对象失败");
         return false;
     }
 
-    m_computePipeline->SetShader(std::move(computeShader));
+    if (m_computeShader) {
+        // 使用预创建的着色器对象
+        m_computePipeline->SetShader(m_computeShader);
+    } else {
+        // 从 SPIR-V 数据创建
+        ShaderReflection reflection;
+        reflection.Resources = {
+            {"outputImage", ShaderResource::Type::Image2D, 0, 0, 1, 0},
+            {"accumImage",  ShaderResource::Type::Image2D, 0, 1, 1, 0},
+            {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(PathTracingCameraUBO)},
+            {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(PathTracingSceneData)},
+            {"triangleBuf", ShaderResource::Type::StorageBuffer, 0, 4, 1, sizeof(PathTracingTriangleData)},
+        };
+
+        ShaderDesc shaderDesc{};
+        shaderDesc.type = ShaderType::Compute;
+        shaderDesc.entryPoint = "main";
+        shaderDesc.language = ShaderLanguage::SPIRV;
+        shaderDesc.filename = "pathtrace.comp";
+
+        auto computeShader = factory->CreateShaderImpl(shaderDesc, m_computeSPIRV, reflection);
+        if (!computeShader) {
+            LOG_ERROR("PathTracingPipeline", "创建计算着色器失败");
+            return false;
+        }
+        m_computePipeline->SetShader(std::move(computeShader));
+    }
     if (!m_computePipeline->Create(m_device)) {
         LOG_ERROR("PathTracingPipeline", "编译计算管线失败");
         return false;
@@ -157,34 +195,38 @@ bool PathTracingPipeline::CreateResources() {
                                 DescriptorType::UniformBuffer);
     m_descriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData),
                                 DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
+                                DescriptorType::StorageBuffer);
     m_descriptorSet->Update();
 
-    // 8. 创建 Present 着色器
-    ShaderReflection presentReflection;
-    presentReflection.Resources = {
-        {"presentTexture", ShaderResource::Type::Sampler2D, 0, 0, 1, 0},
-    };
+    // 8. 创建 Present 着色器（仅在未预创建时从 SPIR-V 创建）
+    if (!m_presentVertShader || !m_presentFragShader) {
+        ShaderReflection presentReflection;
+        presentReflection.Resources = {
+            {"presentTexture", ShaderResource::Type::Sampler2D, 0, 0, 1, 0},
+        };
 
-    ShaderDesc vertDesc{};
-    vertDesc.type = ShaderType::Vertex;
-    vertDesc.entryPoint = "main";
-    vertDesc.language = ShaderLanguage::SPIRV;
-    vertDesc.filename = "fullscreen.vert";
-    m_presentVertShader = factory->CreateShaderImpl(vertDesc, m_presentVertSPIRV, presentReflection);
-    if (!m_presentVertShader) {
-        LOG_ERROR("PathTracingPipeline", "创建 Present 顶点着色器失败");
-        return false;
-    }
+        ShaderDesc vertDesc{};
+        vertDesc.type = ShaderType::Vertex;
+        vertDesc.entryPoint = "main";
+        vertDesc.language = ShaderLanguage::SPIRV;
+        vertDesc.filename = "fullscreen.vert";
+        m_presentVertShader = factory->CreateShaderImpl(vertDesc, m_presentVertSPIRV, presentReflection);
+        if (!m_presentVertShader) {
+            LOG_ERROR("PathTracingPipeline", "创建 Present 顶点着色器失败");
+            return false;
+        }
 
-    ShaderDesc fragDesc{};
-    fragDesc.type = ShaderType::Pixel;
-    fragDesc.entryPoint = "main";
-    fragDesc.language = ShaderLanguage::SPIRV;
-    fragDesc.filename = "present.frag";
-    m_presentFragShader = factory->CreateShaderImpl(fragDesc, m_presentFragSPIRV, presentReflection);
-    if (!m_presentFragShader) {
-        LOG_ERROR("PathTracingPipeline", "创建 Present 片段着色器失败");
-        return false;
+        ShaderDesc fragDesc{};
+        fragDesc.type = ShaderType::Pixel;
+        fragDesc.entryPoint = "main";
+        fragDesc.language = ShaderLanguage::SPIRV;
+        fragDesc.filename = "present.frag";
+        m_presentFragShader = factory->CreateShaderImpl(fragDesc, m_presentFragSPIRV, presentReflection);
+        if (!m_presentFragShader) {
+            LOG_ERROR("PathTracingPipeline", "创建 Present 片段着色器失败");
+            return false;
+        }
     }
 
     // 9. 创建 Present 管线状态对象（无头模式跳过）
@@ -230,6 +272,11 @@ bool PathTracingPipeline::CreateResources() {
         LOG_INFO("PathTracingPipeline", "无头模式：跳过 Present 资源创建");
     }
 
+    // 11. 初始化 Overlay 资源（gizmo PSO）
+    if (!m_device->IsHeadless()) {
+        InitOverlayResources();
+    }
+
     m_initialized = true;
     LOG_INFO("PathTracingPipeline", "路径追踪管线初始化完成 ({}x{})",
              m_width ? m_width : 1280, m_height ? m_height : 720);
@@ -251,6 +298,9 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         if (m_cachedSceneData.objectCount > 0 && m_sceneSSBO) {
             m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
         }
+        if (m_cachedTriangleData.triangleCount > 0 && m_triangleBuffer) {
+            m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+        }
         // 重建纹理后 accumImage 已归零，必须重置帧计数从 0 开始累积
         ResetAccumulation();
     }
@@ -267,6 +317,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
                 cmd->BindDescriptorSet(0, m_presentDescriptorSet.get());
                 cmd->Draw(3, 1);
             }
+            RenderOverlay(cmd);
             if (m_overlayCB) m_overlayCB(cmd);
         }
         return;
@@ -345,7 +396,8 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
             cmd->Draw(3, 1);
         }
 
-        // Overlay 回调（gizmo / HUD）
+        // Gizmo + 应用 HUD
+        RenderOverlay(cmd);
         if (m_overlayCB) m_overlayCB(cmd);
     }
 }
@@ -355,6 +407,104 @@ void PathTracingPipeline::SetSceneData(const PathTracingSceneData& data) {
     if (m_sceneSSBO) {
         m_sceneSSBO->UpdateData(&data, sizeof(data), 0);
     }
+}
+
+void PathTracingPipeline::SetTriangleData(const PathTracingTriangleData& data) {
+    m_cachedTriangleData = data;
+    if (m_triangleBuffer) {
+        m_triangleBuffer->UpdateData(&data, sizeof(data), 0);
+    }
+}
+
+void PathTracingPipeline::BuildFromScene(Scene* scene) {
+    if (!scene) return;
+
+    m_cachedSceneData = {};
+    m_cachedTriangleData = {};
+
+    uint32_t triOffset = 0;
+    uint32_t objectIdx = 0;
+    const uint32_t maxObjects = 32;
+
+    for (const auto& node : scene->GetNodes()) {
+        if (objectIdx >= maxObjects) break;
+
+        auto meshRenderer = scene->GetComponent<Graphic::MeshRenderer>(node);
+        if (!meshRenderer) continue;
+
+        auto mesh = meshRenderer->GetMesh();
+        if (!mesh || !mesh->HasCPUMeshData()) continue;
+
+        auto emissive = meshRenderer->GetEmissive();
+        float r = 0.7f, g = 0.7f, b = 0.7f;
+        if (auto material = meshRenderer->GetMaterial()) {
+            if (auto* baseColor = material->GetParam("BaseColor")) {
+                if (auto* c = std::get_if<PrismaMath::vec4>(baseColor)) {
+                    r = c->r; g = c->g; b = c->b;
+                }
+            }
+        }
+
+        // 世界变换（CPU 侧将顶点预变换到世界空间，shader 中无需矩阵运算）
+        Matrix4x4 worldMat = scene->GetWorldTransform(node);
+
+        uint32_t totalTris = 0;
+        for (const auto& cpuMesh : mesh->GetCPUSubMeshes()) {
+            const auto& indices = cpuMesh.indices;
+            const auto& positions = cpuMesh.positions;
+            if (indices.empty() || positions.empty()) continue;
+
+            uint32_t triCount = (uint32_t)(indices.size() / 3);
+
+            for (uint32_t ti = 0; ti < triCount; ti++) {
+                if (triOffset + ti >= PathTracingTriangleData::MAX_TRIANGLES) break;
+
+                uint32_t i0 = indices[ti * 3 + 0];
+                uint32_t i1 = indices[ti * 3 + 1];
+                uint32_t i2 = indices[ti * 3 + 2];
+
+                glm::vec3 v0 = glm::vec3(worldMat * glm::vec4(glm::vec3(positions[i0]), 1.0f));
+                glm::vec3 v1 = glm::vec3(worldMat * glm::vec4(glm::vec3(positions[i1]), 1.0f));
+                glm::vec3 v2 = glm::vec3(worldMat * glm::vec4(glm::vec3(positions[i2]), 1.0f));
+
+                auto& tri = m_cachedTriangleData.triangles[triOffset + ti];
+                std::memcpy(tri.v0, &v0, sizeof(float) * 3);
+                std::memcpy(tri.v1, &v1, sizeof(float) * 3);
+                std::memcpy(tri.v2, &v2, sizeof(float) * 3);
+            }
+
+            totalTris += triCount;
+        }
+
+        if (totalTris == 0) continue;
+
+        // 创建 PTSceneObject（type=4 = 三角形网格）
+        auto& obj = m_cachedSceneData.objects[objectIdx];
+        obj.p0[0] = 0.0f; obj.p0[1] = 0.0f; obj.p0[2] = 0.0f; obj.p0[3] = 4.0f;
+        obj.p1[0] = (float)triOffset;
+        obj.p1[1] = (float)totalTris;
+        obj.p1[2] = 0.0f; obj.p1[3] = 0.0f;
+        obj.p2[0] = 0.0f; obj.p2[1] = 0.0f; obj.p2[2] = 0.0f; obj.p2[3] = 0.0f;
+        obj.color[0] = r; obj.color[1] = g; obj.color[2] = b;
+        obj.color[3] = emissive.x + emissive.y + emissive.z; // 以标量发射强度近似
+
+        triOffset += totalTris;
+        objectIdx++;
+    }
+
+    m_cachedSceneData.objectCount = (int)objectIdx;
+    m_cachedTriangleData.triangleCount = (int)triOffset;
+
+    // 上传到 GPU
+    if (m_sceneSSBO) {
+        m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
+    }
+    if (m_triangleBuffer) {
+        m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+    }
+
+    LOG_INFO("PathTracingPipeline", "BuildFromScene: {} 个对象, {} 个三角形",
+             objectIdx, triOffset);
 }
 
 void PathTracingPipeline::ResetAccumulation() {
@@ -408,6 +558,7 @@ void PathTracingPipeline::Shutdown() {
 void PathTracingPipeline::DestroyResources() {
     m_descriptorSet.reset();
     m_computePipeline.reset();
+    m_triangleBuffer.reset();
     m_sceneSSBO.reset();
     m_cameraUBO.reset();
     m_storageTexture.reset();
@@ -419,7 +570,73 @@ void PathTracingPipeline::DestroyResources() {
     m_presentVertShader.reset();
     m_presentFragShader.reset();
 
+    m_gizmoPSO.reset();
+    m_gizmoVertShader.reset();
+    m_gizmoFragShader.reset();
+    m_gizmoCamera.reset();
+
     LOG_DEBUG("PathTracingPipeline", "资源已清理");
+}
+
+void PathTracingPipeline::InitOverlayResources() {
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) return;
+
+    if (!m_gizmoVertShader || !m_gizmoFragShader) {
+        LOG_WARN("PathTracingPipeline", "gizmo 着色器未设置，跳过 overlay 初始化");
+        return;
+    }
+
+    auto pso = factory->CreatePipelineStateImpl();
+    pso->SetShader(ShaderType::Vertex, m_gizmoVertShader);
+    pso->SetShader(ShaderType::Pixel, m_gizmoFragShader);
+    pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+    RasterizerState rs{};
+    rs.cullMode = CullMode::None;
+    pso->SetRasterizerState(rs);
+    if (pso->Create(m_device)) {
+        m_gizmoPSO = std::shared_ptr<IPipelineState>(std::move(pso));
+        LOG_INFO("PathTracingPipeline", "gizmo PSO 创建成功");
+    } else {
+        LOG_ERROR("PathTracingPipeline", "gizmo PSO 创建失败");
+    }
+
+    m_gizmoCamera = std::make_shared<OrthographicCamera>(
+        0.0f, static_cast<float>(m_width), 0.0f, static_cast<float>(m_height)
+    );
+}
+
+void PathTracingPipeline::RenderOverlay(ICommandBuffer* cmd) {
+    const auto& gizmoCommands = Renderer::GetGizmoQueue();
+    if (gizmoCommands.empty() || !m_gizmoPSO) return;
+
+    cmd->SetPipelineState(m_gizmoPSO.get());
+
+    float w = static_cast<float>(m_width);
+    float h = static_cast<float>(m_height);
+    cmd->SetViewport(Viewport{0.0f, 0.0f, w, h, 0.0f, 1.0f});
+    cmd->SetScissorRect(Rect{0, 0, static_cast<int>(w), static_cast<int>(h)});
+
+    auto vp = m_gizmoCamera ? m_gizmoCamera->GetViewProjectionMatrix() : glm::mat4(1.0f);
+
+    for (const auto& gc : gizmoCommands) {
+        if (!gc.mesh) continue;
+        GizmoPushConstants pc{};
+        pc.mvp = vp * gc.transform;
+        pc.color = gc.color;
+        cmd->PushConstants(ShaderType::Vertex, &pc, sizeof(pc));
+        cmd->PushConstants(ShaderType::Pixel, &pc, sizeof(pc));
+
+        for (const auto& subMesh : gc.mesh->GetSubMeshes()) {
+            if (subMesh.vertexBuffer && subMesh.indexBuffer) {
+                cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                cmd->SetIndexBuffer(subMesh.indexBuffer.get());
+                cmd->DrawIndexed(subMesh.indexCount);
+            }
+        }
+    }
+
+    Renderer::ClearGizmoQueue();
 }
 
 } // namespace Prisma::Graphic
