@@ -100,13 +100,10 @@ void Template3DApp::RenderPathTracing() {
     ctx.width             = m_Spec.Width;
     ctx.height            = m_Spec.Height;
 
-    // 排队 stats 文字四边形
-    auto gizmoCam = m_ptPipeline->GetGizmoCamera();
-    if (gizmoCam) {
-        Renderer2D::BeginGizmo(*gizmoCam);
-        DrawStatsOverlay();
-        Renderer2D::EndGizmo();
-    }
+    // 排队 stats 文字四边形（gizmo 相机由管线内部管理）
+    Renderer2D::BeginGizmo();
+    DrawStatsOverlay();
+    Renderer2D::EndGizmo();
 
     m_ptPipeline->Execute(ctx);
 }
@@ -264,12 +261,6 @@ void Template3DApp::OnEvent(Event& e) {
         }
         return false;
     });
-}
-
-void Template3DApp::OnShutdown() {
-    m_ptPipeline.reset();
-
-    LOG_INFO("Template3D", "应用已关闭");
 }
 
 } // namespace Prisma

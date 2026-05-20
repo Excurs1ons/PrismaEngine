@@ -30,7 +30,6 @@ public:
     void OnRender() override;
     void OnUpdate(Timestep ts) override;
     void OnEvent(Event& e) override;
-    void OnShutdown() override;
 
 private:
     void RenderPathTracing();
