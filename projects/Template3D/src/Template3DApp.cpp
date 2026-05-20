@@ -29,7 +29,7 @@ Template3DApp::Template3DApp()
 
 Template3DApp::~Template3DApp() = default;
 
-void Template3DApp::BuildPathTracingScene() {
+void Template3DApp::InitSceneCamera() {
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (!sceneManager) {
         LOG_ERROR("Template3D", "无法获取 SceneManager");
@@ -59,12 +59,6 @@ void Template3DApp::BuildPathTracingScene() {
              camConfig.position.x, camConfig.position.y, camConfig.position.z,
              camConfig.target.x, camConfig.target.y, camConfig.target.z, camConfig.fov);
 
-    // 委托引擎管线从场景节点自动构建路径追踪数据（三角形网格）
-    if (m_ptPipeline) {
-        m_ptPipeline->BuildFromScene(scene);
-    }
-
-    m_sceneLoaded = true;
     LOG_INFO("Template3D", "场景 GetNodes()={} 个节点", scene->GetNodes().size());
 }
 
@@ -102,7 +96,7 @@ int Template3DApp::OnInitialize() {
     // 通过 SceneManager 获取已加载的场景（Engine 已从 project.json 的 entryScene 自动加载）
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (sceneManager) {
-        BuildPathTracingScene();
+        InitSceneCamera();
     }
 
     // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
