@@ -1,6 +1,15 @@
 #pragma once
 
 #include "Export.h"
+
+// GAME_API: 各游戏/应用项目对外导出的统一符号。
+// 与 PRISMA_PLUGIN_API 等价（总是 dllexport/visibility("default")），
+// 但语义明确表明这是"游戏项目"的入口，而非"引擎插件"。
+#if defined(_MSC_VER)
+    #define GAME_API __declspec(dllexport)
+#else
+    #define GAME_API __attribute__((visibility("default")))
+#endif
 #include <string>
 #include "core/LayerStack.h"
 #include "core/Timestep.h"
