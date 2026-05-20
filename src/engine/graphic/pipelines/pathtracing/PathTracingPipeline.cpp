@@ -13,6 +13,7 @@
 #include "graphic/interfaces/IMesh.h"
 #include "graphic/MeshRenderer.h"
 #include "scene/Scene.h"
+#include <cstring>
 #include "transform/Transform.h"
 #include "Logger.h"
 #include "utils/ImageUtils.h"
@@ -21,7 +22,8 @@
 #include "app/Engine.h"
 #include "scene/SceneManager.h"
 #include <glm/glm.hpp>
-#include <cstring>
+#include <algorithm>
+#include <functional>
 #include <fstream>
 #include <sstream>
 
@@ -73,6 +75,10 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
 
     m_device = device;
 
+    // 预置尺寸防止第一次 Execute 时误触发 resize（重复编译计算着色器导致卡顿）
+    m_width = 1280;
+    m_height = 720;
+
     if (!CreateResources()) {
         LOG_ERROR("PathTracingPipeline", "创建资源失败");
         DestroyResources();
@@ -90,7 +96,57 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
         }
     }
 
+    // 将缓存数据上传到 GPU（首次初始化或重建后）
+    if (m_cachedSceneData.objectCount > 0 && m_sceneSSBO) {
+        m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
+    }
+    if (m_cachedTriangleData.triangleCount > 0 && m_triangleBuffer) {
+        m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+    }
+    if (m_bvhNodeCount > 0 && m_bvhBuffer) {
+        m_bvhBuffer->UpdateData(m_bvhNodes.data(), m_bvhNodeCount * sizeof(BVHNode), 0);
+    }
+    if (!m_triToObject.empty() && m_triToObjectBuffer) {
+        m_triToObjectBuffer->UpdateData(m_triToObject.data(), (uint32_t)(m_triToObject.size() * sizeof(int)), 0);
+    }
+
+    m_initialized = true;
+    LOG_INFO("PathTracingPipeline", "路径追踪管线初始化完成 ({}x{})",
+             m_width ? m_width : 1280, m_height ? m_height : 720);
     return 0;
+}
+
+void PathTracingPipeline::OnSceneLoaded(::Prisma::Scene* scene) {
+    BuildFromScene(scene);
+
+    if (m_useBVH) {
+        // BVH 模式：预变换顶点到世界空间 + 构建 BVH 加速结构
+        for (int i = 0; i < m_cachedSceneData.objectCount; i++) {
+            Node node(m_cachedNodeHandles[i]);
+            if (!node.IsValid()) continue;
+            Matrix4x4 worldMat = scene->GetWorldTransform(node);
+            std::memcpy(m_cachedSceneData.objects[i].worldMatrix, &worldMat, sizeof(float) * 16);
+        }
+        for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+            auto& obj = m_cachedSceneData.objects[oi];
+            int type = (int)obj.p0[3];
+            if (type != 4) continue;
+            int firstTri = (int)obj.p1[0];
+            int triCnt = (int)obj.p1[1];
+            glm::mat4 worldMat;
+            std::memcpy(&worldMat, obj.worldMatrix, sizeof(float) * 16);
+            for (int t = 0; t < triCnt; t++) {
+                auto& tri = m_cachedTriangleData.triangles[firstTri + t];
+                glm::vec4 v0 = worldMat * glm::vec4(tri.v0[0], tri.v0[1], tri.v0[2], 1.0f);
+                glm::vec4 v1 = worldMat * glm::vec4(tri.v1[0], tri.v1[1], tri.v1[2], 1.0f);
+                glm::vec4 v2 = worldMat * glm::vec4(tri.v2[0], tri.v2[1], tri.v2[2], 1.0f);
+                tri.v0[0] = v0.x; tri.v0[1] = v0.y; tri.v0[2] = v0.z;
+                tri.v1[0] = v1.x; tri.v1[1] = v1.y; tri.v1[2] = v1.z;
+                tri.v2[0] = v2.x; tri.v2[1] = v2.y; tri.v2[2] = v2.z;
+            }
+        }
+        BuildBVH();
+    }
 }
 
 bool PathTracingPipeline::CreateResources() {
@@ -157,6 +213,38 @@ bool PathTracingPipeline::CreateResources() {
         m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
     }
 
+    // 3c. 创建 BVH Node SSBO（仅在启用 BVH 时）
+    if (m_useBVH) {
+        BufferDesc bvhSSBODesc{};
+        bvhSSBODesc.type = BufferType::Structured;
+        bvhSSBODesc.size = MAX_BVH_NODES * sizeof(BVHNode);
+        bvhSSBODesc.usage = BufferUsage::Default;
+        m_bvhBuffer = factory->CreateBufferImpl(bvhSSBODesc);
+        if (!m_bvhBuffer) {
+            LOG_ERROR("PathTracingPipeline", "创建 BVH SSBO 失败");
+            return false;
+        }
+        if (m_bvhNodeCount > 0) {
+            m_bvhBuffer->UpdateData(m_bvhNodes.data(), m_bvhNodeCount * sizeof(BVHNode), 0);
+        }
+    }
+
+    // 3d. 创建 triToObject SSBO（仅在启用 BVH 时）
+    if (m_useBVH) {
+        BufferDesc ttoSSBODesc{};
+        ttoSSBODesc.type = BufferType::Structured;
+        ttoSSBODesc.size = PathTracingTriangleData::MAX_TRIANGLES * sizeof(int);
+        ttoSSBODesc.usage = BufferUsage::Default;
+        m_triToObjectBuffer = factory->CreateBufferImpl(ttoSSBODesc);
+        if (!m_triToObjectBuffer) {
+            LOG_ERROR("PathTracingPipeline", "创建 triToObject SSBO 失败");
+            return false;
+        }
+        if (!m_triToObject.empty()) {
+            m_triToObjectBuffer->UpdateData(m_triToObject.data(), (uint32_t)(m_triToObject.size() * sizeof(int)), 0);
+        }
+    }
+
     // 4. 创建计算着色器 & 管线
     m_computePipeline = factory->CreateComputePipelineImpl();
     if (!m_computePipeline) {
@@ -165,10 +253,8 @@ bool PathTracingPipeline::CreateResources() {
     }
 
     if (m_computeShader) {
-        // 使用预创建的着色器对象
         m_computePipeline->SetShader(m_computeShader);
     } else {
-        // 从 SPIR-V 数据创建
         ShaderReflection reflection;
         reflection.Resources = {
             {"outputImage", ShaderResource::Type::Image2D, 0, 0, 1, 0},
@@ -176,14 +262,14 @@ bool PathTracingPipeline::CreateResources() {
             {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(PathTracingCameraUBO)},
             {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(PathTracingSceneData)},
             {"triangleBuf", ShaderResource::Type::StorageBuffer, 0, 4, 1, sizeof(PathTracingTriangleData)},
+            {"bvhNodes",    ShaderResource::Type::StorageBuffer, 0, 5, 1, MAX_BVH_NODES * sizeof(BVHNode)},
+            {"triToObject", ShaderResource::Type::StorageBuffer, 0, 6, 1, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int)},
         };
-
         ShaderDesc shaderDesc{};
         shaderDesc.type = ShaderType::Compute;
         shaderDesc.entryPoint = "main";
         shaderDesc.language = ShaderLanguage::SPIRV;
         shaderDesc.filename = "pathtrace.comp";
-
         auto computeShader = factory->CreateShaderImpl(shaderDesc, m_computeSPIRV, reflection);
         if (!computeShader) {
             LOG_ERROR("PathTracingPipeline", "创建计算着色器失败");
@@ -202,7 +288,6 @@ bool PathTracingPipeline::CreateResources() {
         LOG_ERROR("PathTracingPipeline", "计算管线没有描述符集布局");
         return false;
     }
-
     m_descriptorSet = factory->CreateDescriptorSet(layouts[0].get());
     if (!m_descriptorSet) {
         LOG_ERROR("PathTracingPipeline", "创建描述符集失败");
@@ -218,6 +303,14 @@ bool PathTracingPipeline::CreateResources() {
                                 DescriptorType::StorageBuffer);
     m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
                                 DescriptorType::StorageBuffer);
+    if (m_useBVH && m_bvhBuffer) {
+        m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode),
+                                    DescriptorType::StorageBuffer);
+    }
+    if (m_useBVH && m_triToObjectBuffer) {
+        m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int),
+                                    DescriptorType::StorageBuffer);
+    }
     m_descriptorSet->Update();
 
     // 8. 创建 Present 着色器（仅在未预创建时从 SPIR-V 创建）
@@ -226,7 +319,6 @@ bool PathTracingPipeline::CreateResources() {
         presentReflection.Resources = {
             {"presentTexture", ShaderResource::Type::Sampler2D, 0, 0, 1, 0},
         };
-
         ShaderDesc vertDesc{};
         vertDesc.type = ShaderType::Vertex;
         vertDesc.entryPoint = "main";
@@ -237,7 +329,6 @@ bool PathTracingPipeline::CreateResources() {
             LOG_ERROR("PathTracingPipeline", "创建 Present 顶点着色器失败");
             return false;
         }
-
         ShaderDesc fragDesc{};
         fragDesc.type = ShaderType::Pixel;
         fragDesc.entryPoint = "main";
@@ -273,20 +364,17 @@ bool PathTracingPipeline::CreateResources() {
             LOG_ERROR("PathTracingPipeline", "创建 Present 描述符集布局失败");
             return false;
         }
-
         m_presentDescriptorSet = factory->CreateDescriptorSet(m_presentDSLayout.get());
         if (!m_presentDescriptorSet) {
             LOG_ERROR("PathTracingPipeline", "创建 Present 描述符集失败");
             return false;
         }
-
         SamplerDesc samplerDesc{};
         samplerDesc.filter = TextureFilter::Linear;
         samplerDesc.addressU = TextureAddressMode::Clamp;
         samplerDesc.addressV = TextureAddressMode::Clamp;
         samplerDesc.addressW = TextureAddressMode::Clamp;
         m_presentSampler = factory->CreateSamplerImpl(samplerDesc);
-
         m_presentDescriptorSet->BindTexture(0, m_storageTexture.get(), m_presentSampler.get());
         m_presentDescriptorSet->Update();
     } else {
@@ -304,23 +392,233 @@ bool PathTracingPipeline::CreateResources() {
     return true;
 }
 
+bool PathTracingPipeline::ResizeResources() {
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("PathTracingPipeline", "无法获取资源工厂（ResizeResources）");
+        return false;
+    }
+
+    // 1. 重建存储纹理（新的宽高）
+    m_storageTexture.reset();
+    TextureDesc texDesc{};
+    texDesc.type        = TextureType::Texture2D;
+    texDesc.format      = TextureFormat::RGBA32_Float;
+    texDesc.width       = m_width;
+    texDesc.height      = m_height;
+    texDesc.depth       = 1;
+    texDesc.mipLevels   = 1;
+    texDesc.arraySize   = 1;
+    texDesc.allowShaderResource  = true;
+    texDesc.allowUnorderedAccess = true;
+    m_storageTexture = factory->CreateTextureImpl(texDesc);
+    if (!m_storageTexture) {
+        LOG_ERROR("PathTracingPipeline", "重建存储纹理失败");
+        return false;
+    }
+
+    // 2. 重建计算描述符集（绑定新纹理 + 已有 UBO/SSBO）
+    m_descriptorSet.reset();
+    const auto& layouts = m_computePipeline->GetDescriptorSetLayouts();
+    if (layouts.empty()) {
+        LOG_ERROR("PathTracingPipeline", "计算管线没有描述符集布局（ResizeResources）");
+        return false;
+    }
+    m_descriptorSet = factory->CreateDescriptorSet(layouts[0].get());
+    if (!m_descriptorSet) {
+        LOG_ERROR("PathTracingPipeline", "重建计算描述符集失败");
+        return false;
+    }
+    m_descriptorSet->BindStorageImage(0, m_storageTexture.get());
+    m_descriptorSet->BindStorageImage(1, m_storageTexture.get());
+    m_descriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO),
+                                DescriptorType::UniformBuffer);
+    m_descriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData),
+                                DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
+                                DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode),
+                                DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int),
+                                DescriptorType::StorageBuffer);
+    m_descriptorSet->Update();
+
+    // 3. 重建 Present 描述符集（绑定新纹理）
+    if (!m_device->IsHeadless()) {
+        m_presentDescriptorSet.reset();
+        m_presentDescriptorSet = factory->CreateDescriptorSet(m_presentDSLayout.get());
+        if (!m_presentDescriptorSet) {
+            LOG_ERROR("PathTracingPipeline", "重建 Present 描述符集失败");
+            return false;
+        }
+        m_presentDescriptorSet->BindTexture(0, m_storageTexture.get(), m_presentSampler.get());
+        m_presentDescriptorSet->Update();
+    }
+
+    LOG_DEBUG("PathTracingPipeline", "尺寸资源重建完成 ({}x{})", m_width, m_height);
+    return true;
+}
+
+void PathTracingPipeline::BuildBVH() {
+    int totalTris = m_cachedTriangleData.triangleCount;
+    m_bvhNodeCount = 0;
+    if (totalTris <= 0) return;
+
+    // 1. 三角形索引 + 重心数组（用于节点分割）
+    struct TriInfo { float cx, cy, cz; };
+    std::vector<TriInfo> triInfos(totalTris);
+    std::vector<int> triOrder(totalTris);
+    for (int i = 0; i < totalTris; i++) {
+        auto& tri = m_cachedTriangleData.triangles[i];
+        triInfos[i] = {(tri.v0[0] + tri.v1[0] + tri.v2[0]) / 3.0f,
+                       (tri.v0[1] + tri.v1[1] + tri.v2[1]) / 3.0f,
+                       (tri.v0[2] + tri.v1[2] + tri.v2[2]) / 3.0f};
+        triOrder[i] = i;
+    }
+
+    // 小场景（< 256 三角形）不做树分割，退化单叶节点避免 GPU 线程发散
+    if (totalTris < 256) {
+        m_bvhNodes.resize(1);
+        auto& root = m_bvhNodes[0];
+        root.aabbMin[0] = root.aabbMin[1] = root.aabbMin[2] = 1e30f;
+        root.aabbMax[0] = root.aabbMax[1] = root.aabbMax[2] = -1e30f;
+        for (int i = 0; i < totalTris; i++) {
+            auto& tri = m_cachedTriangleData.triangles[i];
+            for (int v = 0; v < 3; v++) {
+                float* vert = (v == 0) ? tri.v0 : (v == 1) ? tri.v1 : tri.v2;
+                root.aabbMin[0] = (std::min)(root.aabbMin[0], vert[0]);
+                root.aabbMin[1] = (std::min)(root.aabbMin[1], vert[1]);
+                root.aabbMin[2] = (std::min)(root.aabbMin[2], vert[2]);
+                root.aabbMax[0] = (std::max)(root.aabbMax[0], vert[0]);
+                root.aabbMax[1] = (std::max)(root.aabbMax[1], vert[1]);
+                root.aabbMax[2] = (std::max)(root.aabbMax[2], vert[2]);
+            }
+        }
+        root.aabbMin[3] = (float)totalTris;
+        root.aabbMax[3] = 0.0f;
+        m_bvhNodeCount = 1;
+        LOG_INFO("PathTracingPipeline", "BVH 退化单节点: {} 个三角形（场景尺寸小）", totalTris);
+        return;
+    }
+
+    m_bvhNodes.resize(MAX_BVH_NODES);
+    m_bvhNodeCount = 0;
+    std::function<int(int, int)> buildNode = [&](int start, int count) -> int {
+        int idx = m_bvhNodeCount++;
+        auto& node = m_bvhNodes[idx];
+        node.aabbMin[0] = node.aabbMin[1] = node.aabbMin[2] = 1e30f;
+        node.aabbMax[0] = node.aabbMax[1] = node.aabbMax[2] = -1e30f;
+        node.aabbMin[3] = 0.0f; node.aabbMax[3] = 0.0f;
+
+        for (int i = 0; i < count; i++) {
+            int ti = triOrder[start + i];
+            auto& tri = m_cachedTriangleData.triangles[ti];
+            for (int v = 0; v < 3; v++) {
+                float* vert = (v == 0) ? tri.v0 : (v == 1) ? tri.v1 : tri.v2;
+                node.aabbMin[0] = (std::min)(node.aabbMin[0], vert[0]);
+                node.aabbMin[1] = (std::min)(node.aabbMin[1], vert[1]);
+                node.aabbMin[2] = (std::min)(node.aabbMin[2], vert[2]);
+                node.aabbMax[0] = (std::max)(node.aabbMax[0], vert[0]);
+                node.aabbMax[1] = (std::max)(node.aabbMax[1], vert[1]);
+                node.aabbMax[2] = (std::max)(node.aabbMax[2], vert[2]);
+            }
+        }
+
+        if (count <= 4) {
+            node.aabbMin[3] = (float)count;
+            node.aabbMax[3] = (float)start;
+            return idx;
+        }
+
+        float ex = node.aabbMax[0] - node.aabbMin[0];
+        float ey = node.aabbMax[1] - node.aabbMin[1];
+        float ez = node.aabbMax[2] - node.aabbMin[2];
+        int axis = (ex >= ey && ex >= ez) ? 0 : (ey >= ez) ? 1 : 2;
+        float mid = (node.aabbMin[axis] + node.aabbMax[axis]) * 0.5f;
+
+        int left = start, right = start + count - 1;
+        while (left <= right) {
+            while (left <= right && (&triInfos[triOrder[left]].cx)[axis] < mid) left++;
+            while (left <= right && (&triInfos[triOrder[right]].cx)[axis] >= mid) right--;
+            if (left < right) { std::swap(triOrder[left], triOrder[right]); left++; right--; }
+        }
+        int split = left;
+        if (split == start || split == start + count)
+            split = start + count / 2;
+
+        node.aabbMin[3] = 0.0f;
+        buildNode(start, split - start);        // left = idx + 1
+        node.aabbMax[3] = (float)m_bvhNodeCount; // right child index
+        buildNode(split, start + count - split);
+        return idx;
+    };
+
+    buildNode(0, totalTris);
+    m_bvhNodeCount = (uint32_t)m_bvhNodeCount;
+
+    // 3. 按 BVH 叶节点顺序重排三角形（depth-first 连续）
+    std::vector<PTTriangle> reordered(totalTris);
+    std::vector<int> oldToNew(totalTris);
+    for (int i = 0; i < totalTris; i++) {
+        reordered[i] = m_cachedTriangleData.triangles[triOrder[i]];
+        oldToNew[triOrder[i]] = i;
+    }
+    std::memcpy(m_cachedTriangleData.triangles, reordered.data(), totalTris * sizeof(PTTriangle));
+
+    // 4. 重建 triToObject 映射（使用重排后的索引）
+    m_triToObject.assign(totalTris, -1);
+    for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+        auto& obj = m_cachedSceneData.objects[oi];
+        int type = (int)obj.p0[3];
+        if (type == 4) {
+            int oldFirst = (int)obj.p1[0];
+            int triCnt = (int)obj.p1[1];
+            for (int t = 0; t < triCnt; t++) {
+                int newIdx = oldToNew[oldFirst + t];
+                if (newIdx < totalTris) m_triToObject[newIdx] = (int)oi;
+            }
+            obj.p1[0] = (float)oldToNew[oldFirst]; // 更新对象三角形偏移到新顺序
+        }
+    }
+
+    // 5. 上传到 GPU（如果已创建）
+    if (m_sceneSSBO)
+        m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
+    if (m_triangleBuffer)
+        m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+    if (m_bvhBuffer)
+        m_bvhBuffer->UpdateData(m_bvhNodes.data(), m_bvhNodeCount * sizeof(BVHNode), 0);
+    if (m_triToObjectBuffer)
+        m_triToObjectBuffer->UpdateData(m_triToObject.data(), (uint32_t)(totalTris * sizeof(int)), 0);
+
+    LOG_INFO("PathTracingPipeline", "BVH 构建完成: {} 个节点, {} 个三角形",
+             m_bvhNodeCount, totalTris);
+}
+
 void PathTracingPipeline::Execute(const RenderContext& ctx) {
     if (!m_initialized || !ctx.device || !ctx.commandBuffer) return;
 
     auto cmd = ctx.commandBuffer;
     bool headless = m_device->IsHeadless();
 
-    // 延迟初始化：根据帧尺寸创建资源
+    // 延迟初始化：根据帧尺寸重建存储纹理和描述符集（不重建着色器/管线）
     if ((ctx.width != m_width || ctx.height != m_height) && ctx.width > 0 && ctx.height > 0) {
         m_width = ctx.width;
         m_height = ctx.height;
-        DestroyResources();
-        CreateResources();
+        if (!ResizeResources()) {
+            LOG_ERROR("PathTracingPipeline", "调整尺寸后重建资源失败");
+        }
         if (m_cachedSceneData.objectCount > 0 && m_sceneSSBO) {
             m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
         }
         if (m_cachedTriangleData.triangleCount > 0 && m_triangleBuffer) {
             m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+        }
+        if (m_bvhNodeCount > 0 && m_bvhBuffer) {
+            m_bvhBuffer->UpdateData(m_bvhNodes.data(), m_bvhNodeCount * sizeof(BVHNode), 0);
+        }
+        if (!m_triToObject.empty() && m_triToObjectBuffer) {
+            m_triToObjectBuffer->UpdateData(m_triToObject.data(), (uint32_t)(m_triToObject.size() * sizeof(int)), 0);
         }
         // 重建纹理后 accumImage 已归零，必须重置帧计数从 0 开始累积
         ResetAccumulation();
@@ -353,11 +651,14 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         m_device->EndSwapChainRenderPass();
     }
 
+    // 第一次使用从 Undefined 过渡，之后从 ShaderRead 过渡（保留上一帧累积数据）
+    ResourceState prevState = m_textureInitialized ? ResourceState::ShaderRead : ResourceState::Undefined;
     cmd->PipelineBarrier({{
         m_storageTexture.get(),
-        ResourceState::Undefined,
+        prevState,
         ResourceState::UnorderedAccess
     }});
+    m_textureInitialized = true;
 
     // 填充 Camera UBO
     {
@@ -389,6 +690,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
 
         m_cameraUBO->UpdateData(&ubo, sizeof(ubo), 0);
         m_resetAccumulation = false;
+
     }
 
     cmd->SetComputePipeline(m_computePipeline.get());
@@ -446,7 +748,8 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
     if (!scene) return;
 
     m_cachedSceneData = {};
-    m_cachedTriangleData = {};
+    // 2.3MB 数组不能使用栈上临时对象（= {}），改用直接 memset
+    memset(&m_cachedTriangleData, 0, sizeof(m_cachedTriangleData));
     m_scene = scene;
 
     uint32_t triOffset = 0;
@@ -494,9 +797,13 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
                 glm::vec3 v2 = glm::vec3(positions[i2]);
 
                 auto& tri = m_cachedTriangleData.triangles[triOffset + ti];
+                // 写入 4 个 float 匹配 GPU std430 的 vec3 对齐（16 字节/顶点）
                 std::memcpy(tri.v0, &v0, sizeof(float) * 3);
+                tri.v0[3] = 0.0f;
                 std::memcpy(tri.v1, &v1, sizeof(float) * 3);
+                tri.v1[3] = 0.0f;
                 std::memcpy(tri.v2, &v2, sizeof(float) * 3);
+                tri.v2[3] = 0.0f;
             }
 
             totalTris += triCount;
@@ -602,20 +909,71 @@ void PathTracingPipeline::Shutdown() {
     m_initialized = false;
 }
 
+void PathTracingPipeline::ToggleBVH() {
+    if (!m_initialized || !m_device) return;
+    m_device->WaitForIdle();
+
+    m_computeShader.reset();
+    m_descriptorSet.reset();
+    m_computePipeline.reset();
+
+    m_useBVH = !m_useBVH;
+
+    LoadDefaultShaders();
+
+    auto* factory = m_device->GetResourceFactory();
+    m_computePipeline = factory->CreateComputePipelineImpl();
+    if (!m_computePipeline) { LOG_ERROR("PathTracingPipeline", "切换 BVH 时创建管线失败"); return; }
+    if (m_computeShader) m_computePipeline->SetShader(m_computeShader);
+    if (!m_computePipeline->Create(m_device)) { LOG_ERROR("PathTracingPipeline", "切换 BVH 时编译管线失败"); return; }
+
+    const auto& layouts = m_computePipeline->GetDescriptorSetLayouts();
+    if (layouts.empty()) return;
+    m_descriptorSet = factory->CreateDescriptorSet(layouts[0].get());
+    if (!m_descriptorSet) return;
+    m_descriptorSet->BindStorageImage(0, m_storageTexture.get());
+    m_descriptorSet->BindStorageImage(1, m_storageTexture.get());
+    m_descriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO), DescriptorType::UniformBuffer);
+    m_descriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData), DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData), DescriptorType::StorageBuffer);
+    if (m_useBVH && m_bvhBuffer)
+        m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode), DescriptorType::StorageBuffer);
+    if (m_useBVH && m_triToObjectBuffer)
+        m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int), DescriptorType::StorageBuffer);
+    m_descriptorSet->Update();
+
+    // 重新上传场景数据（BVH 模式下顶点已在世界空间，flat 模式使用本地空间+ per-obj 变换）
+    if (m_cachedSceneData.objectCount > 0 && m_sceneSSBO)
+        m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
+    if (m_cachedTriangleData.triangleCount > 0 && m_triangleBuffer)
+        m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+    if (m_useBVH && m_bvhNodeCount > 0 && m_bvhBuffer)
+        m_bvhBuffer->UpdateData(m_bvhNodes.data(), m_bvhNodeCount * sizeof(BVHNode), 0);
+    if (m_useBVH && !m_triToObject.empty() && m_triToObjectBuffer)
+        m_triToObjectBuffer->UpdateData(m_triToObject.data(), (uint32_t)(m_triToObject.size() * sizeof(int)), 0);
+
+    ResetAccumulation();
+    LOG_INFO("PathTracingPipeline", "切换 BVH: {}", m_useBVH ? "ON" : "OFF");
+}
+
 void PathTracingPipeline::DestroyResources() {
     m_descriptorSet.reset();
     m_computePipeline.reset();
     m_triangleBuffer.reset();
+    m_bvhBuffer.reset();
+    m_triToObjectBuffer.reset();
     m_sceneSSBO.reset();
     m_cameraUBO.reset();
     m_storageTexture.reset();
+    m_textureInitialized = false;
 
     m_presentDescriptorSet.reset();
     m_presentSampler.reset();
     m_presentDSLayout.reset();
     m_presentPSO.reset();
-    m_presentVertShader.reset();
-    m_presentFragShader.reset();
+    // 注意：不重置 m_presentVertShader / m_presentFragShader
+    // 着色器 VkShaderModule 不依赖窗口尺寸，Destroy+Create 期间可复用
+    // 如果此处被释放，后续 CreateResources 会因 SPIRV 数据为空而失败
 
     m_gizmoPSO.reset();
     m_gizmoVertShader.reset();
@@ -633,10 +991,14 @@ void PathTracingPipeline::LoadDefaultShaders() {
     }
 
     if (!m_computeShader && m_computeSPIRV.empty()) {
-        auto shader = rm->LoadShaderSync("assets/shaders/pathtrace.comp.spv");
+        const char* shaderPath = m_useBVH
+            ? "assets/shaders/pathtrace_BVH.comp.spv"
+            : "assets/shaders/pathtrace.comp.spv";
+        auto shader = rm->LoadShaderSync(shaderPath);
         if (shader) {
             SetComputeShader(std::move(shader));
-            LOG_INFO("PathTracingPipeline", "内部加载计算着色器: pathtrace.comp.spv");
+            LOG_INFO("PathTracingPipeline", "内部加载计算着色器: {} {}",
+                     shaderPath, m_useBVH ? "(BVH)" : "(Flat)");
         }
     }
 
@@ -698,6 +1060,10 @@ void PathTracingPipeline::RenderOverlay(ICommandBuffer* cmd) {
     cmd->SetViewport(Viewport{0.0f, 0.0f, w, h, 0.0f, 1.0f});
     cmd->SetScissorRect(Rect{0, 0, static_cast<int>(w), static_cast<int>(h)});
 
+    // 每次渲染前更新正交投影匹配当前视口，确保 Overlay 不随窗口缩放变形
+    if (m_gizmoCamera) {
+        m_gizmoCamera->SetViewport(static_cast<uint32_t>(w), static_cast<uint32_t>(h));
+    }
     auto vp = m_gizmoCamera ? m_gizmoCamera->GetViewProjectionMatrix() : glm::mat4(1.0f);
 
     for (const auto& gc : gizmoCommands) {

@@ -40,7 +40,7 @@ int Template3DApp::OnInitialize() {
         m_headlessCfg.outputPath    = m_headlessCfg.outputPath.empty() ? m_Spec.HeadlessOutputPath : m_headlessCfg.outputPath;
         m_Spec.Width  = m_headlessCfg.width;
         m_Spec.Height = m_headlessCfg.height;
-        LOG_INFO("Template3D", "头模式分辨率: {}x{} (frames={}, output={})",
+        LOG_INFO("Template3D", "headless模式分辨率: {}x{} (frames={}, output={})",
                  m_Spec.Width, m_Spec.Height, m_headlessCfg.totalFrames, m_headlessCfg.outputPath);
     }
 
@@ -73,10 +73,7 @@ int Template3DApp::OnInitialize() {
 void Template3DApp::OnRender() {
     if (!m_ptPipeline || !m_device) return;
 
-    // Gizmo 覆盖层在 OnRender 中排队，管线执行移至 RenderSystem::EndFrame
-    Renderer2D::BeginGizmo();
     DrawStatsOverlay();
-    Renderer2D::EndGizmo();
 }
 
 void Template3DApp::SavePathTracingOutput() {
@@ -210,6 +207,14 @@ void Template3DApp::OnEvent(Event& e) {
                 m_ptPipeline->ResetAccumulation();
             }
             LOG_INFO("Template3D", "NEE {}", m_enableNEE ? "启用" : "禁用");
+            return true;
+        }
+        if (key == Input::KeyCode::B && !repeat) {
+            if (m_ptPipeline) {
+                m_ptPipeline->ToggleBVH();
+                m_ptPipeline->ResetAccumulation();
+            }
+            LOG_INFO("Template3D", "BVH {}", m_ptPipeline && m_ptPipeline->GetUseBVH() ? "ON" : "OFF");
             return true;
         }
         if (key == Input::KeyCode::LeftBracket && !repeat) {

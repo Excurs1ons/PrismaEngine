@@ -36,8 +36,11 @@ struct PathTracingSceneData {
 };
 
 // 三角形 SSBO 数据结构 — 必须与 pathtrace.comp 中的 Triangle 布局完全一致（std430）
+// 注意：GLSL std430 中 vec3 对齐为 16 字节，所以每顶点必须使用 4 个 float 来填充对齐
 struct PTTriangle {
-    float v0[3], v1[3], v2[3];
+    float v0[4];  // xyz + padding (匹配 GPU vec3 的 16 字节对齐)
+    float v1[4];
+    float v2[4];
 };
 
 struct PathTracingTriangleData {
@@ -46,6 +49,16 @@ struct PathTracingTriangleData {
     static constexpr uint32_t MAX_TRIANGLES = 65536;
     PTTriangle triangles[MAX_TRIANGLES]{};
 };
+
+// BVH 节点 (32 字节, 与 GLSL BVHNode 布局一致)
+// aabbMin.xyz = 包围盒最小值, aabbMin.w = float(triangleCount)  (0 = 内部节点)
+// aabbMax.xyz = 包围盒最大值, aabbMax.w = float(childOrTriStart) (内部: 右子节点索引; 叶子: 首个三角形索引)
+struct alignas(16) BVHNode {
+    float aabbMin[4];
+    float aabbMax[4];
+};
+
+static constexpr uint32_t MAX_BVH_NODES = 65536 * 2;
 
 // Camera UBO 数据结构 — 必须与 pathtrace.comp 中的 CameraUBO 布局完全一致（std140）
 struct PathTracingCameraUBO {
@@ -74,6 +87,7 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+    void OnSceneLoaded(::Prisma::Scene* scene) override;
 
     // 设置计算和 present 着色器 SPIR-V（必须在 Initialize 之前调用）
     void SetComputeShaderSPIRV(const void* data, size_t size);
@@ -102,6 +116,9 @@ public:
     void SetMaxBounces(uint32_t bounces) { m_maxBounces = bounces; }
     void SetMaxSamples(uint32_t samples) { m_maxSamples = samples; }
     void SetConverged(uint32_t samples) { m_converged = m_frameCount >= samples; }
+    void SetUseBVH(bool useBVH) { m_useBVH = useBVH; }
+    bool GetUseBVH() const { return m_useBVH; }
+    void ToggleBVH(); // 运行时切换 BVH/Flat 着色器（按 B 键调�?
 
     // 输出保存（headless 模式）
     bool SaveOutput(const std::string& path);
@@ -124,6 +141,7 @@ public:
 private:
     bool CreateResources();
     void DestroyResources();
+    bool ResizeResources(); // 仅重建尺寸相关资源（纹理+描述符），不碰着色器/管线
 
     IRenderDevice* m_device = nullptr;
 
@@ -140,6 +158,8 @@ private:
     std::unique_ptr<IBuffer> m_cameraUBO;
     std::unique_ptr<IBuffer> m_sceneSSBO;
     std::unique_ptr<IBuffer> m_triangleBuffer;
+    std::unique_ptr<IBuffer> m_bvhBuffer;         // BVH 节点 SSBO (binding 5)
+    std::unique_ptr<IBuffer> m_triToObjectBuffer;  // 三角形→对象索引 SSBO (binding 6)
     std::unique_ptr<IComputePipeline> m_computePipeline;
     std::shared_ptr<IDescriptorSet> m_descriptorSet;
 
@@ -164,10 +184,14 @@ private:
     void InitOverlayResources();
     void RenderOverlay(ICommandBuffer* cmd);
     void LoadDefaultShaders();
+    void BuildBVH();  // 构建 BVH 加速结构
 
     // 场景数据缓存（用于延迟初始化后重上传）
     PathTracingSceneData m_cachedSceneData{};
     PathTracingTriangleData m_cachedTriangleData{};
+    std::vector<BVHNode> m_bvhNodes;    // BVH 节点缓存
+    std::vector<int> m_triToObject;     // 三角形→对象索引映射
+    uint32_t m_bvhNodeCount = 0;
     uint32_t m_cachedNodeHandles[32]{}; // objectIdx → node handle (用于每帧 UpdateTransforms)
     Scene* m_scene = nullptr;           // 当前关联场景（用于每帧读取世界变换）
 
@@ -182,6 +206,8 @@ private:
     bool m_resetAccumulation = false;
     bool m_initialized = false;
     bool m_shadersSet = false;
+    bool m_textureInitialized = false; // 存储纹理是否已有有效数据（用于 PipelineBarrier 状态跟踪）
+    bool m_useBVH = false;             // 使用 BVH 加速结构（默认为 flat 循环）
 };
 
 } // namespace Prisma::Graphic
