@@ -1,0 +1,5 @@
+{
+    "name": "pt_present_vert",
+    "shader": "assets/shaders/fullscreen.vert.spv",
+    "properties": {}
+}

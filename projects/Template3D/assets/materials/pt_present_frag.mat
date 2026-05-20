@@ -1,0 +1,5 @@
+{
+    "name": "pt_present_frag",
+    "shader": "assets/shaders/present.frag.spv",
+    "properties": {}
+}
