@@ -43,6 +43,25 @@ public:
         return m_Rotation * Vector3(0.0f, 0.0f, 1.0f);
     }
 
+    /// 提取 Y 轴旋转角（弧度），等同于 glm::yaw(quat)
+    float GetYaw() const {
+        // 来自 glm::yaw(quat): atan2(2.0f * (w*y + x*z), 1.0f - 2.0f * (x*x + y*y))
+        return std::atan2(2.0f * (m_Rotation.w * m_Rotation.y + m_Rotation.x * m_Rotation.z),
+                          1.0f - 2.0f * (m_Rotation.x * m_Rotation.x + m_Rotation.y * m_Rotation.y));
+    }
+
+    /// 以欧拉角（弧度）返回旋转: pitch, yaw, roll
+    Vector3 GetEulerAngles() const {
+        // 来自 glm::eulerAngles(quat)
+        float sinPitch = -2.0f * (m_Rotation.y * m_Rotation.z - m_Rotation.w * m_Rotation.x);
+        float pitch = std::asin(std::clamp(sinPitch, -1.0f, 1.0f));
+        float yaw   = std::atan2(2.0f * (m_Rotation.w * m_Rotation.z + m_Rotation.x * m_Rotation.y),
+                                 1.0f - 2.0f * (m_Rotation.y * m_Rotation.y + m_Rotation.z * m_Rotation.z));
+        float roll  = std::atan2(2.0f * (m_Rotation.w * m_Rotation.y + m_Rotation.z * m_Rotation.x),
+                                 1.0f - 2.0f * (m_Rotation.x * m_Rotation.x + m_Rotation.y * m_Rotation.y));
+        return Vector3(pitch, yaw, roll);
+    }
+
 private:
     void UpdateMatrix() {
         Matrix4x4 translationMatrix = glm::translate(Matrix4x4(1.0f), m_Position);
