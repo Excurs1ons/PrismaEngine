@@ -77,6 +77,17 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
         return -1;
     }
 
+    // 自动从当前场景构建路径追踪数据（如未通过 SetSceneData/SetTriangleData 显式设置）
+    if (m_cachedSceneData.objectCount == 0 && m_cachedTriangleData.triangleCount == 0) {
+        auto* sceneManager = Engine::Get().GetSceneManager();
+        if (sceneManager) {
+            auto* scene = sceneManager->GetCurrentScene();
+            if (scene) {
+                BuildFromScene(scene);
+            }
+        }
+    }
+
     return 0;
 }
 

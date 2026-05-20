@@ -38,7 +38,7 @@ private:
 
     void SavePathTracingOutput();
     void OnWindowResize(uint32_t w, uint32_t h);
-    void BuildPathTracingScene();
+    void InitSceneCamera();
 
     bool m_autoQuit = false;
 
@@ -66,7 +66,6 @@ private:
 
     bool m_ptConverged = false;
     uint32_t m_ptMaxSamples = 512;
-    bool m_sceneLoaded = false;
     bool m_enableNEE = false;
 
     Graphic::IRenderDevice* m_device = nullptr;
