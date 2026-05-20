@@ -32,6 +32,8 @@ struct RenderSystemDesc {
     bool headless              = false;
     RenderMode renderMode      = RenderMode::Mode3D_Forward;
     PresentMode presentMode    = PresentMode::VSync;
+    uint32_t maxSamples        = 512;
+    uint32_t maxBounces        = 8;
     uint32_t maxFramesInFlight = 3;
     std::string name           = "PrismaApp";
 };
@@ -70,6 +72,10 @@ public:
     // === 渲染流程 ===
     void SetMainPipeline(std::shared_ptr<IPipeline> pipeline);
     IPipeline* GetMainPipeline() const { return m_mainRenderPipeline.get(); }
+    template<typename T>
+    std::shared_ptr<T> GetMainPipelineAs() const {
+        return std::dynamic_pointer_cast<T>(m_mainRenderPipeline);
+    }
 
     // === 场景渲染 ===
     void RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera, ITexture* targetTexture = nullptr);

@@ -89,11 +89,14 @@ int RenderSystem::InitializeRenderResourceManager() {
 }
 
 int RenderSystem::InitializeRenderPipelines() {
-    // 根据渲染模式选择管线
-    // 注意：Mode3D_PathTracing 需要外部传入 SPIR-V 数据，
-    // 应由 app 手动创建 PathTracingPipeline 并通过 SetMainPipeline 传入。
+    // 根据渲染模式选择管线（路径追踪管线的着色器由 LoadDefaultShaders 内部加载）
     if (m_desc.renderMode == RenderMode::Mode2D) {
         m_mainRenderPipeline = std::make_shared<Pipeline2D>();
+    } else if (m_desc.renderMode == RenderMode::Mode3D_PathTracing) {
+        auto ptPipeline = std::make_shared<PathTracingPipeline>();
+        ptPipeline->SetMaxSamples(m_desc.maxSamples);
+        ptPipeline->SetMaxBounces(m_desc.maxBounces);
+        m_mainRenderPipeline = std::move(ptPipeline);
     } else {
         m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
     }

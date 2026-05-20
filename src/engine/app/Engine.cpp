@@ -202,6 +202,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
         rDesc.enableDebug      = false;
         rDesc.presentMode      = appSpec.PresentMode;
         rDesc.renderMode       = renderMode;
+        rDesc.maxSamples       = appSpec.MaxSamples;
+        rDesc.maxBounces       = appSpec.MaxBounces;
         rDesc.enableValidation = false;
         
         m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
