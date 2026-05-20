@@ -1,5 +1,0 @@
-{
-    "name": "pt_compute",
-    "shader": "assets/shaders/pathtrace.comp.spv",
-    "properties": {}
-}
