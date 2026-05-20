@@ -324,3 +324,36 @@ bool traverseBVH(..., out HitResult hit) {
 ### Phase 3: 硬件加速 (DXR)
 
 规划见上方"RTX 硬件加速"章节。BVH 阶段是直接的前置准备——每个三角形的 `triToObject` 映射在设计上兼容 DXR 的 BLAS 实例化模型（BLAS = BVH 节点 + 三角形数据，TLAS = triToObject 的等效概念）。`hardwareRayTracing` 配置项（`project.json` → `rendering.hardwareRayTracing`）作为开关预留。
+
+---
+
+## 性能优化清单
+
+### P0 — 管线健壮性（已完成）
+
+| 优化 | 状态 | 说明 |
+|------|------|------|
+| 描述符集绑定修复 | ✅ 已完成 | 使用占位 Buffer 方案，始终创建 BVH/triToObject SSBO 并绑定 binding 5/6，flat 模式不产生描述符集"空洞"，消除 Vulkan 驱动错误恢复慢路径 |
+| ResizeResources 修复 | ✅ 已完成 | 配合占位 Buffer 方案，不再绑定 nullptr 描述符 |
+| m_width/m_height 预设移除 | ✅ 已完成 | 移除 Initialize 中的 1280x720 预设，恢复为 0，首帧 Execute 自然触发 ResizeResources 对齐窗口 |
+
+### P1 — CPU 端优化（已完成）
+
+| 优化 | 状态 | 说明 |
+|------|------|------|
+| SSBO 每帧上传去重 | ✅ 已完成 | `Execute` 中 `m_frameCount > 0`（累积阶段）跳过 `UpdateTransforms`，场景静止时不再每帧上传 Scene SSBO |
+| BuildFromScene 去重守卫 | ✅ 已完成 | Initialize 和 OnSceneLoaded 均检查 `m_scene == scene` 防止重复构建 |
+
+### P2 — GPU 端优化（待实施）
+
+| 优化 | 状态 | 预期提升 | 说明 |
+|------|------|---------|------|
+| 局部空间射线追踪 | ✅ 已完成 | 大幅降低 | 将三角形循环内的 3N 次顶点世界变换，降为循环外 1 次射线逆矩阵变换。当前 shader 对每个三角形做 `objToWorld * vec4(tri.v, 1.0)`，射线局部空间变换后无需逐顶点变换 |
+| 对象级 AABB 剔除 | ⏳ 待实施 | 中等 | 为每个 Mesh 对象预计算 AABB，射线不与包围盒相交时跳过数千三角形遍历。需要 PTSceneObject 增加 aabbMin/aabbMax 字段 |
+| 冗余 imageStore 消除 | ✅ 已完成 | 低 | 移除 main 中第 579 行的 `imageStore(outputImage, ...)`，同一纹理绑定到 binding 0/1 只需写入一次，另一 binding 在 present 时采样 |
+
+### 实施记录
+
+- 2026-05-21: P0 全部完成，P1 全部完成，P2 大部分完成（除 AABB 剔除）
+- P0/P1 改动集中在 `PathTracingPipeline.cpp`，涉及描述符管理、资源初始化时机和 CPU 每帧开销
+- P2 改动涉及 `pathtrace.comp` 着色器核心逻辑重写（射线局部空间变换）和 `PTSceneObject` 数据结构扩展

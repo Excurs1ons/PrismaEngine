@@ -75,9 +75,8 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
 
     m_device = device;
 
-    // 预置尺寸防止第一次 Execute 时误触发 resize（重复编译计算着色器导致卡顿）
-    m_width = 1280;
-    m_height = 720;
+    // m_width/m_height 在成员初始化中已为 0，首帧 Execute 会通过
+    // ResizeResources 自动调整到窗口实际尺寸
 
     if (!CreateResources()) {
         LOG_ERROR("PathTracingPipeline", "创建资源失败");
@@ -86,11 +85,12 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
     }
 
     // 自动从当前场景构建路径追踪数据（如未通过 SetSceneData/SetTriangleData 显式设置）
+    // 使用 m_scene 指针防止重复构建（OnSceneLoaded 可能随后以相同场景调用）
     if (m_cachedSceneData.objectCount == 0 && m_cachedTriangleData.triangleCount == 0) {
         auto* sceneManager = Engine::Get().GetSceneManager();
         if (sceneManager) {
             auto* scene = sceneManager->GetCurrentScene();
-            if (scene) {
+            if (scene && scene != m_scene) {
                 BuildFromScene(scene);
             }
         }
@@ -117,6 +117,10 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
 }
 
 void PathTracingPipeline::OnSceneLoaded(::Prisma::Scene* scene) {
+    if (m_scene == scene) {
+        LOG_DEBUG("PathTracingPipeline", "OnSceneLoaded 跳过（场景已构建）");
+        return;
+    }
     BuildFromScene(scene);
 
     if (m_useBVH) {
@@ -213,8 +217,8 @@ bool PathTracingPipeline::CreateResources() {
         m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
     }
 
-    // 3c. 创建 BVH Node SSBO（仅在启用 BVH 时）
-    if (m_useBVH) {
+    // 3c. 创建 BVH Node SSBO（始终创建，flat 模式作为占位保持布局一致性）
+    {
         BufferDesc bvhSSBODesc{};
         bvhSSBODesc.type = BufferType::Structured;
         bvhSSBODesc.size = MAX_BVH_NODES * sizeof(BVHNode);
@@ -229,8 +233,8 @@ bool PathTracingPipeline::CreateResources() {
         }
     }
 
-    // 3d. 创建 triToObject SSBO（仅在启用 BVH 时）
-    if (m_useBVH) {
+    // 3d. 创建 triToObject SSBO（始终创建，flat 模式作为占位）
+    {
         BufferDesc ttoSSBODesc{};
         ttoSSBODesc.type = BufferType::Structured;
         ttoSSBODesc.size = PathTracingTriangleData::MAX_TRIANGLES * sizeof(int);
@@ -303,14 +307,10 @@ bool PathTracingPipeline::CreateResources() {
                                 DescriptorType::StorageBuffer);
     m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
                                 DescriptorType::StorageBuffer);
-    if (m_useBVH && m_bvhBuffer) {
-        m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode),
-                                    DescriptorType::StorageBuffer);
-    }
-    if (m_useBVH && m_triToObjectBuffer) {
-        m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int),
-                                    DescriptorType::StorageBuffer);
-    }
+    m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode),
+                                DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int),
+                                DescriptorType::StorageBuffer);
     m_descriptorSet->Update();
 
     // 8. 创建 Present 着色器（仅在未预创建时从 SPIR-V 创建）
@@ -386,8 +386,7 @@ bool PathTracingPipeline::CreateResources() {
         InitOverlayResources();
     }
 
-    m_initialized = true;
-    LOG_INFO("PathTracingPipeline", "路径追踪管线初始化完成 ({}x{})",
+    LOG_INFO("PathTracingPipeline", "路径追踪管线资源创建完成 ({}x{})",
              m_width ? m_width : 1280, m_height ? m_height : 720);
     return true;
 }
@@ -627,7 +626,8 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
     if (!m_storageTexture || !m_computePipeline) return;
 
     // 每帧更新场景对象的 worldMatrix（本地空间 → 世界空间变换）
-    if (m_scene) {
+    // 累积阶段（m_frameCount > 0）场景和相机静止，无需每帧上传 SSBO
+    if (m_scene && m_frameCount == 0) {
         UpdateTransforms(m_scene);
     }
 
@@ -824,6 +824,7 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
         // worldMatrix 将每帧由 UpdateTransforms 填充，初始为 identity
         Matrix4x4 identity(1.0f);
         std::memcpy(obj.worldMatrix, &identity, sizeof(float) * 16);
+        std::memcpy(obj.invWorldMatrix, &identity, sizeof(float) * 16);
 
         // 记录 node handle 用于每帧 transform 更新
         m_cachedNodeHandles[objectIdx] = node.handle;
@@ -856,6 +857,10 @@ void PathTracingPipeline::UpdateTransforms(Scene* scene) {
 
         Matrix4x4 worldMat = scene->GetWorldTransform(node);
         std::memcpy(m_cachedSceneData.objects[i].worldMatrix, &worldMat, sizeof(float) * 16);
+
+        // 计算并存储逆矩阵用于 local space tracing
+        glm::mat4 invMat = glm::inverse(reinterpret_cast<const glm::mat4&>(worldMat));
+        std::memcpy(m_cachedSceneData.objects[i].invWorldMatrix, &invMat, sizeof(float) * 16);
     }
 
     m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
@@ -913,11 +918,42 @@ void PathTracingPipeline::ToggleBVH() {
     if (!m_initialized || !m_device) return;
     m_device->WaitForIdle();
 
+    m_useBVH = !m_useBVH;
+
+    // Flat→BVH：预变换顶点到世界空间并构建加速结构
+    if (m_useBVH && m_bvhNodeCount == 0 && m_cachedTriangleData.triangleCount > 0) {
+        for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+            auto& obj = m_cachedSceneData.objects[oi];
+            int type = (int)obj.p0[3];
+            if (type != 4) continue;
+            int firstTri = (int)obj.p1[0];
+            int triCnt = (int)obj.p1[1];
+            glm::mat4 worldMat;
+            std::memcpy(&worldMat, obj.worldMatrix, sizeof(float) * 16);
+            for (int t = 0; t < triCnt; t++) {
+                auto& tri = m_cachedTriangleData.triangles[firstTri + t];
+                glm::vec4 v0 = worldMat * glm::vec4(tri.v0[0], tri.v0[1], tri.v0[2], 1.0f);
+                glm::vec4 v1 = worldMat * glm::vec4(tri.v1[0], tri.v1[1], tri.v1[2], 1.0f);
+                glm::vec4 v2 = worldMat * glm::vec4(tri.v2[0], tri.v2[1], tri.v2[2], 1.0f);
+                tri.v0[0] = v0.x; tri.v0[1] = v0.y; tri.v0[2] = v0.z;
+                tri.v1[0] = v1.x; tri.v1[1] = v1.y; tri.v1[2] = v1.z;
+                tri.v2[0] = v2.x; tri.v2[1] = v2.y; tri.v2[2] = v2.z;
+            }
+        }
+        BuildBVH();
+    }
+
+    // BVH→Flat：重新从场景构建本地空间数据（顶点已被 BVH 模式变换到世界空间）
+    if (!m_useBVH && m_scene) {
+        m_bvhNodes.clear();
+        m_bvhNodeCount = 0;
+        m_triToObject.clear();
+        BuildFromScene(m_scene);
+    }
+
     m_computeShader.reset();
     m_descriptorSet.reset();
     m_computePipeline.reset();
-
-    m_useBVH = !m_useBVH;
 
     LoadDefaultShaders();
 
@@ -936,20 +972,20 @@ void PathTracingPipeline::ToggleBVH() {
     m_descriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO), DescriptorType::UniformBuffer);
     m_descriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData), DescriptorType::StorageBuffer);
     m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData), DescriptorType::StorageBuffer);
-    if (m_useBVH && m_bvhBuffer)
-        m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode), DescriptorType::StorageBuffer);
-    if (m_useBVH && m_triToObjectBuffer)
-        m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int), DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode),
+                                DescriptorType::StorageBuffer);
+    m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int),
+                                DescriptorType::StorageBuffer);
     m_descriptorSet->Update();
 
-    // 重新上传场景数据（BVH 模式下顶点已在世界空间，flat 模式使用本地空间+ per-obj 变换）
+    // 重新上传所有场景数据
     if (m_cachedSceneData.objectCount > 0 && m_sceneSSBO)
         m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
     if (m_cachedTriangleData.triangleCount > 0 && m_triangleBuffer)
         m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
-    if (m_useBVH && m_bvhNodeCount > 0 && m_bvhBuffer)
+    if (m_bvhNodeCount > 0 && m_bvhBuffer)
         m_bvhBuffer->UpdateData(m_bvhNodes.data(), m_bvhNodeCount * sizeof(BVHNode), 0);
-    if (m_useBVH && !m_triToObject.empty() && m_triToObjectBuffer)
+    if (!m_triToObject.empty() && m_triToObjectBuffer)
         m_triToObjectBuffer->UpdateData(m_triToObject.data(), (uint32_t)(m_triToObject.size() * sizeof(int)), 0);
 
     ResetAccumulation();
