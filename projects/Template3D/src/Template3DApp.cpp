@@ -101,21 +101,21 @@ int Template3DApp::OnInitialize() {
         return -1;
     }
 
-    // 使用引擎 RenderResourceManager 加载着色器
+    // 使用 Material Asset 加载着色器
     auto ptPipeline = std::make_shared<PathTracingPipeline>();
-    auto rm = Engine::Get().GetRenderResourceManager();
 
-    auto compShader = rm ? rm->LoadShaderSync("assets/shaders/pathtrace.comp.spv") : nullptr;
-    if (compShader) {
-        ptPipeline->SetComputeShader(std::move(compShader));
+    auto computeMat = std::make_shared<Graphic::Material>(nullptr);
+    if (computeMat->Load("assets/materials/pt_compute.mat")) {
+        ptPipeline->SetComputeShader(computeMat->GetShader());
     } else {
         return -1;
     }
 
-    auto vertShader = rm ? rm->LoadShaderSync("assets/shaders/fullscreen.vert.spv") : nullptr;
-    auto fragShader = rm ? rm->LoadShaderSync("assets/shaders/present.frag.spv") : nullptr;
-    if (vertShader && fragShader) {
-        ptPipeline->SetPresentShaders(std::move(vertShader), std::move(fragShader));
+    auto vertMat = std::make_shared<Graphic::Material>(nullptr);
+    auto fragMat = std::make_shared<Graphic::Material>(nullptr);
+    if (vertMat->Load("assets/materials/pt_present_vert.mat") &&
+        fragMat->Load("assets/materials/pt_present_frag.mat")) {
+        ptPipeline->SetPresentShaders(vertMat->GetShader(), fragMat->GetShader());
     } else {
         return -1;
     }
