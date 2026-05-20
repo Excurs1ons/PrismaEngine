@@ -40,17 +40,6 @@ struct WindowConfig {
     uint32_t maxFPS = 0;
 };
 
-struct ProjectConfig {
-    std::string name = "Prisma App";
-    std::string entryScene;
-    std::vector<std::string> assets;
-    WindowConfig window;
-    RenderMode renderMode = RenderMode::Mode3D_Forward;
-    ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
-    RenderingConfig rendering;
-    HeadlessConfig headless;
-};
-
 struct RenderingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
@@ -61,6 +50,17 @@ struct HeadlessConfig {
     uint32_t width = 1080;
     uint32_t height = 1080;
     std::string outputPath = "pt_output.png";
+};
+
+struct ProjectConfig {
+    std::string name = "Prisma App";
+    std::string entryScene;
+    std::vector<std::string> assets;
+    WindowConfig window;
+    RenderMode renderMode = RenderMode::Mode3D_Forward;
+    ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
+    RenderingConfig rendering;
+    HeadlessConfig headless;
 };
 
 } // namespace Prisma
