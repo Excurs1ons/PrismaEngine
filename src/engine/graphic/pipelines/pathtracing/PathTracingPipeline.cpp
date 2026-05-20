@@ -19,16 +19,18 @@
 #include "graphic/ICamera.h"
 #include "graphic/interfaces/IResourceManager.h"
 #include "app/Engine.h"
+#include "scene/SceneManager.h"
 #include <glm/glm.hpp>
 #include <cstring>
 #include <fstream>
 #include <sstream>
 
 // Gizmo push constants — 必须与 gizmo shader 布局一致
+// 注意：位于全局命名空间，不可使用 PrismaMath 别名
 namespace {
 struct alignas(16) GizmoPushConstants {
-    PrismaMath::mat4 mvp;
-    Prisma::Color color;
+    glm::mat4 mvp;
+    glm::vec4 color;
 };
 }
 
