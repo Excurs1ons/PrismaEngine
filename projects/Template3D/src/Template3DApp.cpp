@@ -36,22 +36,6 @@ Template3DApp::Template3DApp()
 
 Template3DApp::~Template3DApp() = default;
 
-void Template3DApp::InitOverlayResources() {
-    auto rm = Engine::Get().GetRenderResourceManager();
-    if (!rm || !m_device) return;
-
-    auto gizmoVert = rm->LoadShaderSync("assets/shaders/Renderer2D.vert.spv");
-    auto gizmoFrag = rm->LoadShaderSync("assets/shaders/UnlitVertex.frag.spv");
-    if (!gizmoVert || !gizmoFrag) {
-        LOG_ERROR("Template3D", "gizmo shader 加载失败");
-        return;
-    }
-
-    if (m_ptPipeline) {
-        m_ptPipeline->SetOverlayShaders(std::move(gizmoVert), std::move(gizmoFrag));
-    }
-}
-
 void Template3DApp::BuildPathTracingScene() {
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (!sceneManager) {
@@ -109,8 +93,6 @@ int Template3DApp::OnInitialize() {
         return -1;
     }
     m_ptPipeline = ptPipeline;
-
-    InitOverlayResources();
 
     // 通过 SceneManager 加载场景
     auto* sceneManager = Engine::Get().GetSceneManager();

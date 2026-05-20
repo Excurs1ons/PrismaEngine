@@ -33,7 +33,6 @@ public:
 
 private:
     void RenderPathTracing();
-    void InitOverlayResources();
     void DrawStatsOverlay();
 
     void SavePathTracingOutput();
