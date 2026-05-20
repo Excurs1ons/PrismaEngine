@@ -1,11 +1,17 @@
 {
     "name": "Cornell Box",
-    "camera": {
-        "position": [0.0, 0.0, 3.5],
-        "target": [0.0, 0.0, 0.0],
-        "fov": 70.0
-    },
     "nodes": [
+        {
+            "name": "Main Camera",
+            "position": [0.0, 0.0, 3.5],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "components": [{
+                "type": "Camera",
+                "data": {
+                    "fov": 70.0
+                }
+            }]
+        },
         {
             "name": "Floor",
             "components": [{

@@ -1,5 +1,4 @@
 #pragma once
-#include "Camera.h"
 #include "core/Node.h"
 #include "graphic/RenderCommandContext.h"
 #include "graphic/RenderComponent.h"
@@ -15,17 +14,11 @@
 namespace Prisma {
 
 class Component;
+class Transform;
 
 class ENGINE_API Scene
 {
 public:
-    // ── 场景相机数据（JSON 序列化用） ──
-    struct CameraConfigData {
-        PrismaMath::vec3 position = {0.0f, 0.0f, 2.5f};
-        PrismaMath::vec3 target   = {0.0f, 0.0f, 0.0f};
-        float fov = 70.0f;
-    };
-
     // ── Node 层级数据 ──
     struct SceneNodeData {
         uint32_t parent = UINT32_MAX;     // UINT32_MAX = 根节点
@@ -84,11 +77,8 @@ public:
     const std::vector<std::shared_ptr<Component>>& GetComponents(Node node) const;
     void RemoveComponent(Node node, Component* comp);
 
-    // ── 场景相机 ──
+    // ── 场景主相机（遍历 Node 查找第一个 Camera 组件） ──
     std::shared_ptr<Prisma::Graphic::ICamera> GetMainCamera();
-    void SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera);
-    const CameraConfigData& GetCameraConfig() const noexcept { return m_cameraConfig; }
-    void SetCameraConfig(const CameraConfigData& data) noexcept { m_cameraConfig = data; }
 
     // ── 序列化 ──
     bool Deserialize(const std::string& path);
@@ -98,15 +88,11 @@ private:
     std::string m_Name = "Untitled";
     bool m_IsDirty = false;
     std::vector<Node> m_nodes;
-    std::shared_ptr<Prisma::Graphic::ICamera> m_mainCamera;
 
     // 层级与组件
-    std::vector<SceneNodeData> m_nodeData;       // indexed by node index
-    std::vector<std::string> m_nodeNames;        // indexed by node index
+    std::vector<SceneNodeData> m_nodeData;
+    std::vector<std::string> m_nodeNames;
     std::unordered_map<uint32_t, std::vector<std::shared_ptr<Component>>> m_nodeComponents;
-
-    // 场景级配置（相机等）
-    CameraConfigData m_cameraConfig;
 };
 
 } // namespace Prisma

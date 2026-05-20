@@ -1,19 +1,77 @@
 #include "Camera.h"
 #include "Transform.h"
 #include "Logger.h"
+#include "core/ComponentRegistry.h"
+#include <glaze/glaze.hpp>
+
+// ── Glaze 元数据 ──
+
+template <>
+struct glz::meta<Prisma::Graphic::ProjectionMode> {
+    static constexpr auto value = glz::meta<
+        std::underlying_type_t<Prisma::Graphic::ProjectionMode>
+    >{};
+    // 序列化为 "perspective" / "orthographic"
+    static constexpr std::string_view name(Prisma::Graphic::ProjectionMode mode) {
+        switch (mode) {
+            case Prisma::Graphic::ProjectionMode::Perspective:  return "perspective";
+            case Prisma::Graphic::ProjectionMode::Orthographic: return "orthographic";
+        }
+        return "perspective";
+    }
+    static constexpr auto from(std::string_view s) {
+        if (s == "orthographic") return Prisma::Graphic::ProjectionMode::Orthographic;
+        return Prisma::Graphic::ProjectionMode::Perspective;
+    }
+};
+
+template <>
+struct glz::meta<Prisma::Graphic::Camera::Data> {
+    static constexpr auto value = glz::object(
+        "projectionMode", &Prisma::Graphic::Camera::Data::projectionMode,
+        "fov",            &Prisma::Graphic::Camera::Data::fovDeg,
+        "orthoSize",      &Prisma::Graphic::Camera::Data::orthoSize,
+        "near",           &Prisma::Graphic::Camera::Data::nearPlane,
+        "far",            &Prisma::Graphic::Camera::Data::farPlane,
+        "clearColor",     &Prisma::Graphic::Camera::Data::clearColor
+    );
+};
+
+// ── ComponentRegistry 注册 ──
+namespace {
+    bool registered = []() {
+        auto& reg = Prisma::ComponentRegistry::Get();
+        reg.Register<Prisma::Graphic::Camera>("Camera");
+        reg.RegisterSerializable("Camera",
+            [](const Prisma::Component& comp) -> std::string {
+                const auto& typed = static_cast<const Prisma::Graphic::Camera&>(comp);
+                auto data = typed.GetData();
+                std::string json;
+                auto ec = glz::write_json(data, json);
+                if (ec) json.clear();
+                return json;
+            },
+            [](Prisma::Component& comp, const std::string& json) {
+                auto& typed = static_cast<Prisma::Graphic::Camera&>(comp);
+                Prisma::Graphic::Camera::Data data;
+                auto ec = glz::read_json(data, json);
+                if (!ec) typed.SetData(data);
+            }
+        );
+        return true;
+    }();
+}
 
 namespace Prisma {
 namespace Graphic {
 
 Camera::Camera()
-    : m_clearColor(0.0f, 0.0f, 0.0f, 1.0f), m_fov(Prisma::PI / 4.0f), m_aspectRatio(16.0f / 9.0f),
-      m_nearPlane(0.1f), m_farPlane(1000.0f), m_isViewDirty(true), m_isProjectionDirty(true) {
-    // 初始化缓存向量
+    : m_fov(Prisma::PI / 4.0f), m_orthoSize(5.0f), m_aspectRatio(16.0f / 9.0f),
+      m_nearPlane(0.1f), m_farPlane(1000.0f),
+      m_isViewDirty(true), m_isProjectionDirty(true) {
     m_forward = PrismaMath::vec3(0.0f, 0.0f, 1.0f);
     m_up      = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
     m_right   = PrismaMath::vec3(1.0f, 0.0f, 0.0f);
-
-    // 初始化矩阵为单位矩阵
     m_viewMatrix       = PrismaMath::mat4(1.0f);
     m_projectionMatrix = PrismaMath::mat4(1.0f);
 }
@@ -22,10 +80,7 @@ Camera::~Camera() {}
 
 void Camera::Initialize() {
     LOG_DEBUG("Camera3D", "Node '{0}' 的 Camera3D 组件已初始化", GetNodeName());
-
-    // 初始化Transform的旋转（相机默认看向-Z方向）
     if (auto transform = GetTransform()) {
-        // 设置初始旋转为 Identity
         transform->SetRotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
         MarkViewDirty();
     }
@@ -36,17 +91,63 @@ void Camera::Update(Timestep ts) {
         std::swap(m_farPlane, m_nearPlane);
         m_isProjectionDirty = true;
     }
-    // 更新视图矩阵（如果需要）
     UpdateViewMatrix();
 }
 
+// ── 投影模式 ──
+
+void Camera::SetProjectionMode(ProjectionMode mode) {
+    m_projectionMode = mode;
+    m_isProjectionDirty = true;
+}
+
 void Camera::SetPerspectiveProjection(float fov, float aspectRatio, float nearPlane, float farPlane) {
+    m_projectionMode    = ProjectionMode::Perspective;
     m_fov               = fov;
     m_aspectRatio       = aspectRatio;
     m_nearPlane         = nearPlane;
     m_farPlane          = farPlane;
     m_isProjectionDirty = true;
 }
+
+void Camera::SetOrthographicProjection(float size, float aspectRatio, float nearPlane, float farPlane) {
+    m_projectionMode    = ProjectionMode::Orthographic;
+    m_orthoSize         = size;
+    m_aspectRatio       = aspectRatio;
+    m_nearPlane         = nearPlane;
+    m_farPlane          = farPlane;
+    m_isProjectionDirty = true;
+}
+
+void Camera::SetOrthoSize(float size) {
+    m_orthoSize = size;
+    m_isProjectionDirty = true;
+}
+
+// ── 数据序列化 ──
+
+Camera::Data Camera::GetData() const {
+    Data d;
+    d.projectionMode = m_projectionMode;
+    d.fovDeg         = glm::degrees(m_fov);
+    d.orthoSize      = m_orthoSize;
+    d.nearPlane      = m_nearPlane;
+    d.farPlane       = m_farPlane;
+    d.clearColor     = {m_clearColor.r, m_clearColor.g, m_clearColor.b, m_clearColor.a};
+    return d;
+}
+
+void Camera::SetData(const Data& d) {
+    m_projectionMode    = d.projectionMode;
+    m_fov               = glm::radians(d.fovDeg);
+    m_orthoSize         = d.orthoSize;
+    m_nearPlane         = d.nearPlane;
+    m_farPlane          = d.farPlane;
+    m_clearColor        = PrismaMath::vec4(d.clearColor[0], d.clearColor[1], d.clearColor[2], d.clearColor[3]);
+    m_isProjectionDirty = true;
+}
+
+// ── ICamera 接口 ──
 
 PrismaMath::vec4 Camera::GetClearColor() const {
     return m_clearColor;
@@ -63,7 +164,13 @@ PrismaMath::mat4 Camera::GetViewMatrix() const {
 
 PrismaMath::mat4 Camera::GetProjectionMatrix() const {
     if (m_isProjectionDirty) {
-        m_projectionMatrix  = glm::perspectiveRH(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+        if (m_projectionMode == ProjectionMode::Orthographic) {
+            float halfH = m_orthoSize * 0.5f;
+            float halfW = halfH * m_aspectRatio;
+            m_projectionMatrix = glm::orthoRH_ZO(-halfW, halfW, -halfH, halfH, m_nearPlane, m_farPlane);
+        } else {
+            m_projectionMatrix = glm::perspectiveRH(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+        }
         m_isProjectionDirty = false;
     }
     return m_projectionMatrix;
@@ -131,8 +238,6 @@ void Camera::MoveWorld(const PrismaMath::vec3& direction) {
 
 void Camera::MoveLocal(float forward, float right, float up) {
     UpdateVectors();
-
-    // 计算移动向量
     PrismaMath::vec3 movement = PrismaMath::vec3(0.0f, 0.0f, 0.0f);
     if (forward != 0.0f)
         movement = movement + m_forward * forward;
@@ -140,19 +245,14 @@ void Camera::MoveLocal(float forward, float right, float up) {
         movement = movement + m_right * right;
     if (up != 0.0f)
         movement = movement + m_up * up;
-
     MoveWorld(movement);
 }
 
 void Camera::Rotate(float pitch, float yaw, float roll) {
     if (auto transform = GetTransform()) {
-        // 创建旋转增量（弧度）
         glm::quat deltaRotation = glm::quat(glm::vec3(glm::radians(pitch), glm::radians(yaw), glm::radians(roll)));
-
-        // 应用旋转到当前旋转
-        glm::quat newRotation     = deltaRotation * transform->GetRotation();
+        glm::quat newRotation  = deltaRotation * transform->GetRotation();
         transform->SetRotation(newRotation);
-
         MarkViewDirty();
     }
 }
@@ -161,28 +261,22 @@ void Camera::LookAt(const PrismaMath::vec3& target) {
     if (auto transform = GetTransform()) {
         PrismaMath::vec3 position  = GetPosition();
         PrismaMath::vec3 direction = glm::normalize(target - position);
+        PrismaMath::vec3 forward    = -direction;
+        PrismaMath::vec3 worldUp    = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
+        PrismaMath::vec3 right      = glm::normalize(glm::cross(worldUp, forward));
+        PrismaMath::vec3 up         = glm::cross(forward, right);
 
-        // 创建前向向量（相机看向-Z方向）
-        PrismaMath::vec3 forward = -direction;
-
-        // 计算上向量
-        PrismaMath::vec3 worldUp = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
-        PrismaMath::vec3 right   = glm::normalize(glm::cross(worldUp, forward));
-        PrismaMath::vec3 up      = glm::cross(forward, right);
-
-        // 创建旋转矩阵
         PrismaMath::mat4 rotationMatrix = PrismaMath::mat4(1.0f);
-        rotationMatrix[0][0]            = right.x;
-        rotationMatrix[0][1]            = up.x;
-        rotationMatrix[0][2]            = forward.x;
-        rotationMatrix[1][0]            = right.y;
-        rotationMatrix[1][1]            = up.y;
-        rotationMatrix[1][2]            = forward.y;
-        rotationMatrix[2][0]            = right.z;
-        rotationMatrix[2][1]            = up.z;
-        rotationMatrix[2][2]            = forward.z;
+        rotationMatrix[0][0] = right.x;
+        rotationMatrix[0][1] = up.x;
+        rotationMatrix[0][2] = forward.x;
+        rotationMatrix[1][0] = right.y;
+        rotationMatrix[1][1] = up.y;
+        rotationMatrix[1][2] = forward.y;
+        rotationMatrix[2][0] = right.z;
+        rotationMatrix[2][1] = up.z;
+        rotationMatrix[2][2] = forward.z;
 
-        // 转换为四元数
         glm::quat rotationQuat = glm::quat_cast(rotationMatrix);
         transform->SetRotation(rotationQuat);
         MarkViewDirty();
@@ -194,33 +288,20 @@ void Camera::LookAt(float x, float y, float z) {
 }
 
 void Camera::UpdateViewMatrix() const {
-    if (!m_isViewDirty) {
-        return;
-    }
+    if (!m_isViewDirty) return;
 
     if (auto transform = GetTransform()) {
-        // 获取位置和旋转
-        PrismaMath::vec3 position = transform->GetPosition();
-        glm::quat rotation = transform->GetRotation();
-
-        // 创建旋转矩阵
+        PrismaMath::vec3 position   = transform->GetPosition();
+        glm::quat rotation          = transform->GetRotation();
         PrismaMath::mat4 rotationMatrix = glm::mat4_cast(rotation);
 
-        // 相机默认前向是-Z，所以需要额外旋转
-        // 注意：这个 180 度旋转可能导致相机朝向错误，暂时禁用
-        // PrismaMath::mat4 cameraFix = glm::rotate(glm::mat4(1.0f), Prisma::PI, glm::vec3(0.0f, 1.0f, 0.0f));
-        // rotationMatrix = cameraFix * rotationMatrix;
-
-        // 计算世界坐标系的各轴
         m_forward = glm::normalize(
-            PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));  // Z轴（前向）
+            PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));
         m_up = glm::normalize(
-            PrismaMath::vec3(rotationMatrix[1][0], rotationMatrix[1][1], rotationMatrix[1][2]));  // Y轴（上向）
+            PrismaMath::vec3(rotationMatrix[1][0], rotationMatrix[1][1], rotationMatrix[1][2]));
         m_right = glm::normalize(
-            PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));  // X轴（右向）
+            PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));
 
-        // 计算视图矩阵（相机变换的逆矩阵）
-        // 视图矩阵 = 旋转矩阵的转置 * 平移矩阵的逆
         PrismaMath::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
         m_viewMatrix                 = glm::transpose(rotationMatrix);
         m_viewMatrix                 = m_viewMatrix * translation;

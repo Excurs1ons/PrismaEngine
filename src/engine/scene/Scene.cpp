@@ -1,11 +1,9 @@
 #include "pch.h"
 #include "Scene.h"
-#include "Camera.h"
 #include "Logger.h"
 #include "core/EntityManager.h"
 #include "core/ComponentRegistry.h"
 #include "transform/Transform.h"
-#include "graphic/OrthographicCamera.h"
 #include <glaze/glaze.hpp>
 #include <glaze/json/generic.hpp>
 #include <array>
@@ -20,12 +18,6 @@
 // ═══════════════════════════════════════════════════════════
 
 namespace Prisma {
-
-struct SceneCameraFileData {
-    std::array<float, 3> position = {0, 0, 2.5f};
-    std::array<float, 3> target = {0, 0, 0};
-    float fov = 70.0f;
-};
 
 struct SceneComponentEntry {
     std::string type;
@@ -43,22 +35,12 @@ struct SceneNodeFileData {
 
 struct SceneFileData {
     std::string name;
-    std::optional<SceneCameraFileData> camera;
     std::vector<SceneNodeFileData> nodes;
 };
 
 } // namespace Prisma
 
 // ── Glaze 元数据（全局命名空间） ──
-
-template <>
-struct glz::meta<Prisma::SceneCameraFileData> {
-    static constexpr auto value = glz::object(
-        "position", &Prisma::SceneCameraFileData::position,
-        "target",   &Prisma::SceneCameraFileData::target,
-        "fov",      &Prisma::SceneCameraFileData::fov
-    );
-};
 
 template <>
 struct glz::meta<Prisma::SceneComponentEntry> {
@@ -84,7 +66,6 @@ template <>
 struct glz::meta<Prisma::SceneFileData> {
     static constexpr auto value = glz::object(
         "name",   &Prisma::SceneFileData::name,
-        "camera", &Prisma::SceneFileData::camera,
         "nodes",  &Prisma::SceneFileData::nodes
     );
 };
@@ -269,11 +250,15 @@ void Scene::RemoveComponent(Node node, Component* comp) {
 // ── 相机 ──
 
 std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
-    return m_mainCamera;
-}
-
-void Scene::SetMainCamera(std::shared_ptr<Prisma::Graphic::ICamera> camera) {
-    m_mainCamera = std::move(camera);
+    for (auto& node : m_nodes) {
+        auto it = m_nodeComponents.find(node.handle);
+        if (it == m_nodeComponents.end()) continue;
+        for (auto& comp : it->second) {
+            auto camera = std::dynamic_pointer_cast<Prisma::Graphic::ICamera>(comp);
+            if (camera) return camera;
+        }
+    }
+    return nullptr;
 }
 
 // ── 序列化 ──
@@ -287,13 +272,6 @@ bool Scene::Deserialize(const std::string& path) {
     }
 
     SetName(sfd.name);
-
-    // 解析相机配置
-    if (sfd.camera) {
-        m_cameraConfig.position = {sfd.camera->position[0], sfd.camera->position[1], sfd.camera->position[2]};
-        m_cameraConfig.target   = {sfd.camera->target[0],   sfd.camera->target[1],   sfd.camera->target[2]};
-        m_cameraConfig.fov      = sfd.camera->fov;
-    }
 
     // 第一遍：创建所有 Node，建立 name→node 映射
     std::unordered_map<std::string, Node> nameToNode;
@@ -352,13 +330,6 @@ bool Scene::Deserialize(const std::string& path) {
 bool Scene::Serialize(const std::string& path) const {
     SceneFileData sfd;
     sfd.name = m_Name;
-
-    // ── 相机 ──
-    SceneCameraFileData cf;
-    cf.position = {m_cameraConfig.position.x, m_cameraConfig.position.y, m_cameraConfig.position.z};
-    cf.target   = {m_cameraConfig.target.x,   m_cameraConfig.target.y,   m_cameraConfig.target.z};
-    cf.fov      = m_cameraConfig.fov;
-    sfd.camera  = cf;
 
     // 构建 index→name 映射
     std::unordered_map<uint32_t, std::string> idxToName;

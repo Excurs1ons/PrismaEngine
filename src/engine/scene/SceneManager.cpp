@@ -1,9 +1,9 @@
 #include "SceneManager.h"
 #include "Scene.h"
 #include "logger/Logger.h"
-#include "graphic/OrthographicCamera.h"
 #include "core/AssetManager.h"
 #include "app/Engine.h"
+#include "transform/Camera.h"
 
 namespace Prisma {
 
@@ -28,10 +28,9 @@ void SceneManager::CreateNewScene() {
     m_currentScene = std::make_shared<Scene>();
     m_currentScene->SetName("未命名场景");
 
-    // 创建默认 2D 正交相机
-    auto camera = std::make_shared<Graphic::OrthographicCamera>();
-    camera->SetProjection(0.0f, 1600.0f, 0.0f, 900.0f);
-    m_currentScene->SetMainCamera(camera);
+    // 创建默认透视相机节点
+    auto cameraNode = m_currentScene->CreateNode("Main Camera");
+    m_currentScene->AddComponent<Graphic::Camera>(cameraNode);
 
     m_currentScene->SetDirty(false);
 }
@@ -57,9 +56,9 @@ bool SceneManager::LoadFromFile(const std::string& path) {
 
     // 确保场景有主相机（fallback）
     if (!newScene->GetMainCamera()) {
-        auto camera = std::make_shared<Graphic::OrthographicCamera>();
-        camera->SetProjection(0.0f, 1600.0f, 0.0f, 900.0f);
-        newScene->SetMainCamera(camera);
+        LOG_WARN("SceneManager", "场景 '{0}' 没有相机节点，创建默认相机", newScene->GetName());
+        auto cameraNode = newScene->CreateNode("Main Camera");
+        newScene->AddComponent<Graphic::Camera>(cameraNode);
     }
 
     m_currentScene = std::move(newScene);

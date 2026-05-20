@@ -1,6 +1,5 @@
 ﻿#include "Template3DApp.h"
 
-#include "graphic/PerspectiveCamera.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/Renderer2D.h"
 #include "graphic/interfaces/ICommandBuffer.h"
@@ -28,39 +27,6 @@ Template3DApp::Template3DApp()
 }
 
 Template3DApp::~Template3DApp() = default;
-
-void Template3DApp::InitSceneCamera() {
-    auto* sceneManager = Engine::Get().GetSceneManager();
-    if (!sceneManager) {
-        LOG_ERROR("Template3D", "无法获取 SceneManager");
-        return;
-    }
-    auto* scene = sceneManager->GetCurrentScene();
-    if (!scene) {
-        LOG_ERROR("Template3D", "没有当前场景");
-        return;
-    }
-    m_scene = scene;
-
-    // 从场景相机配置创建 PerspectiveCamera 并托管于 Scene
-    const auto& camConfig = scene->GetCameraConfig();
-    auto camera = std::make_shared<PerspectiveCamera>(
-        Prisma::Deg2Rad(camConfig.fov),
-        static_cast<float>(m_Spec.Width) / m_Spec.Height,
-        0.1f, 100.0f
-    );
-    camera->SetLookAt(
-        {camConfig.position.x, camConfig.position.y, camConfig.position.z},
-        {camConfig.target.x,   camConfig.target.y,   camConfig.target.z}
-    );
-    scene->SetMainCamera(camera);
-
-    LOG_INFO("Template3D", "相机: pos=({:.1f},{:.1f},{:.1f}) target=({:.1f},{:.1f},{:.1f}) fov={:.1f}",
-             camConfig.position.x, camConfig.position.y, camConfig.position.z,
-             camConfig.target.x, camConfig.target.y, camConfig.target.z, camConfig.fov);
-
-    LOG_INFO("Template3D", "场景 GetNodes()={} 个节点", scene->GetNodes().size());
-}
 
 int Template3DApp::OnInitialize() {
     LOG_INFO("Template3D", "3D 模板初始化（路径追踪引擎管线版）");
@@ -94,9 +60,13 @@ int Template3DApp::OnInitialize() {
     m_ptPipeline = ptPipeline;
 
     // 通过 SceneManager 获取已加载的场景（Engine 已从 project.json 的 entryScene 自动加载）
+    // 相机已作为场景节点（Camera 组件）由 Scene::Deserialize 自动创建
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (sceneManager) {
-        InitSceneCamera();
+        m_scene = sceneManager->GetCurrentScene();
+        if (auto camera = m_scene ? m_scene->GetMainCamera() : nullptr) {
+            camera->SetViewport(m_Spec.Width, m_Spec.Height);
+        }
     }
 
     // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
