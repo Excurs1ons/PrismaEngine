@@ -1,8 +1,7 @@
 /**
  * Template3D — PrismaEngine 3D 路径追踪模板
  *
- * 演示 PrismaEngine 的 3D 渲染管线与路径追踪能力：
- *   - ForwardPipeline 标准 3D 渲染
+ * 演示 PrismaEngine 的路径追踪能力：
  *   - Compute-shader 路径追踪（Cornell Box 场景）
  *   - 五面立方体：左红右绿，顶部白色面光源
  *
@@ -26,7 +25,7 @@ int main(int argc, char* argv[]) {
     uint32_t headlessWidth = 1080;
     uint32_t headlessHeight = 1080;
     uint32_t samples = 500;
-    std::string outputPath = "/sdcard/pt_output.png";
+    std::string outputPath = "pt_output.png";
 
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
