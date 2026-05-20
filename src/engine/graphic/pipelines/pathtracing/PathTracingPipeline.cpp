@@ -879,10 +879,11 @@ void PathTracingPipeline::UpdateTransforms(Scene* scene) {
 
         Matrix4x4 worldMat = scene->GetWorldTransform(node);
         std::memcpy(m_cachedSceneData.objects[i].worldMatrix, &worldMat, sizeof(float) * 16);
-
-        // 计算并存储逆矩阵用于 local space tracing
-        glm::mat4 invMat = glm::inverse(reinterpret_cast<const glm::mat4&>(worldMat));
-        std::memcpy(m_cachedSceneData.objects[i].invWorldMatrix, &invMat, sizeof(float) * 16);
+        // 同步计算逆矩阵（供局部空间射线追踪使用）
+        glm::mat4 wm;
+        std::memcpy(&wm, &worldMat, sizeof(float) * 16);
+        glm::mat4 invWm = glm::inverse(wm);
+        std::memcpy(m_cachedSceneData.objects[i].invWorldMatrix, &invWm, sizeof(float) * 16);
     }
 
     m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);

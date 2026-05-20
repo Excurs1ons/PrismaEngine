@@ -212,7 +212,7 @@ private:
     bool m_initialized = false;
     bool m_shadersSet = false;
     bool m_textureInitialized = false; // 存储纹理是否已有有效数据（用于 PipelineBarrier 状态跟踪）
-    bool m_useBVH = false;             // 使用 BVH 加速结构（默认为 flat 循环）
+    bool m_useBVH = true;             // 默认启用 BVH 加速结构，避免 O(N) 三角形遍历
 };
 
 } // namespace Prisma::Graphic
