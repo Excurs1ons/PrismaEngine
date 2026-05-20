@@ -19,6 +19,7 @@ public:
         std::string meshPath;
         std::array<float, 4> color = {0.7f, 0.7f, 0.7f, 1.0f};
         std::array<float, 3> emissive = {0.0f, 0.0f, 0.0f};
+        std::string material; // .mat 材质文件路径（引用 material asset）
     };
 
     MeshRenderer();
@@ -65,6 +66,7 @@ private:
     std::shared_ptr<Mesh> m_mesh;
     std::shared_ptr<Material> m_material;
     std::string m_meshPath;
+    std::string m_materialPath;
     PrismaMath::vec3 m_emissive = {0.0f, 0.0f, 0.0f};
 };
 

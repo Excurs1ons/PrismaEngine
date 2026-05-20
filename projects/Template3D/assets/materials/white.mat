@@ -1,0 +1,7 @@
+{
+    "name": "white",
+    "shader": "assets/shaders/present.frag.spv",
+    "properties": {
+        "albedo": [1.0, 1.0, 1.0, 1.0]
+    }
+}

@@ -17,6 +17,8 @@
 #include "Logger.h"
 #include "utils/ImageUtils.h"
 #include "graphic/ICamera.h"
+#include "graphic/interfaces/IResourceManager.h"
+#include "app/Engine.h"
 #include <glm/glm.hpp>
 #include <cstring>
 #include <fstream>
@@ -53,6 +55,12 @@ int PathTracingPipeline::Initialize(IRenderDevice* device) {
         LOG_ERROR("PathTracingPipeline", "设备为空");
         return -1;
     }
+
+    // 如果未显式设置着色器，从默认路径内部加载
+    if (!m_computeShader && m_computeSPIRV.empty()) {
+        LoadDefaultShaders();
+    }
+
     bool hasCompute = m_computeShader || !m_computeSPIRV.empty();
     bool hasPresent = (m_presentVertShader && m_presentFragShader) ||
                       (!m_presentVertSPIRV.empty() && !m_presentFragSPIRV.empty());
@@ -576,6 +584,31 @@ void PathTracingPipeline::DestroyResources() {
     m_gizmoCamera.reset();
 
     LOG_DEBUG("PathTracingPipeline", "资源已清理");
+}
+
+void PathTracingPipeline::LoadDefaultShaders() {
+    auto* rm = Engine::Get().GetRenderResourceManager();
+    if (!rm) {
+        LOG_ERROR("PathTracingPipeline", "无法获取 RenderResourceManager，默认着色器加载失败");
+        return;
+    }
+
+    if (!m_computeShader && m_computeSPIRV.empty()) {
+        auto shader = rm->LoadShaderSync("assets/shaders/pathtrace.comp.spv");
+        if (shader) {
+            SetComputeShader(std::move(shader));
+            LOG_INFO("PathTracingPipeline", "内部加载计算着色器: pathtrace.comp.spv");
+        }
+    }
+
+    if (!m_presentVertShader && m_presentVertSPIRV.empty()) {
+        auto vert = rm->LoadShaderSync("assets/shaders/fullscreen.vert.spv");
+        auto frag = rm->LoadShaderSync("assets/shaders/present.frag.spv");
+        if (vert && frag) {
+            SetPresentShaders(std::move(vert), std::move(frag));
+            LOG_INFO("PathTracingPipeline", "内部加载 present 着色器");
+        }
+    }
 }
 
 void PathTracingPipeline::InitOverlayResources() {

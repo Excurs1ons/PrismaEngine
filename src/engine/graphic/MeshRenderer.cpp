@@ -16,7 +16,8 @@ struct glz::meta<Prisma::Graphic::MeshRenderer::Data> {
     static constexpr auto value = glz::object(
         "mesh",     &Prisma::Graphic::MeshRenderer::Data::meshPath,
         "color",    &Prisma::Graphic::MeshRenderer::Data::color,
-        "emissive", &Prisma::Graphic::MeshRenderer::Data::emissive
+        "emissive", &Prisma::Graphic::MeshRenderer::Data::emissive,
+        "material", &Prisma::Graphic::MeshRenderer::Data::material
     );
 };
 
@@ -57,11 +58,13 @@ Prisma::Graphic::MeshRenderer::Data MeshRenderer::GetData() const {
     auto c = GetColor();
     d.color = {c.r, c.g, c.b, c.a};
     d.emissive = {m_emissive.x, m_emissive.y, m_emissive.z};
+    d.material = m_materialPath;
     return d;
 }
 
 void MeshRenderer::SetData(const Data& d) {
     m_meshPath = d.meshPath;
+    m_materialPath = d.material;
     SetColor(d.color[0], d.color[1], d.color[2], d.color[3]);
     m_emissive = {d.emissive[0], d.emissive[1], d.emissive[2]};
 
@@ -71,6 +74,15 @@ void MeshRenderer::SetData(const Data& d) {
         if (am) {
             auto handle = am->Load<Graphic::Mesh>(m_meshPath);
             m_mesh = handle.Get();
+        }
+    }
+
+    // 加载 Material Asset（从 .mat 文件，MeshRenderer→Material→Shader）
+    if (!m_materialPath.empty()) {
+        auto* am = Prisma::Engine::Get().GetAssetManager();
+        if (am) {
+            auto handle = am->Load<Graphic::Material>(m_materialPath, nullptr);
+            m_material = handle.Get();
         }
     }
 }
