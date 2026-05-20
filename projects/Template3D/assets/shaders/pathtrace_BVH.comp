@@ -636,8 +636,6 @@ void main() {
     }
 
     // ── Stage 5: Store results ──
-    // Currently PathTracingPipeline.cpp binds the same texture to both slots
-    // We store linear radiance to be presented by present.frag
+    // outputImage 和 accumImage 绑定到同一纹理，仅写入一次
     imageStore(accumImage, pix, vec4(accumulatedRadiance, 1.0));
-    imageStore(outputImage, pix, vec4(accumulatedRadiance, 1.0));
 }
