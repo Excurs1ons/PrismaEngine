@@ -24,7 +24,7 @@ on:
   workflow_dispatch:
 
 env:
-  CMAKE_VERSION: '3.31.0'
+  CMAKE_VERSION: '4.3.2'
 
 jobs:
   ci-android:
@@ -44,7 +44,10 @@ jobs:
     - name: Setup Android NDK
       uses: nttld/setup-ndk@v1
       with:
-        ndk-version: r26b
+        ndk-version: r28
+
+    - name: Setup Ninja
+      run: sudo apt-get update && sudo apt-get install -y ninja-build
 
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2.0
