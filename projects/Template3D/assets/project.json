@@ -20,5 +20,6 @@
         "height": 1080,
         "outputPath": "pt_output.png"
     },
+    "renderMode": "PathTracing",
     "pipelineType": "PathTracing"
 }
