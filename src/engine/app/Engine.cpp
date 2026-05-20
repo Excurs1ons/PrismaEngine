@@ -23,7 +23,6 @@
 #include "threading/ThreadManager.h"
 #include "app/CommandLineParser.h"
 #include "scene/Scene.h"
-#include "graphic/OrthographicCamera.h"
 
 #if defined(PRISMA_ENABLE_MCP)
 #include "mcp/MCPSubSystem.h"

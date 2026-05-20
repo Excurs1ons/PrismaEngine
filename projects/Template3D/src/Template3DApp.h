@@ -38,7 +38,7 @@ private:
 
     void SavePathTracingOutput();
     void OnWindowResize(uint32_t w, uint32_t h);
-    void InitSceneCamera();
+
 
     bool m_autoQuit = false;
 

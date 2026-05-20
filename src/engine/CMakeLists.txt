@@ -104,7 +104,6 @@ set(CORE_SOURCES
     # Graphic
     graphic/Renderer.cpp
     graphic/Renderer2D.cpp
-    graphic/CameraComponent.cpp
     graphic/RenderSystem.cpp
     graphic/RenderCommandContext.cpp
     graphic/RenderComponent.cpp
@@ -120,7 +119,6 @@ graphic/Mesh.cpp
 graphic/glTFLoader.cpp
 graphic/MeshRenderer.cpp
     graphic/OrthographicCamera.cpp
-    graphic/PerspectiveCamera.cpp
     graphic/SpriteRenderer.cpp
     graphic/SpriteAnimation.cpp
     graphic/stb_impl.cpp
@@ -393,7 +391,6 @@ set(CORE_HEADERS
     config/RenderBackendConfig.h
 
     # Graphic
-    graphic/CameraComponent.h
     graphic/interfaces/IComputePipeline.h
 
     # PCH
