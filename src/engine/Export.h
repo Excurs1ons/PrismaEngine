@@ -24,3 +24,9 @@
     #define ENGINE_API __attribute__((visibility("default")))
     #define EDITOR_API __attribute__((visibility("default")))
 #endif
+
+#if defined(_MSC_VER)
+    #define PRISMA_PLUGIN_API __declspec(dllexport)
+#else
+    #define PRISMA_PLUGIN_API __attribute__((visibility("default")))
+#endif
