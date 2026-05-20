@@ -74,38 +74,10 @@ int Template3DApp::OnInitialize() {
 void Template3DApp::OnRender() {
     if (!m_ptPipeline || !m_device) return;
 
-    RenderPathTracing();
-}
-
-void Template3DApp::RenderPathTracing() {
-    if (!m_ptPipeline || !m_device) return;
-
-    if (m_headlessCfg.enabled) {
-        uint32_t frame = m_ptPipeline->GetFrameCount();
-        if (frame >= m_headlessCfg.totalFrames) return;
-    }
-
-    // 从当前场景获取相机（Scene 托管，Engine 已维护 viewport）
-    auto camera = m_scene ? m_scene->GetMainCamera() : nullptr;
-    if (!camera) return;
-
-    RenderContext ctx;
-    ctx.device            = m_device;
-    ctx.commandBuffer     = m_device->GetCurrentCommandBuffer();
-    ctx.camera.viewMatrix = camera->GetViewMatrix();
-    ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
-    ctx.camera.position   = camera->GetPosition();
-    ctx.camera.fov        = camera->GetFOV();
-    ctx.frameIndex        = m_device->GetCurrentFrameIndex();
-    ctx.width             = m_Spec.Width;
-    ctx.height            = m_Spec.Height;
-
-    // 排队 stats 文字四边形（gizmo 相机由管线内部管理）
+    // Gizmo 覆盖层在 OnRender 中排队，管线执行移至 RenderSystem::EndFrame
     Renderer2D::BeginGizmo();
     DrawStatsOverlay();
     Renderer2D::EndGizmo();
-
-    m_ptPipeline->Execute(ctx);
 }
 
 void Template3DApp::SavePathTracingOutput() {

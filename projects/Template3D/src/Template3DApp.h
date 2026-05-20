@@ -32,7 +32,6 @@ public:
     void OnEvent(Event& e) override;
 
 private:
-    void RenderPathTracing();
     void DrawStatsOverlay();
 
     void SavePathTracingOutput();
