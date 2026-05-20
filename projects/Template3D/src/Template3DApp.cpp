@@ -2,14 +2,10 @@
 
 #include "graphic/RenderSystem.h"
 #include "graphic/Renderer2D.h"
-#include "graphic/RenderDesc.h"
-#include "graphic/interfaces/IResourceFactory.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "app/Engine.h"
 #include "input/InputManager.h"
 #include "platform/Platform.h"
-#include "utils/ImageUtils.h"
-#include "core/AssetManager.h"
 #include "scene/Scene.h"
 #include "scene/SceneManager.h"
 #include "Logger.h"
@@ -26,12 +22,12 @@ using namespace Graphic;
 // ============================================================================
 
 Template3DApp::Template3DApp()
-    : Application({"Template3D", "", 1280, 720, false, true, Graphic::PresentMode::Mailbox, 0})
+    : Application()
 {
     m_camera = std::make_shared<PerspectiveCamera>(
         glm::radians(70.0f), static_cast<float>(m_Spec.Width) / m_Spec.Height, 0.1f, 100.0f
     );
-    m_camera->SetLookAt({0.0f, 0.0f, 2.5f}, {0.0f, 0.0f, 0.0f});
+    m_camera->SetLookAt({0.0f, 0.0f, 3.5f}, {0.0f, 0.0f, 0.0f});
 }
 
 Template3DApp::~Template3DApp() = default;
@@ -236,9 +232,7 @@ void Template3DApp::DrawStatsOverlay() {
     }
 }
 
-void Template3DApp::OnUpdate(Timestep ts) {
-    // M2: 使用 ts 参数
-    (void)ts;
+void Template3DApp::OnUpdate([[maybe_unused]] Timestep ts) {
     if (m_headlessCfg.enabled && m_ptPipeline) {
         if (m_ptPipeline->GetFrameCount() >= m_headlessCfg.totalFrames) {
             LOG_INFO("Template3D", "headless模式完成，保存输出...");

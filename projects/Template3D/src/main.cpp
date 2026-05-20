@@ -46,7 +46,6 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    spec.RefreshAssetDatabaseOnStartup = false;
     auto app = std::make_unique<Prisma::Template3DApp>();
     app->SetAutoQuit(autoQuit);
     app->SetSamples(samples);
