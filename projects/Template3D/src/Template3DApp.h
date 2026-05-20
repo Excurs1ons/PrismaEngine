@@ -37,7 +37,6 @@ private:
     void DrawStatsOverlay();
 
     void SavePathTracingOutput();
-    void OnWindowResize(uint32_t w, uint32_t h);
 
 
     bool m_autoQuit = false;

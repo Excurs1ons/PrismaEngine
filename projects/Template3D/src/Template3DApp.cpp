@@ -50,23 +50,18 @@ int Template3DApp::OnInitialize() {
         return -1;
     }
 
-    // 路径追踪管线内部自动加载着色器（LoadDefaultShaders）
-    auto ptPipeline = std::make_shared<PathTracingPipeline>();
-
-    if (ptPipeline->Initialize(m_device) != 0) {
-        LOG_ERROR("Template3D", "路径追踪管线初始化失败");
+    m_ptPipeline = Engine::Get().GetRenderSystem()->GetMainPipelineAs<Graphic::PathTracingPipeline>();
+    if (!m_ptPipeline) {
+        LOG_ERROR("Template3D", "获取路径追踪管线失败（renderMode 不匹配？）");
         return -1;
     }
-    m_ptPipeline = ptPipeline;
 
     // 通过 SceneManager 获取已加载的场景（Engine 已从 project.json 的 entryScene 自动加载）
-    // 相机已作为场景节点（Camera 组件）由 Scene::Deserialize 自动创建
+    // 相机已作为场景节点（Camera 组件）由 Scene::Deserialize 自动创建，Engine 已同步 viewport
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (sceneManager) {
         m_scene = sceneManager->GetCurrentScene();
-        if (auto camera = m_scene ? m_scene->GetMainCamera() : nullptr) {
-            camera->SetViewport(m_Spec.Width, m_Spec.Height);
-        }
+    }
     }
 
     // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
@@ -90,11 +85,9 @@ void Template3DApp::RenderPathTracing() {
         if (frame >= m_headlessCfg.totalFrames) return;
     }
 
-    // 从当前场景获取相机（Scene 托管）
+    // 从当前场景获取相机（Scene 托管，Engine 已维护 viewport）
     auto camera = m_scene ? m_scene->GetMainCamera() : nullptr;
     if (!camera) return;
-
-    camera->SetViewport(m_Spec.Width, m_Spec.Height);
 
     RenderContext ctx;
     ctx.device            = m_device;
@@ -223,10 +216,6 @@ void Template3DApp::OnEvent(Event& e) {
     Application::OnEvent(e);
 
     EventDispatcher d(e);
-    d.Dispatch<WindowResizeEvent>([this](WindowResizeEvent& ev) {
-        OnWindowResize(ev.GetWidth(), ev.GetHeight());
-        return false;
-    });
     d.Dispatch<KeyPressedEvent>([this](KeyPressedEvent& ev) {
         // H2: 用 InputManager::KeyCode 替代 SDL_SCANCODE_*
         auto key = static_cast<Input::KeyCode>(ev.GetKeyCode());
@@ -275,14 +264,6 @@ void Template3DApp::OnEvent(Event& e) {
         }
         return false;
     });
-}
-
-void Template3DApp::OnWindowResize(uint32_t w, uint32_t h) {
-    m_Spec.Width = w;
-    m_Spec.Height = h;
-    if (auto camera = m_scene ? m_scene->GetMainCamera() : nullptr) {
-        camera->SetViewport(w, h);
-    }
 }
 
 void Template3DApp::OnShutdown() {
