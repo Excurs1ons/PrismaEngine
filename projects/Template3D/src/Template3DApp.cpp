@@ -29,7 +29,7 @@ Template3DApp::Template3DApp()
     : Application({"Template3D", "", 1280, 720, false, true, Graphic::PresentMode::Mailbox, 0})
 {
     m_camera = std::make_shared<PerspectiveCamera>(
-        glm::radians(70.0f), 1280.0f / 720.0f, 0.1f, 100.0f
+        glm::radians(70.0f), static_cast<float>(m_Spec.Width) / m_Spec.Height, 0.1f, 100.0f
     );
     m_camera->SetLookAt({0.0f, 0.0f, 2.5f}, {0.0f, 0.0f, 0.0f});
 }
