@@ -94,10 +94,9 @@ int Template3DApp::OnInitialize() {
     }
     m_ptPipeline = ptPipeline;
 
-    // 通过 SceneManager 加载场景
+    // 通过 SceneManager 获取已加载的场景（Engine 已从 project.json 的 entryScene 自动加载）
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (sceneManager) {
-        sceneManager->LoadFromFile("assets/scenes/cornell_box.scene.json");
         BuildPathTracingScene();
     }
 
