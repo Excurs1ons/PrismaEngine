@@ -121,6 +121,12 @@ public:
     // 从引擎 ECS 场景构建路径追踪数据
     void BuildFromScene(::Prisma::Scene* scene);
 
+    // 从引擎场景重新构建路径追踪数据（切换 PrimitiveComponent ↔ MeshRenderer 后调用）
+    void ReloadSceneData();
+    void SetMode(PathTraceMode mode);
+    void CycleMode();
+    const char* GetModeName() const;
+
     // 每帧更新场景对象的 worldMatrix（本地空间顶点 → 世界空间变换）
     void UpdateTransforms(::Prisma::Scene* scene);
 
@@ -128,20 +134,10 @@ public:
     void EnableNEE(bool enabled) { m_enableNEE = enabled; }
     void SetMaxBounces(uint32_t bounces) { m_maxBounces = bounces; }
     void SetMaxSamples(uint32_t samples) { m_maxSamples = samples; }
-    void SetConverged(uint32_t samples) { m_converged = m_frameCount >= samples; }
-
-    // === 模式切换（取代旧的 SetUseBVH/ToggleBVH） ===
-    void SetMode(PathTraceMode mode);
-    PathTraceMode GetMode() const { return m_mode; }
-    void CycleMode(); // Flat → BVH → HardwareRT → Flat 循环
-    const char* GetModeName() const; // 返回当前模式名称（用于 HUD）
-
-    // 输出保存（headless 模式）
-    bool SaveOutput(const std::string& path);
-
-    // 状态
     uint32_t GetFrameCount() const { return m_frameCount; }
+    uint32_t GetMaxSamples() const { return m_maxSamples; }
     bool IsConverged() const { return m_converged; }
+    bool SaveOutput(const std::string& path);
 
     // Overlay 回调（仅用于应用自定义 HUD 文本，gizmo 由管线内部处理）
     void SetOverlayCallback(OverlayCallback cb) { m_overlayCB = std::move(cb); }

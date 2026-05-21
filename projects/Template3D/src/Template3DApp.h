@@ -61,9 +61,14 @@ private:
     float m_overlayRefreshTimer = 0.0f;
     double m_overlayLastTime = 0.0;
 
+    // SPS（自重置以来的平均 samples/sec）
+    double m_accumStartTime = 0.0;
+    uint32_t m_cachedSPS = 0;
+
     bool m_ptConverged = false;
     uint32_t m_ptMaxSamples = 512;
     bool m_enableNEE = false;
+    bool m_usePrimitiveSphere = true; // P 键切换: true=PrimitiveComponent, false=MeshRenderer
 };
 
 } // namespace Prisma

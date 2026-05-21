@@ -112,6 +112,95 @@ bool intersectSphere(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) 
     hit.color = obj.color.rgb; hit.emissive = 0.0; return true;
 }
 
+// ============ Box intersection (type=2, with Y-axis rotation) ============
+bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    vec3 hs = obj.p1.xyz;
+    float cosA = obj.p2.x;
+    float sinA = obj.p2.y;
+
+    vec3 rel = origin - center;
+    vec3 lo = vec3(rel.x * cosA - rel.z * sinA, rel.y, rel.x * sinA + rel.z * cosA);
+    vec3 ld = vec3(dir.x * cosA - dir.z * sinA, dir.y, dir.x * sinA + dir.z * cosA);
+
+    vec3 tMin = (-hs - lo) / ld;
+    vec3 tMax = (hs - lo) / ld;
+    vec3 t1 = min(tMin, tMax);
+    vec3 t2 = max(tMin, tMax);
+    float tNear = max(t1.x, max(t1.y, t1.z));
+    float tFar = min(t2.x, min(t2.y, t2.z));
+    if (tNear > tFar || tFar < EPS) return false;
+
+    float t = tNear;
+    if (t < EPS) { t = tFar; if (t < EPS) return false; }
+
+    vec3 localPos = lo + t * ld;
+    vec3 cd = localPos / hs;
+    float ax = abs(cd.x), ay = abs(cd.y), az = abs(cd.z);
+    vec3 localNormal;
+    if (ax >= ay && ax >= az)      localNormal = vec3(sign(cd.x), 0.0, 0.0);
+    else if (ay >= ax && ay >= az) localNormal = vec3(0.0, sign(cd.y), 0.0);
+    else                           localNormal = vec3(0.0, 0.0, sign(cd.z));
+
+    hit.t = t;
+    hit.normal = normalize(vec3(localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
+                                -localNormal.x * sinA + localNormal.z * cosA));
+    hit.color = obj.color.rgb; hit.emissive = 0.0; return true;
+}
+
+// ============ Cone intersection (type=3, with Y-axis rotation) ============
+bool intersectCone(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    float radius = obj.p1.x, halfHeight = obj.p1.y;
+    float cosA = obj.p2.x, sinA = obj.p2.y;
+    if (halfHeight <= 0.0 || radius <= 0.0) return false;
+
+    vec3 lo = origin - center;
+    vec3 localO = vec3(lo.x * cosA - lo.z * sinA, lo.y, lo.x * sinA + lo.z * cosA);
+    vec3 localD = vec3(dir.x * cosA - dir.z * sinA, dir.y, dir.x * sinA + dir.z * cosA);
+    float k = radius / (2.0 * halfHeight), k2 = k * k;
+    float ox = localO.x, oy = localO.y, oz = localO.z;
+    float dx = localD.x, dy = localD.y, dz = localD.z;
+
+    float A = dx*dx + dz*dz - k2 * dy*dy;
+    float B = 2.0 * (ox*dx + oz*dz) - 2.0 * k2 * dy * (oy - halfHeight);
+    float C = ox*ox + oz*oz - k2 * (halfHeight - oy) * (halfHeight - oy);
+    float tSide = 1e30, tBase = 1e30;
+
+    if (abs(A) > 1e-10) {
+        float disc = B*B - 4.0*A*C;
+        if (disc >= 0.0) {
+            float sqrtDisc = sqrt(disc);
+            for (int i = 0; i < 2; i++) {
+                float t = (i == 0) ? (-B - sqrtDisc) / (2.0 * A) : (-B + sqrtDisc) / (2.0 * A);
+                if (t < EPS) continue;
+                float y = oy + t * dy;
+                if (y >= -halfHeight && y <= halfHeight) { tSide = t; break; }
+            }
+        }
+    } else if (abs(B) > 1e-10) {
+        float t = -C / B;
+        if (t >= EPS) { float y = oy + t * dy; if (y >= -halfHeight && y <= halfHeight) tSide = t; }
+    }
+    if (abs(dy) > 1e-10) {
+        float t = (-halfHeight - oy) / dy;
+        if (t >= EPS) { vec3 pt = localO + t * localD; if (pt.x*pt.x + pt.z*pt.z <= radius*radius) tBase = t; }
+    }
+
+    float t = min(tSide, tBase);
+    if (t >= 1e29) return false;
+
+    vec3 localPos = localO + t * localD;
+    vec3 localNormal = (t == tSide)
+        ? normalize(vec3(localPos.x, k2 * (halfHeight - localPos.y), localPos.z))
+        : vec3(0.0, -1.0, 0.0);
+
+    hit.t = t;
+    hit.normal = normalize(vec3(localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
+                                -localNormal.x * sinA + localNormal.z * cosA));
+    hit.color = obj.color.rgb; hit.emissive = 0.0; return true;
+}
+
 bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2, vec3 n0, vec3 n1, vec3 n2, out HitResult hit) {
     vec3 e1 = v1 - v0, e2 = v2 - v0, p = cross(dir, e2);
     float det = dot(e1, p);
@@ -140,6 +229,8 @@ bool traceScene(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
         HitResult r; bool hitObj = false; int type = int(obj.p0.w);
         if (type == 0) hitObj = intersectPlane(origin, dir, obj, r);
         else if (type == 1) hitObj = intersectSphere(origin, dir, obj, r);
+        else if (type == 2) hitObj = intersectBox(origin, dir, obj, r);
+        else if (type == 3) hitObj = intersectCone(origin, dir, obj, r);
         else if (type == 4) {
             int firstTri = int(obj.p1.x), triCount = int(obj.p1.y);
             vec3 lo = (obj.invWorldMatrix * vec4(origin, 1.0)).xyz;

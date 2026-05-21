@@ -1,4 +1,4 @@
-{
+﻿{
     "name": "Template3D（3D路径追踪模板）",
     "entryScene": "scenes/cornell_box.scene.json",
     "assets": ["assets", "projects/Template3D/assets"],
@@ -11,8 +11,8 @@
         "maxFPS": 0
     },
     "rendering": {
-        "maxSamples": 512,
-        "maxBounces": 4,
+        "maxSamples": 1024,
+        "maxBounces": 16,
         "pathTraceMode": "Flat",
         "enableNEE": false
     },

@@ -118,6 +118,7 @@ set(CORE_SOURCES
 graphic/Mesh.cpp
 graphic/glTFLoader.cpp
 graphic/MeshRenderer.cpp
+graphic/PrimitiveComponent.cpp
     graphic/OrthographicCamera.cpp
     graphic/SpriteRenderer.cpp
     graphic/SpriteAnimation.cpp

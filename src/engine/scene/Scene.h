@@ -59,6 +59,7 @@ public:
         comp->SetOwnerNode(node, this);
         comp->Initialize();
         m_nodeComponents[node.handle].push_back(comp);
+        m_IsDirty = true;
         return comp;
     }
 

@@ -39,9 +39,14 @@ public:
     // 便捷：获取所属 Node 名称
     std::string GetNodeName() const;
 
+    // 启用/禁用
+    void SetEnabled(bool enabled) { m_Enabled = enabled; }
+    bool IsEnabled() const { return m_Enabled; }
+
 protected:
     Node m_ownerNode;
     Scene* m_ownerScene = nullptr;
+    bool m_Enabled = true;
 };
 
 } // namespace Prisma

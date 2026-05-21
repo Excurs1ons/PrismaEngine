@@ -244,6 +244,7 @@ void Scene::RemoveComponent(Node node, Component* comp) {
         vec.erase(std::remove_if(vec.begin(), vec.end(),
             [comp](const auto& ptr) { return ptr.get() == comp; }),
             vec.end());
+        m_IsDirty = true;
     }
 }
 
