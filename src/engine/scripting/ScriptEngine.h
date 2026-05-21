@@ -124,7 +124,7 @@ public:
     ScriptEngine();
     ~ScriptEngine();
 
-    bool Initialize(CoreCLRHost& host);
+    bool Initialize(CoreCLRHost& host, const std::string& gameDir = "");
     void Shutdown();
     void Update(float dt);
     void Render(float dt);
@@ -144,6 +144,7 @@ private:
     static uint32_t S_GetEntityCapacity();
 
     CoreCLRHost* m_host = nullptr;
+    std::string m_gameDir;                   // 游戏 DLL 所在目录（与 Host 运行时目录分离）
     bool  m_initialized = false;
     void (*m_bootstrapFn)(void* api) = nullptr;
     void (*m_onFrameFn)(float) = nullptr;

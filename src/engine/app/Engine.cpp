@@ -223,29 +223,52 @@ int Engine::Run(std::unique_ptr<Application> app) {
 #if PRISMA_ENABLE_SCRIPTING > 0
         // 初始化 C# 脚本引擎（根据项目设置决定）
         if (scriptingBackend == ScriptingBackend::CoreCLR) {
-            std::vector<std::string> scriptPaths = {
+            // Host 运行时搜索路径（PrismaEngine.Host 自包含发布目录）
+            std::vector<std::string> hostPaths = {
                 ".",
                 "scripts",
                 "../scripts",
-                "../projects/Template2D/scripts/GameScripts/bin/Debug/net10.0/win-x64/publish",
-                "../projects/Template2D/scripts/GameScripts/bin/Release/net10.0/win-x64/publish",
-                "../projects/PrismaCraft/scripts/GameScripts/bin/Release/net10.0/win-x64/publish",
+                "host",
+                "../host",
+                "Host/linux-x64/publish",
+                "Host/linux-arm64/publish",
+                "Host/win-x64/publish",
+                "../build/PrismaEngine.Host/linux-x64/publish",
+                "../build/PrismaEngine.Host/linux-arm64/publish",
+                "../build/PrismaEngine.Host/win-x64/publish",
             };
-            std::string scriptsDir;
-            for (const auto& p : scriptPaths) {
-                if (std::filesystem::exists(p + "/GameScripts.runtimeconfig.json")) {
-                    scriptsDir = std::filesystem::canonical(p).string();
+            std::string hostDir;
+            for (const auto& p : hostPaths) {
+                if (std::filesystem::exists(p + "/PrismaEngine.Host.runtimeconfig.json")) {
+                    hostDir = std::filesystem::canonical(p).string();
                     break;
                 }
             }
-            if (!scriptsDir.empty()) {
-                if (m_coreCLRHost->Initialize(scriptsDir)) {
-                    if (m_scriptEngine->Initialize(*m_coreCLRHost)) {
+
+            // 游戏 DLL 搜索路径（GameScripts 构建输出）
+            std::vector<std::string> gamePaths = {
+                ".",
+                "scripts",
+                "../scripts",
+                "../projects/Template2D/scripts/GameScripts/bin/Release/net10.0",
+                "../projects/PrismaCraft/scripts/GameScripts/bin/Release/net10.0",
+            };
+            std::string gameDir;
+            for (const auto& p : gamePaths) {
+                if (std::filesystem::exists(p + "/GameScripts.dll")) {
+                    gameDir = std::filesystem::canonical(p).string();
+                    break;
+                }
+            }
+
+            if (!hostDir.empty()) {
+                if (m_coreCLRHost->Initialize(hostDir)) {
+                    if (m_scriptEngine->Initialize(*m_coreCLRHost, gameDir)) {
                         LOG_INFO("Engine", "C# 脚本系统已启动 (CoreCLR)");
                     }
                 }
             } else {
-                LOG_WARNING("Engine", "未找到 C# 脚本输出目录（先执行 dotnet publish --self-contained）");
+                LOG_WARNING("Engine", "未找到 PrismaEngine.Host 发布目录（先执行 dotnet publish PrismaEngine.Host --self-contained）");
             }
         } else if (scriptingBackend == ScriptingBackend::Mono) {
 #if PRISMA_ENABLE_MONO

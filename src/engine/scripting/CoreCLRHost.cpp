@@ -19,13 +19,13 @@ namespace Scripting {
     using char_t = wchar_t;
     #define STR(s) L##s
     static std::string hostfxrFilename() { return "hostfxr.dll"; }
-    [[maybe_unused]] static std::string runtimeConfigFilename() { return "GameScripts.runtimeconfig.json"; }
+    [[maybe_unused]] static std::string runtimeConfigFilename() { return "PrismaEngine.Host.runtimeconfig.json"; }
 #else
     #include <dlfcn.h>
     using char_t = char;
     #define STR(s) s
     static std::string hostfxrFilename() { return "libhostfxr.so"; }
-    [[maybe_unused]] static std::string runtimeConfigFilename() { return "GameScripts.runtimeconfig.json"; }
+    [[maybe_unused]] static std::string runtimeConfigFilename() { return "PrismaEngine.Host.runtimeconfig.json"; }
 #endif
 
 using hostfxr_handle = void*;
@@ -123,8 +123,9 @@ bool CoreCLRHost::Initialize(const std::string& scriptsDir) {
     setenv("DOTNET_MULTILEVEL_LOOKUP", "0", 1);
 #endif
 
-    // 4. 通过自包含程序集路径初始化运行时（argv[0] = .dll 路径）
-    std::string dllPath = (fs::path(scriptsDir) / "GameScripts.dll").string();
+    // 4. 通过自包含 Host 程序集初始化运行时
+    //    PrismaEngine.Host 提供运行时环境，GameScripts 作为插件由 ScriptEngine 单独加载
+    std::string dllPath = (fs::path(scriptsDir) / "PrismaEngine.Host.dll").string();
     auto nativePath = to_native(dllPath);
     std::vector<char_t> dllBuf(nativePath.begin(), nativePath.end());
     dllBuf.push_back(0); // null-terminate

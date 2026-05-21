@@ -154,9 +154,10 @@ static void S_SetAmbientLight(float r, float g, float b) {
     Graphic::LightManager2D::Get().SetAmbientColor({r, g, b});
 }
 
-bool ScriptEngine::Initialize(CoreCLRHost& host) {
+bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     if (m_initialized) return true;
     m_host = &host;
+    m_gameDir = gameDir;
     s_activeEngine = this;
 
     m_api.log = S_Log;
@@ -231,11 +232,12 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
 
     m_api.srpShutdown = SRP_Shutdown;
 
-    const std::string& scriptsDir = host.GetScriptsDir();
-    std::string assemblyPath = scriptsDir + "/GameScripts.dll";
-    m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
-    m_onFrameFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "OnFrame");
-    m_srpRenderFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, "GameScripts.ScriptEntry, GameScripts", "OnRender");
+    const std::string& hostDir = host.GetScriptsDir();
+    // Host publish 目录存放运行时文件；GameScripts.dll 在引擎二进制目录（由 CMake POST_BUILD 复制）
+    std::string gameAssembly = m_gameDir.empty() ? hostDir + "/GameScripts.dll" : m_gameDir + "/GameScripts.dll";
+    m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(gameAssembly, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
+    m_onFrameFn = (void (*)(float))host.GetFunctionPointer(gameAssembly, "GameScripts.ScriptEntry, GameScripts", "OnFrame");
+    m_srpRenderFn = (void (*)(float))host.GetFunctionPointer(gameAssembly, "GameScripts.ScriptEntry, GameScripts", "OnRender");
 
     if (!m_bootstrapFn || !m_onFrameFn) return false;
 
