@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>PrismaEngine.Host</AssemblyName>
+    <RootNamespace>PrismaEngine</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <PublishTrimmed>false</PublishTrimmed>
+    <!-- 逃逸舱：C++ CoreCLRHost 从原生代码调用，修剪器默认关闭此功能 -->
+    <_EnableConsumingManagedCodeFromNativeHosting>true</_EnableConsumingManagedCodeFromNativeHosting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Prisma.Core/Prisma.Core.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="../Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <TrimmerRootAssembly Include="PrismaEngine.Host" />
+    <TrimmerRootAssembly Include="Prisma.Core" />
+  </ItemGroup>
+
+  <!--
+    自包含发布需要 OutputType=Exe 编译器要求 Main() 入口点。
+    实际由 C++ CoreCLRHost 通过 hostfxr 加载游戏 DLL 触发。
+    此 Main() 仅用于满足 dotnet publish self-contained 的工具链要求。
+  -->
+  <Target Name="GenerateStubEntryPoint" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_StubProgram>$(IntermediateOutputPath)GeneratedProgram.cs</_StubProgram>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(_StubProgram)"
+      Lines="// &lt;auto-generated/&gt;&#10;// 存根入口点。C++ CoreCLRHost 通过 hostfxr 加载此 assembly 获取运行时环境，&#10;// 实际游戏入口由 GameScripts.dll 提供。&#10;class Program { static void Main() {} }"
+      Overwrite="true"
+      Encoding="UTF-8" />
+    <ItemGroup>
+      <Compile Include="$(_StubProgram)" />
+    </ItemGroup>
+  </Target>
+</Project>
