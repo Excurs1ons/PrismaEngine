@@ -217,25 +217,36 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         endif()
 
         set(CS_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/Prisma.Core")
+        set(CS_HOST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/PrismaEngine.Host")
         set(CS_OUTPUT_FILE "${CMAKE_BINARY_DIR}/bin/Prisma.Core.dll")
-        set(CS_LIB_DIR "${CMAKE_SOURCE_DIR}/projects/Template2D/scripts/lib")
 
         add_custom_command(
             OUTPUT "${CS_OUTPUT_FILE}"
             COMMAND ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin"
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${CS_LIB_DIR}"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CS_OUTPUT_FILE}"
-                "${CS_LIB_DIR}/Prisma.Core.dll"
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_BINARY_DIR}/bin/Prisma.Core.pdb"
-                "${CS_LIB_DIR}/Prisma.Core.pdb"
             DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj"
             COMMENT "Building Prisma.Core C# library"
         )
 
         add_custom_target(PrismaCore ALL
             DEPENDS "${CS_OUTPUT_FILE}"
+        )
+
+        # 自包含 Host 发布：产出运行时文件（hostfxr + coreclr + 所有 System DLL）
+        # 发布到 build/PrismaEngine.Host/<rid>/publish/
+        set(CS_HOST_OUTPUT_DIR "${CMAKE_BINARY_DIR}/PrismaEngine.Host/${CS_RID}")
+        add_custom_command(
+            OUTPUT "${CS_HOST_OUTPUT_DIR}/publish/PrismaEngine.Host.runtimeconfig.json"
+            COMMAND ${DOTNET} publish "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
+                    -c Release -r ${CS_RID} --self-contained true
+                    -o "${CS_HOST_OUTPUT_DIR}/publish"
+                    -p:DebugType=portable -p:DebugSymbols=true
+                    --nologo
+            DEPENDS "${CS_OUTPUT_FILE}" "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
+            COMMENT "Publishing PrismaEngine.Host (self-contained, RID: ${CS_RID})"
+        )
+
+        add_custom_target(PrismaEngineHost ALL
+            DEPENDS "${CS_HOST_OUTPUT_DIR}/publish/PrismaEngine.Host.runtimeconfig.json"
         )
 
         # C# 源码生成器（Roslyn Analyzer，编译 GameScripts 时自动调用）
@@ -460,7 +471,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
                 "$<TARGET_FILE_DIR:Engine>/Prisma.Core.pdb"
             COMMENT "Deploying Prisma.Core.dll to Engine output directory"
         )
-        add_dependencies(Engine PrismaCore)
+        add_dependencies(Engine PrismaCore PrismaEngineHost)
     endif()
 endif()
 if(MSVC)

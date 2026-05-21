@@ -151,39 +151,23 @@ endif()
 # ============================================================
 
 if(PRISMA_ENABLE_SCRIPTING)
-    add_dependencies(${PROJECT_NAME} PrismaCore)
+    add_dependencies(${PROJECT_NAME} PrismaCore PrismaEngineHost)
     add_dependencies(${PRISMACRAFT_PLUGIN_NAME} PrismaCore)
 
-    set(CS_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts/lib")
     find_program(DOTNET dotnet REQUIRED)
-
-    if(WIN32)
-        set(CS_RID "win-x64")
-    else()
-        if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
-            set(CS_RID "linux-arm64")
-        else()
-            set(CS_RID "linux-x64")
-        endif()
-    endif()
 
     set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
     set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E echo "Publishing C# scripts for RID: ${CS_RID}..."
-        COMMAND ${DOTNET} publish -c Release -r ${CS_RID} --self-contained true
-                -p:DebugType=portable -p:DebugSymbols=true
-                -p:PrismaCoreRef="${CS_LIB_DIR}"
-                --nologo
-                "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/${CS_RID}/publish/"
-                "${SCRIPTS_OUT}/"
-        COMMENT "Building + publishing C# scripts (RID: ${CS_RID})"
+        COMMAND ${CMAKE_COMMAND} -E echo "Building C# game scripts..."
+        COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
+                -c Release --nologo
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/GameScripts.dll"
+                "${SCRIPTS_OUT}/GameScripts.dll"
+        COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
     )
-
-    message(STATUS "PrismaCraft configured for RID: ${CS_RID}")
 else()
     message(STATUS "PrismaCraft: Scripting disabled, skipping C# dependencies.")
 endif()
