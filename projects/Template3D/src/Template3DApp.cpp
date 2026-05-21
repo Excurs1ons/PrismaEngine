@@ -77,7 +77,7 @@ int Template3DApp::OnInitialize() {
     m_enableNEE = m_Spec.EnableNEE;
     m_ptPipeline->EnableNEE(m_enableNEE);
 
-    LOG_INFO("Template3D", "P/R 重置累积，[/] 调整采样帧数，N 切换 NEE");
+    LOG_INFO("Template3D", "R 重置累积，B 切换模式，P 切换 Primitive|Mesh，N 切换 NEE，[/] 调整采样帧数");
     return 0;
 }
 
@@ -151,7 +151,7 @@ void Template3DApp::DrawStatsOverlay() {
     Renderer2D::DrawString("Template3D (PathTracing)",
                            {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
 
-    Renderer2D::DrawString("[R] Reset  [N] NEE  [B] Flat|BVH|RT  [ -Samples+ ]",
+    Renderer2D::DrawString("[R] Reset  [N] NEE  [B] Flat|BVH|RT  [P] Prim|Mesh  [ -Samples+ ]",
                            {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
 
     if (m_ptPipeline) {

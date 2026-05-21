@@ -12,7 +12,7 @@
 - `pathTraceMode`: `"Flat"` / `"BVH"` / `"HardwareRT"`
 - `enableNEE`: `true` / `false`
 
-**控制键**: `N` 切换 NEE, `M` 切换模式, `[/]` 调整采样帧数, `P/R` 重置累积
+**控制键**: `R` 重置累积, `B` 切换模式 (Flat/BVH/HardwareRT), `P` 切换 Primitive|Mesh, `N` 切换 NEE, `[/]` 调整采样帧数
 
 ## 当前实现 (Template3D)
 
@@ -62,7 +62,7 @@ Template3D 包含一个纯 compute shader 实现的路径追踪器，位于 `pro
 - `m_ptMaxSamples`：默认 4096 帧（可在 `Template3DApp.h` 修改，0 = 无限制）
 - `m_ptConverged`：达到上限后冻结 frameCount，跳过所有 GPU dispatch
 - 显示：橙色 `PathTrace: N/4096` → 绿色 `Converged: N/4096`
-- 重置：R 键（重置累积）、P 键（切换模式）、窗口 resize
+- 重置：R 键（重置累积）、B 键（切换模式）、窗口 resize
 
 ### 场景数据
 
