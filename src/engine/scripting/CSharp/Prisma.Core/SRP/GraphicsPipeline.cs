@@ -16,17 +16,16 @@ public sealed class GraphicsPipeline : IDisposable
             CullMode = desc.CullMode,
             DepthTest = desc.DepthTest ? (byte)1 : (byte)0,
             DepthWrite = desc.DepthWrite ? (byte)1 : (byte)0,
-            DepthFunc = desc.DepthFunc,
+            DepthFunc = (byte)desc.DepthFunc,
             BlendEnable = desc.BlendEnable ? (byte)1 : (byte)0,
             BlendColorWriteMask = desc.BlendColorWriteMask,
             Topology = desc.Topology,
         };
-        if (desc.RenderTargetFormats != null)
-            for (int i = 0; i < desc.RenderTargetFormats.Length && i < 8; i++)
-                nativeDesc.RenderTargetFormats[i] = desc.RenderTargetFormats[i];
-
         unsafe
         {
+            if (desc.RenderTargetFormats != null)
+                for (int i = 0; i < desc.RenderTargetFormats.Length && i < 8; i++)
+                    nativeDesc.RenderTargetFormats[i] = desc.RenderTargetFormats[i];
             Handle = Interop.API.SrpCreatePipeline(&nativeDesc);
         }
     }
