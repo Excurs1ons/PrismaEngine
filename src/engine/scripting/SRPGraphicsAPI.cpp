@@ -283,6 +283,22 @@ void SRPGraphicsAPI::CmdBindTexture(uint32_t slot, TextureHandle tex, SamplerHan
     m_cmdBuffer->BindDescriptorSet(0, descSet.get());
 }
 
+void SRPGraphicsAPI::CmdBlitRenderTarget(TextureHandle dst) {
+    auto* dev = GetDev(); if (!dev) return;
+    auto* dstTex = GetTexturePtr(dst); if (!dstTex) return;
+
+    auto* vkDev = dynamic_cast<Vk::RenderDeviceVulkan*>(dev);
+    if (!vkDev) return;
+
+    auto* swapChain = vkDev->GetSwapChain();
+    if (!swapChain) return;
+
+    auto* currentRT = swapChain->GetCurrentRenderTarget();
+    if (!currentRT) return;
+
+    dstTex->CopyFrom(currentRT, 0, 0, 0, 0);
+}
+
 // === Compute Pipeline ===
 
 ComputePipelineHandle SRPGraphicsAPI::CreateComputePipeline(ShaderHandle shaderH, uint32_t pushConstSize) {
@@ -426,6 +442,7 @@ void SRP_DestroyTexture(uint32_t h) { SRPGraphicsAPI::Get().DestroyTexture(h); }
 uint32_t SRP_CreateSampler(const SRPSamplerDesc* d) { return d ? SRPGraphicsAPI::Get().CreateSampler(*d) : 0; }
 void SRP_DestroySampler(uint32_t h) { SRPGraphicsAPI::Get().DestroySampler(h); }
 void SRP_CmdBindTexture(uint32_t slot, uint32_t tex, uint32_t sampler) { SRPGraphicsAPI::Get().CmdBindTexture(slot, tex, sampler); }
+void SRP_CmdBlitRenderTarget(uint32_t dst) { SRPGraphicsAPI::Get().CmdBlitRenderTarget(dst); }
 
 // Compute pipeline C wrappers
 uint32_t SRP_CreateComputePipeline(uint32_t shader, uint32_t pcs) { return SRPGraphicsAPI::Get().CreateComputePipeline(shader, pcs); }

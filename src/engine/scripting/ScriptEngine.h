@@ -84,6 +84,7 @@ struct PrismaAPI {
 
     // Texture binding
     void     (*srpCmdBindTexture)(uint32_t slot, uint32_t tex, uint32_t sampler);
+    void     (*srpCmdBlitRenderTarget)(uint32_t dstTex);
 
     // Frame
     void (*srpBeginFrame)();

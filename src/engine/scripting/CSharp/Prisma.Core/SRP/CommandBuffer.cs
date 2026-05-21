@@ -165,4 +165,10 @@ public sealed class CommandBuffer
     {
         unsafe { Interop.API.SrpCmdBindTexture((uint)slot, texture.Handle, sampler.Handle); }
     }
+
+    /// <summary>将当前渲染目标拷贝到纹理（供后续 Pass 采样）。</summary>
+    public void BlitRenderTarget(Texture dst)
+    {
+        unsafe { Interop.API.SrpCmdBlitRenderTarget(dst.Handle); }
+    }
 }

@@ -207,6 +207,7 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.srpCreateSampler = SRP_CreateSampler;
     m_api.srpDestroySampler = SRP_DestroySampler;
     m_api.srpCmdBindTexture = SRP_CmdBindTexture;
+    m_api.srpCmdBlitRenderTarget = SRP_CmdBlitRenderTarget;
     m_api.srpBeginFrame = SRP_BeginFrame;
     m_api.srpEndFrame = SRP_EndFrame;
     m_api.srpCmdBeginRenderPass = SRP_CmdBeginRenderPass;

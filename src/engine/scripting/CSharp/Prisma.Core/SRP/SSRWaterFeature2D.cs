@@ -4,8 +4,8 @@ namespace Prisma.SRP;
 
 /// <summary>
 /// 2D 屏幕空间反射水面效果 (RendererFeature2D)。
-/// 通过 fragment shader + alpha blending 在屏幕下半部绘制反射水面。
-/// 使用 push constants 控制水位线、时间和扭曲强度。
+/// 先 BlitRenderTarget 捕获当前帧到纹理，再用 fragment shader 采样反射。
+/// 通过 push constants 控制水位线、时间和扭曲强度。
 /// </summary>
 public sealed class SSRWaterFeature2D : RendererFeature2D
 {
@@ -20,6 +20,7 @@ void main() {
     private const string FragSrc = @"#version 450 core
 layout(location = 0) in vec2 vUV;
 layout(location = 0) out vec4 outColor;
+layout(binding = 1) uniform sampler2D sceneTex;
 layout(push_constant) uniform PushConstants {
     float waterLevel;
     float time;
@@ -32,18 +33,27 @@ void main() {
     float depth = vUV.y - pc.waterLevel;
     float normalizedDepth = depth / (1.0 - pc.waterLevel);
 
-    float wave = sin(vUV.x * 25.0 + pc.time * 2.0) * pc.distortion;
-    wave += cos(vUV.y * 12.0 + pc.time * 1.5) * pc.distortion * 0.6;
-    wave += sin((vUV.x + vUV.y) * 15.0 + pc.time * 3.0) * pc.distortion * 0.3;
+    float wave = sin(vUV.x * 25.0 + pc.time * 2.0) * pc.distortion * 0.8;
+    wave += cos(vUV.y * 12.0 + pc.time * 1.5) * pc.distortion * 0.5;
 
-    float alpha = smoothstep(0.0, 0.15, depth) * 0.55;
-    vec3 waterColor = mix(vec3(0.05, 0.25, 0.55), vec3(0.02, 0.15, 0.45), normalizedDepth);
-    waterColor += wave * 0.15;
+    vec2 reflectedUV = vec2(vUV.x + wave, pc.waterLevel - depth);
+    reflectedUV = clamp(reflectedUV, 0.0, 1.0);
+    vec3 reflectedColor = texture(sceneTex, reflectedUV).rgb;
+
+    float reflectionStrength = 0.4 + normalizedDepth * 0.25;
+    vec3 waterColor = mix(
+        vec3(0.02, 0.12, 0.35),
+        vec3(0.05, 0.22, 0.55),
+        normalizedDepth
+    );
+
+    vec3 finalColor = mix(waterColor, reflectedColor, reflectionStrength);
 
     float fresnel = 1.0 - abs(vUV.y * 2.0 - pc.waterLevel * 2.0 - 1.0);
-    waterColor += fresnel * 0.08;
+    finalColor += fresnel * 0.06;
 
-    outColor = vec4(waterColor, alpha);
+    float alpha = smoothstep(0.0, 0.12, depth) * 0.6;
+    outColor = vec4(finalColor, alpha);
 }";
 
     [StructLayout(LayoutKind.Sequential)]
@@ -57,8 +67,11 @@ void main() {
 
     private Shader? _vs, _fs;
     private GraphicsPipeline? _pipeline;
+    private Texture? _sceneTex;
+    private Sampler? _sceneSampler;
     private float _timeAccum;
     private WaterParams _params = new() { WaterLevel = 0.55f, Distortion = 0.015f };
+    private int _texW = 1280, _texH = 720;
 
     public float WaterLevel
     {
@@ -72,7 +85,7 @@ void main() {
         set => _params.Distortion = Math.Clamp(value, 0f, 0.05f);
     }
 
-    public float ElapsedTime => _timeAccum;
+    public void SetResolution(int w, int h) { _texW = w; _texH = h; }
 
     public override void Create()
     {
@@ -88,15 +101,21 @@ void main() {
             BlendEnable = true,
             BlendColorWriteMask = 0xF,
         });
+
+        _sceneTex = new Texture(_texW, _texH, 37);
+        _sceneSampler = new Sampler(minFilter: 1, magFilter: 1, addressU: 1, addressV: 1);
     }
 
     public override void Execute(CommandBuffer cmd)
     {
-        if (_pipeline == null) return;
+        if (_pipeline == null || _sceneTex == null || _sceneSampler == null) return;
+
+        cmd.BlitRenderTarget(_sceneTex);
 
         _params.Time = _timeAccum;
 
         cmd.BindPipeline(_pipeline);
+        cmd.BindTexture(1, _sceneTex, _sceneSampler);
         unsafe
         {
             fixed (WaterParams* p = &_params)
@@ -113,6 +132,8 @@ void main() {
     public override void Dispose()
     {
         _pipeline?.Dispose();
+        _sceneTex?.Dispose();
+        _sceneSampler?.Dispose();
         _fs?.Dispose();
         _vs?.Dispose();
     }

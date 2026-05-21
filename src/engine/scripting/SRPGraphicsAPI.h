@@ -114,6 +114,7 @@ public:
     void DestroySampler(SamplerHandle h);
     std::shared_ptr<Graphic::ISampler> GetSamplerPtr(SamplerHandle h);
     void CmdBindTexture(uint32_t slot, TextureHandle tex, SamplerHandle sampler);
+    void CmdBlitRenderTarget(TextureHandle dst);
 
     // === Compute Pipeline ===
     ComputePipelineHandle CreateComputePipeline(ShaderHandle computeShader, uint32_t pushConstantSize = 0);
@@ -166,6 +167,7 @@ extern "C" {
     uint32_t SRP_CreateSampler(const SRPSamplerDesc* d);
     void SRP_DestroySampler(uint32_t h);
     void SRP_CmdBindTexture(uint32_t slot, uint32_t tex, uint32_t sampler);
+    void SRP_CmdBlitRenderTarget(uint32_t dst);
 
     // Compute pipeline C wrappers
     uint32_t SRP_CreateComputePipeline(uint32_t shader, uint32_t pushConstSize);

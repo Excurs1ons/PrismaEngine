@@ -99,10 +99,11 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<SRPSamplerDesc*, uint> SrpCreateSampler;
     public delegate* unmanaged<uint, void> SrpDestroySampler;
 
-    // Texture binding
-    public delegate* unmanaged<uint, uint, uint, void> SrpCmdBindTexture;
+	// Texture binding
+	public delegate* unmanaged<uint, uint, uint, void> SrpCmdBindTexture;
+	public delegate* unmanaged<uint, void> SrpCmdBlitRenderTarget;
 
-    // Frame
+	// Frame
     public delegate* unmanaged<void> SrpBeginFrame;
     public delegate* unmanaged<void> SrpEndFrame;
 
