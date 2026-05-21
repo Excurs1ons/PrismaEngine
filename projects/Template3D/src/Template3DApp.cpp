@@ -151,7 +151,7 @@ void Template3DApp::DrawStatsOverlay() {
     Renderer2D::DrawString("Template3D (PathTracing)",
                            {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
 
-    Renderer2D::DrawString("[P/R] Reset  [N] NEE  [M] Mode  [ -Samples+ ]",
+    Renderer2D::DrawString("[P/R] Reset  [N] NEE  [B] Mode  [ -Samples+ ]",
                            {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
 
     if (m_ptPipeline) {
@@ -249,7 +249,7 @@ void Template3DApp::OnEvent(Event& e) {
             LOG_INFO("Template3D", "NEE {}", m_enableNEE ? "启用" : "禁用");
             return true;
         }
-        if (key == Input::KeyCode::M && !repeat) {
+        if ((key == Input::KeyCode::B || key == Input::KeyCode::M) && !repeat) {
             if (m_ptPipeline) {
                 m_ptPipeline->CycleMode();
                 m_ptPipeline->ResetAccumulation();
