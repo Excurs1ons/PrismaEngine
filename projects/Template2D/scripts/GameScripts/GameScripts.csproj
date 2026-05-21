@@ -22,4 +22,24 @@
     <!-- 保留从原生代码（C++ CoreCLRHost）调用的入口点，防止 linker 删除 -->
     <TrimmerRootAssembly Include="GameScripts" />
   </ItemGroup>
+
+  <!--
+    自包含发布需要 OutputType=Exe → 编译器要求 Main() 入口点。
+    但实际入口由 C++ CoreCLRHost 通过 UnmanagedCallersOnly 触发，
+    此 Main() 永远不会被调用。
+    通过 MSBuild 在 obj/ 下自动生成，不污染源码树。
+  -->
+  <Target Name="GenerateStubEntryPoint" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_StubProgram>$(IntermediateOutputPath)GeneratedProgram.cs</_StubProgram>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(_StubProgram)"
+      Lines="// &lt;auto-generated/&gt;&#10;// 存根入口点。实际入口由 C++ CoreCLRHost 通过 load_assembly_and_get_function_pointer 触发。&#10;class Program { static void Main() {} }"
+      Overwrite="true"
+      Encoding="UTF-8" />
+    <ItemGroup>
+      <Compile Include="$(_StubProgram)" />
+    </ItemGroup>
+  </Target>
 </Project>

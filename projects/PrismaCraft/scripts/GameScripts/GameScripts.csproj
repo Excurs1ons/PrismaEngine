@@ -19,4 +19,18 @@
     <ProjectReference Include="../../../../src/engine/scripting/CSharp/Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <TrimmerRootAssembly Include="GameScripts" />
   </ItemGroup>
+
+  <Target Name="GenerateStubEntryPoint" BeforeTargets="CoreCompile">
+    <PropertyGroup>
+      <_StubProgram>$(IntermediateOutputPath)GeneratedProgram.cs</_StubProgram>
+    </PropertyGroup>
+    <WriteLinesToFile
+      File="$(_StubProgram)"
+      Lines="// &lt;auto-generated/&gt;&#10;// 存根入口点。实际入口由 C++ CoreCLRHost 通过 load_assembly_and_get_function_pointer 触发。&#10;class Program { static void Main() {} }"
+      Overwrite="true"
+      Encoding="UTF-8" />
+    <ItemGroup>
+      <Compile Include="$(_StubProgram)" />
+    </ItemGroup>
+  </Target>
 </Project>
