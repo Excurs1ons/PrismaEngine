@@ -408,6 +408,21 @@ bool traverseBVH(..., out HitResult hit) {
 | 对象级 AABB 剔除 | ⏳ 待实施 | 中等 | 为每个 Mesh 对象预计算 AABB，射线不与包围盒相交时跳过数千三角形遍历。需要 PTSceneObject 增加 aabbMin/aabbMax 字段 |
 | 冗余 imageStore 消除 | ✅ 已完成 | 低 | 移除 main 中第 579 行的 `imageStore(outputImage, ...)`，同一纹理绑定到 binding 0/1 只需写入一次，另一 binding 在 present 时采样 |
 
+### Bug 6: Template3D — 收敛后 SPS 平均值持续下降
+
+**症状**: Template3D 累积收敛后（如 `513/512 samples`），收敛速度平均值（SPS）仍在持续减少，直至趋近于 0。
+
+**根因**: 
+1. `PathTracingPipeline::Execute()` line 740-743：收敛检测 `m_frameCount >= m_maxSamples` 后设 `m_converged = true`，然后 `m_frameCount++` → 513
+2. 下一帧 line 622 early return 跳过计算路径，不再执行收敛检测代码 → `m_frameCount` 永远停在 513
+3. `Template3DApp::DrawStatsOverlay()` 中 SPS 公式 `m_cachedSPS = frameCount / elapsed`，分子固定为 513，分母 `elapsed` 持续增长 → SPS 单调递减趋近于 0
+
+**影响**: 仅影响 Template3D overlay 显示，不影响渲染结果。显示值 `513/512` 比用户配置多 1 帧也容易引起困惑。
+
+**修复方向**:
+- 收敛后冻结 SPS 计算（缓存最终值，不再更新），或
+- 将收敛检测和 `m_frameCount++` 移到 early return 之前，使 `m_frameCount` 不超出 `m_maxSamples`
+
 ### 实施记录
 
 - 2026-05-21: P0 全部完成，P1 全部完成，P2 大部分完成（除 AABB 剔除）
