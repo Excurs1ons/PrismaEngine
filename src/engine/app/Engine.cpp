@@ -245,20 +245,28 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
             }
 
-            // 游戏 DLL 搜索路径（GameScripts 构建输出）
+            // 游戏 DLL 搜索（*_Managed.dll 匹配各项目构建输出）
             std::vector<std::string> gamePaths = {
                 ".",
                 "scripts",
                 "../scripts",
                 "../projects/Template2D/scripts/GameScripts/bin/Release/net10.0",
                 "../projects/PrismaCraft/scripts/GameScripts/bin/Release/net10.0",
+                "../projects/SRP2D/scripts/GameScripts/bin/Release/net10.0",
             };
             std::string gameDir;
+            std::string gameDll;
             for (const auto& p : gamePaths) {
-                if (std::filesystem::exists(p + "/GameScripts.dll")) {
-                    gameDir = std::filesystem::canonical(p).string();
-                    break;
+                if (!std::filesystem::exists(p)) continue;
+                for (const auto& entry : std::filesystem::directory_iterator(p)) {
+                    auto name = entry.path().filename().string();
+                    if (name.ends_with("_Managed.dll")) {
+                        gameDll = name;
+                        gameDir = std::filesystem::canonical(p).string();
+                        break;
+                    }
                 }
+                if (!gameDir.empty()) break;
             }
 
             if (!hostDir.empty()) {

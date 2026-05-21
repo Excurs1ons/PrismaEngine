@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>GameScripts</AssemblyName>
+    <AssemblyName>PrismaCraft_Managed</AssemblyName>
     <RootNamespace>GameScripts</RootNamespace>
     <Nullable>enable</Nullable>
     <!-- 纯类库：自包含发布由 PrismaEngine.Host 负责 -->
@@ -13,6 +13,6 @@
       <Private>true</Private>
     </ProjectReference>
     <ProjectReference Include="../../../../src/engine/scripting/CSharp/Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <TrimmerRootAssembly Include="GameScripts" />
+    <TrimmerRootAssembly Include="PrismaCraft_Managed" />
   </ItemGroup>
 </Project>

@@ -153,8 +153,8 @@ if(PRISMA_ENABLE_SCRIPTING)
         COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
                 -c Release --nologo
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/GameScripts.dll"
-                "${SCRIPTS_OUT}/GameScripts.dll"
+                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/Template2D_Managed.dll"
+                "${SCRIPTS_OUT}/Template2D_Managed.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
     )
 else()

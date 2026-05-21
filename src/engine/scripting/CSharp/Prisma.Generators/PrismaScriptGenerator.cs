@@ -31,7 +31,7 @@ namespace Prisma.Generators
                 {
                     GenerateScriptPartial(context, info);
                     
-                    // 只有�?Script 的类才需要注册到 ScriptRegistry
+                    // 只有�?Script 的类才需要注册到 ScriptRegistry
                     if (info.IsScript)
                     {
                         scriptsToRegister.Add(info);
@@ -52,7 +52,7 @@ namespace Prisma.Generators
                 baseType = baseType.BaseType;
             }
 
-            // 提取完整的继承列�?/ Extract full inheritance list
+            // 提取完整的继承列�?/ Extract full inheritance list
             var baseList = new List<string>();
             if (classSymbol.BaseType != null && classSymbol.BaseType.SpecialType != SpecialType.System_Object)
             {
@@ -125,14 +125,14 @@ namespace Prisma.Generators
             sb.AppendLine($"    public partial class {info.ClassName}");
             sb.AppendLine("    {");
 
-            // 1. 如果�?Script，生�?TypeId / If Script, generate TypeId
+            // 1. 如果�?Script，生�?TypeId / If Script, generate TypeId
             if (info.IsScript)
             {
                 sb.AppendLine($"        public override uint TypeId => {info.TypeId}u;");
                 sb.AppendLine();
             }
 
-            // 2. 如果标记�?Serializable，生成序列化覆盖 / If Serializable, generate serialization overrides
+            // 2. 如果标记�?Serializable，生成序列化覆盖 / If Serializable, generate serialization overrides
             if (info.IsSerializable && info.IsScript)
             {
                 sb.AppendLine("        public override void OnSerialize(Utf8JsonWriter writer)");
@@ -161,12 +161,13 @@ namespace Prisma.Generators
 
         private void GenerateRegistry(GeneratorExecutionContext context, List<ScriptInfo> scripts)
         {
-            var assemblyName = context.Compilation.AssemblyName?.Replace(".", "") ?? "Unknown";
+            context.AnalyzerConfigOptions.GlobalOptions.TryGetValue("build_property.RootNamespace", out var rootNs);
+            var ns = (!string.IsNullOrEmpty(rootNs) ? rootNs : context.Compilation.AssemblyName)?.Replace(".", "") ?? "Unknown";
             var sb = new StringBuilder();
             sb.AppendLine("using System;");
             sb.AppendLine("using Prisma;");
             sb.AppendLine();
-            sb.AppendLine($"namespace {assemblyName}.Generated");
+            sb.AppendLine($"namespace {ns}.Generated");
             sb.AppendLine("{");
             sb.AppendLine("    public static class ScriptRegistry");
             sb.AppendLine("    {");

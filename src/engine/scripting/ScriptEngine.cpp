@@ -3,6 +3,7 @@
 #include "Logger.h"
 #include "app/Engine.h"
 #include "app/Application.h"
+#include <filesystem>
 #include "input/InputManager.h"
 #include "platform/Platform.h"
 #include "core/EntityManager.h"
@@ -234,11 +235,35 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.srpShutdown = SRP_Shutdown;
 
     const std::string& hostDir = host.GetScriptsDir();
-    // Host publish 目录存放运行时文件；GameScripts.dll 在引擎二进制目录（由 CMake POST_BUILD 复制）
-    std::string gameAssembly = m_gameDir.empty() ? hostDir + "/GameScripts.dll" : m_gameDir + "/GameScripts.dll";
-    m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(gameAssembly, "GameScripts.ScriptEntry, GameScripts", "Bootstrap");
-    m_onFrameFn = (void (*)(float))host.GetFunctionPointer(gameAssembly, "GameScripts.ScriptEntry, GameScripts", "OnFrame");
-    m_srpRenderFn = (void (*)(float))host.GetFunctionPointer(gameAssembly, "GameScripts.ScriptEntry, GameScripts", "OnRender");
+
+    // 搜索 *_Managed.dll（每个项目命名不同：Template2D_Managed.dll / SRP2D_Managed.dll 等）
+    std::string gameDll;
+    if (std::filesystem::exists(gameDir)) {
+        for (const auto& entry : std::filesystem::directory_iterator(gameDir)) {
+            auto name = entry.path().filename().string();
+            if (name.ends_with("_Managed.dll")) {
+                gameDll = name;
+                break;
+            }
+        }
+    }
+
+    std::string assemblyPath = gameDir + "/" + gameDll;
+    auto dotPos = gameDll.rfind(".dll");
+    std::string assemblyName = (dotPos != std::string::npos) ? gameDll.substr(0, dotPos) : gameDll;
+    auto managedPos = assemblyName.rfind("_Managed");
+    std::string projectPrefix = (managedPos != std::string::npos) ? assemblyName.substr(0, managedPos) : assemblyName;
+
+    auto tryGetFn = [&](const std::string& typePrefix) -> bool {
+        std::string type = typePrefix + ".ScriptEntry, " + assemblyName;
+        m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(assemblyPath, type, "Bootstrap");
+        m_onFrameFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, type, "OnFrame");
+        m_srpRenderFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, type, "OnRender");
+        return m_bootstrapFn && m_onFrameFn;
+    };
+
+    if (!tryGetFn(projectPrefix) && projectPrefix != "GameScripts")
+        tryGetFn("GameScripts");
 
     if (!m_bootstrapFn || !m_onFrameFn) return false;
 
