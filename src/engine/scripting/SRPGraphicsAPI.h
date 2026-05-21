@@ -15,6 +15,7 @@ namespace Prisma::Graphic {
     class ISampler;
     class IDescriptorSet;
     class IDescriptorSetLayout;
+    class IComputePipeline;
 }
 
 namespace Prisma::Scripting {
@@ -22,6 +23,7 @@ namespace Prisma::Scripting {
 // Handle types
 using ShaderHandle = uint32_t;
 using PipelineHandle = uint32_t;
+using ComputePipelineHandle = uint32_t;
 using RenderTargetHandle = uint32_t;
 using DepthTargetHandle = uint32_t;
 using BufferHandle = uint32_t;
@@ -113,6 +115,15 @@ public:
     std::shared_ptr<Graphic::ISampler> GetSamplerPtr(SamplerHandle h);
     void CmdBindTexture(uint32_t slot, TextureHandle tex, SamplerHandle sampler);
 
+    // === Compute Pipeline ===
+    ComputePipelineHandle CreateComputePipeline(ShaderHandle computeShader, uint32_t pushConstantSize = 0);
+    void DestroyComputePipeline(ComputePipelineHandle h);
+    void CmdBindComputePipeline(ComputePipelineHandle h);
+    void CmdDispatch(uint32_t x, uint32_t y, uint32_t z);
+    void CmdBindComputeTexture(uint32_t slot, TextureHandle tex, SamplerHandle sampler);
+    void CmdBindStorageImage(uint32_t slot, TextureHandle tex);
+    void CmdBindStorageBuffer(uint32_t slot, BufferHandle buf);
+
     void Shutdown();
 
 private:
@@ -127,6 +138,11 @@ private:
     std::vector<std::shared_ptr<Graphic::ISampler>> m_samplers;
     std::unordered_map<PipelineHandle, std::shared_ptr<Graphic::IDescriptorSet>> m_frameDescriptorSets;
     PipelineHandle m_currentPipeline = 0;
+
+    // Compute pipeline state
+    std::vector<std::shared_ptr<Graphic::IComputePipeline>> m_computePipelines;
+    std::unordered_map<ComputePipelineHandle, std::shared_ptr<Graphic::IDescriptorSet>> m_computeDescriptorSets;
+    ComputePipelineHandle m_currentComputePipeline = 0;
 
     // Current frame command buffer (not owned - from device)
     Graphic::ICommandBuffer* m_cmdBuffer = nullptr;
@@ -150,6 +166,16 @@ extern "C" {
     uint32_t SRP_CreateSampler(const SRPSamplerDesc* d);
     void SRP_DestroySampler(uint32_t h);
     void SRP_CmdBindTexture(uint32_t slot, uint32_t tex, uint32_t sampler);
+
+    // Compute pipeline C wrappers
+    uint32_t SRP_CreateComputePipeline(uint32_t shader, uint32_t pushConstSize);
+    void SRP_DestroyComputePipeline(uint32_t h);
+    void SRP_CmdBindComputePipeline(uint32_t h);
+    void SRP_CmdDispatch(uint32_t x, uint32_t y, uint32_t z);
+    void SRP_CmdBindComputeTexture(uint32_t slot, uint32_t tex, uint32_t sampler);
+    void SRP_CmdBindStorageImage(uint32_t slot, uint32_t tex);
+    void SRP_CmdBindStorageBuffer(uint32_t slot, uint32_t buf);
+
     void SRP_BeginFrame();
     void SRP_EndFrame();
     void SRP_CmdBeginRenderPass(uint32_t rc, const uint32_t* rh, uint32_t dh, const float* cc, float dc, int vw, int vh);

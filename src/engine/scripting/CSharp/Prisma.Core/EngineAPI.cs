@@ -119,15 +119,21 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<uint, uint, uint, int, void> SrpCmdDrawIndexed;
     public delegate* unmanaged<void> SrpCmdDrawFullScreenQuad;
 
+    // Compute pipeline
+    public delegate* unmanaged<uint, uint, uint> SrpCreateComputePipeline;
+    public delegate* unmanaged<uint, void> SrpDestroyComputePipeline;
+    public delegate* unmanaged<uint, void> SrpCmdBindComputePipeline;
+    public delegate* unmanaged<uint, uint, uint, void> SrpCmdDispatch;
+    public delegate* unmanaged<uint, uint, uint, void> SrpCmdBindComputeTexture;
+    public delegate* unmanaged<uint, uint, void> SrpCmdBindStorageImage;
+    public delegate* unmanaged<uint, uint, void> SrpCmdBindStorageBuffer;
+
     public delegate* unmanaged<void> SrpShutdown;
 
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
 }
 
-/// <summary>
-/// SRP 管线创建描述。内存布局与 C++ Prisma::Scripting::SRPPipelineDesc 一致。
-/// </summary>
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct SRPPipelineDesc
 {
@@ -144,6 +150,8 @@ internal unsafe struct SRPPipelineDesc
     public byte BlendEnable;
     public byte BlendColorWriteMask;
     public fixed float ClearColor[4];
+    public uint Topology;
+    private fixed uint _padding[1];
 }
 
 /// <summary>

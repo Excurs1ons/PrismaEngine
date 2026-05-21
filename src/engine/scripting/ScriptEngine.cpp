@@ -219,6 +219,16 @@ bool ScriptEngine::Initialize(CoreCLRHost& host) {
     m_api.srpCmdDraw = SRP_CmdDraw;
     m_api.srpCmdDrawIndexed = SRP_CmdDrawIndexed;
     m_api.srpCmdDrawFullScreenQuad = SRP_CmdDrawFullScreenQuad;
+
+    // Compute pipeline
+    m_api.srpCreateComputePipeline = SRP_CreateComputePipeline;
+    m_api.srpDestroyComputePipeline = SRP_DestroyComputePipeline;
+    m_api.srpCmdBindComputePipeline = SRP_CmdBindComputePipeline;
+    m_api.srpCmdDispatch = SRP_CmdDispatch;
+    m_api.srpCmdBindComputeTexture = SRP_CmdBindComputeTexture;
+    m_api.srpCmdBindStorageImage = SRP_CmdBindStorageImage;
+    m_api.srpCmdBindStorageBuffer = SRP_CmdBindStorageBuffer;
+
     m_api.srpShutdown = SRP_Shutdown;
 
     const std::string& scriptsDir = host.GetScriptsDir();

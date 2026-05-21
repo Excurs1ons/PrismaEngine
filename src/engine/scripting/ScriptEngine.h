@@ -102,6 +102,15 @@ struct PrismaAPI {
     void (*srpCmdDrawIndexed)(uint32_t indexCount, uint32_t instanceCount, uint32_t firstIndex, int32_t vertexOffset);
     void (*srpCmdDrawFullScreenQuad)();
 
+    // Compute pipeline
+    uint32_t (*srpCreateComputePipeline)(uint32_t shader, uint32_t pushConstSize);
+    void     (*srpDestroyComputePipeline)(uint32_t handle);
+    void     (*srpCmdBindComputePipeline)(uint32_t handle);
+    void     (*srpCmdDispatch)(uint32_t x, uint32_t y, uint32_t z);
+    void     (*srpCmdBindComputeTexture)(uint32_t slot, uint32_t tex, uint32_t sampler);
+    void     (*srpCmdBindStorageImage)(uint32_t slot, uint32_t tex);
+    void     (*srpCmdBindStorageBuffer)(uint32_t slot, uint32_t buf);
+
     void (*srpShutdown)();
 
     // [诊断] 结构体大小，用于 C++/C# 版本校验
