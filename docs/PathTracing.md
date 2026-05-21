@@ -1,5 +1,19 @@
 # 路径追踪系统
 
+## 当前状态
+
+| 模式 | 状态 | 说明 |
+|------|------|------|
+| **Flat** (pathtrace.comp) | ✅ 可用 | 暴力遍历全部三角形，NEE 可选 |
+| **BVH** (pathtrace_BVH.comp) | ❌ 待修复 | BVH 构建和遍历确认正确，需排查全黑问题 |
+| **HardwareRT** (RTX) | ❌ 待修复 | Vulkan 光线追踪管线需进一步调试 |
+
+**项目配置**: `project.json` → `rendering` 段支持:
+- `pathTraceMode`: `"Flat"` / `"BVH"` / `"HardwareRT"`
+- `enableNEE`: `true` / `false`
+
+**控制键**: `N` 切换 NEE, `M` 切换模式, `[/]` 调整采样帧数, `P/R` 重置累积
+
 ## 当前实现 (Template3D)
 
 Template3D 包含一个纯 compute shader 实现的路径追踪器，位于 `projects/Template3D/`。
@@ -186,6 +200,48 @@ Shader Binding Table (SBT)
 ---
 
 ## Bug 修复记录
+
+### Bug 5: 黑屏（第三类）— 面法线回退死代码 + 着色器加载逻辑错误
+
+**症状**: 路径追踪输出全黑，诊断色（品红：R=1=BVH命中，B=1=暴力遍历命中）显示三角形求交正确，但 `tracePath` 返回 0 辐射。Flat 模式和 BVH 模式均黑屏（不同根因）。NEE 关闭时小光源几乎无法命中。
+
+**诊断工具**: 在着色器 `main()` 中添加暴力三角形遍历绕过 BVH，输出诊断颜色区分数据问题 vs 路径追踪问题。品红确诊问题在路径追踪逻辑而非几何数据。
+
+**根因 1: `pathtrace.comp` 面法线回退死代码**（主要）
+
+```glsl
+// 错误：normalize 后检查 dot < 0.1 → 永远为假，回退从未生效
+vec3 n = normalize((1.0 - u - v) * n0 + u * n1 + v * n2);
+if (dot(n, n) < 0.1) n = normalize(cross(e1, e2));
+
+// 正确：先检查再 normalize
+vec3 interpN = (1.0 - u - v) * n0 + u * n1 + v * n2;
+if (dot(interpN, interpN) < 0.1) interpN = cross(e1, e2);
+vec3 n = normalize(interpN);
+```
+
+`plane.obj`（墙面/地面/天花板/灯光）不含顶点法线 → `n0=n1=n2=(0,0,0)` → 插值结果 `(0,0,0)` → `normalize((0,0,0))` = `(0,0,0)`（GLSL 定义）→ 法线为零 → `sampleHemisphere` 退化（tan/bitan 均为零向量）→ 弹射方向 `(0,0,0)` → 后续求交全 `det=0` → 找不到交点 → `tracePath` 返回 0。
+
+**根因 2: `LoadDefaultShaders()` 使用 `m_mode` 而非 `m_targetMode`**（次要）
+
+`SetMode(Flat)` 后 `m_mode` 仍未更新（在函数末尾才赋值），`LoadDefaultShaders` 据此加载 `pathtrace_BVH.comp.spv` 而非 `pathtrace.comp.spv`。即使数据已重建为本地空间，BVH 着色器找不到对应加速结构 → 全黑。
+
+```
+[PathTracingPipeline] 内部加载计算着色器: pathtrace_BVH.comp.spv (BVH)  ← 两次都是 BVH!
+[PathTracingPipeline] 切换模式: Flat
+```
+
+**根因 3: `BindTexture()` imageLayout 不匹配**（驱动依赖）
+
+`VulkanResources.cpp` 中 `BindTexture()` 写死 `imageLayout = VK_IMAGE_LAYOUT_GENERAL`，但 PipelineBarrier 已将纹理过渡到 `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`。Vulkan 规范要求 descriptor 的 `imageLayout` 与实际布局一致，违反此规则在某些驱动（NVIDIA）上导致 `sampler2D` 采样返回全黑。
+
+**修复**:
+1. `pathtrace.comp`: 插值→检查长度→面法线回退→normalize 顺序修正
+2. `PathTracingPipeline.cpp:1129`: `m_mode` → `m_targetMode`
+3. `VulkanResources.cpp:142`: `imageLayout` → `VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL`
+
+**当前状态**: Flat 模式 + NEE 可渲染 Cornell Box。BVH 模式和 HardwareRT 模式待修复。
+
 
 ### Bug 1: 黑屏 — 面法线未根据入射方向翻转
 
