@@ -736,11 +736,11 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         cmd->PipelineBarrier({{ m_storageTexture.get(), ResourceState::UnorderedAccess, ResourceState::ShaderRead }});
     }
 
-    // 收敛检测
+    // 收敛检测（先递增再检测，确保 frameCount 不超过 m_maxSamples）
+    m_frameCount++;
     if (m_maxSamples > 0 && m_frameCount >= m_maxSamples) {
         m_converged = true;
     }
-    m_frameCount++;
 
     // 打开 swapchain RP 画全屏四边形（无头模式跳过）
     if (!headless) {

@@ -2,6 +2,8 @@
 
 #include "graphic/RenderSystem.h"
 #include "graphic/Renderer2D.h"
+#include "graphic/PrimitiveComponent.h"
+#include "graphic/MeshRenderer.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "app/Engine.h"
 #include "input/InputManager.h"
@@ -55,6 +57,14 @@ int Template3DApp::OnInitialize() {
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (sceneManager) {
         m_scene = sceneManager->GetCurrentScene();
+    }
+
+    // 默认用 Primitive（禁用所有 MeshRenderer）
+    if (m_scene) {
+        for (const auto& node : m_scene->GetNodes()) {
+            if (auto meshR = m_scene->GetComponent<Graphic::MeshRenderer>(node))
+                meshR->SetEnabled(false);
+        }
     }
 
     // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
@@ -148,21 +158,44 @@ void Template3DApp::DrawStatsOverlay() {
 
     if (m_ptPipeline) {
         uint32_t frameCount = m_ptPipeline->GetFrameCount();
+        uint32_t maxSamples = m_ptPipeline->GetMaxSamples();
+
+        // SPS = 自上次重置以来的平均 samples/sec
+        if (frameCount == 0) {
+            m_accumStartTime = now;
+            m_cachedSPS = 0;
+        } else if (!m_ptPipeline->IsConverged() && now > m_accumStartTime) {
+            double elapsed = now - m_accumStartTime;
+            m_cachedSPS = static_cast<uint32_t>(frameCount / elapsed + 0.5);
+        }
+
         std::string ptInfo;
         Prisma::Vector4 ptColor;
         if (m_ptPipeline->IsConverged()) {
-            ptInfo = std::format("[{}] Converged: {}/{} samples  |  {}x{}",
-                                 m_ptPipeline->GetModeName(), frameCount, m_ptMaxSamples,
+            ptInfo = std::format("[{}] Converged: {}/{} samples  {} S/s  |  {}x{}",
+                                 m_ptPipeline->GetModeName(), frameCount, maxSamples, m_cachedSPS,
                                  m_Spec.Width, m_Spec.Height);
             ptColor = {0.2f, 1.0f, 0.2f, 1.0f};
         } else {
-            std::string maxStr = m_ptMaxSamples > 0 ? "/" + std::to_string(m_ptMaxSamples) : "+";
-            ptInfo = std::format("[{}] Pt: {}{} samples  |  {}x{}",
-                                 m_ptPipeline->GetModeName(), frameCount, maxStr,
+            std::string maxStr = maxSamples > 0 ? "/" + std::to_string(maxSamples) : "+";
+            ptInfo = std::format("[{}] Pt: {}{} samples  {} S/s  |  {}x{}",
+                                 m_ptPipeline->GetModeName(), frameCount, maxStr, m_cachedSPS,
                                  m_Spec.Width, m_Spec.Height);
             ptColor = {0.9f, 0.6f, 0.2f, 1.0f};
         }
         Renderer2D::DrawString(ptInfo, {30.0f, 130.0f}, 1.5f, ptColor);
+    }
+
+    // 实时 NEE + Primitive 状态（每帧绘制，不缓存）
+    if (m_ptPipeline) {
+        Prisma::Vector4 neeColor = m_enableNEE
+            ? Prisma::Vector4{0.2f, 1.0f, 0.2f, 1.0f}
+            : Prisma::Vector4{0.6f, 0.6f, 0.6f, 1.0f};
+        Renderer2D::DrawString(m_enableNEE ? "NEE: ON" : "NEE: OFF", {30.0f, 165.0f}, 1.5f, neeColor);
+        Prisma::Vector4 primColor = m_usePrimitiveSphere
+            ? Prisma::Vector4{0.2f, 1.0f, 0.2f, 1.0f}
+            : Prisma::Vector4{0.6f, 0.6f, 0.6f, 1.0f};
+        Renderer2D::DrawString(m_usePrimitiveSphere ? "Primitive: ON" : "Primitive: OFF", {30.0f, 185.0f}, 1.5f, primColor);
     }
 }
 
@@ -190,8 +223,18 @@ void Template3DApp::OnEvent(Event& e) {
             return true;
         }
         if (key == Input::KeyCode::P && !repeat) {
-            if (m_ptPipeline) m_ptPipeline->ResetAccumulation();
-            LOG_INFO("Template3D", "重置路径追踪累积");
+            // 全局切换 PrimitiveComponent ↔ MeshRenderer
+            m_usePrimitiveSphere = !m_usePrimitiveSphere;
+            if (m_scene) {
+                for (const auto& node : m_scene->GetNodes()) {
+                    if (auto prim = m_scene->GetComponent<Graphic::PrimitiveComponent>(node))
+                        prim->SetEnabled(m_usePrimitiveSphere);
+                    if (auto meshR = m_scene->GetComponent<Graphic::MeshRenderer>(node))
+                        meshR->SetEnabled(!m_usePrimitiveSphere);
+                }
+                m_scene->SetDirty(true);
+                LOG_INFO("Template3D", "全局模式 → {}", m_usePrimitiveSphere ? "Primitive (原生)" : "Mesh (三角化)");
+            }
             return true;
         }
         if (key == Input::KeyCode::R && !repeat) {
