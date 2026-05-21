@@ -3,11 +3,11 @@ using System.Runtime.InteropServices;
 namespace Prisma.SRP;
 
 /// <summary>
-/// 屏幕空间反射水面效果。
+/// 2D 屏幕空间反射水面效果 (RendererFeature2D)。
 /// 通过 fragment shader + alpha blending 在屏幕下半部绘制反射水面。
 /// 使用 push constants 控制水位线、时间和扭曲强度。
 /// </summary>
-public sealed class SSRWaterFeature : RendererFeature
+public sealed class SSRWaterFeature2D : RendererFeature2D
 {
     private const string VertSrc = @"#version 450 core
 layout(location = 0) out vec2 vUV;
