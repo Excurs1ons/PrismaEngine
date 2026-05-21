@@ -1,57 +1,96 @@
 namespace Prisma.SRP;
 
-/// <summary>
-/// 可编程渲染管线基类。C# 控制 Pass 顺序和执行逻辑。
-/// 每帧 Build 被调用，生成当前帧的 Pass 列表并执行。
-/// </summary>
 public abstract class RenderPipeline
 {
     protected List<RenderPass> passes = new();
+    protected List<RendererFeature> features = new();
 
-    /// <summary>每帧构建 Pass 列表。子类实现具体的渲染管线。</summary>
     public abstract void Build();
 
-    /// <summary>执行所有 Pass。</summary>
-    public void Render()
+    public void AddFeature(RendererFeature feature)
     {
-        unsafe
-        {
-            Interop.API.SrpBeginFrame();
-
-            for (int i = 0; i < passes.Count; i++)
-            {
-                var pass = passes[i];
-
-                // Begin render target (TODO: use actual RT handles from shaderpack config)
-                uint noRT = 0;
-                int w = 1280, h = 720;
-                Interop.API.SrpCmdBeginRenderPass(0, &noRT, 0, null, 1.0f, w, h);
-
-                pass.Execute();
-
-                Interop.API.SrpCmdEndRenderPass();
-            }
-
-            Interop.API.SrpEndFrame();
-        }
+        feature.Create();
+        features.Add(feature);
     }
 
-    /// <summary>释放所有 GPU 资源。</summary>
+    public void RemoveFeature(RendererFeature feature)
+    {
+        features.Remove(feature);
+        feature.Dispose();
+    }
+
+    public void Render()
+    {
+        var cmd = new CommandBuffer();
+        cmd.BeginFrame();
+
+        var sorted = CollectAndSort();
+
+        foreach (var entry in sorted)
+        {
+            entry(cmd);
+        }
+
+        cmd.EndFrame();
+    }
+
+    private struct ScheduledPass
+    {
+        public RenderPassEvent Event;
+        public Action<CommandBuffer> Execute;
+    }
+
+    private List<Action<CommandBuffer>> CollectAndSort()
+    {
+        var scheduled = new List<ScheduledPass>();
+
+        for (int i = 0; i < passes.Count; i++)
+        {
+            var pass = passes[i];
+            scheduled.Add(new ScheduledPass
+            {
+                Event = RenderPassEvent.AfterSkybox,
+                Execute = cmd =>
+                {
+                    cmd.BeginRenderPass();
+                    pass.Execute(cmd);
+                    cmd.EndRenderPass();
+                }
+            });
+        }
+
+        for (int i = 0; i < features.Count; i++)
+        {
+            var feature = features[i];
+            scheduled.Add(new ScheduledPass
+            {
+                Event = feature.InjectionPoint,
+                Execute = feature.Execute
+            });
+        }
+
+        scheduled.Sort((a, b) => a.Event.CompareTo(b.Event));
+
+        var result = new List<Action<CommandBuffer>>(scheduled.Count);
+        for (int i = 0; i < scheduled.Count; i++)
+            result.Add(scheduled[i].Execute);
+        return result;
+    }
+
     public virtual void Dispose()
     {
         for (int i = 0; i < passes.Count; i++)
             passes[i].Dispose();
+        for (int i = 0; i < features.Count; i++)
+            features[i].Dispose();
         passes.Clear();
+        features.Clear();
     }
 }
 
-/// <summary>
-/// Shaderpack 渲染管线 — 根据 Iris/OptiFine shaderpack 动态生成 Pass。
-/// </summary>
 public class ShaderpackPipeline : RenderPipeline
 {
     private ShaderpackAsset? _pack;
-    private MinecraftUniforms _uniforms = new();
 
     public void LoadPack(ShaderpackAsset pack)
     {
@@ -59,11 +98,8 @@ public class ShaderpackPipeline : RenderPipeline
         Build();
     }
 
-    public MinecraftUniforms Uniforms => _uniforms;
-
     public override void Build()
     {
-        // 清理旧 Pass
         for (int i = 0; i < passes.Count; i++)
             passes[i].Dispose();
         passes.Clear();
@@ -72,113 +108,57 @@ public class ShaderpackPipeline : RenderPipeline
 
         var programs = _pack.Programs;
 
-        // Shadow Pass
         if (programs.TryGetValue("shadow", out var shadow))
-        {
-            passes.Add(CompileGBufferPass("shadow", shadow));
-        }
+            passes.Add(MakeGBufferPass("shadow", shadow));
 
-        // GBuffers terrain
         if (programs.TryGetValue("gbuffers_terrain", out var terrain))
-        {
-            passes.Add(CompileGBufferPass("gbuffers_terrain", terrain, 
-                rtFormats: new uint[] { 0, 1, 2 })); // colortex0,1,2
-        }
+            passes.Add(MakeGBufferPass("gbuffers_terrain", terrain));
 
-        // Deferred
         if (programs.TryGetValue("deferred", out var deferred))
-        {
-            passes.Add(CompileCompositePass("deferred", deferred));
-        }
+            passes.Add(MakeCompositePass("deferred", deferred));
 
-        // Composite chain (composite, composite1, composite2...)
         for (int i = 0; ; i++)
         {
             string name = i == 0 ? "composite" : $"composite{i}";
             if (programs.TryGetValue(name, out var comp))
-                passes.Add(CompileCompositePass(name, comp));
+                passes.Add(MakeCompositePass(name, comp));
             else
                 break;
         }
 
-        // Final output
         if (programs.TryGetValue("final", out var final))
-        {
-            passes.Add(CompileCompositePass("final", final, isFinal: true));
-        }
+            passes.Add(MakeCompositePass("final", final, isFinal: true));
     }
 
-    private RenderPass CompileGBufferPass(string name, ShaderpackProgram program, uint[]? rtFormats = null)
+    private RenderPass MakeGBufferPass(string name, ShaderpackProgram program)
     {
-        var vs = CompileShader(program.VertexSource, SRPShaderStage.Vertex);
-        var fs = CompileShader(program.FragmentSource, SRPShaderStage.Fragment);
-
-        var desc = new SRPPipelineDesc
+        var vs = new Shader(program.VertexSource, ShaderStage.Vertex);
+        var fs = new Shader(program.FragmentSource, ShaderStage.Fragment);
+        var pipeline = new GraphicsPipeline(vs, fs, new PipelineDesc
         {
-            VertexShader = vs,
-            FragmentShader = fs,
-            NumRenderTargets = (uint)(rtFormats?.Length ?? 1),
-            DepthStencilFormat = 50, // D32_Float
-            CullMode = 2, // Back
-            DepthTest = 1,
-            DepthWrite = 1,
-            DepthFunc = 4, // Less
-            BlendColorWriteMask = 0xF,
-        };
-
-        if (rtFormats != null)
-        {
-            unsafe
-            {
-                for (int i = 0; i < rtFormats.Length && i < 8; i++)
-                    desc.RenderTargetFormats[i] = rtFormats[i];
-            }
-        }
-
-        uint pipeline;
-        unsafe { pipeline = Interop.API.SrpCreatePipeline(&desc); }
-
-        return new RenderPass(name, vs, fs, pipeline, _uniforms);
-    }
-
-    private RenderPass CompileCompositePass(string name, ShaderpackProgram program, bool isFinal = false)
-    {
-        var vs = CompileShader(program.VertexSource, SRPShaderStage.Vertex);
-        var fs = CompileShader(program.FragmentSource, SRPShaderStage.Fragment);
-
-        var desc = new SRPPipelineDesc
-        {
-            VertexShader = vs,
-            FragmentShader = fs,
             NumRenderTargets = 1,
-            CullMode = 0, // None (fullscreen quad)
-            DepthTest = 0,
-            DepthWrite = 0,
+            DepthStencilFormat = 50,
+            CullMode = 2,
+            DepthTest = true,
+            DepthWrite = true,
+            DepthFunc = 4,
             BlendColorWriteMask = 0xF,
-        };
-
-        uint pipeline;
-        unsafe { pipeline = Interop.API.SrpCreatePipeline(&desc); }
-
-        return new RenderPass(name, vs, fs, pipeline, _uniforms) { IsFinal = isFinal };
+        });
+        return new RenderPass(name, vs, fs, pipeline);
     }
 
-    private static uint CompileShader(string source, SRPShaderStage stage)
+    private RenderPass MakeCompositePass(string name, ShaderpackProgram program, bool isFinal = false)
     {
-        unsafe
+        var vs = new Shader(program.VertexSource, ShaderStage.Vertex);
+        var fs = new Shader(program.FragmentSource, ShaderStage.Fragment);
+        var pipeline = new GraphicsPipeline(vs, fs, new PipelineDesc
         {
-            fixed (byte* srcPtr = System.Text.Encoding.UTF8.GetBytes(source))
-            {
-                return Interop.API.SrpCreateShader(srcPtr, (uint)source.Length, (uint)stage);
-            }
-        }
+            NumRenderTargets = 1,
+            CullMode = 0,
+            DepthTest = false,
+            DepthWrite = false,
+            BlendColorWriteMask = 0xF,
+        });
+        return new RenderPass(name, vs, fs, pipeline) { IsFinal = isFinal };
     }
-}
-
-internal enum SRPShaderStage : uint
-{
-    Vertex = 0,
-    Fragment = 1,
-    Compute = 2,
-    Geometry = 3
 }
