@@ -41,6 +41,7 @@ public static class ScriptEntry
     public static void OnFrame(float dt)
     {
         _world?.Step(dt);
+        _pipeline?.WaterSSR.Update(dt);
     }
 
     [UnmanagedCallersOnly(EntryPoint = "OnRender")]

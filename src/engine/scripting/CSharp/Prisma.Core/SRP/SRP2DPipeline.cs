@@ -7,7 +7,10 @@ namespace Prisma.SRP;
 /// </summary>
 public sealed class SRP2DRenderPipeline : RenderPipeline
 {
+    public SSRWaterFeature WaterSSR { get; } = new();
+
     public override void Build()
     {
+        AddFeature(WaterSSR);
     }
 }
