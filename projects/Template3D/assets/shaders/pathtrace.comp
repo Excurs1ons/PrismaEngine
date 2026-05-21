@@ -2,8 +2,8 @@
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-layout(rgba32f, binding = 0) uniform image2D outputImage;
-layout(rgba32f, binding = 1) uniform image2D accumImage;
+layout(rgba16f, binding = 0) uniform image2D outputImage;
+layout(rgba16f, binding = 1) uniform image2D accumImage;
 
 // Camera UBO (std140)
 layout(std140, binding = 2) uniform CameraUBO {
@@ -227,7 +227,7 @@ vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
         vec3 u1 = abs(hit.normal.y) < 0.999 ? vec3(0,1,0) : vec3(1,0,0);
         vec3 tangent = normalize(cross(hit.normal, u1)), bitangent = cross(hit.normal, tangent);
         float r1 = randFloat(), r2 = randFloat(), r = sqrt(r1), phi = 6.2831853 * r2;
-        vec3 nextDir = normalize(tangent * r * cos(phi) + bitangent * r * sin(phi) + hit.normal * sqrt(max(0.0, 1.0 - r1)));
+        vec3 nextDir = tangent * r * cos(phi) + bitangent * r * sin(phi) + hit.normal * sqrt(max(0.0, 1.0 - r1));
         throughput *= hit.color;
         if (bounce > 5) {
             float s = max(throughput.r, max(throughput.g, throughput.b));

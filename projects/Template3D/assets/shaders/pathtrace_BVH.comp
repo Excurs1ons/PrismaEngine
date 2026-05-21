@@ -2,8 +2,8 @@
 
 layout(local_size_x = 8, local_size_y = 8) in;
 
-layout(rgba32f, binding = 0) uniform image2D outputImage;
-layout(rgba32f, binding = 1) uniform image2D accumImage;
+layout(rgba16f, binding = 0) uniform image2D outputImage;
+layout(rgba16f, binding = 1) uniform image2D accumImage;
 
 // Camera UBO (std140)
 layout(std140, binding = 2) uniform CameraUBO {
@@ -486,10 +486,10 @@ vec3 sampleHemisphere(vec3 normal) {
     vec3 bitangent = normalize(cross(normal, tangent));
     tangent = cross(bitangent, normal);
 
-    vec3 sampleDir = tangent * r * cos(theta) +
-                     bitangent * r * sin(theta) +
-                     normal * sqrt(max(0.0, 1.0 - u1));
-    return normalize(sampleDir);
+    // tangent/bitangent/normal 构成正交基，各分量平方和 = 1，无需外层 normalize
+    return tangent * r * cos(theta) +
+           bitangent * r * sin(theta) +
+           normal * sqrt(max(0.0, 1.0 - u1));
 }
 
 // ============ Light sampling (uniform area) ============
