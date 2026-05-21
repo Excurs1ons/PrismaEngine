@@ -436,6 +436,7 @@ option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 | 问题 | 级别 | 说明 |
 |------|------|------|
+| **窗口缩放不更新** | 中 | 路径追踪收敛后缩放窗口，渲染内容不跟随缩放（已修复，见 PathTracing.md Bug 6） |
 | **Firefly 噪点** | 中等 | Monte Carlo 方差，需 firefly clamping |
 | **低采样效率** | 中等 | Random walk 找不到光源 |
 | **软件渲染** | 环境 | proot 下仅 llvmpipe，需真机硬件 |

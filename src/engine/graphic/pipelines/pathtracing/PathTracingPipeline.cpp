@@ -20,9 +20,11 @@
 #include "graphic/ICamera.h"
 #include "graphic/interfaces/IResourceManager.h"
 #include "app/Engine.h"
+#include "core/AssetManager.h"
 #include "scene/SceneManager.h"
 #include "graphic/adapters/vulkan/VulkanResources.h"
 #include "graphic/adapters/vulkan/VulkanCommandBuffer.h"
+#include "graphic/PrimitiveComponent.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <functional>
@@ -177,11 +179,11 @@ bool PathTracingPipeline::CreateResources() {
     TextureDesc texDesc{};
     texDesc.type = TextureType::Texture2D;
     texDesc.format = TextureFormat::RGBA16_Float;
-    // 半分辨率渲染：路径追踪计算在 (width/2) × (height/2) 上执行，present 时硬件双线性上采样
+    // 原生分辨率渲染
     uint32_t createW = m_width ? m_width : 1280;
     uint32_t createH = m_height ? m_height : 720;
-    texDesc.width  = createW / 2;
-    texDesc.height = createH / 2;
+    texDesc.width  = createW;
+    texDesc.height = createH;
     texDesc.depth = 1;
     texDesc.mipLevels = 1;
     texDesc.arraySize = 1;
@@ -419,8 +421,8 @@ bool PathTracingPipeline::ResizeResources() {
     TextureDesc texDesc{};
     texDesc.type        = TextureType::Texture2D;
     texDesc.format      = TextureFormat::RGBA16_Float;
-    texDesc.width       = m_width / 2;
-    texDesc.height      = m_height / 2;
+    texDesc.width       = m_width;
+    texDesc.height      = m_height;
     texDesc.depth       = 1;
     texDesc.mipLevels   = 1;
     texDesc.arraySize   = 1;
@@ -616,7 +618,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
     auto cmd = ctx.commandBuffer;
     bool headless = m_device->IsHeadless();
 
-    // 延迟初始化：根据帧尺寸重建存储纹理和描述符集（不重建着色器/管线）
+    // 尺寸检测：必须在收敛检测之前，防止收敛后窗口缩放不更新
     if ((ctx.width != m_width || ctx.height != m_height) && ctx.width > 0 && ctx.height > 0) {
         m_width = ctx.width;
         m_height = ctx.height;
@@ -639,17 +641,8 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         ResetAccumulation();
     }
 
-    if (!m_storageTexture) return;
-    // HardwareRT 模式不依赖计算管线，检查模式标记跳过此判断
-    if (m_mode != PathTraceMode::HardwareRT && !m_computePipeline) return;
-
-    // 每帧更新场景对象的 worldMatrix（本地空间 → 世界空间变换）
-    // 累积阶段（m_frameCount > 0）场景和相机静止，无需每帧上传 SSBO
-    if (m_scene && m_frameCount == 0) {
-        UpdateTransforms(m_scene);
-    }
-
-    if (m_converged) {
+    // 收敛后且场景未变更：只做 present，不计算
+    if (m_converged && m_scene && !m_scene->IsDirty()) {
         if (!headless) {
             m_device->BeginSwapChainRenderPass();
             cmd->SetViewport(Viewport{0.0f, 0.0f, (float)m_width, (float)m_height, 0.0f, 1.0f});
@@ -663,6 +656,24 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
             if (m_overlayCB) m_overlayCB(cmd);
         }
         return;
+    }
+
+    // 场景组件变更时自动重建数据
+    if (m_scene && m_scene->IsDirty()) {
+        BuildFromScene(m_scene);
+        ResetAccumulation();
+        m_scene->SetDirty(false);
+        LOG_INFO("PathTracingPipeline", "场景数据已自动重建");
+    }
+
+    if (!m_storageTexture) return;
+    // HardwareRT 模式不依赖计算管线，检查模式标记跳过此判断
+    if (m_mode != PathTraceMode::HardwareRT && !m_computePipeline) return;
+
+    // 每帧更新场景对象的 worldMatrix（本地空间 → 世界空间变换）
+    // 累积阶段（m_frameCount > 0）场景和相机静止，无需每帧上传 SSBO
+    if (m_scene && m_frameCount == 0) {
+        UpdateTransforms(m_scene);
     }
 
     if (!headless) {
@@ -719,7 +730,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         cmd->SetComputePipeline(m_computePipeline.get());
         cmd->BindDescriptorSet(0, m_descriptorSet.get());
 
-        uint32_t cw = m_width / 2, ch = m_height / 2;
+        uint32_t cw = m_width, ch = m_height;
         cmd->Dispatch((cw + 7) / 8, (ch + 7) / 8, 1);
 
         cmd->PipelineBarrier({{ m_storageTexture.get(), ResourceState::UnorderedAccess, ResourceState::ShaderRead }});
@@ -777,6 +788,87 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
     for (const auto& node : scene->GetNodes()) {
         if (objectIdx >= maxObjects) break;
 
+        // 优先检查 PrimitiveComponent（原生图元，无需三角化）
+        auto primComp = scene->GetComponent<Graphic::PrimitiveComponent>(node);
+        if (primComp && primComp->IsEnabled()) {
+            auto emissive = primComp->GetEmissive();
+            float r = 0.7f, g = 0.7f, b = 0.7f;
+            // 从材质文件读取颜色
+            auto* am = Engine::Get().GetAssetManager();
+            if (am && !primComp->GetMaterialPath().empty()) {
+                auto matHandle = am->Load<Graphic::Material>(primComp->GetMaterialPath(), nullptr);
+                if (auto mat = matHandle.Get()) {
+                    if (auto* baseColor = mat->GetParam("BaseColor")) {
+                        if (auto* c = std::get_if<PrismaMath::vec4>(baseColor)) {
+                            r = c->r; g = c->g; b = c->b;
+                        }
+                    }
+                }
+            }
+
+            auto& obj = m_cachedSceneData.objects[objectIdx];
+            // 从节点 transform 计算世界空间位置/缩放（原图元在局部空间以原点为单位大小）
+            auto primTransform = scene->GetComponent<Transform>(node);
+            glm::vec3 worldPos(0.0f), worldScale(1.0f);
+            glm::quat worldRot(1.0f, 0.0f, 0.0f, 0.0f);
+            if (primTransform) {
+                worldPos   = primTransform->GetPosition();
+                worldScale = primTransform->GetScale();
+                worldRot   = primTransform->GetRotation();
+            }
+            // 均匀缩放作为通用尺寸因子
+            float uniformScale = (worldScale.x + worldScale.y + worldScale.z) / 3.0f;
+
+            switch (primComp->GetShape()) {
+                case Graphic::PrimitiveShape::Sphere:
+                    obj.p0[0] = worldPos.x; obj.p0[1] = worldPos.y; obj.p0[2] = worldPos.z;
+                    obj.p0[3] = 1.0f;                     // type=1
+                    obj.p1[0] = 1.0f * uniformScale;       // 世界空间半径
+                    break;
+                case Graphic::PrimitiveShape::Box:
+                    obj.p0[0] = worldPos.x; obj.p0[1] = worldPos.y; obj.p0[2] = worldPos.z;
+                    obj.p0[3] = 2.0f;                     // type=2
+                    obj.p1[0] = 0.5f * worldScale.x;       // half-size (cube.obj: ±0.5 → 半边长0.5)
+                    obj.p1[1] = 0.5f * worldScale.y;
+                    obj.p1[2] = 0.5f * worldScale.z;
+                    // 从 quaternion 提取 Y 轴旋转
+                    {   float cosA = 1.0f - 2.0f * (worldRot.y * worldRot.y + worldRot.z * worldRot.z);
+                        float sinA = 2.0f * (worldRot.x * worldRot.z + worldRot.w * worldRot.y);
+                        obj.p2[0] = cosA; obj.p2[1] = sinA;
+                    }
+                    break;
+                case Graphic::PrimitiveShape::Cone:
+                    obj.p0[0] = worldPos.x; obj.p0[1] = worldPos.y; obj.p0[2] = worldPos.z;
+                    obj.p0[3] = 3.0f;                     // type=3
+                    obj.p1[0] = 0.5f * worldScale.x;       // 半径
+                    obj.p1[1] = 0.5f * worldScale.y;       // half-height
+                    obj.p2[0] = 1.0f; obj.p2[1] = 0.0f;    // cosA=1, sinA=0
+                    break;
+                case Graphic::PrimitiveShape::Plane:
+                    obj.p0[0] = worldPos.x; obj.p0[1] = worldPos.y; obj.p0[2] = worldPos.z;
+                    obj.p0[3] = 0.0f;                     // type=0
+                    // 法线：局部 +Y 经过旋转 → 世界空间
+                    {   glm::vec3 localN(0.0f, 1.0f, 0.0f);
+                        glm::vec3 worldN = worldRot * localN;
+                        obj.p1[0] = worldN.x; obj.p1[1] = worldN.y; obj.p1[2] = worldN.z;
+                    }
+                    // UV bounds（plane.obj: 2×2 → 半边长 1.0）
+                    obj.p2[0] = -1.0f * worldScale.x;
+                    obj.p2[1] = -1.0f * worldScale.z;
+                    obj.p2[2] =  1.0f * worldScale.x;
+                    obj.p2[3] =  1.0f * worldScale.z;
+                    break;
+            }
+            obj.color[0] = r; obj.color[1] = g; obj.color[2] = b;
+            obj.color[3] = emissive.x + emissive.y + emissive.z;
+            Matrix4x4 identity(1.0f);
+            std::memcpy(obj.worldMatrix, &identity, sizeof(float) * 16);
+            std::memcpy(obj.invWorldMatrix, &identity, sizeof(float) * 16);
+            m_cachedNodeHandles[objectIdx] = node.handle;
+            objectIdx++;
+            continue;
+        }
+
         auto meshRenderer = scene->GetComponent<Graphic::MeshRenderer>(node);
         if (!meshRenderer) continue;
 
@@ -810,13 +902,11 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
                 uint32_t i1 = indices[ti * 3 + 1];
                 uint32_t i2 = indices[ti * 3 + 2];
 
-                // 本地空间顶点（不上世界变换，shader 中每帧通过 worldMatrix 转换）
                 glm::vec3 v0 = glm::vec3(positions[i0]);
                 glm::vec3 v1 = glm::vec3(positions[i1]);
                 glm::vec3 v2 = glm::vec3(positions[i2]);
 
                 auto& tri = m_cachedTriangleData.triangles[triOffset + ti];
-                // 写入 4 个 float 匹配 GPU std430 的 vec3 对齐（16 字节/顶点）
                 std::memcpy(tri.vertices[0].pos, &v0, sizeof(float) * 3);
                 tri.vertices[0].pos[3] = 0.0f;
                 std::memcpy(tri.vertices[1].pos, &v1, sizeof(float) * 3);
@@ -824,7 +914,6 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
                 std::memcpy(tri.vertices[2].pos, &v2, sizeof(float) * 3);
                 tri.vertices[2].pos[3] = 0.0f;
 
-                // 写入顶点法线（来自 OBJ vn，或为空时用面法线在 shader 中自动计算）
                 if (!normals.empty() && i0 < normals.size() && i1 < normals.size() && i2 < normals.size()) {
                     glm::vec3 n0 = glm::vec3(normals[i0]);
                     glm::vec3 n1 = glm::vec3(normals[i1]);
@@ -837,10 +926,8 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
                     tri.vertices[2].nrm[3] = 0.0f;
                 }
             }
-
             totalTris += triCount;
         }
-
         if (totalTris == 0) continue;
 
         // 创建 PTSceneObject（type=4 = 三角形网格）
@@ -878,6 +965,13 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
 
     LOG_INFO("PathTracingPipeline", "BuildFromScene: {} 个对象, {} 个三角形",
              objectIdx, triOffset);
+}
+
+void PathTracingPipeline::ReloadSceneData() {
+    if (!m_scene || !m_initialized) return;
+    BuildFromScene(m_scene);
+    ResetAccumulation();
+    LOG_INFO("PathTracingPipeline", "场景数据已重建");
 }
 
 void PathTracingPipeline::UpdateTransforms(Scene* scene) {
@@ -933,8 +1027,8 @@ bool PathTracingPipeline::SaveOutput(const std::string& path) {
     LOG_INFO("PathTracingPipeline", "保存输出到: {} (帧数: {})", path, m_frameCount);
     m_device->WaitForIdle();
 
-    uint32_t w = m_width / 2;
-    uint32_t h = m_height / 2;
+    uint32_t w = m_width;
+    uint32_t h = m_height;
 
     // 纹理是 RGBA16_Float (8 bytes/pixel)，以原始字节形式回读
     size_t rawSize = (size_t)w * h * 8;

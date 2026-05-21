@@ -290,6 +290,32 @@ hit.normal = faceNormal;
 
 **修复**: `Initialize()` 中主动预置 `m_width = 1280; m_height = 720;`，并分离出 `ResizeResources()` 仅重建纹理 + 描述符集，不碰着色器/管线。
 
+### Bug 6: 窗口缩放后渲染内容不跟随更新
+
+**症状**: 路径追踪渲染收敛后（`m_converged = true`），调整 Template3D 窗口大小，渲染内容保持在原始分辨率，不跟随缩放。
+
+**根因**: `PathTracingPipeline::Execute()` 中收敛后的提前返回（`if (m_converged ...) return;`）位于窗口缩放检测之前。收敛后窗口缩放时，缩放检测代码（`ResizeResources()`）永远不会被执行：
+
+```
+Execute 流程（修复前）:
+  1. m_converged 检查 → 是 → BeginSwapChainRP + Present → return
+                                             ↑
+  2. 窗口缩放检测  → 永远被跳过！         (死代码)
+```
+
+**修复**: 将窗口缩放检测移到收敛检测之前。缩放发生时 `ResetAccumulation()` 会重置 `m_converged = false`，自然进入 compute 路径以新分辨率渲染：
+
+```
+Execute 流程（修复后）:
+  1. 窗口缩放检测 → 缩放？→ ResizeResources() + ResetAccumulation()
+  2. m_converged 检查 → false（刚被重置）→ 继续
+  3. 计算 + Present（新分辨率）
+```
+
+**涉及文件**: `src/engine/graphic/pipelines/pathtracing/PathTracingPipeline.cpp`
+
+**当前状态**: 已修复。
+
 ### Bug 4: 黑屏（第二类）— PipelineBarrier 初始状态错误
 
 **症状**: 路径追踪输出全黑，dispatch 正常执行。
