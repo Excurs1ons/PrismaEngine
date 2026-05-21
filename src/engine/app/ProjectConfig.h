@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "graphic/interfaces/RenderTypes.h"
+#include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 #include <glaze/glaze.hpp>
 #include <string>
 #include <vector>
@@ -44,7 +45,7 @@ struct RenderingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
     bool hardwareRayTracing = false; // DXR 硬件加速预留
-    std::string pathTraceMode = "Flat"; // 路径追踪模式: "Flat"/"BVH"/"HardwareRT"
+    Graphic::PathTraceMode pathTraceMode = Graphic::PathTraceMode::BVH;
     bool enableNEE = false;            // 下一事件估计（小光源时显著提升收敛）
 };
 
@@ -102,6 +103,16 @@ struct glz::meta<Prisma::Graphic::PresentMode> {
         "Mailbox", Mailbox,
         "Adaptive", Adaptive,
         "VSync", VSync
+    );
+};
+
+template <>
+struct glz::meta<Prisma::Graphic::PathTraceMode> {
+    using enum Prisma::Graphic::PathTraceMode;
+    static constexpr auto value = glz::enumerate(
+        "Flat", Flat,
+        "BVH", BVH,
+        "HardwareRT", HardwareRT
     );
 };
 

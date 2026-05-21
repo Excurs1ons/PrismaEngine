@@ -1,0 +1,65 @@
+{
+    // 项目名称（HUD 左上角显示）
+    "name": "Template3D（3D路径追踪模板）",
+
+    // 入口场景（相对 assets/ 搜索路径）
+    "entryScene": "scenes/cornell_box.scene.json",
+
+    // 资产搜索路径
+    "assets": ["assets", "projects/Template3D/assets"],
+
+    // ========== 窗口配置 ==========
+    "window": {
+        "width": 1280,      // 初始窗口宽度（像素）
+        "height": 720,      // 初始窗口高度（像素）
+        "fullscreen": false, // 是否全屏
+        "resizable": true,   // 是否可调整大小
+
+        // 垂直同步模式（PresentMode 枚举）:
+        //   0 = Immediate  — 立即呈现（关闭垂直同步，可能画面撕裂）
+        //   1 = VSync      — 等待垂直同步（限制帧率=刷新率）
+        //   2 = Mailbox    — 邮箱模式（三重缓冲，低延迟）
+        //   3 = Adaptive   — 自适应垂直同步
+        "vsync": 2,
+
+        "maxFPS": 0          // 帧率上限（0=不限制）
+    },
+
+    // ========== 渲染模式 ==========
+    // (RenderMode 枚举)
+    //   0 = 2D
+    //   1 = Forward 3D
+    //   2 = Forward+ 3D
+    //   3 = Deferred 3D
+    //   4 = Deferred+ 3D
+    //   5 = PathTracing
+    //   6 = SRP（脚本渲染管线）
+    "renderMode": 5,
+
+    // ========== 脚本后端 ==========
+    "scriptingBackend": "CoreCLR",
+
+    // ========== 路径追踪配置 ==========
+    "rendering": {
+        "maxSamples": 1024,  // 最大采样帧数（收敛后停止累积）
+        "maxBounces": 16,    // 光线最大弹射次数
+
+        "hardwareRayTracing": false,  // 是否启用 DXR 硬件加速（预留）
+
+        // 路径追踪模式（PathTraceMode 枚举）:
+        //   0 = Flat       — 暴力遍历所有三角形（兼容性好）
+        //   1 = BVH        — BVH 加速遍历（默认，性能更佳）
+        //   2 = HardwareRT — Vulkan 硬件光线追踪（需 RTX 显卡）
+        "pathTraceMode": 1,
+
+        "enableNEE": false   // 下一事件估计（小光源场景显著提升收敛速度）
+    },
+
+    // ========== 无头渲染配置（CLI --headless） ==========
+    "headless": {
+        "frames": 500,      // 渲染帧数
+        "width": 1080,       // 输出宽度
+        "height": 1080,      // 输出高度
+        "outputPath": "pt_output.png"  // 输出文件路径
+    }
+}

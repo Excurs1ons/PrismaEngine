@@ -70,10 +70,8 @@ int Template3DApp::OnInitialize() {
     // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
     m_ptPipeline->SetMaxSamples(m_ptMaxSamples > 0 ? m_ptMaxSamples : m_Spec.MaxSamples);
 
-    // 从 project.json 读取路径追踪模式
-    if (m_Spec.PathTraceMode == "Flat") m_ptPipeline->SetMode(Graphic::PathTraceMode::Flat);
-    else if (m_Spec.PathTraceMode == "BVH") m_ptPipeline->SetMode(Graphic::PathTraceMode::BVH);
-    else if (m_Spec.PathTraceMode == "HardwareRT") m_ptPipeline->SetMode(Graphic::PathTraceMode::HardwareRT);
+    // 从 project.jsonc 读取路径追踪模式
+    m_ptPipeline->SetMode(m_Spec.PathTraceMode);
 
     // 从 project.json 读取 NEE 开关
     m_enableNEE = m_Spec.EnableNEE;

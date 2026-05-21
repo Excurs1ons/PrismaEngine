@@ -16,6 +16,7 @@
 #include "core/Event.h"
 #include "Window.h"
 #include "graphic/interfaces/RenderTypes.h"
+#include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 
 namespace Prisma {
 
@@ -34,7 +35,7 @@ struct ApplicationSpecification {
     uint32_t MaxSamples = 512;
     uint32_t MaxBounces = 4;
     bool HardwareRayTracing = false;
-    std::string PathTraceMode = "Flat";
+    Graphic::PathTraceMode PathTraceMode = Graphic::PathTraceMode::BVH;
     bool EnableNEE = false;
     uint32_t HeadlessFrames = 500;
     uint32_t HeadlessWidth = 1080;

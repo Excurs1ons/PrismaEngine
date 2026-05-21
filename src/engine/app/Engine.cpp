@@ -136,13 +136,22 @@ int Engine::Run(std::unique_ptr<Application> app) {
     {
         auto& spec                         = m_CurrentApp->GetSpecification();
         std::vector<std::string> projPaths = {
+            "assets/project.jsonc",
             "assets/project.json",
+            "project.jsonc",
             "project.json",
+            "projects/PrismaCraft/assets/project.jsonc",
             "projects/PrismaCraft/assets/project.json",
+            "../projects/PrismaCraft/assets/project.jsonc",
             "../projects/PrismaCraft/assets/project.json",
+            "projects/Template2D/assets/project.jsonc",
             "projects/Template2D/assets/project.json",
+            "../projects/Template2D/assets/project.jsonc",
             "../projects/Template2D/assets/project.json",
+            "projects/Template3D/assets/project.jsonc",
             "projects/Template3D/assets/project.json",
+            "../projects/Template3D/assets/project.jsonc",
+            "../projects/Template3D/assets/project.json",
         };
         for (const auto& p : projPaths) {
             // 手动读取文件（可处理 BOM）
