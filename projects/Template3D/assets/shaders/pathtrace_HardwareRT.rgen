@@ -134,9 +134,11 @@ void main() {
         vec3 hitPos = origin + dir * prd.t;
         vec3 hitNormal = prd.normal;
 
-        // 直接光照贡献
+        // 直接光照贡献（NEE 开启时只在 bounce==0 添加，后续由 NEE 处理）
         if (prd.emissive > 0.0) {
-            radiance += throughput * prd.color * prd.emissive;
+            if (bounce == 0 || ubo.enableNEE == 0) {
+                radiance += throughput * prd.color * prd.emissive;
+            }
             break;
         }
 
@@ -169,7 +171,7 @@ void main() {
                     // 阴影射线（只检测是否遮挡，共用 prd payload location 4）
                     prd.hitType = 0;
                     traceRayEXT(tlas, gl_RayFlagsTerminateOnFirstHitEXT, 0xff, 0, 0, 0,
-                                hitPos + hitNormal * EPS, 0.001, lDir, d, 4);
+                                hitPos + EPS * lDir, 0.001, lDir, d, 4);
 
                     float vis = (prd.hitType == 0) ? 1.0 : 0.0;
                     if (vis > 0.0) {

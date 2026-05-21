@@ -171,7 +171,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
             }
 
             ProjectConfig config;
-            auto err = glz::read_json(config, buf);
+            auto err = glz::read_jsonc(config, buf);
             if (!err) {
                 spec.Name               = config.name;
                 spec.EntryScene         = config.entryScene;

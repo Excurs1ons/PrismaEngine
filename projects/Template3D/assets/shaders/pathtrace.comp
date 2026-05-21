@@ -261,6 +261,8 @@ float traceShadow(vec3 origin, vec3 dir, float maxT, int skipIndex1, int skipInd
         int type = int(obj.p0.w); HitResult r;
         if (type == 0) { if (intersectPlane(origin, dir, obj, r) && r.t < maxT - EPS) return 0.0; }
         else if (type == 1) { if (intersectSphere(origin, dir, obj, r) && r.t < maxT - EPS) return 0.0; }
+        else if (type == 2) { if (intersectBox(origin, dir, obj, r) && r.t < maxT - EPS) return 0.0; }
+        else if (type == 3) { if (intersectCone(origin, dir, obj, r) && r.t < maxT - EPS) return 0.0; }
         else if (type == 4) {
             int firstTri = int(obj.p1.x), triCount = int(obj.p1.y);
             vec3 lo = (obj.invWorldMatrix * vec4(origin, 1.0)).xyz;
@@ -302,8 +304,10 @@ vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
         if (!traceScene(origin, dir, -1, hit)) break;
         vec3 hitPos = origin + hit.t * dir;
         if (hit.emissive > 0.0) {
-            // 调试用：无论是否开启 NEE，都添加灯光直接命中（会偏亮但能证明可见性）
-            radiance += throughput * hit.color * hit.emissive;
+            // NEE 开启时只在 bounce==0 添加自发光（后续由 NEE 处理）；NEE 关闭时始终添加
+            if (bounce == 0 || ubo.enableNEE == 0) {
+                radiance += throughput * hit.color * hit.emissive;
+            }
             break;
         }
         if (ubo.enableNEE != 0 && lightIndex >= 0) {
@@ -313,7 +317,7 @@ vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
             float cosH = max(dot(lDir, hit.normal), 0.0);
             float cosL = abs(dot(lDir, lNormal)); // 强制灯光双面采样
             if (cosH > 0.0 && cosL > 0.0 && lPdf > 0.0 && d2 > 0.0001) {
-                float vis = traceShadow(hitPos + hit.normal * EPS, lDir, d, hit.objIndex, lightIndex);
+                float vis = traceShadow(hitPos + EPS * lDir, lDir, d, hit.objIndex, lightIndex);
                 if (vis > 0.0) radiance += min(throughput * lObj.color.rgb * lObj.color.w * hit.color * cosH * cosL * vis / (3.14159265 * d2 * lPdf), vec3(2.0));
             }
         }
