@@ -941,6 +941,8 @@ void VulkanRTBackend::BindAndTraceRays(VkCommandBuffer cmd, uint32_t width, uint
                                         VkDescriptorSet descSet) {
     if (m_rtPipeline == VK_NULL_HANDLE || descSet == VK_NULL_HANDLE) return;
 
+    LOAD_RT_FUNC(m_device, vkCmdTraceRaysKHR);
+
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, m_rtPipeline);
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
                             m_rtPipelineLayout, 0, 1, &descSet, 0, nullptr);

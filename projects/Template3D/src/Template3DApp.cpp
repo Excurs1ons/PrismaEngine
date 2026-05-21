@@ -44,12 +44,6 @@ int Template3DApp::OnInitialize() {
                  m_Spec.Width, m_Spec.Height, m_headlessCfg.totalFrames, m_headlessCfg.outputPath);
     }
 
-    m_device = Engine::Get().GetRenderSystem()->GetDevice();
-    if (!m_device) {
-        LOG_ERROR("Template3D", "无法获取渲染设备");
-        return -1;
-    }
-
     m_ptPipeline = Engine::Get().GetRenderSystem()->GetMainPipelineAs<Graphic::PathTracingPipeline>();
     if (!m_ptPipeline) {
         LOG_ERROR("Template3D", "获取路径追踪管线失败（renderMode 不匹配？）");
@@ -66,12 +60,21 @@ int Template3DApp::OnInitialize() {
     // 从 project.json 读取管线参数（可被 CLI --samples 覆盖）
     m_ptPipeline->SetMaxSamples(m_ptMaxSamples > 0 ? m_ptMaxSamples : m_Spec.MaxSamples);
 
+    // 从 project.json 读取路径追踪模式
+    if (m_Spec.PathTraceMode == "Flat") m_ptPipeline->SetMode(Graphic::PathTraceMode::Flat);
+    else if (m_Spec.PathTraceMode == "BVH") m_ptPipeline->SetMode(Graphic::PathTraceMode::BVH);
+    else if (m_Spec.PathTraceMode == "HardwareRT") m_ptPipeline->SetMode(Graphic::PathTraceMode::HardwareRT);
+
+    // 从 project.json 读取 NEE 开关
+    m_enableNEE = m_Spec.EnableNEE;
+    m_ptPipeline->EnableNEE(m_enableNEE);
+
     LOG_INFO("Template3D", "P/R 重置累积，[/] 调整采样帧数，N 切换 NEE");
     return 0;
 }
 
 void Template3DApp::OnRender() {
-    if (!m_ptPipeline || !m_device) return;
+    if (!m_ptPipeline) return;
 
     DrawStatsOverlay();
 }
@@ -121,8 +124,7 @@ void Template3DApp::DrawStatsOverlay() {
         m_overlayRefreshTimer = 0.0f;
     }
 
-    auto camera = m_scene ? m_scene->GetMainCamera() : nullptr;
-    auto pos = camera ? camera->GetPosition() : PrismaMath::vec3{0.0f};
+
 
     Renderer2D::DrawString(m_overlayTimingInfo, {30.0f, winH - 45.0f}, 1.5f, {0.2f, 1.0f, 0.2f, 1.0f});
     Renderer2D::DrawString(m_overlayStatusStr, {30.0f, winH - 85.0f}, 1.5f, m_overlayStatusColor);
@@ -143,11 +145,6 @@ void Template3DApp::DrawStatsOverlay() {
 
     Renderer2D::DrawString("[P/R] Reset  [N] NEE  [M] Mode  [ -Samples+ ]",
                            {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
-    Renderer2D::DrawString(
-        "Cam: (" + std::to_string(static_cast<int>(pos.x)) + ", "
-                 + std::to_string(static_cast<int>(pos.y)) + ", "
-                 + std::to_string(static_cast<int>(pos.z)) + ")",
-        {30.0f, 95.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
 
     if (m_ptPipeline) {
         uint32_t frameCount = m_ptPipeline->GetFrameCount();

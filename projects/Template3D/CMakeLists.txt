@@ -113,6 +113,57 @@ target_compile_definitions(${TEMPLATE3D_PLUGIN_NAME} PRIVATE TEMPLATE3D_PLUGIN_E
 
 
 # ============================================================
+# GLSL → SPIR-V 自动编译
+# ============================================================
+
+find_program(GLSLANG_VALIDATOR glslangValidator)
+if(GLSLANG_VALIDATOR)
+    # 常规着色器（vert/frag/comp）
+    file(GLOB SHADER_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.vert"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.frag"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.comp"
+    )
+    foreach(SHADER ${SHADER_SOURCES})
+        get_filename_component(SHADER_NAME ${SHADER} NAME)
+        set(SPV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/${SHADER_NAME}.spv")
+        add_custom_command(
+            OUTPUT ${SPV_OUTPUT}
+            COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
+            DEPENDS ${SHADER}
+            COMMENT "Compiling ${SHADER_NAME} → SPIR-V"
+        )
+        list(APPEND GENERATED_SPVS ${SPV_OUTPUT})
+    endforeach()
+
+    # RT 着色器（需要 SPIR-V 1.4+）
+    file(GLOB RT_SHADER_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.rgen"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.rchit"
+        "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.rmiss"
+    )
+    foreach(SHADER ${RT_SHADER_SOURCES})
+        get_filename_component(SHADER_NAME ${SHADER} NAME)
+        set(SPV_OUTPUT "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/${SHADER_NAME}.spv")
+        add_custom_command(
+            OUTPUT ${SPV_OUTPUT}
+            COMMAND ${GLSLANG_VALIDATOR} --target-env vulkan1.3 -V ${SHADER} -o ${SPV_OUTPUT}
+            DEPENDS ${SHADER}
+            COMMENT "Compiling ${SHADER_NAME} → SPIR-V (Vulkan 1.3)"
+        )
+        list(APPEND GENERATED_SPVS ${SPV_OUTPUT})
+    endforeach()
+
+    # 将 SPIR-V 编译目标添加为显式依赖，确保在复制之前编译
+    add_custom_target(CompileShaders DEPENDS ${GENERATED_SPVS})
+    add_dependencies(${PROJECT_NAME} CompileShaders)
+    add_dependencies(${TEMPLATE3D_PLUGIN_NAME} CompileShaders)
+    message(STATUS "GLSL→SPIR-V 编译已启用 (glslangValidator: ${GLSLANG_VALIDATOR})")
+else()
+    message(WARNING "glslangValidator 未找到 — 着色器将使用已有的 .spv 文件")
+endif()
+
+# ============================================================
 # 复制项目资源
 # ============================================================
 

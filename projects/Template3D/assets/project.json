@@ -12,7 +12,9 @@
     },
     "rendering": {
         "maxSamples": 512,
-        "maxBounces": 4
+        "maxBounces": 4,
+        "pathTraceMode": "Flat",
+        "enableNEE": false
     },
     "headless": {
         "frames": 500,

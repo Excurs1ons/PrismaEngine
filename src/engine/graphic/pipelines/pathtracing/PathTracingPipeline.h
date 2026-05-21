@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "Export.h"
 #include "interfaces/IPipeline.h"
@@ -229,8 +229,8 @@ private:
     bool m_initialized = false;
     bool m_shadersSet = false;
     bool m_textureInitialized = false; // 存储纹理是否已有有效数据（用于 PipelineBarrier 状态跟踪）
-    PathTraceMode m_mode = PathTraceMode::BVH; // 默认 BVH 模式
-    PathTraceMode m_targetMode = PathTraceMode::BVH; // 等待激活的目标模式
+    PathTraceMode m_mode       = PathTraceMode::BVH;  // 默认 BVH 模式
+    PathTraceMode m_targetMode = PathTraceMode::BVH;  // 等待激活的目标模式
 
     // ======== 硬件光线追踪资源 ========
     std::unique_ptr<VulkanRTBackend> m_rtBackend;

@@ -125,8 +125,10 @@ bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2, vec3 n0
     if (v < 0.0 || u + v > 1.0) return false;
     float t = dot(e2, q) * invDet;
     if (t < EPS) return false;
-    vec3 n = normalize((1.0 - u - v) * n0 + u * n1 + v * n2);
-    if (dot(n, n) < 0.1) n = normalize(cross(e1, e2));
+    // 先插值，检查退化（法线全零或极小），然后用面法线回退，最后归一化
+    vec3 interpN = (1.0 - u - v) * n0 + u * n1 + v * n2;
+    if (dot(interpN, interpN) < 0.1) interpN = cross(e1, e2);
+    vec3 n = normalize(interpN);
     hit.t = t; hit.normal = (dot(dir, n) < 0.0) ? n : -n; return true;
 }
 

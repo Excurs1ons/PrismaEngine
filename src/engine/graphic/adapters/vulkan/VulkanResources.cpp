@@ -139,7 +139,7 @@ void VulkanDescriptorSet::BindTexture(uint32_t binding, ITexture* texture, ISamp
     WriteInfo write{};
     write.binding = binding;
     write.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    write.imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+    write.imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     write.imageInfo.imageView = vkTex->GetVkImageView();
     if (sampler) {
         write.imageInfo.sampler = (VkSampler)sampler->GetHandle();
@@ -197,7 +197,7 @@ void VulkanDescriptorSet::BindAccelerationStructure(uint32_t binding, void* acce
     WriteInfo write{};
     write.binding = binding;
     write.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-    write.accelerationStructure = static_cast<VkAccelerationStructureKHR>(reinterpret_cast<uintptr_t>(accelerationStructure));
+    write.accelerationStructure = reinterpret_cast<VkAccelerationStructureKHR>(accelerationStructure);
     write.isAccelerationStructure = true;
     m_writes.push_back(write);
 }

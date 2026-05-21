@@ -151,7 +151,7 @@ if(PRISMA_ENABLE_SCRIPTING)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Building C# game scripts..."
         COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
-                -c Release --nologo
+                -c Release --nologo --no-restore
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/Template2D_Managed.dll"
                 "${SCRIPTS_OUT}/Template2D_Managed.dll"

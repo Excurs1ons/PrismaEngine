@@ -8,6 +8,9 @@
 #include "graphic/interfaces/IRenderDevice.h"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <algorithm>
+#include <fstream>
+#include "graphic/RenderDesc.h"
 #include <memory>
 #include <vector>
 #include <cstdint>
@@ -177,7 +180,7 @@ public:
             return;
         }
 
-        const uint8_t rgba[4] = {
+        uint8_t rgba[4] = {
             static_cast<uint8_t>(std::clamp(color.r, 0.0f, 1.0f) * 255.0f),
             static_cast<uint8_t>(std::clamp(color.g, 0.0f, 1.0f) * 255.0f),
             static_cast<uint8_t>(std::clamp(color.b, 0.0f, 1.0f) * 255.0f),

@@ -34,6 +34,8 @@ struct ApplicationSpecification {
     uint32_t MaxSamples = 512;
     uint32_t MaxBounces = 4;
     bool HardwareRayTracing = false;
+    std::string PathTraceMode = "Flat";
+    bool EnableNEE = false;
     uint32_t HeadlessFrames = 500;
     uint32_t HeadlessWidth = 1080;
     uint32_t HeadlessHeight = 1080;

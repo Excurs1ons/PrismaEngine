@@ -1,4 +1,4 @@
-#include "Engine.h"
+﻿#include "Engine.h"
 #include "Platform.h"
 #include "Application.h"
 #include "Logger.h"
@@ -18,7 +18,10 @@
 #include "scripting/CoreCLRHost.h"
 #include "scripting/ScriptEngine.h"
 #include <typeinfo>
+#include <string_view>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include <glaze/glaze.hpp>
 #include "app/ProjectConfig.h"
 #include "threading/ThreadManager.h"
@@ -131,7 +134,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
     auto scriptingBackend = ScriptingBackend::CoreCLR;
     auto renderMode = RenderMode::Mode3D_Forward;
     {
-        auto& spec = m_CurrentApp->GetSpecification();
+        auto& spec                         = m_CurrentApp->GetSpecification();
         std::vector<std::string> projPaths = {
             "assets/project.json",
             "project.json",
@@ -142,43 +145,70 @@ int Engine::Run(std::unique_ptr<Application> app) {
             "projects/Template3D/assets/project.json",
         };
         for (const auto& p : projPaths) {
-            if (std::filesystem::exists(p)) {
-                ProjectConfig config;
-                std::string buf;
-                auto err = glz::read_file_json(config, p, buf);
-                if (!err) {
-                    spec.Name        = config.name;
-                    spec.EntryScene  = config.entryScene;
-                    spec.Width       = config.window.width;
-                    spec.Height      = config.window.height;
-                    spec.Fullscreen  = config.window.fullscreen;
-                    spec.Resizable   = config.window.resizable;
-                    spec.PresentMode = config.window.vsync;
-                    spec.MaxFPS      = config.window.maxFPS;
-                    spec.MaxSamples      = config.rendering.maxSamples;
-                    spec.MaxBounces      = config.rendering.maxBounces;
-                    spec.HardwareRayTracing = config.rendering.hardwareRayTracing;
-                    spec.HeadlessFrames  = config.headless.frames;
-                    spec.HeadlessWidth   = config.headless.width;
-                    spec.HeadlessHeight  = config.headless.height;
-                    spec.HeadlessOutputPath = config.headless.outputPath;
-                    if (m_AssetManager) {
-                        for (auto& ap : config.assets)
-                            m_AssetManager->AddSearchPath(ap);
-                    }
-                    scriptingBackend = config.scriptingBackend;
-                    renderMode = config.renderMode;
-                    LOG_INFO("Engine", "项目配置已加载: {0} ({1}x{2}), 渲染模式: {3}, 脚本后端: {4}",
-                             config.name, config.window.width, config.window.height,
-                             renderMode == RenderMode::SRP ? "SRP" :
-                             renderMode == RenderMode::Mode2D ? "2D" : "3D",
-                             scriptingBackend == ScriptingBackend::Off ? "Off" :
-                             scriptingBackend == ScriptingBackend::Mono ? "Mono" : "CoreCLR");
+            // 手动读取文件（可处理 BOM）
+            std::ifstream fileStream(p, std::ios::binary | std::ios::ate);
+            if (!fileStream) continue;
+            std::streamsize sz = fileStream.tellg();
+            fileStream.seekg(0);
+            std::string buf(static_cast<size_t>(sz), '\0');
+            fileStream.read(buf.data(), buf.size());
+
+            // 跳过 UTF-8 BOM (EF BB BF) — 使用 unsigned char 避免 sign 扩展问题
+            if (buf.size() >= 3) {
+                const auto* uBuf = reinterpret_cast<const unsigned char*>(buf.data());
+                if (uBuf[0] == 0xEF && uBuf[1] == 0xBB && uBuf[2] == 0xBF) {
+                    buf.erase(0, 3);
                 }
-                break;
             }
+
+            ProjectConfig config;
+            auto err = glz::read_json(config, buf);
+            if (!err) {
+                spec.Name               = config.name;
+                spec.EntryScene         = config.entryScene;
+                spec.Width              = config.window.width;
+                spec.Height             = config.window.height;
+                spec.Fullscreen         = config.window.fullscreen;
+                spec.Resizable          = config.window.resizable;
+                spec.PresentMode        = config.window.vsync;
+                spec.MaxFPS             = config.window.maxFPS;
+                spec.MaxSamples         = config.rendering.maxSamples;
+                spec.MaxBounces         = config.rendering.maxBounces;
+                spec.HardwareRayTracing = config.rendering.hardwareRayTracing;
+                spec.PathTraceMode      = config.rendering.pathTraceMode;
+                spec.EnableNEE          = config.rendering.enableNEE;
+                spec.HeadlessFrames     = config.headless.frames;
+                spec.HeadlessWidth      = config.headless.width;
+                spec.HeadlessHeight     = config.headless.height;
+                spec.HeadlessOutputPath = config.headless.outputPath;
+                if (m_AssetManager) {
+                    for (auto& ap : config.assets)
+                        m_AssetManager->AddSearchPath(ap);
+                }
+                scriptingBackend = config.scriptingBackend;
+                renderMode       = config.renderMode;
+                LOG_INFO("Engine",
+                         "项目配置已加载: {0} ({1}x{2}), 渲染模式: {3}, 脚本后端: {4}",
+                         config.name,
+                         config.window.width,
+                         config.window.height,
+                         renderMode == RenderMode::SRP                  ? "SRP"
+                         : renderMode == RenderMode::Mode2D             ? "2D"
+                         : renderMode == RenderMode::Mode3D_PathTracing ? "PathTracing"
+                                                                        : "3D",
+                         scriptingBackend == ScriptingBackend::Off    ? "Off"
+                         : scriptingBackend == ScriptingBackend::Mono ? "Mono"
+                                                                      : "CoreCLR");
+            } else {
+                LOG_ERROR("Engine", "项目配置文件解析失败: {} (错误: {})", p, glz::format_error(err, buf));
+            }
+            break;
         }
     }
+
+    LOG_INFO("Engine", "[诊断] renderMode={}, 是否PathTracing={}",
+             static_cast<int>(renderMode),
+             renderMode == RenderMode::Mode3D_PathTracing ? "是" : "否");
 
     if (!m_Spec.Headless) {
         WindowProps props;
@@ -205,6 +235,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
         rDesc.enableDebug      = false;
         rDesc.presentMode      = appSpec.PresentMode;
         rDesc.renderMode       = renderMode;
+        LOG_INFO("Engine", "渲染模式: {}",
+                 renderMode == RenderMode::Mode3D_PathTracing ? "PathTracing" :
+                 renderMode == RenderMode::Mode3D_Forward ? "Forward" :
+                 renderMode == RenderMode::Mode2D ? "2D" : "Other");
         rDesc.maxSamples         = appSpec.MaxSamples;
         rDesc.maxBounces         = appSpec.MaxBounces;
         rDesc.hardwareRayTracing = appSpec.HardwareRayTracing;

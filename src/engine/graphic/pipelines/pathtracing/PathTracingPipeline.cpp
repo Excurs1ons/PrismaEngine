@@ -1126,14 +1126,14 @@ void PathTracingPipeline::LoadDefaultShaders() {
     }
 
     if (!m_computeShader && m_computeSPIRV.empty()) {
-        const char* shaderPath = (m_mode == PathTraceMode::BVH)
+        const char* shaderPath = (m_targetMode == PathTraceMode::BVH)
             ? "assets/shaders/pathtrace_BVH.comp.spv"
             : "assets/shaders/pathtrace.comp.spv";
         auto shader = rm->LoadShaderSync(shaderPath);
         if (shader) {
             SetComputeShader(std::move(shader));
             LOG_INFO("PathTracingPipeline", "内部加载计算着色器: {} {}",
-                     shaderPath, m_mode == PathTraceMode::BVH ? "(BVH)" : "(Flat)");
+                     shaderPath, m_targetMode == PathTraceMode::BVH ? "(BVH)" : "(Flat)");
         }
     }
 
@@ -1307,7 +1307,7 @@ bool PathTracingPipeline::BuildRTResources([[maybe_unused]] Scene* scene) {
     m_rtRhiDescriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
                                      DescriptorType::StorageBuffer);
     m_rtRhiDescriptorSet->BindAccelerationStructure(5,
-        reinterpret_cast<void*>(static_cast<uintptr_t>(m_rtBackend->GetTLAS())));
+        reinterpret_cast<void*>(m_rtBackend->GetTLAS()));
     m_rtRhiDescriptorSet->Update();
 
     // 5. 从 RHI 描述符集布局获取 Vulkan 原生布局，创建管线布局

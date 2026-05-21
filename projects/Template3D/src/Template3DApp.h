@@ -64,8 +64,6 @@ private:
     bool m_ptConverged = false;
     uint32_t m_ptMaxSamples = 512;
     bool m_enableNEE = false;
-
-    Graphic::IRenderDevice* m_device = nullptr;
 };
 
 } // namespace Prisma

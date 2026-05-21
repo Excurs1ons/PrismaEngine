@@ -44,6 +44,8 @@ struct RenderingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
     bool hardwareRayTracing = false; // DXR 硬件加速预留
+    std::string pathTraceMode = "Flat"; // 路径追踪模式: "Flat"/"BVH"/"HardwareRT"
+    bool enableNEE = false;            // 下一事件估计（小光源时显著提升收敛）
 };
 
 struct HeadlessConfig {
@@ -120,7 +122,9 @@ struct glz::meta<Prisma::RenderingConfig> {
     static constexpr auto value = glz::object(
         "maxSamples", &Prisma::RenderingConfig::maxSamples,
         "maxBounces", &Prisma::RenderingConfig::maxBounces,
-        "hardwareRayTracing", &Prisma::RenderingConfig::hardwareRayTracing
+        "hardwareRayTracing", &Prisma::RenderingConfig::hardwareRayTracing,
+        "pathTraceMode", &Prisma::RenderingConfig::pathTraceMode,
+        "enableNEE", &Prisma::RenderingConfig::enableNEE
     );
 };
 

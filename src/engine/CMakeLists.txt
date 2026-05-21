@@ -240,7 +240,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
                     -c Release -r ${CS_RID} --self-contained true
                     -o "${CS_HOST_OUTPUT_DIR}/publish"
                     -p:DebugType=portable -p:DebugSymbols=true
-                    --nologo
+                    --nologo --no-restore
             DEPENDS "${CS_OUTPUT_FILE}" "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
             COMMENT "Publishing PrismaEngine.Host (self-contained, RID: ${CS_RID})"
         )
@@ -252,9 +252,10 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         # C# 源码生成器（Roslyn Analyzer，编译 GameScripts 时自动调用）
         set(CS_GENERATORS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/Prisma.Generators")
         add_custom_target(PrismaGenerators ALL
-            COMMAND ${DOTNET} build "${CS_GENERATORS_DIR}/Prisma.Generators.csproj" -c Release --nologo
+            COMMAND ${DOTNET} build "${CS_GENERATORS_DIR}/Prisma.Generators.csproj" -c Release --nologo --no-restore
             COMMENT "Building Prisma.Generators (Roslyn source generators)"
         )
+        add_dependencies(PrismaGenerators PrismaCore)
         
     else()
         message(WARNING "Scripting: 未找到 dotnet, 无法构建 C# 核心库")

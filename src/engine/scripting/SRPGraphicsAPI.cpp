@@ -285,7 +285,7 @@ void SRPGraphicsAPI::CmdBindTexture(uint32_t slot, TextureHandle tex, SamplerHan
 
 void SRPGraphicsAPI::CmdBlitRenderTarget(TextureHandle dst) {
     auto* dev = GetDev(); if (!dev) return;
-    auto* dstTex = GetTexturePtr(dst); if (!dstTex) return;
+    auto dstTex = GetTexturePtr(dst); if (!dstTex) return;
 
     auto* vkDev = dynamic_cast<Vk::RenderDeviceVulkan*>(dev);
     if (!vkDev) return;
@@ -305,7 +305,7 @@ ComputePipelineHandle SRPGraphicsAPI::CreateComputePipeline(ShaderHandle shaderH
     auto* dev = GetDev(); auto* fac = GetFac();
     if (!dev || !fac) return 0;
     auto shader = GetShaderPtr(shaderH);
-    if (!shader || shader->GetDesc().type != G::ShaderType::Compute) return 0;
+    if (!shader || shader->GetShaderType() != G::ShaderType::Compute) return 0;
 
     auto pipeline = fac->CreateComputePipelineImpl();
     if (!pipeline) return 0;
