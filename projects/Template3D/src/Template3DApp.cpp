@@ -141,7 +141,7 @@ void Template3DApp::DrawStatsOverlay() {
     Renderer2D::DrawString("Template3D (PathTracing)",
                            {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
 
-    Renderer2D::DrawString("[P/R] Reset  [N] NEE  [ -Samples+ ]",
+    Renderer2D::DrawString("[P/R] Reset  [N] NEE  [M] Mode  [ -Samples+ ]",
                            {30.0f, 65.0f}, 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
     Renderer2D::DrawString(
         "Cam: (" + std::to_string(static_cast<int>(pos.x)) + ", "
@@ -154,13 +154,15 @@ void Template3DApp::DrawStatsOverlay() {
         std::string ptInfo;
         Prisma::Vector4 ptColor;
         if (m_ptPipeline->IsConverged()) {
-            ptInfo = std::format("Converged: {}/{} samples  |  {}x{}",
-                                 frameCount, m_ptMaxSamples, m_Spec.Width, m_Spec.Height);
+            ptInfo = std::format("[{}] Converged: {}/{} samples  |  {}x{}",
+                                 m_ptPipeline->GetModeName(), frameCount, m_ptMaxSamples,
+                                 m_Spec.Width, m_Spec.Height);
             ptColor = {0.2f, 1.0f, 0.2f, 1.0f};
         } else {
             std::string maxStr = m_ptMaxSamples > 0 ? "/" + std::to_string(m_ptMaxSamples) : "+";
-            ptInfo = std::format("PathTrace: {}{} samples  |  {}x{}",
-                                 frameCount, maxStr, m_Spec.Width, m_Spec.Height);
+            ptInfo = std::format("[{}] Pt: {}{} samples  |  {}x{}",
+                                 m_ptPipeline->GetModeName(), frameCount, maxStr,
+                                 m_Spec.Width, m_Spec.Height);
             ptColor = {0.9f, 0.6f, 0.2f, 1.0f};
         }
         Renderer2D::DrawString(ptInfo, {30.0f, 130.0f}, 1.5f, ptColor);
@@ -209,12 +211,12 @@ void Template3DApp::OnEvent(Event& e) {
             LOG_INFO("Template3D", "NEE {}", m_enableNEE ? "启用" : "禁用");
             return true;
         }
-        if (key == Input::KeyCode::B && !repeat) {
+        if (key == Input::KeyCode::M && !repeat) {
             if (m_ptPipeline) {
-                m_ptPipeline->ToggleBVH();
+                m_ptPipeline->CycleMode();
                 m_ptPipeline->ResetAccumulation();
             }
-            LOG_INFO("Template3D", "BVH {}", m_ptPipeline && m_ptPipeline->GetUseBVH() ? "ON" : "OFF");
+            LOG_INFO("Template3D", "模式: {}", m_ptPipeline ? m_ptPipeline->GetModeName() : "?");
             return true;
         }
         if (key == Input::KeyCode::LeftBracket && !repeat) {

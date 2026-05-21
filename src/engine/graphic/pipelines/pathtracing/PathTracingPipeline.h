@@ -6,6 +6,7 @@
 #include "interfaces/IPipelineState.h"
 #include "interfaces/IDescriptorSet.h"
 #include "interfaces/IComputePipeline.h"
+#include "VulkanRTBackend.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -81,6 +82,13 @@ struct PathTracingCameraUBO {
     int enableNEE = 0;
 };
 
+/// 路径追踪渲染模式
+enum class PathTraceMode : uint8_t {
+    Flat = 0,       ///< 计算着色器暴力遍历所有三角形 (pathtrace.comp)
+    BVH = 1,        ///< 计算着色器 BVH 加速遍历 (pathtrace_BVH.comp)
+    HardwareRT = 2  ///< Vulkan 硬件光线追踪 (pathtrace_HardwareRT.*)
+};
+
 class ENGINE_API PathTracingPipeline : public IPipeline {
 public:
     using OverlayCallback = std::function<void(ICommandBuffer*)>;
@@ -121,9 +129,12 @@ public:
     void SetMaxBounces(uint32_t bounces) { m_maxBounces = bounces; }
     void SetMaxSamples(uint32_t samples) { m_maxSamples = samples; }
     void SetConverged(uint32_t samples) { m_converged = m_frameCount >= samples; }
-    void SetUseBVH(bool useBVH) { m_useBVH = useBVH; }
-    bool GetUseBVH() const { return m_useBVH; }
-    void ToggleBVH(); // 运行时切换 BVH/Flat 着色器（按 B 键调�?
+
+    // === 模式切换（取代旧的 SetUseBVH/ToggleBVH） ===
+    void SetMode(PathTraceMode mode);
+    PathTraceMode GetMode() const { return m_mode; }
+    void CycleMode(); // Flat → BVH → HardwareRT → Flat 循环
+    const char* GetModeName() const; // 返回当前模式名称（用于 HUD）
 
     // 输出保存（headless 模式）
     bool SaveOutput(const std::string& path);
@@ -189,7 +200,13 @@ private:
     void InitOverlayResources();
     void RenderOverlay(ICommandBuffer* cmd);
     void LoadDefaultShaders();
-    void BuildBVH();  // 构建 BVH 加速结构
+    void BuildBVH();  // 构建 CPU BVH 加速结构
+
+    // 硬件光线追踪辅助方法
+    bool LoadRTHardwareShaders();                // 加载 rgen/rchit/rmiss SPIR-V
+    bool BuildRTResources(Scene* scene);         // 构建 BLAS/TLAS/RT管线/SBT
+    void DestroyRTResources();                    // 清理 RT 资源
+    void ExecuteHardwareRT(ICommandBuffer* cmd);  // HardwareRT 模式执行
 
     // 场景数据缓存（用于延迟初始化后重上传）
     PathTracingSceneData m_cachedSceneData{};
@@ -212,7 +229,17 @@ private:
     bool m_initialized = false;
     bool m_shadersSet = false;
     bool m_textureInitialized = false; // 存储纹理是否已有有效数据（用于 PipelineBarrier 状态跟踪）
-    bool m_useBVH = true;             // 默认启用 BVH 加速结构，避免 O(N) 三角形遍历
+    PathTraceMode m_mode = PathTraceMode::BVH; // 默认 BVH 模式
+    PathTraceMode m_targetMode = PathTraceMode::BVH; // 等待激活的目标模式
+
+    // ======== 硬件光线追踪资源 ========
+    std::unique_ptr<VulkanRTBackend> m_rtBackend;
+    std::shared_ptr<IDescriptorSet> m_rtRhiDescriptorSet; // 通过 RHI 创建的 RT 描述符集
+    std::vector<uint8_t> m_rgenSPIRV;
+    std::vector<uint8_t> m_rchitSPIRV;
+    std::vector<uint8_t> m_rmissSPIRV;
+    bool m_rtResourcesBuilt = false;   // BLAS/TLAS/RT pipeline 是否已构建
+    bool m_sceneChangedSinceLastRTBuild = true; // 场景变更后标记需重建 AS
 };
 
 } // namespace Prisma::Graphic
