@@ -20,7 +20,7 @@
         //   1 = VSync      — 等待垂直同步（限制帧率=刷新率）
         //   2 = Mailbox    — 邮箱模式（三重缓冲，低延迟）
         //   3 = Adaptive   — 自适应垂直同步
-        "vsync": 2,
+        "vsync": "Mailbox",
 
         "maxFPS": 0          // 帧率上限（0=不限制）
     },
@@ -34,7 +34,7 @@
     //   4 = Deferred+ 3D
     //   5 = PathTracing
     //   6 = SRP（脚本渲染管线）
-    "renderMode": 5,
+    "renderMode": "PathTracing",
 
     // ========== 脚本后端 ==========
     "scriptingBackend": "CoreCLR",
@@ -50,7 +50,7 @@
         //   0 = Flat       — 暴力遍历所有三角形（兼容性好）
         //   1 = BVH        — BVH 加速遍历（默认，性能更佳）
         //   2 = HardwareRT — Vulkan 硬件光线追踪（需 RTX 显卡）
-        "pathTraceMode": 1,
+        "pathTraceMode": "BVH",
 
         "enableNEE": false   // 下一事件估计（小光源场景显著提升收敛速度）
     },
