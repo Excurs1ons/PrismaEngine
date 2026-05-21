@@ -1,17 +1,10 @@
-using System;
-using System.Runtime.InteropServices;
 using Prisma;
 using Prisma.SRP;
 
 namespace GameScripts;
 
-/// <summary>
-/// SRP 端到端测试：编译着色器 → 创建管线 → 录制命令 → 渲染全屏四边形。
-/// 在 Bootstrap 时自动运行，输出渲染结果。
-/// </summary>
 internal static class SRPTest
 {
-    // 最小 GLSL 着色器（#version 450 core，与现有引擎兼容）
     const string VertSrc = @"
 #version 450 core
 layout(location = 0) out vec2 uv;
@@ -30,121 +23,64 @@ void main() {
     color = vec4(c, 1.0);
 }";
 
-    // Minecraft 风格 gbuffers_terrain（带光照计算）
-    const string TerrainVert = @"
+    const string CSsrc = @"
 #version 450 core
-layout(location = 0) in vec3 pos;
-layout(location = 2) in vec2 texcoord;
-layout(location = 3) in vec2 lmcoord;
-layout(location = 0) out vec2 texCoord;
-layout(location = 1) out vec2 lightCoord;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+layout(rgba8, binding = 0) uniform image2D outputImg;
 void main() {
-    texCoord = texcoord;
-    lightCoord = lmcoord;
-    gl_Position = ftransform();
-}";
-
-    const string TerrainFrag = @"
-#version 450 core
-layout(location = 0) in vec2 texCoord;
-layout(location = 1) in vec2 lightCoord;
-layout(location = 0) out vec4 color;
-uniform sampler2D gtexture;
-uniform sampler2D lightmap;
-void main() {
-    vec4 tex = texture(gtexture, texCoord);
-    vec2 lm = texture(lightmap, lightCoord).rg;
-    color = tex * vec4(lm, lm.x, 1.0);
-}";
-
-    // 全屏复合 Pass
-    const string CompositeFrag = @"
-#version 450 core
-layout(location = 0) in vec2 uv;
-layout(location = 0) out vec4 color;
-uniform sampler2D colortex0;
-void main() {
-    color = texture(colortex0, uv);
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    vec2 uv = vec2(pos) / vec2(imageSize(outputImg));
+    vec3 c = 0.5 + 0.5 * cos(uv.xyx + vec3(0, 2, 4));
+    imageStore(outputImg, pos, vec4(c, 1.0));
 }";
 
     public static void Run()
     {
         Debug.Log("[SRPTest] Starting end-to-end SRP test...");
 
-        unsafe
+        var vs = new Shader(VertSrc, ShaderStage.Vertex);
+        var fs = new Shader(FragSrc, ShaderStage.Fragment);
+        if (vs.Handle == 0 || fs.Handle == 0)
         {
-            // 1. 编译着色器
-            uint vs = CompileVertex(VertSrc);
-            uint fs = CompileFragment(FragSrc);
-            if (vs == 0 || fs == 0)
-            {
-                Debug.LogError("[SRPTest] Shader compilation failed!");
-                return;
-            }
-            Debug.Log($"[SRPTest] Shaders compiled: vs={vs}, fs={fs}");
-
-            // 2. 创建管线
-            var desc = new SRPPipelineDesc
-            {
-                VertexShader = vs,
-                FragmentShader = fs,
-                NumRenderTargets = 1,
-                DepthStencilFormat = 50, // D32_Float
-                CullMode = 0,  // None
-                DepthTest = 0,
-                DepthWrite = 0,
-                BlendColorWriteMask = 0xF,
-            };
-            desc.RenderTargetFormats[0] = 0; // RGBA8_UNorm
-
-            uint pipeline;
-            pipeline = Interop.API.SrpCreatePipeline(&desc);
-            if (pipeline == 0)
-            {
-                Debug.LogError("[SRPTest] Pipeline creation failed!");
-                return;
-            }
-            Debug.Log($"[SRPTest] Pipeline created: {pipeline}");
-
-            // 3. 注册 SRP 渲染回调
-            ScriptEngine.OnRenderCallback = dt =>
-            {
-                unsafe
-                {
-                    // 获取当前帧命令缓冲（引擎 BeginFrame 已启动）
-                    Interop.API.SrpBeginFrame();
-
-                    // 绑定管线
-                    Interop.API.SrpCmdBindPipeline(pipeline);
-
-                    // 视口
-                    Interop.API.SrpCmdSetViewport(0, 0, 1280, 720);
-                    Interop.API.SrpCmdSetScissor(0, 0, 1280, 720);
-
-                    // 绘制全屏四边形（4 顶点）
-                    Interop.API.SrpCmdDrawFullScreenQuad();
-
-                    Interop.API.SrpEndFrame();
-                }
-            };
-
-            Debug.Log("[SRPTest] SRP pipeline ready! Rendering fullscreen quad every frame.");
+            Debug.LogError("[SRPTest] Shader compilation failed!");
+            return;
         }
-    }
+        Debug.Log($"[SRPTest] Shaders compiled: vs={vs.Handle}, fs={fs.Handle}");
 
-    private static unsafe uint CompileVertex(string src)
-    {
-        fixed (byte* ptr = System.Text.Encoding.UTF8.GetBytes(src))
+        var pipeline = new GraphicsPipeline(vs, fs, new PipelineDesc
         {
-            return Interop.API.SrpCreateShader(ptr, (uint)src.Length, (uint)SRPShaderStage.Vertex);
-        }
-    }
-
-    private static unsafe uint CompileFragment(string src)
-    {
-        fixed (byte* ptr = System.Text.Encoding.UTF8.GetBytes(src))
+            NumRenderTargets = 1,
+            DepthStencilFormat = 50,
+            CullMode = 0,
+            DepthTest = false,
+            DepthWrite = false,
+            BlendColorWriteMask = 0xF,
+        });
+        if (pipeline.Handle == 0)
         {
-            return Interop.API.SrpCreateShader(ptr, (uint)src.Length, (uint)SRPShaderStage.Fragment);
+            Debug.LogError("[SRPTest] Pipeline creation failed!");
+            return;
         }
+        Debug.Log($"[SRPTest] Pipeline created: {pipeline.Handle}");
+
+        var cs = new Shader(CSsrc, ShaderStage.Compute);
+        if (cs.Handle != 0)
+        {
+            var computePipeline = new ComputePipeline(cs, 0);
+            Debug.Log($"[SRPTest] Compute pipeline created: {computePipeline.Handle}");
+        }
+
+        ScriptEngine.OnRenderCallback = dt =>
+        {
+            var cmd = new CommandBuffer();
+            cmd.BeginFrame();
+            cmd.BindPipeline(pipeline);
+            cmd.SetViewport(0, 0, 1280, 720);
+            cmd.SetScissor(0, 0, 1280, 720);
+            cmd.DrawFullScreenQuad();
+            cmd.EndFrame();
+        };
+
+        Debug.Log("[SRPTest] SRP pipeline ready! Rendering fullscreen quad every frame.");
     }
 }
