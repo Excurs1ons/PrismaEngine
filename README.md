@@ -70,7 +70,7 @@ flowchart LR
     subgraph Cpp["C++ Engine"]
         H[CoreCLRHost]
         E[ScriptEngine]
-        A[PrismaAPI<br/>18 fns]
+        A[PrismaAPI<br/>63 fns + SRP]
         R[Engine::Run]
     end
     
@@ -114,8 +114,8 @@ flowchart LR
 | Module | Status | Description |
 |--------|--------|-------------|
 | SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
-| CoreCLR Scripting | ✅ 90% | C# Node/Script system, self-contained publish |
-| Rendering Architecture | ✅ 85% | Core Pass + Feature system |
+| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, 计算管线) |
+| Rendering Architecture | ✅ 90% | Core Pass + Feature system + Compute Pipeline RHI |
 | Resource Management | ✅ 95% | Handle<T> system + resource pools |
 | Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
 | DirectX 12 Backend | ⏳ 70% | Primary Windows rendering backend |

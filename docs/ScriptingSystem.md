@@ -1,6 +1,6 @@
 # 脚本系统设计
 
-> **状态**: ✅ 基础实现完成（CoreCLR 后端）
+> **状态**: ✅ 基础实现完成（CoreCLR 后端 + C# SRP + 计算管线）
 > **优先级**: 高
 > **依赖**: .NET 10 SDK, hostfxr
 
@@ -199,6 +199,126 @@ DestroyEntity 递增 generation，CreateEntity 重用空闲槽时返回新 gener
 | Phase 4 | ECS 全集成 | ⏳ 待实现 |
 | Phase 5 | 热重载支持 | ⏳ 待实现 |
 
+## C# 可编程渲染管线 (SRP)
+
+C# 通过 **SRP（Scriptable Render Pipeline）** 控制渲染流程，类似 Unity 的 Scriptable Render Pipeline。
+
+### 架构
+
+```
+C# GameScripts (渲染逻辑)
+  └─ RenderPipeline (管线基类)
+       ├─ RenderPass (图形 Pass)
+       ├─ ComputePass (计算 Pass)
+       ├─ RendererFeature (特性注入)
+       └─ CommandBuffer (命令录制)
+            └─ Interop.API.Srp* (C++ 桥接)
+                 └─ SRPGraphicsAPI (资源池 + 命令转发)
+                      └─ IRenderDevice / ICommandBuffer (Vulkan/DX12)
+```
+
+### 核心类
+
+| 类 | 文件 | 功能 |
+|------|------|------|
+| `CommandBuffer` | `SRP/CommandBuffer.cs` | 统一 GPU 命令录制接口。封装所有 `Interop.API.Srp*` 调用 |
+| `Shader` | `SRP/Shader.cs` | 着色器包装（Vertex/Fragment/Compute/Geometry） |
+| `GraphicsPipeline` | `SRP/GraphicsPipeline.cs` | 图形管线包装 |
+| `ComputePipeline` | `SRP/ComputePipeline.cs` | 计算管线包装 |
+| `Texture` | `SRP/Texture.cs` | 纹理资源包装 |
+| `Sampler` | `SRP/Sampler.cs` | 采样器包装 |
+| `Buffer` | `SRP/Buffer.cs` | 顶点/索引缓冲区包装 |
+| `RenderPass` | `SRP/RenderPass.cs` | 图形 Pass 基类 |
+| `ComputePass` | `SRP/ComputePass.cs` | 计算 Pass（封装管线 + Dispatch） |
+| `RendererFeature` | `SRP/RendererFeature.cs` | 渲染特性基类，可在管线任意阶段插入逻辑 |
+| `RenderPassEvent` | `SRP/RenderPassEvent.cs` | 注入点枚举（BeforeRendering ~ AfterRendering） |
+| `RenderPipeline` | `SRP/RenderPipeline.cs` | 管线基类：管理 Pass + Feature 排序和执行 |
+
+### 计算管线扩展 (C++ 侧)
+
+新增桥接函数，通过 `PrismaAPI` 暴露到 C#：
+
+```cpp
+// PrismaAPI 新增字段
+uint32_t (*srpCreateComputePipeline)(uint32_t shader, uint32_t pushConstSize);
+void     (*srpDestroyComputePipeline)(uint32_t handle);
+void     (*srpCmdBindComputePipeline)(uint32_t handle);
+void     (*srpCmdDispatch)(uint32_t x, uint32_t y, uint32_t z);
+void     (*srpCmdBindComputeTexture)(uint32_t slot, uint32_t tex, uint32_t sampler);
+void     (*srpCmdBindStorageImage)(uint32_t slot, uint32_t tex);
+void     (*srpCmdBindStorageBuffer)(uint32_t slot, uint32_t buf);
+```
+
+底层通过已有 RHI 接口实现：
+- `IComputePipeline` / `VulkanComputePipeline` — 从着色器反射自动构建描述符集布局
+- `ICommandBuffer::SetComputePipeline()` — 绑定计算管线
+- `ICommandBuffer::Dispatch()` — 分派线程组
+- `IDescriptorSet::BindStorageImage()` / `BindBuffer()` — 绑定存储映像/SSBO
+
+### C# 使用示例
+
+```csharp
+// 资源创建
+var computeShader = new Shader(source, ShaderStage.Compute);
+var texture = new Texture(256, 256, 0); // RGBA8
+var computePipeline = new ComputePipeline(computeShader, 0);
+
+// 命令录制
+var cmd = new CommandBuffer();
+cmd.BeginFrame();
+cmd.SetComputePipeline(computePipeline);
+cmd.SetStorageImage(0, texture);
+cmd.Dispatch(32, 32, 1);
+cmd.EndFrame();
+```
+
+### 特性注入 (RendererFeature)
+
+```csharp
+public class BloomFeature : RendererFeature
+{
+    private Shader? _shader;
+    private ComputePipeline? _pipeline;
+
+    public override void Create()
+    {
+        _shader = new Shader(bloomSrc, ShaderStage.Compute);
+        _pipeline = new ComputePipeline(_shader, 0);
+    }
+
+    public override void Execute(CommandBuffer cmd)
+    {
+        cmd.SetComputePipeline(_pipeline!);
+        cmd.SetStorageImage(0, targetTex);
+        cmd.Dispatch(width / 8, height / 8, 1);
+    }
+}
+
+// 注册到管线
+pipeline.AddFeature(new BloomFeature {
+    Name = "Bloom",
+    InjectionPoint = RenderPassEvent.BeforePostProcessing
+});
+```
+
+### 设计原则
+
+1. **零 Interop.API 暴露** — 用户代码通过 `CommandBuffer` + 资源包装类与 GPU 交互
+2. **IDisposable 资源管理** — 所有资源包装类实现 `IDisposable`，构造函数创建原生句柄，`Dispose` 释放
+3. **Unity 风格** — `CommandBuffer` 录制命令、`RendererFeature` 注入渲染逻辑、`RenderPassEvent` 控制执行顺序
+4. **自动描述符管理** — 计算管线的描述符集布局通过着色器反射自动构建，`CmdBindStorageImage/Buffer` 自动缓存和绑定
+
+### 关键文件
+
+| 文件 | 职责 |
+|------|------|
+| `src/engine/scripting/SRPGraphicsAPI.h/.cpp` | 计算管线池 + Dispatch + 存储资源绑定实现 |
+| `src/engine/scripting/ScriptEngine.h/.cpp` | `PrismaAPI` 函数指针表 + 注册 |
+| `src/engine/scripting/CSharp/Prisma.Core/EngineAPI.cs` | C# 侧 `PrismaAPI` 委托定义 |
+| `src/engine/scripting/CSharp/Prisma.Core/SRP/CommandBuffer.cs` | 中央命令录制器 |
+| `src/engine/scripting/CSharp/Prisma.Core/SRP/ComputePipeline.cs` | 计算管线包装 |
+| `src/engine/scripting/CSharp/Prisma.Core/SRP/RendererFeature.cs` | 渲染特性基类 |
+
 ## 开发建议
 
 - **IDE**: 推荐使用 Visual Studio 2026 (Windows) 或 VS Code + C# Dev Kit (跨平台)。
@@ -217,4 +337,4 @@ DestroyEntity 递增 generation，CreateEntity 重用空闲槽时返回新 gener
 
 ---
 
-*文档创建时间: 2025-12-25 | 最后更新: 2026-05-10*
+*文档创建时间: 2025-12-25 | 最后更新: 2026-05-21*
