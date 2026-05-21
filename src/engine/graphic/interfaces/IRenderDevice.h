@@ -190,6 +190,10 @@ public:
     virtual VkQueue GetGraphicsQueue() const = 0;
     /// @brief 获取图形队列族索引
     virtual uint32_t GetGraphicsQueueFamily() const = 0;
+    /// @brief 获取异步计算队列（可能回退到图形队列）
+    virtual VkQueue GetComputeQueue() const { return GetGraphicsQueue(); }
+    /// @brief 获取计算队列族索引
+    virtual uint32_t GetComputeQueueFamily() const { return GetGraphicsQueueFamily(); }
 
     /// @brief 是否无头模式
     virtual bool IsHeadless() const { return false; }

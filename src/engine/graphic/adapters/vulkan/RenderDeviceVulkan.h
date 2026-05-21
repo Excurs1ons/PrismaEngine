@@ -90,6 +90,8 @@ public:
     VkDevice GetVkDevice() const override { return m_device; }
     VkQueue GetGraphicsQueue() const override { return m_graphicsQueue; }
     uint32_t GetGraphicsQueueFamily() const override { return m_graphicsQueueFamily; }
+    VkQueue GetComputeQueue() const override { return m_computeQueue; }
+    uint32_t GetComputeQueueFamily() const override { return m_computeQueueFamily; }
     VkDescriptorPool GetVkDescriptorPool() const { return m_descriptorPool; }
     VmaAllocator GetVmaAllocator() const override { return m_allocator; }
     VmaAllocator GetAllocator() const { return m_allocator; }
@@ -168,12 +170,15 @@ private:
     VkQueue m_graphicsQueue        = VK_NULL_HANDLE;
     VkQueue m_presentQueue         = VK_NULL_HANDLE;
     uint32_t m_graphicsQueueFamily = 0;
+    VkQueue m_computeQueue         = VK_NULL_HANDLE;
+    uint32_t m_computeQueueFamily  = 0;
 
     // 描述符池
     VkDescriptorPool m_descriptorPool = VK_NULL_HANDLE;
 
     // 命令控制
     VkCommandPool m_commandPool = VK_NULL_HANDLE;
+    VkCommandPool m_computeCommandPool = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> m_commandBuffers;
     std::vector<std::unique_ptr<VulkanCommandBuffer>> m_vulkanCommandBuffers;
 

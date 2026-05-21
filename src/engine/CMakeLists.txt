@@ -136,6 +136,7 @@ graphic/MeshRenderer.cpp
 
     # Graphic - PathTracing Pipeline
     graphic/pipelines/pathtracing/PathTracingPipeline.cpp
+    graphic/pipelines/pathtracing/VulkanRTBackend.cpp
 
     # Graphic - Deferred Pipeline
     graphic/pipelines/deferred/DeferredPipeline.cpp

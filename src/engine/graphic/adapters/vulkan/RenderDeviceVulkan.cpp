@@ -71,12 +71,26 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         VkPhysicalDeviceFeatures features{};
         features.samplerAnisotropy = VK_TRUE;
 
+        // 光线追踪所需的扩展特性
+        VkPhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures = {};
+        accelFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+        accelFeatures.accelerationStructure = VK_TRUE;
+
+        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures = {};
+        rtPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+        rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
+
         vkb::PhysicalDeviceSelector selector{m_vkbInstance};
         if (!m_headless) {
             selector.set_surface(m_surface);
         }
         auto phys_ret = selector.set_minimum_version(1, 3)
                             .set_required_features(features)
+                            .add_required_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                            .add_required_extension_features(accelFeatures)
+                            .add_required_extension_features(rtPipelineFeatures)
                             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
                             .select();
         if (!phys_ret)
@@ -108,12 +122,32 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         m_graphicsQueue       = m_vkbDevice.get_queue(vkb::QueueType::graphics).value();
         m_graphicsQueueFamily = m_vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
-        // 5. 初始化 VMA
+        // 4b. 获取异步计算队列（优先专用的非图形计算队列，否则共享 graphics+compute）
+        {
+            auto dedicatedCompute = m_vkbDevice.get_dedicated_queue(vkb::QueueType::compute);
+            if (dedicatedCompute.has_value()) {
+                m_computeQueue = dedicatedCompute.value();
+                m_computeQueueFamily = m_vkbDevice.get_dedicated_queue_index(vkb::QueueType::compute).value();
+            } else {
+                auto computeQueue = m_vkbDevice.get_queue(vkb::QueueType::compute);
+                if (computeQueue.has_value()) {
+                    m_computeQueue = computeQueue.value();
+                    m_computeQueueFamily = m_vkbDevice.get_queue_index(vkb::QueueType::compute).value();
+                } else {
+                    // 回退：与图形队列共享（总是包含 VK_QUEUE_COMPUTE_BIT）
+                    m_computeQueue = m_graphicsQueue;
+                    m_computeQueueFamily = m_graphicsQueueFamily;
+                }
+            }
+        }
+
+        // 5. 初始化 VMA（光线追踪需要 VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT）
         VmaAllocatorCreateInfo allocatorInfo = {};
         allocatorInfo.vulkanApiVersion       = VK_API_VERSION_1_3;
         allocatorInfo.physicalDevice         = m_physicalDevice;
         allocatorInfo.device                 = m_device;
         allocatorInfo.instance               = m_instance;
+        allocatorInfo.flags                  = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
         if (vmaCreateAllocator(&allocatorInfo, &m_allocator) != VK_SUCCESS)
             return -5;
 
@@ -124,12 +158,18 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
 
 
 
-        // 6. 初始化描述符池
-        std::array<VkDescriptorPoolSize, 2> poolSizes{};
+        // 6. 初始化描述符池（包含所有引擎使用的描述符类型）
+        std::array<VkDescriptorPoolSize, 5> poolSizes{};
         poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         poolSizes[0].descriptorCount = 1000;
         poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         poolSizes[1].descriptorCount = 1000;
+        poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        poolSizes[2].descriptorCount = 100;
+        poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[3].descriptorCount = 100;
+        poolSizes[4].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        poolSizes[4].descriptorCount = 16;
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -145,6 +185,17 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         cmd_pool_info.queueFamilyIndex        = m_graphicsQueueFamily;
         cmd_pool_info.flags                   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         vkCreateCommandPool(m_device, &cmd_pool_info, nullptr, &m_commandPool);
+
+        // 7b. 计算命令池（如果与图形队列同族则复用同一池，否则创建独立池）
+        if (m_computeQueueFamily == m_graphicsQueueFamily) {
+            m_computeCommandPool = m_commandPool;
+        } else {
+            VkCommandPoolCreateInfo cmp_pool_info = {};
+            cmp_pool_info.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            cmp_pool_info.queueFamilyIndex        = m_computeQueueFamily;
+            cmp_pool_info.flags                   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+            vkCreateCommandPool(m_device, &cmp_pool_info, nullptr, &m_computeCommandPool);
+        }
 
         m_commandBuffers.resize(3);
         VkCommandBufferAllocateInfo cmd_alloc_info = {};
@@ -192,6 +243,7 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
             }
         }
 
+        m_deviceFeatures.supportsRayTracing = true;
         m_initialized = true;
         return 0;
     } catch (...) {
@@ -241,6 +293,11 @@ void RenderDeviceVulkan::Shutdown() {
     if (m_commandPool) {
         LOG_DEBUG("VulkanDevice", "销毁命令池...");
         vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+    }
+    if (m_computeCommandPool && m_computeCommandPool != m_commandPool) {
+        LOG_DEBUG("VulkanDevice", "销毁计算命令池...");
+        vkDestroyCommandPool(m_device, m_computeCommandPool, nullptr);
+        m_computeCommandPool = VK_NULL_HANDLE;
     }
 
     if (m_descriptorPool) {
