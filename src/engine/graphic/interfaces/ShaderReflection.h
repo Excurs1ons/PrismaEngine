@@ -10,7 +10,7 @@ namespace Prisma::Graphic {
  * @brief 着色器资源反射信息 (Descriptor Set Binding)
  */
 struct ShaderResource {
-    enum class Type { UniformBuffer, StorageBuffer, Sampler2D, SamplerCube, Image2D };
+    enum class Type { UniformBuffer, StorageBuffer, Sampler2D, SamplerCube, Image2D, StorageImage, AccelerationStructure };
     
     std::string Name;
     Type ResourceType;

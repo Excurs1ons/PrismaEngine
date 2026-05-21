@@ -33,6 +33,11 @@ public:
                             DescriptorType type = DescriptorType::UniformBuffer) = 0;
     virtual void BindStorageImage(uint32_t binding, ITexture* texture) = 0;
 
+    /// @brief 绑定加速结构（光线追踪 TLAS/BLAS）
+    /// @param binding 描述符绑定索引
+    /// @param accelerationStructure 原生加速结构句柄（VkAccelerationStructureKHR 转换为 void*）
+    virtual void BindAccelerationStructure(uint32_t binding, void* accelerationStructure) = 0;
+
     // 获取原生句柄 (供后端执行)
     virtual void* GetNativeHandle() const = 0;
     

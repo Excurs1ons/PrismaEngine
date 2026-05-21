@@ -193,6 +193,15 @@ void VulkanDescriptorSet::BindStorageImage(uint32_t binding, ITexture* texture) 
     m_writes.push_back(write);
 }
 
+void VulkanDescriptorSet::BindAccelerationStructure(uint32_t binding, void* accelerationStructure) {
+    WriteInfo write{};
+    write.binding = binding;
+    write.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+    write.accelerationStructure = static_cast<VkAccelerationStructureKHR>(reinterpret_cast<uintptr_t>(accelerationStructure));
+    write.isAccelerationStructure = true;
+    m_writes.push_back(write);
+}
+
 void VulkanDescriptorSet::Update() {
     if (m_writes.empty()) return;
 
@@ -203,6 +212,9 @@ void VulkanDescriptorSet::Update() {
     }
 
     std::vector<VkWriteDescriptorSet> vkWrites;
+    std::vector<VkWriteDescriptorSetAccelerationStructureKHR> asWrites;
+    asWrites.reserve(m_writes.size());
+
     for (auto& write : m_writes) {
         VkWriteDescriptorSet vkWrite{};
         vkWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -210,7 +222,15 @@ void VulkanDescriptorSet::Update() {
         vkWrite.dstBinding = write.binding;
         vkWrite.descriptorCount = 1;
         vkWrite.descriptorType = write.type;
-        if (write.isImage) {
+
+        if (write.isAccelerationStructure) {
+            VkWriteDescriptorSetAccelerationStructureKHR asWrite{};
+            asWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR;
+            asWrite.accelerationStructureCount = 1;
+            asWrite.pAccelerationStructures = &write.accelerationStructure;
+            asWrites.push_back(asWrite);
+            vkWrite.pNext = &asWrites.back();
+        } else if (write.isImage) {
             vkWrite.pImageInfo = &write.imageInfo;
         } else {
             vkWrite.pBufferInfo = &write.bufferInfo;

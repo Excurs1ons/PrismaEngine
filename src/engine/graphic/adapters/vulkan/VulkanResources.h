@@ -1,17 +1,16 @@
 #pragma once
 
-#include "interfaces/ITexture.h"
-#include "interfaces/IBuffer.h"
-#include "interfaces/IDescriptorSet.h"
-#include "interfaces/ISampler.h"
-#include "RenderDesc.h"
+#include "Export.h"
+#include "graphic/interfaces/IBuffer.h"
+#include "graphic/interfaces/ITexture.h"
+#include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/interfaces/ISampler.h"
+#include "graphic/interfaces/IRenderDevice.h"
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
-#include <algorithm>
-#include <cstdint>
-#include <cstring>
-#include <fstream>
+#include <memory>
 #include <vector>
+#include <cstdint>
 #include <memory>
 
 #include "Export.h"
@@ -573,6 +572,7 @@ public:
     void BindBuffer(uint32_t binding, IBuffer* buffer, uint32_t offset, uint32_t size,
                     DescriptorType type = DescriptorType::UniformBuffer) override;
     void BindStorageImage(uint32_t binding, ITexture* texture) override;
+    void BindAccelerationStructure(uint32_t binding, void* accelerationStructure) override;
     void* GetNativeHandle() const override { return (void*)m_set; }
     void Update() override;
 
@@ -583,10 +583,12 @@ private:
     struct WriteInfo {
         uint32_t binding;
         VkDescriptorType type;
-        VkDescriptorImageInfo imageInfo;
-        VkDescriptorBufferInfo bufferInfo;
-        bool isImage;
+        VkDescriptorImageInfo imageInfo{};
+        VkDescriptorBufferInfo bufferInfo{};
+        VkAccelerationStructureKHR accelerationStructure = VK_NULL_HANDLE;
+        bool isImage = false;
         bool isStorageImage = false;
+        bool isAccelerationStructure = false;
     };
     std::vector<WriteInfo> m_writes;
 };
