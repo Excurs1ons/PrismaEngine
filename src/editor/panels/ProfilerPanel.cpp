@@ -50,7 +50,7 @@ static void drawFrameTiming(const Engine::FrameStats& stats) {
     }
 }
 
-static void drawResourceStats(IResourceFactory* factory) {
+static void drawResourceStats(Graphic::IResourceFactory* factory) {
     if (!factory) { ImGui::TextColored(ImVec4(1,0,0,1), "ResourceFactory unavailable"); return; }
 
     auto creationStats = factory->GetCreationStats();
