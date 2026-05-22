@@ -223,10 +223,20 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         set(CS_HOST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/PrismaEngine.Host")
         set(CS_OUTPUT_FILE "${CMAKE_BINARY_DIR}/bin/Prisma.Core.dll")
 
+        # NuGet restore（避免并行构建冲突）
+        set(CS_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prisma_core_restored")
+        add_custom_command(
+            OUTPUT "${CS_RESTORE_STAMP}"
+            COMMAND ${DOTNET} restore "${CS_CORE_DIR}/Prisma.Core.csproj" -p:RestorePackagesWithLockFile=false
+            COMMAND ${CMAKE_COMMAND} -E touch "${CS_RESTORE_STAMP}"
+            DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj"
+            COMMENT "Restoring Prisma.Core NuGet packages"
+        )
+
         add_custom_command(
             OUTPUT "${CS_OUTPUT_FILE}"
-            COMMAND ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin"
-            DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj"
+            COMMAND ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin" --no-restore
+            DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj" "${CS_RESTORE_STAMP}"
             COMMENT "Building Prisma.Core C# library"
         )
 
@@ -259,6 +269,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
             COMMENT "Building Prisma.Generators (Roslyn source generators)"
         )
         add_dependencies(PrismaGenerators PrismaCore)
+        add_dependencies(PrismaEngineHost PrismaCore)
         
     else()
         message(WARNING "Scripting: 未找到 dotnet, 无法构建 C# 核心库")
