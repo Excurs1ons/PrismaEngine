@@ -124,7 +124,8 @@ bool intersectPlane(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
     if (!valid) return false;
 
     hit.t = t;
-    hit.normal = normal;
+    // 根据光线入射方向翻转法线：从背面击中时反转，确保法线朝向射线来源
+    hit.normal = (denom < 0.0) ? normal : -normal;
     hit.color = obj.color.rgb;
     hit.emissive = obj.color.w;
     return true;
@@ -494,6 +495,21 @@ vec3 sampleHemisphere(vec3 normal) {
 
 // ============ Light sampling (uniform area) ============
 vec3 sampleLightPoint(SceneObject obj, out vec3 normal, out float pdf) {
+    // 网格光源：三角形面积均匀采样（BVH 模式顶点已在世界空间）
+    if (int(obj.p0.w) == 4) {
+        int firstTri = int(obj.p1.x), triCount = int(obj.p1.y);
+        int ti = clamp(firstTri + int(randFloat() * float(triCount)), firstTri, firstTri + triCount - 1);
+        Triangle tri = triBuf.triangles[ti];
+        vec3 v0 = tri.vertices[0].pos, v1 = tri.vertices[1].pos, v2 = tri.vertices[2].pos;
+        float u = randFloat(), v = randFloat();
+        if (u + v > 1.0) { u = 1.0 - u; v = 1.0 - v; }
+        vec3 lp = v0 + u * (v1 - v0) + v * (v2 - v0);
+        vec3 we1 = v1 - v0, we2 = v2 - v0;
+        normal = normalize(cross(we1, we2));
+        pdf = 1.0 / (0.5 * length(cross(we1, we2)) * float(triCount) + 1e-6);
+        return lp;
+    }
+    // 平面光源：包围盒面积均匀采样
     vec4 bounds = obj.p2; // (umin, vmin, umax, vmax)
     float u = bounds.x + randFloat() * (bounds.z - bounds.x);
     float v = bounds.y + randFloat() * (bounds.w - bounds.y);
@@ -508,7 +524,7 @@ vec3 sampleLightPoint(SceneObject obj, out vec3 normal, out float pdf) {
     }
     normal = obj.p1.xyz;
     float area = (bounds.z - bounds.x) * (bounds.w - bounds.y);
-    pdf = 1.0 / area;
+    pdf = 1.0 / (area + 1e-6);
     return pt;
 }
 

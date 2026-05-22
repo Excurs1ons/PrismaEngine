@@ -330,7 +330,7 @@ vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
             float s = max(throughput.r, max(throughput.g, throughput.b));
             if (randFloat() > s) break; throughput /= s;
         }
-        origin = hitPos + hit.normal * EPS; dir = nextDir;
+        origin = hitPos + EPS * nextDir; dir = nextDir;
     }
     return radiance;
 }
