@@ -1526,6 +1526,18 @@ void PathTracingPipeline::ExecuteHardwareRT(ICommandBuffer* cmd) {
     uint32_t dispatchW = m_width;
     uint32_t dispatchH = m_height;
 
+    // AS 内存屏障：确保 TLAS 构建/更新对 TraceRays 可见
+    // 当 UpdateTLASInstances（或首次 BuildTLAS）在本 command buffer 中记录后，
+    // 必须有显式屏障使 AS 写入 → 读取可见，否则驱动可能读到过期 BVH 数据
+    VkMemoryBarrier asBarrier{};
+    asBarrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    asBarrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+    asBarrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+    vkCmdPipelineBarrier(vkCmd,
+        VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+        VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+        0, 1, &asBarrier, 0, nullptr, 0, nullptr);
+
     m_rtBackend->BindAndTraceRays(vkCmd, dispatchW, dispatchH, vkDescSet);
 }
 
