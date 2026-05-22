@@ -817,7 +817,12 @@ bool VulkanRTBackend::CreateRTPipeline(const RTPipelineShaders& shaders,
     missGroup.anyHitShader       = VK_SHADER_UNUSED_KHR;
     missGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
 
-    const VkRayTracingShaderGroupCreateInfoKHR groups[] = { rgenGroup, hitGroup, missGroup };
+    // groups 顺序决定 SBT 中 handle 的排列顺序：
+    //   [0]=rgen → raygenRegion
+    //   [1]=miss → missRegion  
+    //   [2]=hit  → hitRegion
+    // 必须与 vkCmdTraceRaysKHR 的 region 顺序一致
+    const VkRayTracingShaderGroupCreateInfoKHR groups[] = { rgenGroup, missGroup, hitGroup };
     const uint32_t groupCount = 3;
 
     VkRayTracingPipelineCreateInfoKHR rtPipelineCI{};
