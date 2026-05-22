@@ -88,7 +88,7 @@ function(prisma_create_app APP_NAME)
 
     # 设置 C++ 标准
     set_target_properties(${APP_NAME} PROPERTIES
-        CXX_STANDARD 20
+        CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
     )
@@ -139,7 +139,7 @@ function(prisma_create_editor_extension EXTENSION_NAME)
 
     # 设置 C++ 标准
     set_target_properties(${EXTENSION_NAME} PROPERTIES
-        CXX_STANDARD 20
+        CXX_STANDARD 23
         CXX_STANDARD_REQUIRED ON
         CXX_EXTENSIONS OFF
     )

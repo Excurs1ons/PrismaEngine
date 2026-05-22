@@ -10,7 +10,7 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Excurs1ons/PrismaEngine)
 [![Mintlify](https://img.shields.io/badge/Mintlify-Docs-262626?style=flat-square&logo=googlegemini&logoColor=fff)](https://mintlify.wiki/Excurs1ons/PrismaEngine)
 
-Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusing on high-performance rendering and modern graphics architectures.
+Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusing on high-performance rendering and modern graphics architectures.
 
 [中文文档](./docs/README_zh.md) | [English](./README.md)
 
@@ -30,7 +30,7 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++20, focusi
 | Module | Status | Description |
 |--------|--------|-------------|
 | SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
-| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, 计算管线) |
+| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
 | Rendering Architecture | ✅ 90% | Core Pass + Feature system + Compute Pipeline RHI |
 | Resource Management | ✅ 95% | Handle<T> system + resource pools |
 | Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
@@ -129,7 +129,7 @@ The SDK contains:
 
 ## Core Features
 
-- **Modern C++20**: Utilizing concepts, coroutines, and designated initializers.
+- **Modern C++23**: Utilizing concepts, coroutines, and designated initializers.
 - **Smart Dependency Management**: No manual library installation required; CMake handles everything.
 - **Unified Rendering API**: Write once, run on DX12 or Vulkan.
 - **Android Deep Optimization**: Zero-latency input via GameActivity and high-performance Vulkan rendering path.

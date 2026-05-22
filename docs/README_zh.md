@@ -7,7 +7,7 @@
 [![CI Android](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml)
 [![Android APK](https://img.shields.io/badge/APK-下载-green.svg?logo=android)](https://github.com/Excurs1ons/PrismaEngine/releases/download/latest/PrismaAndroid.apk)
 
-Prisma Engine 是一个使用现代 C++20 构建的跨平台 3D 游戏引擎，专注于高性能渲染和现代图形架构。
+Prisma Engine 是一个使用现代 C++23 构建的跨平台 3D 游戏引擎，专注于高性能渲染和现代图形架构。
 
 简体中文 | [English](../README.md)
 
@@ -21,14 +21,13 @@ Prisma Engine 是一个使用现代 C++20 构建的跨平台 3D 游戏引擎，�
 | **Windows** | [![CI Windows](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml) | Push / PR |
 | **Linux** | [![CI Linux](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml) | Push / PR |
 | **Android** | [![CI Android](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml) | Push / PR |
-| **Release** | 全部 | [![Release](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/release.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/release.yml) | 标签 (`v*.*.*`) |
 
 ## 当前进度
 
 | 模块 | 状态 | 说明 |
 |------|--------|------|
 | SoA Entity Pool | ✅ 100% | 虚拟内存 1M 容量，双缓冲 |
-| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, 计算管线) |
+| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
 | 渲染架构 | ✅ 90% | 核心 Pass + Feature 系统 + Compute Pipeline RHI |
 | 资源管理 | ✅ 95% | Handle<T> 句柄系统 + 资源池 |
 | Vulkan 后端 | ✅ 90% | 稳健的跨平台 Vulkan 实现 |
@@ -88,7 +87,7 @@ cmake --build build/linux-x64-debug --parallel
 
 ## 核心特性
 
-- **现代 C++20**: 利用 Concepts、Coroutines 和 Designated Initializers。
+- **现代 C++23**: 利用 Concepts、Coroutines 和 Designated Initializers。
 - **智能依赖管理**: 彻底告别手动库安装，一切交给 CMake。
 - **统一渲染 API**: 一次编写，在 DX12 或 Vulkan 上同步运行。
 - **Android 深度优化**: 通过 GameActivity 实现零延迟输入，以及高性能 Vulkan 渲染路径。

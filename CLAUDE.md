@@ -4,11 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Prisma Engine (formerly YAGE - Yet Another Game Engine) is a cross-platform game engine built with modern C++20. It supports Windows, Linux, and Android platforms with a focus on modern graphics APIs (DirectX 12, Vulkan).
+Prisma Engine (formerly YAGE - Yet Another Game Engine) is a cross-platform game engine built with modern C++23. It supports Windows, Linux, and Android platforms with a focus on modern graphics APIs (DirectX 12, Vulkan).
 
 ## 项目概述 / Project Overview (Chinese)
 
-Prisma Engine（原 YAGE - Yet Another Game Engine）是一个使用现代 C++20 构建的跨平台游戏引擎。支持 Windows、Linux 和 Android 平台，专注于现代图形 API（DirectX 12、Vulkan）。
+Prisma Engine（原 YAGE - Yet Another Game Engine）是一个使用现代 C++23 构建的跨平台游戏引擎。支持 Windows、Linux 和 Android 平台，专注于现代图形 API（DirectX 12、Vulkan）。
 
 ## Build Commands
 
@@ -234,7 +234,7 @@ Dependencies are configured in `cmake/FetchThirdPartyDeps.cmake`.
 ## Development Guidelines / 开发指南
 
 ### Code Style / 代码风格
-- **C++20 standard**
+- **C++23 standard**
 - **PascalCase** for class names / 类名使用 PascalCase
 - **camelCase** for function names / 函数名使用 camelCase
 - **Mixed language comments** / 中英文注释混用
