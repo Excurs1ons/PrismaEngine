@@ -482,7 +482,7 @@ bool VulkanRTBackend::BuildTLAS(const std::vector<InstanceInput>& instances) {
             std::memset(&dst[i], 0, sizeof(VkAccelerationStructureInstanceKHR));
             dst[i].transform                              = instances[i].transform;
             dst[i].instanceCustomIndex                    = instances[i].instanceCustomIndex & 0x00FFFFFF;
-            dst[i].mask                                   = 0xFF;
+            dst[i].mask                                   = (i < instances.size()) ? instances[i].instanceMask : 0xFF;
             dst[i].instanceShaderBindingTableRecordOffset  = 0;
             dst[i].flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
             dst[i].accelerationStructureReference          = instances[i].blasDeviceAddress;
@@ -674,7 +674,7 @@ bool VulkanRTBackend::UpdateTLASInstances(VkCommandBuffer cmd,
             std::memset(&dst[i], 0, sizeof(VkAccelerationStructureInstanceKHR));
             dst[i].transform                              = instances[i].transform;
             dst[i].instanceCustomIndex                    = instances[i].instanceCustomIndex & 0x00FFFFFF;
-            dst[i].mask                                   = 0xFF;
+            dst[i].mask                                   = (i < instances.size()) ? instances[i].instanceMask : 0xFF;
             dst[i].instanceShaderBindingTableRecordOffset  = 0;
             dst[i].flags                                  = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
             dst[i].accelerationStructureReference          = instances[i].blasDeviceAddress;

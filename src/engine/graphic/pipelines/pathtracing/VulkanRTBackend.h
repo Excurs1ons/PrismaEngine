@@ -45,6 +45,7 @@ public:
         VkTransformMatrixKHR transform; // 对象世界变换
         uint32_t instanceCustomIndex;   // 对象索引
         uint64_t blasDeviceAddress;     // BLAS 设备地址
+        uint8_t  instanceMask = 0xFF;   // 实例掩码（默认全可见用于主光线）
     };
 
     /// 构建 TLAS（包含所有实例）
