@@ -23,12 +23,19 @@ mkdir -p "$SDK_INCLUDE_DIR"
 # Copy all .h files preserving directory structure
 find "$SRC_DIR" -name "*.h" -type f | while read -r header; do
     relative_path="${header#$SRC_DIR/}"
+
+    # Skip internal-only directories and files
+    case "$relative_path" in
+        adapters/*|graphic/adapters/*)     continue ;;
+        mcp/*|packing/*|object/*)          continue ;;
+        pch.h|framework.h|targetver.h)     continue ;;
+        *test_shader*|*DefaultShader*)     continue ;;
+        *EngineShaderAdapter*|*SpirvReflector*|*ShaderFactory*) continue ;;
+    esac
+
     dest_dir="$SDK_INCLUDE_DIR/$(dirname "$relative_path")"
     mkdir -p "$dest_dir"
     cp "$header" "$dest_dir/"
-    echo "  ${relative_path}"
 done
 
-echo ""
-echo "SDK headers synced successfully."
-echo "Total headers: $(find "$SDK_INCLUDE_DIR" -name "*.h" | wc -l)"
+echo "Headers synced: $(find "$SDK_INCLUDE_DIR" -name "*.h" | wc -l)"

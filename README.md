@@ -165,6 +165,44 @@ cmake --build build/linux-x64-debug --parallel
 # Dependencies download automatically via CMake FetchContent
 ```
 
+## Using the SDK (Without Full Source)
+
+If you just want to try out a project (like PrismaCraft) or build your own game, you don't need the full engine source — download the **prebuilt SDK** from GitHub Releases:
+
+### Option 1: Download Prebuilt SDK (Recommended)
+
+```bash
+# 1. Download from https://github.com/Excurs1ons/PrismaEngine/releases
+#    Look for: PrismaEngine-SDK-<version>-<platform>.tar.gz
+
+# 2. Extract
+tar xzf PrismaEngine-SDK-0.1.0-linux.tar.gz
+
+# 3. Build any sample project
+cd PrismaEngine-SDK-0.1.0-linux/samples/BasicTriangle
+cmake -B build -DPrismaEngine_DIR=../..
+cmake --build build
+./build/BasicTriangle
+```
+
+### Option 2: Use SDK from Local Repo
+
+```bash
+# SDK is already in the repo at sdk/
+cd sdk/samples/BasicTriangle
+cmake -B build -DPrismaEngine_DIR=$(pwd)/../..
+cmake --build build
+./build/BasicTriangle
+```
+
+The SDK contains:
+- **190+ public C++ headers** — Full engine API (`#include <PrismaEngine/PrismaEngine.h>`)
+- **CMake config** — `find_package(PrismaEngine)` ready
+- **Sample projects** — BasicTriangle, BlockGame, PrismaCraftStarter
+- **Precompiled libraries** — Engine binaries for your platform (in release downloads)
+
+> **Note**: Prebuilt SDK is available on [GitHub Releases](https://github.com/Excurs1ons/PrismaEngine/releases). The `sdk/` directory in the repo contains headers and CMake configs but no prebuilt binaries — those are too large for the repository.
+
 ## Documentation
 
 - [Documentation Index](docs/Index.md) - **Start here**

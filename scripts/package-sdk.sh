@@ -1,380 +1,313 @@
 #!/bin/bash
-# PrismaEngine SDK 打包脚本
-# 用法: ./package-sdk.sh [version] [options]
+# package-sdk.sh — PrismaEngine SDK 打包脚本
+# 在 CI/Release 时运行: 构建引擎 → 收集产物 → 打包 → 生成 Release 归档
 #
-# 示例:
-#   ./package-sdk.sh 0.1.0
-#   ./package-sdk.sh 0.1.0 --platforms linux,windows,android
+# 用法:
+#   ./package-sdk.sh 0.1.0                              # 全部平台
+#   ./package-sdk.sh 0.1.0 --platforms linux,windows     # 指定平台
+#   ./package-sdk.sh 0.1.0 --skip-build                  # 跳过构建（只用已有产物）
+#
+# 输出:
+#   dist/PrismaEngine-SDK-<version>-<platform>.tar.gz
+#   dist/PrismaEngine-SDK-<version>-<platform>.sha256
+#
+# 上传到 GitHub Release 后, 用户解压并:
+#   cmake -B build -DPrismaEngine_DIR=/path/to/sdk
 
 set -e
 
-# 颜色输出
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-CYAN='\033[0;36m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; CYAN='\033[0;36m'; NC='\033[0m'
 
-# 获取脚本目录
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# 默认值
 VERSION="${1:-0.1.0}"
 PLATFORMS="linux,windows,android"
 OUTPUT_DIR="$PROJECT_ROOT/dist"
-CLEAN_BUILD=false
+SKIP_BUILD=false
 
-# 解析参数
 shift 2>/dev/null || true
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --platforms|-p)
-            PLATFORMS="$2"
-            shift 2
-            ;;
-        --output|-o)
-            OUTPUT_DIR="$2"
-            shift 2
-            ;;
-        --clean)
-            CLEAN_BUILD=true
-            shift
-            ;;
+        --platforms|-p) PLATFORMS="$2"; shift 2 ;;
+        --output|-o)    OUTPUT_DIR="$2"; shift 2 ;;
+        --skip-build)   SKIP_BUILD=true; shift ;;
         --help|-h)
             echo "用法: $0 [version] [options]"
-            echo ""
-            echo "参数:"
-            echo "  version              SDK 版本号 (默认: 0.1.0)"
-            echo ""
-            echo "选项:"
-            echo "  --platforms, -p      要打包的平台 (默认: linux,windows,android)"
-            echo "  --output, -o         输出目录 (默认: dist/)"
-            echo "  --clean              清理后重新构建"
-            echo "  --help, -h           显示此帮助"
-            echo ""
-            echo "示例:"
-            echo "  $0 0.1.0"
-            echo "  $0 0.1.0 --platforms linux,windows"
-            echo "  $0 0.1.0 -o /tmp/sdk-output"
-            exit 0
-            ;;
-        *)
-            echo -e "${RED}未知选项: $1${NC}"
-            exit 1
-            ;;
+            echo "  version           SDK 版本 (默认: 0.1.0)"
+            echo "  --platforms, -p   平台列表 (默认: linux,windows,android)"
+            echo "  --output, -o      输出目录 (默认: dist/)"
+            echo "  --skip-build      跳过 cmake 构建"
+            exit 0 ;;
+        *) echo -e "${RED}未知: $1${NC}"; exit 1 ;;
     esac
 done
 
-function print_header() {
-    echo ""
-    echo -e "${CYAN}====================================${NC}"
-    echo -e "${CYAN}$1${NC}"
-    echo -e "${CYAN}====================================${NC}"
-}
+print_header() { echo -e "\n${CYAN}====================================${NC}\n${CYAN}$1${NC}\n${CYAN}====================================${NC}"; }
+print_step()  { echo -e "\n${YELLOW}$1${NC}"; }
 
-function print_step() {
-    echo ""
-    echo -e "${YELLOW}$1${NC}"
-}
-
-print_header "PrismaEngine SDK 打包工具"
-echo -e "${GREEN}版本: ${VERSION}${NC}"
-echo -e "${GREEN}平台: ${PLATFORMS}${NC}"
-echo -e "${GREEN}输出: ${OUTPUT_DIR}${NC}"
-
-# 创建输出目录
+print_header "PrismaEngine SDK v${VERSION} Packager"
+echo -e "  Platforms: ${PLATFORMS}"
+echo -e "  Output:    ${OUTPUT_DIR}"
+echo -e "  SkipBuild: ${SKIP_BUILD}"
 mkdir -p "$OUTPUT_DIR"
 
-# SDK 目录结构
-SDK_DIR="$OUTPUT_DIR/PrismaEngine-SDK-${VERSION}"
-INCLUDE_DIR="$SDK_DIR/include"
-LIB_DIR="$SDK_DIR/lib"
-SAMPLES_DIR="$SDK_DIR/samples"
-CMAKE_DIR="$SDK_DIR/cmake"
-DOCS_DIR="$SDK_DIR/docs"
+# ──────────────────────────────────────────────
+# Step 1: Build Engine for Each Platform
+# ──────────────────────────────────────────────
+if [ "$SKIP_BUILD" = false ]; then
+    print_step "[1/5] Building engine for each platform"
+    IFS=',' read -ra PLATFORM_ARRAY <<< "$PLATFORMS"
+    for platform in "${PLATFORM_ARRAY[@]}"; do
+        platform=$(echo "$platform" | xargs)
+        echo "  Building for: $platform"
 
-print_step "[1/6] 创建 SDK 目录结构"
-mkdir -p "$INCLUDE_DIR/PrismaEngine"
-mkdir -p "$LIB_DIR"
-mkdir -p "$SAMPLES_DIR"
-mkdir -p "$CMAKE_DIR"
-mkdir -p "$DOCS_DIR"
+        case "$platform" in
+            linux)
+                for preset in linux-x64-debug linux-x64-release linux-arm64-debug; do
+                    if cmake --preset "$preset" 2>/dev/null; then
+                        cmake --build "build/$preset" --target Engine -j"$(nproc)"
+                    fi
+                done
+                ;;
+            windows)
+                for preset in windows-x64-debug windows-x64-release; do
+                    if cmake --preset "$preset" 2>/dev/null; then
+                        cmake --build "build/$preset" --target Engine
+                    fi
+                done
+                ;;
+            android)
+                if cmake --preset engine-android-arm64-debug 2>/dev/null; then
+                    cmake --build "build/engine-android-arm64-debug" --target Engine
+                fi
+                ;;
+        esac
+    done
+else
+    print_step "[1/5] Skip build (--skip-build)"
+fi
 
-print_step "[2/6] 复制公共头文件"
-echo "复制引擎头文件..."
-find "$PROJECT_ROOT/src/engine" -name "*.h" -type f | while read -r header; do
-    # 保持目录结构
-    relative_path="${header#$PROJECT_ROOT/src/engine/}"
-    dest_dir="$INCLUDE_DIR/PrismaEngine/$(dirname "$relative_path")"
-    mkdir -p "$dest_dir"
-    cp "$header" "$dest_dir/"
-done
+# ──────────────────────────────────────────────
+# Step 2: Package SDK for Each Platform
+# ──────────────────────────────────────────────
+print_step "[2/5] Packaging SDK per platform"
 
-echo "复制编辑器头文件..."
-find "$PROJECT_ROOT/src/editor" -name "*.h" -type f | while read -r header; do
-    relative_path="${header#$PROJECT_ROOT/src/editor/}"
-    dest_dir="$INCLUDE_DIR/PrismaEngine/Editor/$(dirname "$relative_path")"
-    mkdir -p "$dest_dir"
-    cp "$header" "$dest_dir/"
-done
+# Source directories from repo (committed)
+REPO_SDK_INCLUDE="$PROJECT_ROOT/sdk/include"
+REPO_SDK_CMAKE="$PROJECT_ROOT/sdk/cmake"
+REPO_SAMPLES="$PROJECT_ROOT/sdk/samples"
+REPO_DOCS="$PROJECT_ROOT/sdk/docs"
 
-# 创建统一导出头文件
-cat > "$INCLUDE_DIR/PrismaEngine.h" << 'EOF'
-#pragma once
-
-// PrismaEngine SDK 统一头文件
-
-// 核心系统
-#include "PrismaEngine/Engine.h"
-#include "PrismaEngine/Logger.h"
-#include "PrismaEngine/Platform.h"
-
-// 应用程序接口
-#include "PrismaEngine/IApplication.h"
-
-// 渲染系统
-#include "PrismaEngine/graphic/RenderSystemNew.h"
-
-// 资源管理
-#include "PrismaEngine/core/AssetManager.h"
-
-// 音频系统
-#include "PrismaEngine/audio/AudioAPI.h"
-#include "PrismaEngine/audio/IAudioDevice.h"
-
-// 输入系统
-#include "PrismaEngine/input/InputManager.h"
-
-// 编辑器 (可选)
-#ifdef PRISMA_EDITOR
-#include "PrismaEngine/Editor/Editor.h"
-#endif
-EOF
-
-print_step "[3/6] 收集预编译库"
 IFS=',' read -ra PLATFORM_ARRAY <<< "$PLATFORMS"
 for platform in "${PLATFORM_ARRAY[@]}"; do
-    platform=$(echo "$platform" | xargs) # 去除空格
-    echo "处理平台: $platform"
+    platform=$(echo "$platform" | xargs)
+    echo "  Packaging for: $platform"
 
+    SDK_DIR="$OUTPUT_DIR/PrismaEngine-SDK-${VERSION}-${platform}"
+    rm -rf "$SDK_DIR"
+    mkdir -p "$SDK_DIR/include" "$SDK_DIR/lib" "$SDK_DIR/samples" "$SDK_DIR/cmake" "$SDK_DIR/docs"
+
+    # Copy headers from repo
+    if [ -d "$REPO_SDK_INCLUDE/PrismaEngine" ]; then
+        cp -r "$REPO_SDK_INCLUDE/PrismaEngine" "$SDK_DIR/include/PrismaEngine"
+        echo "  Headers: $(find "$SDK_DIR/include/PrismaEngine" -name '*.h' | wc -l) files"
+    else
+        echo "  WARNING: No headers in sdk/include/ — run sync-sdk-headers.sh first"
+    fi
+
+    # Copy samples
+    if [ -d "$REPO_SAMPLES" ]; then
+        cp -r "$REPO_SAMPLES/"* "$SDK_DIR/samples/"
+        echo "  Samples: copied"
+    fi
+
+    # Copy docs
+    if [ -d "$REPO_DOCS" ]; then
+        cp -r "$REPO_DOCS/"* "$SDK_DIR/docs/"
+        echo "  Docs: copied"
+    fi
+
+    # Collect prebuilt libraries
     case "$platform" in
         linux)
-            BUILD_DIRS=("build/linux-x64-debug" "build/linux-x64-release")
-            for build_dir in "${BUILD_DIRS[@]}"; do
-                if [ -d "$PROJECT_ROOT/$build_dir" ]; then
-                    echo "  复制 $build_dir"
-                    mkdir -p "$LIB_DIR/linux/x64"
-                    # 复制静态库和动态库
-                    find "$PROJECT_ROOT/$build_dir" -name "*.a" -exec cp {} "$LIB_DIR/linux/x64/" \; 2>/dev/null || true
-                    find "$PROJECT_ROOT/$build_dir" -name "*.so*" -exec cp {} "$LIB_DIR/linux/x64/" \; 2>/dev/null || true
-                fi
+            LIB_DEST="$SDK_DIR/lib/linux"
+            mkdir -p "$LIB_DEST"
+            for dir in build/linux-x64-debug build/linux-x64-release build/linux-arm64-debug; do
+                [ -d "$PROJECT_ROOT/$dir" ] || continue
+                find "$PROJECT_ROOT/$dir" \( -name "*.so*" -o -name "*.a" \) -exec cp -L {} "$LIB_DEST/" \; 2>/dev/null || true
             done
+            echo "  Libs (linux): $(ls "$LIB_DEST" 2>/dev/null | wc -l) files"
             ;;
+
         windows)
-            BUILD_DIRS=("build/windows-x64-debug" "build/windows-x64-release")
-            for build_dir in "${BUILD_DIRS[@]}"; do
-                if [ -d "$PROJECT_ROOT/$build_dir" ]; then
-                    echo "  复制 $build_dir"
-                    mkdir -p "$LIB_DIR/windows/x64"
-                    find "$PROJECT_ROOT/$build_dir" -name "*.lib" -exec cp {} "$LIB_DIR/windows/x64/" \; 2>/dev/null || true
-                    find "$PROJECT_ROOT/$build_dir" -name "*.dll" -exec cp {} "$LIB_DIR/windows/x64/" \; 2>/dev/null || true
-                fi
+            LIB_DEST="$SDK_DIR/lib/windows"
+            mkdir -p "$LIB_DEST"
+            for dir in build/windows-x64-debug build/windows-x64-release; do
+                [ -d "$PROJECT_ROOT/$dir" ] || continue
+                find "$PROJECT_ROOT/$dir" \( -name "*.dll" -o -name "*.lib" -o -name "*.pdb" \) -exec cp {} "$LIB_DEST/" \; 2>/dev/null || true
             done
+            echo "  Libs (windows): $(ls "$LIB_DEST" 2>/dev/null | wc -l) files"
             ;;
+
         android)
-            BUILD_DIRS=("projects/android/PrismaAndroid/build/outputs")
-            if [ -d "$PROJECT_ROOT/$BUILD_DIRS" ]; then
-                echo "  复制 Android 库"
-                mkdir -p "$LIB_DIR/android"
-                find "$PROJECT_ROOT/$BUILD_DIRS" -name "*.aar" -exec cp {} "$LIB_DIR/android/" \; 2>/dev/null || true
-                find "$PROJECT_ROOT/$BUILD_DIRS" -name "*.so" -exec cp {} "$LIB_DIR/android/" \; 2>/dev/null || true
-            fi
-            ;;
-        *)
-            echo -e "${YELLOW}  警告: 未知平台 $platform${NC}"
+            LIB_DEST="$SDK_DIR/lib/android"
+            mkdir -p "$LIB_DEST"
+            # Android .so files from Gradle build
+            for abi in arm64-v8a armeabi-v7a x86_64; do
+                find "$PROJECT_ROOT/projects/android" -path "*/$abi/*.so" -exec cp {} "$LIB_DEST/" \; 2>/dev/null || true
+            done
+            echo "  Libs (android): $(ls "$LIB_DEST" 2>/dev/null | wc -l) files"
             ;;
     esac
-done
 
-print_step "[4/6] 生成 CMake 配置文件"
-cat > "$CMAKE_DIR/PrismaEngineConfig.cmake" << EOF
-# PrismaEngine SDK CMake 配置文件
-# 版本: ${VERSION}
+    # Generate platform-specific CMake config
+    cat > "$SDK_DIR/cmake/PrismaEngineConfig.cmake" << SDKEOF
+# PrismaEngine SDK CMake Configuration (${platform})
+# Auto-generated by package-sdk.sh v${VERSION}
+# GitHub: https://github.com/Excurs1ons/PrismaEngine/releases
 
-@PACKAGE_INIT@
+get_filename_component(PRISMAENGINE_SDK_DIR "\${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
+set(PRISMAENGINE_INCLUDE_DIR "\${PRISMAENGINE_SDK_DIR}/include")
 
-# 查找依赖
-include(CMakeFindDependencyMacro)
-
-# 查找 Vulkan (如果启用)
-if(PRISMA_ENABLE_RENDER_VULKAN)
-    find_dependency(Vulkan REQUIRED)
+# Import prebuilt library
+if(NOT TARGET PrismaEngine::Engine)
+    add_library(PrismaEngine::Engine SHARED IMPORTED)
+    set_target_properties(PrismaEngine::Engine PROPERTIES
+        IMPORTED_LOCATION "\${PRISMAENGINE_SDK_DIR}/lib/${platform}/\${CMAKE_SHARED_LIBRARY_SUFFIX}"
+        INTERFACE_INCLUDE_DIRECTORIES "\${PRISMAENGINE_INCLUDE_DIR}"
+    )
 endif()
 
-# 查找 SDL3
-find_dependency(SDL3 REQUIRED)
+set(PRISMAENGINE_FOUND TRUE)
+set(PRISMAENGINE_VERSION "${VERSION}")
 
-# 包含目标
-include("\${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
+# Helper: prisma_create_app
+function(prisma_create_app APP_NAME)
+    cmake_parse_arguments(ARG "" "FOLDER" "SOURCES;LIBRARIES" \${ARGN})
+    add_executable(\${APP_NAME})
+    if(ARG_SOURCES)
+        target_sources(\${APP_NAME} PRIVATE \${ARG_SOURCES})
+    endif()
+    set_target_properties(\${APP_NAME} PROPERTIES
+        CXX_STANDARD 20 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF
+    )
+    target_link_libraries(\${APP_NAME} PRIVATE PrismaEngine::Engine)
+    target_include_directories(\${APP_NAME} PRIVATE \${PRISMAENGINE_INCLUDE_DIR})
+    if(ARG_LIBRARIES)
+        target_link_libraries(\${APP_NAME} PRIVATE \${ARG_LIBRARIES})
+    endif()
+    if(ARG_FOLDER)
+        set_target_properties(\${APP_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY \${ARG_FOLDER})
+    endif()
+endfunction()
+SDKEOF
 
-check_required_components(PrismaEngine)
-EOF
-
-cat > "$CMAKE_DIR/PrismaEngineConfigVersion.cmake" << EOF
+    # Version config
+    cat > "$SDK_DIR/cmake/PrismaEngineConfigVersion.cmake" << SDKEOF
 set(PACKAGE_VERSION "${VERSION}")
-
 if(PACKAGE_VERSION VERSION_LESS PACKAGE_FIND_VERSION)
     set(PACKAGE_VERSION_COMPATIBLE FALSE)
 else()
+    set(PACKAGE_VERSION_COMPATIBLE TRUE)
     if(PACKAGE_VERSION VERSION_EQUAL PACKAGE_FIND_VERSION)
         set(PACKAGE_VERSION_EXACT TRUE)
     endif()
-    set(PACKAGE_VERSION_COMPATIBLE TRUE)
 endif()
-EOF
+SDKEOF
 
-print_step "[5/6] 复制示例项目"
-if [ -d "$PROJECT_ROOT/sdk/samples" ]; then
-    cp -r "$PROJECT_ROOT/sdk/samples/"* "$SAMPLES_DIR/"
-else
-    echo "  警告: 未找到示例项目目录"
-fi
+    echo "  CMake config: generated"
+done
 
-print_step "[6/6] 生成文档"
-cat > "$DOCS_DIR/QuickStart.md" << EOF
-# PrismaEngine SDK 快速入门指南
+# ──────────────────────────────────────────────
+# Step 3: Generate SDK README
+# ──────────────────────────────────────────────
+print_step "[3/5] Generating SDK README"
 
-## 版本 ${VERSION}
+for platform in "${PLATFORM_ARRAY[@]}"; do
+    platform=$(echo "$platform" | xargs)
+    SDK_DIR="$OUTPUT_DIR/PrismaEngine-SDK-${VERSION}-${platform}"
 
-### 环境要求
+    cat > "$SDK_DIR/README.md" << SDKEOF
+# PrismaEngine SDK v${VERSION} (${platform})
 
-- CMake 3.20+
-- C++20 编译器
-  - Windows: MSVC 2026+
-  - Linux: GCC 11+ 或 Clang 13+
-  - Android: NDK r25+
-- Vulkan SDK (如果使用 Vulkan 后端)
-- SDL3 (包含在 SDK 中)
-
-### 安装
-
-1. 解压 SDK 到任意目录
-2. 设置环境变量 \`PrismaEngine_DIR\` 指向 SDK 目录
-   - Linux/macOS: \`export PrismaEngine_DIR=/path/to/sdk\`
-   - Windows: \`set PrismaEngine_DIR=C:\\path\\to\\sdk\`
-
-### 创建项目
-
-创建 \`CMakeLists.txt\`:
-
-\`\`\`cmake
-cmake_minimum_required(VERSION 3.20)
-project(MyGame VERSION 1.0.0 LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-find_package(PrismaEngine REQUIRED)
-
-add_executable(MyGame src/main.cpp)
-target_link_libraries(MyGame PRIVATE PrismaEngine::Engine)
+## Directory Structure
+\`\`\`
+PrismaEngine-SDK-${VERSION}-${platform}/
+├── include/PrismaEngine/    # Public C++ headers (190+ files)
+├── lib/${platform}/         # Prebuilt engine libraries
+├── samples/                 # Example projects
+├── cmake/                   # CMake config (find_package)
+└── docs/                    # API reference
 \`\`\`
 
-创建 \`src/main.cpp\`:
-
-\`\`\`cpp
-#include <PrismaEngine/PrismaEngine.h>
-
-using namespace PrismaEngine;
-
-class MyGame : public IApplication<MyGame> {
-public:
-    bool Initialize() override {
-        LOG_INFO("Game", "游戏初始化");
-        return true;
-    }
-
-    int Run() override {
-        // 游戏主循环
-        return 0;
-    }
-
-    void Shutdown() override {
-        LOG_INFO("Game", "游戏关闭");
-    }
-};
-
-int main() {
-    MyGame game;
-    game.Initialize();
-    return game.Run();
-}
-\`\`\`
-
-### 构建和运行
-
+## Quick Start
 \`\`\`bash
-mkdir build && cd build
-cmake ..
-cmake --build .
-./MyGame  # Linux/macOS
-# 或
-MyGame.exe  # Windows
+# Extract SDK, then build your project:
+cmake -B build -DPrismaEngine_DIR=/path/to/PrismaEngine-SDK-${VERSION}-${platform}
+cmake --build build
 \`\`\`
 
-### 示例项目
-
-查看 \`samples/\` 目录获取更多示例：
-- BasicTriangle - 最小的可运行示例
-- AssetLoading - 资源加载演示
-- InputHandling - 输入处理演示
-
-### 更多信息
-
-- API 参考: \`docs/APIReference.md\`
-- 平台支持: \`docs/PlatformSupport.md\`
-EOF
-
-# 创建 README
-cat > "$SDK_DIR/README.md" << EOF
-# PrismaEngine SDK v${VERSION}
-
-## 目录结构
-
-\`\`\`
-PrismaEngine-SDK-${VERSION}/
-├── include/           # 头文件
-│   └── PrismaEngine/
-├── lib/               # 预编译库
-│   ├── linux/
-│   ├── windows/
-│   └── android/
-├── samples/           # 示例项目
-├── cmake/             # CMake 配置文件
-└── docs/              # 文档
+## Build a Sample
+\`\`\`bash
+cd samples/BasicTriangle
+cmake -B build -DPrismaEngine_DIR=/path/to/PrismaEngine-SDK-${VERSION}-${platform}
+cmake --build build
+./build/BasicTriangle
 \`\`\`
 
-## 快速开始
+## Requirements
+- CMake 3.20+
+- C++20 compiler (GCC 11+, Clang 13+, MSVC 2026+)
+- Vulkan SDK 1.3+ (for Vulkan backend)
+- SDL3 (bundled in SDK)
 
-参见 \`docs/QuickStart.md\` 获取详细说明。
+## Source
+https://github.com/Excurs1ons/PrismaEngine
+SDKEOF
+done
 
-## 许可证
+# ──────────────────────────────────────────────
+# Step 4: Create Archives + Checksums
+# ──────────────────────────────────────────────
+print_step "[4/5] Creating archives and checksums"
 
-本 SDK 使用以下许可证：
-- PrismaEngine: MIT License
-- 第三方依赖: 各自的许可证
+for platform in "${PLATFORM_ARRAY[@]}"; do
+    platform=$(echo "$platform" | xargs)
+    SDK_DIRNAME="PrismaEngine-SDK-${VERSION}-${platform}"
 
-## 支持
+    echo "  Archiving: ${SDK_DIRNAME}"
+    cd "$OUTPUT_DIR"
 
-- GitHub: https://github.com/Excurs1ons/PrismaEngine
-- 文档: https://prismaengine.dev (待上线)
-EOF
+    tar czf "${SDK_DIRNAME}.tar.gz" "$SDK_DIRNAME"
+    echo "  Created: ${SDK_DIRNAME}.tar.gz ($(du -h "${SDK_DIRNAME}.tar.gz" | cut -f1))"
 
-print_header "SDK 打包完成！"
-echo -e "${GREEN}输出目录: ${SDK_DIR}${NC}"
+    # SHA256
+    if command -v sha256sum &>/dev/null; then
+        sha256sum "${SDK_DIRNAME}.tar.gz" > "${SDK_DIRNAME}.tar.gz.sha256"
+    elif command -v shasum &>/dev/null; then
+        shasum -a 256 "${SDK_DIRNAME}.tar.gz" > "${SDK_DIRNAME}.tar.gz.sha256"
+    fi
+    echo "  Checksum: ${SDK_DIRNAME}.tar.gz.sha256"
+done
+
+cd "$PROJECT_ROOT"
+
+# ──────────────────────────────────────────────
+# Step 5: Summary
+# ──────────────────────────────────────────────
+print_header "SDK Packaging Complete!"
+
+echo -e "${GREEN}Output:${NC}"
+ls -lh "$OUTPUT_DIR"/*.tar.gz 2>/dev/null
 echo ""
-echo "下一步："
-echo "  1. 测试 SDK: cd ${SAMPLES_DIR}/BasicTriangle && cmake -B build -DPrismaEngine_DIR=${SDK_DIR}"
-echo "  2. 分发 SDK: tar czf ${OUTPUT_DIR}/PrismaEngine-SDK-${VERSION}.tar.gz -C ${OUTPUT_DIR} PrismaEngine-SDK-${VERSION}"
+echo -e "${GREEN}Upload to GitHub Release:${NC}"
+echo "  1. Go to: https://github.com/Excurs1ons/PrismaEngine/releases/new"
+echo "  2. Tag: v${VERSION}"
+echo "  3. Upload these files:"
+for f in "$OUTPUT_DIR"/*.tar.gz "$OUTPUT_DIR"/*.sha256; do
+    [ -f "$f" ] && echo "     - $(basename "$f")"
+done
 echo ""
+echo -e "${GREEN}Users then use:${NC}"
+echo '  cmake -B build -DPrismaEngine_DIR=/path/to/sdk'

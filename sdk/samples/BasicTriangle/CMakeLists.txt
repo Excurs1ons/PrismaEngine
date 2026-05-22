@@ -5,11 +5,16 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# 查找 PrismaEngine
-# 如果从 SDK 构建：
-# set(PrismaEngine_DIR "/path/to/sdk")
-# 如果从源码构建：
-# set(PrismaEngine_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../..")
+# ── 查找 PrismaEngine SDK ──
+# 使用预编译 SDK (从 GitHub Releases 下载):
+#   cmake -B build -DPrismaEngine_DIR=/path/to/PrismaEngine-SDK-<version>-<platform>
+#
+# 使用仓库内 SDK (本地开发):
+#   cmake -B build -DPrismaEngine_DIR=$(pwd)/../..
+#
+# 使用引擎构建产物 (源码构建):
+#   cmake -B build -DPrismaEngine_DIR=$(pwd)/../../../build/<preset>
+# ──────────────────────────
 
 find_package(PrismaEngine REQUIRED)
 
@@ -26,12 +31,10 @@ target_include_directories(BasicTriangle PRIVATE
     ${PRISMAENGINE_INCLUDE_DIR}
 )
 
-# 设置输出名称
 set_target_properties(BasicTriangle PROPERTIES
     OUTPUT_NAME "BasicTriangle"
 )
 
-# 安装规则
 install(TARGETS BasicTriangle
     RUNTIME DESTINATION bin
 )

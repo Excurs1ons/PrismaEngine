@@ -6,52 +6,54 @@
 
 ```
 sdk/
-├── include/PrismaEngine/    # 公共头文件
-├── lib/                      # 预编译库（由 package-sdk.sh 生成）
-│   ├── linux/               # Linux 平台库
-│   ├── windows/             # Windows 平台库
-│   └── android/             # Android 平台库
+├── include/PrismaEngine/    # 公共 C++ 头文件 (190+ 文件)
+├── lib/                      # 预编译库 — 仅从 GitHub Release 获取
+│   ├── linux/                # 仓库中为空, 下载 Release 后填充
+│   ├── windows/
+│   └── android/
 ├── samples/                 # 示例项目
 │   ├── BasicTriangle/       # 最小的可运行示例
-│   └── ...
-├── cmake/                   # CMake 配置文件
-└── docs/                    # 文档
+│   ├── BlockGame/           # 方块游戏示例
+│   └── PrismaCraftStarter/  # Minecraft 风格游戏启动器
+├── cmake/                   # CMake 配置文件 (find_package 就绪)
+└── docs/                    # API 参考和迁移指南
 ```
 
 ## 快速开始
 
-### 1. 从源码构建（开发模式）
+### 方式 A: 下载预编译 SDK (推荐, 无需引擎源码)
 
-如果你想使用 PrismaEngine 源码进行开发：
+从 [GitHub Releases](https://github.com/Excurs1ons/PrismaEngine/releases) 下载对应平台的 SDK 压缩包:
 
 ```bash
-# 克隆仓库
-git clone https://github.com/Excurs1ons/PrismaEngine.git
-cd PrismaEngine
+# 1. 下载并解压
+tar xzf PrismaEngine-SDK-0.1.0-linux.tar.gz
 
-# 构建引擎
-./scripts/build-linux.sh linux-x64-debug
-
-# 构建示例项目
-cd sdk/samples/BasicTriangle
-cmake -B build -DCMAKE_BUILD_TYPE=Debug -DPrismaEngine_DIR=../../../build/linux-x64-debug
+# 2. 构建示例项目
+cd PrismaEngine-SDK-0.1.0-linux/samples/BasicTriangle
+cmake -B build -DPrismaEngine_DIR=../..
 cmake --build build
 ./build/BasicTriangle
 ```
 
-### 2. 使用已打包的 SDK
+### 方式 B: 使用仓库内的 SDK (本地开发)
 
-如果你想使用预打包的 SDK：
+如果你已克隆完整仓库:
 
 ```bash
-# 1. 首先打包 SDK
-./scripts/package-sdk.sh 0.1.0
+# 仓库内的 sdk/ 目录已包含头文件和 cmake 配置
+cd sdk/samples/BasicTriangle
+cmake -B build -DPrismaEngine_DIR=$(pwd)/../..
+cmake --build build
+./build/BasicTriangle
+```
 
-# 2. 解压到目标目录
-# （假设解压到 /opt/PrismaEngine-SDK）
+### 创建新项目
 
-# 3. 创建新项目
+```bash
 mkdir MyGame && cd MyGame
+
+# CMakeLists.txt
 cat > CMakeLists.txt << 'EOF'
 cmake_minimum_required(VERSION 3.20)
 project(MyGame VERSION 1.0.0 LANGUAGES CXX)
@@ -63,66 +65,71 @@ find_package(PrismaEngine REQUIRED)
 
 add_executable(MyGame src/main.cpp)
 target_link_libraries(MyGame PRIVATE PrismaEngine::Engine)
+target_include_directories(MyGame PRIVATE ${PRISMAENGINE_INCLUDE_DIR})
 EOF
 
-# 4. 创建源文件
+# src/main.cpp
 mkdir src
 cat > src/main.cpp << 'EOF'
 #include <PrismaEngine/PrismaEngine.h>
 
-using namespace PrismaEngine;
+using namespace Prisma;
 
-class MyGame : public IApplication<MyGame> {
+class MyGame : public Application {
 public:
-    bool Initialize() override {
-        LOG_INFO("MyGame", "游戏初始化");
-        return Platform::Initialize();
-    }
+    MyGame() : Application({.Name = "MyGame"}) {}
 
-    int Run() override {
-        // 游戏主循环
+    int OnInitialize() override {
+        LOG_INFO("Game", "游戏初始化");
         return 0;
     }
 
-    void Shutdown() override {
-        Platform::Shutdown();
+    void OnUpdate(Timestep ts) override {
+        // 每帧更新
+    }
+
+    void OnShutdown() override {
+        LOG_INFO("Game", "游戏关闭");
     }
 };
 
-int main() {
-    MyGame game;
-    game.Initialize();
-    return game.Run();
+Prisma::Application* Prisma::CreateApplication() {
+    return new MyGame();
 }
 EOF
 
-# 5. 构建项目
-cmake -B build -DPrismaEngine_DIR=/opt/PrismaEngine-SDK
+# 构建
+cmake -B build -DPrismaEngine_DIR=/path/to/sdk
 cmake --build build
-./build/MyGame
 ```
 
 ## 示例项目
 
 ### BasicTriangle
 
-最简单的 PrismaEngine 应用程序示例。
+最小的可运行 PrismaEngine 应用。
 
-**构建：**
+**构建:**
 ```bash
-cd sdk/samples/BasicTriangle
-cmake -B build -DPrismaEngine_DIR=../../../build/linux-x64-debug
+cd samples/BasicTriangle
+cmake -B build -DPrismaEngine_DIR=/path/to/sdk
 cmake --build build
 ./build/BasicTriangle
 ```
 
+### BlockGame
+
+展示基础方塊游戏循环、输入处理、世界生成。
+
+### PrismaCraftStarter
+
+集成 PrismaEngine + PrismaCraft 的 Minecraft 风格游戏启动器。
+
 ## CMake 函数
 
-SDK 提供了以下 CMake 辅助函数：
+SDK 提供以下 CMake 辅助函数:
 
 ### prisma_create_app
-
-创建一个 PrismaEngine 应用程序：
 
 ```cmake
 prisma_create_app(MyGame
@@ -132,84 +139,71 @@ prisma_create_app(MyGame
 )
 ```
 
-参数：
-- `FOLDER`: 可选，设置输出目录
-- `SOURCES`: 可选，指定源文件
-- `LIBRARIES`: 可选，链接额外的库
-
 ### prisma_create_editor_extension
-
-创建编辑器扩展：
 
 ```cmake
 prisma_create_editor_extension(MyExtension
-    SOURCES
-        src/Extension.cpp
-        src/ExtensionPanel.cpp
+    SOURCES src/Extension.cpp src/ExtensionPanel.cpp
 )
 ```
 
 ## 平台支持
 
-| 平台 | 支持状态 | 备注 |
+| 平台 | SDK 状态 | 备注 |
 |------|---------|------|
-| Linux x64 | ✅ 完全支持 | 推荐 Ubuntu 22.04+ |
-| Linux ARM64 | ✅ 完全支持 | 需要 ARM64 toolchain |
-| Windows x64 | ✅ 完全支持 | 需要 Windows 10+ |
-| Android | ✅ 完全支持 | 需要 NDK r25+ |
+| Linux x64 | ✅ Release 可用 | Ubuntu 22.04+ |
+| Linux ARM64 | ✅ Release 可用 | 树莓派 / Termux |
+| Windows x64 | ✅ Release 可用 | Windows 10+ |
+| Android | ⏳ Release 待发布 | NDK r25+ |
 
 ## 系统要求
 
 ### 开发环境
+- **CMake**: 3.20+
+- **C++ 编译器**: GCC 11+ / Clang 13+ / MSVC 2026+
+- **Vulkan SDK**: 1.3+ (如需 Vulkan 后端)
 
-- **CMake**: 3.20 或更高版本
-- **C++ 编译器**:
-  - Linux: GCC 11+ 或 Clang 13+
-  - Windows: MSVC 2026+
-  - Android: NDK r25+
-- **Vulkan SDK**: 1.3+ (如果使用 Vulkan 后端)
-- **Python**: 3.8+ (用于构建脚本)
-
-### 运行时要求
-
-- **显卡**: 支持 Vulkan 1.3 或 OpenGL 4.5+
-- **内存**: 至少 4GB RAM
-- **存储**: 至少 500MB 可用空间
+### 运行时
+- **显卡**: Vulkan 1.3 或 OpenGL 4.5+
+- **内存**: 4GB RAM
+- **存储**: 500MB
 
 ## 文档
 
 - [API 参考](docs/APIReference.md)
-- [快速入门](docs/QuickStart.md)
-- [平台支持](docs/PlatformSupport.md)
+- [迁移指南](docs/MigrationGuide.md)
 
 ## 故障排除
 
-### Linux: 找不到 Vulkan 头文件
+### `find_package(PrismaEngine)` 失败
 
+确保设置了 `PrismaEngine_DIR`:
 ```bash
-# Ubuntu/Debian
-sudo apt install libvulkan-dev vulkan-tools
-
-# Fedora
-sudo dnf install vulkan-devel vulkan-tools
+cmake -B build -DPrismaEngine_DIR=/path/to/sdk
 ```
 
-### Windows: 找不到 SDL3
+### 找不到头文件
 
-确保使用 `PRISMA_USE_FETCHCONTENT=ON`，或者手动安装 SDL3：
+SDK 的 `sdk/include/` 目录必须包含 `PrismaEngine/PrismaEngine.h`。如果缺失, 运行:
 ```bash
-vcpkg install sdl3:x64-windows
+./scripts/sync-sdk-headers.sh
 ```
 
-### 编译错误: C++23 特性不支持
+### 预编译库不存在
 
-确保编译器支持 C++20：
+仓库内的 `sdk/lib/` 目录为空。请从 [GitHub Releases](https://github.com/Excurs1ons/PrismaEngine/releases) 下载。
+
+## 发布新版本
+
 ```bash
-# 检查 GCC 版本
-g++ --version  # 需要 11+
+# 1. 同步头文件
+./scripts/sync-sdk-headers.sh
 
-# 检查 Clang 版本
-clang++ --version  # 需要 13+
+# 2. 打包 SDK (构建引擎 + 收集产物)
+./scripts/package-sdk.sh 1.0.0 --platforms linux,windows
+
+# 3. 上传 dist/*.tar.gz 到 GitHub Releases
+#    https://github.com/Excurs1ons/PrismaEngine/releases/new
 ```
 
 ## 贡献
@@ -218,13 +212,9 @@ clang++ --version  # 需要 13+
 
 ## 许可证
 
-本项目采用 MIT 许可证。请参阅 [LICENSE](../../LICENSE) 文件了解详情。
+MIT License — 见 [LICENSE](../../LICENSE)
 
 ## 联系方式
 
 - GitHub: https://github.com/Excurs1ons/PrismaEngine
 - 问题反馈: https://github.com/Excurs1ons/PrismaEngine/issues
-
----
-
-**Happy Game Development! 🎮**
