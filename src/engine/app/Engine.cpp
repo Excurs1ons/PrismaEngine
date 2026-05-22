@@ -346,7 +346,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         m_Window->SetEventCallback([this](Event& e) {
             EventDispatcher dispatcher(e);
             
-            dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent& [[maybe_unused]] event) {
+            dispatcher.Dispatch<WindowCloseEvent>([this](WindowCloseEvent&) {
                 m_Running = false;
                 return true;
             });

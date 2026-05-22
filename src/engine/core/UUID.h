@@ -25,11 +25,10 @@ private:
 } // namespace Prisma
 
 namespace std {
-    template <typename T> struct hash;
     template<>
     struct hash<Prisma::UUID> {
         std::size_t operator()(const Prisma::UUID& uuid) const {
-            return std::hash<uint64_t>{}((uint64_t)uuid);
+            return hash<uint64_t>{}(static_cast<uint64_t>(uuid));
         }
     };
 }
