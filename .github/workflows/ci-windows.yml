@@ -58,6 +58,8 @@ jobs:
 
     - name: Restore .NET projects (avoids NuGet parallel conflict)
       run: |
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue src/engine/scripting/CSharp/Prisma.Core/obj
+        Remove-Item -Recurse -Force -ErrorAction SilentlyContinue src/engine/scripting/CSharp/PrismaEngine.Host/obj
         dotnet restore src/engine/scripting/CSharp/Prisma.Core/Prisma.Core.csproj
         dotnet restore src/engine/scripting/CSharp/PrismaEngine.Host/PrismaEngine.Host.csproj
 
