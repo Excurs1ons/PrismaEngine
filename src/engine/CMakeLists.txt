@@ -139,7 +139,10 @@ set(CORE_SOURCES
 
     # Graphic - PathTracing Pipeline
     graphic/pipelines/pathtracing/PathTracingPipeline.cpp
-    graphic/pipelines/pathtracing/VulkanRTBackend.cpp
+    # VulkanRTBackend requires VK 1.2 (not available on Android)
+    if(NOT ANDROID)
+        graphic/pipelines/pathtracing/VulkanRTBackend.cpp
+    endif()
 
     # Graphic - Deferred Pipeline
     graphic/pipelines/deferred/DeferredPipeline.cpp
