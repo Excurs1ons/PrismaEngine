@@ -35,20 +35,6 @@ if(PRISMA_BUILD_LAUNCHER)
         COMMENT "构建 PrismaEngine 运行时"
     )
 
-    # 运行时源文件配置
-    set(PRISMA_LAUNCHER_SOURCES
-        "src/launcher/windows/WindowsRuntime.cpp"
-        "src/launcher/linux/LinuxRuntime.cpp"
-        "src/launcher/android/AndroidRuntime.cpp"
-        "src/launcher/web/WebRuntime.cpp"
-    )
-
-    # 运行时资源文件
-    set(PRISMA_LAUNCHER_RESOURCES
-        "resources/common"
-        "resources/launcher"
-    )
-
 else()
     message(STATUS "Launcher: 构建已禁用")
 endif()

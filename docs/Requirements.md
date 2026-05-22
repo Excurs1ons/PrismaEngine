@@ -1,8 +1,8 @@
-# YAGE 功能需求列表
+# PrismaEngine 功能需求列表
 
 ## 简介
 
-本文档总结了 YAGE (Yet Another Game Engine) 游戏引擎的功能需求，按照模块进行组织，方便跟踪开发进度和优先级。
+本文档总结了 PrismaEngine（原 YAGE - Yet Another Game Engine）游戏引擎的功能需求，按照模块进行组织，方便跟踪开发进度和优先级。
 
 ## 核心架构需求
 
@@ -234,7 +234,7 @@
 
 ```mermaid
 pie showData
-    title YAGE 功能完成度
+    title PrismaEngine 功能完成度
     "已完成" : 40
     "进行中" : 35
     "未开始" : 25

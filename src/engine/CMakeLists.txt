@@ -88,6 +88,7 @@ set(CORE_SOURCES
     core/Component.cpp
     core/UUID.cpp
     core/SpriteRendererComponent.cpp
+    core/Packaging.cpp
 
     # UI
     ui/UIComponent.cpp
@@ -115,10 +116,10 @@ set(CORE_SOURCES
     graphic/VoxelRenderer.cpp
     graphic/GeometryRenderPass.cpp
     graphic/Material.cpp
-graphic/Mesh.cpp
-graphic/glTFLoader.cpp
-graphic/MeshRenderer.cpp
-graphic/PrimitiveComponent.cpp
+    graphic/Mesh.cpp
+    graphic/glTFLoader.cpp
+    graphic/MeshRenderer.cpp
+    graphic/PrimitiveComponent.cpp
     graphic/OrthographicCamera.cpp
     graphic/SpriteRenderer.cpp
     graphic/SpriteAnimation.cpp
@@ -169,7 +170,8 @@ graphic/PrimitiveComponent.cpp
     graphic/adapters/vulkan/VulkanAdapters.cpp
     graphic/adapters/vulkan/RenderDeviceVulkan.cpp
     graphic/adapters/vulkan/RenderDeviceVulkan_Capture.cpp
-    graphic/adapters/vulkan/VulkanSwapChain.cpp    graphic/adapters/vulkan/VulkanShader.cpp
+    graphic/adapters/vulkan/VulkanSwapChain.cpp
+    graphic/adapters/vulkan/VulkanShader.cpp
     graphic/adapters/vulkan/VulkanResources.cpp
     graphic/adapters/vulkan/VulkanResourceFactory.cpp
     graphic/adapters/vulkan/VulkanFence.cpp
@@ -380,7 +382,6 @@ set(CORE_HEADERS
     core/IImageLoader.h
     core/ImageLoaderSTB.h
     core/HotReloadManager.h
-    core/Packaging.cpp
 
     # UI
     ui/UIComponent.h

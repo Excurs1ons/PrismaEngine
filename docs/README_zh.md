@@ -9,8 +9,8 @@ Prisma Engine 是一个使用现代 C++20 构建的跨平台 3D 游戏引擎，�
 
 简体中文 | [English](../README.md)
 
-> **当前状态**: Android Vulkan 运行时已达到生产级，Windows DirectX 12 后端处于深度开发阶段。
-> **最后更新**: 2026-03-06
+> **当前状态**: Android Vulkan 运行时已达到生产级，CoreCLR C# 脚本系统已集成，SoA Entity Pool 支持百万级虚拟容量。
+> **最后更新**: 2026-05-22
 
 ## CI/CD 状态
 
@@ -34,17 +34,22 @@ Prisma Engine 是一个使用现代 C++20 构建的跨平台 3D 游戏引擎，�
 
 | 模块 | 状态 | 说明 |
 |------|--------|------|
-| 渲染架构 | ✅ 85% | 核心 Pass + Feature 系统 |
+| SoA Entity Pool | ✅ 100% | 虚拟内存 1M 容量，双缓冲 |
+| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, 计算管线) |
+| 渲染架构 | ✅ 90% | 核心 Pass + Feature 系统 + Compute Pipeline RHI |
 | 资源管理 | ✅ 95% | Handle<T> 句柄系统 + 资源池 |
 | Vulkan 后端 | ✅ 90% | 稳健的跨平台 Vulkan 实现 |
+| DirectX 12 后端 | ⏳ 70% | Windows 主要渲染后端 |
 | Platform 层 | ✅ 95% | 统一的 Windows/Linux/Android 抽象层 |
 | Logger 系统 | ✅ 100% | 线程安全的跨平台日志 |
 | 音频系统 | ✅ 50% | XAudio2/SDL3 后端，支持 3D 空间音频 |
 | 着色器 | ✅ 50% | PBR 光照着色器 (lit/unlit) |
 | Android 运行时 | ✅ 90% | 优化的 Vulkan 运行时（集成 GameActivity） |
-| 编辑器工具 | ⏳ 15% | 集成 ImGui 的基础检查器 |
+| 编辑器工具 | ⏳ 15% | ImGui 基础检查器 |
+| MCP 协议 | ✅ 85% | 17 工具、7 类别、双传输、Hash Delta 追踪 |
+| WebUI Editor | ✅ 80% | 浏览器编辑器，包含场景/游戏视图、层级、检查器 |
 
-**总体进度: ~70%**
+**总体进度: ~82%**
 
 ## 快速开始
 
@@ -86,7 +91,7 @@ cmake --build build/linux-x64-debug --parallel
 - [文档索引](Index.md) - **从这里开始**
 - [架构优化说明](ArchitectureOptimization.md) - 最新的设计改进
 - [Vulkan 集成详情](VulkanIntegration.md) - 详细的 Android 实现
-- [RenderGraph 计划](RenderGraph_Migration_Plan.md) - 未来渲染架构路线图
+- [RenderGraph 计划](RenderGraphMigrationPlan.md) - 未来渲染架构路线图
 
 ## 核心特性
 

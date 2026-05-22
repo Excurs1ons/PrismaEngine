@@ -375,7 +375,7 @@ Migrating from ScriptableRenderPipeline to RenderGraph architecture.
 
 正在从 ScriptableRenderPipeline 迁移到 RenderGraph 架构。
 
-See: [RenderGraph Migration Plan](RenderGraph_Migration_Plan.md)
+See: [RenderGraph Migration Plan](RenderGraphMigrationPlan.md)
 
 ### Migration Benefits / 迁移优势
 

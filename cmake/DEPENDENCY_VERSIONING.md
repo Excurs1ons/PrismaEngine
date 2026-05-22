@@ -199,4 +199,4 @@ cmake --preset windows-x64-debug \
 ## 相关链接 / Related Links
 
 - [CMake FetchContent 文档](https://cmake.org/cmake/help/latest/module/FetchContent.html)
-- [依赖管理策略](../docs/DependencyManagement.md)
+- [CMake 预设配置](../CMakePresets.json) - CMake preset definitions

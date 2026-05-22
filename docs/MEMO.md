@@ -1,11 +1,11 @@
-# YAGE 开发备忘录
+# PrismaEngine 开发备忘录
 
 ## 项目概述
-YAGE (Yet Another Game Engine) 是一个跨平台游戏引擎，支持Windows和Android平台。
+PrismaEngine (formerly YAGE - Yet Another Game Engine) 是一个跨平台游戏引擎，支持Windows、Linux和Android平台。
 
 ## 技术栈
 - **编程语言**: C++20
-- **图形API**: DirectX 12, Vulkan (计划中)
+- **图形API**: DirectX 12, Vulkan
 - **窗口和输入**: SDL3
 - **构建系统**: Visual Studio 2026
 - **包管理**: vcpkg
@@ -13,12 +13,13 @@ YAGE (Yet Another Game Engine) 是一个跨平台游戏引擎，支持Windows和
 
 ## 项目结构
 ```
-YAGE/
-├── Engine/           # 核心引擎代码
-├── Editor/           # 编辑器应用
-├── Launcher/          # 游戏启动器实现
-├── Assets/           # 游戏资源
-└── Docs/             # 文档 (计划中)
+PrismaEngine/
+├── src/              # 源代码
+├── resources/        # 引擎资源
+├── projects/         # 平台特定项目
+├── cmake/            # CMake 模块
+├── docs/             # 文档
+└── assets/           # 示例/演示资产
 ```
 
 ## 核心系统

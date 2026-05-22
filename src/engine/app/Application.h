@@ -26,7 +26,6 @@ namespace Prisma {
 struct ApplicationSpecification {
     std::string Name = "Prisma App";
     std::string EntryScene = "";
-    std::vector<std::string> Scenes;  // 可选多场景列表（F6/F7 切换）
     uint32_t Width = 1280;
     uint32_t Height = 720;
     bool Fullscreen = false;
@@ -42,6 +41,7 @@ struct ApplicationSpecification {
     uint32_t HeadlessWidth = 1080;
     uint32_t HeadlessHeight = 1080;
     std::string HeadlessOutputPath = "pt_output.png";
+    std::vector<std::string> Scenes;  // 可选多场景列表（F6/F7 切换，放末尾避免破坏聚合初始化）
 };
 
 class ENGINE_API Application {

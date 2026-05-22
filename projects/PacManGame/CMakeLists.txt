@@ -50,7 +50,7 @@ add_executable(${PROJECT_NAME}
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Engine
-    SDL3::SDL3
+    SDL3-shared
 )
 
 # ========== 包含目录 ==========
@@ -58,7 +58,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
 target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${CMAKE_SOURCE_DIR}/src
-        ${CMAKE_SOURCE_DIR}/../../src/engine
+        ${CMAKE_SOURCE_DIR}/src/engine
 )
 
 # ========== 编译选项 ==========

@@ -40,9 +40,10 @@ elseif(NOT PRISMA_BUILD_PROJECT_TEMPLATE3D)
     message(STATUS "  Skipped project: Template3D")
 endif()
 
-# 2. 其他平台特定项目 (可选)
-# if(WIN32 AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/windows/Game/CMakeLists.txt)
-#     add_subdirectory(windows/Game)
+# 未激活的项目（保留供未来开发）:
+# - SRP2D/  — C# SRP 2D 渲染测试项目 (C# only, 无 C++ 目标)
+# if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/SRP2D/CMakeLists.txt)
+#     add_subdirectory(SRP2D)
 # endif()
 
 message(STATUS "=========================")

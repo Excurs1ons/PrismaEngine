@@ -107,7 +107,7 @@
 ### 5. 文档
 - ✅ `MISSING_API.md` - 缺失的引擎 API 文档
 - ✅ `README.md` - 项目说明
-- ✅ `docs/architecture.md` - 详细架构设计
+- ✅ `docs/Architecture.md` - 详细架构设计
 
 ### 6. 资源目录
 - ✅ `assets/sprites/` - 精灵资源目录

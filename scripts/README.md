@@ -210,4 +210,4 @@ These scripts are designed to work seamlessly with CI/CD pipelines:
 
 - [CLAUDE.md](../CLAUDE.md) - Main documentation
 - [CMakePresets.json](../CMakePresets.json) - CMake preset definitions
-- [docs/Building.md](../docs/Building.md) - Detailed build instructions
+- [CLAUDE.md](../CLAUDE.md) - Main documentation and build instructions

@@ -201,7 +201,7 @@ sudo dnf install vulkan-devel vulkan-tools
 vcpkg install sdl3:x64-windows
 ```
 
-### 编译错误: C++20 特性不支持
+### 编译错误: C++23 特性不支持
 
 确保编译器支持 C++20：
 ```bash
@@ -214,7 +214,7 @@ clang++ --version  # 需要 13+
 
 ## 贡献
 
-欢迎贡献！请查看 [CONTRIBUTING.md](../../CONTRIBUTING.md) 了解详情。
+欢迎贡献！请查看主仓库的 [README.md](../../README.md) 了解详情。
 
 ## 许可证
 

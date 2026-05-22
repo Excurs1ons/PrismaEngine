@@ -86,7 +86,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Related Documentation / 相关文档
 
-- [Directory Structure](docs/DirectoryStructure.md) - Project organization / 项目组织
-- [Rendering System](docs/RenderingSystem.md) - Rendering architecture / 渲染架构
-- [Resource Management](docs/ResourceManager.md) - Asset loading / 资产加载
-- [Android Integration](docs/VulkanIntegration.md) - Android setup / Android 设置
+- [Directory Structure](DirectoryStructure.md) - Project organization / 项目组织
+- [Rendering System](RenderingSystem.md) - Rendering architecture / 渲染架构
+- [Resource Management](ResourceManager.md) - Asset loading / 资产加载
+- [Android Integration](VulkanIntegration.md) - Android setup / Android 设置

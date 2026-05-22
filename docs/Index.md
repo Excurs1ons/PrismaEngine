@@ -9,19 +9,17 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 - [Requirements](Requirements.md) - System requirements and dependencies
 
 ## 🏗️ Architecture & Design
-- [Architecture Overview](architecture.md) - High-level system design
+- [Architecture Overview](Architecture.md) - High-level system design
 - [Architecture Optimization](ArchitectureOptimization.md) - Recent core improvements (2024)
-- [Implementation Summary](ImplementationSummary.md) - Technical implementation details
 - [Path Tracing Plan](plans/2026-05-18-pathtracing-next-steps.md) - Path tracing roadmap (NEE, denoising, ReSTIR)
-- [Lifecycle Management](LifecycleManagement.md) - Engine and object lifecycle
-- [Lifecycle Management Implementation](LifecycleManagement_Implementation.md) - Deep dive into lifecycle code
+- [Module Progress](ModuleProgress.md) - Detailed module status report
 
 ## 🎨 Rendering System
 - [Rendering Architecture](RenderingSystem.md) - Overview of the rendering pipeline
 - [Vulkan Integration](VulkanIntegration.md) - Detailed Vulkan backend for Android/Windows
-- [RenderGraph Migration Plan](RenderGraph_Migration_Plan.md) - Future rendering architecture
-- [Rendering Redesign](rendering-architecture-redesign.md) - Design rationale for the new renderer
-- [Rendering Comparison](rendering-architecture-comparison.md) - Evaluation of different rendering techniques
+- [RenderGraph Migration Plan](RenderGraphMigrationPlan.md) - Future rendering architecture
+- [Rendering Redesign](RenderingArchitectureRedesign.md) - Design rationale for the new renderer
+- [Rendering Comparison](RenderingArchitectureComparison.md) - Evaluation of different rendering techniques
 - [Text Rendering](TextRenderer.md) - Font and text subsystem
 
 ## 📦 Resource & Asset Management
@@ -40,13 +38,13 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 
 ## 💻 Scripting & UI
 - [Scripting System](ScriptingSystem.md) - Engine scripting architecture
-- [Scripting Guide](SCRIPTING_GUIDE.md) - How to write scripts for Prisma Engine
+- [Scripting Guide](ScriptingGuide.md) - How to write scripts for Prisma Engine
 - [UI System](UISystem.md) - User interface framework
 
 ## 🛠️ Development & Guidelines
 - [Coding Style](CodingStyle.md) - Project coding standards
 - [Roadmap](Roadmap.md) - Future plans and task list
-- [Module Progress](MODULE_PROGRESS.md) - Detailed module status
+- [Module Progress](ModuleProgress.md) - Detailed module status
 - [Development MEMO](MEMO.md) - Random notes and troubleshooting
 - [Unity Legacy Avoidance](UnityLegacyAvoidance.md) - Design philosophy: avoiding Unity's technical debt (8 rules)
 
@@ -57,7 +55,7 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 ## 🤖 AI Integration
 - [PrismaMCP](PrismaMCP.md) - Model Context Protocol for AI Agent control (17 tools, 7 categories)
 - [MCP Skill](../skills/prisma-mcp/SKILL.md) - AI agent usage skill for Prisma Engine MCP
-- [MCP Test Report](MCP_Test_Report.md) - MCP protocol test results and validation (19 tests)
+- [MCP Test Report](MCPTestReport.md) - MCP protocol test results and validation (19 tests)
 
 ---
-*Last Updated: 2026-05-18 (Added Template3D Path Tracing)*
+*Last Updated: 2026-05-22 (Documentation audit and reorganization)*

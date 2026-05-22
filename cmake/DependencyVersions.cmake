@@ -19,10 +19,6 @@
 # GitHub: https://github.com/g-truc/glm
 set(PRISMA_DEP_GLM_VERSION "1.0.2")
 
-# nlohmann/json - JSON库
-# GitHub: https://github.com/nlohmann/json
-set(PRISMA_DEP_NLOHMANN_JSON_VERSION "master")
-
 # Glaze - 极速 JSON C++ 库
 # GitHub: https://github.com/stephenberry/glaze
 set(PRISMA_DEP_GLAZE_VERSION "v7.5.0")
@@ -31,18 +27,9 @@ set(PRISMA_DEP_GLAZE_VERSION "v7.5.0")
 # GitHub: https://github.com/nothings/stb
 set(PRISMA_DEP_STB_VERSION "master")
 
-# tinyxml2 - XML解析库 (用于 TMX 地图格式)
-# GitHub: https://github.com/leethomason/tinyxml2
-set(PRISMA_DEP_TINYXML2_VERSION "10.0.0")
-
-# Zstandard - 压缩库 (用于 TMX Base64+zstd 格式)
+# Zstandard - 压缩库
 # GitHub: https://github.com/facebook/zstd
 set(PRISMA_DEP_ZSTD_VERSION "v1.5.6")
-
-# Tweeny - 补间动画库 (header-only, 用于 UI 动画)
-# GitHub: https://github.com/mobius3/tweeny
-# 锁定到具体 tag
-set(PRISMA_DEP_TWEENY_VERSION "v3.2.0")
 
 # -------------------------------------------------------------------------------
 # 平台抽象 / Platform Abstraction
@@ -81,17 +68,6 @@ set(PRISMA_DEP_SPIRV_REFLECT_VERSION "vulkan-sdk-1.4.350.0")
 # 使用分支名而不是 commit SHA
 set(PRISMA_DEP_IMGUI_VERSION "docking")
 
-# -------------------------------------------------------------------------------
-# 依赖兼容性矩阵 / Dependency Compatibility Matrix
-# -------------------------------------------------------------------------------
-
-# 记录经过测试的依赖组合
-# 格式: "PRISMA_VERSION"
-set(PRISMA_DEP_MATRIX_VERSION "1.0.0")
-
-# 最后验证日期
-set(PRISMA_DEP_LAST_VERIFIED "2025-01-24")
-
 # xxHash - 极快哈希 (MCP 增量追踪)
 # GitHub: https://github.com/Cyan4973/xxHash
 set(PRISMA_DEP_XXHASH_VERSION "v0.8.2")
@@ -115,11 +91,10 @@ set(PRISMA_DEP_KNOWN_ISSUES
 # 1. 更新对应的 PRISMA_DEP_*_VERSION 变量
 # 2. 运行 scripts/update-deps.sh 验证编译
 # 3. 运行测试确保没有破坏性变更
-# 4. 更新 PRISMA_DEP_LAST_VERIFIED 日期
-# 5. 在 PRISMA_DEP_KNOWN_ISSUES 中记录任何新问题
+# 4. 在 PRISMA_DEP_KNOWN_ISSUES 中记录任何新问题
 
 # 推荐更新策略：
-# - 核心依赖（GLM, nlohmann/json）：只在有重要更新时升级
+# - 核心依赖（GLM, Glaze）：只在有重要更新时升级
 # - 图形API相关（Vulkan, DX12）：跟随上游版本更新
 # - ImGui：由于使用 docking 分支，可以定期更新
 # - 其他库：使用最新的稳定版本

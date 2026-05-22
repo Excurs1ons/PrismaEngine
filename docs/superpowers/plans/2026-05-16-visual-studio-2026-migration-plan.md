@@ -75,9 +75,9 @@ git commit -m "build(scripts): Update script references to Visual Studio 2026"
 - Modify: `CLAUDE.md`
 - Modify: `docs/MEMO.md`
 - Modify: `docs/ScriptingSystem.md`
-- Modify: `docs/rendering-refactoring-plan.md`
+- Modify: `docs/RenderingRefactoringPlan.md`
 - Modify: `docs/DeviceConfiguration.md`
-- Modify: `docs/MCP_Test_Report.md`
+- Modify: `docs/MCPTestReport.md`
 
 - [ ] **Step 1: Modify CLAUDE.md**
 
@@ -101,7 +101,7 @@ and
 - **IDE**: 推荐使用 Visual Studio 2026 (Windows) 或 VS Code + C# Dev Kit (跨平台)。
 ```
 
-- [ ] **Step 4: Modify docs/rendering-refactoring-plan.md**
+- [ ] **Step 4: Modify docs/RenderingRefactoringPlan.md**
 
 ```markdown
 - Visual Studio 2026
@@ -113,7 +113,7 @@ and
       "generator": "Visual Studio 18 2026",
 ```
 
-- [ ] **Step 6: Modify docs/MCP_Test_Report.md**
+- [ ] **Step 6: Modify docs/MCPTestReport.md**
 
 ```markdown
 - MSVC 19.50 (Visual Studio 2026 Community)
@@ -123,7 +123,7 @@ and
 - [ ] **Step 7: Commit**
 
 ```bash
-git add CLAUDE.md docs/MEMO.md docs/ScriptingSystem.md docs/rendering-refactoring-plan.md docs/DeviceConfiguration.md docs/MCP_Test_Report.md
+git add CLAUDE.md docs/MEMO.md docs/ScriptingSystem.md docs/RenderingRefactoringPlan.md docs/DeviceConfiguration.md docs/MCPTestReport.md
 git commit -m "docs: Update documentation references to Visual Studio 2026"
 ```
 

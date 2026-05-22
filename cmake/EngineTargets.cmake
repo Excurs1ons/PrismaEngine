@@ -45,7 +45,6 @@ set(PRISMA_ENGINE_VERSION "${PRISMA_ENGINE_VERSION_MAJOR}.${PRISMA_ENGINE_VERSIO
 # 配置公共依赖
 set(PRISMA_ENGINE_PUBLIC_DEPENDENCIES
     "glm::glm-header-only"
-    "nlohmann_json::nlohmann_json"
 )
 
 # 配置私有依赖
@@ -56,16 +55,16 @@ set(PRISMA_ENGINE_PRIVATE_DEPENDENCIES
 # 渲染后端依赖
 if(PRISMA_ENABLE_RENDER_VULKAN)
     list(APPEND PRISMA_ENGINE_PUBLIC_DEPENDENCIES
-        "Vulkan::Headers"
-        "GPUOpen::VulkanMemoryAllocator"
-        "vk-bootstrap::vk-bootstrap"
+        "Vulkan-Headers"
+        "vma"
+        "vk-bootstrap"
     )
 endif()
 
 # 音频后端依赖
 if(PRISMA_ENABLE_AUDIO_SDL3)
     list(APPEND PRISMA_ENGINE_PUBLIC_DEPENDENCIES
-        "SDL3::SDL3-static"
+        "SDL3-shared"
     )
 endif()
 

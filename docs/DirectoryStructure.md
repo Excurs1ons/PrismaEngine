@@ -162,93 +162,38 @@ src/game/
 
 ## Resources / resources/
 
-### Common Resources / resources/common/
+Platform-specific resources.
 
-Shared resources across runtime and editor.
-
-Runtime 和 Editor 共用的资源。
+平台特定资源。
 
 ```
-resources/common/
-├── shaders/                 # Shader source code / 着色器源码
-│   ├── hlsl/                # HLSL shaders (for DX12)
-│   │   ├── default.hlsl     # Default shader
-│   │   ├── Skybox.hlsl      # Skybox shader
-│   │   └── Text.hlsl        # Text rendering shader
-│   │
-│   └── glsl/                # GLSL shaders (for Vulkan/OpenGL)
-│       ├── clearcolor.vert/frag
-│       ├── shader.vert/frag
-│       └── skybox.vert/frag
-│
-├── textures/                # Common textures / 通用纹理
-│   └── android_robot.png    # Example texture
-│
-└── fonts/                   # Common fonts / 通用字体
+resources/
+└── windows/                 # Windows platform resources
+    └── icons/               # Windows icons
+        ├── Launcher.ico     # Main application icon
+        └── small.ico        # Small icon
 ```
 
-### Launcher Resources / resources/launcher/
-
-Platform-specific launcher resources (icons, etc.).
-
-平台特定的启动器资源（图标等）。
-
-```
-resources/launcher/
-├── windows/
-│   └── icons/               # Windows icons
-│       ├── Launcher.ico     # Main application icon
-│       └── small.ico        # Small icon
-│
-├── linux/
-│   └── icons/               # Linux icons
-│
-└── android/
-    └── icons/               # Android icons
-```
-
-### Editor Resources / resources/editor/
-
-Editor-specific resources (UI icons, themes, etc.).
-
-编辑器专用资源（UI 图标、主题等）。
-
-```
-resources/editor/
-├── icons/                   # Editor UI icons
-├── fonts/                   # Editor fonts
-├── themes/                  # Editor themes
-└── layouts/                 # Editor layouts
-```
+> **Note**: Shader source files (HLSL/GLSL) are located in the `assets/` directory.
+> 
+> **说明**：着色器源码（HLSL/GLSL）位于 `assets/` 目录下。
 
 ## Platform Projects / projects/
 
-### Android Project / projects/android/PrismaAndroid/
-
-Android Studio project for Android launcher.
-
-Android 启动器的 Android Studio 项目。
+### Project List
 
 ```
-projects/android/PrismaAndroid/
-├── app/
-│   ├── src/main/
-│   │   ├── cpp/             # Native C++ code / 原生 C++ 代码
-│   │   │   └── CMakeLists.txt
-│   │   ├── java/            # Java/Kotlin code
-│   │   │   └── MainActivity.java
-│   │   ├── assets/          # Runtime assets (copied during build)
-│   │   │   ├── shaders/     # Compiled SPIR-V shaders
-│   │   │   └── textures/    # Runtime textures
-│   │   ├── res/             # Android resources
-│   │   │   ├── drawable/
-│   │   │   ├── mipmap-*/    # App icons
-│   │   │   └── values/      # Resource values
-│   │   └── AndroidManifest.xml
-│   └── build.gradle.kts     # Gradle build configuration
-│
-└── [Gradle config files]
+projects/
+├── PacManGame/              # 2D 吃豆人游戏示例
+├── PrismaCraft/             # Minecraft 风格体素游戏
+├── SRP2D/                   # 2D Scriptable Render Pipeline 示例
+├── Template2D/              # 2D 游戏项目模板（含 C# 脚本）
+└── Template3D/              # 3D 游戏项目模板（含 Path Tracing）
 ```
+
+> **Note**: The Android project (`projects/android/PrismaAndroid/`) has been migrated into the engine's core build system.
+>
+> **说明**：Android 项目（`projects/android/PrismaAndroid/`）已整合到引擎核心构建系统中。
 
 ## Assets / assets/
 
@@ -267,22 +212,42 @@ assets/
 
 ```
 cmake/
-├── FetchThirdPartyDeps.cmake  # FetchContent dependency management
-├── DeviceOptions.cmake         # Device/platform-specific options
-└── [Other CMake modules]
+├── CompilerOptions.cmake        # Compiler flags and warnings
+├── DependencyVersions.cmake     # Version lock for all dependencies
+├── DeviceOptions.cmake          # Device/platform-specific options
+├── EditorPostTargets.cmake      # Editor post-build steps
+├── EditorTargets.cmake          # Editor build targets
+├── EngineTargets.cmake          # Engine library targets
+├── FetchThirdPartyDeps.cmake    # FetchContent dependency management
+├── FindMono.cmake               # Mono runtime finder
+├── InstallConfig.cmake          # Install configuration
+├── LauncherTargets.cmake        # Launcher build targets
+├── OutputDirectories.cmake      # Output directory configuration
+├── PackagingConfig.cmake        # Packaging configuration
+├── PlatformConfig.cmake         # Platform-specific config
+├── ProjectTargets.cmake         # Project build targets
+├── SDKConfig.cmake              # SDK generation config
+└── Utils.cmake                  # Utility functions
 ```
 
 ## Documentation / docs/
 
 ```
 docs/
-├── CLAUDE.md                 # Project overview (this file)
-├── README_zh.md              # Chinese documentation index
+├── Index.md                  # Documentation index (start here)
+├── Architecture.md           # High-level system design
 ├── RenderingSystem.md        # Rendering system docs
-├── AssetSerialization.md     # Asset serialization
 ├── VulkanIntegration.md      # Android/Vulkan integration
-└── [Other documentation]
+├── AssetSerialization.md     # Asset serialization
+├── DirectoryStructure.md     # This file
+├── ...                       # See Index.md for full list
+├── plans/                    # Implementation plans (date-prefixed)
+└── superpowers/              # Advanced design specs and plans
 ```
+
+> **Note**: The root-level `CLAUDE.md`, `README.md`, and `GEMINI.md` are project-level configuration files, not documentation.
+>
+> **说明**: 根目录下的 `CLAUDE.md`、`README.md`、`GEMINI.md` 是项目级配置文件，而非文档。
 
 ## Build Artifacts (Gitignored) / 构建产物（Git忽略）
 
@@ -332,11 +297,10 @@ namespace PrismaEngine {
 3. Add conditional compilation if needed / 如需要使用条件编译
 
 ### Adding Resources / 添加资源
-- **Common shaders**: `resources/common/shaders/hlsl/` or `glsl/`
-- **Common textures**: `resources/common/textures/`
-- **Platform-specific**: `resources/launcher/{platform}/`
+- **Shaders**: `assets/shaders/` (HLSL or GLSL)
+- **Platform-specific resources**: `resources/{platform}/`
 
 ## Related Documentation / 相关文档
-- [CLAUDE.md](../CLAUDE.md) - Project overview / 项目概述
+- [Documentation Index](Index.md) - Full documentation map / 完整文档索引
 - [Rendering System](RenderingSystem.md) - Rendering architecture / 渲染架构
 - [Vulkan Integration](VulkanIntegration.md) - Android/Vulkan setup

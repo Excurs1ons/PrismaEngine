@@ -171,7 +171,7 @@ cmake --build build/linux-x64-debug --parallel
 - [Architecture Overview](docs/README_zh.md) - Architecture and design
 - [Vulkan Integration](docs/VulkanIntegration.md) - Detailed Android implementation
 - [CoreCLR Scripting Summary](docs/plans/2026-05-10-coreclr-scripting-summary.md) - C# scripting implementation
-- [RenderGraph Plan](docs/RenderGraph_Migration_Plan.md) - Future rendering roadmap
+- [RenderGraph Plan](docs/RenderGraphMigrationPlan.md) - Future rendering roadmap
 
 ## Core Features
 

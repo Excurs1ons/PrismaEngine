@@ -39,16 +39,6 @@ if(NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
     endif()
 endif()
 
-# 查找 nlohmann_json
-if(NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
-    find_dependency(nlohmann_json CONFIG)
-endif()
-
-# 查找 ImGui
-if(NOT PRISMAENGINE_FIND_COMPONENTS_ONLY)
-    find_dependency(imgui CONFIG)
-endif()
-
 # 包含目标 (如果存在)
 if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
     include("${CMAKE_CURRENT_LIST_DIR}/PrismaEngineTargets.cmake")
