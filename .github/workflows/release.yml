@@ -48,8 +48,8 @@ jobs:
 
     - name: Build Engine
       run: |
-        cmake -B build -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DPRISMA_BUILD_PROJECT_TEMPLATE2D=OFF -DPRISMA_BUILD_PROJECT_TEMPLATE3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
-        cmake --build build --config Release --parallel
+        cmake -B build/windows-x64-release -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DPRISMA_BUILD_PROJECT_TEMPLATE2D=OFF -DPRISMA_BUILD_PROJECT_TEMPLATE3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
+        cmake --build build/windows-x64-release --config Release --parallel
 
     - name: Package SDK
       run: |
@@ -58,8 +58,8 @@ jobs:
         mkdir $DIR/lib $DIR/include $DIR/cmake -Force
         Copy-Item -Recurse sdk/include/PrismaEngine $DIR/include/
         Copy-Item sdk/cmake/*.cmake $DIR/cmake/
-        Copy-Item build/lib/Release/Prisma.dll $DIR/lib/
-        Copy-Item build/lib/Release/Prisma.lib $DIR/lib/
+        Copy-Item build/windows-x64-release/bin/Release/Prisma.dll $DIR/lib/ -ErrorAction SilentlyContinue
+        Copy-Item build/windows-x64-release/lib/Release/Prisma.lib $DIR/lib/ -ErrorAction SilentlyContinue
         7z a "PrismaEngine-SDK-${V}-windows-x64.zip" $DIR
 
     - uses: actions/upload-artifact@v4
@@ -108,46 +108,6 @@ jobs:
     - uses: actions/upload-artifact@v4
       with:
         name: sdk-linux-x64
-        path: PrismaEngine-SDK-*.tar.gz
-
-  # ==========================
-  # Linux ARM64
-  # ==========================
-  sdk-linux-arm64:
-    name: Linux ARM64 SDK
-    runs-on: ubuntu-latest
-    needs: get-version
-    steps:
-    - uses: actions/checkout@v4
-
-    - uses: jwlawson/actions-setup-cmake@v2.0
-      with:
-        cmake-version: ${{ env.CMAKE_VERSION }}
-
-    - uses: humbletim/setup-vulkan-sdk@main
-      with:
-        vulkan-query-version: 1.4.304.0
-        vulkan-components: Vulkan-Headers, Vulkan-Loader
-        vulkan-use-cache: true
-
-    - name: Build Engine
-      run: |
-        cmake --preset linux-arm64-release -DPRISMA_BUILD_PROJECT_TEMPLATE2D=OFF -DPRISMA_BUILD_PROJECT_TEMPLATE3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
-        cmake --build build/linux-arm64-release --parallel
-
-    - name: Package SDK
-      run: |
-        V="${{ needs.get-version.outputs.version }}"
-        DIR="PrismaEngine-SDK-${V}-linux-arm64"
-        mkdir -p $DIR/lib $DIR/include $DIR/cmake
-        cp -r sdk/include/PrismaEngine $DIR/include/
-        cp sdk/cmake/*.cmake $DIR/cmake/
-        cp build/linux-arm64-release/lib/libPrisma.so $DIR/lib/
-        tar czf "PrismaEngine-SDK-${V}-linux-arm64.tar.gz" $DIR
-
-    - uses: actions/upload-artifact@v4
-      with:
-        name: sdk-linux-arm64
         path: PrismaEngine-SDK-*.tar.gz
 
   # ==========================
@@ -203,7 +163,7 @@ jobs:
   release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [sdk-windows-x64, sdk-linux-x64, sdk-linux-arm64, sdk-android-arm64]
+    needs: [sdk-windows-x64, sdk-linux-x64, sdk-android-arm64]
     steps:
     - uses: actions/download-artifact@v4
 
@@ -218,7 +178,6 @@ jobs:
         files: |
           sdk-windows-x64/*.zip
           sdk-linux-x64/*.tar.gz
-          sdk-linux-arm64/*.tar.gz
           sdk-android-arm64/*.tar.gz
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
