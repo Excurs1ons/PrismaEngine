@@ -343,7 +343,8 @@ void VulkanCommandBuffer::PipelineBarrier(const std::vector<ImageBarrier>& image
                 break;
             case ResourceState::ShaderRead:
                 srcAccess = VK_ACCESS_SHADER_READ_BIT;
-                srcStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                srcStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                         | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                 break;
             case ResourceState::UnorderedAccess:
                 srcAccess = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
@@ -373,7 +374,8 @@ void VulkanCommandBuffer::PipelineBarrier(const std::vector<ImageBarrier>& image
         switch (ib.newState) {
             case ResourceState::ShaderRead:
                 dstAccess = VK_ACCESS_SHADER_READ_BIT;
-                dstStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+                dstStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT
+                         | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                 break;
             case ResourceState::UnorderedAccess:
                 dstAccess = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;

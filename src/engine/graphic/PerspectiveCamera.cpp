@@ -27,12 +27,12 @@ void PerspectiveCamera::SetNearFarPlanes(float nearPlane, float farPlane) {
 }
 
 void PerspectiveCamera::SetAspectRatio(float aspectRatio) {
-    m_aspectRatio = aspectRatio;
+    m_aspectRatio = (aspectRatio > 0.0f) ? aspectRatio : 1.0f;
     m_isProjectionDirty = true;
 }
 
 void PerspectiveCamera::SetViewport(uint32_t width, uint32_t height) {
-    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+    m_aspectRatio = (height > 0) ? static_cast<float>(width) / static_cast<float>(height) : 1.0f;
     m_isProjectionDirty = true;
 }
 
@@ -51,7 +51,9 @@ void PerspectiveCamera::SetRotation(const glm::quat& rotation) {
 }
 
 void PerspectiveCamera::LookAt(const PrismaMath::vec3& target) {
-    PrismaMath::vec3 direction = glm::normalize(target - m_position);
+    PrismaMath::vec3 delta = target - m_position;
+    if (glm::length(delta) < 0.0001f) return; // target == position，维持当前朝向
+    PrismaMath::vec3 direction = glm::normalize(delta);
     PrismaMath::vec3 worldUp = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
 
     // 防止 direction 与 worldUp 平行

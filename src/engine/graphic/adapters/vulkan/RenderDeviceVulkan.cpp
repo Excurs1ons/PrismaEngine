@@ -500,6 +500,18 @@ void RenderDeviceVulkan::Resize(uint32_t width, uint32_t height) {
         vkDeviceWaitIdle(m_device);
     if (m_swapChain) {
         m_swapChain->Resize(width, height);
+
+        // 调整信号量数组以匹配新的交换链图像数
+        uint32_t imageCount = m_swapChain->GetBufferCount();
+        if (m_renderFinishedSemaphores.size() < imageCount) {
+            VkSemaphoreCreateInfo semaphoreInfo{};
+            semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+            size_t oldSize = m_renderFinishedSemaphores.size();
+            m_renderFinishedSemaphores.resize(imageCount);
+            for (size_t i = oldSize; i < imageCount; i++) {
+                vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+            }
+        }
     }
     m_frameActive       = false;
     m_hasPendingPresent = false;

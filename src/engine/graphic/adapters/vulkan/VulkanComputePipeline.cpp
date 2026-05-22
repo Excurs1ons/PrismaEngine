@@ -83,6 +83,12 @@ bool VulkanComputePipeline::Create(IRenderDevice* device) {
                 case ShaderResource::Type::Image2D:
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                     break;
+                case ShaderResource::Type::StorageImage:
+                    binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                    break;
+                case ShaderResource::Type::AccelerationStructure:
+                    binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+                    break;
                 default:
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                     break;

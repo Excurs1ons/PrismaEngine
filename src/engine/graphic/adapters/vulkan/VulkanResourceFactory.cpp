@@ -442,9 +442,11 @@ std::shared_ptr<Prisma::Graphic::IDescriptorSetLayout> VulkanResourceFactory::Cr
         binding.descriptorCount = 1;
         binding.stageFlags = VK_SHADER_STAGE_ALL;
         switch (res.ResourceType) {
-            case Prisma::Graphic::ShaderResource::Type::Sampler2D:
+		case Prisma::Graphic::ShaderResource::Type::Sampler2D:
             case Prisma::Graphic::ShaderResource::Type::SamplerCube:
-            case Prisma::Graphic::ShaderResource::Type::Image2D: binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; break;
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; break;
+            case Prisma::Graphic::ShaderResource::Type::Image2D:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE; break;
             case Prisma::Graphic::ShaderResource::Type::StorageImage: binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; break;
             case Prisma::Graphic::ShaderResource::Type::UniformBuffer: binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; break;
             case Prisma::Graphic::ShaderResource::Type::StorageBuffer: binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; break;

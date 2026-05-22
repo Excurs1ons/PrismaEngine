@@ -278,6 +278,7 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
         cameraData.position         = camera->GetPosition();
         cameraData.nearPlane        = camera->GetNearPlane();
         cameraData.farPlane         = camera->GetFarPlane();
+        cameraData.fov              = camera->GetFOV();
 
         Renderer::BeginScene(cameraData);
 
@@ -307,6 +308,7 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
         ctx.camera.position         = camera->GetPosition();
         ctx.camera.nearPlane        = camera->GetNearPlane();
         ctx.camera.farPlane         = camera->GetFarPlane();
+        ctx.camera.fov              = camera->GetFOV();
         ctx.frameIndex              = m_device ? m_device->GetCurrentFrameIndex() : 0;
         ctx.width                   = m_desc.width;
         ctx.height                  = m_desc.height;

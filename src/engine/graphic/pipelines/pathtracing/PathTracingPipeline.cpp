@@ -279,8 +279,8 @@ bool PathTracingPipeline::CreateResources() {
     } else {
         ShaderReflection reflection;
         reflection.Resources = {
-            {"outputImage", ShaderResource::Type::Image2D, 0, 0, 1, 0},
-            {"accumImage",  ShaderResource::Type::Image2D, 0, 1, 1, 0},
+            {"outputImage", ShaderResource::Type::StorageImage, 0, 0, 1, 0},
+            {"accumImage",  ShaderResource::Type::StorageImage, 0, 1, 1, 0},
             {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(PathTracingCameraUBO)},
             {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(PathTracingSceneData)},
             {"triangleBuf", ShaderResource::Type::StorageBuffer, 0, 4, 1, sizeof(PathTracingTriangleData)},
@@ -724,7 +724,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
     std::memcpy(ubo.cameraUp, &up, sizeof(float) * 3);
     std::memcpy(ubo.cameraRight, &right, sizeof(float) * 3);
     ubo.fov = ctx.camera.fov;
-    ubo.aspectRatio = (float)m_width / (float)m_height;
+    ubo.aspectRatio = (m_height > 0) ? (float)m_width / (float)m_height : 1.0f;
     ubo.frameCount = (int)m_frameCount;
     ubo.maxBounces = (int)m_maxBounces;
     ubo.resetAccumulation = m_resetAccumulation ? 1 : 0;
