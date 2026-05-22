@@ -1,7 +1,5 @@
 #pragma once
 
-#ifndef __ANDROID__
-
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include <vector>
@@ -146,15 +144,3 @@ private:
 };
 
 } // namespace Prisma::Graphic
-
-#else // __ANDROID__ — stub (Vulkan 1.2 not available)
-
-namespace Prisma::Graphic {
-class VulkanRTBackend {
-public:
-    bool Initialize(...) { return false; }
-    void Shutdown() {}
-};
-} // namespace Prisma::Graphic
-
-#endif // __ANDROID__
