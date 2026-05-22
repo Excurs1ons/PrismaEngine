@@ -231,6 +231,7 @@ private:
 
     // ======== 硬件光线追踪资源 ========
     std::unique_ptr<VulkanRTBackend> m_rtBackend;
+    std::shared_ptr<IDescriptorSetLayout> m_rtDescLayout;  // RT 描述符集布局（用于 resize 重建）
     std::shared_ptr<IDescriptorSet> m_rtRhiDescriptorSet; // 通过 RHI 创建的 RT 描述符集
     std::vector<uint8_t> m_rgenSPIRV;
     std::vector<uint8_t> m_rchitSPIRV;

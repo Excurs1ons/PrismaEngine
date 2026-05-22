@@ -472,6 +472,32 @@ bool PathTracingPipeline::ResizeResources() {
         m_presentDescriptorSet->Update();
     }
 
+    // 4. 重建 RT 描述符集（HardwareRT 模式使用，绑定新纹理 + 已有 UBO/SSBO/TLAS）
+    if (m_rtDescLayout) {
+        m_rtRhiDescriptorSet.reset();
+        m_rtRhiDescriptorSet = factory->CreateDescriptorSet(m_rtDescLayout.get());
+        if (!m_rtRhiDescriptorSet) {
+            LOG_ERROR("PathTracingPipeline", "重建 RT 描述符集失败");
+            return false;
+        }
+        m_rtRhiDescriptorSet->BindStorageImage(0, m_storageTexture.get());
+        m_rtRhiDescriptorSet->BindStorageImage(1, m_storageTexture.get());
+        m_rtRhiDescriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO),
+                                         DescriptorType::UniformBuffer);
+        m_rtRhiDescriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData),
+                                         DescriptorType::StorageBuffer);
+        m_rtRhiDescriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
+                                         DescriptorType::StorageBuffer);
+        if (m_rtBackend && m_rtBackend->GetTLAS()) {
+            m_rtRhiDescriptorSet->BindAccelerationStructure(5,
+                reinterpret_cast<void*>(m_rtBackend->GetTLAS()));
+        }
+        m_rtRhiDescriptorSet->Update();
+    }
+
+    // 新建纹理初始状态为 Undefined，必须重置标记使首次 barrier 使用正确的初始状态
+    m_textureInitialized = false;
+
     LOG_DEBUG("PathTracingPipeline", "尺寸资源重建完成 ({}x{})", m_width, m_height);
     return true;
 }
@@ -1396,13 +1422,13 @@ bool PathTracingPipeline::BuildRTResources([[maybe_unused]] Scene* scene) {
         {"triangleBuf", ShaderResource::Type::StorageBuffer, 0, 4, 1, sizeof(PathTracingTriangleData)},
         {"tlas",        ShaderResource::Type::AccelerationStructure, 0, 5, 1, 0},
     };
-    auto rtDescLayout = factory->CreateDescriptorSetLayout(rtResources);
-    if (!rtDescLayout) {
+    m_rtDescLayout = factory->CreateDescriptorSetLayout(rtResources);
+    if (!m_rtDescLayout) {
         LOG_ERROR("PathTracingPipeline", "创建 RT 描述符集布局失败");
         return false;
     }
 
-    m_rtRhiDescriptorSet = factory->CreateDescriptorSet(rtDescLayout.get());
+    m_rtRhiDescriptorSet = factory->CreateDescriptorSet(m_rtDescLayout.get());
     if (!m_rtRhiDescriptorSet) {
         LOG_ERROR("PathTracingPipeline", "创建 RT 描述符集失败");
         return false;
@@ -1422,7 +1448,7 @@ bool PathTracingPipeline::BuildRTResources([[maybe_unused]] Scene* scene) {
 
     // 5. 从 RHI 描述符集布局获取 Vulkan 原生布局，创建管线布局
     VkDescriptorSetLayout vkDescLayout = static_cast<VkDescriptorSetLayout>(
-        rtDescLayout->GetNativeHandle());
+        m_rtDescLayout->GetNativeHandle());
     VkPipelineLayout vkPipeLayout = m_rtBackend->CreatePipelineLayout(vkDescLayout);
     if (vkPipeLayout == VK_NULL_HANDLE) {
         LOG_ERROR("PathTracingPipeline", "创建 RT 管线布局失败");
@@ -1456,6 +1482,7 @@ void PathTracingPipeline::DestroyRTResources() {
     m_rtBackend->Shutdown();
     m_rtBackend.reset();
     m_rtRhiDescriptorSet.reset();
+    m_rtDescLayout.reset();
     m_rgenSPIRV.clear();
     m_rchitSPIRV.clear();
     m_rmissSPIRV.clear();
