@@ -125,9 +125,9 @@ void main() {
     const float EPS = 0.005;
 
     for (int bounce = 0; bounce < ubo.maxBounces; bounce++) {
-        // 追踪主光线
+        // 追踪主光线（mask 0x03：0x01 光源 + 0x02 非光源）
         prd.hitType = 0;
-        traceRayEXT(tlas, gl_RayFlagsNoneEXT, 0xff, 0, 0, 0, origin, 0.001, dir, 1e30, 4);
+        traceRayEXT(tlas, gl_RayFlagsNoneEXT, 0x03, 0, 0, 0, origin, 0.001, dir, 1e30, 4);
 
         if (prd.hitType == 0) break; // 未命中
 
@@ -168,9 +168,9 @@ void main() {
                 float cosL = abs(dot(lDir, lNormal));
 
                 if (cosH > 0.0 && cosL > 0.0 && lPdf > 0.0 && d2 > 0.0001) {
-                    // 阴影射线（只检测是否遮挡，共用 prd payload location 4）
+                    // 阴影射线（mask 0x02 仅非光源：跳过光源实例避免自遮挡）
                     prd.hitType = 0;
-                    traceRayEXT(tlas, gl_RayFlagsTerminateOnFirstHitEXT, 0xff, 0, 0, 0,
+                    traceRayEXT(tlas, gl_RayFlagsTerminateOnFirstHitEXT, 0x02, 0, 0, 0,
                                 hitPos + EPS * lDir, 0.001, lDir, d, 4);
 
                     float vis = (prd.hitType == 0) ? 1.0 : 0.0;
