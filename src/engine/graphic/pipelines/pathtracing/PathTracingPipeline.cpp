@@ -674,6 +674,10 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
     // 累积阶段（m_frameCount > 0）场景和相机静止，无需每帧上传 SSBO
     if (m_scene && m_frameCount == 0) {
         UpdateTransforms(m_scene);
+        // HardwareRT 模式下，同步更新 TLAS 实例变换
+        if (m_mode == PathTraceMode::HardwareRT && m_rtBackend && m_rtResourcesBuilt) {
+            UpdateTLASInstances(cmd);
+        }
     }
 
     if (!headless) {
@@ -1156,6 +1160,15 @@ void PathTracingPipeline::SetMode(PathTraceMode newMode) {
         m_descriptorSet.reset();
         m_computeShader.reset();
 
+        // 确保三角形顶点为局部空间（BVH 模式会原地变换到世界空间）
+        // BLAS 需要局部空间顶点 + TLAS 实例变换处理世界矩阵
+        m_bvhNodes.clear();
+        m_bvhNodeCount = 0;
+        m_triToObject.clear();
+        if (m_scene) {
+            BuildFromScene(m_scene);
+        }
+
         // 构建 RT 资源
         LoadRTHardwareShaders();
         BuildRTResources(m_scene);
@@ -1357,6 +1370,9 @@ bool PathTracingPipeline::BuildRTResources([[maybe_unused]] Scene* scene) {
         inst.transform = transform;
         inst.instanceCustomIndex = (int)oi;
         inst.blasDeviceAddress = blasAddr;
+        // 实例掩码：光源（emissive > 0）= 0x01，非光源 = 0x02
+        // 主光线使用 mask 0x03 命中所有；阴影射线使用 mask 0x02 跳过光源
+        inst.instanceMask = (obj.color[3] > 0.0f) ? 0x01 : 0x02;
         instances.push_back(inst);
     }
 
@@ -1447,6 +1463,44 @@ void PathTracingPipeline::DestroyRTResources() {
     LOG_DEBUG("PathTracingPipeline", "RT 资源已清理");
 }
 
+void PathTracingPipeline::UpdateTLASInstances(ICommandBuffer* cmd) {
+    if (!m_rtBackend || !m_rtBackend->GetTLAS()) return;
+    if (m_rtBackend->m_blasEntries.empty()) return;
+
+    // 从更新的 cachedSceneData 构建 InstanceInput 列表
+    std::vector<VulkanRTBackend::InstanceInput> instances;
+    uint32_t blasIdx = 0;
+    for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+        auto& obj = m_cachedSceneData.objects[oi];
+        int type = (int)obj.p0[3];
+        if (type != 4) continue;
+        if (blasIdx >= (uint32_t)m_rtBackend->m_blasEntries.size()) break;
+
+        glm::mat4 wm;
+        std::memcpy(&wm, obj.worldMatrix, sizeof(float) * 16);
+        VkTransformMatrixKHR transform = {{
+            { wm[0][0], wm[1][0], wm[2][0], wm[3][0] },
+            { wm[0][1], wm[1][1], wm[2][1], wm[3][1] },
+            { wm[0][2], wm[1][2], wm[2][2], wm[3][2] }
+        }};
+
+        VulkanRTBackend::InstanceInput inst;
+        inst.transform = transform;
+        inst.instanceCustomIndex = (int)oi;
+        inst.blasDeviceAddress = m_rtBackend->GetBLASDeviceAddress(
+            m_rtBackend->m_blasEntries[blasIdx].handle);
+        inst.instanceMask = (obj.color[3] > 0.0f) ? 0x01 : 0x02;
+        instances.push_back(inst);
+        blasIdx++;
+    }
+
+    auto* vkCmdBuf = dynamic_cast<Vulkan::VulkanCommandBuffer*>(cmd);
+    if (!vkCmdBuf) return;
+    VkCommandBuffer vkCmd = vkCmdBuf->GetVkCommandBuffer();
+
+    m_rtBackend->UpdateTLASInstances(vkCmd, instances);
+}
+
 void PathTracingPipeline::ExecuteHardwareRT(ICommandBuffer* cmd) {
     if (!m_rtBackend || !m_rtBackend->GetRTPipeline()) return;
     if (!m_rtRhiDescriptorSet) {
@@ -1466,9 +1520,11 @@ void PathTracingPipeline::ExecuteHardwareRT(ICommandBuffer* cmd) {
     VkDescriptorSet vkDescSet = static_cast<VkDescriptorSet>(
         m_rtRhiDescriptorSet->GetNativeHandle());
 
-    // 全分辨率（rgen 中每个 gl_LaunchIDEXT = 一个像素）
-    uint32_t dispatchW = m_width / 2;
-    uint32_t dispatchH = m_height / 2;
+    // 全分辨率：rgen 中每个 gl_LaunchIDEXT = 一个像素
+    // 注意：TraceRays 的 width/height 是光线数量，不是线程组数
+    // rgen 中 gl_LaunchSizeEXT = (width, height)，每个线程处理一个像素
+    uint32_t dispatchW = m_width;
+    uint32_t dispatchH = m_height;
 
     m_rtBackend->BindAndTraceRays(vkCmd, dispatchW, dispatchH, vkDescSet);
 }

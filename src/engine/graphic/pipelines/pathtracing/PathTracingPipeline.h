@@ -203,6 +203,7 @@ private:
     bool BuildRTResources(Scene* scene);         // 构建 BLAS/TLAS/RT管线/SBT
     void DestroyRTResources();                    // 清理 RT 资源
     void ExecuteHardwareRT(ICommandBuffer* cmd);  // HardwareRT 模式执行
+    void UpdateTLASInstances(ICommandBuffer* cmd); // 更新 TLAS 实例变换
 
     // 场景数据缓存（用于延迟初始化后重上传）
     PathTracingSceneData m_cachedSceneData{};
