@@ -247,6 +247,17 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         # 自包含 Host 发布：产出运行时文件（hostfxr + coreclr + 所有 System DLL）
         # 发布到 build/PrismaEngine.Host/<rid>/publish/
         set(CS_HOST_OUTPUT_DIR "${CMAKE_BINARY_DIR}/PrismaEngine.Host/${CS_RID}")
+
+        # Host restore（避免并行冲突）
+        set(CS_HOST_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prisma_host_restored")
+        add_custom_command(
+            OUTPUT "${CS_HOST_RESTORE_STAMP}"
+            COMMAND ${DOTNET} restore "${CS_HOST_DIR}/PrismaEngine.Host.csproj" -r ${CS_RID} -p:RestorePackagesWithLockFile=false
+            COMMAND ${CMAKE_COMMAND} -E touch "${CS_HOST_RESTORE_STAMP}"
+            DEPENDS "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
+            COMMENT "Restoring PrismaEngine.Host NuGet packages"
+        )
+
         add_custom_command(
             OUTPUT "${CS_HOST_OUTPUT_DIR}/publish/PrismaEngine.Host.runtimeconfig.json"
             COMMAND ${DOTNET} publish "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
@@ -254,7 +265,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
                     -o "${CS_HOST_OUTPUT_DIR}/publish"
                     -p:DebugType=portable -p:DebugSymbols=true
                     --nologo --no-restore
-            DEPENDS "${CS_OUTPUT_FILE}" "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
+            DEPENDS "${CS_OUTPUT_FILE}" "${CS_HOST_DIR}/PrismaEngine.Host.csproj" "${CS_HOST_RESTORE_STAMP}"
             COMMENT "Publishing PrismaEngine.Host (self-contained, RID: ${CS_RID})"
         )
 
