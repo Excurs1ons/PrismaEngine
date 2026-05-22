@@ -16,42 +16,21 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(TEMPLATE3D_SOURCES
     src/Template3DApp.cpp
+    src/StatsOverlay.cpp
+    src/HeadlessRunner.cpp
 )
 
 set(TEMPLATE3D_HEADERS
     src/Template3DApp.h
+    src/StatsOverlay.h
+    src/HeadlessRunner.h
 )
 
 # ========== 共享包含目录 ==========
 
 set(TEMPLATE3D_INCLUDE_DIRS
+    # Engine 包含目录由 target_link_libraries(Engine) 通过 PUBLIC 自动继承
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/engine
-    ${CMAKE_SOURCE_DIR}/src/engine/app
-    ${CMAKE_SOURCE_DIR}/src/engine/core
-    ${CMAKE_SOURCE_DIR}/src/engine/graphic
-    ${CMAKE_SOURCE_DIR}/src/engine/graphic/interfaces
-    ${CMAKE_SOURCE_DIR}/src/engine/graphic/adapters/vulkan
-    ${CMAKE_SOURCE_DIR}/src/engine/logger
-    ${CMAKE_SOURCE_DIR}/src/engine/platform
-    ${CMAKE_SOURCE_DIR}/src/engine/scripting
-    ${CMAKE_SOURCE_DIR}/src/engine/window
-    ${CMAKE_SOURCE_DIR}/src/engine/math
-    ${CMAKE_SOURCE_DIR}/src/engine/resource
-    ${CMAKE_SOURCE_DIR}/src/engine/audio
-    ${CMAKE_SOURCE_DIR}/src/engine/ui
-    ${CMAKE_SOURCE_DIR}/src/engine/ui/2d
-    ${CMAKE_SOURCE_DIR}/src/engine/input
-    ${CMAKE_SOURCE_DIR}/src/engine/tilemap
-    ${CMAKE_SOURCE_DIR}/src/engine/scene
-    ${CMAKE_SOURCE_DIR}/src/engine/object
-    ${CMAKE_SOURCE_DIR}/src/engine/transform
-    ${CMAKE_SOURCE_DIR}/src/engine/threading
-    ${CMAKE_SOURCE_DIR}/src/engine/serialization
-    ${CMAKE_SOURCE_DIR}/src/engine/physics
-    ${CMAKE_SOURCE_DIR}/src/engine/config
-    ${CMAKE_SOURCE_DIR}/src/engine/packing
-    ${CMAKE_SOURCE_DIR}/src/engine/utils
 )
 
 # ========== 共享编译选项宏 ==========
@@ -192,7 +171,7 @@ add_custom_command(TARGET ${TEMPLATE3D_PLUGIN_NAME} POST_BUILD
 # ============================================================
 
 if(PRISMA_ENABLE_SCRIPTING)
-    set(CS_PROJ "${CMAKE_CURRENT_SOURCE_DIR}/scripts/GameScripts/GameScripts.csproj")
+    set(CS_PROJ "${CMAKE_CURRENT_SOURCE_DIR}/scripts/GameScripts.csproj")
 
     if(EXISTS "${CS_PROJ}")
         add_dependencies(${PROJECT_NAME} PrismaCore PrismaEngineHost)
@@ -208,7 +187,7 @@ if(PRISMA_ENABLE_SCRIPTING)
             COMMAND ${DOTNET} build "${CS_PROJ}"
                     -c Release --nologo
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/Template3D_Managed.dll"
+                    "${SCRIPTS_DIR}/bin/Release/net10.0/Template3D_Managed.dll"
                     "${SCRIPTS_OUT}/Template3D_Managed.dll"
             COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
         )

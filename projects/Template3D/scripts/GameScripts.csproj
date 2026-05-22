@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>Template3D_Managed</AssemblyName>
+    <RootNamespace>Template3D</RootNamespace>
+    <Nullable>enable</Nullable>
+    <!-- 纯类库：自包含发布由 PrismaEngine.Host 负责 -->
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/engine/scripting/CSharp/Prisma.Core/Prisma.Core.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="../../../src/engine/scripting/CSharp/Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <TrimmerRootAssembly Include="Template3D_Managed" />
+  </ItemGroup>
+</Project>

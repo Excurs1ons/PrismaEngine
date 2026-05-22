@@ -9,7 +9,14 @@
 #include "core/EntityManager.h"
 #include "graphic/2d/LightManager2D.h"
 #include "graphic/Renderer2D.h"
+#include "graphic/PerspectiveCamera.h"
+#include "graphic/RenderSystem.h"
+#include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
+#include "scene/SceneManager.h"
+#include "scene/Scene.h"
 #include <cstring>
+#include <SDL3/SDL_events.h>
+#include <SDL3/SDL_mouse.h>
 
 #ifdef _MSC_VER
 #include <windows.h>
@@ -155,6 +162,148 @@ static void S_SetAmbientLight(float r, float g, float b) {
     Graphic::LightManager2D::Get().SetAmbientColor({r, g, b});
 }
 
+// ==================== 3D Camera API ====================
+
+static Graphic::PerspectiveCamera* GetMainCamera3D() {
+    auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
+    if (!scene) return nullptr;
+    auto cam = scene->GetMainCamera();
+    if (!cam) return nullptr;
+    return dynamic_cast<Graphic::PerspectiveCamera*>(cam.get());
+}
+
+static void S_SetCamera3DPos(float x, float y, float z) {
+    auto* pCam = GetMainCamera3D();
+    if (pCam) pCam->SetPosition(glm::vec3(x, y, z));
+}
+
+static void S_GetCamera3DPos(float* x, float* y, float* z) {
+    if (!x || !y || !z) return;
+    auto* pCam = GetMainCamera3D();
+    if (pCam) {
+        auto pos = pCam->GetPosition();
+        *x = pos.x; *y = pos.y; *z = pos.z;
+    } else {
+        *x = *y = *z = 0.0f;
+    }
+}
+
+static void S_SetCameraRotation(float pitch, float yaw) {
+    auto* pCam = GetMainCamera3D();
+    if (!pCam) return;
+
+    // Reconstruct current rotation from camera basis vectors
+    glm::vec3 fwd = pCam->GetForward();
+    glm::vec3 rgt = pCam->GetRight();
+    glm::vec3 upv = pCam->GetUp();
+    glm::mat3 rotMat(rgt.x, rgt.y, rgt.z, upv.x, upv.y, upv.z, fwd.x, fwd.y, fwd.z);
+    glm::quat currentRot = glm::quat_cast(rotMat);
+
+    // FPS-style: pitch around local X, yaw around world Y
+    glm::quat qPitch = glm::angleAxis(pitch, glm::vec3(1.0f, 0.0f, 0.0f));
+    glm::quat qYaw   = glm::angleAxis(yaw,   glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::quat newRot = qYaw * currentRot * qPitch;
+
+    pCam->SetRotation(newRot);
+}
+
+static void S_MoveCameraLocal(float forward, float right, float up) {
+    auto* pCam = GetMainCamera3D();
+    if (!pCam) return;
+    glm::vec3 worldDelta = pCam->GetForward() * forward + pCam->GetRight() * right + pCam->GetUp() * up;
+    pCam->MoveWorld(worldDelta);
+}
+
+// ==================== Enhanced Input API ====================
+
+// Scroll tracking state — SDL doesn't expose scroll as persistent state,
+// so we accumulate it during the event loop in ScriptEngine::Update().
+static float s_mouseScrollX = 0.0f;
+static float s_mouseScrollY = 0.0f;
+
+static float S_GetMouseDeltaX() {
+    auto* m = Engine::Get().GetInputManager();
+    return m ? m->GetMouseDelta().x : 0.0f;
+}
+
+static float S_GetMouseDeltaY() {
+    auto* m = Engine::Get().GetInputManager();
+    return m ? m->GetMouseDelta().y : 0.0f;
+}
+
+static float S_GetMouseScrollX() { return s_mouseScrollX; }
+static float S_GetMouseScrollY() { return s_mouseScrollY; }
+
+static void S_SetMouseCapture(bool capture) {
+    auto& window = Engine::Get().GetWindow();
+    if (window.m_Window) {
+        SDL_SetWindowRelativeMouseMode(window.m_Window, capture);
+    }
+}
+
+static bool S_IsKeyJustPressed(int key) {
+    auto* m = Engine::Get().GetInputManager();
+    return m ? m->IsKeyJustPressed(static_cast<Prisma::Input::KeyCode>(key)) : false;
+}
+
+// ==================== Path Tracing Pipeline Control ====================
+
+static std::shared_ptr<Graphic::PathTracingPipeline> GetPathTracingPipeline() {
+    auto* rs = Engine::Get().GetRenderSystem();
+    if (!rs) return nullptr;
+    return rs->GetMainPipelineAs<Graphic::PathTracingPipeline>();
+}
+
+static bool s_ptNEEEnabled = false; // mirror of pipeline's internal m_enableNEE
+
+static void S_PTSetMaxSamples(uint32_t samples) {
+    auto pipeline = GetPathTracingPipeline();
+    if (pipeline) pipeline->SetMaxSamples(samples);
+}
+
+static uint32_t S_PTGetFrameCount() {
+    auto pipeline = GetPathTracingPipeline();
+    return pipeline ? pipeline->GetFrameCount() : 0;
+}
+
+static void S_PTResetAccumulation() {
+    auto pipeline = GetPathTracingPipeline();
+    if (pipeline) pipeline->ResetAccumulation();
+}
+
+static void S_PTSetNEE(bool enabled) {
+    s_ptNEEEnabled = enabled;
+    auto pipeline = GetPathTracingPipeline();
+    if (pipeline) pipeline->EnableNEE(enabled);
+}
+
+static bool S_PTGetNEE() { return s_ptNEEEnabled; }
+
+static void S_PTCycleMode() {
+    auto pipeline = GetPathTracingPipeline();
+    if (pipeline) pipeline->CycleMode();
+}
+
+static void S_PTGetModeName(char* buffer, uint32_t bufferSize) {
+    if (!buffer || bufferSize == 0) return;
+    auto pipeline = GetPathTracingPipeline();
+    const char* name = pipeline ? pipeline->GetModeName() : "None";
+    size_t len = std::strlen(name);
+    size_t copyLen = (len < bufferSize - 1) ? len : (bufferSize - 1);
+    std::memcpy(buffer, name, copyLen);
+    buffer[copyLen] = '\0';
+}
+
+static bool S_PTIsConverged() {
+    auto pipeline = GetPathTracingPipeline();
+    return pipeline ? pipeline->IsConverged() : false;
+}
+
+static uint32_t S_PTGetMaxSamples() {
+    auto pipeline = GetPathTracingPipeline();
+    return pipeline ? pipeline->GetMaxSamples() : 0;
+}
+
 bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     if (m_initialized) return true;
     m_host = &host;
@@ -234,6 +383,31 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
 
     m_api.srpShutdown = SRP_Shutdown;
 
+    // 3D Camera API
+    m_api.setCamera3DPos = S_SetCamera3DPos;
+    m_api.getCamera3DPos = S_GetCamera3DPos;
+    m_api.setCameraRotation = S_SetCameraRotation;
+    m_api.moveCameraLocal = S_MoveCameraLocal;
+
+    // Enhanced Input API
+    m_api.getMouseDeltaX = S_GetMouseDeltaX;
+    m_api.getMouseDeltaY = S_GetMouseDeltaY;
+    m_api.getMouseScrollX = S_GetMouseScrollX;
+    m_api.getMouseScrollY = S_GetMouseScrollY;
+    m_api.setMouseCapture = S_SetMouseCapture;
+    m_api.isKeyJustPressed = S_IsKeyJustPressed;
+
+    // Path Tracing Pipeline Control
+    m_api.ptSetMaxSamples = S_PTSetMaxSamples;
+    m_api.ptGetFrameCount = S_PTGetFrameCount;
+    m_api.ptResetAccumulation = S_PTResetAccumulation;
+    m_api.ptSetNEE = S_PTSetNEE;
+    m_api.ptGetNEE = S_PTGetNEE;
+    m_api.ptCycleMode = S_PTCycleMode;
+    m_api.ptGetModeName = S_PTGetModeName;
+    m_api.ptIsConverged = S_PTIsConverged;
+    m_api.ptGetMaxSamples = S_PTGetMaxSamples;
+
     const std::string& hostDir = host.GetScriptsDir();
 
     // 搜索 *_Managed.dll（每个项目命名不同：Template2D_Managed.dll / SRP2D_Managed.dll 等）
@@ -293,6 +467,16 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
 void ScriptEngine::Update(float dt) {
     if (!m_initialized || !m_onFrameFn) return;
     s_activeEngine = this;
+
+    // 每帧重置鼠标滚轮累积，使用 SDL_PumpEvents + SDL_PeepEvents 获取自上次 PollEvent 以来的新滚轮事件
+    s_mouseScrollX = 0.0f;
+    s_mouseScrollY = 0.0f;
+    SDL_PumpEvents();
+    SDL_Event ev;
+    while (SDL_PeepEvents(&ev, 1, SDL_GETEVENT, SDL_EVENT_MOUSE_WHEEL, SDL_EVENT_MOUSE_WHEEL) > 0) {
+        s_mouseScrollX += ev.wheel.x;
+        s_mouseScrollY += ev.wheel.y;
+    }
     m_onFrameFn(dt);
     s_activeEngine = nullptr;
 }

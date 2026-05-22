@@ -114,6 +114,31 @@ struct PrismaAPI {
 
     void (*srpShutdown)();
 
+    // ===== 3D Camera API (for Template3D/PathTracing) =====
+    void (*setCamera3DPos)(float x, float y, float z);
+    void (*getCamera3DPos)(float* x, float* y, float* z);
+    void (*setCameraRotation)(float pitch, float yaw);
+    void (*moveCameraLocal)(float forward, float right, float up);
+
+    // ===== Enhanced Input API =====
+    float (*getMouseDeltaX)();
+    float (*getMouseDeltaY)();
+    float (*getMouseScrollX)();
+    float (*getMouseScrollY)();
+    void (*setMouseCapture)(bool capture);
+    bool (*isKeyJustPressed)(int key);
+
+    // ===== Path Tracing Pipeline Control =====
+    void (*ptSetMaxSamples)(uint32_t samples);
+    uint32_t (*ptGetFrameCount)();
+    void (*ptResetAccumulation)();
+    void (*ptSetNEE)(bool enabled);
+    bool (*ptGetNEE)();
+    void (*ptCycleMode)();
+    void (*ptGetModeName)(char* buffer, uint32_t bufferSize);
+    bool (*ptIsConverged)();
+    uint32_t (*ptGetMaxSamples)();
+
     // [诊断] 结构体大小，用于 C++/C# 版本校验
     // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)
     // C# 侧在 Init 中校验，不匹配时抛出明确异常

@@ -190,6 +190,16 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 spec.HeadlessWidth      = config.headless.width;
                 spec.HeadlessHeight     = config.headless.height;
                 spec.HeadlessOutputPath = config.headless.outputPath;
+
+                // CLI args 覆盖 project.jsonc 默认值（0/空 = 不覆盖）
+                if (m_Spec.HeadlessFrames)    spec.HeadlessFrames     = m_Spec.HeadlessFrames;
+                if (m_Spec.HeadlessWidth)     spec.HeadlessWidth      = m_Spec.HeadlessWidth;
+                if (m_Spec.HeadlessHeight)    spec.HeadlessHeight     = m_Spec.HeadlessHeight;
+                if (!m_Spec.HeadlessOutputPath.empty()) spec.HeadlessOutputPath = m_Spec.HeadlessOutputPath;
+                if (m_Spec.MaxSamples)        spec.MaxSamples         = m_Spec.MaxSamples;
+
+                spec.Scenes = config.scenes;
+
                 if (m_AssetManager) {
                     for (auto& ap : config.assets)
                         m_AssetManager->AddSearchPath(ap);

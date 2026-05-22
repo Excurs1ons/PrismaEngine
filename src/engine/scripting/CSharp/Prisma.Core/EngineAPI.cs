@@ -131,6 +131,31 @@ internal unsafe struct PrismaAPI
 
     public delegate* unmanaged<void> SrpShutdown;
 
+    // ===== 3D Camera API =====
+    public delegate* unmanaged<float, float, float, void> SetCamera3DPos;
+    public delegate* unmanaged<float*, float*, float*, void> GetCamera3DPos;
+    public delegate* unmanaged<float, float, void> SetCameraRotation;
+    public delegate* unmanaged<float, float, float, void> MoveCameraLocal;
+
+    // ===== Enhanced Input API =====
+    public delegate* unmanaged<float> GetMouseDeltaX;
+    public delegate* unmanaged<float> GetMouseDeltaY;
+    public delegate* unmanaged<float> GetMouseScrollX;
+    public delegate* unmanaged<float> GetMouseScrollY;
+    public delegate* unmanaged<bool, void> SetMouseCapture;
+    public delegate* unmanaged<int, bool> IsKeyJustPressed;
+
+    // ===== Path Tracing Pipeline Control =====
+    public delegate* unmanaged<uint, void> PtSetMaxSamples;
+    public delegate* unmanaged<uint> PtGetFrameCount;
+    public delegate* unmanaged<void> PtResetAccumulation;
+    public delegate* unmanaged<bool, void> PtSetNEE;
+    public delegate* unmanaged<bool> PtGetNEE;
+    public delegate* unmanaged<void> PtCycleMode;
+    public delegate* unmanaged<byte*, uint, void> PtGetModeName;
+    public delegate* unmanaged<bool> PtIsConverged;
+    public delegate* unmanaged<uint> PtGetMaxSamples;
+
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
 }

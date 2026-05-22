@@ -20,40 +20,31 @@ int main(int argc, char* argv[]) {
     spec.Name = "Template3D";
     spec.Headless = false;
 
-    bool autoQuit = false;
-    uint32_t headlessFrames = 0;     // 0 = 从 project.json 读取
-    uint32_t headlessWidth = 0;
-    uint32_t headlessHeight = 0;
-    uint32_t samples = 0;            // 0 = 从 project.json 读取
-    std::string outputPath;          // 空 = 从 project.json 读取
-
+    // CLI 参数直接映射到 EngineSpecification 字段
+    // 0/空 = 使用 project.jsonc 值（Engine::Run 自动合并）
     for (int i = 1; i < argc; ++i) {
         std::string_view arg = argv[i];
         if (arg == "--headless") {
             spec.Headless = true;
-        } else if (arg == "--quit") {
-            autoQuit = true;
         } else if (arg == "--frames" && i + 1 < argc) {
-            headlessFrames = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
+            spec.HeadlessFrames = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
         } else if (arg == "--output" && i + 1 < argc) {
-            outputPath = argv[++i];
+            spec.HeadlessOutputPath = argv[++i];
         } else if (arg == "--width" && i + 1 < argc) {
-            headlessWidth = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
+            spec.HeadlessWidth = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
         } else if (arg == "--height" && i + 1 < argc) {
-            headlessHeight = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
+            spec.HeadlessHeight = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
         } else if (arg == "--samples" && i + 1 < argc) {
-            samples = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
+            spec.MaxSamples = static_cast<uint32_t>(std::max(1, std::atoi(argv[++i])));
         }
     }
 
     auto app = std::make_unique<Prisma::Template3DApp>();
-    app->SetAutoQuit(autoQuit);
-    app->SetSamples(samples);
+
     if (spec.Headless) {
-        app->SetHeadlessConfig(headlessFrames, outputPath, headlessWidth, headlessHeight);
-        std::cout << "Template3D 头模式: frames=" << headlessFrames
-                  << " output=" << outputPath
-                  << " " << (headlessWidth ? std::to_string(headlessWidth) : "?") << "x" << (headlessHeight ? std::to_string(headlessHeight) : "?") << std::endl;
+        std::cout << "Template3D headless mode: frames=" << spec.HeadlessFrames
+                  << " output=" << spec.HeadlessOutputPath
+                  << " " << (spec.HeadlessWidth ? std::to_string(spec.HeadlessWidth) : "?") << "x" << (spec.HeadlessHeight ? std::to_string(spec.HeadlessHeight) : "?") << std::endl;
     }
 
     int result = Prisma::RunApplication(

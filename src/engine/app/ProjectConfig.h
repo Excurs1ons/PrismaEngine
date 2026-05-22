@@ -60,6 +60,7 @@ struct ProjectConfig {
     std::string name = "Prisma App";
     std::string entryScene;
     std::vector<std::string> assets;
+    std::vector<std::string> scenes;   // 可选的多场景列表（F6/F7 切换）
     WindowConfig window;
     RenderMode renderMode = RenderMode::Mode3D_Forward;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
@@ -155,6 +156,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "name", &Prisma::ProjectConfig::name,
         "entryScene", &Prisma::ProjectConfig::entryScene,
         "assets", &Prisma::ProjectConfig::assets,
+        "scenes", &Prisma::ProjectConfig::scenes,
         "window", &Prisma::ProjectConfig::window,
         "renderMode", &Prisma::ProjectConfig::renderMode,
         "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,

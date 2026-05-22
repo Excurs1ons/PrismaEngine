@@ -5,6 +5,11 @@
     // 入口场景（相对 assets/ 搜索路径）
     "entryScene": "scenes/cornell_box.scene.json",
 
+    // 可选多场景列表（F6 下一场景 F7 上一场景）
+    "scenes": [
+        "scenes/cornell_box.scene.json"
+    ],
+
     // 资产搜索路径
     "assets": ["assets", "projects/Template3D/assets"],
 

@@ -38,6 +38,13 @@ struct EngineSpecification {
     LogLevel MinLogLevel = LogLevel::Trace;
     uint32_t MaxFPS = 0; 
     Graphic::PresentMode PresentMode = Graphic::PresentMode::VSync;
+
+    // CLI 覆盖字段（0/空 = 使用 project.jsonc 值）
+    uint32_t HeadlessFrames = 0;
+    uint32_t HeadlessWidth = 0;
+    uint32_t HeadlessHeight = 0;
+    std::string HeadlessOutputPath;
+    uint32_t MaxSamples = 0;
 };
 
 /**
