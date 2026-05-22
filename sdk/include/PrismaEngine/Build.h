@@ -1,0 +1,15 @@
+#pragma once
+
+#ifdef _DEBUG
+#define PRISMA_DEBUG 1
+#else
+#define PRISMA_DEBUG 0
+#endif
+
+
+#define PRISMA_PLATFORM_WINDOWS 1
+#define PRISMA_PLATFORM_ANDROID 0
+#define PRISMA_PLATFORM_LINUX 0
+#define PRISMA_PLATFORM_WEB 0
+#define PRISMA_PLATFORM_IOS 0
+#define PRISMA_PLATFORM_MACOS 0
