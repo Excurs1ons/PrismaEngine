@@ -159,6 +159,16 @@ if(PRISMA_ENABLE_SCRIPTING)
     set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
     set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
+    # Restore GameScripts NuGet packages（避免并行冲突）
+    set(PC_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prismacraft_scripts_restored")
+    add_custom_command(
+        OUTPUT "${PC_RESTORE_STAMP}"
+        COMMAND ${DOTNET} restore "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj" -p:RestorePackagesWithLockFile=false
+        COMMAND ${CMAKE_COMMAND} -E touch "${PC_RESTORE_STAMP}"
+        DEPENDS "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
+        COMMENT "Restoring PrismaCraft GameScripts NuGet packages"
+    )
+
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Building C# game scripts..."
         COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
@@ -167,6 +177,7 @@ if(PRISMA_ENABLE_SCRIPTING)
                 "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/PrismaCraft_Managed.dll"
                 "${SCRIPTS_OUT}/PrismaCraft_Managed.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
+        DEPENDS "${PC_RESTORE_STAMP}"
     )
 else()
     message(STATUS "PrismaCraft: Scripting disabled, skipping C# dependencies.")
