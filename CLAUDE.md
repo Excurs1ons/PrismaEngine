@@ -95,6 +95,7 @@ cmake --build build/launcher-web-debug --target Launcher
 ```bash
 # General build
 dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
+dotnet build projects/Template3D/scripts/GameScripts.csproj
 
 # Termux / Restricted VM Build (CRITICAL)
 # Android/Termux environments often limit virtual memory (ulimit -v). 
@@ -154,7 +155,12 @@ PrismaEngine/
 │       ├── windows/
 │       ├── linux/
 │       └── android/
-├── projects/                # 平台特定项目 / Platform-specific projects
+├── projects/                # 项目模板 / Project templates
+│   ├── Template2D/          # 2D 场景模板（C# 脚本驱动）
+│   ├── Template3D/          # 3D 路径追踪模板
+│   │   ├── src/             # C++: StatsOverlay, HeadlessRunner, Template3DApp
+│   │   └── scripts/         # C#: CameraController3D, ScriptEntry
+│   ├── PrismaCraft/         # Minecraft 复刻项目
 │   └── android/             # Android Studio 项目
 ├── cmake/                   # CMake 模块 / CMake modules
 ├── docs/                    # 文档 / Documentation
@@ -199,11 +205,10 @@ Note: XAudio2 implementation exists in `audio/AudioDeviceXAudio2.*` and `audio/d
   - TMX (Tiled Map) XML format via tinyxml2
 
 #### Component System / 组件系统
-- **ECS (Entity Component System)** architecture / ECS 架构
-- `ECS.h` and `Systems.h` in `src/engine/core/`
-- `AssetManager` for asset-based resource management
-- Transform system for 2D/3D transforms
-- ScriptComponent for game logic integration
+- **Component-based** architecture
+- `Component` base class in `src/engine/core/Component.h`
+- `ComponentRegistry` for factory-based serialization
+- Key components: `Transform`, `Camera`, `PrimitiveComponent`, `MeshRenderer`, `SpriteRenderer`, `ScriptComponent`
 - **UI System**: 2D UI components in `src/engine/ui/`
   - `UIComponent`: Base UI component
   - `ButtonComponent`, `CanvasComponent`: 2D UI elements
@@ -337,7 +342,20 @@ Configured in `cmake/UpscalerOptions.cmake`:
 
 All upscalers are disabled by default.
 
+## CI/CD
+
+CI 自动在 `main`/`develop`/`dev` 分支 Push/PR 时触发：
+
+| Platform | Workflow |
+|----------|----------|
+| Windows  | `ci-windows.yml` (VS 2022, 只构建引擎) |
+| Linux    | `ci-linux.yml` (Ninja) |
+| Android  | `ci-android.yml` (NDK r28, API 34) |
+
 ## Android Development / Android 开发
+
+- **API Level**: 34 (Vulkan 1.3+)
+- **NDK**: r28
 
 ### Directory Structure / 目录结构
 ```
@@ -372,11 +390,9 @@ auto texture = TextureAsset::loadAsset(
 ```
 
 ## Known Limitations / 已知限制
-- Vulkan renderer on Linux needs testing / Linux 上的 Vulkan 渲染器需要测试
-- XAudio2 backend disabled pending interface refactoring / XAudio2 后端暂时禁用，等待接口重构
-- Script system (Mono) not fully implemented / 脚本系统（Mono）未完全实现
-- Physics engine integration pending / 物理引擎集成待定
-- Linux CMake presets defined but not fully tested / Linux CMake 预设已定义但未充分测试
+- Vulkan RT backend uses VK 1.2 functions (loaded dynamically on Android)
+- XAudio2 backend disabled pending interface refactoring
+- Linux CMake presets defined but not fully tested
 
 ## Related Documentation / 相关文档
 - [Rendering System](docs/RenderingSystem.md)
