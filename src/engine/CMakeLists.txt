@@ -121,6 +121,7 @@ set(CORE_SOURCES
     graphic/MeshRenderer.cpp
     graphic/PrimitiveComponent.cpp
     graphic/OrthographicCamera.cpp
+    graphic/PerspectiveCamera.cpp
     graphic/SpriteRenderer.cpp
     graphic/SpriteAnimation.cpp
     graphic/stb_impl.cpp
