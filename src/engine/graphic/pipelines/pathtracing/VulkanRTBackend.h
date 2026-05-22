@@ -88,6 +88,9 @@ public:
     /// 从描述符集布局创建管线布局（存储到 m_rtPipelineLayout）
     VkPipelineLayout CreatePipelineLayout(VkDescriptorSetLayout descSetLayout);
 
+    // 内部清理辅助
+    void DestroyTLAS();  // 销毁 TLAS + TLAS buffer，用于 BuildTLAS 错误恢复
+
     // ======== 执行 ========
 
     /// 绑定 RT 管线 + 描述符集，并执行 TraceRays

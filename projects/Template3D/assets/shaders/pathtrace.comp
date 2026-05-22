@@ -109,6 +109,7 @@ bool intersectSphere(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) 
     if (t < EPS) t = (-b + sqrt(disc)) / (2.0 * a);
     if (t < EPS) return false;
     hit.t = t; hit.normal = normalize((origin + t * dir) - obj.p0.xyz);
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
     hit.color = obj.color.rgb; hit.emissive = 0.0; return true;
 }
 
@@ -145,6 +146,7 @@ bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
     hit.t = t;
     hit.normal = normalize(vec3(localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
                                 -localNormal.x * sinA + localNormal.z * cosA));
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
     hit.color = obj.color.rgb; hit.emissive = 0.0; return true;
 }
 
@@ -198,6 +200,7 @@ bool intersectCone(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
     hit.t = t;
     hit.normal = normalize(vec3(localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
                                 -localNormal.x * sinA + localNormal.z * cosA));
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
     hit.color = obj.color.rgb; hit.emissive = 0.0; return true;
 }
 
@@ -217,6 +220,7 @@ bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2, vec3 n0
     // 先插值，检查退化（法线全零或极小），然后用面法线回退，最后归一化
     vec3 interpN = (1.0 - u - v) * n0 + u * n1 + v * n2;
     if (dot(interpN, interpN) < 0.1) interpN = cross(e1, e2);
+    if (dot(interpN, interpN) < 1e-10) return false; // 完全退化三角形
     vec3 n = normalize(interpN);
     hit.t = t; hit.normal = (dot(dir, n) < 0.0) ? n : -n; return true;
 }
@@ -328,6 +332,7 @@ vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
         throughput *= hit.color;
         if (bounce > 5) {
             float s = max(throughput.r, max(throughput.g, throughput.b));
+            if (s < 1e-10) break; // 全黑终止
             if (randFloat() > s) break; throughput /= s;
         }
         origin = hitPos + EPS * nextDir; dir = nextDir;

@@ -927,8 +927,9 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
 
             uint32_t triCount = (uint32_t)(indices.size() / 3);
 
+            uint32_t writtenThisMesh = 0;
             for (uint32_t ti = 0; ti < triCount; ti++) {
-                if (triOffset + ti >= PathTracingTriangleData::MAX_TRIANGLES) break;
+                if (triOffset + writtenThisMesh >= PathTracingTriangleData::MAX_TRIANGLES) break;
 
                 uint32_t i0 = indices[ti * 3 + 0];
                 uint32_t i1 = indices[ti * 3 + 1];
@@ -938,7 +939,7 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
                 glm::vec3 v1 = glm::vec3(positions[i1]);
                 glm::vec3 v2 = glm::vec3(positions[i2]);
 
-                auto& tri = m_cachedTriangleData.triangles[triOffset + ti];
+                auto& tri = m_cachedTriangleData.triangles[triOffset + writtenThisMesh];
                 std::memcpy(tri.vertices[0].pos, &v0, sizeof(float) * 3);
                 tri.vertices[0].pos[3] = 0.0f;
                 std::memcpy(tri.vertices[1].pos, &v1, sizeof(float) * 3);
@@ -957,8 +958,9 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
                     std::memcpy(tri.vertices[2].nrm, &n2, sizeof(float) * 3);
                     tri.vertices[2].nrm[3] = 0.0f;
                 }
+                writtenThisMesh++;
             }
-            totalTris += triCount;
+            totalTris += writtenThisMesh;
         }
         if (totalTris == 0) continue;
 

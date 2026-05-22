@@ -56,20 +56,7 @@ bool VulkanRTBackend::Initialize(VkDevice device, VkPhysicalDevice physDev,
     return true;
 }
 
-void VulkanRTBackend::Shutdown() {
-    vkDeviceWaitIdle(m_device);
-
-    if (m_rtPipeline != VK_NULL_HANDLE) {
-        vkDestroyPipeline(m_device, m_rtPipeline, nullptr);
-        m_rtPipeline = VK_NULL_HANDLE;
-    }
-
-    if (m_sbtBuffer != VK_NULL_HANDLE) {
-        vmaDestroyBuffer(m_allocator, m_sbtBuffer, m_sbtAlloc);
-        m_sbtBuffer = VK_NULL_HANDLE;
-        m_sbtAlloc  = VK_NULL_HANDLE;
-    }
-
+void VulkanRTBackend::DestroyTLAS() {
     if (m_tlas != VK_NULL_HANDLE) {
         auto vkDestroyAccelerationStructureKHR =
             LoadRTFunc<PFN_vkDestroyAccelerationStructureKHR>(
@@ -84,6 +71,23 @@ void VulkanRTBackend::Shutdown() {
         m_tlasBuffer = VK_NULL_HANDLE;
         m_tlasAlloc  = VK_NULL_HANDLE;
     }
+}
+
+void VulkanRTBackend::Shutdown() {
+    vkDeviceWaitIdle(m_device);
+
+    if (m_rtPipeline != VK_NULL_HANDLE) {
+        vkDestroyPipeline(m_device, m_rtPipeline, nullptr);
+        m_rtPipeline = VK_NULL_HANDLE;
+    }
+
+    if (m_sbtBuffer != VK_NULL_HANDLE) {
+        vmaDestroyBuffer(m_allocator, m_sbtBuffer, m_sbtAlloc);
+        m_sbtBuffer = VK_NULL_HANDLE;
+        m_sbtAlloc  = VK_NULL_HANDLE;
+    }
+
+    DestroyTLAS();
 
     if (m_instanceBuffer != VK_NULL_HANDLE) {
         vmaDestroyBuffer(m_allocator, m_instanceBuffer, m_instanceAlloc);
@@ -566,6 +570,7 @@ bool VulkanRTBackend::BuildTLAS(const std::vector<InstanceInput>& instances) {
 
     if (m_scratchBuffer == VK_NULL_HANDLE) {
         LOG_WARN("VulkanRT", "BuildTLAS: no scratch buffer");
+        DestroyTLAS();
         return false;
     }
 
@@ -578,6 +583,7 @@ bool VulkanRTBackend::BuildTLAS(const std::vector<InstanceInput>& instances) {
     VkCommandBuffer cmd = VK_NULL_HANDLE;
     if (vkAllocateCommandBuffers(m_device, &cmdAI, &cmd) != VK_SUCCESS) {
         LOG_WARN("VulkanRT", "BuildTLAS: command buffer alloc failed");
+        DestroyTLAS();
         return false;
     }
 
@@ -602,6 +608,7 @@ bool VulkanRTBackend::BuildTLAS(const std::vector<InstanceInput>& instances) {
     if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
         LOG_WARN("VulkanRT", "BuildTLAS: end command buffer failed");
         vkFreeCommandBuffers(m_device, m_commandPool, 1, &cmd);
+        DestroyTLAS();
         return false;
     }
 
@@ -611,6 +618,7 @@ bool VulkanRTBackend::BuildTLAS(const std::vector<InstanceInput>& instances) {
     if (!ExecuteOneShot(m_device, m_commandPool, queue, cmd)) {
         LOG_WARN("VulkanRT", "BuildTLAS: execution failed");
         vkFreeCommandBuffers(m_device, m_commandPool, 1, &cmd);
+        DestroyTLAS();
         return false;
     }
 

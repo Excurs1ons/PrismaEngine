@@ -153,6 +153,7 @@ bool intersectSphere(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) 
     vec3 pt = origin + t * dir;
     hit.t = t;
     hit.normal = normalize(pt - center);
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
     hit.color = obj.color.rgb;
     hit.emissive = 0.0;
     return true;
@@ -256,6 +257,7 @@ bool intersectCone(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
 
     hit.t = t;
     hit.normal = normalize(worldNormal);
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
     hit.color = obj.color.rgb;
     hit.emissive = 0.0;
     return true;
@@ -303,6 +305,7 @@ bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
 
     hit.t = t;
     hit.normal = normalize(worldNormal);
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
     hit.color = obj.color.rgb;
     hit.emissive = 0.0;
     return true;
@@ -335,6 +338,7 @@ bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2,
     if (dot(interpNormal, interpNormal) < 0.001) {
         interpNormal = cross(e1, e2);
     }
+    if (dot(interpNormal, interpNormal) < 1e-10) return false; // 完全退化三角形
     interpNormal = normalize(interpNormal);
     if (dot(dir, interpNormal) > 0.0) {
         interpNormal = -interpNormal;
@@ -345,6 +349,7 @@ bool intersectTriangle(vec3 origin, vec3 dir, vec3 v0, vec3 v1, vec3 v2,
 }
 
 // ============ AABB intersection (for BVH traversal) ============
+// invDir 保证非零：调用处已对零分量做 epsilon 保护
 bool intersectAABB(vec3 origin, vec3 invDir, vec3 aabbMin, vec3 aabbMax, out float tMin, out float tMax) {
     vec3 t1 = (aabbMin - origin) * invDir;
     vec3 t2 = (aabbMax - origin) * invDir;
@@ -357,7 +362,12 @@ bool intersectAABB(vec3 origin, vec3 invDir, vec3 aabbMin, vec3 aabbMax, out flo
 
 // ============ BVH traversal (closest hit) ============
 bool traverseBVH(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
-    vec3 invDir = 1.0 / dir;
+    // 保护零方向分量：避免 1.0/0.0 = Inf 导致 (offset)*Inf = NaN
+    vec3 safeDir = dir;
+    if (abs(safeDir.x) < 1e-10) safeDir.x = 1e-10;
+    if (abs(safeDir.y) < 1e-10) safeDir.y = 1e-10;
+    if (abs(safeDir.z) < 1e-10) safeDir.z = 1e-10;
+    vec3 invDir = 1.0 / safeDir;
     int stack[64];
     int sp = 1;
     stack[0] = 0;
@@ -403,7 +413,11 @@ bool traverseBVH(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
 
 // ============ BVH shadow traversal (any hit within maxT) ============
 bool traverseBVHShadow(vec3 origin, vec3 dir, float maxT, int skip1, int skip2) {
-    vec3 invDir = 1.0 / dir;
+    vec3 safeDir = dir;
+    if (abs(safeDir.x) < 1e-10) safeDir.x = 1e-10;
+    if (abs(safeDir.y) < 1e-10) safeDir.y = 1e-10;
+    if (abs(safeDir.z) < 1e-10) safeDir.z = 1e-10;
+    vec3 invDir = 1.0 / safeDir;
     int stack[64]; int sp = 1; stack[0] = 0;
     while (sp > 0) {
         sp--; int nIdx = stack[sp];
@@ -505,8 +519,11 @@ vec3 sampleLightPoint(SceneObject obj, out vec3 normal, out float pdf) {
         if (u + v > 1.0) { u = 1.0 - u; v = 1.0 - v; }
         vec3 lp = v0 + u * (v1 - v0) + v * (v2 - v0);
         vec3 we1 = v1 - v0, we2 = v2 - v0;
-        normal = normalize(cross(we1, we2));
-        pdf = 1.0 / (0.5 * length(cross(we1, we2)) * float(triCount) + 1e-6);
+        vec3 cn = cross(we1, we2);
+        float triArea = 0.5 * length(cn);
+        if (triArea < 1e-10) { pdf = 0.0; return vec3(0.0); } // 退化三角形
+        normal = normalize(cn);
+        pdf = 1.0 / (triArea * float(triCount) + 1e-6);
         return lp;
     }
     // 平面光源：包围盒面积均匀采样
@@ -590,6 +607,7 @@ vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
         // Russian roulette
         if (bounce > 5) {
             float survival = max(max(throughput.r, throughput.g), throughput.b);
+            if (survival < 1e-10) break; // 全黑终止
             if (randFloat() > survival) break;
             throughput /= survival;
         }

@@ -191,6 +191,7 @@ void main() {
         // Russian roulette
         if (bounce > 5) {
             float s = max(throughput.r, max(throughput.g, throughput.b));
+            if (s < 1e-10) break; // 全黑终止
             if (randFloat() > s) break;
             throughput /= s;
         }

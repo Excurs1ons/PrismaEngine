@@ -86,8 +86,9 @@ void main() {
     // ======== 法线插值 ========
     vec3 localNormal = u * n0 + v * n1 + w * n2;
     if (dot(localNormal, localNormal) < 0.1) {
-        localNormal = normalize(cross(v1 - v0, v2 - v0));
+        localNormal = cross(v1 - v0, v2 - v0);
     }
+    if (dot(localNormal, localNormal) < 1e-10) return; // 完全退化三角形
     // 变换到世界空间（逆转置矩阵）
     mat3 worldToObjT = transpose(mat3(gl_WorldToObjectEXT));
     vec3 worldNormal = normalize(worldToObjT * localNormal);
