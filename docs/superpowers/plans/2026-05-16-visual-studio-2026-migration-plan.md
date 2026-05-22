@@ -73,9 +73,7 @@ git commit -m "build(scripts): Update script references to Visual Studio 2026"
 
 **Files:**
 - Modify: `CLAUDE.md`
-- Modify: `docs/MEMO.md`
 - Modify: `docs/ScriptingSystem.md`
-- Modify: `docs/RenderingRefactoringPlan.md`
 - Modify: `docs/DeviceConfiguration.md`
 - Modify: `docs/MCPTestReport.md`
 
@@ -85,15 +83,7 @@ git commit -m "build(scripts): Update script references to Visual Studio 2026"
 1. Open the PrismaEngine root folder in Visual Studio 2026
 ```
 
-- [ ] **Step 2: Modify docs/MEMO.md**
-
-```markdown
-- **构建系统**: Visual Studio 2026
-```
-and
-```markdown
-1. 安装 Visual Studio 2026
-```
+- [ ] **(Skipped) docs/MEMO.md was deleted during documentation restructuring**
 
 - [ ] **Step 3: Modify docs/ScriptingSystem.md**
 
@@ -101,7 +91,7 @@ and
 - **IDE**: 推荐使用 Visual Studio 2026 (Windows) 或 VS Code + C# Dev Kit (跨平台)。
 ```
 
-- [ ] **Step 4: Modify docs/RenderingRefactoringPlan.md**
+- [ ] **(Skipped) docs/RenderingRefactoringPlan.md was deleted during documentation restructuring**
 
 ```markdown
 - Visual Studio 2026
@@ -123,7 +113,7 @@ and
 - [ ] **Step 7: Commit**
 
 ```bash
-git add CLAUDE.md docs/MEMO.md docs/ScriptingSystem.md docs/RenderingRefactoringPlan.md docs/DeviceConfiguration.md docs/MCPTestReport.md
+git add CLAUDE.md docs/ScriptingSystem.md docs/DeviceConfiguration.md docs/MCPTestReport.md
 git commit -m "docs: Update documentation references to Visual Studio 2026"
 ```
 

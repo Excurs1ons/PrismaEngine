@@ -21,7 +21,7 @@
 
 ### 3.3. 脚本与文档全局更新
 项目中包含大量的 VS2022 环境搭建指引与硬编码参考，需要全部升级为 Visual Studio 2026：
-- **文档类**：`CLAUDE.md`, `docs/MEMO.md`, `docs/ScriptingSystem.md`, `docs/RenderingRefactoringPlan.md`, `docs/DeviceConfiguration.md`, `docs/MCPTestReport.md`, `sdk/README.md`, `.github/workflows/README.md`
+- **文档类**：`CLAUDE.md`, `docs/ScriptingSystem.md`, `docs/DeviceConfiguration.md`, `docs/MCPTestReport.md`, `sdk/README.md`, `.github/workflows/README.md`
 - **脚本类**：`scripts/README.md`, `scripts/package-sdk.sh`, `scripts/setup-env.ps1`
 - **忽略项**：第三方或原作者的版权声明（如 `src/editor/core/webview.h` 中的 `Copyright (c) 2022`）保持不变。
 

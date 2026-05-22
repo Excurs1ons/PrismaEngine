@@ -106,7 +106,7 @@ Common presets include:
 ## Guidelines for AI Agents
 1. **Always use `-j2` or `-j4` for builds** on ARM/limited resources to avoid memory exhaustion (as per global context).
 2. **Follow the Driver-Device pattern** when adding platform-specific features.
-3. **Update `docs/ModuleProgress.md`** when completing or modifying major features.
+3. **Update `docs/Roadmap.md`** (Module Progress section) when completing or modifying major features.
 4. **Refer to `docs/`** for detailed specifications of individual systems before refactoring.
 5. **Check `CMakePresets.json`** for environment-specific configurations before suggesting build fixes.
 6. **Environment Optimization (Encoding)**: 在 Windows 中文环境下，建议 AI Agent 在执行构建命令时带上英文语言包前缀，以确保日志可读：

@@ -89,8 +89,8 @@
 | 30 | `README.md` | `C++20`（多处） | `C++23` |
 | 31 | `CLAUDE.md` | `C++20`（多处） | `C++23` |
 | 32 | `GEMINI.md` | `C++20`（多处） | `C++23` |
-| 33 | `docs/CodingStyle.md:4` | `> **版本**: C++20` | `C++23` |
-| 34 | `docs/MEMO.md:7` | `**编程语言**: C++20` | `C++23` |
+| 33 | ~~`docs/CodingStyle.md:4`~~ | ~~已删除~~ | 文档已移除，无需变更 |
+| 34 | ~~`docs/MEMO.md:7`~~ | ~~已删除~~ | 文档已移除，无需变更 |
 | 35 | `docs/README_zh.md` | `现代 C++20` | `C++23` |
 | 36 | `docs/Index.md` | `C++20`（如有引用） | `C++23` |
 | 37 | `cmake/DEPENDENCY_VERSIONING.md` | Vulkan-Headers v1.4.328 等 | 更新为 v1.4.351 |

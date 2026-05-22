@@ -94,6 +94,16 @@ if(PRISMA_BUILD_LAUNCHER AND TARGET Launcher)
     )
 endif()
 
+# ========== Editor 可执行文件安装 ==========
+
+if(PRISMA_BUILD_EDITOR AND TARGET Editor)
+    # 安装编辑器 DLL 和其依赖的 Engine DLL
+    install(TARGETS Editor
+        RUNTIME DESTINATION bin
+        LIBRARY DESTINATION bin
+    )
+endif()
+
 # ========== 目录安装 ==========
 
 # 安装 projects 目录

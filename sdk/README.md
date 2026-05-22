@@ -214,7 +214,7 @@ clang++ --version  # 需要 13+
 
 ## 贡献
 
-欢迎贡献！请查看主仓库的 [README.md](../../README.md) 了解详情。
+欢迎贡献！请查看主仓库的 [README.md](../README.md) 了解详情。
 
 ## 许可证
 

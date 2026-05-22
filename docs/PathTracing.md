@@ -186,7 +186,7 @@ Shader Binding Table (SBT)
 
 ### 5. 与 RTXGI 的关系
 
-参考 `docs/RTXGIIntegration.md` — 已有的 RTXGI 设计文档：
+参考 `docs/plans/RTXGIIntegration.md` — 已有的 RTXGI 设计文档：
 
 | | RTXGI (DDGI) | 我们的纯 PT | NRD + 混合 PT |
 |---|---|---|---|
@@ -333,7 +333,7 @@ Execute 流程（修复后）:
 - [RTXDI GitHub](https://github.com/NVIDIA-RTX/RTXDI) — 直接光照采样
 - [Vulkan Ray Tracing](https://www.khronos.org/vulkan-ray-tracing/) — 官方规范
 - [RenderingSystem.md](RenderingSystem.md) — 渲染系统架构
-- [RTXGIIntegration.md](RTXGIIntegration.md) — RTXGI 集成设计
+- [RTXGIIntegration.md](plans/RTXGIIntegration.md) — RTXGI 集成设计
 - [Roadmap.md](Roadmap.md) — 功能路线图
 
 ---

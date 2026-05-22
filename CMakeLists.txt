@@ -149,11 +149,9 @@ include(cmake/InstallConfig.cmake)
 include(cmake/ProjectTargets.cmake)
 
 # ========== 打包配置 ==========
-
-# 只在构建 SDK 时启用打包
-if(PRISMA_BUILD_SDK)
-    include(cmake/PackagingConfig.cmake)
-endif()
+# CPack 打包：cmake --build build --target package
+# 支持 Windows (NSIS+ZIP) 和 Linux (TGZ+DEB+RPM)
+include(cmake/PackagingConfig.cmake)
 
 # ========== 总结构建配置 ==========
 

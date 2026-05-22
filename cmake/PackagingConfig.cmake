@@ -1,73 +1,46 @@
 # PackagingConfig.cmake
-# CPack 打包配置和自定义分发目标
+# CPack 打包配置 — 构建 NSIS (Windows) / TGZ+DEB+RPM (Linux) 安装包
+# 使用方式: cmake --build build --target package
 
-# ========== 构建配置检测 ==========
-
-# 检测当前构建配置，用于分发目标
-if(CMAKE_BINARY_DIR MATCHES "/debug/" OR CMAKE_BINARY_DIR MATCHES "\\debug$")
-    set(DIST_CONFIG "Debug")
-elseif(CMAKE_BINARY_DIR MATCHES "/release/" OR CMAKE_BINARY_DIR MATCHES "\\release$")
-    set(DIST_CONFIG "Release")
-else()
-    # 对于多配置生成器 (如 Visual Studio)，使用默认配置
-    set(DIST_CONFIG "Release")
-    message(WARNING "无法从构建路径确定配置类型，使用默认 Release 配置")
-endif()
-
-# ========== CPack 配置 ==========
+# ========== CPack 通用配置 ==========
 
 set(CPACK_PACKAGE_NAME "PrismaEngine")
 set(CPACK_PACKAGE_VENDOR "Prisma")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Prisma Game Engine")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Prisma Game Engine — cross-platform 3D engine built with modern C++20")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_VERSION_MAJOR "${PROJECT_VERSION_MAJOR}")
 set(CPACK_PACKAGE_VERSION_MINOR "${PROJECT_VERSION_MINOR}")
 set(CPACK_PACKAGE_VERSION_PATCH "${PROJECT_VERSION_PATCH}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "PrismaEngine")
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+set(CPACK_RESOURCE_FILE_README "${CMAKE_SOURCE_DIR}/README.md")
 
-# Windows 特定配置
+# 打包内容来自 cmake --install, 由 InstallConfig.cmake 定义安装规则
+set(CPACK_INSTALL_CMAKE_PROJECTS "${CMAKE_BINARY_DIR};PRISMA;ALL;/")
+
+# ========== Windows: NSIS 安装包 ==========
+
 if(WIN32)
     set(CPACK_GENERATOR "NSIS;ZIP")
     set(CPACK_NSIS_DISPLAY_NAME "Prisma Engine")
     set(CPACK_NSIS_PACKAGE_NAME "Prisma Engine")
     set(CPACK_NSIS_CONTACT "contact@example.com")
     set(CPACK_NSIS_MODIFY_PATH ON)
+    set(CPACK_NSIS_INSTALL_ROOT "$PROGRAMFILES64")
+    set(CPACK_NSIS_MENU_LINKS
+        "bin/PrismaEditor.exe" "Prisma Engine Editor"
+        "bin/PrismaLauncher.exe" "Prisma Engine Launcher"
+    )
 endif()
 
-# Linux 特定配置
+# ========== Linux: TGZ / DEB / RPM ==========
+
 if(PRISMA_PLATFORM_LINUX)
     set(CPACK_GENERATOR "TGZ;DEB;RPM")
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libgl1-mesa-glx, libopenal1")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libc6, libstdc++6, libvulkan1")
     set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 endif()
 
-# ========== 自定义分发目标 ==========
+# ========== 启用 CPack ==========
 
-# tar.gz 分发目标 (Linux/macOS/通用)
-add_custom_target(dist
-    COMMAND ${CMAKE_COMMAND} -E echo "使用配置: ${DIST_CONFIG} 创建分发包"
-    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config ${DIST_CONFIG} --prefix ${CMAKE_BINARY_DIR}/install
-    COMMAND ${CMAKE_COMMAND} -E tar "czf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.tar.gz"
-        --format=gnutar
-        "${CMAKE_BINARY_DIR}/install"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Creating distribution package"
-    VERBATIM
-)
-
-# zip 分发目标 (Windows)
-add_custom_target(dist-win
-    COMMAND ${CMAKE_COMMAND} --install ${CMAKE_BINARY_DIR} --config ${DIST_CONFIG} --prefix ${CMAKE_BINARY_DIR}/install
-    COMMAND ${CMAKE_COMMAND} -E tar "cf" "${CMAKE_BINARY_DIR}/PrismaEngine-${PROJECT_VERSION}.zip"
-        --format=zip
-        "${CMAKE_BINARY_DIR}/install"
-    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-    COMMENT "Creating Windows distribution package"
-    VERBATIM
-)
-
-# 包含 CPack
-# 注意: 如果需要使用 CPack，取消下面的注释
-# include(CPack)
+include(CPack)
