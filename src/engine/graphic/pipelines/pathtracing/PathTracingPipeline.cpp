@@ -689,6 +689,8 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         BuildFromScene(m_scene);
         ResetAccumulation();
         m_scene->SetDirty(false);
+        // HardwareRT 需要重建 BLAS/TLAS 以匹配新的场景几何
+        m_sceneChangedSinceLastRTBuild = true;
         LOG_INFO("PathTracingPipeline", "场景数据已自动重建");
     }
 
@@ -1001,6 +1003,8 @@ void PathTracingPipeline::ReloadSceneData() {
     if (!m_scene || !m_initialized) return;
     BuildFromScene(m_scene);
     ResetAccumulation();
+    // HardwareRT 需要重建 BLAS/TLAS 以匹配新的场景几何
+    m_sceneChangedSinceLastRTBuild = true;
     LOG_INFO("PathTracingPipeline", "场景数据已重建");
 }
 
