@@ -178,6 +178,7 @@ void MeshRenderer::Update(Timestep ts) {
         const float pulse = 0.5f + 0.5f * std::sin(ts.GetSeconds());
         m_material->SetParam("ObjectPosition", PrismaMath::vec3(position.x, position.y, position.z));
         m_material->SetParam("FramePulse", pulse);
+        m_material->SetParam("Emissive", PrismaMath::vec4(m_emissive, 0.0f));
 
         if (m_mesh) {
             EnsureMeshGPUResources(m_mesh.get());

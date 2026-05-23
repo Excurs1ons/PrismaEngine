@@ -12,6 +12,7 @@ layout(push_constant) uniform PushConstants {
     mat4 vp;
     mat4 model;
     vec4 color;
+    vec4 emissive;
 } pc;
 
 void main() {
@@ -19,5 +20,5 @@ void main() {
     vec3 N = normalize(cross(dFdx(inWorldPos), dFdy(inWorldPos)));
     outNormal = vec4(N, 0.0);
     outAlbedo = pc.color;
-    outEmissive = vec4(0.0, 0.0, 0.0, 0.0);
+    outEmissive = pc.emissive;
 }

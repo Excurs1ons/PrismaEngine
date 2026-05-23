@@ -277,7 +277,7 @@ std::vector<Prisma::Graphic::Light> Scene::GetLights() const {
         if (it == m_nodeComponents.end()) continue;
         for (auto& comp : it->second) {
             auto lightComp = std::dynamic_pointer_cast<Prisma::Graphic::LightComponent>(comp);
-            if (lightComp) {
+            if (lightComp && lightComp->IsEnabled()) {
                 result.push_back(lightComp->GetLightData());
             }
         }

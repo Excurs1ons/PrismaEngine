@@ -12,7 +12,8 @@ struct glz::meta<Prisma::Graphic::LightComponent::LightType> {
     static constexpr auto value = glz::enumerate(
         "Directional", Directional,
         "Point", Point,
-        "Spot", Spot
+        "Spot", Spot,
+        "Ambient", Ambient
     );
 };
 
@@ -36,16 +37,38 @@ namespace {
             [](const Prisma::Component& comp) -> std::string {
                 const auto& typed = static_cast<const Prisma::Graphic::LightComponent&>(comp);
                 auto data = typed.GetData();
+                glz::json_t root;
+                auto ec = glz::read_json(root, glz::write_json(data).value_or("{}"));
+                if (!ec && root.is_object()) {
+                    auto& obj = root.get_object();
+                    obj["enabled"] = typed.IsEnabled();
+                    return glz::write_json(root).value_or("");
+                }
+                // fallback: 只写 data
                 std::string json;
-                auto ec = glz::write_json(data, json);
-                if (ec) json.clear();
+                auto e = glz::write_json(data, json);
+                if (e) json.clear();
                 return json;
             },
             [](Prisma::Component& comp, const std::string& json) {
                 auto& typed = static_cast<Prisma::Graphic::LightComponent&>(comp);
+                // 用 json_t 解析，提取 data 字段和 enabled
+                glz::json_t root;
+                auto ec = glz::read_json(root, json);
+                if (ec) return;
+                if (!root.is_object()) return;
+                auto& obj = root.get_object();
+
+                // 反序列化 data 子对象
+                auto dataJson = glz::write_json(root).value_or("");
                 Prisma::Graphic::LightComponent::Data data;
-                auto ec = glz::read_json(data, json);
-                if (!ec) typed.SetData(data);
+                auto de = glz::read_json(data, dataJson);
+                if (!de) typed.SetData(data);
+
+                // 读取 enabled
+                auto it = obj.find("enabled");
+                if (it != obj.end() && it->second.is_boolean())
+                    typed.SetEnabled(it->second.get_boolean());
             }
         );
         return true;

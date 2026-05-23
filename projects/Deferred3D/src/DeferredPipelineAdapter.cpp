@@ -131,7 +131,6 @@ int DeferredPipelineAdapter::Initialize(Graphic::IRenderDevice* device)
     m_vkDevice = m_device->GetVkDevice();
 
     m_pipeline = std::make_shared<Graphic::DeferredPipeline>();
-    m_pipeline->SetAmbientLight({0.2f, 0.2f, 0.2f});
     m_pipeline->Initialize();
 
     auto* factory = m_device->GetResourceFactory();
@@ -493,12 +492,22 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
             }
         }
 
-        struct PushData { Graphic::PrismaMath::mat4 vp; Graphic::PrismaMath::mat4 model; Graphic::PrismaMath::vec4 color; };
+        Graphic::PrismaMath::vec4 emissive(0.0f, 0.0f, 0.0f, 0.0f);
+        if (c.material) {
+            const auto* pe = c.material->GetParam("Emissive");
+            if (!pe) pe = c.material->GetParam("emissive");
+            if (pe) {
+                if (const auto* v4 = std::get_if<Graphic::PrismaMath::vec4>(pe))
+                    emissive = *v4;
+            }
+        }
+
+        struct PushData { Graphic::PrismaMath::mat4 vp; Graphic::PrismaMath::mat4 model; Graphic::PrismaMath::vec4 color; Graphic::PrismaMath::vec4 emissive; };
         PushData pd{};
         pd.vp = vp;
         pd.model = c.transform;
         pd.color = baseCol;
-        // 单次 PushConstants 覆盖所有图形阶段（vs 分开调用可能在某些驱动上导致数据不同步）
+        pd.emissive = emissive;
         ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &pd, sizeof(pd));
 
         for (const auto& sm : c.mesh->GetSubMeshes()) {
@@ -513,7 +522,61 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     vkCmdEndRenderPass(vkCmd);
 
     // ====================================================================
-    // Phase 2: SwapChain Pass — forward reference or debug GBuffer
+    // Phase 1.5: Lighting Pass — fullscreen triangle, reads GBuffer → lightingOutput
+    // ====================================================================
+    {
+        VkClearValue ltClear;
+        ltClear.color = {{0, 0, 0, 0}};
+        VkRenderPassBeginInfo rp = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+        rp.renderPass = m_lightingRP;
+        rp.framebuffer = m_lightingFB;
+        rp.renderArea = {{0, 0}, {m_width, m_height}};
+        rp.clearValueCount = 1;
+        rp.pClearValues = &ltClear;
+        vkCmdBeginRenderPass(vkCmd, &rp, VK_SUBPASS_CONTENTS_INLINE);
+    }
+    ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});
+    ctx.commandBuffer->SetScissorRect({0,0,(int)m_width,(int)m_height});
+    ctx.commandBuffer->SetPipelineState(m_lightingPSO.get());
+    ctx.commandBuffer->BindDescriptorSet(0, m_lightingDS.get());
+
+    {
+        struct LightingPC { Graphic::PrismaMath::vec4 ambient; Graphic::PrismaMath::vec4 lightDir; Graphic::PrismaMath::vec4 lightColor; Graphic::PrismaMath::vec4 lightPos; };
+        LightingPC lpc{};
+        lpc.ambient = {0.0f, 0.0f, 0.0f, 1.0f};
+
+        // 从场景光源中提取环境光（Ambient）和定向光（Directional）
+        for (const auto& light : ctx.lights) {
+            int lightType = static_cast<int>(light.direction.w + 0.5f);
+            PrismaMath::vec3 col = PrismaMath::vec3(light.color.x, light.color.y, light.color.z);
+            float intensity = glm::length(col);
+            if (intensity < 0.001f) continue;
+
+            if (lightType == 0) { // Directional
+                PrismaMath::vec3 dir = PrismaMath::vec3(light.direction.x, light.direction.y, light.direction.z);
+                float len = glm::length(dir);
+                if (len > 0.001f) {
+                    dir = -dir / len;
+                    lpc.lightDir = {dir.x, dir.y, dir.z, 0.0f};
+                    lpc.lightColor = {col.x, col.y, col.z, 1.0f};
+                }
+                if (!m_firstFrameLogged)
+                    LOG_INFO("Deferred3D_Light", "Directional: dir=({:.3},{:.3},{:.3}) color=({:.3},{:.3},{:.3})",
+                             lpc.lightDir.x, lpc.lightDir.y, lpc.lightDir.z, col.x, col.y, col.z);
+            } else if (lightType == 3) { // Ambient
+                lpc.ambient = {col.x, col.y, col.z, 1.0f};
+                if (!m_firstFrameLogged)
+                    LOG_INFO("Deferred3D_Light", "Ambient: color=({:.3},{:.3},{:.3})", col.x, col.y, col.z);
+            }
+        }
+
+        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &lpc, sizeof(lpc));
+        ctx.commandBuffer->Draw(3, 1);
+    }
+    vkCmdEndRenderPass(vkCmd);
+
+    // ====================================================================
+    // Phase 2: SwapChain Pass — composite lighting result or debug GBuffer
     // ====================================================================
     ctx.device->BeginSwapChainRenderPass();
     ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});
@@ -524,9 +587,11 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
         ctx.commandBuffer->SetPipelineState(m_debugGBufferPSO.get());
         ctx.commandBuffer->BindDescriptorSet(0, m_debugGBufferDS[dbgIdx].get());
         ctx.commandBuffer->Draw(3, 1);
-    }
-
-    if (!m_debugGBufferShow && m_forwardPSO) {
+    } else if (m_compositePSO && m_compositeDS) {
+        ctx.commandBuffer->SetPipelineState(m_compositePSO.get());
+        ctx.commandBuffer->BindDescriptorSet(0, m_compositeDS.get());
+        ctx.commandBuffer->Draw(3, 1);
+    } else if (m_forwardPSO) {
         ctx.commandBuffer->SetPipelineState(m_forwardPSO.get());
         int cmdIdx = 0;
         for (const auto& c : cmds) {
@@ -534,7 +599,7 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
 
             Graphic::PrismaMath::mat4 mvp = ctx.camera.projectionMatrix * ctx.camera.viewMatrix * c.transform;
 
-            Graphic::PrismaMath::vec4 baseCol(1.0f, 0.0f, 1.0f, 1);  // magenta = no material
+            Graphic::PrismaMath::vec4 baseCol(1.0f, 0.0f, 1.0f, 1);
             const char* matName = "(null)";
             if (c.material) {
                 matName = c.material->GetName().c_str();
@@ -560,7 +625,6 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
             PushData pd{};
             pd.mvp = mvp;
             pd.color = baseCol;
-            // 单次 PushConstants 覆盖所有图形阶段
             ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &pd, sizeof(pd));
 
             for (const auto& sm : c.mesh->GetSubMeshes()) {
@@ -574,7 +638,7 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     }
 
     if (!m_firstFrameLogged) {
-        LOG_INFO("Deferred3D_Frame1", "GBuffer pass OK, forward reference pass active");
+        LOG_INFO("Deferred3D_Frame1", "GBuffer → Lighting → Composite pipeline active");
         m_firstFrameLogged = true;
     }
 }

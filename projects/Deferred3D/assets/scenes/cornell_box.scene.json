@@ -63,6 +63,36 @@
             "scale": [1.25, 1.0, 1.0]
         },
         {
+            "name": "AmbientLight",
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "components": [{
+                "type": "Light",
+                "data": {
+                    "type": "Ambient",
+                    "color": [0.8, 0.8, 0.8],
+                    "intensity": 0.3,
+                    "range": 10.0,
+                    "enabled": false
+                }
+            }]
+        },
+        {
+            "name": "DirectionalLight",
+            "position": [0.0, 3.0, 0.0],
+            "rotation": [0.7071, 0.0, 0.0, 0.7071],
+            "components": [{
+                "type": "Light",
+                "data": {
+                    "type": "Directional",
+                    "color": [1.0, 1.0, 1.0],
+                    "intensity": 3.0,
+                    "range": 10.0,
+                    "enabled": false
+                }
+            }]
+        },
+        {
             "name": "Light",
             "components": [
                 {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/light.mat", "emissive": [10.0, 10.0, 10.0]}},
