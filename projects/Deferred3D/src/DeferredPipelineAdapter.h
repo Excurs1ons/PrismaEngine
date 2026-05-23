@@ -97,7 +97,7 @@ private:
 
     void UpdateDebugDSBinding();
 
-    int m_debugGBufferTarget = 1; // 0=position, 1=normal, 2=albedo, 3=emissive, 4=depth
+    int m_debugGBufferTarget = 0; // 0=position, 1=normal, 2=albedo, 3=emissive, 4=depth
     bool m_debugGBufferShow = true;
 
     Graphic::RenderCommandContext m_deviceContext;
