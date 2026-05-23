@@ -1,7 +1,8 @@
 {
     "name": "ClusteredForward3D (分块前向渲染)",
-    "entryScene": "scenes/demo.scene.json",
+    "entryScene": "scenes/cornell_box.scene.json",
     "scenes": [
+        "scenes/cornell_box.scene.json",
         "scenes/demo.scene.json"
     ],
     "assets": ["assets", "projects/ClusteredForward3D/assets"],

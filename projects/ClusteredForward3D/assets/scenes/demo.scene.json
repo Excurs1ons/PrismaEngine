@@ -1,14 +1,14 @@
-{
+﻿{
     "name": "Cornell Box Clustered Demo",
     "nodes": [
         {
             "name": "Main Camera",
-            "position": [0.0, 0.0, -4.5],
+            "position": [0.0, 0.0, -6.5],
             "rotation": [0.0, 0.0, 0.0, 1.0],
             "components": [{
                 "type": "Camera",
                 "data": {
-                    "fov": 50.0,
+                    "fov": 35.0,
                     "clearColor": [0.02, 0.02, 0.02, 1.0]
                 }
             }]

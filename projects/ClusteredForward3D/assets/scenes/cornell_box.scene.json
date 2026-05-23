@@ -1,0 +1,116 @@
+﻿{
+    "name": "Cornell Box",
+    "nodes": [
+        {
+            "name": "Main Camera",
+            "position": [0.0, 0.0, -2.7],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "components": [{
+                "type": "Camera",
+                "data": {
+                    "fov": 70.0
+                }
+            }]
+        },
+        {
+            "name": "Floor",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/plane.obj", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [0.0, -1.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.25, 1.0, 1.25]
+        },
+        {
+            "name": "Ceiling",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/plane.obj", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [0.0, 1.0, 0.0],
+            "rotation": [1.0, 0.0, 0.0, 0.0],
+            "scale": [1.25, 1.0, 1.25]
+        },
+        {
+            "name": "LeftWall",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/red.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/plane.obj", "material": "assets/materials/red.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [-1.25, 0.0, 0.0],
+            "rotation": [0.0, 0.0, -0.7071, 0.7071],
+            "scale": [1.0, 1.0, 1.25]
+        },
+        {
+            "name": "RightWall",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/green.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/plane.obj", "material": "assets/materials/green.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [1.25, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.7071, 0.7071],
+            "scale": [1.0, 1.0, 1.25]
+        },
+        {
+            "name": "BackWall",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/plane.obj", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [0.0, 0.0, 1.25],
+            "rotation": [0.7071, 0.0, 0.0, 0.7071],
+            "scale": [1.25, 1.0, 1.0]
+        },
+        {
+            "name": "Light",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/light.mat", "emissive": [10.0, 10.0, 10.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/plane.obj", "material": "assets/materials/light.mat", "emissive": [10.0, 10.0, 10.0]}}
+            ],
+            "position": [0.0, 0.995, 0.0],
+            "rotation": [1.0, 0.0, 0.0, 0.0],
+            "scale": [0.3, 1.0, 0.3]
+        },
+        {
+            "name": "ShortBox",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Box", "material": "assets/materials/red.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/cube.obj", "material": "assets/materials/red.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [-0.7, -0.7, -0.35],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [0.6, 0.6, 0.6]
+        },
+        {
+            "name": "TallBox",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Box", "material": "assets/materials/green.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/cube.obj", "material": "assets/materials/green.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [0.6, -0.5, 0.35],
+            "rotation": [0.0, 0.1305, 0.0, 0.9914],
+            "scale": [1.0, 1.0, 1.0]
+        },
+        {
+            "name": "Sphere",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Sphere", "material": "assets/materials/white.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/sphere.obj", "material": "assets/materials/white.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [0.0, -0.6, -0.9],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [0.35, 0.35, 0.35]
+        },
+        {
+            "name": "Cone",
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Cone", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}},
+                {"type": "MeshRenderer", "data": {"mesh": "assets/models/cone.obj", "material": "assets/materials/gray.mat", "emissive": [0.0, 0.0, 0.0]}}
+            ],
+            "position": [0.6, 0.25, 0.35],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [0.2, 0.25, 0.2]
+        }
+    ]
+}
