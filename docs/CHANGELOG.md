@@ -61,6 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fixed HardwareRT→HardwareRT switch crash**: ResizeResources() null-check m_computePipeline / 修复窗口缩放崩溃：ResizeResources() 空检查 m_computePipeline
 - **Fixed mode cycle freeze**: Clear m_computeSPIRV when entering HardwareRT mode / 修复模式循环冻结：进入 HardwareRT 模式时清除 m_computeSPIRV
 - **Fixed RT build retry spam**: Clear sceneChangedAfterFailedBuild flag after failed RT resource build / 修复 RT 构建重试刷日志：构建失败后清除重试标记
+- **Fixed OBJ loader vertex normals**: Rewrote OBJ loader to correctly index per-vertex normals (was discarding normal index from face format) / 修复 OBJ 加载器顶点法线：重写 OBJ 加载器以正确处理每顶点法线索引（之前丢弃了面格式中的法线索引）
+- **Fixed BVH NEE double-sided light**: Changed light normal check from max(dot, 0) to abs(dot) to match Flat shader / 修复 BVH NEE 双面光源：将灯光法线检查从 max(dot, 0) 改为 abs(dot) 与 Flat 着色器一致
 - Fixed CMake `CMAKE_ROOT` reference in FetchContent.cmake / 修复 FetchContent.cmake 中的 CMAKE_ROOT 引用
 - Fixed platform-specific runtime build configurations / 修复平台特定的运行时构建配置
 
