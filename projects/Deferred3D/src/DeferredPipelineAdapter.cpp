@@ -387,9 +387,9 @@ void DeferredPipelineAdapter::CreatePSOs()
         if (!layouts.empty()) {
             m_debugGBufferDS = m_device->GetResourceFactory()->CreateDescriptorSet(layouts[0].get());
             if (m_debugGBufferDS && m_defaultSampler) {
-                m_debugGBufferDS->BindTexture(0, m_gbNormal.get(), m_defaultSampler.get());
+                m_debugGBufferDS->BindTexture(0, m_gbPosition.get(), m_defaultSampler.get());
                 m_debugGBufferDS->Update();
-                LOG_INFO("Deferred3D_PSO", "Debug GBuffer DS bound to gbNormal");
+                LOG_INFO("Deferred3D_PSO", "Debug GBuffer DS bound to gbPosition");
             }
         }
     }
@@ -444,10 +444,13 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
                      c.mesh && !c.mesh->GetSubMeshes().empty() ? (void*)c.mesh->GetSubMeshes()[0].indexBuffer.get() : nullptr);
         }
     }
+    // Vulkan clip-space Y is inverted vs GLM's Y-up projection
+    const Graphic::PrismaMath::mat4 vkFlipY = glm::scale(Graphic::PrismaMath::mat4(1.0f), Graphic::PrismaMath::vec3(1.0f, -1.0f, 1.0f));
+
     for (const auto& c : cmds) {
         if (!c.mesh) continue;
 
-        Graphic::PrismaMath::mat4 vp = ctx.camera.projectionMatrix * ctx.camera.viewMatrix;
+        Graphic::PrismaMath::mat4 vp = vkFlipY * ctx.camera.projectionMatrix * ctx.camera.viewMatrix;
 
         Graphic::PrismaMath::vec4 baseCol(0.8f, 0.8f, 0.8f, 1);
         if (c.material) {
@@ -488,7 +491,6 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     ctx.commandBuffer->SetScissorRect({0,0,(int)m_width,(int)m_height});
 
     if (m_debugGBufferShow && m_debugGBufferPSO && m_debugGBufferDS) {
-        UpdateDebugDSBinding();
         ctx.commandBuffer->SetPipelineState(m_debugGBufferPSO.get());
         ctx.commandBuffer->BindDescriptorSet(0, m_debugGBufferDS.get());
         ctx.commandBuffer->Draw(3, 1);
@@ -498,7 +500,7 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     for (const auto& c : cmds) {
         if (!c.mesh) continue;
 
-        Graphic::PrismaMath::mat4 mvp = ctx.camera.projectionMatrix * ctx.camera.viewMatrix * c.transform;
+        Graphic::PrismaMath::mat4 mvp = vkFlipY * ctx.camera.projectionMatrix * ctx.camera.viewMatrix * c.transform;
 
         Graphic::PrismaMath::vec4 baseCol(0.8f, 0.8f, 0.8f, 1);
         if (c.material) {
@@ -561,6 +563,7 @@ void DeferredPipelineAdapter::SetDebugGBufferConfig(int target, bool show)
 {
     m_debugGBufferTarget = target;
     m_debugGBufferShow = show;
+    UpdateDebugDSBinding();
 }
 
 void DeferredPipelineAdapter::UpdateDebugDSBinding()
