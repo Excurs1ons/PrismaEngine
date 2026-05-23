@@ -1,0 +1,94 @@
+#version 450
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct ClusterAABB {
+    vec4 min;
+    vec4 max;
+};
+
+struct Light {
+    vec4 position; // w is padding
+    vec4 color;    // w is range
+    vec3 direction;
+    int type;
+};
+
+layout(set = 0, binding = 0, std430) readonly buffer ClusterAABBs {
+    ClusterAABB clusters[];
+};
+
+layout(set = 0, binding = 1, std430) readonly buffer LightBuffer {
+    Light lights[];
+};
+
+layout(set = 0, binding = 2, std430) writeonly buffer GlobalLightIndexList {
+    uint globalIndexList[];
+};
+
+layout(set = 0, binding = 3, std430) writeonly buffer ClusterLightGrid {
+    uvec2 clusterGrid[]; // offset, count
+};
+
+layout(set = 0, binding = 4, std430) buffer GlobalLightCount {
+    uint globalCount;
+};
+
+layout(set = 0, binding = 5) uniform CameraData {
+    mat4 projection;
+    mat4 invProjection;
+    mat4 view;
+    float nearPlane;
+    float farPlane;
+    uvec2 gridSize;
+    uvec2 screenSize;
+    uint totalLights;
+    uint numZSlices;
+} camera;
+
+bool intersectAABBPointLight(ClusterAABB aabb, Light light) {
+    vec3 lightViewPos = (camera.view * vec4(light.position.xyz, 1.0)).xyz;
+    float radius = light.color.w;
+
+    if (radius <= 0.0) radius = 10.0;
+
+    vec3 closest = max(aabb.min.xyz, min(lightViewPos, aabb.max.xyz));
+    float distSq = dot(closest - lightViewPos, closest - lightViewPos);
+    return distSq <= (radius * radius);
+}
+
+void main() {
+    uvec3 clusterID = gl_GlobalInvocationID;
+    if (clusterID.x >= camera.gridSize.x || clusterID.y >= camera.gridSize.y || clusterID.z >= camera.numZSlices) return;
+
+    uint clusterIndex = clusterID.x + 
+                        camera.gridSize.x * (clusterID.y + 
+                        camera.gridSize.y * clusterID.z);
+
+    uint visibleLightCount = 0;
+    uint visibleLightIndices[256];
+
+    for (uint i = 0; i < camera.totalLights; i++) {
+        if (lights[i].type == 1) { // Point Light
+            if (intersectAABBPointLight(clusters[clusterIndex], lights[i])) {
+                if (visibleLightCount < 256) {
+                    visibleLightIndices[visibleLightCount] = i;
+                    visibleLightCount++;
+                }
+            }
+        } else if (lights[i].type == 0) { // Directional
+            if (visibleLightCount < 256) {
+                visibleLightIndices[visibleLightCount] = i;
+                visibleLightCount++;
+            }
+        }
+    }
+
+    uint offset = atomicAdd(globalCount, visibleLightCount);
+
+    for (uint i = 0; i < visibleLightCount; i++) {
+        globalIndexList[offset + i] = visibleLightIndices[i];
+    }
+
+    clusterGrid[clusterIndex] = uvec2(offset, visibleLightCount);
+}

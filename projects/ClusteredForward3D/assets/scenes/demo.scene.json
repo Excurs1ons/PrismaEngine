@@ -1,0 +1,136 @@
+{
+    "name": "Cornell Box Clustered Demo",
+    "nodes": [
+        {
+            "name": "Main Camera",
+            "position": [0.0, 0.0, -4.5],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "components": [{
+                "type": "Camera",
+                "data": {
+                    "fov": 50.0,
+                    "clearColor": [0.02, 0.02, 0.02, 1.0]
+                }
+            }]
+        },
+        {
+            "name": "Floor",
+            "position": [0.0, -1.25, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.25, 0.1, 1.25],
+            "components": [
+                {
+                    "type": "MeshRenderer",
+                    "data": {
+                        "mesh": "models/plane.obj",
+                        "material": "materials/gray.mat"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Ceiling",
+            "position": [0.0, 1.25, 0.0],
+            "rotation": [1.0, 0.0, 0.0, 0.0],
+            "scale": [1.25, 0.1, 1.25],
+            "components": [
+                {
+                    "type": "MeshRenderer",
+                    "data": {
+                        "mesh": "models/plane.obj",
+                        "material": "materials/gray.mat"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Left Wall",
+            "position": [-1.25, 0.0, 0.0],
+            "rotation": [0.0, 0.0, -0.7071, 0.7071],
+            "scale": [1.25, 0.1, 1.25],
+            "components": [
+                {
+                    "type": "MeshRenderer",
+                    "data": {
+                        "mesh": "models/plane.obj",
+                        "material": "materials/red.mat"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Right Wall",
+            "position": [1.25, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.7071, 0.7071],
+            "scale": [1.25, 0.1, 1.25],
+            "components": [
+                {
+                    "type": "MeshRenderer",
+                    "data": {
+                        "mesh": "models/plane.obj",
+                        "material": "materials/green.mat"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Back Wall",
+            "position": [0.0, 0.0, 1.25],
+            "rotation": [-0.7071, 0.0, 0.0, 0.7071],
+            "scale": [1.25, 0.1, 1.25],
+            "components": [
+                {
+                    "type": "MeshRenderer",
+                    "data": {
+                        "mesh": "models/plane.obj",
+                        "material": "materials/gray.mat"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Small Cube",
+            "position": [-0.4, -0.85, 0.3],
+            "scale": [0.4, 0.4, 0.4],
+            "rotation": [0.0, 0.1494, 0.0, 0.9888],
+            "components": [
+                {
+                    "type": "MeshRenderer",
+                    "data": {
+                        "mesh": "models/cube.obj",
+                        "material": "materials/white.mat"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Big Sphere",
+            "position": [0.4, -0.85, -0.2],
+            "scale": [0.4, 0.4, 0.4],
+            "components": [
+                {
+                    "type": "MeshRenderer",
+                    "data": {
+                        "mesh": "models/sphere.obj",
+                        "material": "materials/white.mat"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Point Light Central",
+            "position": [0.0, 1.0, 0.0],
+            "components": [
+                {
+                    "type": "Light",
+                    "data": {
+                        "type": "Point",
+                        "color": [1.0, 1.0, 1.0],
+                        "intensity": 3.0,
+                        "range": 6.0
+                    }
+                }
+            ]
+        }
+    ]
+}

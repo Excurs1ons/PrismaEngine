@@ -1,0 +1,210 @@
+#version 460
+#extension GL_EXT_ray_tracing : require
+
+layout(rgba16f, binding = 0) uniform image2D outputImage;
+layout(rgba16f, binding = 1) uniform image2D accumImage;
+
+// Camera UBO (std140) — 与 compute 版本一致
+layout(std140, binding = 2) uniform CameraUBO {
+    vec4 cameraPos;
+    vec4 cameraDir;
+    vec4 cameraUp;
+    vec4 cameraRight;
+    float fov;
+    float aspectRatio;
+    int frameCount;
+    int maxBounces;
+    int samplesPerPixel;
+    int useAccumulation;
+    int resetAccumulation;
+    int enableNEE;
+} ubo;
+
+// Scene objects SSBO — 仅用于查找光源索引
+struct SceneObject {
+    vec4 p0;
+    vec4 p1;
+    vec4 p2;
+    vec4 color;
+    mat4 worldMatrix;
+    mat4 invWorldMatrix;
+};
+
+layout(std430, binding = 3) readonly buffer SceneData {
+    int objectCount;
+    SceneObject objects[];
+} scene;
+
+struct Vertex {
+    vec3 pos;
+    float pad0;
+    vec3 nrm;
+    float pad1;
+};
+
+struct Triangle {
+    Vertex vertices[3];
+};
+
+layout(std430, binding = 4) readonly buffer TriangleBuffer {
+    int triangleCount;
+    Triangle triangles[];
+} triBuf;
+
+// 场景 TLAS (来自 VulkanRTBackend)
+layout( binding = 5) uniform accelerationStructureEXT tlas;
+
+// ======== Payload 声明（与 rchit/rmiss 匹配） ========
+struct HitPayload {
+    vec3 color;
+    vec3 normal;
+    float emissive;
+    int objIndex;
+    float t;
+    int hitType;  // 0 = miss, 1 = hit mesh
+};
+
+layout(location = 4) rayPayloadEXT HitPayload prd;
+
+// ======== 随机数状态 ========
+uint randState;
+
+uint wangHash(uint seed) {
+    seed = (seed ^ 61u) ^ (seed >> 16u);
+    seed *= 9u;
+    seed = seed ^ (seed >> 4u);
+    seed *= 0x27d4eb2du;
+    seed = seed ^ (seed >> 15u);
+    return seed;
+}
+
+float randFloat() {
+    randState = randState * 747796405u + 2891336453u;
+    uint result = randState >> 16u;
+    return float(result) / 65535.0;
+}
+
+vec3 sampleHemisphere(vec3 normal, inout float cosTheta) {
+    vec3 u1 = abs(normal.y) < 0.999 ? vec3(0,1,0) : vec3(1,0,0);
+    vec3 tangent = normalize(cross(normal, u1));
+    vec3 bitangent = cross(normal, tangent);
+    float r1 = randFloat(), r2 = randFloat(), r = sqrt(r1);
+    float phi = 6.2831853 * r2;
+    cosTheta = sqrt(max(0.0, 1.0 - r1));
+    return tangent * r * cos(phi) + bitangent * r * sin(phi) + normal * cosTheta;
+}
+
+// ======== 主函数 ========
+void main() {
+    ivec2 pix = ivec2(gl_LaunchIDEXT);
+    ivec2 size = ivec2(gl_LaunchSizeEXT);
+    if (any(greaterThanEqual(pix, size))) return;
+
+    // 查找光源
+    int lIdx = -1;
+    for (int i = 0; i < scene.objectCount; i++) {
+        if (scene.objects[i].color.w > 0.0) { lIdx = i; break; }
+    }
+
+    // 随机数初始化（与 compute 版本一致）
+    randState = wangHash(uint(pix.x + pix.y * size.x) + uint(ubo.frameCount * 1234567u));
+
+    // ======== 相机光线 ========
+    float hFov = tan(ubo.fov * 0.5);
+    float aF = hFov * ubo.aspectRatio;
+    float px = ((float(pix.x) + randFloat()) / float(size.x) * 2.0 - 1.0) * aF;
+    float py = -((float(pix.y) + randFloat()) / float(size.y) * 2.0 - 1.0) * hFov;
+    vec3 dir = normalize(ubo.cameraDir.xyz + px * ubo.cameraRight.xyz + py * ubo.cameraUp.xyz);
+    vec3 origin = ubo.cameraPos.xyz;
+
+    // ======== 路径追踪主循环 ========
+    vec3 radiance = vec3(0.0);
+    vec3 throughput = vec3(1.0);
+
+    // 顶点偏移常量
+    const float EPS = 0.005;
+
+    for (int bounce = 0; bounce < ubo.maxBounces; bounce++) {
+        // 追踪主光线（mask 0x03：0x01 光源 + 0x02 非光源）
+        prd.hitType = 0;
+        traceRayEXT(tlas, gl_RayFlagsNoneEXT, 0x03, 0, 0, 0, origin, 0.001, dir, 1e30, 4);
+
+        if (prd.hitType == 0) break; // 未命中
+
+        vec3 hitPos = origin + dir * prd.t;
+        vec3 hitNormal = prd.normal;
+
+        // 直接光照贡献（NEE 开启时只在 bounce==0 添加，后续由 NEE 处理）
+        if (prd.emissive > 0.0) {
+            if (bounce == 0 || ubo.enableNEE == 0) {
+                radiance += throughput * prd.color * prd.emissive;
+            }
+            break;
+        }
+
+        // NEE：向光源发射阴影射线
+        if (ubo.enableNEE != 0 && lIdx >= 0) {
+            SceneObject lObj = scene.objects[lIdx];
+            vec3 lNormal;
+            int firstTri = int(lObj.p1.x), triCount = int(lObj.p1.y);
+            if (triCount > 0) {
+                int ti = clamp(firstTri + int(randFloat() * float(triCount)), firstTri, firstTri + triCount - 1);
+                Triangle tri = triBuf.triangles[ti];
+                vec3 v0 = tri.vertices[0].pos, v1 = tri.vertices[1].pos, v2 = tri.vertices[2].pos;
+                float u = randFloat(), v = randFloat();
+                if (u + v > 1.0) { u = 1.0 - u; v = 1.0 - v; }
+                vec3 lPt = v0 + u * (v1 - v0) + v * (v2 - v0);
+                lNormal = normalize(cross(v1 - v0, v2 - v0));
+                vec3 wv1 = (lObj.worldMatrix * vec4(v1 - v0, 0.0)).xyz;
+                vec3 wv2 = (lObj.worldMatrix * vec4(v2 - v0, 0.0)).xyz;
+                float lPdf = 1.0 / (0.5 * length(cross(wv1, wv2)) * float(triCount) + 1e-6);
+
+                vec3 toL = lPt - hitPos;
+                float d2 = dot(toL, toL);
+                float d = sqrt(d2);
+                vec3 lDir = toL / d;
+
+                float cosH = max(dot(lDir, hitNormal), 0.0);
+                float cosL = abs(dot(lDir, lNormal));
+
+                if (cosH > 0.0 && cosL > 0.0 && lPdf > 0.0 && d2 > 0.0001) {
+                    // 阴影射线（mask 0x02 仅非光源：跳过光源实例避免自遮挡）
+                    prd.hitType = 0;
+                    traceRayEXT(tlas, gl_RayFlagsTerminateOnFirstHitEXT, 0x02, 0, 0, 0,
+                                hitPos + EPS * lDir, 0.001, lDir, d, 4);
+
+                    float vis = (prd.hitType == 0) ? 1.0 : 0.0;
+                    if (vis > 0.0) {
+                        vec3 contrib = throughput * lObj.color.rgb * lObj.color.w * prd.color
+                                        * cosH * cosL * vis / (3.14159265 * d2 * lPdf);
+                        radiance += min(contrib, vec3(2.0));
+                    }
+                }
+            }
+        }
+
+        // 半球采样下一方向（漫反射 BSDF）
+        float cosTheta;
+        vec3 nextDir = sampleHemisphere(hitNormal, cosTheta);
+        throughput *= prd.color;
+
+        // Russian roulette
+        if (bounce > 5) {
+            float s = max(throughput.r, max(throughput.g, throughput.b));
+            if (s < 1e-10) break; // 全黑终止
+            if (randFloat() > s) break;
+            throughput /= s;
+        }
+
+        origin = hitPos + hitNormal * EPS;
+        dir = nextDir;
+    }
+
+    // ======== 时域累积 ========
+    if (ubo.useAccumulation > 0 && ubo.resetAccumulation == 0 && ubo.frameCount > 0) {
+        radiance = mix(imageLoad(accumImage, pix).rgb, radiance, 1.0 / float(ubo.frameCount + 1));
+    }
+
+    imageStore(accumImage, pix, vec4(radiance, 1.0));
+    imageStore(outputImage, pix, vec4(radiance, 1.0));
+}

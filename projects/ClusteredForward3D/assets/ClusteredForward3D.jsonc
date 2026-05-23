@@ -1,0 +1,18 @@
+{
+    "name": "ClusteredForward3D (分块前向渲染)",
+    "entryScene": "scenes/demo.scene.json",
+    "scenes": [
+        "scenes/demo.scene.json"
+    ],
+    "assets": ["assets", "projects/ClusteredForward3D/assets"],
+    "window": {
+        "width": 1280,
+        "height": 720,
+        "fullscreen": false,
+        "resizable": true,
+        "vsync": "Mailbox",
+        "maxFPS": 0
+    },
+    "renderMode": "ClusteredForward",
+    "scriptingBackend": "Off"
+}
