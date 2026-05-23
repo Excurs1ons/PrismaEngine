@@ -1,5 +1,5 @@
 #version 450
-layout(location = 0) out vec4 outColor;
+layout(location = 0) in vec4 inPosition;
 
 layout(push_constant) uniform PC {
     mat4 mvp;
@@ -7,5 +7,5 @@ layout(push_constant) uniform PC {
 } pc;
 
 void main() {
-    outColor = pc.color;
+    gl_Position = pc.mvp * vec4(inPosition.xyz, 1.0);
 }

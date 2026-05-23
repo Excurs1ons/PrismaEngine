@@ -10,6 +10,7 @@
 #include "scene/Scene.h"
 #include "scene/SceneManager.h"
 #include "Logger.h"
+#include <algorithm>
 
 namespace Prisma {
 
@@ -17,7 +18,7 @@ static std::shared_ptr<Graphic::ITexture> CreateRT(Graphic::IRenderDevice* dev, 
 {
     Graphic::TextureDesc d;
     d.width = w; d.height = h; d.format = fmt;
-    if (isDepth) d.allowDepthStencil = true;
+    if (isDepth) { d.allowDepthStencil = true; d.allowShaderResource = true; }
     else { d.allowRenderTarget = true; d.allowShaderResource = true; }
     return std::shared_ptr<Graphic::ITexture>(dev->GetResourceFactory()->CreateTextureImpl(d).release());
 }
@@ -167,7 +168,7 @@ void DeferredPipelineAdapter::Shutdown()
     m_debugGBufferPSO.reset();
     m_lightingDS.reset();
     m_compositeDS.reset();
-    m_debugGBufferDS.reset();
+    for (auto& ds : m_debugGBufferDS) ds.reset();
 }
 
 bool DeferredPipelineAdapter::CreateResources(uint32_t w, uint32_t h)
@@ -206,9 +207,9 @@ bool DeferredPipelineAdapter::CreateResources(uint32_t w, uint32_t h)
     gbDepth.format = VK_FORMAT_D32_SFLOAT;
     gbDepth.samples = VK_SAMPLE_COUNT_1_BIT;
     gbDepth.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    gbDepth.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    gbDepth.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     gbDepth.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    gbDepth.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    gbDepth.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
 
     VkAttachmentReference gbDepthRef = { 4, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL };
 
@@ -312,13 +313,12 @@ void DeferredPipelineAdapter::DestroyResources()
 
 void DeferredPipelineAdapter::CreatePSOs()
 {
-    // DEBUG: disable depth test and culling to isolate issue
     m_gbufferPSO = MakePSO(m_device,
         "assets/shaders/gbuffer.vert.spv", "assets/shaders/gbuffer.frag.spv",
         m_gbufferRP,
         {Graphic::TextureFormat::RGBA16_Float, Graphic::TextureFormat::RGBA16_Float,
          Graphic::TextureFormat::RGBA8_UNorm, Graphic::TextureFormat::RGBA16_Float},
-        Graphic::TextureFormat::D32_Float, false, false);
+        Graphic::TextureFormat::D32_Float, true, false);
 
     auto* rm = Engine::Get().GetRenderResourceManager();
 
@@ -356,23 +356,23 @@ void DeferredPipelineAdapter::CreatePSOs()
         LOG_ERROR("Deferred3D_PSO", "m_lightingPSO is null!");
     }
 
-    // Forward PSO: renders to swapchain, no custom RP
+    // Forward PSO: renders to swapchain with material colors
     m_forwardPSO = MakePSO(m_device,
-        "assets/shaders/Renderer2D.vert.spv", "assets/shaders/forward.frag.spv",
+        "assets/shaders/forward.vert.spv", "assets/shaders/forward.frag.spv",
         VK_NULL_HANDLE,  // swapchain RP
         {Graphic::TextureFormat::RGBA8_UNorm},
         Graphic::TextureFormat::Unknown, false, false);
 
-    // Composite descriptor set: reads GBuffer albedo (debug)
+    // Composite descriptor set: reads lighting output
     if (m_compositePSO) {
         auto layouts = m_compositePSO->GetDescriptorSetLayouts();
         LOG_INFO("Deferred3D_PSO", "Composite PSO DS layouts: {}", layouts.size());
         if (!layouts.empty()) {
             m_compositeDS = m_device->GetResourceFactory()->CreateDescriptorSet(layouts[0].get());
             if (m_compositeDS && m_defaultSampler) {
-                m_compositeDS->BindTexture(0, m_gbAlbedo.get(), m_defaultSampler.get());
+                m_compositeDS->BindTexture(0, m_lightingOutput.get(), m_defaultSampler.get());
                 m_compositeDS->Update();
-                LOG_INFO("Deferred3D_PSO", "Composite DS bound to gbAlbedo");
+                LOG_INFO("Deferred3D_PSO", "Composite DS bound to lightingOutput");
             }
         }
     }
@@ -385,11 +385,15 @@ void DeferredPipelineAdapter::CreatePSOs()
     if (m_debugGBufferPSO) {
         auto layouts = m_debugGBufferPSO->GetDescriptorSetLayouts();
         if (!layouts.empty()) {
-            m_debugGBufferDS = m_device->GetResourceFactory()->CreateDescriptorSet(layouts[0].get());
-            if (m_debugGBufferDS && m_defaultSampler) {
-                m_debugGBufferDS->BindTexture(0, m_gbPosition.get(), m_defaultSampler.get());
-                m_debugGBufferDS->Update();
-                LOG_INFO("Deferred3D_PSO", "Debug GBuffer DS bound to gbPosition");
+            std::shared_ptr<Graphic::ITexture> gbTexs[5] = {m_gbPosition, m_gbNormal, m_gbAlbedo, m_gbEmissive, m_gbDepth};
+            const char* gbNames[5] = {"gbPosition", "gbNormal", "gbAlbedo", "gbEmissive", "gbDepth"};
+            for (int i = 0; i < 5; ++i) {
+                m_debugGBufferDS[i] = m_device->GetResourceFactory()->CreateDescriptorSet(layouts[0].get());
+                if (m_debugGBufferDS[i] && m_defaultSampler && gbTexs[i]) {
+                    m_debugGBufferDS[i]->BindTexture(0, gbTexs[i].get(), m_defaultSampler.get());
+                    m_debugGBufferDS[i]->Update();
+                    LOG_INFO("Deferred3D_PSO", "Debug GBuffer DS[{}] = {}", i, gbNames[i]);
+                }
             }
         }
     }
@@ -411,8 +415,6 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
 
     m_cameraAdapter.SetCameraData(ctx.camera, (float)ctx.width, (float)ctx.height);
     if (m_pipeline) m_pipeline->Update(Prisma::Timestep(ctx.deltaTime), &m_cameraAdapter);
-
-    UpdateDebugDSBinding();
 
     // ====================================================================
     // Phase 1: GBuffer Pass — render scene geometry to 4 RTs + depth
@@ -446,13 +448,10 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
                      c.mesh && !c.mesh->GetSubMeshes().empty() ? (void*)c.mesh->GetSubMeshes()[0].indexBuffer.get() : nullptr);
         }
     }
-    // Vulkan clip-space Y is inverted vs GLM's Y-up projection
-    const Graphic::PrismaMath::mat4 vkFlipY = glm::scale(Graphic::PrismaMath::mat4(1.0f), Graphic::PrismaMath::vec3(1.0f, -1.0f, 1.0f));
-
     for (const auto& c : cmds) {
         if (!c.mesh) continue;
 
-        Graphic::PrismaMath::mat4 vp = vkFlipY * ctx.camera.projectionMatrix * ctx.camera.viewMatrix;
+        Graphic::PrismaMath::mat4 vp = ctx.camera.projectionMatrix * ctx.camera.viewMatrix;
 
         Graphic::PrismaMath::vec4 baseCol(0.8f, 0.8f, 0.8f, 1);
         if (c.material) {
@@ -486,54 +485,68 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     vkCmdEndRenderPass(vkCmd);
 
     // ====================================================================
-    // Phase 2: SwapChain Pass — display debug GBuffer output
+    // Phase 2: SwapChain Pass — forward reference or debug GBuffer
     // ====================================================================
     ctx.device->BeginSwapChainRenderPass();
     ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});
     ctx.commandBuffer->SetScissorRect({0,0,(int)m_width,(int)m_height});
 
-    if (m_debugGBufferShow && m_debugGBufferPSO && m_debugGBufferDS) {
+    int dbgIdx = std::clamp(m_debugGBufferTarget, 0, 4);
+    if (m_debugGBufferShow && m_debugGBufferPSO && m_debugGBufferDS[dbgIdx]) {
         ctx.commandBuffer->SetPipelineState(m_debugGBufferPSO.get());
-        ctx.commandBuffer->BindDescriptorSet(0, m_debugGBufferDS.get());
+        ctx.commandBuffer->BindDescriptorSet(0, m_debugGBufferDS[dbgIdx].get());
         ctx.commandBuffer->Draw(3, 1);
     }
 
-    // Keep forward mesh draw as reference for geometry comparison
-    for (const auto& c : cmds) {
-        if (!c.mesh) continue;
+    if (!m_debugGBufferShow && m_forwardPSO) {
+        ctx.commandBuffer->SetPipelineState(m_forwardPSO.get());
+        int cmdIdx = 0;
+        for (const auto& c : cmds) {
+            if (!c.mesh) continue;
 
-        Graphic::PrismaMath::mat4 mvp = vkFlipY * ctx.camera.projectionMatrix * ctx.camera.viewMatrix * c.transform;
+            Graphic::PrismaMath::mat4 mvp = ctx.camera.projectionMatrix * ctx.camera.viewMatrix * c.transform;
 
-        Graphic::PrismaMath::vec4 baseCol(0.8f, 0.8f, 0.8f, 1);
-        if (c.material) {
-            const auto* p = c.material->GetParam("BaseColor");
-            if (!p) p = c.material->GetParam("basecolor");
-            if (p) {
-                if (const auto* col = std::get_if<Prisma::Color>(p))
-                    baseCol = {col->r, col->g, col->b, col->a};
-                else if (const auto* v4 = std::get_if<Graphic::PrismaMath::vec4>(p))
-                    baseCol = *v4;
+            Graphic::PrismaMath::vec4 baseCol(1.0f, 0.0f, 1.0f, 1);  // magenta = no material
+            const char* matName = "(null)";
+            if (c.material) {
+                matName = c.material->GetName().c_str();
+                const auto* p = c.material->GetParam("BaseColor");
+                if (!p) p = c.material->GetParam("basecolor");
+                if (p) {
+                    if (const auto* col = std::get_if<Prisma::Color>(p))
+                        baseCol = {col->r, col->g, col->b, col->a};
+                    else if (const auto* v4 = std::get_if<Graphic::PrismaMath::vec4>(p))
+                        baseCol = *v4;
+                }
             }
-        }
 
-        struct PushData { Graphic::PrismaMath::mat4 mvp; Graphic::PrismaMath::vec4 color; };
-        PushData pd{};
-        pd.mvp = mvp;
-        pd.color = baseCol;
-        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Vertex, &pd, sizeof(pd));
-        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Pixel, &pd, sizeof(pd));
+            if (!m_firstFrameLogged) {
+                LOG_INFO("Deferred3D_Dbg", "Cmd[{}] mat='{}' mesh='{}' color=({:.3},{:.3},{:.3},{:.3})",
+                    cmdIdx, matName,
+                    c.mesh ? c.mesh->GetName().c_str() : "null",
+                    baseCol.r, baseCol.g, baseCol.b, baseCol.a);
+            }
+            ++cmdIdx;
 
-        for (const auto& sm : c.mesh->GetSubMeshes()) {
-            if (sm.vertexBuffer && sm.indexBuffer) {
-                ctx.commandBuffer->SetVertexBuffer(sm.vertexBuffer.get(), 0);
-                ctx.commandBuffer->SetIndexBuffer(sm.indexBuffer.get());
-                ctx.commandBuffer->DrawIndexed(sm.indexCount);
+            struct PushData { Graphic::PrismaMath::mat4 mvp; Graphic::PrismaMath::vec4 color; };
+            PushData pd{};
+            pd.mvp = mvp;
+            pd.color = baseCol;
+            ctx.commandBuffer->PushConstants(Graphic::ShaderType::Vertex, &pd, sizeof(pd));
+            ctx.commandBuffer->PushConstants(Graphic::ShaderType::Pixel, &pd, sizeof(pd));
+
+            for (const auto& sm : c.mesh->GetSubMeshes()) {
+                if (sm.vertexBuffer && sm.indexBuffer) {
+                    ctx.commandBuffer->SetVertexBuffer(sm.vertexBuffer.get(), 0);
+                    ctx.commandBuffer->SetIndexBuffer(sm.indexBuffer.get());
+                    ctx.commandBuffer->DrawIndexed(sm.indexCount);
+                }
             }
         }
     }
 
     if (!m_firstFrameLogged) {
-        LOG_INFO("Deferred3D_Frame1", "GBuffer pass OK, debug GBuffer overlay active");
+        LOG_INFO("Deferred3D_Frame1", "GBuffer pass OK, forward reference pass active");
         m_firstFrameLogged = true;
     }
 }
@@ -565,25 +578,6 @@ void DeferredPipelineAdapter::SetDebugGBufferConfig(int target, bool show)
 {
     m_debugGBufferTarget = target;
     m_debugGBufferShow = show;
-}
-
-void DeferredPipelineAdapter::UpdateDebugDSBinding()
-{
-    if (!m_debugGBufferDS || !m_defaultSampler) return;
-
-    std::shared_ptr<Graphic::ITexture> tex;
-    switch (m_debugGBufferTarget) {
-        case 0: tex = m_gbPosition; break;
-        case 1: tex = m_gbNormal; break;
-        case 2: tex = m_gbAlbedo; break;
-        case 3: tex = m_gbEmissive; break;
-        case 4: tex = m_gbDepth; break;
-        default: tex = m_gbNormal; break;
-    }
-    if (tex) {
-        m_debugGBufferDS->BindTexture(0, tex.get(), m_defaultSampler.get());
-        m_debugGBufferDS->Update();
-    }
 }
 
 } // namespace Prisma
