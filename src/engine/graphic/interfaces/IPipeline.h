@@ -40,6 +40,7 @@ struct RenderContext {
     
     // 基础管线必须显式包含这些
     CameraData camera;
+    Prisma::Vector4 clearColor = {0.1f, 0.1f, 0.1f, 1.0f};
     std::vector<Light> lights;
     
     uint32_t frameIndex = 0;

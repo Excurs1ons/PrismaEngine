@@ -55,13 +55,24 @@ public:
     void DrawIndexedIndirect(IBuffer* indirectBuffer, uint32_t offset = 0) override;
 
     // === 资源同步与屏障 ===
-    void PipelineBarrier() override {}
+    void PipelineBarrier() override {
+        VkMemoryBarrier barrier{};
+        barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+        barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT;
+
+        vkCmdPipelineBarrier(m_cmd,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+            0, 1, &barrier, 0, nullptr, 0, nullptr);
+    }
     void PipelineBarrier(const std::vector<ImageBarrier>& imageBarriers) override;
 
     // === 调试 (修复接口匹配) ===
     void BeginDebugGroup([[maybe_unused]] const std::string& name) override { }
     void EndDebugGroup() override {}
 
+    void* GetNativeHandle() const override { return reinterpret_cast<void*>(m_cmd); }
     VkCommandBuffer GetVkCommandBuffer() const { return m_cmd; }
     uint32_t GetAndResetCommandCount() { uint32_t c = m_commandCount; m_commandCount = 0; return c; }
 

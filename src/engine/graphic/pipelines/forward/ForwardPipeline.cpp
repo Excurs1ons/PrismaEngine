@@ -117,7 +117,7 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
     if (!m_device) return;
 
     if (!ctx.targetTexture) {
-        ctx.device->BeginSwapChainRenderPass();
+        ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
     }
 
     TextureRenderTargetProxy proxy(ctx.targetTexture);

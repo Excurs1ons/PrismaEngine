@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Export.h"
 #include "interfaces/IDeviceContext.h"
 #include "math/MathTypes.h"
 #include <string>
@@ -8,10 +9,7 @@
 
 namespace Prisma::Graphic {
 
-/// @brief 渲染命令上下文实现
-/// 实现 IDeviceContext 接口，提供命令执行功能
-/// 注意：这是一个临时适配器，后续应由具体后端（DX12/Vulkan）实现
-class RenderCommandContext : public IDeviceContext {
+class ENGINE_API RenderCommandContext : public IDeviceContext {
 public:
     RenderCommandContext();
     virtual ~RenderCommandContext();

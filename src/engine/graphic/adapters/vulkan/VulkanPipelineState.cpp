@@ -55,6 +55,27 @@ static VkPrimitiveTopology ToVkPrimitiveTopology(PrimitiveTopology topology) {
 }
 
 // ============================================================
+// 辅助函数：TextureFormat → VkFormat
+// ============================================================
+static VkFormat ToVkFormat(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R8_UNorm:            return VK_FORMAT_R8_UNORM;
+        case TextureFormat::RG8_UNorm:           return VK_FORMAT_R8G8_UNORM;
+        case TextureFormat::RGBA8_UNorm:         return VK_FORMAT_R8G8B8A8_UNORM;
+        case TextureFormat::RGBA8_UNorm_sRGB:    return VK_FORMAT_R8G8B8A8_SRGB;
+        case TextureFormat::BGRA8_UNorm:         return VK_FORMAT_B8G8R8A8_UNORM;
+        case TextureFormat::BGRA8_UNorm_sRGB:    return VK_FORMAT_B8G8R8A8_SRGB;
+        case TextureFormat::R32_Float:           return VK_FORMAT_R32_SFLOAT;
+        case TextureFormat::RG32_Float:          return VK_FORMAT_R32G32_SFLOAT;
+        case TextureFormat::RGB32_Float:         return VK_FORMAT_R32G32B32_SFLOAT;
+        case TextureFormat::RGBA32_Float:        return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case TextureFormat::D32_Float:           return VK_FORMAT_D32_SFLOAT;
+        case TextureFormat::D24_UNorm_S8_UInt:   return VK_FORMAT_D24_UNORM_S8_UINT;
+        default: return VK_FORMAT_UNDEFINED;
+    }
+}
+
+// ============================================================
 // 辅助函数：BlendOp → VkBlendOp
 // ============================================================
 static VkBlendOp ToVkBlendOp(BlendOp op) {
@@ -240,20 +261,51 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     VkPushConstantRange defaultPushConstant{};
     defaultPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     defaultPushConstant.offset = 0;
-    defaultPushConstant.size = 128; 
+    defaultPushConstant.size = 256; 
     pushConstantRanges.push_back(defaultPushConstant);
 
     m_descriptorSetLayouts.clear();
+    
+    // 1. 收集并按 Set 分组所有着色器阶段的资源
+    std::map<uint32_t, std::vector<ShaderResource>> groupedResources;
     for (const auto& [type, shaderRes] : m_shaders) {
         auto vkShader = std::dynamic_pointer_cast<VulkanShader>(shaderRes);
         if (!vkShader) continue;
 
         const auto& reflection = vkShader->GetReflection();
-        
-        // 处理 Descriptor Sets (目前简化，仅处理 Set 0)
-        if (!reflection.Resources.empty()) {
-            auto layout = deviceVulkan->GetResourceFactory()->CreateDescriptorSetLayout(reflection.Resources);
-            if (layout) {
+        for (const auto& res : reflection.Resources) {
+            // 检查该资源是否已在同一 Set/Binding 中定义（来自不同阶段）
+            auto& setResources = groupedResources[res.Set];
+            auto it = std::find_if(setResources.begin(), setResources.end(), [&](const ShaderResource& existing) {
+                return existing.Binding == res.Binding;
+            });
+
+            if (it == setResources.end()) {
+                setResources.push_back(res);
+            } else {
+                // 如果已存在，合并 Stage Flags (虽然 ShaderResource 没存这个，但底层 RHI 会处理)
+            }
+        }
+    }
+
+    // 2. 为每个 Set 创建布局
+    if (!groupedResources.empty()) {
+        // 找出最大 Set 索引，确保布局数组是连续的（Vulkan 要求）
+        uint32_t maxSet = 0;
+        for (auto const& [setIdx, _] : groupedResources) {
+            maxSet = std::max(maxSet, setIdx);
+        }
+
+        for (uint32_t i = 0; i <= maxSet; ++i) {
+            if (groupedResources.count(i)) {
+                auto layout = deviceVulkan->GetResourceFactory()->CreateDescriptorSetLayout(groupedResources[i]);
+                if (layout) {
+                    m_descriptorSetLayouts.push_back(layout);
+                    descriptorSetLayoutHandles.push_back((VkDescriptorSetLayout)layout->GetNativeHandle());
+                }
+            } else {
+                // 创建一个空布局填充空位
+                auto layout = deviceVulkan->GetResourceFactory()->CreateDescriptorSetLayout({});
                 m_descriptorSetLayouts.push_back(layout);
                 descriptorSetLayoutHandles.push_back((VkDescriptorSetLayout)layout->GetNativeHandle());
             }
@@ -287,36 +339,39 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
         }
     }
 
-    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
-    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    
-    // 默认使用 Prisma::Vertex 布局
+    // ========== 顶点输入状态 ==========
+
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
     bindingDescription.stride = sizeof(Prisma::Graphic::Vertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions{};
-    attributeDescriptions[0].binding = 0;
-    attributeDescriptions[0].location = 0;
-    attributeDescriptions[0].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[0].offset = offsetof(Prisma::Graphic::Vertex, position);
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+    if (m_inputAttributes.empty()) {
+        // 默认回退：使用 Prisma::Vertex 基础布局 (Pos, Color, UV)
+        attributeDescriptions.resize(3);
+        attributeDescriptions[0] = { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, position) };
+        attributeDescriptions[1] = { 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, color) };
+        attributeDescriptions[2] = { 2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, uv) };
+    } else {
+        // 使用用户自定义布局
+        for (uint32_t i = 0; i < (uint32_t)m_inputAttributes.size(); ++i) {
+            const auto& attr = m_inputAttributes[i];
+            VkVertexInputAttributeDescription vkAttr{};
+            vkAttr.binding = attr.inputSlot;
+            vkAttr.location = i; // 假设 location 对应数组索引，或者可以在 VertexInputAttribute 中增加 Location 字段
+            vkAttr.format = ToVkFormat(attr.format);
+            vkAttr.offset = attr.alignedByteOffset;
+            attributeDescriptions.push_back(vkAttr);
+        }
+    }
 
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[1].offset = offsetof(Prisma::Graphic::Vertex, color);
-
-    attributeDescriptions[2].binding = 0;
-    attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-    attributeDescriptions[2].offset = offsetof(Prisma::Graphic::Vertex, uv);
-
+    VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
+    vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertexInputInfo.vertexBindingDescriptionCount = 1;
     vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
-
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = ToVkPrimitiveTopology(m_topology);
@@ -331,10 +386,15 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
-    rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
+    rasterizer.polygonMode = m_rasterizerState.fillMode == FillMode::Solid ? VK_POLYGON_MODE_FILL : VK_POLYGON_MODE_LINE;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = VK_CULL_MODE_NONE;
-    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    
+    // Mapping CullMode
+    if (m_rasterizerState.cullMode == CullMode::None) rasterizer.cullMode = VK_CULL_MODE_NONE;
+    else if (m_rasterizerState.cullMode == CullMode::Front) rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+    else if (m_rasterizerState.cullMode == CullMode::Back) rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
+    
+    rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE; // Prisma standard is CCW
     rasterizer.depthBiasEnable = VK_FALSE;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
@@ -344,21 +404,26 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
 
     // [修复] 从 m_blendState 读取混合状态，不再硬编码 alpha blending
     // 此前硬编码为 srcAlpha / oneMinusSrcAlpha，导致 additive blending（如 2D 光照叠加）失效
-    VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-    colorBlendAttachment.blendEnable = m_blendState.blendEnable ? VK_TRUE : VK_FALSE;
-    colorBlendAttachment.colorWriteMask = m_blendState.writeMask; // 0xF = RGBA，与 VK 常量值一致
-    colorBlendAttachment.srcColorBlendFactor = ToVkBlendFactor(m_blendState.srcBlend);
-    colorBlendAttachment.dstColorBlendFactor = ToVkBlendFactor(m_blendState.destBlend);
-    colorBlendAttachment.colorBlendOp = ToVkBlendOp(m_blendState.blendOp);
-    colorBlendAttachment.srcAlphaBlendFactor = ToVkBlendFactor(m_blendState.srcBlendAlpha);
-    colorBlendAttachment.dstAlphaBlendFactor = ToVkBlendFactor(m_blendState.destBlendAlpha);
-    colorBlendAttachment.alphaBlendOp = ToVkBlendOp(m_blendState.blendOpAlpha);
+    uint32_t rtCount = m_customRenderPass != VK_NULL_HANDLE
+        ? std::max(1u, static_cast<uint32_t>(m_renderTargetFormats.size()))
+        : 1u;
+    std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(rtCount);
+    for (auto& cba : colorBlendAttachments) {
+        cba.blendEnable = m_blendState.blendEnable ? VK_TRUE : VK_FALSE;
+        cba.colorWriteMask = m_blendState.writeMask;
+        cba.srcColorBlendFactor = ToVkBlendFactor(m_blendState.srcBlend);
+        cba.dstColorBlendFactor = ToVkBlendFactor(m_blendState.destBlend);
+        cba.colorBlendOp = ToVkBlendOp(m_blendState.blendOp);
+        cba.srcAlphaBlendFactor = ToVkBlendFactor(m_blendState.srcBlendAlpha);
+        cba.dstAlphaBlendFactor = ToVkBlendFactor(m_blendState.destBlendAlpha);
+        cba.alphaBlendOp = ToVkBlendOp(m_blendState.blendOpAlpha);
+    }
 
     VkPipelineColorBlendStateCreateInfo colorBlending{};
     colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.attachmentCount = 1;
-    colorBlending.pAttachments = &colorBlendAttachment;
+    colorBlending.attachmentCount = rtCount;
+    colorBlending.pAttachments = colorBlendAttachments.data();
 
     std::vector<VkDynamicState> dynamicStates = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamicState{};
@@ -396,9 +461,13 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
         }
     }
 
-    VkRenderPass renderPass = vkSwapChain->GetRenderPass();
+    VkRenderPass renderPass = m_customRenderPass != VK_NULL_HANDLE
+        ? m_customRenderPass
+        : vkSwapChain->GetRenderPass();
     if (renderPass == VK_NULL_HANDLE) {
-        m_errors = "SwapChain RenderPass is not initialized";
+        m_errors = m_customRenderPass != VK_NULL_HANDLE
+            ? "Custom RenderPass is VK_NULL_HANDLE"
+            : "SwapChain RenderPass is not initialized";
         m_isValid = false;
         return false;
     }

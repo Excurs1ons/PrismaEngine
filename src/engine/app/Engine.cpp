@@ -130,28 +130,20 @@ int Engine::Run(std::unique_ptr<Application> app) {
     m_CurrentApp = std::move(app);
     m_Running = true;
 
-    // 从 project.json 读取项目配置（窗口参数、入口场景、资产路径、脚本后端）
+    // 从项目名称对应的文件读取配置
     auto scriptingBackend = ScriptingBackend::CoreCLR;
     auto renderMode = RenderMode::Mode3D_Forward;
     {
-        auto& spec                         = m_CurrentApp->GetSpecification();
+        auto& spec = m_CurrentApp->GetSpecification();
+        std::string projName = m_Spec.Name;
+        
         std::vector<std::string> projPaths = {
-            "assets/project.jsonc",
-            "assets/project.json",
-            "project.jsonc",
-            "project.json",
-            "projects/PrismaCraft/assets/project.jsonc",
-            "projects/PrismaCraft/assets/project.json",
-            "../projects/PrismaCraft/assets/project.jsonc",
-            "../projects/PrismaCraft/assets/project.json",
-            "projects/Template2D/assets/project.jsonc",
-            "projects/Template2D/assets/project.json",
-            "../projects/Template2D/assets/project.jsonc",
-            "../projects/Template2D/assets/project.json",
-            "projects/Template3D/assets/project.jsonc",
-            "projects/Template3D/assets/project.json",
-            "../projects/Template3D/assets/project.jsonc",
-            "../projects/Template3D/assets/project.json",
+            projName + ".jsonc",
+            projName + ".json",
+            "assets/" + projName + ".jsonc",
+            "assets/" + projName + ".json",
+            "project.jsonc", // 回退兼容
+            "assets/project.jsonc"
         };
         for (const auto& p : projPaths) {
             // 手动读取文件（可处理 BOM）

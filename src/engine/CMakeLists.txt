@@ -114,6 +114,7 @@ set(CORE_SOURCES
     graphic/ShaderFactory.cpp
     graphic/TextureAtlas.cpp
     graphic/VoxelRenderer.cpp
+    graphic/LightComponent.cpp
     graphic/GeometryRenderPass.cpp
     graphic/Material.cpp
     graphic/Mesh.cpp
@@ -147,6 +148,10 @@ set(CORE_SOURCES
     graphic/pipelines/deferred/LightingPass.cpp
     graphic/pipelines/deferred/CompositionPass.cpp
     graphic/pipelines/deferred/GBuffer.cpp
+
+    # Graphic - Clustered Pipeline
+    graphic/pipelines/clustered/ClusteredForwardPipeline.cpp
+    graphic/pipelines/clustered/ClusteredOpaquePass.cpp
 
     # Graphic - Skybox
     graphic/pipelines/SkyboxRenderPass.cpp
@@ -394,6 +399,7 @@ set(CORE_HEADERS
     core/Event.h
     core/Component.h
     core/ComponentRegistry.h
+    graphic/LightComponent.h
     core/SpriteRendererComponent.h
     core/ISubSystem.h
     core/IWorld.h
@@ -430,6 +436,8 @@ set(CORE_HEADERS
 
     # Graphic
     graphic/interfaces/IComputePipeline.h
+    graphic/pipelines/clustered/ClusteredForwardPipeline.h
+    graphic/pipelines/clustered/ClusteredOpaquePass.h
 
     # PCH
     pch.h

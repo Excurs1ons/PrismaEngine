@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "interfaces/IGBuffer.h"
 #include "interfaces/IDeviceContext.h"
 #include "math/MathTypes.h"
@@ -34,8 +35,7 @@ struct GBufferData {
     uint32_t materialID;
 };
 
-// G-Buffer资源管理器
-class GBuffer : public IGBuffer
+class ENGINE_API GBuffer : public IGBuffer
 {
 public:
     GBuffer();

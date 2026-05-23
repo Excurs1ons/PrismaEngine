@@ -5,6 +5,7 @@
 #include <fstream>
 #include <limits>
 #include <chrono>
+#include <array>
 #include "Logger.h"
 
 namespace Prisma::Graphic::Vulkan {
@@ -62,6 +63,17 @@ private:
     uint32_t m_height = 0;
 };
 
+uint32_t FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties, VkPhysicalDevice physicalDevice) {
+    VkPhysicalDeviceMemoryProperties memProperties;
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
+    for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+        if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+    return 0;
+}
+
 TextureFormat ToTextureFormat(VkFormat format) {
     switch (format) {
         case VK_FORMAT_B8G8R8A8_UNORM:
@@ -77,6 +89,7 @@ TextureFormat ToTextureFormat(VkFormat format) {
 }
 
 }  // namespace
+
 VulkanSwapChain::VulkanSwapChain(RenderDeviceVulkan* device)
     : m_device(device) {
 }
@@ -86,7 +99,6 @@ VulkanSwapChain::~VulkanSwapChain() {
 }
 
 int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t height, PresentMode presentMode) {
-    // 在重新初始化（如窗口缩放）前等待 GPU 空闲，避免销毁正在被 CommandBuffer 引用的旧资源。
     if (m_device->GetVkDevice() != VK_NULL_HANDLE) {
         vkDeviceWaitIdle(m_device->GetVkDevice());
     }
@@ -102,7 +114,6 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
         case PresentMode::Adaptive:  vkPresentMode = VK_PRESENT_MODE_FIFO_RELAXED_KHR; break;
     }
 
-    // 修正：按照 (VkPhysicalDevice, VkDevice, VkSurfaceKHR) 的顺序传递
     vkb::SwapchainBuilder swapchain_builder{m_device->GetPhysicalDevice(), m_device->GetVkDevice(), (VkSurfaceKHR)windowHandle};
     auto vkb_swap_ret = swapchain_builder
         .set_desired_extent(width, height)
@@ -123,12 +134,61 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     m_imageViews = vkb_swapchain.get_image_views().value();
     m_format = vkb_swapchain.image_format;
     m_extent = vkb_swapchain.extent;
-    LOG_DEBUG("Vulkan", "交换链实际 extent: {0}x{1} (请求 {2}x{3})", m_extent.width, m_extent.height, width, height);
     m_mode = presentMode;
     m_hdrEnabled = false;
     m_renderTargets.clear();
 
-    // Create RenderPass
+    // 1. 创建深度缓冲
+    m_depthFormat = VK_FORMAT_D32_SFLOAT;
+    VkImageCreateInfo depthInfo{};
+    depthInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    depthInfo.imageType = VK_IMAGE_TYPE_2D;
+    depthInfo.extent.width = m_extent.width;
+    depthInfo.extent.height = m_extent.height;
+    depthInfo.extent.depth = 1;
+    depthInfo.mipLevels = 1;
+    depthInfo.arrayLayers = 1;
+    depthInfo.format = m_depthFormat;
+    depthInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    depthInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    depthInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if (vkCreateImage(m_device->GetVkDevice(), &depthInfo, nullptr, &m_depthImage) != VK_SUCCESS) {
+        return -4;
+    }
+
+    VkMemoryRequirements memRequirements;
+    vkGetImageMemoryRequirements(m_device->GetVkDevice(), m_depthImage, &memRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memRequirements.size;
+    allocInfo.memoryTypeIndex = FindMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, m_device->GetPhysicalDevice());
+
+    if (vkAllocateMemory(m_device->GetVkDevice(), &allocInfo, nullptr, &m_depthImageMemory) != VK_SUCCESS) {
+        return -5;
+    }
+
+    vkBindImageMemory(m_device->GetVkDevice(), m_depthImage, m_depthImageMemory, 0);
+
+    VkImageViewCreateInfo depthViewInfo{};
+    depthViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    depthViewInfo.image = m_depthImage;
+    depthViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    depthViewInfo.format = m_depthFormat;
+    depthViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    depthViewInfo.subresourceRange.baseMipLevel = 0;
+    depthViewInfo.subresourceRange.levelCount = 1;
+    depthViewInfo.subresourceRange.baseArrayLayer = 0;
+    depthViewInfo.subresourceRange.layerCount = 1;
+
+    if (vkCreateImageView(m_device->GetVkDevice(), &depthViewInfo, nullptr, &m_depthImageView) != VK_SUCCESS) {
+        return -6;
+    }
+
+    // 2. 创建 RenderPass
     VkAttachmentDescription colorAttachment = {};
     colorAttachment.format = m_format;
     colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -143,23 +203,39 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    VkAttachmentDescription depthAttachment = {};
+    depthAttachment.format = m_depthFormat;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depthAttachmentRef = {};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
     VkSubpassDependency dependency = {};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
     dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 
+    std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
     VkRenderPassCreateInfo renderPassInfo = {};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;
@@ -170,16 +246,16 @@ int VulkanSwapChain::Initialize(void* windowHandle, uint32_t width, uint32_t hei
         return -2;
     }
 
-    // Create Framebuffers
+    // 3. 创建 Framebuffers
     m_framebuffers.resize(m_imageViews.size());
     for (size_t i = 0; i < m_imageViews.size(); i++) {
-        VkImageView attachments[] = { m_imageViews[i] };
+        std::array<VkImageView, 2> fbAttachments = { m_imageViews[i], m_depthImageView };
 
         VkFramebufferCreateInfo framebufferInfo = {};
         framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
         framebufferInfo.renderPass = m_renderPass;
-        framebufferInfo.attachmentCount = 1;
-        framebufferInfo.pAttachments = attachments;
+        framebufferInfo.attachmentCount = static_cast<uint32_t>(fbAttachments.size());
+        framebufferInfo.pAttachments = fbAttachments.data();
         framebufferInfo.width = m_extent.width;
         framebufferInfo.height = m_extent.height;
         framebufferInfo.layers = 1;
@@ -202,6 +278,11 @@ void VulkanSwapChain::Cleanup() {
 
     for (auto fb : m_framebuffers) vkDestroyFramebuffer(device, fb, nullptr);
     for (auto view : m_imageViews) vkDestroyImageView(device, view, nullptr);
+    
+    if (m_depthImageView != VK_NULL_HANDLE) vkDestroyImageView(device, m_depthImageView, nullptr);
+    if (m_depthImage != VK_NULL_HANDLE) vkDestroyImage(device, m_depthImage, nullptr);
+    if (m_depthImageMemory != VK_NULL_HANDLE) vkFreeMemory(device, m_depthImageMemory, nullptr);
+
     if (m_renderPass != VK_NULL_HANDLE) vkDestroyRenderPass(device, m_renderPass, nullptr);
     if (m_swapchain != VK_NULL_HANDLE) vkDestroySwapchainKHR(device, m_swapchain, nullptr);
 
@@ -211,6 +292,9 @@ void VulkanSwapChain::Cleanup() {
     m_renderTargets.clear();
     m_swapchain = VK_NULL_HANDLE;
     m_renderPass = VK_NULL_HANDLE;
+    m_depthImageView = VK_NULL_HANDLE;
+    m_depthImage = VK_NULL_HANDLE;
+    m_depthImageMemory = VK_NULL_HANDLE;
 }
 
 ITexture* VulkanSwapChain::GetRenderTarget(uint32_t bufferIndex) {
@@ -225,15 +309,12 @@ ITexture* VulkanSwapChain::GetCurrentRenderTarget() {
 }
 
 bool VulkanSwapChain::AcquireNextImage(VkSemaphore semaphore, VkFence fence) {
-    // 使用 UINT64_MAX 等待图像可用。
-    // 在 Immediate 模式下，这通常会立即返回；在 FIFO (VSync) 模式下，这会阻塞直到垂直同步。
-    // 之前的 timeout=0 会导致在图像未立即准备好时跳过整帧渲染，反而限制了表现。
     VkResult result = vkAcquireNextImageKHR(m_device->GetVkDevice(), m_swapchain, UINT64_MAX, semaphore, fence, &m_currentImageIndex);
     if (result == VK_ERROR_OUT_OF_DATE_KHR) {
         return false;
     }
     if (result == VK_NOT_READY || result == VK_TIMEOUT) {
-        return false; // 无可用图像，跳过此帧
+        return false; 
     }
     return result == VK_SUCCESS || result == VK_SUBOPTIMAL_KHR;
 }

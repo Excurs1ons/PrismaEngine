@@ -1,5 +1,6 @@
 #pragma once
 
+#include "../Export.h"
 #include "interfaces/IPass.h"
 #include "interfaces/IRenderTarget.h"
 #include "interfaces/IGBuffer.h"
@@ -9,9 +10,7 @@
 
 namespace Prisma::Graphic {
 
-/// @brief 逻辑 Pipeline 类
-/// 职责：管理和执行 IPass
-class LogicalPipeline : public ILogicalPipeline {
+class ENGINE_API LogicalPipeline : public ILogicalPipeline {
 public:
     LogicalPipeline(const char* name);
     virtual ~LogicalPipeline();
@@ -88,7 +87,7 @@ public:
 
 /// @brief 逻辑延迟渲染管线
 /// 延迟渲染管线实现（非图形 API Pipeline State Object）
-class LogicalDeferredPipeline : public LogicalPipeline {
+class ENGINE_API LogicalDeferredPipeline : public LogicalPipeline {
 public:
     LogicalDeferredPipeline();
     ~LogicalDeferredPipeline() override = default;

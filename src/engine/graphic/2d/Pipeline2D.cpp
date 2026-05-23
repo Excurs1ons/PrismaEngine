@@ -45,7 +45,7 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
     auto proj = ctx.camera.projectionMatrix;
 
     if (!ctx.targetTexture) {
-        ctx.device->BeginSwapChainRenderPass();
+        ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
     }
 
     // ── 1. 2D 光照预处理 (离屏) ──
@@ -62,7 +62,7 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
     }
 
     if (!ctx.targetTexture) {
-        ctx.device->BeginSwapChainRenderPass();
+        ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
     }
 
     // ── 2. 渲染 Renderer2D 内容 (Sprite batching) ──

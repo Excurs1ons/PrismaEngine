@@ -42,6 +42,7 @@ public:
         std::vector<::Prisma::Vector3> positions;
         std::vector<::Prisma::Vector3> normals;   // 空 = 自动计算面法线
         std::vector<::Prisma::Vector2> uvs;        // 空 = 无 UV
+        std::vector<::Prisma::Vector4> colors;     // 顶点颜色
         std::vector<uint32_t> indices;
     };
 

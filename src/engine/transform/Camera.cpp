@@ -70,10 +70,7 @@ Camera::~Camera() {}
 
 void Camera::Initialize() {
     LOG_DEBUG("Camera3D", "Node '{0}' 的 Camera3D 组件已初始化", GetNodeName());
-    if (auto transform = GetTransform()) {
-        transform->SetRotation(glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
-        MarkViewDirty();
-    }
+    MarkViewDirty();
 }
 
 void Camera::Update(Timestep ts) {
@@ -157,9 +154,15 @@ PrismaMath::mat4 Camera::GetProjectionMatrix() const {
         if (m_projectionMode == ProjectionMode::Orthographic) {
             float halfH = m_orthoSize * 0.5f;
             float halfW = halfH * m_aspectRatio;
-            m_projectionMatrix = glm::orthoRH_ZO(-halfW, halfW, -halfH, halfH, m_nearPlane, m_farPlane);
+            m_projectionMatrix = glm::orthoLH_ZO(-halfW, halfW, -halfH, halfH, m_nearPlane, m_farPlane);
         } else {
-            m_projectionMatrix = glm::perspectiveRH(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+            // 使用 LH 版本，使得 +Z 轴指向屏幕内
+            // [修复] m_fov 内部始终存储为弧度（由 SetData 或 SetPerspectiveProjection 保证）
+            m_projectionMatrix = glm::perspectiveLH_ZO(m_fov, m_aspectRatio, m_nearPlane, m_farPlane);
+            
+            // [关键修复] Vulkan Y轴翻转
+            // Vulkan 的 NDC Y轴是向下的，通过翻转投影矩阵的 [1][1] 来适配 Y-up 坐标系
+            m_projectionMatrix[1][1] *= -1.0f;
         }
         m_isProjectionDirty = false;
     }
@@ -250,25 +253,9 @@ void Camera::Rotate(float pitch, float yaw, float roll) {
 void Camera::LookAt(const PrismaMath::vec3& target) {
     if (auto transform = GetTransform()) {
         PrismaMath::vec3 position  = GetPosition();
-        PrismaMath::vec3 direction = glm::normalize(target - position);
-        PrismaMath::vec3 forward    = -direction;
-        PrismaMath::vec3 worldUp    = PrismaMath::vec3(0.0f, 1.0f, 0.0f);
-        PrismaMath::vec3 right      = glm::normalize(glm::cross(worldUp, forward));
-        PrismaMath::vec3 up         = glm::cross(forward, right);
-
-        PrismaMath::mat4 rotationMatrix = PrismaMath::mat4(1.0f);
-        rotationMatrix[0][0] = right.x;
-        rotationMatrix[0][1] = up.x;
-        rotationMatrix[0][2] = forward.x;
-        rotationMatrix[1][0] = right.y;
-        rotationMatrix[1][1] = up.y;
-        rotationMatrix[1][2] = forward.y;
-        rotationMatrix[2][0] = right.z;
-        rotationMatrix[2][1] = up.z;
-        rotationMatrix[2][2] = forward.z;
-
-        glm::quat rotationQuat = glm::quat_cast(rotationMatrix);
-        transform->SetRotation(rotationQuat);
+        // LH LookAt: forward points from camera to target
+        m_viewMatrix = glm::lookAtLH(position, target, PrismaMath::vec3(0.0f, 1.0f, 0.0f));
+        transform->SetRotation(glm::quat_cast(glm::inverse(m_viewMatrix)));
         MarkViewDirty();
     }
 }
@@ -285,6 +272,7 @@ void Camera::UpdateViewMatrix() const {
         glm::quat rotation          = transform->GetRotation();
         PrismaMath::mat4 rotationMatrix = glm::mat4_cast(rotation);
 
+        // LH: Z轴是 Forward
         m_forward = glm::normalize(
             PrismaMath::vec3(rotationMatrix[2][0], rotationMatrix[2][1], rotationMatrix[2][2]));
         m_up = glm::normalize(
@@ -292,9 +280,9 @@ void Camera::UpdateViewMatrix() const {
         m_right = glm::normalize(
             PrismaMath::vec3(rotationMatrix[0][0], rotationMatrix[0][1], rotationMatrix[0][2]));
 
-        PrismaMath::mat4 translation = glm::translate(glm::mat4(1.0f), -position);
-        m_viewMatrix                 = glm::transpose(rotationMatrix);
-        m_viewMatrix                 = m_viewMatrix * translation;
+        // LH View Matrix: R^T * T^-1
+        // 但 GLM 的 lookAtLH 更可靠
+        m_viewMatrix = glm::lookAtLH(position, position + m_forward, m_up);
 
         m_isViewDirty = false;
     }

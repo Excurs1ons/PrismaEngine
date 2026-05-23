@@ -81,6 +81,9 @@ public:
     // ── 场景主相机（遍历 Node 查找第一个 Camera 组件） ──
     std::shared_ptr<Prisma::Graphic::ICamera> GetMainCamera();
 
+    // ── 获取场景中所有光源 ──
+    std::vector<Prisma::Graphic::Light> GetLights() const;
+
     // ── 序列化 ──
     bool Deserialize(const std::string& path);
     bool Serialize(const std::string& path) const;

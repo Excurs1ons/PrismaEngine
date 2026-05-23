@@ -670,7 +670,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
     // 收敛后且场景未变更：只做 present，不计算
     if (m_converged && m_scene && !m_scene->IsDirty()) {
         if (!headless) {
-            m_device->BeginSwapChainRenderPass();
+            m_device->BeginSwapChainRenderPass(ctx.clearColor);
             cmd->SetViewport(Viewport{0.0f, 0.0f, (float)m_width, (float)m_height, 0.0f, 1.0f});
             cmd->SetScissorRect(Rect{0, 0, (int)m_width, (int)m_height});
             if (m_presentPSO && m_presentDescriptorSet) {

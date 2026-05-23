@@ -72,9 +72,13 @@ public:
     VkPipeline GetVkPipeline() const { return m_pipeline; }
     VkPipelineLayout GetVkPipelineLayout() const { return m_pipelineLayout; }
 
+    // For offscreen rendering: override the render pass used during Create()
+    void SetCustomRenderPass(VkRenderPass pass) { m_customRenderPass = pass; }
+
 private:
     VkPipeline m_pipeline = VK_NULL_HANDLE;
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE;
+    VkRenderPass m_customRenderPass = VK_NULL_HANDLE;
     std::vector<std::shared_ptr<IDescriptorSetLayout>> m_descriptorSetLayouts;
     VkDevice m_device = VK_NULL_HANDLE;
     std::unordered_map<ShaderType, std::shared_ptr<IShader>> m_shaders;

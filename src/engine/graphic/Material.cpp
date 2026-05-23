@@ -3,6 +3,7 @@
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/interfaces/IBuffer.h"
 #include "RenderResourceManager.h"
 #include "app/Engine.h"
 #include "graphic/RenderSystem.h"
@@ -58,8 +59,8 @@ bool Material::Load(const std::filesystem::path& path) {
     if (rootObj.contains("properties") && rootObj.at("properties").is_object()) {
         const auto& properties = rootObj.at("properties").get_object();
 
-        if (properties.contains("albedo") && properties.at("albedo").is_array() && properties.at("albedo").get_array().size() >= 4) {
-            auto& albedoArr = properties.at("albedo").get_array();
+        if (properties.contains("basecolor") && properties.at("basecolor").is_array() && properties.at("basecolor").get_array().size() >= 4) {
+            auto& albedoArr = properties.at("basecolor").get_array();
             SetBaseColor(
                 static_cast<float>(albedoArr[0].get_number()),
                 static_cast<float>(albedoArr[1].get_number()),
@@ -107,11 +108,11 @@ std::shared_ptr<Material> Material::CreateDefault() {
 }
 
 void Material::SetBaseColor(float r, float g, float b, float a) {
-    SetParam("BaseColor", Prisma::Color(r, g, b, a));
+    SetParam("BaseColor", PrismaMath::vec4(r, g, b, a));
 }
 
 void Material::SetBaseColor(const Prisma::Color& color) {
-    SetParam("BaseColor", color);
+    SetParam("BaseColor", PrismaMath::vec4(color.r, color.g, color.b, color.a));
 }
 
 void Material::SetMetallic(float metallic) {
@@ -125,48 +126,94 @@ void Material::SetRoughness(float roughness) {
 void Material::Bind(ICommandBuffer* cmd) {
     if (!cmd || !m_Shader) return;
 
-    // 获取或创建描述符集（仅一次）
-    if (!m_DescriptorSet) {
-        auto* engine = &Engine::Get();
-        auto* rf = engine->GetRenderSystem()->GetDevice()->GetResourceFactory();
+    UpdateDescriptorSet();
 
-        // 收集着色器中所有与材质参数匹配的采样器资源信息
-        std::vector<ShaderResource> shaderResources;
-        for (const auto& [name, value] : m_Params) {
-            if (!std::holds_alternative<std::shared_ptr<ITexture>>(value))
-                continue;
-            const ShaderResource* resInfo = m_Shader->FindResource(name);
-            if (resInfo) {
-                shaderResources.push_back(*resInfo);
-            }
+    // 每次 Bind 都更新一次数据，确保动态修改生效
+    if (m_MaterialUBO) {
+        MaterialData data{};
+        if (auto* val = GetParam("BaseColor")) {
+            if (std::holds_alternative<PrismaMath::vec4>(*val))
+                data.baseColor = std::get<PrismaMath::vec4>(*val);
         }
-
-        if (!shaderResources.empty()) {
-            m_DescriptorSetLayout = rf->CreateDescriptorSetLayout(shaderResources);
-            m_DescriptorSet = rf->CreateDescriptorSet(m_DescriptorSetLayout.get());
-
-            if (m_DescriptorSet) {
-                auto defaultSampler = Engine::Get().GetRenderResourceManager()->GetDefaultSampler();
-
-                // 遍历所有纹理参数，按资源名找到对应 binding 并绑定
-                for (const auto& [name, value] : m_Params) {
-                    if (!std::holds_alternative<std::shared_ptr<ITexture>>(value))
-                        continue;
-                    auto texture = std::get<std::shared_ptr<ITexture>>(value);
-                    if (!texture) continue;
-
-                    const ShaderResource* resInfo = m_Shader->FindResource(name);
-                    if (resInfo) {
-                        m_DescriptorSet->BindTexture(resInfo->Binding, texture.get(), defaultSampler.get());
-                    }
-                }
-                m_DescriptorSet->Update();
-            }
+        if (auto* val = GetParam("Metallic")) {
+            if (std::holds_alternative<float>(*val))
+                data.metallic = std::get<float>(*val);
         }
+        if (auto* val = GetParam("Roughness")) {
+            if (std::holds_alternative<float>(*val))
+                data.roughness = std::get<float>(*val);
+        }
+        m_MaterialUBO->UpdateData(&data, sizeof(data), 0);
     }
 
     if (m_DescriptorSet) {
         cmd->BindDescriptorSet(0, m_DescriptorSet.get());
+    }
+}
+
+void Material::UpdateDescriptorSet() {
+    if (m_DescriptorSet) return;
+
+    auto* rf = Engine::Get().GetRenderSystem()->GetDevice()->GetResourceFactory();
+    auto* rm = Engine::Get().GetRenderResourceManager();
+
+    // 1. 创建材质 UBO
+    BufferDesc uboDesc;
+    uboDesc.type = BufferType::Constant;
+    uboDesc.size = sizeof(MaterialData);
+    uboDesc.usage = BufferUsage::Dynamic;
+    m_MaterialUBO = rf->CreateBufferImpl(uboDesc);
+
+    // 2. 收集资源并创建 Layout
+    // 强制匹配 clustered_forward.frag 的预期布局：
+    // Binding 0: MaterialData (UBO)
+    // Binding 1: AlbedoMap (Sampler2D)
+    std::vector<ShaderResource> shaderResources;
+    
+    ShaderResource uboRes;
+    uboRes.Name = "MaterialData";
+    uboRes.ResourceType = ShaderResource::Type::UniformBuffer;
+    uboRes.Set = 0;
+    uboRes.Binding = 0;
+    shaderResources.push_back(uboRes);
+
+    ShaderResource texRes;
+    texRes.Name = "AlbedoMap";
+    texRes.ResourceType = ShaderResource::Type::Sampler2D;
+    texRes.Set = 0;
+    texRes.Binding = 1;
+    shaderResources.push_back(texRes);
+
+    m_DescriptorSetLayout = rf->CreateDescriptorSetLayout(shaderResources);
+    m_DescriptorSet = rf->CreateDescriptorSet(m_DescriptorSetLayout.get());
+
+    if (m_DescriptorSet) {
+        m_DescriptorSet->BindBuffer(0, m_MaterialUBO.get(), 0, sizeof(MaterialData), DescriptorType::UniformBuffer);
+
+        auto defaultSampler = rm->GetDefaultSampler();
+        std::shared_ptr<ITexture> texture = nullptr;
+
+        // 尝试获取用户设置的纹理
+        if (auto* val = GetParam("AlbedoMap")) {
+            if (std::holds_alternative<std::shared_ptr<ITexture>>(*val))
+                texture = std::get<std::shared_ptr<ITexture>>(*val);
+        }
+
+        // [核心修复] 如果没有贴图，使用一个默认的 1x1 白色贴图作为兜底
+        if (!texture) {
+             uint32_t white = 0xFFFFFFFF;
+             TextureDesc desc;
+             desc.width = 1;
+             desc.height = 1;
+             desc.format = TextureFormat::RGBA8_UNorm;
+             texture = rm->CreateTextureFromMemory(&white, sizeof(white), desc);
+        }
+
+        if (texture) {
+            m_DescriptorSet->BindTexture(1, texture.get(), defaultSampler.get());
+        }
+        
+        m_DescriptorSet->Update();
     }
 }
 

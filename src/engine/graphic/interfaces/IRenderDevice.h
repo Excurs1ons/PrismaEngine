@@ -219,7 +219,7 @@ public:
     // === 交换链 RenderPass 生命周期 ===
 
     /// @brief 开始交换链 RenderPass（Pipeline 显式调用，不再由 BeginFrame 自动开）
-    virtual void BeginSwapChainRenderPass() {}
+    virtual void BeginSwapChainRenderPass(const Prisma::Vector4& clearColor = {0.1f, 0.1f, 0.1f, 1.0f}) {}
 
     /// @brief 结束交换链 RenderPass（替代旧 SuspendDefaultRenderPass）
     virtual void EndSwapChainRenderPass() {}

@@ -70,6 +70,13 @@ private:
     std::vector<VkFramebuffer> m_framebuffers;
     std::vector<std::unique_ptr<ITexture>> m_renderTargets;
     VkRenderPass m_renderPass = VK_NULL_HANDLE;
+
+    // 深度缓冲
+    VkImage m_depthImage = VK_NULL_HANDLE;
+    VkDeviceMemory m_depthImageMemory = VK_NULL_HANDLE;
+    VkImageView m_depthImageView = VK_NULL_HANDLE;
+    VkFormat m_depthFormat = VK_FORMAT_UNDEFINED;
+
     uint32_t m_currentImageIndex = 0;
     PresentMode m_mode = PresentMode::VSync;
     bool m_hdrEnabled = false;

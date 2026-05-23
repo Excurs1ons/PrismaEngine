@@ -11,6 +11,7 @@
 #include "adapters/vulkan/VulkanCommandBuffer.h"
 #include "pipelines/forward/ForwardPipeline.h"
 #include "pipelines/pathtracing/PathTracingPipeline.h"
+#include "pipelines/clustered/ClusteredForwardPipeline.h"
 #include "2d/Pipeline2D.h"
 #include "../scene/SceneManager.h"
 
@@ -98,6 +99,8 @@ int RenderSystem::InitializeRenderPipelines() {
         ptPipeline->SetMaxSamples(m_desc.maxSamples);
         ptPipeline->SetMaxBounces(m_desc.maxBounces);
         m_mainRenderPipeline = std::move(ptPipeline);
+    } else if (m_desc.renderMode == RenderMode::Mode3D_ClusteredForward) {
+        m_mainRenderPipeline = std::make_shared<ClusteredForwardPipeline>();
     } else {
         m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
     }
@@ -162,20 +165,8 @@ void RenderSystem::EndFrame() {
         auto& commands = Renderer::GetCommandQueue();
         size_t cmdCount = commands.size();
 
-        // 每 5 秒真实时间记录一次 EndFrame 队列状态
         static double lastLogTime = 0.0;
         double now = Platform::GetTimeSeconds();
-        if (now - lastLogTime >= 5.0) {
-            uint32_t gpuCmdCount = 0;
-            auto* vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
-            if (vkDevice) {
-                auto* vkCmd = dynamic_cast<Vulkan::VulkanCommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
-                if (vkCmd) gpuCmdCount = vkCmd->GetAndResetCommandCount();
-            }
-            LOG_DEBUG("RenderSystem", "EndFrame: {} 条(渲染器) + {} 条(GPU命令)",
-                     cmdCount, gpuCmdCount);
-            lastLogTime = now;
-        }
 
         // 构建上下文并始终执行主渲染管线
         RenderContext ctx;
@@ -200,6 +191,8 @@ void RenderSystem::EndFrame() {
                     ctx.camera.nearPlane        = camera->GetNearPlane();
                     ctx.camera.farPlane         = camera->GetFarPlane();
                     ctx.camera.fov              = camera->GetFOV();
+                    ctx.clearColor              = camera->GetClearColor();
+                    ctx.lights                  = scene->GetLights();
                     hasSceneCamera = true;
                 }
             }
@@ -221,7 +214,28 @@ void RenderSystem::EndFrame() {
         ctx.height     = m_desc.height;
         ctx.deltaTime  = 0.016f;
 
+        static bool s_FirstFrameLogged = false;
+        if (!s_FirstFrameLogged) {
+            LOG_INFO("RenderSystem", "=== First Frame Scene Data ===");
+            LOG_INFO("RenderSystem", "  Camera Pos: [{}, {}, {}]", ctx.camera.position.x, ctx.camera.position.y, ctx.camera.position.z);
+            LOG_INFO("RenderSystem", "  Light Count: {}", ctx.lights.size());
+            LOG_INFO("RenderSystem", "  Queue Count: {}", cmdCount);
+            s_FirstFrameLogged = true;
+        }
+
         m_mainRenderPipeline->Execute(ctx);
+
+        // 每 5 秒记录一次真实的 GPU 命令计数
+        if (now - lastLogTime >= 5.0) {
+            uint32_t gpuCmdCount = 0;
+            if (vkDevice) {
+                auto* vkCmd = dynamic_cast<Vulkan::VulkanCommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
+                if (vkCmd) gpuCmdCount = vkCmd->GetAndResetCommandCount();
+            }
+            LOG_DEBUG("RenderSystem", "EndFrame: {} 条(渲染器) + {} 条(GPU命令)",
+                     cmdCount, gpuCmdCount);
+            lastLogTime = now;
+        }
 
         if (!commands.empty()) {
             Renderer::ClearQueue();
@@ -309,10 +323,11 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
         ctx.camera.nearPlane        = camera->GetNearPlane();
         ctx.camera.farPlane         = camera->GetFarPlane();
         ctx.camera.fov              = camera->GetFOV();
+        ctx.clearColor              = camera->GetClearColor();
         ctx.frameIndex              = m_device ? m_device->GetCurrentFrameIndex() : 0;
         ctx.width                   = m_desc.width;
         ctx.height                  = m_desc.height;
-        ctx.lights.clear();
+        ctx.lights                  = scene->GetLights();
 
         m_mainRenderPipeline->Execute(ctx);
     } else {

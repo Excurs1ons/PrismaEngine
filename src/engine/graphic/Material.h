@@ -52,13 +52,26 @@ public:
     // 状态绑定 (由 OpaquePass 调用)
     void Bind(class ICommandBuffer* cmd);
 
+    // 获取描述符集
+    IDescriptorSet* GetDescriptorSet() const { return m_DescriptorSet.get(); }
+
 private:
+    void UpdateDescriptorSet();
+
+    struct MaterialData {
+        alignas(16) PrismaMath::vec4 baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+        alignas(4)  float metallic = 0.0f;
+        alignas(4)  float roughness = 0.5f;
+        float padding[2]; // 填充到 32 字节 (std140 16字节对齐)
+    };
+
     std::shared_ptr<IShader> m_Shader;
     std::unordered_map<std::string, MaterialParamValue> m_Params;
     
     // 底层描述符集缓存
     std::shared_ptr<IDescriptorSet> m_DescriptorSet;
     std::shared_ptr<IDescriptorSetLayout> m_DescriptorSetLayout;
+    std::shared_ptr<IBuffer> m_MaterialUBO;
 };
 
 } // namespace Prisma::Graphic

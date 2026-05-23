@@ -98,6 +98,9 @@ public:
     // === 调试 ===
     virtual void BeginDebugGroup(const std::string& name) = 0;
     virtual void EndDebugGroup() = 0;
+
+    // === 原生句柄（后端特定：Vulkan 返回 VkCommandBuffer） ===
+    virtual void* GetNativeHandle() const = 0;
 };
 
 } // namespace Prisma::Graphic

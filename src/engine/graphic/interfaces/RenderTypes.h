@@ -532,12 +532,11 @@ enum class StencilOp {
     Decrement
 };
 
-    // 光源结构
+    // 光源结构 (严格 16 字节对齐，3x vec4)
     struct Light {
-        Prisma::Vector3 position;
-        Prisma::Vector4 color;     // RGB + intensity
-        Prisma::Vector3 direction;  // 用于方向光
-        int type;  // 0=directional, 1=point, 2=spot
+        Prisma::Vector4 position;  // xyz: position, w: padding
+        Prisma::Vector4 color;     // rgb: color * intensity, w: range
+        Prisma::Vector4 direction; // xyz: direction, w: type (0=dir, 1=point)
     };
 
 

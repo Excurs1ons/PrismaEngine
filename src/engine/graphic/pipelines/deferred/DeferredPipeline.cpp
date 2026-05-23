@@ -1,4 +1,5 @@
 #include "DeferredPipeline.h"
+#include "GBuffer.h"
 #include "graphic/ICamera.h"
 #include "../SkyboxRenderPass.h"
 #include "CompositionPass.h"
@@ -18,7 +19,43 @@ DeferredPipeline::~DeferredPipeline() {
 }
 
 bool DeferredPipeline::Initialize() {
+    m_gBufferOwner = std::make_shared<GBuffer>();
+    if (!m_gBufferOwner->Initialize(m_width, m_height)) {
+        return false;
+    }
+    m_gBuffer = m_gBufferOwner.get();
+
+    m_geometryPass = std::make_shared<GeometryPass>();
+    m_geometryPass->SetGBuffer(m_gBuffer);
+    m_geometryPass->SetEnabled(true);
+    AddPass(m_geometryPass.get());
+
+    m_skyboxPass = std::make_shared<SkyboxPass>();
+    m_skyboxPass->SetEnabled(true);
+    AddPass(m_skyboxPass.get());
+
+    m_lightingPass = std::make_shared<LightingPass>();
+    m_lightingPass->SetGBuffer(m_gBuffer);
+    m_lightingPass->SetEnabled(true);
+    AddPass(m_lightingPass.get());
+
+    m_transparentPass = std::make_shared<TransparentPass>();
+    m_transparentPass->SetEnabled(true);
+    AddPass(m_transparentPass.get());
+
+    m_compositionPass = std::make_shared<CompositionPass>();
+    m_compositionPass->SetEnabled(true);
+    AddPass(m_compositionPass.get());
+
     return true;
+}
+
+void DeferredPipeline::SetResolution(uint32_t width, uint32_t height) {
+    m_width = width;
+    m_height = height;
+    if (m_gBufferOwner) {
+        m_gBufferOwner->Resize(width, height);
+    }
 }
 
 void DeferredPipeline::Update(Prisma::Timestep ts, Prisma::Graphic::ICamera* camera) {

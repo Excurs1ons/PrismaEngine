@@ -6,11 +6,15 @@
 #include "Renderer.h"
 #include "app/Engine.h"
 #include "core/AssetManager.h"
+#include "RenderResourceManager.h"
+#include "graphic/RenderSystem.h"
+#include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/IResourceFactory.h"
 #include <glaze/glaze.hpp>
 #include <cassert>
 #include <cmath>
 
-// ── Glaze 元数据 ──
+// ── Glaze 元数据 (必须在全局命名空间) ──
 template <>
 struct glz::meta<Prisma::Graphic::MeshRenderer::Data> {
     static constexpr auto value = glz::object(
@@ -20,6 +24,57 @@ struct glz::meta<Prisma::Graphic::MeshRenderer::Data> {
         "material", &Prisma::Graphic::MeshRenderer::Data::material
     );
 };
+
+namespace Prisma::Graphic {
+
+namespace {
+    void EnsureMeshGPUResources(Mesh* mesh) {
+        if (!mesh || !mesh->IsLoaded()) return;
+
+        auto& subMeshes = const_cast<std::vector<SubMeshBuffer>&>(mesh->GetSubMeshes());
+        auto& cpuDatas = mesh->GetCPUSubMeshes();
+
+        auto* renderSystem = Engine::Get().GetRenderSystem();
+        if (!renderSystem || !renderSystem->GetDevice()) return;
+        auto* rf = renderSystem->GetDevice()->GetResourceFactory();
+
+        for (size_t i = 0; i < subMeshes.size(); ++i) {
+            if (!subMeshes[i].vertexBuffer && i < cpuDatas.size()) {
+                const auto& cpu = cpuDatas[i];
+                
+                std::vector<Prisma::Graphic::Vertex> vertices(cpu.positions.size());
+                for (size_t v = 0; v < cpu.positions.size(); ++v) {
+                    vertices[v].position = Prisma::Vector4(cpu.positions[v], 1.0f);
+                    if (v < cpu.colors.size()) vertices[v].color = cpu.colors[v];
+                    else vertices[v].color = Prisma::Vector4(1, 1, 1, 1);
+                    
+                    if (v < cpu.uvs.size()) vertices[v].uv = Prisma::Vector4(cpu.uvs[v].x, cpu.uvs[v].y, 0, 0);
+                    if (v < cpu.normals.size()) vertices[v].normal = Prisma::Vector4(cpu.normals[v], 0.0f);
+                }
+
+                BufferDesc vbd;
+                vbd.type = BufferType::Vertex;
+                vbd.size = static_cast<uint64_t>(vertices.size() * sizeof(Prisma::Graphic::Vertex));
+                vbd.usage = BufferUsage::Immutable;
+                vbd.initialData = vertices.data();
+                subMeshes[i].vertexBuffer = rf->CreateBufferImpl(vbd);
+
+                BufferDesc ibd;
+                ibd.type = BufferType::Index;
+                ibd.size = static_cast<uint64_t>(cpu.indices.size() * sizeof(uint32_t));
+                ibd.usage = BufferUsage::Immutable;
+                ibd.initialData = cpu.indices.data();
+                subMeshes[i].indexBuffer = rf->CreateBufferImpl(ibd);
+                
+                subMeshes[i].indexCount = static_cast<uint32_t>(cpu.indices.size());
+                subMeshes[i].vertexCount = static_cast<uint32_t>(cpu.positions.size());
+                
+                LOG_INFO("MeshRenderer", "已为网格 '{}' 子网格 {} 创建 GPU 缓冲 (V={}, I={})", 
+                         mesh->GetName(), i, subMeshes[i].vertexCount, subMeshes[i].indexCount);
+            }
+        }
+    }
+}
 
 // ── 注册 ──
 namespace {
@@ -45,8 +100,6 @@ namespace {
         return true;
     }();
 }
-
-namespace Prisma::Graphic {
 
 MeshRenderer::MeshRenderer() {}
 
@@ -74,10 +127,10 @@ void MeshRenderer::SetData(const Data& d) {
         if (am) {
             auto handle = am->Load<Graphic::Mesh>(m_meshPath);
             m_mesh = handle.Get();
+            EnsureMeshGPUResources(m_mesh.get());
         }
     }
 
-    // 加载 Material Asset（从 .mat 文件，MeshRenderer→Material→Shader）
     if (!m_materialPath.empty()) {
         auto* am = Prisma::Engine::Get().GetAssetManager();
         if (am) {
@@ -126,8 +179,8 @@ void MeshRenderer::Update(Timestep ts) {
         m_material->SetParam("ObjectPosition", PrismaMath::vec3(position.x, position.y, position.z));
         m_material->SetParam("FramePulse", pulse);
 
-        // [新增] 提交渲染指令
         if (m_mesh) {
+            EnsureMeshGPUResources(m_mesh.get());
             Renderer::Submit(m_mesh.get(), m_material.get(), transform->GetMatrix());
         }
     }

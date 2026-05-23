@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "graphic/LogicalPass.h"
 #include "graphic/LogicalPipeline.h"
 #include "graphic/interfaces/IPass.h"
@@ -11,18 +12,15 @@
 
 namespace Prisma::Graphic {
 
-// 前置声明
 class ICamera;
+class GBuffer;
 class GeometryPass;
 class LightingPass;
 class SkyboxPass;
 class TransparentPass;
 class CompositionPass;
 
-/// @brief 延迟渲染管线实现
-/// 管理和执行延迟渲染的所有 Pass
-/// 顺序：GeometryPass → SkyboxPass → LightingPass → TransparentPass → CompositionPass
-class DeferredPipeline : public LogicalDeferredPipeline {
+class ENGINE_API DeferredPipeline : public LogicalDeferredPipeline {
 public:
     // 光源类型
     enum class LightType {
@@ -60,6 +58,9 @@ public:
     /// @brief 初始化管线
     /// 创建并添加所有 Pass
     bool Initialize();
+
+    /// @brief 设置视口尺寸并重建 GBuffer
+    void SetResolution(uint32_t width, uint32_t height);
 
     /// @brief 更新管线数据
     /// @param ts 时间增量
@@ -138,6 +139,8 @@ private:
     void CollectStats();
 
 private:
+    std::shared_ptr<GBuffer> m_gBufferOwner;
+
     // Pass 实例
     std::shared_ptr<GeometryPass> m_geometryPass;
     std::shared_ptr<SkyboxPass> m_skyboxPass;

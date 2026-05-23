@@ -4,6 +4,7 @@
 #include "core/EntityManager.h"
 #include "core/ComponentRegistry.h"
 #include "transform/Transform.h"
+#include "graphic/LightComponent.h"
 #include <glaze/glaze.hpp>
 #include <glaze/json/generic.hpp>
 #include <array>
@@ -132,8 +133,15 @@ void Scene::RemoveNode(Node node) {
     m_IsDirty = true;
 }
 
-void Scene::Update(Timestep /*ts*/) {
-    // 逻辑更新由 ScriptEngine 或 System 处理
+void Scene::Update(Timestep ts) {
+    // 遍历所有节点的组件并更新
+    for (auto& [handle, components] : m_nodeComponents) {
+        for (auto& comp : components) {
+            if (comp->IsEnabled()) {
+                comp->Update(ts);
+            }
+        }
+    }
 }
 
 // ── Node 名称 ──
@@ -260,6 +268,21 @@ std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
         }
     }
     return nullptr;
+}
+
+std::vector<Prisma::Graphic::Light> Scene::GetLights() const {
+    std::vector<Prisma::Graphic::Light> result;
+    for (auto& node : m_nodes) {
+        auto it = m_nodeComponents.find(node.handle);
+        if (it == m_nodeComponents.end()) continue;
+        for (auto& comp : it->second) {
+            auto lightComp = std::dynamic_pointer_cast<Prisma::Graphic::LightComponent>(comp);
+            if (lightComp) {
+                result.push_back(lightComp->GetLightData());
+            }
+        }
+    }
+    return result;
 }
 
 // ── 序列化 ──

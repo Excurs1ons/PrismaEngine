@@ -337,6 +337,8 @@ void RenderDeviceVulkan::BeginFrame() {
     if (!m_initialized)
         return;
 
+    m_defaultPassExecuted = false; // 重置本帧标志位
+
     if (m_headless) {
         vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
         vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
@@ -393,20 +395,30 @@ void RenderDeviceVulkan::EndSwapChainRenderPass() {
     m_isDefaultRenderPassActive = false;
 }
 
-void RenderDeviceVulkan::BeginSwapChainRenderPass() {
+void RenderDeviceVulkan::BeginSwapChainRenderPass(const Prisma::Vector4& clearColorValue) {
     if (!m_initialized || !m_frameActive || m_isDefaultRenderPassActive || !m_swapChain)
         return;
+    m_clearColor = clearColorValue;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
+    
     VkRenderPassBeginInfo rpInfo{};
     rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     rpInfo.renderPass        = m_swapChain->GetRenderPass();
     rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
+    rpInfo.renderArea.offset = {0, 0};
     rpInfo.renderArea.extent = m_swapChain->GetExtent();
-    VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
-    rpInfo.clearValueCount   = 1;
-    rpInfo.pClearValues      = &clearColor;
+    
+    // 设置两个清除值：0 是颜色，1 是深度
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{m_clearColor.x, m_clearColor.y, m_clearColor.z, m_clearColor.w}};
+    clearValues[1].depthStencil = {1.0f, 0};
+    
+    rpInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
+    rpInfo.pClearValues      = clearValues.data();
+    
     vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
     m_isDefaultRenderPassActive = true;
+    m_defaultPassExecuted = true; // 标记本帧已执行过主清屏 Pass
 }
 
 void RenderDeviceVulkan::EndFrame() {
@@ -428,21 +440,31 @@ void RenderDeviceVulkan::EndFrame() {
         return;
     }
 
-    if (!m_isDefaultRenderPassActive) {
+    // 如果管线没有手动开启过 SwapChain RP，则在这里开启一个默认的（用于清屏或仅 Overlay）
+    if (!m_isDefaultRenderPassActive && !m_defaultPassExecuted) {
         VkRenderPassBeginInfo rpInfo{};
         rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         rpInfo.renderPass        = m_swapChain->GetRenderPass();
         rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
+        rpInfo.renderArea.offset = {0, 0};
         rpInfo.renderArea.extent = m_swapChain->GetExtent();
-        VkClearValue clearColor  = {{{0.1f, 0.1f, 0.1f, 1.0f}}};
-        rpInfo.clearValueCount   = 1;
-        rpInfo.pClearValues      = &clearColor;
+        
+        // 同样设置两个清除值
+        std::array<VkClearValue, 2> clearValues{};
+        clearValues[0].color = {{m_clearColor.x, m_clearColor.y, m_clearColor.z, m_clearColor.w}};
+        clearValues[1].depthStencil = {1.0f, 0};
+        
+        rpInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
+        rpInfo.pClearValues      = clearValues.data();
 
         vkCmdBeginRenderPass(cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
         m_isDefaultRenderPassActive = true;
+        m_defaultPassExecuted = true;
     }
 
     if (m_overlayRenderCallback) {
+        // 如果上面没开 RP（因为之前开过又关了），但现在又要画 Overlay，需要以 LOAD 模式重新开启
+        // 但目前引擎设计倾向于在同一个 RP 内完成。
         m_overlayRenderCallback(cmd);
     }
 

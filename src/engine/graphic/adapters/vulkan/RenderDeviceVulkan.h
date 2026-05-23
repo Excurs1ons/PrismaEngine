@@ -105,7 +105,7 @@ public:
     bool IsSwapChainRenderPassActive() const override { return m_isDefaultRenderPassActive; }
     bool IsDefaultRenderPassActive() const { return m_isDefaultRenderPassActive; }
 
-    void BeginSwapChainRenderPass() override;
+    void BeginSwapChainRenderPass(const Prisma::Vector4& clearColor = {0.1f, 0.1f, 0.1f, 1.0f}) override;
     void EndSwapChainRenderPass() override;
 
     bool IsHeadless() const override { return m_headless; }
@@ -214,8 +214,11 @@ private:
     // 覆盖层渲染回调（指向 PrismaEditor.dll 的实际渲染函数）
     OverlayRenderCallback m_overlayRenderCallback;
 
+    Prisma::Vector4 m_clearColor = {0.1f, 0.1f, 0.1f, 1.0f};
+
     // 离屏渲染支持
     bool m_isDefaultRenderPassActive = false;
+    bool m_defaultPassExecuted = false; // [新增] 标记本帧是否已执行过主清屏 Pass
 };
 
 }  // namespace Prisma::Graphic::Vulkan
