@@ -95,6 +95,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets/PacManGame.json
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/PacManGame.json
     COMMENT "Copying PacMan project assets"
 )
 

@@ -126,6 +126,9 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/assets")
         COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${CMAKE_CURRENT_SOURCE_DIR}/assets
             $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
+        COMMAND ${CMAKE_COMMAND} -E copy
+            ${CMAKE_CURRENT_SOURCE_DIR}/assets/PrismaCraft.jsonc
+            $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/PrismaCraft.jsonc
         COMMENT "Copying project assets"
     )
 endif()

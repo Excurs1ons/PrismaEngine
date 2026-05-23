@@ -125,10 +125,16 @@ void Template3DApp::LoadScene(const std::string& path) {
 }
 
 void Template3DApp::OnRender() {
-    // HUD rendering is handled by StatsOverlay::Update() called from OnUpdate
-    // The overlay callback on PathTracingPipeline is available (SetOverlayCallback)
-    // but StatsOverlay as a Component renders via Renderer2D::DrawString directly,
-    // so the pipeline callback pathway is not needed here.
+    // StatsOverlay renders via Renderer2D::DrawString, which requires
+    // being inside BeginGizmo()/EndGizmo() (set up by Engine::Run main loop).
+    // The Update() call writes to gizmo command queue consumed by
+    // PathTracingPipeline::RenderOverlay(). If called too early (e.g. OnUpdate),
+    // the text lands in the scene command queue and is never displayed.
+    if (m_statsOverlay) {
+        m_statsOverlay->SetNEEEnabled(m_enableNEE);
+        m_statsOverlay->SetUsePrimitiveSphere(m_usePrimitiveSphere);
+        m_statsOverlay->Update(Timestep{});
+    }
 }
 
 void Template3DApp::OnUpdate(Timestep ts) {
@@ -136,12 +142,6 @@ void Template3DApp::OnUpdate(Timestep ts) {
     if (m_scene && m_scene->IsDirty()) {
         m_ptPipeline->ReloadSceneData();
         m_scene->SetDirty(false);
-    }
-
-    if (m_statsOverlay) {
-        m_statsOverlay->SetNEEEnabled(m_enableNEE);
-        m_statsOverlay->SetUsePrimitiveSphere(m_usePrimitiveSphere);
-        m_statsOverlay->Update(ts);
     }
 
     if (m_headlessRunner && m_headlessRunner->Update()) {

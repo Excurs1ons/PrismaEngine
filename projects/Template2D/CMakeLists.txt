@@ -122,6 +122,9 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
+    COMMAND ${CMAKE_COMMAND} -E copy
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets/Template2D.json
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/Template2D.json
     COMMENT "Copying shaders and project assets"
 )
 
@@ -150,10 +153,10 @@ if(PRISMA_ENABLE_SCRIPTING)
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Building C# game scripts..."
-        COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
+        COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts.csproj"
                 -c Release --nologo --no-restore
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/Template2D_Managed.dll"
+                "${SCRIPTS_DIR}/bin/Release/net10.0/Template2D_Managed.dll"
                 "${SCRIPTS_OUT}/Template2D_Managed.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
     )

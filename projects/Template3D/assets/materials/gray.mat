@@ -2,6 +2,6 @@
     "name": "gray",
     "shader": "assets/shaders/present.frag.spv",
     "properties": {
-        "albedo": [0.8, 0.8, 0.8, 1.0]
+        "basecolor": [0.8, 0.8, 0.8, 1.0]
     }
 }
