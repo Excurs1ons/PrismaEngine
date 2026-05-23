@@ -21,10 +21,15 @@ if(PRISMA_ENABLE_SCRIPTING)
     set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
     set(SCRIPTS_OUT "${CMAKE_BINARY_DIR}/bin")
 
+    # 强制 .NET 工具链输出英文（避免中文乱码）
+    set(DOTNET_ENV_CMD ${CMAKE_COMMAND} -E env
+        "DOTNET_CLI_UI_LANGUAGE=en-US"
+        "VSLANG=1033")
+
     add_custom_target(SRP2D_Scripts ALL
         COMMAND ${CMAKE_COMMAND} -E echo "Building SRP2D C# scripts..."
-        COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
-                -c Release --nologo --no-restore
+        COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
+                -c Release --nologo
         COMMAND ${CMAKE_COMMAND} -E make_directory "${SCRIPTS_OUT}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/SRP2D_Managed.dll"

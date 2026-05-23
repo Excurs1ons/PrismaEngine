@@ -162,11 +162,16 @@ if(PRISMA_ENABLE_SCRIPTING)
     set(SCRIPTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripts")
     set(SCRIPTS_OUT "$<TARGET_FILE_DIR:${PROJECT_NAME}>")
 
+    # 强制 .NET 工具链输出英文（避免中文乱码）
+    set(DOTNET_ENV_CMD ${CMAKE_COMMAND} -E env
+        "DOTNET_CLI_UI_LANGUAGE=en-US"
+        "VSLANG=1033")
+
     # Restore GameScripts NuGet packages（避免并行冲突）
     set(PC_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prismacraft_scripts_restored")
     add_custom_command(
         OUTPUT "${PC_RESTORE_STAMP}"
-        COMMAND ${DOTNET} restore "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj" -p:RestorePackagesWithLockFile=false
+        COMMAND ${DOTNET_ENV_CMD} ${DOTNET} restore "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj" -p:RestorePackagesWithLockFile=false
         COMMAND ${CMAKE_COMMAND} -E touch "${PC_RESTORE_STAMP}"
         DEPENDS "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
         COMMENT "Restoring PrismaCraft GameScripts NuGet packages"
@@ -174,7 +179,7 @@ if(PRISMA_ENABLE_SCRIPTING)
 
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E echo "Building C# game scripts..."
-        COMMAND ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
+        COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
                 -c Release --nologo --no-restore
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/PrismaCraft_Managed.dll"

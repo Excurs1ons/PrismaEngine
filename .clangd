@@ -1,6 +1,6 @@
 CompileFlags:
   Add:
-    - "-std=c++20"
+    - "-std=c++23"
     - "-xc++"
     - "-I./src"
     - "-I./src/engine"
@@ -59,6 +59,7 @@ CompileFlags:
     - "-DENGINE_EXPORTS=1"
   Remove:
     - "-W*"
+    - "-external:*"
   Compiler: clang
 
 Index:
