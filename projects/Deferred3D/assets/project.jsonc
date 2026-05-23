@@ -1,0 +1,39 @@
+{
+    "name": "Deferred3D（延迟渲染调试）",
+
+    "entryScene": "scenes/cornell_box.scene.json",
+
+    "scenes": [
+        "scenes/cornell_box.scene.json"
+    ],
+
+    "assets": ["assets", "projects/Deferred3D/assets"],
+
+    "window": {
+        "width": 1280,
+        "height": 720,
+        "fullscreen": false,
+        "resizable": true,
+        "vsync": "Mailbox",
+        "maxFPS": 0
+    },
+
+    "renderMode": "Forward",
+
+    "scriptingBackend": "Off",
+
+    "rendering": {
+        "maxSamples": 512,
+        "maxBounces": 8,
+        "hardwareRayTracing": false,
+        "pathTraceMode": "BVH",
+        "enableNEE": false
+    },
+
+    "headless": {
+        "frames": 100,
+        "width": 1280,
+        "height": 720,
+        "outputPath": "deferred_output.png"
+    }
+}

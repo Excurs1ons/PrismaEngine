@@ -1,0 +1,7 @@
+{
+    "name": "gray",
+    "shader": "assets/shaders/present.frag.spv",
+    "properties": {
+        "basecolor": [0.8, 0.8, 0.8, 1.0]
+    }
+}
