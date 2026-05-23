@@ -509,6 +509,21 @@ void PathTracingPipeline::BuildBVH() {
         root.aabbMin[3] = (float)totalTris;
         root.aabbMax[3] = 0.0f;
         m_bvhNodeCount = 1;
+
+        // 退化路径也需要构建 triToObject 映射，否则 BVH 着色器会跳过所有三角形
+        m_triToObject.assign(totalTris, -1);
+        for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+            auto& obj = m_cachedSceneData.objects[oi];
+            int type = (int)obj.p0[3];
+            if (type == 4) {
+                int firstTri = (int)obj.p1[0];
+                int triCnt = (int)obj.p1[1];
+                for (int t = 0; t < triCnt; t++) {
+                    int ti = firstTri + t;
+                    if (ti < totalTris) m_triToObject[ti] = (int)oi;
+                }
+            }
+        }
         LOG_INFO("PathTracingPipeline", "BVH 退化单节点: {} 个三角形（场景尺寸小）", totalTris);
         return;
     }
@@ -709,7 +724,11 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         if (!m_rtResourcesBuilt && m_sceneChangedSinceLastRTBuild) {
             LOG_WARN("PathTracingPipeline", "RT 资源未就绪，尝试构建...");
             LoadRTHardwareShaders();
-            BuildRTResources(m_scene);
+            if (BuildRTResources(m_scene)) {
+                m_rtResourcesBuilt = true;
+            }
+            // 无论成功失败都清除标记，避免每帧重试
+            m_sceneChangedSinceLastRTBuild = false;
         }
 
         // 屏障: Undefined/ShaderRead → UnorderedAccess

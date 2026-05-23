@@ -54,6 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed / 修复
 
+- **Fixed path tracing mesh rendering**: C++ PTVertex (32 bytes) vs GLSL Vertex (48 bytes) struct layout mismatch in all pathtrace variants (Flat/BVH/HardwareRT) / 修复路径追踪网格渲染：所有 pathtrace 变体中 C++ PTVertex（32 字节）与 GLSL Vertex（48 字节）结构体布局不匹配
+- **Fixed RT NEE light sampling**: Missing local-to-world space transform for light sample point and normal in rgen shader / 修复 RT NEE 灯光采样：rgen 着色器中灯光采样点和法线缺少本地到世界空间变换
+- **Fixed BVH+Mesh black screen**: RebuildBVHForScene() and BuildBVH() degenerate path missing triToObject mapping / 修复 BVH+Mesh 黑屏：添加 RebuildBVHForScene() 并修复 BuildBVH() 退化路径缺少 triToObject 映射
+- **Fixed gizmo overlay depth test**: Disable depth test/write for overlay PSO / 修复 gizmo 叠加层深度测试：叠加层 PSO 关闭深度测试
+- **Fixed HardwareRT→HardwareRT switch crash**: ResizeResources() null-check m_computePipeline / 修复窗口缩放崩溃：ResizeResources() 空检查 m_computePipeline
+- **Fixed mode cycle freeze**: Clear m_computeSPIRV when entering HardwareRT mode / 修复模式循环冻结：进入 HardwareRT 模式时清除 m_computeSPIRV
+- **Fixed RT build retry spam**: Clear sceneChangedAfterFailedBuild flag after failed RT resource build / 修复 RT 构建重试刷日志：构建失败后清除重试标记
 - Fixed CMake `CMAKE_ROOT` reference in FetchContent.cmake / 修复 FetchContent.cmake 中的 CMAKE_ROOT 引用
 - Fixed platform-specific runtime build configurations / 修复平台特定的运行时构建配置
 

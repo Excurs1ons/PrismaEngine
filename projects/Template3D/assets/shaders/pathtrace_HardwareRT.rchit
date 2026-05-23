@@ -29,10 +29,8 @@ layout(std430, binding = 3) readonly buffer SceneData {
 } scene;
 
 struct Vertex {
-    vec3 pos;
-    float pad0;
-    vec3 nrm;
-    float pad1;
+    vec4 pos;  // xyz + pad (匹配 C++ PTVertex::pos[4], 32 字节/顶点)
+    vec4 nrm;  // xyz + pad (匹配 C++ PTVertex::nrm[4])
 };
 
 struct Triangle {
@@ -59,12 +57,12 @@ void main() {
 
     Triangle tri = triBuf.triangles[triIdx];
 
-    vec3 v0 = tri.vertices[0].pos;
-    vec3 v1 = tri.vertices[1].pos;
-    vec3 v2 = tri.vertices[2].pos;
-    vec3 n0 = tri.vertices[0].nrm;
-    vec3 n1 = tri.vertices[1].nrm;
-    vec3 n2 = tri.vertices[2].nrm;
+    vec3 v0 = tri.vertices[0].pos.xyz;
+    vec3 v1 = tri.vertices[1].pos.xyz;
+    vec3 v2 = tri.vertices[2].pos.xyz;
+    vec3 n0 = tri.vertices[0].nrm.xyz;
+    vec3 n1 = tri.vertices[1].nrm.xyz;
+    vec3 n2 = tri.vertices[2].nrm.xyz;
 
     // ======== 计算重心坐标 ========
     vec3 worldHit = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
