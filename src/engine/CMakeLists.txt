@@ -229,11 +229,16 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         set(CS_HOST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/PrismaEngine.Host")
         set(CS_OUTPUT_FILE "${CMAKE_BINARY_DIR}/bin/Prisma.Core.dll")
 
+        # 强制 .NET 工具链输出英文（避免中文乱码）
+        set(DOTNET_ENV_CMD ${CMAKE_COMMAND} -E env
+            "DOTNET_CLI_UI_LANGUAGE=en-US"
+            "VSLANG=1033")
+
         # NuGet restore（避免并行构建冲突）
         set(CS_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prisma_core_restored")
         add_custom_command(
             OUTPUT "${CS_RESTORE_STAMP}"
-            COMMAND ${DOTNET} restore "${CS_CORE_DIR}/Prisma.Core.csproj" -p:RestorePackagesWithLockFile=false
+            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} restore "${CS_CORE_DIR}/Prisma.Core.csproj" -p:RestorePackagesWithLockFile=false
             COMMAND ${CMAKE_COMMAND} -E touch "${CS_RESTORE_STAMP}"
             DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj"
             COMMENT "Restoring Prisma.Core NuGet packages"
@@ -241,7 +246,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
 
         add_custom_command(
             OUTPUT "${CS_OUTPUT_FILE}"
-            COMMAND ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin" --no-restore
+            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin" --no-restore
             DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj" "${CS_RESTORE_STAMP}"
             COMMENT "Building Prisma.Core C# library"
         )
@@ -258,7 +263,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         set(CS_HOST_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prisma_host_restored")
         add_custom_command(
             OUTPUT "${CS_HOST_RESTORE_STAMP}"
-            COMMAND ${DOTNET} restore "${CS_HOST_DIR}/PrismaEngine.Host.csproj" -r ${CS_RID} -p:RestorePackagesWithLockFile=false
+            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} restore "${CS_HOST_DIR}/PrismaEngine.Host.csproj" -r ${CS_RID} -p:RestorePackagesWithLockFile=false
             COMMAND ${CMAKE_COMMAND} -E touch "${CS_HOST_RESTORE_STAMP}"
             DEPENDS "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
             COMMENT "Restoring PrismaEngine.Host NuGet packages"
@@ -266,7 +271,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
 
         add_custom_command(
             OUTPUT "${CS_HOST_OUTPUT_DIR}/publish/PrismaEngine.Host.runtimeconfig.json"
-            COMMAND ${DOTNET} publish "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
+            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} publish "${CS_HOST_DIR}/PrismaEngine.Host.csproj"
                     -c Release -r ${CS_RID} --self-contained true
                     -o "${CS_HOST_OUTPUT_DIR}/publish"
                     -p:DebugType=portable -p:DebugSymbols=true
@@ -282,7 +287,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         # C# 源码生成器（Roslyn Analyzer，编译 GameScripts 时自动调用）
         set(CS_GENERATORS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/Prisma.Generators")
         add_custom_target(PrismaGenerators ALL
-            COMMAND ${DOTNET} build "${CS_GENERATORS_DIR}/Prisma.Generators.csproj" -c Release --nologo --no-restore
+            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${CS_GENERATORS_DIR}/Prisma.Generators.csproj" -c Release --nologo --no-restore
             COMMENT "Building Prisma.Generators (Roslyn source generators)"
         )
         add_dependencies(PrismaGenerators PrismaCore)
@@ -506,6 +511,11 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
             COMMENT "Deploying Prisma.Core.dll to Engine output directory"
         )
         add_dependencies(Engine PrismaCore PrismaEngineHost)
+
+        # 编译时嵌入 Host 发布目录路径，运行时无需猜测 CWD
+        target_compile_definitions(Engine PRIVATE
+            PRISMA_HOST_DIR="${CS_HOST_OUTPUT_DIR}/publish"
+        )
     endif()
 endif()
 if(MSVC)

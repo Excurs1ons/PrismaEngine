@@ -59,7 +59,7 @@ void OpaquePass::Execute(const PassExecutionContext& context) {
 
 void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {
     if (!cmd || commands.empty() || !m_device) {
-        LOG_DEBUG("OpaquePass", "跳过 Execute: cmd={} empty={} device={}", (void*)cmd, commands.empty(), (void*)m_device);
+        // LOG_DEBUG("OpaquePass", "跳过 Execute: cmd={} empty={} device={}", (void*)cmd, commands.empty(), (void*)m_device);
         return;
     }
     if (!EnsureDefaultPipeline()) {

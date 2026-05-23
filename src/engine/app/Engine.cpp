@@ -269,24 +269,41 @@ int Engine::Run(std::unique_ptr<Application> app) {
         // 初始化 C# 脚本引擎（根据项目设置决定）
         if (scriptingBackend == ScriptingBackend::CoreCLR) {
             // Host 运行时搜索路径（PrismaEngine.Host 自包含发布目录）
-            std::vector<std::string> hostPaths = {
-                ".",
-                "scripts",
-                "../scripts",
-                "host",
-                "../host",
-                "Host/linux-x64/publish",
-                "Host/linux-arm64/publish",
-                "Host/win-x64/publish",
-                "../build/PrismaEngine.Host/linux-x64/publish",
-                "../build/PrismaEngine.Host/linux-arm64/publish",
-                "../build/PrismaEngine.Host/win-x64/publish",
-            };
             std::string hostDir;
-            for (const auto& p : hostPaths) {
-                if (std::filesystem::exists(p + "/PrismaEngine.Host.runtimeconfig.json")) {
-                    hostDir = std::filesystem::canonical(p).string();
-                    break;
+
+            // 优先使用 CMake 编译时嵌入的路径（精确、不受 CWD 影响）
+#ifdef PRISMA_HOST_DIR
+            if (std::filesystem::exists(PRISMA_HOST_DIR "/PrismaEngine.Host.runtimeconfig.json")) {
+                hostDir = PRISMA_HOST_DIR;
+            }
+#endif
+
+            // 回退：运行时相对路径搜索（兼容手动运行等场景）
+            if (hostDir.empty()) {
+                std::vector<std::string> hostPaths = {
+                    ".",
+                    "scripts",
+                    "../scripts",
+                    "host",
+                    "../host",
+                    "Host/linux-x64/publish",
+                    "Host/linux-arm64/publish",
+                    "Host/win-x64/publish",
+                    "../build/PrismaEngine.Host/linux-x64/publish",
+                    "../build/PrismaEngine.Host/linux-arm64/publish",
+                    "../build/PrismaEngine.Host/win-x64/publish",
+                    "../../PrismaEngine.Host/linux-x64/publish",
+                    "../../PrismaEngine.Host/linux-arm64/publish",
+                    "../../PrismaEngine.Host/win-x64/publish",
+                    "PrismaEngine.Host/linux-x64/publish",
+                    "PrismaEngine.Host/linux-arm64/publish",
+                    "PrismaEngine.Host/win-x64/publish",
+                };
+                for (const auto& p : hostPaths) {
+                    if (std::filesystem::exists(p + "/PrismaEngine.Host.runtimeconfig.json")) {
+                        hostDir = std::filesystem::canonical(p).string();
+                        break;
+                    }
                 }
             }
 
