@@ -70,7 +70,7 @@
                 "data": {
                     "type": "Point",
                     "color": [1.0, 0.95, 0.9],
-                    "intensity": 5.0,
+                    "intensity": 2.0,
                     "range": 6.0
                 }
             }]
