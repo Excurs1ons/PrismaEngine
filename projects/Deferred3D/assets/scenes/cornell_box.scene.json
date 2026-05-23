@@ -70,10 +70,9 @@
                 "type": "Light",
                 "data": {
                     "type": "Ambient",
-                    "color": [0.8, 0.8, 0.8],
-                    "intensity": 0.3,
-                    "range": 10.0,
-                    "enabled": false
+                    "color": [1, 1, 1],
+                    "intensity": 1,
+                    "enabled": true
                 }
             }]
         },

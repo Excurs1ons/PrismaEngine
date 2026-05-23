@@ -78,21 +78,27 @@ private:
     std::shared_ptr<Graphic::ITexture> m_gbEmissive;
     std::shared_ptr<Graphic::ITexture> m_gbDepth;
     std::shared_ptr<Graphic::ITexture> m_lightingOutput;
+    std::shared_ptr<Graphic::ITexture> m_ssgiOutput;
 
     VkRenderPass m_gbufferRP = VK_NULL_HANDLE;
     VkFramebuffer m_gbufferFB = VK_NULL_HANDLE;
     VkRenderPass m_lightingRP = VK_NULL_HANDLE;
     VkFramebuffer m_lightingFB = VK_NULL_HANDLE;
+    VkRenderPass m_ssgiRP = VK_NULL_HANDLE;
+    VkFramebuffer m_ssgiFB = VK_NULL_HANDLE;
 
     std::shared_ptr<Graphic::IPipelineState> m_gbufferPSO;
     std::shared_ptr<Graphic::IPipelineState> m_lightingPSO;
+    std::shared_ptr<Graphic::IPipelineState> m_ssgiPSO;
     std::shared_ptr<Graphic::IPipelineState> m_compositePSO;
     std::shared_ptr<Graphic::IPipelineState> m_forwardPSO;
     std::shared_ptr<Graphic::IPipelineState> m_debugGBufferPSO;
 
     std::shared_ptr<Graphic::IDescriptorSet> m_lightingDS;
+    std::shared_ptr<Graphic::IBuffer> m_lightingUBO;
+    std::shared_ptr<Graphic::IDescriptorSet> m_ssgiDS;
     std::shared_ptr<Graphic::IDescriptorSet> m_compositeDS;
-    std::shared_ptr<Graphic::IDescriptorSet> m_debugGBufferDS[5]; // one per target, created once
+    std::shared_ptr<Graphic::IDescriptorSet> m_debugGBufferDS[5];
     std::shared_ptr<Graphic::ISampler> m_defaultSampler;
 
     int m_debugGBufferTarget = 0; // 0=position, 1=normal, 2=albedo, 3=emissive, 4=depth

@@ -1,4 +1,4 @@
-#include "DeferredPipelineAdapter.h"
+﻿#include "DeferredPipelineAdapter.h"
 #include "graphic/interfaces/IResourceFactory.h"
 #include "graphic/interfaces/ISwapChain.h"
 #include "graphic/MeshRenderer.h"
@@ -163,9 +163,12 @@ void DeferredPipelineAdapter::Shutdown()
     m_pipeline.reset();
     m_gbufferPSO.reset();
     m_lightingPSO.reset();
+    m_ssgiPSO.reset();
     m_compositePSO.reset();
+    m_forwardPSO.reset();
     m_debugGBufferPSO.reset();
     m_lightingDS.reset();
+    m_ssgiDS.reset();
     m_compositeDS.reset();
     for (auto& ds : m_debugGBufferDS) ds.reset();
 }
@@ -181,8 +184,9 @@ bool DeferredPipelineAdapter::CreateResources(uint32_t w, uint32_t h)
     m_gbEmissive = CreateRT(m_device, w, h, Graphic::TextureFormat::RGBA16_Float);
     m_gbDepth    = CreateRT(m_device, w, h, Graphic::TextureFormat::D32_Float, true);
     m_lightingOutput = CreateRT(m_device, w, h, Graphic::TextureFormat::RGBA16_Float);
+    m_ssgiOutput     = CreateRT(m_device, w, h, Graphic::TextureFormat::RGBA16_Float);
 
-    if (!m_gbPosition || !m_gbNormal || !m_gbAlbedo || !m_gbEmissive || !m_gbDepth || !m_lightingOutput)
+    if (!m_gbPosition || !m_gbNormal || !m_gbAlbedo || !m_gbEmissive || !m_gbDepth || !m_lightingOutput || !m_ssgiOutput)
         return false;
 
     VkImageView gbViews[4] = { GetVkImageView(m_gbPosition), GetVkImageView(m_gbNormal), GetVkImageView(m_gbAlbedo), GetVkImageView(m_gbEmissive) };
@@ -297,6 +301,43 @@ bool DeferredPipelineAdapter::CreateResources(uint32_t w, uint32_t h)
     ltFB.width = w; ltFB.height = h; ltFB.layers = 1;
     if (vkCreateFramebuffer(m_vkDevice, &ltFB, nullptr, &m_lightingFB) != VK_SUCCESS) return false;
 
+    // --- SSGI RP ---
+    VkImageView ssgiView = GetVkImageView(m_ssgiOutput);
+    VkAttachmentDescription ssgiColor = ltColor; // same format and layout as lighting
+    VkAttachmentReference ssgiColorRef = { 0, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL };
+    VkSubpassDescription ssgiSubpass = {};
+    ssgiSubpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    ssgiSubpass.colorAttachmentCount = 1;
+    ssgiSubpass.pColorAttachments = &ssgiColorRef;
+
+    VkSubpassDependency ssgiDep[2] = {};
+    ssgiDep[0].srcSubpass = VK_SUBPASS_EXTERNAL; ssgiDep[0].dstSubpass = 0;
+    ssgiDep[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    ssgiDep[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    ssgiDep[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    ssgiDep[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    ssgiDep[1].srcSubpass = 0; ssgiDep[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+    ssgiDep[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    ssgiDep[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    ssgiDep[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    ssgiDep[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    VkRenderPassCreateInfo ssgiRP = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
+    ssgiRP.attachmentCount = 1;
+    ssgiRP.pAttachments = &ssgiColor;
+    ssgiRP.subpassCount = 1;
+    ssgiRP.pSubpasses = &ssgiSubpass;
+    ssgiRP.dependencyCount = 2;
+    ssgiRP.pDependencies = ssgiDep;
+    if (vkCreateRenderPass(m_vkDevice, &ssgiRP, nullptr, &m_ssgiRP) != VK_SUCCESS) return false;
+
+    VkFramebufferCreateInfo ssgiFB = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
+    ssgiFB.renderPass = m_ssgiRP;
+    ssgiFB.attachmentCount = 1;
+    ssgiFB.pAttachments = &ssgiView;
+    ssgiFB.width = w; ssgiFB.height = h; ssgiFB.layers = 1;
+    if (vkCreateFramebuffer(m_vkDevice, &ssgiFB, nullptr, &m_ssgiFB) != VK_SUCCESS) return false;
+
     CreatePSOs();
     return true;
 }
@@ -307,7 +348,10 @@ void DeferredPipelineAdapter::DestroyResources()
     if (m_gbufferRP) { vkDestroyRenderPass(m_vkDevice, m_gbufferRP, nullptr); m_gbufferRP = VK_NULL_HANDLE; }
     if (m_lightingFB) { vkDestroyFramebuffer(m_vkDevice, m_lightingFB, nullptr); m_lightingFB = VK_NULL_HANDLE; }
     if (m_lightingRP) { vkDestroyRenderPass(m_vkDevice, m_lightingRP, nullptr); m_lightingRP = VK_NULL_HANDLE; }
-    m_gbPosition.reset(); m_gbNormal.reset(); m_gbAlbedo.reset(); m_gbEmissive.reset(); m_gbDepth.reset(); m_lightingOutput.reset();
+    if (m_ssgiFB) { vkDestroyFramebuffer(m_vkDevice, m_ssgiFB, nullptr); m_ssgiFB = VK_NULL_HANDLE; }
+    if (m_ssgiRP) { vkDestroyRenderPass(m_vkDevice, m_ssgiRP, nullptr); m_ssgiRP = VK_NULL_HANDLE; }
+    m_gbPosition.reset(); m_gbNormal.reset(); m_gbAlbedo.reset(); m_gbEmissive.reset(); m_gbDepth.reset();
+    m_lightingOutput.reset(); m_ssgiOutput.reset();
 }
 
 void DeferredPipelineAdapter::CreatePSOs()
@@ -320,6 +364,12 @@ void DeferredPipelineAdapter::CreatePSOs()
         Graphic::TextureFormat::D32_Float, true, false);
 
     auto* rm = Engine::Get().GetRenderResourceManager();
+
+    // SSGI PSO: fullscreen triangle, samples GBuffer → writes indirect lighting
+    m_ssgiPSO = MakePSO(m_device,
+        "assets/shaders/deferred_fullscreen.vert.spv", "assets/shaders/ssgi.frag.spv",
+        m_ssgiRP,
+        {Graphic::TextureFormat::RGBA16_Float}, Graphic::TextureFormat::Unknown, false, false);
 
     m_lightingPSO = MakePSO(m_device,
         "assets/shaders/deferred_fullscreen.vert.spv", "assets/shaders/deferred_lighting.frag.spv",
@@ -355,6 +405,25 @@ void DeferredPipelineAdapter::CreatePSOs()
         LOG_ERROR("Deferred3D_PSO", "m_lightingPSO is null!");
     }
 
+    // SSGI descriptor set: reads 5 GBuffer textures
+    if (m_ssgiPSO) {
+        auto layouts = m_ssgiPSO->GetDescriptorSetLayouts();
+        LOG_INFO("Deferred3D_PSO", "SSGI PSO DS layouts: {}", layouts.size());
+        if (!layouts.empty()) {
+            m_ssgiDS = m_device->GetResourceFactory()->CreateDescriptorSet(layouts[0].get());
+            if (m_ssgiDS && m_defaultSampler) {
+                m_ssgiDS->BindTexture(0, m_gbPosition.get(), m_defaultSampler.get());
+                m_ssgiDS->BindTexture(1, m_gbNormal.get(), m_defaultSampler.get());
+                m_ssgiDS->BindTexture(2, m_gbAlbedo.get(), m_defaultSampler.get());
+                m_ssgiDS->BindTexture(3, m_gbEmissive.get(), m_defaultSampler.get());
+                m_ssgiDS->BindTexture(4, m_gbDepth.get(), m_defaultSampler.get());
+                m_ssgiDS->BindTexture(5, m_lightingOutput.get(), m_defaultSampler.get());
+                m_ssgiDS->Update();
+                LOG_INFO("Deferred3D_PSO", "SSGI DS created (5 GBuffer + lightingOutput)");
+            }
+        }
+    }
+
     // Forward PSO: renders to swapchain with material colors
     m_forwardPSO = MakePSO(m_device,
         "assets/shaders/forward.vert.spv", "assets/shaders/forward.frag.spv",
@@ -362,7 +431,7 @@ void DeferredPipelineAdapter::CreatePSOs()
         {Graphic::TextureFormat::RGBA8_UNorm},
         Graphic::TextureFormat::D32_Float, true, false);
 
-    // Composite descriptor set: reads lighting output
+    // Composite descriptor set: reads both lighting output and SSGI
     if (m_compositePSO) {
         auto layouts = m_compositePSO->GetDescriptorSetLayouts();
         LOG_INFO("Deferred3D_PSO", "Composite PSO DS layouts: {}", layouts.size());
@@ -370,8 +439,9 @@ void DeferredPipelineAdapter::CreatePSOs()
             m_compositeDS = m_device->GetResourceFactory()->CreateDescriptorSet(layouts[0].get());
             if (m_compositeDS && m_defaultSampler) {
                 m_compositeDS->BindTexture(0, m_lightingOutput.get(), m_defaultSampler.get());
+                m_compositeDS->BindTexture(1, m_ssgiOutput.get(), m_defaultSampler.get());
                 m_compositeDS->Update();
-                LOG_INFO("Deferred3D_PSO", "Composite DS bound to lightingOutput");
+                LOG_INFO("Deferred3D_PSO", "Composite DS bound to lightingOutput + ssgiOutput");
             }
         }
     }
@@ -522,8 +592,78 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     vkCmdEndRenderPass(vkCmd);
 
     // ====================================================================
-    // Phase 1.5: Lighting Pass — fullscreen triangle, reads GBuffer → lightingOutput
+    // Phase 1.5: Lighting Pass — reads GBuffer → lightingOutput (先光照，给 SSGI 反弹用)
     // ====================================================================
+    {
+        VkClearValue ltClear;
+        ltClear.color = {{0, 0, 0, 0}};
+        VkRenderPassBeginInfo rp = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+        rp.renderPass = m_lightingRP;
+        rp.framebuffer = m_lightingFB;
+        rp.renderArea = {{0, 0}, {m_width, m_height}};
+        rp.clearValueCount = 1;
+        rp.pClearValues = &ltClear;
+        vkCmdBeginRenderPass(vkCmd, &rp, VK_SUBPASS_CONTENTS_INLINE);
+    }
+    ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});
+    ctx.commandBuffer->SetScissorRect({0,0,(int)m_width,(int)m_height});
+    ctx.commandBuffer->SetPipelineState(m_lightingPSO.get());
+    ctx.commandBuffer->BindDescriptorSet(0, m_lightingDS.get());
+
+    {
+        struct LightingPC { Graphic::PrismaMath::vec4 ambient; };
+        LightingPC lpc{};
+        lpc.ambient = {0.0f, 0.0f, 0.0f, 1.0f};
+
+        for (const auto& light : ctx.lights) {
+            int lightType = static_cast<int>(light.direction.w + 0.5f);
+            PrismaMath::vec3 col = PrismaMath::vec3(light.color.x, light.color.y, light.color.z);
+            float intensity = glm::length(col);
+            if (intensity < 0.001f) continue;
+
+            if (lightType == 3) { // Ambient
+                lpc.ambient = {col.x, col.y, col.z, 1.0f};
+                if (!m_firstFrameLogged)
+                    LOG_INFO("Deferred3D_Light", "Ambient: color=({:.3},{:.3},{:.3})", col.x, col.y, col.z);
+            }
+        }
+
+        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &lpc, sizeof(lpc));
+        ctx.commandBuffer->Draw(3, 1);
+    }
+    vkCmdEndRenderPass(vkCmd);
+
+    // ====================================================================
+    // Phase 2: SSGI Pass — reads GBuffer + lightingOutput → ssgiOutput
+    // ====================================================================
+    if (m_ssgiPSO && m_ssgiDS) {
+        {
+            VkClearValue ssgiClear;
+            ssgiClear.color = {{0, 0, 0, 0}};
+            VkRenderPassBeginInfo rp = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
+            rp.renderPass = m_ssgiRP;
+            rp.framebuffer = m_ssgiFB;
+            rp.renderArea = {{0, 0}, {m_width, m_height}};
+            rp.clearValueCount = 1;
+            rp.pClearValues = &ssgiClear;
+            vkCmdBeginRenderPass(vkCmd, &rp, VK_SUBPASS_CONTENTS_INLINE);
+        }
+        ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});
+        ctx.commandBuffer->SetScissorRect({0,0,(int)m_width,(int)m_height});
+        ctx.commandBuffer->SetPipelineState(m_ssgiPSO.get());
+        ctx.commandBuffer->BindDescriptorSet(0, m_ssgiDS.get());
+
+        {
+            struct SSGIPC { Graphic::PrismaMath::mat4 vp; Graphic::PrismaMath::vec4 cameraPos; Graphic::PrismaMath::vec4 params; };
+            SSGIPC pc;
+            pc.vp = ctx.camera.projectionMatrix * ctx.camera.viewMatrix;
+            pc.cameraPos = {ctx.camera.position.x, ctx.camera.position.y, ctx.camera.position.z, 1.0f};
+            pc.params = {16.0f, 0.6f, 5.0f, 0.1f}; // rays=16, intensity=0.6, maxDist=5, stepSize=0.1
+            ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &pc, sizeof(pc));
+            ctx.commandBuffer->Draw(3, 1);
+        }
+        vkCmdEndRenderPass(vkCmd);
+    }
     {
         VkClearValue ltClear;
         ltClear.color = {{0, 0, 0, 0}};
