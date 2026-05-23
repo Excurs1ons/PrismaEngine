@@ -611,17 +611,28 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     ctx.commandBuffer->BindDescriptorSet(0, m_lightingDS.get());
 
     {
-        struct LightingPC { Graphic::PrismaMath::vec4 ambient; };
+        struct LightingPC { Graphic::PrismaMath::vec4 ambient; Graphic::PrismaMath::vec4 lightDir; Graphic::PrismaMath::vec4 lightColor; };
         LightingPC lpc{};
-        lpc.ambient = {0.0f, 0.0f, 0.0f, 1.0f};
 
+        // 从场景光源中提取环境光（Ambient）和定向光（Directional）
         for (const auto& light : ctx.lights) {
             int lightType = static_cast<int>(light.direction.w + 0.5f);
             PrismaMath::vec3 col = PrismaMath::vec3(light.color.x, light.color.y, light.color.z);
             float intensity = glm::length(col);
             if (intensity < 0.001f) continue;
 
-            if (lightType == 3) { // Ambient
+            if (lightType == 0) { // Directional
+                PrismaMath::vec3 dir = PrismaMath::vec3(light.direction.x, light.direction.y, light.direction.z);
+                float len = glm::length(dir);
+                if (len > 0.001f) {
+                    dir = -dir / len;
+                    lpc.lightDir = {dir.x, dir.y, dir.z, 0.0f};
+                    lpc.lightColor = {col.x, col.y, col.z, 1.0f};
+                }
+                if (!m_firstFrameLogged)
+                    LOG_INFO("Deferred3D_Light", "Directional: dir=({:.3},{:.3},{:.3}) color=({:.3},{:.3},{:.3})",
+                             lpc.lightDir.x, lpc.lightDir.y, lpc.lightDir.z, col.x, col.y, col.z);
+            } else if (lightType == 3) { // Ambient
                 lpc.ambient = {col.x, col.y, col.z, 1.0f};
                 if (!m_firstFrameLogged)
                     LOG_INFO("Deferred3D_Light", "Ambient: color=({:.3},{:.3},{:.3})", col.x, col.y, col.z);
@@ -664,59 +675,8 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
         }
         vkCmdEndRenderPass(vkCmd);
     }
-    {
-        VkClearValue ltClear;
-        ltClear.color = {{0, 0, 0, 0}};
-        VkRenderPassBeginInfo rp = {VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO};
-        rp.renderPass = m_lightingRP;
-        rp.framebuffer = m_lightingFB;
-        rp.renderArea = {{0, 0}, {m_width, m_height}};
-        rp.clearValueCount = 1;
-        rp.pClearValues = &ltClear;
-        vkCmdBeginRenderPass(vkCmd, &rp, VK_SUBPASS_CONTENTS_INLINE);
-    }
-    ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});
-    ctx.commandBuffer->SetScissorRect({0,0,(int)m_width,(int)m_height});
-    ctx.commandBuffer->SetPipelineState(m_lightingPSO.get());
-    ctx.commandBuffer->BindDescriptorSet(0, m_lightingDS.get());
-
-    {
-        struct LightingPC { Graphic::PrismaMath::vec4 ambient; Graphic::PrismaMath::vec4 lightDir; Graphic::PrismaMath::vec4 lightColor; Graphic::PrismaMath::vec4 lightPos; };
-        LightingPC lpc{};
-        lpc.ambient = {0.0f, 0.0f, 0.0f, 1.0f};
-
-        // 从场景光源中提取环境光（Ambient）和定向光（Directional）
-        for (const auto& light : ctx.lights) {
-            int lightType = static_cast<int>(light.direction.w + 0.5f);
-            PrismaMath::vec3 col = PrismaMath::vec3(light.color.x, light.color.y, light.color.z);
-            float intensity = glm::length(col);
-            if (intensity < 0.001f) continue;
-
-            if (lightType == 0) { // Directional
-                PrismaMath::vec3 dir = PrismaMath::vec3(light.direction.x, light.direction.y, light.direction.z);
-                float len = glm::length(dir);
-                if (len > 0.001f) {
-                    dir = -dir / len;
-                    lpc.lightDir = {dir.x, dir.y, dir.z, 0.0f};
-                    lpc.lightColor = {col.x, col.y, col.z, 1.0f};
-                }
-                if (!m_firstFrameLogged)
-                    LOG_INFO("Deferred3D_Light", "Directional: dir=({:.3},{:.3},{:.3}) color=({:.3},{:.3},{:.3})",
-                             lpc.lightDir.x, lpc.lightDir.y, lpc.lightDir.z, col.x, col.y, col.z);
-            } else if (lightType == 3) { // Ambient
-                lpc.ambient = {col.x, col.y, col.z, 1.0f};
-                if (!m_firstFrameLogged)
-                    LOG_INFO("Deferred3D_Light", "Ambient: color=({:.3},{:.3},{:.3})", col.x, col.y, col.z);
-            }
-        }
-
-        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &lpc, sizeof(lpc));
-        ctx.commandBuffer->Draw(3, 1);
-    }
-    vkCmdEndRenderPass(vkCmd);
-
     // ====================================================================
-    // Phase 2: SwapChain Pass — composite lighting result or debug GBuffer
+    // Phase 3: SwapChain Pass — composite lighting result or debug GBuffer
     // ====================================================================
     ctx.device->BeginSwapChainRenderPass();
     ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});

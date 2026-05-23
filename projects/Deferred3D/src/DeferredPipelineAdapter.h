@@ -95,7 +95,6 @@ private:
     std::shared_ptr<Graphic::IPipelineState> m_debugGBufferPSO;
 
     std::shared_ptr<Graphic::IDescriptorSet> m_lightingDS;
-    std::shared_ptr<Graphic::IBuffer> m_lightingUBO;
     std::shared_ptr<Graphic::IDescriptorSet> m_ssgiDS;
     std::shared_ptr<Graphic::IDescriptorSet> m_compositeDS;
     std::shared_ptr<Graphic::IDescriptorSet> m_debugGBufferDS[5];

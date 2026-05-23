@@ -7,11 +7,11 @@ layout(binding = 1) uniform sampler2D gbNormal;
 layout(binding = 2) uniform sampler2D gbAlbedo;
 layout(binding = 3) uniform sampler2D gbEmissive;
 
-layout(binding = 4) uniform LightingData {
+layout(push_constant) uniform PushConstants {
     vec4 ambient;
     vec4 lightDir;
     vec4 lightColor;
-} ub;
+} pc;
 
 float hash(vec2 p) {
     vec2 r = p * 127.1 + vec2(269.5, 183.3);
@@ -23,15 +23,15 @@ void main() {
     vec3 albedo = texture(gbAlbedo, inUV).rgb;
     vec3 emissiveSelf = texture(gbEmissive, inUV).rgb;
 
-    // 环境光（UBO 传递）
-    vec3 ambient = ub.ambient.rgb * albedo;
+    // 环境光（push constant 传递）
+    vec3 ambient = pc.ambient.rgb * albedo;
 
     // 方向光
     vec3 diffuse = vec3(0);
-    if (length(ub.lightColor.rgb) > 0.001 && length(ub.lightDir.xyz) > 0.001) {
-        vec3 L = normalize(ub.lightDir.xyz);
+    if (length(pc.lightColor.rgb) > 0.001 && length(pc.lightDir.xyz) > 0.001) {
+        vec3 L = normalize(pc.lightDir.xyz);
         float NdotL = max(dot(N, L), 0.0);
-        diffuse = albedo * ub.lightColor.rgb * NdotL;
+        diffuse = albedo * pc.lightColor.rgb * NdotL;
     }
 
     // 硬编码 emissive 面光源直接照明（Cornell Box 天花板 Light 面）
