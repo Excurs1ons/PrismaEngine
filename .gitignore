@@ -91,6 +91,9 @@ local.properties
 /*/build/
 projects/android/PrismaAndroid/app/src/main/assets/
 
+# Compiled shader binaries
+*.spv
+
 # Others
 .DS_Store
 *.tmp
