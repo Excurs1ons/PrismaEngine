@@ -197,6 +197,7 @@ private:
     void RenderOverlay(ICommandBuffer* cmd);
     void LoadDefaultShaders();
     void BuildBVH();  // 构建 CPU BVH 加速结构
+    void RebuildBVHForScene();  // BVH 模式：预变换顶点到世界空间 + 重建 BVH
 
     // 硬件光线追踪辅助方法
     bool LoadRTHardwareShaders();                // 加载 rgen/rchit/rmiss SPIR-V

@@ -108,6 +108,10 @@ void ForwardPipeline::EnsureGizmoPSO() {
     pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
     RasterizerState rs; rs.cullMode = CullMode::None;
     pso->SetRasterizerState(rs);
+    DepthStencilState ds{};
+    ds.depthEnable = false;
+    ds.depthWriteEnable = false;
+    pso->SetDepthStencilState(ds);
     if (pso->Create(m_device)) {
         m_gizmoPSO = std::shared_ptr<IPipelineState>(std::move(pso));
     }

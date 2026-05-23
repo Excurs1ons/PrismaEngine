@@ -131,40 +131,7 @@ void PathTracingPipeline::OnSceneLoaded(::Prisma::Scene* scene) {
     m_sceneChangedSinceLastRTBuild = true;
 
     if (m_mode == PathTraceMode::BVH) {
-        // BVH 模式：预变换顶点到世界空间 + 构建 BVH 加速结构
-        for (int i = 0; i < m_cachedSceneData.objectCount; i++) {
-            Node node(m_cachedNodeHandles[i]);
-            if (!node.IsValid()) continue;
-            Matrix4x4 worldMat = scene->GetWorldTransform(node);
-            std::memcpy(m_cachedSceneData.objects[i].worldMatrix, &worldMat, sizeof(float) * 16);
-        }
-        for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
-            auto& obj = m_cachedSceneData.objects[oi];
-            int type = (int)obj.p0[3];
-            if (type != 4) continue;
-            int firstTri = (int)obj.p1[0];
-            int triCnt = (int)obj.p1[1];
-            glm::mat4 worldMat;
-            std::memcpy(&worldMat, obj.worldMatrix, sizeof(float) * 16);
-            glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(worldMat)));
-            for (int t = 0; t < triCnt; t++) {
-                auto& tri = m_cachedTriangleData.triangles[firstTri + t];
-                glm::vec4 v0 = worldMat * glm::vec4(tri.vertices[0].pos[0], tri.vertices[0].pos[1], tri.vertices[0].pos[2], 1.0f);
-                glm::vec4 v1 = worldMat * glm::vec4(tri.vertices[1].pos[0], tri.vertices[1].pos[1], tri.vertices[1].pos[2], 1.0f);
-                glm::vec4 v2 = worldMat * glm::vec4(tri.vertices[2].pos[0], tri.vertices[2].pos[1], tri.vertices[2].pos[2], 1.0f);
-                tri.vertices[0].pos[0] = v0.x; tri.vertices[0].pos[1] = v0.y; tri.vertices[0].pos[2] = v0.z;
-                tri.vertices[1].pos[0] = v1.x; tri.vertices[1].pos[1] = v1.y; tri.vertices[1].pos[2] = v1.z;
-                tri.vertices[2].pos[0] = v2.x; tri.vertices[2].pos[1] = v2.y; tri.vertices[2].pos[2] = v2.z;
-                // 法线使用逆转置矩阵变换（均匀缩放+旋转时 normalMat = mat3(worldMat)）
-                glm::vec3 n0 = normalMat * glm::vec3(tri.vertices[0].nrm[0], tri.vertices[0].nrm[1], tri.vertices[0].nrm[2]);
-                glm::vec3 n1 = normalMat * glm::vec3(tri.vertices[1].nrm[0], tri.vertices[1].nrm[1], tri.vertices[1].nrm[2]);
-                glm::vec3 n2 = normalMat * glm::vec3(tri.vertices[2].nrm[0], tri.vertices[2].nrm[1], tri.vertices[2].nrm[2]);
-                tri.vertices[0].nrm[0] = n0.x; tri.vertices[0].nrm[1] = n0.y; tri.vertices[0].nrm[2] = n0.z;
-                tri.vertices[1].nrm[0] = n1.x; tri.vertices[1].nrm[1] = n1.y; tri.vertices[1].nrm[2] = n1.z;
-                tri.vertices[2].nrm[0] = n2.x; tri.vertices[2].nrm[1] = n2.y; tri.vertices[2].nrm[2] = n2.z;
-            }
-        }
-        BuildBVH();
+        RebuildBVHForScene();
     }
 }
 
@@ -434,31 +401,33 @@ bool PathTracingPipeline::ResizeResources() {
         return false;
     }
 
-    // 2. 重建计算描述符集（绑定新纹理 + 已有 UBO/SSBO）
-    m_descriptorSet.reset();
-    const auto& layouts = m_computePipeline->GetDescriptorSetLayouts();
-    if (layouts.empty()) {
-        LOG_ERROR("PathTracingPipeline", "计算管线没有描述符集布局（ResizeResources）");
-        return false;
+    // 2. 重建计算描述符集（HardwareRT 模式没有计算管线，跳过）
+    if (m_computePipeline) {
+        m_descriptorSet.reset();
+        const auto& layouts = m_computePipeline->GetDescriptorSetLayouts();
+        if (layouts.empty()) {
+            LOG_ERROR("PathTracingPipeline", "计算管线没有描述符集布局（ResizeResources）");
+            return false;
+        }
+        m_descriptorSet = factory->CreateDescriptorSet(layouts[0].get());
+        if (!m_descriptorSet) {
+            LOG_ERROR("PathTracingPipeline", "重建计算描述符集失败");
+            return false;
+        }
+        m_descriptorSet->BindStorageImage(0, m_storageTexture.get());
+        m_descriptorSet->BindStorageImage(1, m_storageTexture.get());
+        m_descriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO),
+                                    DescriptorType::UniformBuffer);
+        m_descriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData),
+                                    DescriptorType::StorageBuffer);
+        m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
+                                    DescriptorType::StorageBuffer);
+        m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode),
+                                    DescriptorType::StorageBuffer);
+        m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int),
+                                    DescriptorType::StorageBuffer);
+        m_descriptorSet->Update();
     }
-    m_descriptorSet = factory->CreateDescriptorSet(layouts[0].get());
-    if (!m_descriptorSet) {
-        LOG_ERROR("PathTracingPipeline", "重建计算描述符集失败");
-        return false;
-    }
-    m_descriptorSet->BindStorageImage(0, m_storageTexture.get());
-    m_descriptorSet->BindStorageImage(1, m_storageTexture.get());
-    m_descriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO),
-                                DescriptorType::UniformBuffer);
-    m_descriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData),
-                                DescriptorType::StorageBuffer);
-    m_descriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData),
-                                DescriptorType::StorageBuffer);
-    m_descriptorSet->BindBuffer(5, m_bvhBuffer.get(), 0, MAX_BVH_NODES * sizeof(BVHNode),
-                                DescriptorType::StorageBuffer);
-    m_descriptorSet->BindBuffer(6, m_triToObjectBuffer.get(), 0, PathTracingTriangleData::MAX_TRIANGLES * sizeof(int),
-                                DescriptorType::StorageBuffer);
-    m_descriptorSet->Update();
 
     // 3. 重建 Present 描述符集（绑定新纹理）
     if (!m_device->IsHeadless()) {
@@ -687,6 +656,9 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
     // 场景组件变更时自动重建数据
     if (m_scene && m_scene->IsDirty()) {
         BuildFromScene(m_scene);
+        if (m_mode == PathTraceMode::BVH) {
+            RebuildBVHForScene();
+        }
         ResetAccumulation();
         m_scene->SetDirty(false);
         // HardwareRT 需要重建 BLAS/TLAS 以匹配新的场景几何
@@ -1001,9 +973,62 @@ void PathTracingPipeline::BuildFromScene(Scene* scene) {
              objectIdx, triOffset);
 }
 
+void PathTracingPipeline::RebuildBVHForScene() {
+    // 预变换顶点到世界空间（BVH 着色器使用世界空间顶点直接求交）
+    for (int i = 0; i < m_cachedSceneData.objectCount; i++) {
+        Node node(m_cachedNodeHandles[i]);
+        if (!node.IsValid()) continue;
+        Matrix4x4 worldMat = m_scene->GetWorldTransform(node);
+        std::memcpy(m_cachedSceneData.objects[i].worldMatrix, &worldMat, sizeof(float) * 16);
+    }
+    for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+        auto& obj = m_cachedSceneData.objects[oi];
+        int type = (int)obj.p0[3];
+        if (type != 4) continue;
+        int firstTri = (int)obj.p1[0];
+        int triCnt = (int)obj.p1[1];
+        glm::mat4 worldMat;
+        std::memcpy(&worldMat, obj.worldMatrix, sizeof(float) * 16);
+        glm::mat3 normalMat = glm::transpose(glm::inverse(glm::mat3(worldMat)));
+        for (int t = 0; t < triCnt; t++) {
+            auto& tri = m_cachedTriangleData.triangles[firstTri + t];
+            glm::vec4 v0 = worldMat * glm::vec4(tri.vertices[0].pos[0], tri.vertices[0].pos[1], tri.vertices[0].pos[2], 1.0f);
+            glm::vec4 v1 = worldMat * glm::vec4(tri.vertices[1].pos[0], tri.vertices[1].pos[1], tri.vertices[1].pos[2], 1.0f);
+            glm::vec4 v2 = worldMat * glm::vec4(tri.vertices[2].pos[0], tri.vertices[2].pos[1], tri.vertices[2].pos[2], 1.0f);
+            tri.vertices[0].pos[0] = v0.x; tri.vertices[0].pos[1] = v0.y; tri.vertices[0].pos[2] = v0.z;
+            tri.vertices[1].pos[0] = v1.x; tri.vertices[1].pos[1] = v1.y; tri.vertices[1].pos[2] = v1.z;
+            tri.vertices[2].pos[0] = v2.x; tri.vertices[2].pos[1] = v2.y; tri.vertices[2].pos[2] = v2.z;
+            glm::vec3 n0 = normalMat * glm::vec3(tri.vertices[0].nrm[0], tri.vertices[0].nrm[1], tri.vertices[0].nrm[2]);
+            glm::vec3 n1 = normalMat * glm::vec3(tri.vertices[1].nrm[0], tri.vertices[1].nrm[1], tri.vertices[1].nrm[2]);
+            glm::vec3 n2 = normalMat * glm::vec3(tri.vertices[2].nrm[0], tri.vertices[2].nrm[1], tri.vertices[2].nrm[2]);
+            tri.vertices[0].nrm[0] = n0.x; tri.vertices[0].nrm[1] = n0.y; tri.vertices[0].nrm[2] = n0.z;
+            tri.vertices[1].nrm[0] = n1.x; tri.vertices[1].nrm[1] = n1.y; tri.vertices[1].nrm[2] = n1.z;
+            tri.vertices[2].nrm[0] = n2.x; tri.vertices[2].nrm[1] = n2.y; tri.vertices[2].nrm[2] = n2.z;
+        }
+    }
+    BuildBVH();
+    // 上传更新后的数据到 GPU
+    if (m_triangleBuffer) {
+        m_triangleBuffer->UpdateData(&m_cachedTriangleData, sizeof(PathTracingTriangleData), 0);
+    }
+    if (m_bvhNodeCount > 0 && m_bvhBuffer) {
+        m_bvhBuffer->UpdateData(m_bvhNodes.data(), m_bvhNodeCount * sizeof(BVHNode), 0);
+    }
+    if (!m_triToObject.empty() && m_triToObjectBuffer) {
+        m_triToObjectBuffer->UpdateData(m_triToObject.data(), (uint32_t)(m_triToObject.size() * sizeof(int)), 0);
+    }
+    // 场景 SSBO 中的 worldMatrix 已更新，重新上传
+    if (m_sceneSSBO) {
+        m_sceneSSBO->UpdateData(&m_cachedSceneData, sizeof(PathTracingSceneData), 0);
+    }
+}
+
 void PathTracingPipeline::ReloadSceneData() {
     if (!m_scene || !m_initialized) return;
     BuildFromScene(m_scene);
+    if (m_mode == PathTraceMode::BVH) {
+        RebuildBVHForScene();
+    }
     ResetAccumulation();
     // HardwareRT 需要重建 BLAS/TLAS 以匹配新的场景几何
     m_sceneChangedSinceLastRTBuild = true;
@@ -1191,6 +1216,7 @@ void PathTracingPipeline::SetMode(PathTraceMode newMode) {
         m_computePipeline.reset();
         m_descriptorSet.reset();
         m_computeShader.reset();
+        m_computeSPIRV.clear();
 
         // 确保三角形顶点为局部空间（BVH 模式会原地变换到世界空间）
         // BLAS 需要局部空间顶点 + TLAS 实例变换处理世界矩阵
@@ -1599,6 +1625,12 @@ void PathTracingPipeline::InitOverlayResources() {
     RasterizerState rs{};
     rs.cullMode = CullMode::None;
     pso->SetRasterizerState(rs);
+    // Overlay 不需要深度测试，且 present 全屏三角形会写入 depth=0，
+    // 若不关闭深度测试 overlay 四边形（depth≈0.5）会被 LESS 比较挡掉
+    DepthStencilState ds{};
+    ds.depthEnable = false;
+    ds.depthWriteEnable = false;
+    pso->SetDepthStencilState(ds);
     if (pso->Create(m_device)) {
         m_gizmoPSO = std::shared_ptr<IPipelineState>(std::move(pso));
         LOG_INFO("PathTracingPipeline", "gizmo PSO 创建成功");
