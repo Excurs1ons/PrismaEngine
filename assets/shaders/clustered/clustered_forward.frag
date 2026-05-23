@@ -82,7 +82,7 @@ void main() {
 
         if (type == 0) { // Directional
             vec3 L = normalize(-light.direction.xyz);
-            totalDiffuse += max(dot(N, L), 0.0) * light.color.rgb;
+            totalDiffuse += max(dot(N, L), 0.0) * light.color.rgb * albedo;
         } else if (type == 1) { // Point
             vec3 lightDir = light.position.xyz - v_WorldPos;
             float dist = length(lightDir);
@@ -90,7 +90,7 @@ void main() {
             if (dist < range) {
                 vec3 L = normalize(lightDir);
                 float attenuation = pow(max(0.0, 1.0 - (dist / range)), 2.0);
-                totalDiffuse += max(dot(N, L), 0.0) * light.color.rgb * attenuation;
+                totalDiffuse += max(dot(N, L), 0.0) * light.color.rgb * attenuation * albedo;
             }
         }
     }
