@@ -10,8 +10,7 @@ struct ClusterAABB {
 struct Light {
     vec4 position; // w is padding
     vec4 color;    // w is range
-    vec3 direction;
-    int type;
+    vec4 direction; // xyz: direction, w: type (0=dir, 1=point)
 };
 
 layout(set = 0, binding = 0, std430) readonly buffer ClusterAABBs {
@@ -69,14 +68,15 @@ void main() {
     uint visibleLightIndices[256];
 
     for (uint i = 0; i < camera.totalLights; i++) {
-        if (lights[i].type == 1) { // Point Light
+        int lightType = int(lights[i].direction.w);
+        if (lightType == 1) { // Point Light
             if (intersectAABBPointLight(clusters[clusterIndex], lights[i])) {
                 if (visibleLightCount < 256) {
                     visibleLightIndices[visibleLightCount] = i;
                     visibleLightCount++;
                 }
             }
-        } else if (lights[i].type == 0) { // Directional
+        } else if (lightType == 0) { // Directional
             if (visibleLightCount < 256) {
                 visibleLightIndices[visibleLightCount] = i;
                 visibleLightCount++;
