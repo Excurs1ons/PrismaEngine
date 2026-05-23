@@ -387,7 +387,6 @@ void DeferredPipelineAdapter::CreatePSOs()
         if (!layouts.empty()) {
             m_debugGBufferDS = m_device->GetResourceFactory()->CreateDescriptorSet(layouts[0].get());
             if (m_debugGBufferDS && m_defaultSampler) {
-                // Start with normal buffer for visual debugging (colorful = obvious feedback)
                 m_debugGBufferDS->BindTexture(0, m_gbNormal.get(), m_defaultSampler.get());
                 m_debugGBufferDS->Update();
                 LOG_INFO("Deferred3D_PSO", "Debug GBuffer DS bound to gbNormal");
@@ -488,7 +487,8 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     ctx.commandBuffer->SetViewport({0,0,(float)m_width,(float)m_height,0,1});
     ctx.commandBuffer->SetScissorRect({0,0,(int)m_width,(int)m_height});
 
-    if (m_debugGBufferPSO && m_debugGBufferDS) {
+    if (m_debugGBufferShow && m_debugGBufferPSO && m_debugGBufferDS) {
+        UpdateDebugDSBinding();
         ctx.commandBuffer->SetPipelineState(m_debugGBufferPSO.get());
         ctx.commandBuffer->BindDescriptorSet(0, m_debugGBufferDS.get());
         ctx.commandBuffer->Draw(3, 1);
@@ -529,7 +529,7 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     }
 
     if (!m_firstFrameLogged) {
-        LOG_INFO("Deferred3D_Frame1", "GBuffer pass OK, debug view showing gbNormal");
+        LOG_INFO("Deferred3D_Frame1", "GBuffer pass OK, debug GBuffer overlay active");
         m_firstFrameLogged = true;
     }
 }
@@ -556,5 +556,30 @@ bool DeferredPipelineAdapter::CameraDataAdapter::IsActive() const { return true;
 void DeferredPipelineAdapter::CameraDataAdapter::SetActive(bool) {}
 PrismaMath::vec4 DeferredPipelineAdapter::CameraDataAdapter::GetClearColor() const { return m_clearColor; }
 void DeferredPipelineAdapter::CameraDataAdapter::SetClearColor(float r, float g, float b, float a) { m_clearColor = {r,g,b,a}; }
+
+void DeferredPipelineAdapter::SetDebugGBufferConfig(int target, bool show)
+{
+    m_debugGBufferTarget = target;
+    m_debugGBufferShow = show;
+}
+
+void DeferredPipelineAdapter::UpdateDebugDSBinding()
+{
+    if (!m_debugGBufferDS || !m_defaultSampler) return;
+
+    std::shared_ptr<Graphic::ITexture> tex;
+    switch (m_debugGBufferTarget) {
+        case 0: tex = m_gbPosition; break;
+        case 1: tex = m_gbNormal; break;
+        case 2: tex = m_gbAlbedo; break;
+        case 3: tex = m_gbEmissive; break;
+        case 4: tex = m_gbDepth; break;
+        default: tex = m_gbNormal; break;
+    }
+    if (tex) {
+        m_debugGBufferDS->BindTexture(0, tex.get(), m_defaultSampler.get());
+        m_debugGBufferDS->Update();
+    }
+}
 
 } // namespace Prisma

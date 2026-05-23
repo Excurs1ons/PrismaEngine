@@ -109,16 +109,19 @@ void Deferred3DApp::OnEvent(Event& e)
         }
         if (key == Input::KeyCode::G && !repeat) {
             m_showGBuffer = !m_showGBuffer;
+            if (m_deferredAdapter) m_deferredAdapter->SetDebugGBufferConfig(m_gBufferTarget, m_showGBuffer);
             LOG_INFO("Deferred3D", "GBuffer overlay {}", m_showGBuffer ? "on" : "off");
             return true;
         }
         if (key == Input::KeyCode::LeftBracket && !repeat) {
             m_gBufferTarget = (m_gBufferTarget - 1 + 5) % 5;
+            if (m_deferredAdapter) m_deferredAdapter->SetDebugGBufferConfig(m_gBufferTarget, m_showGBuffer);
             LOG_INFO("Deferred3D", "GBuffer target: {}", m_gBufferTarget);
             return true;
         }
         if (key == Input::KeyCode::RightBracket && !repeat) {
             m_gBufferTarget = (m_gBufferTarget + 1) % 5;
+            if (m_deferredAdapter) m_deferredAdapter->SetDebugGBufferConfig(m_gBufferTarget, m_showGBuffer);
             LOG_INFO("Deferred3D", "GBuffer target: {}", m_gBufferTarget);
             return true;
         }

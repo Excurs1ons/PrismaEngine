@@ -29,6 +29,7 @@ public:
     void OnSceneLoaded(Scene* scene) override;
 
     Graphic::DeferredPipeline* GetDeferredPipeline() const { return m_pipeline.get(); }
+    void SetDebugGBufferConfig(int target, bool show);
 
 private:
     class CameraDataAdapter : public Graphic::ICamera {
@@ -93,6 +94,11 @@ private:
     std::shared_ptr<Graphic::IDescriptorSet> m_compositeDS;
     std::shared_ptr<Graphic::IDescriptorSet> m_debugGBufferDS;
     std::shared_ptr<Graphic::ISampler> m_defaultSampler;
+
+    void UpdateDebugDSBinding();
+
+    int m_debugGBufferTarget = 1; // 0=position, 1=normal, 2=albedo, 3=emissive, 4=depth
+    bool m_debugGBufferShow = true;
 
     Graphic::RenderCommandContext m_deviceContext;
     Graphic::SceneData m_sceneData;
