@@ -56,6 +56,10 @@ namespace Prisma {
 
             void Update(Timestep ts) override;
             void Shutdown() override;
+        protected:
+            // 材质系统（protected 供子类 MeshRenderer 直接访问）
+            std::shared_ptr <Material> m_material;
+
         private:
             std::vector<float> m_vertices;
             std::vector <uint32_t> m_indices;
@@ -63,9 +67,6 @@ namespace Prisma {
             uint32_t m_indexCount;
             bool m_use16BitIndices; // 缓存索引类型，避免运行时检查
             Prisma::Color m_color;
-
-            // 材质系统
-            std::shared_ptr <Material> m_material;
         };
     }
 }

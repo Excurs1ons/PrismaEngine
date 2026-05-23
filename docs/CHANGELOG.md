@@ -54,6 +54,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed / 修复
 
+- **Fixed Deferred3D Cornell Box occlusion / 修复 Deferred3D Cornell Box 遮挡问题**: Fixed camera position for LH coordinate system and added depth test to forward pass; previously the back wall occluded all interior objects / 修复 LH 坐标系下的摄像机位置，forward pass 增加深度测试；此前后墙遮挡了所有盒内物体
+- **Fixed MeshRenderer m_material shadowing / 修复 MeshRenderer m_material 影子变量**: Removed duplicate m_material that shadowed RenderComponent::m_material (changed to protected) / 删除影子变量，统一为基类 protected 成员
+- **Fixed Deferred3D PushConstants stage flags / 修复 Deferred3D PushConstants 阶段标志**: Changed from two separate calls (Vertex then Pixel) to a single combined-stage push to avoid potential driver issues / 从两次分开调用改为单次合并阶段推送，避免潜在驱动问题
 - **Fixed path tracing mesh rendering**: C++ PTVertex (32 bytes) vs GLSL Vertex (48 bytes) struct layout mismatch in all pathtrace variants (Flat/BVH/HardwareRT) / 修复路径追踪网格渲染：所有 pathtrace 变体中 C++ PTVertex（32 字节）与 GLSL Vertex（48 字节）结构体布局不匹配
 - **Fixed RT NEE light sampling**: Missing local-to-world space transform for light sample point and normal in rgen shader / 修复 RT NEE 灯光采样：rgen 着色器中灯光采样点和法线缺少本地到世界空间变换
 - **Fixed BVH+Mesh black screen**: RebuildBVHForScene() and BuildBVH() degenerate path missing triToObject mapping / 修复 BVH+Mesh 黑屏：添加 RebuildBVHForScene() 并修复 BuildBVH() 退化路径缺少 triToObject 映射

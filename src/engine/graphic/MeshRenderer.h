@@ -37,16 +37,8 @@ public:
         m_mesh = std::move(mesh);
     }
     
-    void SetMaterial(std::shared_ptr<Material> material) override {
-        m_material = material;
-    }
-
     [[nodiscard]] std::shared_ptr<Mesh> GetMesh() const {
         return m_mesh;
-    }
-
-    [[nodiscard]] std::shared_ptr<Material> GetMaterial() const override {
-        return m_material;
     }
 
     // 序列化
@@ -64,7 +56,6 @@ protected:
 private:
     std::shared_ptr<Model> model_;
     std::shared_ptr<Mesh> m_mesh;
-    std::shared_ptr<Material> m_material;
     std::string m_meshPath;
     std::string m_materialPath;
     PrismaMath::vec3 m_emissive = {0.0f, 0.0f, 0.0f};

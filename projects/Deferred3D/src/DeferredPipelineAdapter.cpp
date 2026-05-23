@@ -361,7 +361,7 @@ void DeferredPipelineAdapter::CreatePSOs()
         "assets/shaders/forward.vert.spv", "assets/shaders/forward.frag.spv",
         VK_NULL_HANDLE,  // swapchain RP
         {Graphic::TextureFormat::RGBA8_UNorm},
-        Graphic::TextureFormat::Unknown, false, false);
+        Graphic::TextureFormat::D32_Float, true, false);
 
     // Composite descriptor set: reads lighting output
     if (m_compositePSO) {
@@ -447,6 +447,34 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
                      c.mesh && !c.mesh->GetSubMeshes().empty() ? (void*)c.mesh->GetSubMeshes()[0].vertexBuffer.get() : nullptr,
                      c.mesh && !c.mesh->GetSubMeshes().empty() ? (void*)c.mesh->GetSubMeshes()[0].indexBuffer.get() : nullptr);
         }
+        // 首帧打印所有材质的 BaseColor，用于排查颜色问题
+        for (size_t i = 0; i < cmds.size(); ++i) {
+            const auto& c = cmds[i];
+            if (!c.material) {
+                LOG_INFO("Deferred3D_Material", "  cmd[{}]: NO material (nullptr)", i);
+                continue;
+            }
+            std::string matName = c.material->GetName();
+            LOG_INFO("Deferred3D_Material", "  cmd[{}]: mat='{}' ptr={}", i, matName, (void*)c.material);
+
+            // 打印所有支持的参数
+            auto* bc = c.material->GetParam("BaseColor");
+            auto* bcl = c.material->GetParam("basecolor");
+            if (bc) {
+                if (const auto* v4 = std::get_if<Graphic::PrismaMath::vec4>(bc))
+                    LOG_INFO("Deferred3D_Material", "    BaseColor (uppercase) = ({:.3},{:.3},{:.3},{:.3})",
+                             v4->r, v4->g, v4->b, v4->a);
+            } else {
+                LOG_INFO("Deferred3D_Material", "    BaseColor (uppercase) = NOT FOUND");
+            }
+            if (bcl) {
+                if (const auto* v4 = std::get_if<Graphic::PrismaMath::vec4>(bcl))
+                    LOG_INFO("Deferred3D_Material", "    basecolor (lowercase) = ({:.3},{:.3},{:.3},{:.3})",
+                             v4->r, v4->g, v4->b, v4->a);
+            } else {
+                LOG_INFO("Deferred3D_Material", "    basecolor (lowercase) = NOT FOUND");
+            }
+        }
     }
     for (const auto& c : cmds) {
         if (!c.mesh) continue;
@@ -470,8 +498,8 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
         pd.vp = vp;
         pd.model = c.transform;
         pd.color = baseCol;
-        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Vertex, &pd, sizeof(pd));
-        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Pixel, &pd, sizeof(pd));
+        // 单次 PushConstants 覆盖所有图形阶段（vs 分开调用可能在某些驱动上导致数据不同步）
+        ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &pd, sizeof(pd));
 
         for (const auto& sm : c.mesh->GetSubMeshes()) {
             if (sm.vertexBuffer && sm.indexBuffer) {
@@ -532,8 +560,8 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
             PushData pd{};
             pd.mvp = mvp;
             pd.color = baseCol;
-            ctx.commandBuffer->PushConstants(Graphic::ShaderType::Vertex, &pd, sizeof(pd));
-            ctx.commandBuffer->PushConstants(Graphic::ShaderType::Pixel, &pd, sizeof(pd));
+            // 单次 PushConstants 覆盖所有图形阶段
+            ctx.commandBuffer->PushConstants(Graphic::ShaderType::Unknown, &pd, sizeof(pd));
 
             for (const auto& sm : c.mesh->GetSubMeshes()) {
                 if (sm.vertexBuffer && sm.indexBuffer) {
