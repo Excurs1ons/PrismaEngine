@@ -412,6 +412,8 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     m_cameraAdapter.SetCameraData(ctx.camera, (float)ctx.width, (float)ctx.height);
     if (m_pipeline) m_pipeline->Update(Prisma::Timestep(ctx.deltaTime), &m_cameraAdapter);
 
+    UpdateDebugDSBinding();
+
     // ====================================================================
     // Phase 1: GBuffer Pass — render scene geometry to 4 RTs + depth
     // ====================================================================
@@ -563,7 +565,6 @@ void DeferredPipelineAdapter::SetDebugGBufferConfig(int target, bool show)
 {
     m_debugGBufferTarget = target;
     m_debugGBufferShow = show;
-    UpdateDebugDSBinding();
 }
 
 void DeferredPipelineAdapter::UpdateDebugDSBinding()
