@@ -1,33 +1,89 @@
 {
   "name": "2D Test Scene",
-  "camera": {
-    "projection": [0.0, 1920.0, 0.0, 1080.0]
-  },
-  "entities": [
+  "nodes": [
+    {
+      "name": "Camera",
+      "components": [
+        {
+          "type": "Camera",
+          "data": {
+            "projectionMode": "orthographic",
+            "orthoSize": 1080.0,
+            "near": 0.1,
+            "far": 1000.0
+          }
+        }
+      ]
+    },
     {
       "name": "RedSquare",
-      "transform": { "position": [200.0, 200.0], "rotation": 0.0 },
-      "spriteRenderer": { "color": [1.0, 0.0, 0.0, 1.0], "size": [100.0, 100.0] }
+      "components": [
+        {
+          "type": "SpriteRenderer",
+          "data": {
+            "color": [1.0, 0.0, 0.0, 1.0],
+            "position": [200.0, 200.0],
+            "size": [100.0, 100.0],
+            "rotation": 0.0
+          }
+        }
+      ]
     },
     {
       "name": "GreenRect",
-      "transform": { "position": [400.0, 300.0], "rotation": 0.0 },
-      "spriteRenderer": { "color": [0.0, 1.0, 0.0, 1.0], "size": [120.0, 80.0] }
+      "components": [
+        {
+          "type": "SpriteRenderer",
+          "data": {
+            "color": [0.0, 1.0, 0.0, 1.0],
+            "position": [400.0, 300.0],
+            "size": [120.0, 80.0],
+            "rotation": 0.0
+          }
+        }
+      ]
     },
     {
       "name": "BlueSquare",
-      "transform": { "position": [600.0, 450.0], "rotation": 0.0 },
-      "spriteRenderer": { "color": [0.0, 0.0, 1.0, 1.0], "size": [90.0, 90.0] }
+      "components": [
+        {
+          "type": "SpriteRenderer",
+          "data": {
+            "color": [0.0, 0.0, 1.0, 1.0],
+            "position": [600.0, 450.0],
+            "size": [90.0, 90.0],
+            "rotation": 0.0
+          }
+        }
+      ]
     },
     {
       "name": "YellowSquare",
-      "transform": { "position": [100.0, 500.0], "rotation": 0.0 },
-      "spriteRenderer": { "color": [1.0, 1.0, 0.0, 1.0], "size": [60.0, 60.0] }
+      "components": [
+        {
+          "type": "SpriteRenderer",
+          "data": {
+            "color": [1.0, 1.0, 0.0, 1.0],
+            "position": [100.0, 500.0],
+            "size": [60.0, 60.0],
+            "rotation": 0.0
+          }
+        }
+      ]
     },
     {
       "name": "PinkSquare",
-      "transform": { "position": [700.0, 100.0], "rotation": 0.0 },
-      "spriteRenderer": { "color": [1.0, 0.0, 1.0, 1.0], "size": [80.0, 80.0] }
+      "components": [
+        {
+          "type": "SpriteRenderer",
+          "data": {
+            "color": [1.0, 0.0, 1.0, 1.0],
+            "position": [700.0, 100.0],
+            "size": [80.0, 80.0],
+            "rotation": 0.0
+          }
+        }
+      ]
     }
   ]
 }
