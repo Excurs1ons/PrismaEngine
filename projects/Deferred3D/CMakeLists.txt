@@ -76,6 +76,7 @@ target_compile_definitions(${DEFERRED3D_PLUGIN_NAME} PRIVATE DEFERRED3D_PLUGIN_E
 # GLSL → SPIR-V 自动编译
 find_program(GLSLANG_VALIDATOR glslangValidator)
 if(GLSLANG_VALIDATOR)
+    # 项目自身的着色器
     file(GLOB SHADER_SOURCES
         "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.vert"
         "${CMAKE_CURRENT_SOURCE_DIR}/assets/shaders/*.frag"
@@ -91,12 +92,31 @@ if(GLSLANG_VALIDATOR)
         )
         list(APPEND GENERATED_SPVS ${SPV_OUTPUT})
     endforeach()
+
+    # 引擎根目录的 PBR 着色器
+    file(GLOB PBR_SHADER_SOURCES
+        "${CMAKE_SOURCE_DIR}/assets/shaders/pbr_*.vert"
+        "${CMAKE_SOURCE_DIR}/assets/shaders/pbr_*.frag"
+        "${CMAKE_SOURCE_DIR}/assets/shaders/pbr_*.comp"
+    )
+    foreach(SHADER ${PBR_SHADER_SOURCES})
+        get_filename_component(SHADER_NAME ${SHADER} NAME)
+        set(SPV_OUTPUT "${CMAKE_SOURCE_DIR}/assets/shaders/${SHADER_NAME}.spv")
+        add_custom_command(
+            OUTPUT ${SPV_OUTPUT}
+            COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
+            DEPENDS ${SHADER}
+            COMMENT "Compiling PBR ${SHADER_NAME} → SPIR-V"
+        )
+        list(APPEND GENERATED_SPVS ${SPV_OUTPUT})
+    endforeach()
+
     add_custom_target(CompileDeferredShaders DEPENDS ${GENERATED_SPVS})
     add_dependencies(${PROJECT_NAME} CompileDeferredShaders)
     add_dependencies(${DEFERRED3D_PLUGIN_NAME} CompileDeferredShaders)
-    message(STATUS "Deferred3D: GLSL→SPIR-V 编译已启用")
+    message(STATUS "Deferred3D: GLSL→SPIR-V 编译已启用 (含 PBR 着色器)")
 else()
-    message(WARNING "glslangValidator 未找到")
+    message(WARNING "glslangValidator 未找到 - PBR 着色器需手动编译为 SPIR-V")
 endif()
 
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
