@@ -6,7 +6,7 @@ Prisma MCP 是 Prisma Engine 内置的 MCP (Model Context Protocol) 服务器实
 
 ### 核心特性
 
-- **内置集成** — 编译进引擎核心，作为 `ISubSystem` 注册，零外部依赖
+- **内置集成** — 编译进编辑器层 (PrismaEditor)，零外部依赖
 - **Token 优化** — 内容哈希增量追踪 / 字段过滤 / 默认值省略 / 智能分页
 - **底层接口** — 场景层级、ECS 组件、GPU 资源、性能计数器全覆盖
 - **双传输模式** — stdio（子进程）和 TCP（独立进程），支持编译-运行循环
@@ -47,7 +47,7 @@ cmake --preset editor-windows-x64-debug -DPRISMA_ENABLE_MCP=OFF
 | `--mcp-transport=stdio\|tcp` | 传输方式 | stdio |
 | `--mcp-port=<port>` | TCP 端口 (TCP 模式) | 3100 |
 
-> 注: MCP 默认编译进引擎。通过 `PRISMA_ENABLE_MCP=OFF` 完全禁用。
+> 注: MCP 默认编译进编辑器。通过 `PRISMA_ENABLE_MCP=OFF` 完全禁用。
 
 ## 协议
 
@@ -269,7 +269,7 @@ MCP 通过 `PRISMA_ENABLE_MCP` 编译选项控制：
 option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 ```
 
-引擎代码中通过 `#if defined(PRISMA_ENABLE_MCP)` 保护。
+编辑器代码中通过 `#if defined(PRISMA_ENABLE_MCP)` 保护（Editor 域）。
 
 ## 已知限制
 
