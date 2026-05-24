@@ -45,6 +45,16 @@ public:
     void SetBaseColor(const Prisma::Color& color);
     void SetMetallic(float metallic);
     void SetRoughness(float roughness);
+    void SetAO(float ao);
+    void SetEmissiveIntensity(float intensity);
+    void SetEmissiveColor(const PrismaMath::vec3& color);
+
+    // 纹理贴图设置
+    void SetAlbedoMap(std::shared_ptr<ITexture> texture);
+    void SetNormalMap(std::shared_ptr<ITexture> texture);
+    void SetMetallicRoughnessMap(std::shared_ptr<ITexture> texture);
+    void SetAOMap(std::shared_ptr<ITexture> texture);
+    void SetEmissiveMap(std::shared_ptr<ITexture> texture);
 
     // 获取 Shader
     std::shared_ptr<IShader> GetShader() const { return m_Shader; }
@@ -55,14 +65,20 @@ public:
     // 获取描述符集
     IDescriptorSet* GetDescriptorSet() const { return m_DescriptorSet.get(); }
 
+    // PBR 材质创建
+    static std::shared_ptr<Material> CreatePBR();
+
 private:
     void UpdateDescriptorSet();
+    void UpdateDescriptorSetPBR();
 
     struct MaterialData {
         alignas(16) PrismaMath::vec4 baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
         alignas(4)  float metallic = 0.0f;
         alignas(4)  float roughness = 0.5f;
-        float padding[2]; // 填充到 32 字节 (std140 16字节对齐)
+        alignas(4)  float ao = 1.0f;
+        alignas(4)  float emissiveIntensity = 0.0f;
+        float padding[3]; // 填充到 48 字节 (std140 16字节对齐)
     };
 
     std::shared_ptr<IShader> m_Shader;
@@ -72,6 +88,13 @@ private:
     std::shared_ptr<IDescriptorSet> m_DescriptorSet;
     std::shared_ptr<IDescriptorSetLayout> m_DescriptorSetLayout;
     std::shared_ptr<IBuffer> m_MaterialUBO;
+
+    // PBR 纹理槽位
+    std::shared_ptr<ITexture> m_albedoMap;
+    std::shared_ptr<ITexture> m_normalMap;
+    std::shared_ptr<ITexture> m_metallicRoughnessMap;
+    std::shared_ptr<ITexture> m_aoMap;
+    std::shared_ptr<ITexture> m_emissiveMap;
 };
 
 } // namespace Prisma::Graphic
