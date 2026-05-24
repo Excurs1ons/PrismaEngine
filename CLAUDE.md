@@ -25,7 +25,7 @@ cmake --build build/windows-x64-debug
 cmake --build build/windows-x64-debug --target Engine
 cmake --build build/windows-x64-debug --target Editor
 cmake --build build/windows-x64-debug --target Launcher
-cmake --build build/windows-x64-debug --target Template3D
+cmake --build build/windows-x64-debug --target PathTracing3D
 
 # Release
 cmake --preset windows-x64-release
@@ -94,14 +94,14 @@ cmake --build build/launcher-web-debug --target Launcher
 ### C# Scripting Builds (Cross-Platform)
 ```bash
 # General build
-dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
-dotnet build projects/Template3D/scripts/GameScripts.csproj
+dotnet build projects/Prisma2D/scripts/GameScripts/GameScripts.csproj
+dotnet build projects/PathTracing3D/scripts/GameScripts.csproj
 
 # Termux / Restricted VM Build (CRITICAL)
 # Android/Termux environments often limit virtual memory (ulimit -v). 
 # .NET 10+ defaults to a large GC region reservation (256GB) which will fail.
 # Use this environment variable to cap reservation to 256MB:
-export DOTNET_GCRegionRange=0x10000000 && dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
+export DOTNET_GCRegionRange=0x10000000 && dotnet build projects/Prisma2D/scripts/GameScripts/GameScripts.csproj
 ```
 
 ### Environment Setup
@@ -156,9 +156,9 @@ PrismaEngine/
 │       ├── linux/
 │       └── android/
 ├── projects/                # 项目模板 / Project templates
-│   ├── Template2D/          # 2D 场景模板（C# 脚本驱动）
-│   ├── Template3D/          # 3D 路径追踪模板
-│   │   ├── src/             # C++: StatsOverlay, HeadlessRunner, Template3DApp
+│   ├── Prisma2D/          # 2D 场景模板（C# 脚本驱动）
+│   ├── PathTracing3D/          # 3D 路径追踪模板
+│   │   ├── src/             # C++: StatsOverlay, HeadlessRunner, PathTracing3DApp
 │   │   └── scripts/         # C#: CameraController3D, ScriptEntry
 │   ├── PrismaCraft/         # Minecraft 复刻项目
 │   └── android/             # Android Studio 项目

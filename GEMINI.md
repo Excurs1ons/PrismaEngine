@@ -25,7 +25,7 @@ Prisma Engine is a high-performance, cross-platform 3D game engine built with **
 - `src/engine/`: Core engine source code (Audio, Graphic, ECS, Input, etc.)
 - `src/editor/`: ImGui-based editor tools.
 - `src/runtime/`: Engine runtime executable.
-- `projects/`: Sample games and templates (e.g., `PacManGame`, `Template2D`).
+- `projects/`: Sample games and templates (e.g., `PacManGame`, `Prisma2D`).
 - `scripts/`: Build, package, and utility scripts.
 - `docs/`: Extensive documentation on systems and architecture.
 - `cmake/`: Modular CMake configuration files.
