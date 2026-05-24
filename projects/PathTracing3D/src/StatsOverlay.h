@@ -25,7 +25,7 @@ private:
     const ApplicationSpecification& m_spec;
     Graphic::PathTracingPipeline* m_pipeline;
 
-    // Stat cache (moved from Template3DApp)
+    // Stat cache (moved from PathTracing3DApp)
     std::string m_overlayTimingInfo = "Calculating...";
     std::string m_overlayStatusStr = "Loading...";
     std::string m_overlayResInfo;

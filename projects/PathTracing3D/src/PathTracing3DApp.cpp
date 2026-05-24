@@ -1,4 +1,4 @@
-﻿#include "Template3DApp.h"
+﻿#include "PathTracing3DApp.h"
 #include "StatsOverlay.h"
 #include "HeadlessRunner.h"
 
@@ -23,22 +23,22 @@ namespace Prisma {
 using namespace Graphic;
 
 // ============================================================================
-// Template3DApp
+// PathTracing3DApp
 // ============================================================================
 
-Template3DApp::Template3DApp()
+PathTracing3DApp::PathTracing3DApp()
     : Application()
 {
 }
 
-Template3DApp::~Template3DApp() = default;
+PathTracing3DApp::~PathTracing3DApp() = default;
 
-int Template3DApp::OnInitialize() {
-    LOG_INFO("Template3D", "3D 模板初始化（路径追踪引擎管线版）");
+int PathTracing3DApp::OnInitialize() {
+    LOG_INFO("PathTracing3D", "3D 模板初始化（路径追踪引擎管线版）");
 
     m_ptPipeline = Engine::Get().GetRenderSystem()->GetMainPipelineAs<Graphic::PathTracingPipeline>();
     if (!m_ptPipeline) {
-        LOG_ERROR("Template3D", "获取路径追踪管线失败（renderMode 不匹配？）");
+        LOG_ERROR("PathTracing3D", "获取路径追踪管线失败（renderMode 不匹配？）");
         return -1;
     }
 
@@ -86,22 +86,22 @@ int Template3DApp::OnInitialize() {
     if (headless) {
         m_Spec.Width  = m_Spec.HeadlessWidth;
         m_Spec.Height = m_Spec.HeadlessHeight;
-        LOG_INFO("Template3D", "headless模式分辨率: {}x{} (frames={}, output={})",
+        LOG_INFO("PathTracing3D", "headless模式分辨率: {}x{} (frames={}, output={})",
                  m_Spec.Width, m_Spec.Height, m_Spec.HeadlessFrames, m_Spec.HeadlessOutputPath);
     }
     m_headlessRunner = std::make_unique<HeadlessRunner>(
         headless, m_Spec.HeadlessFrames, m_Spec.HeadlessOutputPath, m_ptPipeline.get());
 
-    LOG_INFO("Template3D", "R 重置累积，B 切换模式，P 切换 Primitive|Mesh，N 切换 NEE，[/] 调整采样帧数，F5 重载场景，F6/F7 切换场景");
+    LOG_INFO("PathTracing3D", "R 重置累积，B 切换模式，P 切换 Primitive|Mesh，N 切换 NEE，[/] 调整采样帧数，F5 重载场景，F6/F7 切换场景");
     return 0;
 }
 
-void Template3DApp::LoadScene(const std::string& path) {
+void PathTracing3DApp::LoadScene(const std::string& path) {
     auto* sceneManager = Engine::Get().GetSceneManager();
     if (!sceneManager) return;
 
     if (!sceneManager->LoadFromFile(path)) {
-        LOG_ERROR("Template3D", "场景加载失败: {}", path);
+        LOG_ERROR("PathTracing3D", "场景加载失败: {}", path);
         return;
     }
 
@@ -121,10 +121,10 @@ void Template3DApp::LoadScene(const std::string& path) {
         m_ptPipeline->ResetAccumulation();
     }
 
-    LOG_INFO("Template3D", "场景已切换: {}", path);
+    LOG_INFO("PathTracing3D", "场景已切换: {}", path);
 }
 
-void Template3DApp::OnRender() {
+void PathTracing3DApp::OnRender() {
     // StatsOverlay renders via Renderer2D::DrawString, which requires
     // being inside BeginGizmo()/EndGizmo() (set up by Engine::Run main loop).
     // The Update() call writes to gizmo command queue consumed by
@@ -137,7 +137,7 @@ void Template3DApp::OnRender() {
     }
 }
 
-void Template3DApp::OnUpdate(Timestep ts) {
+void PathTracing3DApp::OnUpdate(Timestep ts) {
     // Auto-rebuild PT data when scene is dirty (triggered by P key etc.)
     if (m_scene && m_scene->IsDirty()) {
         m_ptPipeline->ReloadSceneData();
@@ -149,7 +149,7 @@ void Template3DApp::OnUpdate(Timestep ts) {
     }
 }
 
-void Template3DApp::OnEvent(Event& e) {
+void PathTracing3DApp::OnEvent(Event& e) {
     Application::OnEvent(e);
 
     EventDispatcher d(e);
@@ -171,13 +171,13 @@ void Template3DApp::OnEvent(Event& e) {
                         meshR->SetEnabled(!m_usePrimitiveSphere);
                 }
                 m_scene->SetDirty(true);
-                LOG_INFO("Template3D", "全局模式 → {}", m_usePrimitiveSphere ? "Primitive (原生)" : "Mesh (三角化)");
+                LOG_INFO("PathTracing3D", "全局模式 → {}", m_usePrimitiveSphere ? "Primitive (原生)" : "Mesh (三角化)");
             }
             return true;
         }
         if (key == Input::KeyCode::R && !repeat) {
             if (m_ptPipeline) m_ptPipeline->ResetAccumulation();
-            LOG_INFO("Template3D", "重置路径追踪累积");
+            LOG_INFO("PathTracing3D", "重置路径追踪累积");
             return true;
         }
         if (key == Input::KeyCode::N && !repeat) {
@@ -186,7 +186,7 @@ void Template3DApp::OnEvent(Event& e) {
                 m_ptPipeline->EnableNEE(m_enableNEE);
                 m_ptPipeline->ResetAccumulation();
             }
-            LOG_INFO("Template3D", "NEE {}", m_enableNEE ? "启用" : "禁用");
+            LOG_INFO("PathTracing3D", "NEE {}", m_enableNEE ? "启用" : "禁用");
             return true;
         }
         if (key == Input::KeyCode::B && !repeat) {
@@ -194,7 +194,7 @@ void Template3DApp::OnEvent(Event& e) {
                 m_ptPipeline->CycleMode();
                 m_ptPipeline->ResetAccumulation();
             }
-            LOG_INFO("Template3D", "模式: {}", m_ptPipeline ? m_ptPipeline->GetModeName() : "?");
+            LOG_INFO("PathTracing3D", "模式: {}", m_ptPipeline ? m_ptPipeline->GetModeName() : "?");
             return true;
         }
         if (key == Input::KeyCode::LeftBracket && !repeat) {
@@ -203,7 +203,7 @@ void Template3DApp::OnEvent(Event& e) {
                 m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
                 m_ptPipeline->ResetAccumulation();
             }
-            LOG_INFO("Template3D", "最大采样帧数: {}", m_ptMaxSamples);
+            LOG_INFO("PathTracing3D", "最大采样帧数: {}", m_ptMaxSamples);
             return true;
         }
         if (key == Input::KeyCode::RightBracket && !repeat) {
@@ -212,24 +212,24 @@ void Template3DApp::OnEvent(Event& e) {
                 m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
                 m_ptPipeline->ResetAccumulation();
             }
-            LOG_INFO("Template3D", "最大采样帧数: {}", m_ptMaxSamples);
+            LOG_INFO("PathTracing3D", "最大采样帧数: {}", m_ptMaxSamples);
             return true;
         }
         if (key == Input::KeyCode::F5 && !repeat) {
-            LOG_INFO("Template3D", "场景重载: {}", m_scenePath);
+            LOG_INFO("PathTracing3D", "场景重载: {}", m_scenePath);
             LoadScene(m_scenePath);
             return true;
         }
         if (key == Input::KeyCode::F6 && !repeat && !m_sceneList.empty()) {
             m_currentSceneIndex = (m_currentSceneIndex + 1) % static_cast<int>(m_sceneList.size());
-            LOG_INFO("Template3D", "场景切换 (F6): [{} / {}] {}",
+            LOG_INFO("PathTracing3D", "场景切换 (F6): [{} / {}] {}",
                      m_currentSceneIndex + 1, m_sceneList.size(), m_sceneList[m_currentSceneIndex]);
             LoadScene(m_sceneList[m_currentSceneIndex]);
             return true;
         }
         if (key == Input::KeyCode::F7 && !repeat && !m_sceneList.empty()) {
             m_currentSceneIndex = (m_currentSceneIndex - 1 + static_cast<int>(m_sceneList.size())) % static_cast<int>(m_sceneList.size());
-            LOG_INFO("Template3D", "场景切换 (F7): [{} / {}] {}",
+            LOG_INFO("PathTracing3D", "场景切换 (F7): [{} / {}] {}",
                      m_currentSceneIndex + 1, m_sceneList.size(), m_sceneList[m_currentSceneIndex]);
             LoadScene(m_sceneList[m_currentSceneIndex]);
             return true;

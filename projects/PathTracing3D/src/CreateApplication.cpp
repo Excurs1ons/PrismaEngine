@@ -1,13 +1,13 @@
 /**
- * @brief Template3D Plugin Entry — 供 PrismaLauncher 运行时加载
+ * @brief PathTracing3D Plugin Entry — 供 PrismaLauncher 运行时加载
  */
 
-#include "Template3DApp.h"
+#include "PathTracing3DApp.h"
 
 extern "C" {
 
 GAME_API Prisma::Application* CreateApplication() {
-    return new Prisma::Template3DApp();
+    return new Prisma::PathTracing3DApp();
 }
 
 } // extern "C"

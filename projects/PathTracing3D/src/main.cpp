@@ -1,15 +1,15 @@
 /**
- * Template3D — PrismaEngine 3D 路径追踪模板
+ * PathTracing3D — PrismaEngine 3D 路径追踪模板
  *
  * 演示 PrismaEngine 的路径追踪能力：
  *   - Compute-shader 路径追踪（Cornell Box 场景）
  *   - 五面立方体：左红右绿，顶部白色面光源
  *
- * 编译: cmake --build build --target Template3D --config Debug
- * 运行: build/bin/Debug/Template3D
+ * 编译: cmake --build build --build --target PathTracing3D --config Debug
+ * 运行: build/bin/Debug/PathTracing3D
  */
 
-#include "Template3DApp.h"
+#include "PathTracing3DApp.h"
 #include "app/EngineLauncher.h"
 #include <iostream>
 #include <string_view>
@@ -17,7 +17,7 @@
 
 int main(int argc, char* argv[]) {
     Prisma::EngineSpecification spec;
-    spec.Name = "Template3D";
+    spec.Name = "PathTracing3D";
     spec.Headless = false;
 
     // CLI 参数直接映射到 EngineSpecification 字段
@@ -39,10 +39,10 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    auto app = std::make_unique<Prisma::Template3DApp>();
+    auto app = std::make_unique<Prisma::PathTracing3DApp>();
 
     if (spec.Headless) {
-        std::cout << "Template3D headless mode: frames=" << spec.HeadlessFrames
+        std::cout << "PathTracing3D headless mode: frames=" << spec.HeadlessFrames
                   << " output=" << spec.HeadlessOutputPath
                   << " " << (spec.HeadlessWidth ? std::to_string(spec.HeadlessWidth) : "?") << "x" << (spec.HeadlessHeight ? std::to_string(spec.HeadlessHeight) : "?") << std::endl;
     }
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
     );
 
     if (result != 0) {
-        std::cerr << "Template3D exited with error: " << result << std::endl;
+        std::cerr << "PathTracing3D exited with error: " << result << std::endl;
     }
 
     return result;

@@ -1,8 +1,8 @@
 ﻿cmake_minimum_required(VERSION 3.20)
 
-project(Template3D
+project(PathTracing3D
     VERSION 1.0.0
-    DESCRIPTION "3D Scene Template with Path Tracing for PrismaEngine"
+    DESCRIPTION "3D Path Tracing Template for PrismaEngine"
     LANGUAGES CXX
 )
 
@@ -14,21 +14,21 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ========== 共享源码 ==========
 
-set(TEMPLATE3D_SOURCES
-    src/Template3DApp.cpp
+set(PATHTRACING3D_SOURCES
+    src/PathTracing3DApp.cpp
     src/StatsOverlay.cpp
     src/HeadlessRunner.cpp
 )
 
-set(TEMPLATE3D_HEADERS
-    src/Template3DApp.h
+set(PATHTRACING3D_HEADERS
+    src/PathTracing3DApp.h
     src/StatsOverlay.h
     src/HeadlessRunner.h
 )
 
 # ========== 共享包含目录 ==========
 
-set(TEMPLATE3D_INCLUDE_DIRS
+set(PATHTRACING3D_INCLUDE_DIRS
     # Engine 包含目录由 target_link_libraries(Engine) 通过 PUBLIC 自动继承
     ${CMAKE_CURRENT_SOURCE_DIR}/src
 )
@@ -36,7 +36,7 @@ set(TEMPLATE3D_INCLUDE_DIRS
 # ========== 共享编译选项宏 ==========
 
 macro(setup_target_defaults target)
-    target_include_directories(${target} PRIVATE ${TEMPLATE3D_INCLUDE_DIRS})
+    target_include_directories(${target} PRIVATE ${PATHTRACING3D_INCLUDE_DIRS})
     target_link_libraries(${target} PRIVATE Engine)
     if(MSVC)
         target_compile_options(${target} PRIVATE
@@ -55,13 +55,13 @@ macro(setup_target_defaults target)
 endmacro()
 
 # ============================================================
-# Target 1: Template3D (EXE)
+# Target 1: PathTracing3D (EXE)
 # ============================================================
 
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    ${TEMPLATE3D_SOURCES}
-    ${TEMPLATE3D_HEADERS}
+    ${PATHTRACING3D_SOURCES}
+    ${PATHTRACING3D_HEADERS}
 )
 
 setup_target_defaults(${PROJECT_NAME})
@@ -71,24 +71,24 @@ if(MSVC)
 endif()
 
 # ============================================================
-# Target 2: Template3D_plugin (DLL)
+# Target 2: PathTracing3D_plugin (DLL)
 # ============================================================
 
-set(TEMPLATE3D_PLUGIN_NAME "${PROJECT_NAME}_plugin")
+set(PATHTRACING3D_PLUGIN_NAME "${PROJECT_NAME}_plugin")
 
-add_library(${TEMPLATE3D_PLUGIN_NAME} SHARED
+add_library(${PATHTRACING3D_PLUGIN_NAME} SHARED
     src/CreateApplication.cpp
-    ${TEMPLATE3D_SOURCES}
-    ${TEMPLATE3D_HEADERS}
+    ${PATHTRACING3D_SOURCES}
+    ${PATHTRACING3D_HEADERS}
 )
 
-set_target_properties(${TEMPLATE3D_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "Template3D"
+set_target_properties(${PATHTRACING3D_PLUGIN_NAME} PROPERTIES
+    OUTPUT_NAME "PathTracing3D"
     DEBUG_POSTFIX ""
 )
 
-setup_target_defaults(${TEMPLATE3D_PLUGIN_NAME})
-target_compile_definitions(${TEMPLATE3D_PLUGIN_NAME} PRIVATE TEMPLATE3D_PLUGIN_EXPORTS=1)
+setup_target_defaults(${PATHTRACING3D_PLUGIN_NAME})
+target_compile_definitions(${PATHTRACING3D_PLUGIN_NAME} PRIVATE PATHTRACING3D_PLUGIN_EXPORTS=1)
 
 
 # ============================================================
@@ -136,7 +136,7 @@ if(GLSLANG_VALIDATOR)
     # 将 SPIR-V 编译目标添加为显式依赖，确保在复制之前编译
     add_custom_target(CompileShaders DEPENDS ${GENERATED_SPVS})
     add_dependencies(${PROJECT_NAME} CompileShaders)
-    add_dependencies(${TEMPLATE3D_PLUGIN_NAME} CompileShaders)
+    add_dependencies(${PATHTRACING3D_PLUGIN_NAME} CompileShaders)
     message(STATUS "GLSL→SPIR-V 编译已启用 (glslangValidator: ${GLSLANG_VALIDATOR})")
 else()
     message(WARNING "glslangValidator 未找到 — 着色器将使用已有的 .spv 文件")
@@ -154,18 +154,18 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
     COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/assets/Template3D.jsonc
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/Template3D.jsonc
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets/PathTracing3D.jsonc
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/PathTracing3D.jsonc
     COMMENT "Copying shaders and project assets"
 )
 
-add_custom_command(TARGET ${TEMPLATE3D_PLUGIN_NAME} POST_BUILD
+add_custom_command(TARGET ${PATHTRACING3D_PLUGIN_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets/shaders
-        $<TARGET_FILE_DIR:${TEMPLATE3D_PLUGIN_NAME}>/assets/shaders
+        $<TARGET_FILE_DIR:${PATHTRACING3D_PLUGIN_NAME}>/assets/shaders
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/assets
-        $<TARGET_FILE_DIR:${TEMPLATE3D_PLUGIN_NAME}>/assets
+        $<TARGET_FILE_DIR:${PATHTRACING3D_PLUGIN_NAME}>/assets
     COMMENT "Copying shaders and project assets (plugin)"
 )
 
@@ -178,7 +178,7 @@ if(PRISMA_ENABLE_SCRIPTING)
 
     if(EXISTS "${CS_PROJ}")
         add_dependencies(${PROJECT_NAME} PrismaCore PrismaEngineHost)
-        add_dependencies(${TEMPLATE3D_PLUGIN_NAME} PrismaCore)
+        add_dependencies(${PATHTRACING3D_PLUGIN_NAME} PrismaCore)
 
         find_program(DOTNET dotnet REQUIRED)
 
@@ -190,13 +190,13 @@ if(PRISMA_ENABLE_SCRIPTING)
             COMMAND ${DOTNET} build "${CS_PROJ}"
                     -c Release --nologo
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${SCRIPTS_DIR}/bin/Release/net10.0/Template3D_Managed.dll"
-                    "${SCRIPTS_OUT}/Template3D_Managed.dll"
+                    "${SCRIPTS_DIR}/bin/Release/net10.0/PathTracing3D_Managed.dll"
+                    "${SCRIPTS_OUT}/PathTracing3D_Managed.dll"
             COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
         )
     else()
-        message(STATUS "Template3D: C# script project not found at ${CS_PROJ}, skipping.")
+        message(STATUS "PathTracing3D: C# script project not found at ${CS_PROJ}, skipping.")
     endif()
 else()
-    message(STATUS "Template3D: Scripting disabled, skipping C# dependencies.")
+    message(STATUS "PathTracing3D: Scripting disabled, skipping C# dependencies.")
 endif()

@@ -1,6 +1,6 @@
 {
     // 项目名称（HUD 左上角显示）
-    "name": "Template3D（3D路径追踪模板）",
+    "name": "PathTracing3D（3D路径追踪模板）",
 
     // 入口场景（相对 assets/ 搜索路径）
     "entryScene": "scenes/cornell_box.scene.json",
@@ -11,7 +11,7 @@
     ],
 
     // 资产搜索路径
-    "assets": ["assets", "projects/Template3D/assets"],
+    "assets": ["assets", "projects/PathTracing3D/assets"],
 
     // ========== 窗口配置 ==========
     "window": {

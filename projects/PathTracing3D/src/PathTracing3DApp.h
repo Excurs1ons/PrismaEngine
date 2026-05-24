@@ -13,10 +13,10 @@ class Scene;
 class StatsOverlay;
 class HeadlessRunner;
 
-class Template3DApp : public Application {
+class PathTracing3DApp : public Application {
 public:
-    Template3DApp();
-    ~Template3DApp() override;
+    PathTracing3DApp();
+    ~PathTracing3DApp() override;
 
     int OnInitialize() override;
     void OnRender() override;

@@ -1,7 +1,7 @@
 using System;
 using Prisma;
 
-namespace Template3D;
+namespace PathTracing3D;
 
 [Serializable]
 public partial class CameraController3D : Script

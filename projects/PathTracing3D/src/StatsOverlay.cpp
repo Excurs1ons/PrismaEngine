@@ -72,7 +72,7 @@ void StatsOverlay::Update(Timestep ts) {
 
     float escW = Renderer2D::GetStringWidth("ESC to exit", 2.0f);
     Renderer2D::DrawString("ESC to exit", {winW - escW - 30.0f, 30.0f}, 2.0f, {0.4f, 0.4f, 0.4f, 1.0f});
-    Renderer2D::DrawString("Template3D (PathTracing)",
+    Renderer2D::DrawString("PathTracing3D",
                            {30.0f, 30.0f}, 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
 
     Renderer2D::DrawString("[R]Reset [N]NEE [B]Mode [P]Prim|Mesh [ -Samples+ ] [F5]Reload [F6/F7]Scene",

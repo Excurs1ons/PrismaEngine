@@ -2,7 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using Prisma;
 
-namespace Template3D;
+namespace PathTracing3D;
 
 /// <summary>
 /// C++ 引擎通过 CoreCLR 调用的入口点。
@@ -17,14 +17,14 @@ internal static class ScriptEntry
         ScriptEngine.Bootstrap(apiPtr);
 
         // 注册所有源码生成的脚本 (CameraController3D 的 TypeId 等)
-        Template3D.Generated.ScriptRegistry.RegisterAll();
+        PathTracing3D.Generated.ScriptRegistry.RegisterAll();
 
         // 创建专用的控制器 Node（C# SoA ECS 层），挂载摄像机控制脚本。
         // 该节点与 C++ Scene 中的摄像机无关，仅通过 Interop.API 控制 3D 摄像机。
         var camCtrl = Node.Create("__CameraController__");
         camCtrl.AddScript<CameraController3D>();
 
-        System.Console.WriteLine("[Template3D] Scripts initialized, CameraController3D active");
+        System.Console.WriteLine("[PathTracing3D] Scripts initialized, CameraController3D active");
     }
 
     [UnmanagedCallersOnly]

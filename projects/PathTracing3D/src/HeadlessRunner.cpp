@@ -18,7 +18,7 @@ bool HeadlessRunner::Update() {
     if (!m_enabled || !m_pipeline) return false;
 
     if (m_pipeline->GetFrameCount() >= m_totalFrames) {
-        LOG_INFO("Template3D", "headless模式完成，保存输出...");
+        LOG_INFO("PathTracing3D", "headless模式完成，保存输出...");
         m_pipeline->SaveOutput(m_outputPath);
         return true;
     }
