@@ -11,7 +11,7 @@
 
 namespace Prisma {
 
-struct AssetMetadata {
+struct ENGINE_API AssetMetadata {
     UUID guid;
     std::string path;
     std::string type;
