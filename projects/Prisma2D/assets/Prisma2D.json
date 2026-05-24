@@ -1,7 +1,7 @@
 {
-    "name": "Template2D（2D模板项目）",
+    "name": "Prisma2D（2D渲染示例）",
     "entryScene": "scenes/2d_test.jsonc",
-    "assets": ["assets", "projects/Template2D/assets"],
+    "assets": ["assets", "projects/Prisma2D/assets"],
     "window": {
         "width": 1920,
         "height": 1080,

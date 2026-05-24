@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>Template2D_Managed</AssemblyName>
+    <AssemblyName>Prisma2D_Managed</AssemblyName>
     <RootNamespace>GameScripts</RootNamespace>
     <Nullable>enable</Nullable>
     <!-- 纯类库：自包含发布由 PrismaEngine.Host 负责 -->
@@ -14,6 +14,6 @@
       <Private>true</Private>
     </ProjectReference>
     <ProjectReference Include="../../../src/engine/scripting/CSharp/Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <TrimmerRootAssembly Include="Template2D_Managed" />
+    <TrimmerRootAssembly Include="Prisma2D_Managed" />
   </ItemGroup>
 </Project>

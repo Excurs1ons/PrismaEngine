@@ -1,8 +1,8 @@
 ﻿cmake_minimum_required(VERSION 3.20)
 
-project(Template2D
+project(Prisma2D
     VERSION 1.0.0
-    DESCRIPTION "2D Scene Test Template for PrismaEngine"
+    DESCRIPTION "2D Scene Test for PrismaEngine"
     LANGUAGES CXX
 )
 
@@ -14,17 +14,17 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ========== 共享源码（EXE 与 Plugin 共用） ==========
 
-set(TEMPLATE2D_SOURCES
-    src/Template2DApp.cpp
+set(PRISMA2D_SOURCES
+    src/Prisma2DApp.cpp
 )
 
-set(TEMPLATE2D_HEADERS
-    src/Template2DApp.h
+set(PRISMA2D_HEADERS
+    src/Prisma2DApp.h
 )
 
 # ========== 共享包含目录 ==========
 
-set(TEMPLATE2D_INCLUDE_DIRS
+set(PRISMA2D_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/engine/app
     ${CMAKE_SOURCE_DIR}/src/engine/core
@@ -54,7 +54,7 @@ set(TEMPLATE2D_INCLUDE_DIRS
 # ========== 共享编译选项宏 ==========
 
 macro(setup_target_defaults target)
-    target_include_directories(${target} PRIVATE ${TEMPLATE2D_INCLUDE_DIRS})
+    target_include_directories(${target} PRIVATE ${PRISMA2D_INCLUDE_DIRS})
     target_link_libraries(${target} PRIVATE Engine)
     if(MSVC)
         target_compile_options(${target} PRIVATE
@@ -73,14 +73,14 @@ macro(setup_target_defaults target)
 endmacro()
 
 # ============================================================
-# Target 1: Template2D (EXE)
+# Target 1: Prisma2D (EXE)
 # 独立可执行文件，直接链接 Engine.dll，F5 即可调试
 # ============================================================
 
 add_executable(${PROJECT_NAME}
     src/main.cpp
-    ${TEMPLATE2D_SOURCES}
-    ${TEMPLATE2D_HEADERS}
+    ${PRISMA2D_SOURCES}
+    ${PRISMA2D_HEADERS}
 )
 
 setup_target_defaults(${PROJECT_NAME})
@@ -90,25 +90,24 @@ if(MSVC)
 endif()
 
 # ============================================================
-# Target 2: Template2D_plugin (DLL)
-# 保持与旧 Launcher 加载路径兼容，输出 Template2D.dll
+# Target 2: Prisma2D_plugin (DLL)
 # ============================================================
 
-set(TEMPLATE2D_PLUGIN_NAME "${PROJECT_NAME}_plugin")
+set(PRISMA2D_PLUGIN_NAME "${PROJECT_NAME}_plugin")
 
-add_library(${TEMPLATE2D_PLUGIN_NAME} SHARED
+add_library(${PRISMA2D_PLUGIN_NAME} SHARED
     src/CreateApplication.cpp
-    ${TEMPLATE2D_SOURCES}
-    ${TEMPLATE2D_HEADERS}
+    ${PRISMA2D_SOURCES}
+    ${PRISMA2D_HEADERS}
 )
 
-set_target_properties(${TEMPLATE2D_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "Template2D"              # 生成 Template2D.dll（与旧名一致）
-    DEBUG_POSTFIX ""                      # Debug 也不加后缀
+set_target_properties(${PRISMA2D_PLUGIN_NAME} PROPERTIES
+    OUTPUT_NAME "Prisma2D"
+    DEBUG_POSTFIX ""
 )
 
-setup_target_defaults(${TEMPLATE2D_PLUGIN_NAME})
-target_compile_definitions(${TEMPLATE2D_PLUGIN_NAME} PRIVATE TEMPLATE2D_PLUGIN_EXPORTS=1)
+setup_target_defaults(${PRISMA2D_PLUGIN_NAME})
+target_compile_definitions(${PRISMA2D_PLUGIN_NAME} PRIVATE PRISMA2D_PLUGIN_EXPORTS=1)
 
 
 # ============================================================
@@ -123,18 +122,18 @@ add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         ${CMAKE_CURRENT_SOURCE_DIR}/assets
         $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets
     COMMAND ${CMAKE_COMMAND} -E copy
-        ${CMAKE_CURRENT_SOURCE_DIR}/assets/Template2D.json
-        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/Template2D.json
+        ${CMAKE_CURRENT_SOURCE_DIR}/assets/Prisma2D.json
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>/assets/Prisma2D.json
     COMMENT "Copying shaders and project assets"
 )
 
-add_custom_command(TARGET ${TEMPLATE2D_PLUGIN_NAME} POST_BUILD
+add_custom_command(TARGET ${PRISMA2D_PLUGIN_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets/shaders
-        $<TARGET_FILE_DIR:${TEMPLATE2D_PLUGIN_NAME}>/assets/shaders
+        $<TARGET_FILE_DIR:${PRISMA2D_PLUGIN_NAME}>/assets/shaders
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_CURRENT_SOURCE_DIR}/assets
-        $<TARGET_FILE_DIR:${TEMPLATE2D_PLUGIN_NAME}>/assets
+        $<TARGET_FILE_DIR:${PRISMA2D_PLUGIN_NAME}>/assets
     COMMENT "Copying shaders and project assets (plugin)"
 )
 
@@ -144,7 +143,7 @@ add_custom_command(TARGET ${TEMPLATE2D_PLUGIN_NAME} POST_BUILD
 
 if(PRISMA_ENABLE_SCRIPTING)
     add_dependencies(${PROJECT_NAME} PrismaCore PrismaEngineHost)
-    add_dependencies(${TEMPLATE2D_PLUGIN_NAME} PrismaCore)
+    add_dependencies(${PRISMA2D_PLUGIN_NAME} PrismaCore)
 
     find_program(DOTNET dotnet REQUIRED)
 
@@ -161,10 +160,10 @@ if(PRISMA_ENABLE_SCRIPTING)
         COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${SCRIPTS_DIR}/GameScripts.csproj"
                 -c Release --nologo
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SCRIPTS_DIR}/bin/Release/net10.0/Template2D_Managed.dll"
-                "${SCRIPTS_OUT}/Template2D_Managed.dll"
+                "${SCRIPTS_DIR}/bin/Release/net10.0/Prisma2D_Managed.dll"
+                "${SCRIPTS_OUT}/Prisma2D_Managed.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
     )
 else()
-    message(STATUS "Template2D: Scripting disabled, skipping C# dependencies.")
+    message(STATUS "Prisma2D: Scripting disabled, skipping C# dependencies.")
 endif()

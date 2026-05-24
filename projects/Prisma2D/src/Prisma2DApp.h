@@ -7,10 +7,10 @@
 
 namespace Prisma {
 
-class Template2DApp : public Application {
+class Prisma2DApp : public Application {
 public:
-    Template2DApp();
-    ~Template2DApp() override = default;
+    Prisma2DApp();
+    ~Prisma2DApp() override = default;
 
     void SetAutoQuit(bool quit) { m_autoQuit = quit; }
 

@@ -1,4 +1,4 @@
-#include "Template2DApp.h"
+#include "Prisma2DApp.h"
 #include "graphic/Renderer2D.h"
 #include "graphic/Renderer.h"
 #include "graphic/OrthographicCamera.h"
@@ -17,25 +17,25 @@
 namespace Prisma {
 
 // ============================================================================
-// Template2DApp 实现
+// Prisma2DApp 实现
 // ============================================================================
 
-Template2DApp::Template2DApp()
-    : Application({"Template2D", "", 1920, 1080, true, true, Graphic::PresentMode::Mailbox, 0})
+Prisma2DApp::Prisma2DApp()
+    : Application({"Prisma2D", "", 1920, 1080, true, true, Graphic::PresentMode::Mailbox, 0})
 {
 }
 
-int Template2DApp::OnInitialize() {
-    LOG_INFO("Template2D", "C# 脚本化启动, 分辨率={0}x{1}", m_Spec.Width, m_Spec.Height);
+int Prisma2DApp::OnInitialize() {
+    LOG_INFO("Prisma2D", "C# 脚本化启动, 分辨率={0}x{1}", m_Spec.Width, m_Spec.Height);
     return 0;
 }
 
-void Template2DApp::OnUpdate(Timestep ts) {
+void Prisma2DApp::OnUpdate(Timestep ts) {
     // 所有游戏逻辑由 C# 脚本处理
     (void)ts;
 }
 
-void Template2DApp::OnRender() {
+void Prisma2DApp::OnRender() {
     auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
     auto camera = scene ? scene->GetMainCamera() : nullptr;
     auto ortho = std::dynamic_pointer_cast<Graphic::OrthographicCamera>(camera);
@@ -133,7 +133,7 @@ void Template2DApp::OnRender() {
         float dW = Graphic::Renderer2D::GetStringWidth(dcInfo, 2.0f);
         Graphic::Renderer2D::DrawString(dcInfo, hud(winW - dW - 30.0f, winH - 135.0f), 2.0f, {0.5f, 0.7f, 0.5f, 1.0f});
         Graphic::Renderer2D::DrawString("ESC to exit", hud(winW - 220.0f, 30.0f), 2.0f, {0.4f, 0.4f, 0.4f, 1.0f});
-        Graphic::Renderer2D::DrawString("Template2D (Unified Nodes: " + std::to_string(totalNodes) + ")",
+        Graphic::Renderer2D::DrawString("Prisma2D (Unified Nodes: " + std::to_string(totalNodes) + ")",
                                         hud(30.0f, 30.0f), 2.0f, {0.6f, 0.6f, 0.6f, 1.0f});
         Graphic::Renderer2D::DrawString("Cam: (" + std::to_string((int)camX) + "," + std::to_string((int)camY) + ")",
                                         hud(30.0f, 65.0f), 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
@@ -141,7 +141,7 @@ void Template2DApp::OnRender() {
 
 }
 
-void Template2DApp::OnEvent(Event& e) {
+void Prisma2DApp::OnEvent(Event& e) {
     // 让基类处理输入事件（传递给 InputManager）
     Application::OnEvent(e);
 
