@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added / 新增
 
-- **Template3D project** - Cornell Box path tracing template / Cornell Box 路径追踪模板项目
+- **PathTracing3D project** - Cornell Box path tracing template / Cornell Box 路径追踪模板项目
 - **SSBO scene storage** - Scene objects moved from UBO to SSBO (std430) / 场景对象从 UBO 迁移到 SSBO
 - **JSON scene config** - Glaze-based scene file parsing (pt_scene.json) / 基于 Glaze 的场景文件解析
 - **Compute path tracer** - `pathtrace.comp` with plane/sphere/box intersection / 计算着色器路径追踪

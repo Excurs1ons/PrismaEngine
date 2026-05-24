@@ -31,7 +31,7 @@ flowchart TD
 ## Files to Create
 
 ```
-projects/Template2D/scripts/PrismaEngine.Core/UI/
+projects/Prisma2D/scripts/PrismaEngine.Core/UI/
 ├── Toggle.cs           (NEW) - Toggle/Switch component
 ├── Slider.cs           (NEW) - Slider/Scrollbar component
 ├── Dropdown.cs         (NEW) - Dropdown selection
@@ -818,7 +818,7 @@ public static class Tween
 - [ ] **Step 1: Build PrismaEngine.Core**
 
 ```bash
-cd projects/Template2D/scripts
+cd projects/Prisma2D/scripts
 export DOTNET_GCRegionRange=0x10000000
 dotnet build PrismaEngine.Core/PrismaEngine.Core.csproj
 ```
@@ -832,7 +832,7 @@ dotnet build GameScripts/GameScripts.csproj
 - [ ] **Step 3: Commit all Phase 3 changes**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/
 git commit -m "feat(ui): add Phase 3 - Toggle, Slider, Dropdown, InputField, Transition, Tween"
 ```
 

@@ -110,7 +110,7 @@ Engine::Run() 每帧循环:
 
 ### 3.1 问题现象
 
-Template2D 应用可以启动，日志显示 566 个 Quad 被提交和绘制，OpaquePass 创建了 PSO，加载了着色器。但窗口始终显示灰色 (背景清除色 0.1, 0.1, 0.1, 1.0)。
+Prisma2D 应用可以启动，日志显示 566 个 Quad 被提交和绘制，OpaquePass 创建了 PSO，加载了着色器。但窗口始终显示灰色 (背景清除色 0.1, 0.1, 0.1, 1.0)。
 
 ### 3.2 查找过程
 
@@ -153,8 +153,8 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(
 | `src/engine/mcp/tools/SceneTools.cpp` | 使用实际存在的 Scene/GameObject API |
 | `src/engine/graphic/RenderSystem.cpp` | EndFrame 添加 5 秒间隔队列状态日志 |
 | `src/engine/graphic/pipelines/forward/OpaquePass.cpp` | Execute 添加 PSO 和着色器状态日志 |
-| `projects/Template2D/CMakeLists.txt` | 新项目搭建 |
-| `projects/CMakeLists.txt` | 添加 Template2D 子项目 |
+| `projects/Prisma2D/CMakeLists.txt` | 新项目搭建 |
+| `projects/CMakeLists.txt` | 添加 Prisma2D 子项目 |
 | `CMakePresets.json` | `windows-pacman-base` 添加 `PRISMA_ENABLE_MCP=OFF` |
 | `assets/shaders/Renderer2D.frag` | 简化为纯色着色器（临时绕过纹理上传 bug） |
 | `assets/shaders/Renderer2D.frag` | 恢复为纹理采样版本（`v_Color * texture(AlbedoMap, v_UV)`） |
@@ -194,35 +194,35 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(
 
 `Renderer2D.frag` 当前使用纹理采样版本（`v_Color * texture(AlbedoMap, v_UV)`），通过 `glslangValidator` 编译 SPIR-V（744B），无 OpNop 验证错误。CreateTextureFromMemory 的 staging buffer 上传已修复，白色默认纹理正常上传到 GPU。
 
-## 6. Template2D 使用
+## 6. Prisma2D 使用
 
 ### 6.1 构建
 
 ```bash
 cmake --preset pacman-windows-x64-debug
-cmake --build --preset pacman-windows-x64-debug --target Template2D
+cmake --build --preset pacman-windows-x64-debug --target Prisma2D
 ```
 
 ### 6.2 运行
 
 ```bash
-./build/pacman-windows-x64-debug/bin/Debug/Template2D.exe
+./build/pacman-windows-x64-debug/bin/Debug/Prisma2D.exe
 ```
 
 ### 6.3 项目结构
 
 ```
-projects/Template2D/
+projects/Prisma2D/
 ├── CMakeLists.txt                # 构建配置
 ├── src/
 │   ├── main.cpp                  # 入口点
-│   ├── Template2DApp.h          # 应用类声明
-│   └── Template2DApp.cpp        # 2D 场景实现
+│   ├── Prisma2DApp.h          # 应用类声明
+│   └── Prisma2DApp.cpp        # 2D 场景实现
 ```
 
 ### 6.4 作为模板
 
-复制 `projects/Template2D/` 到 `projects/MyNew2DGame/`，修改 `Template2DApp.cpp` 中的 `OnRender()` 函数，在 `BeginScene` / `EndScene` 之间添加 `DrawQuad` 调用。
+复制 `projects/Prisma2D/` 到 `projects/MyNew2DGame/`，修改 `Prisma2DApp.cpp` 中的 `OnRender()` 函数，在 `BeginScene` / `EndScene` 之间添加 `DrawQuad` 调用。
 
 ## 7. 完整渲染管线图
 

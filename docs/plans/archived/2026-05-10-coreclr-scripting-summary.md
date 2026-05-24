@@ -1,7 +1,7 @@
 # CoreCLR C# Scripting — Implementation Summary
 
 **Commit:** `75b29bb` (prune)
-**Status:** ✅ Functional — Template2D fully scripted in C#
+**Status:** ✅ Functional — Prisma2D fully scripted in C#
 
 ## Architecture
 
@@ -10,7 +10,7 @@ C++ Engine (PrismaEngine)
 ├── CoreCLRHost        hostfxr init → self-contained publish
 ├── ScriptEngine       PrismaAPI (18 fns) + entity pool + camera sync
 ├── Engine::Run()      Bootstrap() → OnFrame() per frame
-└── Template2DApp      minimal: OnInitialize/OnRender/OnEvent
+└── Prisma2DApp      minimal: OnInitialize/OnRender/OnEvent
 
 CoreCLR Runtime
 └── hostfxr initialized from scripts/hostfxr.dll (self-contained)
@@ -43,7 +43,7 @@ C# GameScripts.dll
 | **OnFrame per frame** | C++ calls C#_OnFrame(dt) each frame |
 | **SDL3 scancodes in KeyCode** | `W=26`, `Arrows=79-82`, `Escape=41` |
 
-## Template2D Behaviors (C#)
+## Prisma2D Behaviors (C#)
 
 - **5 static scene sprites** from `2d_test.jsonc` (rendered by C++)
 - **20 dynamic rotating sprites** created by `SceneInit.cs`
@@ -57,7 +57,7 @@ C# GameScripts.dll
 | C++ Engine (NEW) | `scripting/CoreCLRHost.h/.cpp` | ~180 |
 | C++ Engine (NEW) | `scripting/ScriptEngine.h/.cpp` | ~240 |
 | C++ Engine (MOD) | `app/Engine.h/.cpp` | +~40 |
-| C++ Template2D (MOD) | `src/Template2DApp.cpp/.h` | ~190 |
+| C++ Prisma2D (MOD) | `src/Prisma2DApp.cpp/.h` | ~190 |
 | C++ Build (MOD) | `CMakeLists.txt` (2 files) | +~60 |
 | C# Core | `PrismaEngine.Core/` (11 files) | ~400 |
 | C# Game | `GameScripts/` (6 files) | ~150 |
@@ -68,14 +68,14 @@ C# GameScripts.dll
 ```
 cmake --build --preset editor-windows-x64-debug
   → dotnet publish --self-contained -r win-x64 (C# → DLLs + hostfxr)
-  → MSVC compile (C++ → Template2D.exe)
+  → MSVC compile (C++ → Prisma2D.exe)
   → copy scripts/ to output dir
 ```
 
 ## Running
 
 ```
-Template2D.exe  (working dir = build/<preset>/bin/Debug/)
+Prisma2D.exe  (working dir = build/<preset>/bin/Debug/)
   → Engine::Run()
     → CoreCLRHost::Initialize("scripts/")
     → ScriptEntry.Bootstrap(api)
@@ -89,6 +89,6 @@ Template2D.exe  (working dir = build/<preset>/bin/Debug/)
 |---|---|---|
 | Black sprites | `Random.Range(0,1)` → int overload → always 0 | Use `(float)Range(0,100)/100f` |
 | WASD not moving | KeyCode enum used ASCII (W=87) but events carry SDL scancode (W=26) | Fixed values to match IInputDriver.h/SDL3 |
-| Input never reached pressedKeys | Template2DApp::OnEvent overrode base without calling Application::OnEvent | Added `Application::OnEvent(e)` call |
+| Input never reached pressedKeys | Prisma2DApp::OnEvent overrode base without calling Application::OnEvent | Added `Application::OnEvent(e)` call |
 | hostfxr not found | Probing system paths (security/portability) | Self-contained publish, load from scripts/ only |
 | Self-contained + library fail | `load_assembly_and_get_function_pointer` doesn't support self-contained components | `<OutputType>Exe</OutputType>` + empty Program.cs |

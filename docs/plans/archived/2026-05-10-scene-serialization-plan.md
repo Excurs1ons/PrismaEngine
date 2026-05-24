@@ -369,8 +369,8 @@ void SpriteRenderer::SetData(const Data& d) {
 ### Task 7: Scene File Format — Convert to JSONC
 
 **Files:**
-- Rename: `projects/Template2D/assets/scenes/2d_test.json` → `2d_test.jsonc`
-- Rename: `projects/Template2D/assets/scenes/default.json` → `default.jsonc`
+- Rename: `projects/Prisma2D/assets/scenes/2d_test.json` → `2d_test.jsonc`
+- Rename: `projects/Prisma2D/assets/scenes/default.json` → `default.jsonc`
 
 **New 2d_test.jsonc format:**
 ```jsonc
@@ -406,11 +406,11 @@ void SpriteRenderer::SetData(const Data& d) {
 
 ---
 
-### Task 8: Template2DApp — Adapt to New Scene System
+### Task 8: Prisma2DApp — Adapt to New Scene System
 
 **Files:**
-- Modify: `projects/Template2D/src/Template2DApp.h`
-- Modify: `projects/Template2D/src/Template2DApp.cpp`
+- Modify: `projects/Prisma2D/src/Prisma2DApp.h`
+- Modify: `projects/Prisma2D/src/Prisma2DApp.cpp`
 
 **Remove:**
 - `m_CameraComponent` (camera comes from SceneManager)
@@ -438,7 +438,7 @@ void SpriteRenderer::SetData(const Data& d) {
 | 5 | Scene.h/.cpp | Full scene I/O with JSONC |
 | 6 | SpriteRenderer.h/.cpp | Component serialization example |
 | 7 | 2d_test → .jsonc | Scene file format |
-| 8 | Template2DApp.h/.cpp | App uses new scene system |
+| 8 | Prisma2DApp.h/.cpp | App uses new scene system |
 
 ---
 

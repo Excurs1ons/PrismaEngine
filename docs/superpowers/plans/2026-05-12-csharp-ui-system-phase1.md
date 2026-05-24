@@ -32,9 +32,9 @@ PrismaEngine.Core/
 ## Task 1: Create UI Infrastructure Files
 
 **Files:**
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/UIElementType.cs`
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/AnchorPresets.cs`
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/ColorBlock.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/UIElementType.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/AnchorPresets.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/ColorBlock.cs`
 
 - [ ] **Step 1: Create UIElementType.cs**
 
@@ -166,7 +166,7 @@ public class Sprite
 - [ ] **Step 5: Commit**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/
 git commit -m "feat(ui): add UI infrastructure files (UIElementType, AnchorPresets, ColorBlock, Sprite)"
 ```
 
@@ -175,7 +175,7 @@ git commit -m "feat(ui): add UI infrastructure files (UIElementType, AnchorPrese
 ## Task 2: Create UIComponent Base Class
 
 **Files:**
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/UIComponent.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/UIComponent.cs`
 
 - [ ] **Step 1: Create UIComponent.cs**
 
@@ -317,7 +317,7 @@ public abstract class UIComponent : Script
 - [ ] **Step 2: Commit**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/UIComponent.cs
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/UIComponent.cs
 git commit -m "feat(ui): add UIComponent base class with anchor system and event callbacks"
 ```
 
@@ -326,7 +326,7 @@ git commit -m "feat(ui): add UIComponent base class with anchor system and event
 ## Task 3: Create Image Component
 
 **Files:**
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/Image.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/Image.cs`
 
 - [ ] **Step 1: Create Image.cs**
 
@@ -418,7 +418,7 @@ public enum FillMethod
 - [ ] **Step 2: Commit**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/Image.cs
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/Image.cs
 git commit -m "feat(ui): add Image component with ImageType support (Simple, Sliced, Tiled, Filled)"
 ```
 
@@ -427,7 +427,7 @@ git commit -m "feat(ui): add Image component with ImageType support (Simple, Sli
 ## Task 4: Create Button Component
 
 **Files:**
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/Button.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/Button.cs`
 
 - [ ] **Step 1: Create Button.cs**
 
@@ -542,7 +542,7 @@ public enum NavigationMode
 - [ ] **Step 2: Commit**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/Button.cs
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/Button.cs
 git commit -m "feat(ui): add Button component with ColorBlock state transitions"
 ```
 
@@ -551,7 +551,7 @@ git commit -m "feat(ui): add Button component with ColorBlock state transitions"
 ## Task 5: Create Text Component
 
 **Files:**
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/Text.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/Text.cs`
 
 - [ ] **Step 1: Create Text.cs**
 
@@ -677,7 +677,7 @@ public enum FontStyle
 - [ ] **Step 2: Commit**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/Text.cs
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/Text.cs
 git commit -m "feat(ui): add Text component with alignment and rich text support"
 ```
 
@@ -686,8 +686,8 @@ git commit -m "feat(ui): add Text component with alignment and rich text support
 ## Task 6: Create UIBridge (Event Handling)
 
 **Files:**
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/UIBridge.cs`
-- Create: `projects/Template2D/scripts/PrismaEngine.Core/UI/EventBus.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/UIBridge.cs`
+- Create: `projects/Prisma2D/scripts/PrismaEngine.Core/UI/EventBus.cs`
 
 - [ ] **Step 1: Create EventBus.cs**
 
@@ -1039,7 +1039,7 @@ public enum InputPriorityMode
 - [ ] **Step 3: Commit**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/UIBridge.cs projects/Template2D/scripts/PrismaEngine.Core/UI/EventBus.cs
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/UIBridge.cs projects/Prisma2D/scripts/PrismaEngine.Core/UI/EventBus.cs
 git commit -m "feat(ui): add UIBridge event handling with bubbling and EventBus"
 ```
 
@@ -1048,7 +1048,7 @@ git commit -m "feat(ui): add UIBridge event handling with bubbling and EventBus"
 ## Task 7: Update PrismaEngine.Core.csproj
 
 **Files:**
-- Modify: `projects/Template2D/scripts/PrismaEngine.Core/PrismaEngine.Core.csproj`
+- Modify: `projects/Prisma2D/scripts/PrismaEngine.Core/PrismaEngine.Core.csproj`
 
 - [ ] **Step 1: Update csproj to include UI folder**
 
@@ -1072,7 +1072,7 @@ git commit -m "feat(ui): add UIBridge event handling with bubbling and EventBus"
 - [ ] **Step 2: Commit**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/PrismaEngine.Core.csproj
+git add projects/Prisma2D/scripts/PrismaEngine.Core/PrismaEngine.Core.csproj
 git commit -m "chore(ui): add UI folder to PrismaEngine.Core project"
 ```
 
@@ -1086,7 +1086,7 @@ git commit -m "chore(ui): add UI folder to PrismaEngine.Core project"
 - [ ] **Step 1: Build C# project**
 
 ```bash
-cd projects/Template2D/scripts
+cd projects/Prisma2D/scripts
 dotnet build PrismaEngine.Core/PrismaEngine.Core.csproj
 ```
 

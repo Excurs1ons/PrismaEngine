@@ -2,7 +2,7 @@
 
 > **For Claude:** The user verifies after each task. Implement one task at a time.
 
-**Goal:** Implement Unity-style C# scripting via CoreCLR for Template2D, replacing hardcoded C++ behaviors with C# scripts.
+**Goal:** Implement Unity-style C# scripting via CoreCLR for Prisma2D, replacing hardcoded C++ behaviors with C# scripts.
 
 **Architecture:** C# owns game objects (Node class), C++ provides backend services via PrismaAPI function pointer table. CoreCLR hosted via hostfxr.
 
@@ -291,13 +291,13 @@ private:
 
 Or even simpler for MVP: C++ create/destroy/store entities in a `std::vector`, and the existing RenderSystem renders them.
 
-Actually, for the simplest MVP that works with Template2D: entities are just data structs stored in a C++ array. The render system reads from this array for rendering.
+Actually, for the simplest MVP that works with Prisma2D: entities are just data structs stored in a C++ array. The render system reads from this array for rendering.
 
-Wait, but Template2D uses Renderer2D immediate mode. The OnRender currently draws all sprites manually. After refactoring, the C++ scene would contain entities created by C# scripts.
+Wait, but Prisma2D uses Renderer2D immediate mode. The OnRender currently draws all sprites manually. After refactoring, the C++ scene would contain entities created by C# scripts.
 
 The simplest approach for entity rendering: ScriptEngine stores entities in a vector that the existing render system iterates. Or, we make ScriptEngine::Update also responsible for rendering (since it knows all entities).
 
-Actually, the cleanest approach: ScriptEngine stores entities. Template2DApp::OnRender iterates ScriptEngine's entities and draws them with Renderer2D. This way:
+Actually, the cleanest approach: ScriptEngine stores entities. Prisma2DApp::OnRender iterates ScriptEngine's entities and draws them with Renderer2D. This way:
 - C# scripts control entity data (position, rotation, color, size)
 - C++ renders them each frame (no change to render pipeline)
 
@@ -311,7 +311,7 @@ For the C API implementations:
 
 ### Task 3: PrismaEngine.Core C# Project
 
-**Directory:** `projects/Template2D/scripts/PrismaEngine.Core/`
+**Directory:** `projects/Prisma2D/scripts/PrismaEngine.Core/`
 
 **Files to create:**
 - `PrismaEngine.Core.csproj`
@@ -537,7 +537,7 @@ cd scripts/PrismaEngine.Core && dotnet build -c Release
 
 ### Task 4: GameScripts C# Project
 
-**Directory:** `projects/Template2D/scripts/GameScripts/`
+**Directory:** `projects/Prisma2D/scripts/GameScripts/`
 
 **Files:**
 - `GameScripts.csproj` (references PrismaEngine.Core)
@@ -654,13 +654,13 @@ namespace GameScripts {
 
 ---
 
-### Task 5: Template2DApp + Engine Integration
+### Task 5: Prisma2DApp + Engine Integration
 
 **Files to modify:**
 - `src/engine/app/Engine.h` — add `ScriptEngine` member, `GetScriptEngine()`
 - `src/engine/app/Engine.cpp` — `Run()`: init CoreCLRHost → ScriptEngine → Bootstrap → OnFrame per loop
-- `projects/Template2D/src/Template2DApp.cpp` — **major cleanup**: remove all TestSprite generation/rotation logic, replace with ScriptEngine-based rendering
-- `projects/Template2D/src/Template2DApp.h` — remove TestSprite struct, FPS/GPU members (already done)
+- `projects/Prisma2D/src/Prisma2DApp.cpp` — **major cleanup**: remove all TestSprite generation/rotation logic, replace with ScriptEngine-based rendering
+- `projects/Prisma2D/src/Prisma2DApp.h` — remove TestSprite struct, FPS/GPU members (already done)
 
 **Engine.h additions:**
 ```cpp
@@ -713,19 +713,19 @@ void Engine::Run() {
 }
 ```
 
-**Template2DApp.cpp — OnInitialize (simplified):**
+**Prisma2DApp.cpp — OnInitialize (simplified):**
 ```cpp
-int Template2DApp::OnInitialize() {
+int Prisma2DApp::OnInitialize() {
     // C# Scripting bootstraps everything in ScriptEntry.Bootstrap
     // No manual sprite creation needed
-    LOG_INFO("Template2D", "C# 脚本化初始化完成, 分辨率={0}x{1}", m_Spec.Width, m_Spec.Height);
+    LOG_INFO("Prisma2D", "C# 脚本化初始化完成, 分辨率={0}x{1}", m_Spec.Width, m_Spec.Height);
     return 0;
 }
 ```
 
-**Template2DApp.cpp — OnRender (draw entities from ScriptEngine):**
+**Prisma2DApp.cpp — OnRender (draw entities from ScriptEngine):**
 ```cpp
-void Template2DApp::OnRender() {
+void Prisma2DApp::OnRender() {
     auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
     auto camera = scene ? scene->GetMainCamera() : nullptr;
     auto ortho = std::dynamic_pointer_cast<Graphic::OrthographicCamera>(camera);
@@ -796,7 +796,7 @@ private:
 ### Task 6: Build System — CMake Integration
 
 **Files to modify:**
-- `projects/Template2D/CMakeLists.txt` — add `add_custom_command` to build C# projects
+- `projects/Prisma2D/CMakeLists.txt` — add `add_custom_command` to build C# projects
 - Optionally: script to find dotnet SDK path
 
 **CMake snippet:**
@@ -829,7 +829,7 @@ add_custom_target(BuildScripts ALL
         ${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/GameScripts.dll
 )
 
-add_dependencies(Template2D BuildScripts)
+add_dependencies(Prisma2D BuildScripts)
 
 # Copy to build output
 file(COPY ${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/ DESTINATION ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/scripts/)

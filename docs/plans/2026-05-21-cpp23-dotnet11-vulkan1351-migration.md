@@ -28,8 +28,8 @@
 | # | 文件 | 变更 |
 |---|------|------|
 | 1 | `cmake/CompilerOptions.cmake:6` | `CMAKE_CXX_STANDARD 20` → `23` |
-| 2 | `projects/Template2D/CMakeLists.txt:11` | `CMAKE_CXX_STANDARD 20` → `23` |
-| 3 | `projects/Template3D/CMakeLists.txt:11` | `CMAKE_CXX_STANDARD 20` → `23` |
+| 2 | `projects/Prisma2D/CMakeLists.txt:11` | `CMAKE_CXX_STANDARD 20` → `23` |
+| 3 | `projects/PathTracing3D/CMakeLists.txt:11` | `CMAKE_CXX_STANDARD 20` → `23` |
 | 4 | `projects/PrismaCraft/CMakeLists.txt:11` | `CMAKE_CXX_STANDARD 20` → `23` |
 | 5 | `projects/PacManGame/CMakeLists.txt:11` | `CMAKE_CXX_STANDARD 20` → `23` |
 | 6 | `sdk/samples/BasicTriangle/CMakeLists.txt:4` | `CMAKE_CXX_STANDARD 20` → `23` |
@@ -43,7 +43,7 @@
 | # | 文件 | 变更 |
 |---|------|------|
 | 11 | `src/engine/scripting/CSharp/Prisma.Core/Prisma.Core.csproj:3` | `net10.0` → `net11.0` |
-| 12 | `projects/Template2D/scripts/GameScripts/GameScripts.csproj:3` | `net10.0` → `net11.0` |
+| 12 | `projects/Prisma2D/scripts/GameScripts/GameScripts.csproj:3` | `net10.0` → `net11.0` |
 | 13 | `projects/PrismaCraft/scripts/GameScripts/GameScripts.csproj:3` | `net10.0` → `net11.0` |
 | 14 | `src/engine/scripting/CSharp/Prisma.Generators/Prisma.Generators.csproj:4` | `netstandard2.0` → **保持不动**（Roslyn source gen） |
 
@@ -51,8 +51,8 @@
 
 | # | 文件 | 变更 |
 |---|------|------|
-| 15 | `projects/Template3D/CMakeLists.txt:174` | `net10.0/${CS_RID}/publish` → `net11.0/...` |
-| 16 | `projects/Template2D/CMakeLists.txt:170` | `net10.0/${CS_RID}/publish` → `net11.0/...` |
+| 15 | `projects/PathTracing3D/CMakeLists.txt:174` | `net10.0/${CS_RID}/publish` → `net11.0/...` |
+| 16 | `projects/Prisma2D/CMakeLists.txt:170` | `net10.0/${CS_RID}/publish` → `net11.0/...` |
 | 17 | `projects/PrismaCraft/CMakeLists.txt:181` | `net10.0/${CS_RID}/publish` → `net11.0/...` |
 | 18 | `src/engine/app/Engine.cpp:230-232` | 3 处 `net10.0/win-x64/publish` 硬编码路径 → `net11.0/...` |
 
@@ -292,7 +292,7 @@ Phase 4: 回归测试与文档       (2 人天)
 
 ### Phase 4 — 回归测试与文档
 
-- [ ] **4.1** 运行全部示例项目：Template2D / Template3D / PacManGame / PrismaCraft
+- [ ] **4.1** 运行全部示例项目：Prisma2D / PathTracing3D / PacManGame / PrismaCraft
 - [ ] **4.2** Asset 加载测试（确保 NBT 序列化 / 资源反序列化不受 C++23 影响）
 - [ ] **4.3** 运行 Android APK 构建并验证 Vulkan 渲染
 - [ ] **4.4** 更新 8 个文档文件 + CLAUDE.md / GEMINI.md / README.md

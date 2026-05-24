@@ -133,7 +133,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 本文档跟踪 PrismaEngine 各模块的开发状态。
 
-**最后更新**: 2026-05-18 (Template3D + SSBO 路径追踪)
+**最后更新**: 2026-05-18 (PathTracing3D + SSBO 路径追踪)
 
 ---
 
@@ -141,7 +141,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 | 时间 | 模块 | 变更 |
 |------|------|------|
-| 09:22 | 路径追踪 | ✅ Template3D Cornell Box 路径追踪成功渲染（SSBO 架构） |
+| 09:22 | 路径追踪 | ✅ PathTracing3D Cornell Box 路径追踪成功渲染（SSBO 架构） |
 | 09:15 | 路径追踪 | ✅ UBO → SSBO 迁移（场景对象放入 SSBO，突破 UBO 65536 限制） |
 | 09:10 | 路径追踪 | ✅ JSON 场景文件系统（Glaze 解析，支持 plane/sphere/box） |
 | 09:00 | 路径追踪 | ✅ SPIR-V 重新编译，pathtrace.comp 重写为 SSBO 遍历 |
@@ -151,7 +151,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 | 12:45 | 2D 渲染 | ✅ 极致 2D 合批系统 (DC 缩减 >99%, 支持 5万+ Quads) |
 | 12:30 | 性能分析 | ✅ 实时性能 HUD + 瓶颈自动分析 (CPU/GPU/VSync/FPS Limit) |
 | 12:15 | 输入系统 | ✅ 鼠标事件合并 (Coalescing) + 手柄指针缓存 (解决 3000FPS 掉帧) |
-| 11:30 | 项目重构 | ✅ 2DTest 更名为 Template2D，UI 布局深度优化 |
+| 11:30 | 项目重构 | ✅ 2DTest 更名为 Prisma2D，UI 布局深度优化 |
 | 11:00 | 渲染架构 | ✅ 三倍环形缓冲 (Ring Buffer) 实现，解决多帧资源竞争 |
 | 21:19 | Android UI | ✅ Prisma Logo 矢量图标 (prisma_1.xml) |
 | 20:44 | Android UI | ✅ 启动屏幕背景和动画配置 |
@@ -330,7 +330,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 | **工具类** | 80% | - | 相机、裁剪等基础工具完成 |
 | **MCP 协议** | 85% | 🆕 | 17 工具、7 分类、双传输、增量哈希 |
 | **WebUI 编辑器** | 80% | 🆕 | 浏览器编辑器，Scene/Game 视口 |
-| **路径追踪 (Template3D)** | 30% | 🆕 | Cornell Box SSBO 路径追踪，待 NEE + 降噪 |
+| **路径追踪 (PathTracing3D)** | 30% | 🆕 | Cornell Box SSBO 路径追踪，待 NEE + 降噪 |
 
 ### 按功能
 
@@ -531,13 +531,13 @@ option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 ---
 
-## 十、Template3D / 路径追踪
+## 十、PathTracing3D / 路径追踪
 
-### 10.1 Template3D 项目
+### 10.1 PathTracing3D 项目
 
 | 组件 | 状态 | 说明 |
 |------|------|------|
-| **Template3D** | ✅ 已完成 | 3D 路径追踪模板项目 |
+| **PathTracing3D** | ✅ 已完成 | 3D 路径追踪模板项目 |
 | **CMake 构建** | ✅ 已完成 | 独立 CMakeLists，post-build 复制资产 |
 | **SPIR-V 嵌入** | ✅ 已完成 | pathtrace.comp → PathtraceCompSPIRV.h |
 | **全屏呈现管线** | ✅ 已完成 | fullscreen.vert + present.frag 呈现 |
@@ -577,7 +577,7 @@ option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 ## 十一、近期计划
 
-1. **Template3D NEE** - 实现 Next Event Estimation，提高采样效率 10-100x
+1. **PathTracing3D NEE** - 实现 Next Event Estimation，提高采样效率 10-100x
 2. **Firefly Clamping** - 颜色累积前 clamp 异常值
 3. **Windows 硬件验证** - 在 Windows GPU 上测试实时性能
 4. **更多几何体** - 支持三角形网格、变换矩阵

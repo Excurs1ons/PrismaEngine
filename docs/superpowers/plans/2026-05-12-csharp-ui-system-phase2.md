@@ -31,7 +31,7 @@ flowchart TD
 ## Files to Create/Modify
 
 ```
-projects/Template2D/scripts/PrismaEngine.Core/UI/
+projects/Prisma2D/scripts/PrismaEngine.Core/UI/
 ├── Canvas.cs           (NEW) - Canvas component
 ├── Panel.cs            (NEW) - Panel with Flexbox layout
 ├── ScrollView.cs       (NEW) - Scrollable container
@@ -583,7 +583,7 @@ public partial class ScrollView : Panel
 - [ ] **Step 1: Build PrismaEngine.Core**
 
 ```bash
-cd projects/Template2D/scripts
+cd projects/Prisma2D/scripts
 export DOTNET_GCRegionRange=0x10000000
 dotnet build PrismaEngine.Core/PrismaEngine.Core.csproj
 ```
@@ -601,7 +601,7 @@ Expected: Build succeeds with no errors
 - [ ] **Step 3: Commit all Phase 2 changes**
 
 ```bash
-git add projects/Template2D/scripts/PrismaEngine.Core/UI/
+git add projects/Prisma2D/scripts/PrismaEngine.Core/UI/
 git commit -m "feat(ui): add Phase 2 - Canvas, Panel, ScrollView, FlexboxLayout"
 ```
 

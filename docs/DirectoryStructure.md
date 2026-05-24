@@ -187,8 +187,8 @@ projects/
 ├── PacManGame/              # 2D 吃豆人游戏示例
 ├── PrismaCraft/             # Minecraft 风格体素游戏
 ├── SRP2D/                   # 2D Scriptable Render Pipeline 示例
-├── Template2D/              # 2D 游戏项目模板（含 C# 脚本）
-└── Template3D/              # 3D 游戏项目模板（含 Path Tracing）
+├── Prisma2D/              # 2D 游戏项目模板（含 C# 脚本）
+└── PathTracing3D/              # 3D 游戏项目模板（含 Path Tracing）
 ```
 
 > **Note**: The Android project (`projects/android/PrismaAndroid/`) has been migrated into the engine's core build system.

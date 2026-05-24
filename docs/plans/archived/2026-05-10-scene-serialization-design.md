@@ -148,4 +148,4 @@ GLM 类型（vec3, quat 等）通过 `std::array` 在 JSON 中表示，Data stru
 5. `Scene` — 重写 Deserialize，加 Serialize
 6. `SpriteRenderer` — 加 Data 作为示例
 7. 更新场景文件到新格式
-8. 更新 Template2DApp 适配
+8. 更新 Prisma2DApp 适配

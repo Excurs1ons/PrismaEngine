@@ -1,16 +1,16 @@
-# Template2D SRP 风格 2D 光照与后处理 — 差距分析
+# Prisma2D SRP 风格 2D 光照与后处理 — 差距分析
 
 > 日期：2026-05-12
-> 目标：评估 PrismaEngine Template2D 项目实现类 Unity SRP 2D Renderer 风格的 2D 光照与后处理所需的差距。
+> 目标：评估 PrismaEngine Prisma2D 项目实现类 Unity SRP 2D Renderer 风格的 2D 光照与后处理所需的差距。
 
 ---
 
 ## 1. 当前架构总览
 
-### 1.1 Template2D 项目结构
+### 1.1 Prisma2D 项目结构
 
 ```
-projects/Template2D/
+projects/Prisma2D/
 ├── CMakeLists.txt          # 共享库 (DLL) 构建，链接 Engine
 ├── assets/
 │   ├── project.json        # 项目配置
@@ -18,7 +18,7 @@ projects/Template2D/
 ├── src/
 │   ├── main.cpp            # 独立可执行入口
 │   ├── CreateApplication.cpp # DLL 插件入口
-│   └── Template2DApp.cpp   # 应用实现 (渲染循环、OnRender、HUD)
+│   └── Prisma2DApp.cpp   # 应用实现 (渲染循环、OnRender、HUD)
 └── scripts/
     └── GameScripts/        # C# 脚本项目 (CoreCLR, .NET 10)
         ├── SceneInit.cs    # 创建 20 个动态精灵
@@ -357,10 +357,10 @@ C++ 读取: 无！ Renderer2D 不迭代 RenderBufferSoA
 ### 构建验证命令
 
 ```bash
-# Template2D 调试构建
+# Prisma2D 调试构建
 cmake --preset engine-windows-x64-debug
 cmake --build --preset engine-windows-x64-debug
 
 # C# 脚本构建
-dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
+dotnet build projects/Prisma2D/scripts/GameScripts/GameScripts.csproj
 ```

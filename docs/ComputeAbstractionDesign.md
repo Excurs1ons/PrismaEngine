@@ -2,11 +2,11 @@
 
 ## 概述
 
-在 Template3D 的路径追踪示例中，约 40 个原生 Vulkan API 调用直连了 `vkCreateComputePipelines`、`vkCmdDispatch`、`vmaCreateImage` 等接口。本文档定义了完整的抽象层，使 Template3D 通过 Engine API（`IRenderDevice`、`IResourceFactory`、`ICommandBuffer` 等）完成所有 GPU 操作，零原生 Vulkan 调用。
+在 PathTracing3D 的路径追踪示例中，约 40 个原生 Vulkan API 调用直连了 `vkCreateComputePipelines`、`vkCmdDispatch`、`vmaCreateImage` 等接口。本文档定义了完整的抽象层，使 PathTracing3D 通过 Engine API（`IRenderDevice`、`IResourceFactory`、`ICommandBuffer` 等）完成所有 GPU 操作，零原生 Vulkan 调用。
 
 ### 设计目标
 
-1. **完全抽象** — Template3D 不出现 `VkImage`/`VkBuffer`/`VkPipeline`/`VkDescriptorSet` 等原生类型
+1. **完全抽象** — PathTracing3D 不出现 `VkImage`/`VkBuffer`/`VkPipeline`/`VkDescriptorSet` 等原生类型
 2. **增量迁移** — 每个模块可独立实现，不破坏现有图形管线
 3. **向后兼容** — 已有接口签名不变，只做扩展
 4. **后端无关** — 接口设计不泄露 Vulkan/DX12 实现细节
@@ -134,7 +134,7 @@ virtual void SetComputePipeline(IComputePipeline* pipeline) = 0;
 | `VulkanResourceFactory::CreateComputePipelineImpl()` | 返回 `VulkanComputePipeline` |
 | `VulkanCommandBuffer::SetComputePipeline()` | 调用 `vkCmdBindPipeline(pipeline, VK_PIPELINE_BIND_POINT_COMPUTE)` |
 
-### Template3D 使用示例
+### PathTracing3D 使用示例
 
 ```cpp
 // 创建计算管线
@@ -203,7 +203,7 @@ public:
 | **A: 显式传参（选定）** | 清晰、零歧义、调用方可控 | 调用方需知道类型 |
 | B: 从布局隐式推断 | 调用方更简洁 | 需要布局信息运行时查询，增加复杂度 |
 
-### Template3D 使用示例
+### PathTracing3D 使用示例
 
 ```cpp
 // 当前 Vulkan 代码
@@ -227,7 +227,7 @@ descriptorSet->BindStorageImage(0, outputStorageImage);
 
 ### 问题
 
-Template3D 通过 `vmaCreateImage` + `VK_IMAGE_USAGE_STORAGE_BIT` + `VK_IMAGE_USAGE_TRANSFER_SRC_BIT` 创建存储图像，然后通过 `vkCreateImageView` 创建视图。当前引擎若 `TextureDesc::allowUnorderedAccess = true`，需要确保 Vulkan 后端正确设置这些标志。
+PathTracing3D 通过 `vmaCreateImage` + `VK_IMAGE_USAGE_STORAGE_BIT` + `VK_IMAGE_USAGE_TRANSFER_SRC_BIT` 创建存储图像，然后通过 `vkCreateImageView` 创建视图。当前引擎若 `TextureDesc::allowUnorderedAccess = true`，需要确保 Vulkan 后端正确设置这些标志。
 
 ### 设计
 
@@ -276,7 +276,7 @@ virtual uint64_t CreateDescriptor(TextureDescriptorType descType,
 // VK_DESCRIPTOR_TYPE_STORAGE_IMAGE 对应的 VkDescriptorImageInfo
 ```
 
-### Template3D 使用示例
+### PathTracing3D 使用示例
 
 ```cpp
 // 创建存储图像（替代 vmaCreateImage + vkCreateImageView）
@@ -300,7 +300,7 @@ uint64_t storageUAV = storageTexture->CreateDescriptor(
 
 ### 问题
 
-`ICommandBuffer::PipelineBarrier()` 无参数，Vulkan 实现为空操作。Template3D 需要图像布局转换：计算前 `UNDEFINED → GENERAL`，计算后 `GENERAL → SHADER_READ_ONLY_OPTIMAL`。
+`ICommandBuffer::PipelineBarrier()` 无参数，Vulkan 实现为空操作。PathTracing3D 需要图像布局转换：计算前 `UNDEFINED → GENERAL`，计算后 `GENERAL → SHADER_READ_ONLY_OPTIMAL`。
 
 ### 设计
 
@@ -366,7 +366,7 @@ public:
 | `Undefined → UnorderedAccess` | `0` | `SHADER_WRITE_BIT` | `TOP_OF_PIPE` | `COMPUTE_SHADER` |
 | `UnorderedAccess → ShaderRead` | `SHADER_WRITE_BIT` | `SHADER_READ_BIT` | `COMPUTE_SHADER` | `FRAGMENT_SHADER` |
 
-### Template3D 使用示例
+### PathTracing3D 使用示例
 
 ```cpp
 // 计算前：UNDEFINED → GENERAL
@@ -386,7 +386,7 @@ cmdBuffer->PipelineBarrier({
 
 ---
 
-## Template3D 迁移映射
+## PathTracing3D 迁移映射
 
 ### 资源生命周期对照
 
@@ -452,7 +452,7 @@ cmdBuffer->PipelineBarrier({
 | **P2** | 模块 2：`DescriptorType` 枚举 + `BindBuffer` 扩展 + Vulkan 后端实现 | 无 |
 | **P3** | 模块 3：`allowUnorderedAccess` 的 Vulkan 实现完善 + 测试 | P2（描述符集绑定存储图像） |
 | **P4** | 模块 4：`ResourceState` + `ImageBarrier` + `PipelineBarrier` 参数化 + Vulkan 实现 | 无 |
-| **P5** | Template3D 重构：替换全部 40+ Vulkan 调用 | P1-P4 |
+| **P5** | PathTracing3D 重构：替换全部 40+ Vulkan 调用 | P1-P4 |
 | **P6** | 验证：编译、运行、比对渲染结果 | P5 |
 
 P1-P4 可并行实现（除 P3 依赖 P2 外），P5 为最终集成。
@@ -469,8 +469,8 @@ P1-P4 可并行实现（除 P3 依赖 P2 外），P5 为最终集成。
 | `src/engine/graphic/adapters/vulkan/VulkanResourceFactory.cpp` | 修改（+`CreateComputePipelineImpl`, 完善`CreateTextureImpl`） | M1, M3 |
 | `src/engine/graphic/adapters/vulkan/VulkanCommandBuffer.cpp` | 修改（+`SetComputePipeline`, +参数化`PipelineBarrier`） | M1, M4 |
 | `src/engine/graphic/adapters/vulkan/VulkanDescriptorSet.h/.cpp` | 修改（+`BufferType`转`VkDescriptorType`） | M2 |
-| `projects/Template3D/src/Template3DApp.h` | 重构（删除`Vk*`成员，替换为智能指针） | P5 |
-| `projects/Template3D/src/Template3DApp.cpp` | 重构（40+ API 调用全部替换） | P5 |
+| `projects/PathTracing3D/src/PathTracing3DApp.h` | 重构（删除`Vk*`成员，替换为智能指针） | P5 |
+| `projects/PathTracing3D/src/PathTracing3DApp.cpp` | 重构（40+ API 调用全部替换） | P5 |
 
 ---
 
@@ -487,7 +487,7 @@ P1-P4 可并行实现（除 P3 依赖 P2 外），P5 为最终集成。
 
 ---
 
-## 附录：Template3D 当前 Vulkan 调用汇总
+## 附录：PathTracing3D 当前 Vulkan 调用汇总
 
 | # | Vulkan 调用 | 位置（行） | 引擎 API 替换 | 优先级 |
 |---|------------|-----------|--------------|--------|

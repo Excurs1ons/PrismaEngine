@@ -106,13 +106,13 @@ Function pointer table (`PrismaAPI`) passed at init. No DllImport, no symbol loo
   - `Bootstrap(IntPtr apiPtr)` — called once at init
   - `OnFrame(float dt)` — called every frame
 
-## Project Structure (Template2D)
+## Project Structure (Prisma2D)
 
 ```
-projects/Template2D/
+projects/Prisma2D/
 ├── assets/project.json
 ├── src/
-│   ├── Template2DApp.cpp/.h    (simplified, no manual sprite logic)
+│   ├── Prisma2DApp.cpp/.h    (simplified, no manual sprite logic)
 │   └── main.cpp
 └── scripts/
     ├── PrismaEngine.Core/
@@ -168,5 +168,5 @@ struct PrismaAPI {
 2. **ScriptEngine** — C API implementation + entity lifecycle management
 3. **PrismaEngine.Core C# project** — Node, Script, Input, Time, Vector2, Color, etc.
 4. **GameScripts C# project** — SceneInit, RotatingSprite, CameraController
-5. **Template2DApp integration** — wire ScriptEngine into Engine::Run, remove hardcoded sprite logic
+5. **Prisma2DApp integration** — wire ScriptEngine into Engine::Run, remove hardcoded sprite logic
 6. **Build system** — CMake `add_custom_command` to build C# before native + runtimeconfig setup

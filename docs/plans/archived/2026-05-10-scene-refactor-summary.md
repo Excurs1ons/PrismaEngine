@@ -2,7 +2,7 @@
 
 ## 概述
 
-将场景序列化/反序列化能力完整化，使 Component/GameObject/Transform/Scene 支持 JSONC 格式的序列化。同时将 Template2DApp 中的引擎级样板代码上提到引擎层。
+将场景序列化/反序列化能力完整化，使 Component/GameObject/Transform/Scene 支持 JSONC 格式的序列化。同时将 Prisma2DApp 中的引擎级样板代码上提到引擎层。
 
 ## Glaze 升级
 
@@ -75,7 +75,7 @@ ComponentRegistry::Get()
 - `GetComponentTypeName()` → `"SpriteRenderer"`
 - 静态注册: `ComponentRegistry::Register<SpriteRenderer> + RegisterSerializable`
 
-### Template2DApp.h/.cpp
+### Prisma2DApp.h/.cpp
 
 **移除：**
 - `m_CameraComponent`（相机来自 SceneManager）
@@ -126,8 +126,8 @@ ComponentRegistry::Get()
 - 新建 `src/engine/app/ProjectConfig.h`：`WindowConfig`/`ProjectConfig` struct + `PresentMode`/`WindowConfig`/`ProjectConfig` 的 Glaze meta
 - `Engine::Run()` 自动读取 project.json，填充 `ApplicationSpecification` + 注册资产路径
 - `Engine::Initialize()` 移除了重复的 project.json assets 读取
-- `Template2DApp::LoadSpecification()` 删除
-- `Template2DApp` 构造函数简化为 aggregate init: `Application({"Template2D", "scenes/2d_test.jsonc", ...})`
+- `Prisma2DApp::LoadSpecification()` 删除
+- `Prisma2DApp` 构造函数简化为 aggregate init: `Application({"Prisma2D", "scenes/2d_test.jsonc", ...})`
 
 ### ComponentEntry — glz::generic 修复 JSON 读取
 - `dataJson` (string) → `data` (`glz::generic`)
@@ -141,10 +141,10 @@ ComponentRegistry::Get()
 
 ### Engine — resize 时更新 spec 窗口尺寸
 - `WindowResizeEvent` 中自动更新 `m_CurrentApp->GetSpecification().Width/Height`
-- `Template2DApp::OnEvent` 不再需要处理 resize
+- `Prisma2DApp::OnEvent` 不再需要处理 resize
 
 ### 相机移动（方向键 + WASD）
-- `Template2DApp` 新增 `m_moveUp/Down/Left/Right` 标志 + `m_cameraMoveSpeed` (600px/s)
+- `Prisma2DApp` 新增 `m_moveUp/Down/Left/Right` 标志 + `m_cameraMoveSpeed` (600px/s)
 - `OnUpdate`: 根据按键状态计算移动向量，通过 `dynamic_cast<OrthographicCamera>` 调用 `SetPosition`
 - `OnEvent`: 跟踪 `KeyPressedEvent`/`KeyReleasedEvent` 设置标志
 

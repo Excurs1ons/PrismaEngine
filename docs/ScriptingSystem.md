@@ -326,7 +326,7 @@ pipeline.AddFeature(new BloomFeature {
   在 Android/Termux 或受限虚拟内存环境（`ulimit -v`）中编译时，.NET 10 默认尝试预留 256GB 虚拟地址空间，这会导致编译失败。必须通过以下环境变量压制：
   ```bash
   export DOTNET_GCRegionRange=0x10000000
-  dotnet build projects/Template2D/scripts/GameScripts/GameScripts.csproj
+  dotnet build projects/Prisma2D/scripts/GameScripts/GameScripts.csproj
   ```
 
 ## 参考资料

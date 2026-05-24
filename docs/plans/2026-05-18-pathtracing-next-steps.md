@@ -2,7 +2,7 @@
 
 ## 现状
 
-Template3D Cornell Box 路径追踪已在 SSBO 架构上跑通：
+PathTracing3D Cornell Box 路径追踪已在 SSBO 架构上跑通：
 - 8 个场景对象（6 平面 + 1 球体 + 1 盒子）
 - 500 帧累积，160x120 分辨率
 - 在 llvmpipe 软件渲染器上 ~350ms/帧
@@ -46,7 +46,7 @@ color = clamp(color, 0.0, 20.0);
 ```bash
 cmake --preset windows-x64-debug
 cmake --build --preset windows-x64-debug
-bin\Template3D.exe --headless --frames 200 --width 1920 --height 1080 --output pt.png
+bin\PathTracing3D.exe --headless --frames 200 --width 1920 --height 1080 --output pt.png
 ```
 
 预期：160x120 200 帧从 70s（llvmpipe）→ <0.5s（RTX）

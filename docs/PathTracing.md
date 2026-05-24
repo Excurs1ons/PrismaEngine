@@ -14,9 +14,9 @@
 
 **控制键**: `R` 重置累积, `B` 切换模式 (Flat/BVH/HardwareRT), `P` 切换 Primitive|Mesh, `N` 切换 NEE, `[/]` 调整采样帧数
 
-## 当前实现 (Template3D)
+## 当前实现 (PathTracing3D)
 
-Template3D 包含一个纯 compute shader 实现的路径追踪器，位于 `projects/Template3D/`。
+PathTracing3D 包含一个纯 compute shader 实现的路径追踪器，位于 `projects/PathTracing3D/`。
 
 ### 架构
 
@@ -59,7 +59,7 @@ Template3D 包含一个纯 compute shader 实现的路径追踪器，位于 `pro
 
 ### 收敛检测
 
-- `m_ptMaxSamples`：默认 4096 帧（可在 `Template3DApp.h` 修改，0 = 无限制）
+- `m_ptMaxSamples`：默认 4096 帧（可在 `PathTracing3DApp.h` 修改，0 = 无限制）
 - `m_ptConverged`：达到上限后冻结 frameCount，跳过所有 GPU dispatch
 - 显示：橙色 `PathTrace: N/4096` → 绿色 `Converged: N/4096`
 - 重置：R 键（重置累积）、B 键（切换模式）、窗口 resize
@@ -292,7 +292,7 @@ hit.normal = faceNormal;
 
 ### Bug 6: 窗口缩放后渲染内容不跟随更新
 
-**症状**: 路径追踪渲染收敛后（`m_converged = true`），调整 Template3D 窗口大小，渲染内容保持在原始分辨率，不跟随缩放。
+**症状**: 路径追踪渲染收敛后（`m_converged = true`），调整 PathTracing3D 窗口大小，渲染内容保持在原始分辨率，不跟随缩放。
 
 **根因**: `PathTracingPipeline::Execute()` 中收敛后的提前返回（`if (m_converged ...) return;`）位于窗口缩放检测之前。收敛后窗口缩放时，缩放检测代码（`ResizeResources()`）永远不会被执行：
 
@@ -434,18 +434,18 @@ bool traverseBVH(..., out HitResult hit) {
 | 对象级 AABB 剔除 | ⏳ 待实施 | 中等 | 为每个 Mesh 对象预计算 AABB，射线不与包围盒相交时跳过数千三角形遍历。需要 PTSceneObject 增加 aabbMin/aabbMax 字段 |
 | 冗余 imageStore 消除 | ✅ 已完成 | 低 | 移除 main 中第 579 行的 `imageStore(outputImage, ...)`，同一纹理绑定到 binding 0/1 只需写入一次，另一 binding 在 present 时采样 |
 
-### Bug 6: Template3D — 收敛后 frameCount 超限且 SPS 持续下降 ✅ 已修复
+### Bug 6: PathTracing3D — 收敛后 frameCount 超限且 SPS 持续下降 ✅ 已修复
 
-**症状**: Template3D 累积收敛后显示 `513/512 samples`，SPS 平均值持续减少趋近于 0。
+**症状**: PathTracing3D 累积收敛后显示 `513/512 samples`，SPS 平均值持续减少趋近于 0。
 
 **根因**:
 1. `PathTracingPipeline::Execute()` 收敛检测先判断 `m_frameCount >= m_maxSamples` 再 `m_frameCount++` → frameCount 多出 1 帧
 2. 收敛后 early return 跳过收敛检测代码 → `m_frameCount` 永远停在超限值
-3. `Template3DApp::DrawStatsOverlay()` 中 SPS = `frameCount / elapsed`，分子固定分母持续增长 → SPS 持续下降
+3. `PathTracing3DApp::DrawStatsOverlay()` 中 SPS = `frameCount / elapsed`，分子固定分母持续增长 → SPS 持续下降
 
 **修复**:
 1. `PathTracingPipeline.cpp`: 将 `m_frameCount++` 移到收敛检测之前，确保 frameCount 恰好在 maxSamples 时收敛（如 512/512）
-2. `Template3DApp.cpp`: 收敛后 `IsConverged()` 守卫 SPS 计算，冻结最终值不再更新
+2. `PathTracing3DApp.cpp`: 收敛后 `IsConverged()` 守卫 SPS 计算，冻结最终值不再更新
 
 ### 实施记录
 
