@@ -11,7 +11,7 @@
 namespace Prisma {
 namespace MCP {
 
-class ENGINE_API MCPServer {
+class EDITOR_API MCPServer {
 public:
     explicit MCPServer(std::unique_ptr<Transport> transport);
     ~MCPServer();

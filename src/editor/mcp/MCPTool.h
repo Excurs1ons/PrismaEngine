@@ -13,7 +13,7 @@
 namespace Prisma {
 namespace MCP {
 
-class ENGINE_API MCPTool {
+class EDITOR_API MCPTool {
 public:
     virtual ~MCPTool() = default;
 
@@ -26,7 +26,7 @@ public:
     virtual bool SupportsFieldFilter() const { return false; }
 };
 
-class ENGINE_API ToolRegistry {
+class EDITOR_API ToolRegistry {
 public:
     ToolRegistry() = default;
     ToolRegistry(ToolRegistry&&) = default;

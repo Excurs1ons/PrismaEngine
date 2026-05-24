@@ -10,7 +10,7 @@
 namespace Prisma {
 namespace MCP {
 
-class ENGINE_API MCPSession {
+class EDITOR_API MCPSession {
 public:
     MCPSession();
 

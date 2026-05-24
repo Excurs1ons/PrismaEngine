@@ -1,23 +1,23 @@
 #pragma once
-#include "core/ISubSystem.h"
 #include "MCPServer.h"
 #include "MCPTool.h"
 #include "MCPSession.h"
 #include <memory>
 #include <vector>
 
+#include "core/Timestep.h"
+
 namespace Prisma {
 namespace MCP {
 
-class ENGINE_API MCPSubSystem : public ISubSystem {
+class EDITOR_API MCPSubSystem {
 public:
     MCPSubSystem();
-    ~MCPSubSystem() override;
+    ~MCPSubSystem();
 
-    int Initialize() override;
-    void Shutdown() override;
-    void Update(Timestep ts) override;
-    const char* GetName() const override { return "MCPSubSystem"; }
+    int Initialize();
+    void Shutdown();
+    void Update(Timestep ts);
 
     // Tool registration
     template<typename T, typename... Args>

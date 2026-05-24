@@ -10,7 +10,7 @@ namespace MCP {
 
 using MCPMessageHandler = std::function<void(const glz::json_t& message)>;
 
-class ENGINE_API Transport {
+class EDITOR_API Transport {
 public:
     virtual ~Transport() = default;
 

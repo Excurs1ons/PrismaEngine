@@ -6,7 +6,7 @@
 namespace Prisma {
 namespace MCP {
 
-class ENGINE_API TransportStdio : public Transport {
+class EDITOR_API TransportStdio : public Transport {
 public:
     TransportStdio();
     ~TransportStdio() override;

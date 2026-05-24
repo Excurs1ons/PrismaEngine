@@ -6,7 +6,7 @@
 namespace Prisma {
 namespace MCP {
 
-class ENGINE_API TransportTCP : public Transport {
+class EDITOR_API TransportTCP : public Transport {
 public:
     explicit TransportTCP(uint16_t port = 3100);
     ~TransportTCP() override;
