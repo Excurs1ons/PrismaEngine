@@ -1,0 +1,117 @@
+// ============================================================
+// pbr_ibl_prefilter.comp - PrismaEngine PBR IBL 预滤波器
+//
+// 将 HDR 环境贴图预滤波为不同粗糙度级别的 mipmap。
+// 使用重要性采样 GGX 分布，结果存储在 cube mipmap 中。
+// 用于 PBR 镜面反射 IBL 分割求和近似。
+//
+// 输入: samplerCube environmentMap (binding 0)
+// 输出: imageCube prefilterMap     (binding 1)
+// ============================================================
+
+#version 450
+#extension GL_GOOGLE_include_directive : enable
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(binding = 0) uniform samplerCube environmentMap;
+layout(binding = 1, rgba16f) uniform imageCube prefilterMap;
+
+layout(push_constant) uniform PushConstants {
+    float roughness;   // 当前 mip 级别的粗糙度
+    uint sampleCount;  // 采样数
+    float padding[2];
+} pc;
+
+const float PI = 3.14159265359;
+
+// Hammersley 序列 (低差异采样)
+float RadicalInverse_VdC(uint bits) {
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10;
+}
+
+vec2 Hammersley(uint i, uint N) {
+    return vec2(float(i) / float(N), RadicalInverse_VdC(i));
+}
+
+// GGX 重要性采样
+vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {
+    float a = roughness * roughness;
+
+    float phi = 2.0 * PI * Xi.x;
+    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    // 从球面坐标到切线空间
+    vec3 H;
+    H.x = cos(phi) * sinTheta;
+    H.y = sin(phi) * sinTheta;
+    H.z = cosTheta;
+
+    // 从切线空间到世界空间
+    vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 right = normalize(cross(up, N));
+    up = cross(N, right);
+
+    return normalize(right * H.x + up * H.y + N * H.z);
+}
+
+vec3 GetCubeDirection(vec2 uv, int face) {
+    vec2 coord = uv * 2.0 - 1.0;
+    vec3 dir = vec3(0.0);
+    switch (face) {
+        case 0: dir = vec3( 1.0,  coord.y, -coord.x); break;
+        case 1: dir = vec3(-1.0,  coord.y,  coord.x); break;
+        case 2: dir = vec3( coord.x,  1.0, -coord.y); break;
+        case 3: dir = vec3( coord.x, -1.0,  coord.y); break;
+        case 4: dir = vec3( coord.x,  coord.y,  1.0); break;
+        case 5: dir = vec3(-coord.x,  coord.y, -1.0); break;
+    }
+    return normalize(dir);
+}
+
+void main() {
+    ivec3 pixel = ivec3(gl_GlobalInvocationID.xyz);
+    ivec2 size = imageSize(prefilterMap);
+    int mipLevel = int(gl_GlobalInvocationID.z / 6);
+    int face = int(gl_GlobalInvocationID.z) % 6;
+
+    // 获取当前 mip 级别的分辨率
+    ivec2 mipSize = ivec2(size.x >> mipLevel, size.y >> mipLevel);
+    mipSize = max(mipSize, ivec2(1));
+
+    if (pixel.x >= mipSize.x || pixel.y >= mipSize.y) return;
+
+    vec2 uv = (vec2(pixel.xy) + 0.5) / vec2(mipSize);
+    vec3 N = GetCubeDirection(uv, face);
+    vec3 V = N; // 对于环境贴图, V = R = N
+
+    uint sampleCount = pc.sampleCount > 0 ? pc.sampleCount : 256;
+
+    vec3 prefilteredColor = vec3(0.0);
+    float totalWeight = 0.0;
+
+    for (uint i = 0u; i < sampleCount; i++) {
+        vec2 Xi = Hammersley(i, sampleCount);
+        vec3 H = ImportanceSampleGGX(Xi, N, pc.roughness);
+        vec3 L = normalize(2.0 * dot(V, H) * H - V);
+
+        float NdotL = max(dot(N, L), 0.0);
+        if (NdotL > 0.0) {
+            // 在环境贴图中采样
+            prefilteredColor += textureLod(environmentMap, L, 0.0).rgb * NdotL;
+            totalWeight += NdotL;
+        }
+    }
+
+    if (totalWeight > 0.0) {
+        prefilteredColor /= totalWeight;
+    }
+
+    imageStore(prefilterMap, pixel, vec4(prefilteredColor, 1.0));
+}
