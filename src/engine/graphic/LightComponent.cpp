@@ -52,6 +52,7 @@ namespace {
             },
             [](Prisma::Component& comp, const std::string& json) {
                 auto& typed = static_cast<Prisma::Graphic::LightComponent&>(comp);
+                
                 // 用 json_t 解析，提取 data 字段和 enabled
                 glz::json_t root;
                 auto ec = glz::read_json(root, json);
@@ -59,16 +60,21 @@ namespace {
                 if (!root.is_object()) return;
                 auto& obj = root.get_object();
 
-                // 反序列化 data 子对象
-                auto dataJson = glz::write_json(root).value_or("");
-                Prisma::Graphic::LightComponent::Data data;
-                auto de = glz::read_json(data, dataJson);
-                if (!de) typed.SetData(data);
-
-                // 读取 enabled
+                // 1. 提取并移除 enabled，避免干扰 Data 的反序列化（某些严格模式下的 Glaze 可能报错）
                 auto it = obj.find("enabled");
-                if (it != obj.end() && it->second.is_boolean())
+                if (it != obj.end() && it->second.is_boolean()) {
                     typed.SetEnabled(it->second.get_boolean());
+                    obj.erase(it);
+                }
+
+                // 2. 反序列化剩余字段到 Data
+                Prisma::Graphic::LightComponent::Data data;
+                auto de = glz::read_json(data, glz::write_json(root).value_or("{}"));
+                if (!de) {
+                    typed.SetData(data);
+                } else {
+                    LOG_WARN("LightComponent", "反序列化 Light Data 失败，错误码: {}", static_cast<int>(de.ec));
+                }
             }
         );
         return true;
@@ -89,8 +95,13 @@ Light LightComponent::GetLightData() const {
         light.position = PrismaMath::vec4(pos.x, pos.y, pos.z, 0.0f);
         
         // 3. Direction (w 为类型)
-        PrismaMath::vec3 forward = transform->GetForward();
-        light.direction = PrismaMath::vec4(forward.x, forward.y, forward.z, static_cast<float>(m_Data.type));
+        if (m_Data.type == LightType::Ambient) {
+            // 环境光没有方向
+            light.direction = PrismaMath::vec4(0, 0, 0, static_cast<float>(m_Data.type));
+        } else {
+            PrismaMath::vec3 forward = transform->GetForward();
+            light.direction = PrismaMath::vec4(forward.x, forward.y, forward.z, static_cast<float>(m_Data.type));
+        }
     } else {
         light.position = PrismaMath::vec4(0, 0, 0, 0);
         light.direction = PrismaMath::vec4(0, 0, 1, static_cast<float>(m_Data.type));

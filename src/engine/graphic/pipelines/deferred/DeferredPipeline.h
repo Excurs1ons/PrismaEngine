@@ -26,7 +26,8 @@ public:
     enum class LightType {
         Directional = 0,
         Point = 1,
-        Spot = 2
+        Spot = 2,
+        Ambient = 3
     };
 
     // 光源结构

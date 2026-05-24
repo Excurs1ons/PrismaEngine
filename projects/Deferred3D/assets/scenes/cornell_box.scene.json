@@ -71,7 +71,7 @@
                 "data": {
                     "type": "Ambient",
                     "color": [1, 1, 1],
-                    "intensity": 100,
+                    "intensity": 0.3,
                     "enabled": true
                 }
             }]

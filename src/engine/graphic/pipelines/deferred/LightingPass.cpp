@@ -78,19 +78,27 @@ void LightingPass::Execute(ICommandBuffer* cmd, IRenderDevice* device) {
     pd.ambient[1] = m_ambientLight.y;
     pd.ambient[2] = m_ambientLight.z;
     pd.ambient[3] = 1.0f;
-    if (!m_lights.empty()) {
-        pd.lightDir[0] = m_lights[0].direction.x;
-        pd.lightDir[1] = m_lights[0].direction.y;
-        pd.lightDir[2] = m_lights[0].direction.z;
+    // 查找第一个 Directional 光源（按类型过滤）
+    const Light* dirLight = nullptr;
+    for (const auto& light : m_lights) {
+        if (light.type == LightType::Directional) {
+            dirLight = &light;
+            break;
+        }
+    }
+    if (dirLight) {
+        pd.lightDir[0] = dirLight->direction.x;
+        pd.lightDir[1] = dirLight->direction.y;
+        pd.lightDir[2] = dirLight->direction.z;
         pd.lightDir[3] = 1.0f;
-        pd.lightColor[0] = m_lights[0].color.x * m_lights[0].intensity;
-        pd.lightColor[1] = m_lights[0].color.y * m_lights[0].intensity;
-        pd.lightColor[2] = m_lights[0].color.z * m_lights[0].intensity;
+        pd.lightColor[0] = dirLight->color.x * dirLight->intensity;
+        pd.lightColor[1] = dirLight->color.y * dirLight->intensity;
+        pd.lightColor[2] = dirLight->color.z * dirLight->intensity;
         pd.lightColor[3] = 1.0f;
-        pd.lightPos[0] = m_lights[0].position.x;
-        pd.lightPos[1] = m_lights[0].position.y;
-        pd.lightPos[2] = m_lights[0].position.z;
-        pd.lightPos[3] = m_lights[0].range;
+        pd.lightPos[0] = dirLight->position.x;
+        pd.lightPos[1] = dirLight->position.y;
+        pd.lightPos[2] = dirLight->position.z;
+        pd.lightPos[3] = dirLight->range;
     } else {
         pd.lightDir[2] = -1.0f;
         pd.lightDir[3] = 1.0f;

@@ -21,7 +21,8 @@ public:
     enum class LightType : uint32_t {
         Directional = 0,
         Point = 1,
-        Spot = 2
+        Spot = 2,
+        Ambient = 3
     };
 
     struct Light {

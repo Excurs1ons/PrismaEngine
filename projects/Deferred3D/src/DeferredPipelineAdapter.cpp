@@ -613,6 +613,10 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
     {
         struct LightingPC { Graphic::PrismaMath::vec4 ambient; Graphic::PrismaMath::vec4 lightDir; Graphic::PrismaMath::vec4 lightColor; };
         LightingPC lpc{};
+        // glm::vec4 默认构造不初始化，必须显式清零
+        lpc.ambient = Graphic::PrismaMath::vec4(0.0f);
+        lpc.lightDir = Graphic::PrismaMath::vec4(0.0f);
+        lpc.lightColor = Graphic::PrismaMath::vec4(0.0f);
 
         // 从场景光源中提取环境光（Ambient）和定向光（Directional）
         for (const auto& light : ctx.lights) {
@@ -621,7 +625,7 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
             float intensity = glm::length(col);
             if (intensity < 0.001f) continue;
 
-            if (lightType == 0) { // Directional
+            if (lightType == static_cast<int>(Graphic::DeferredPipeline::LightType::Directional)) { // Directional
                 PrismaMath::vec3 dir = PrismaMath::vec3(light.direction.x, light.direction.y, light.direction.z);
                 float len = glm::length(dir);
                 if (len > 0.001f) {
@@ -632,7 +636,7 @@ void DeferredPipelineAdapter::Execute(const Graphic::RenderContext& ctx)
                 if (!m_firstFrameLogged)
                     LOG_INFO("Deferred3D_Light", "Directional: dir=({:.3},{:.3},{:.3}) color=({:.3},{:.3},{:.3})",
                              lpc.lightDir.x, lpc.lightDir.y, lpc.lightDir.z, col.x, col.y, col.z);
-            } else if (lightType == 3) { // Ambient
+            } else if (lightType == static_cast<int>(Graphic::DeferredPipeline::LightType::Ambient)) { // Ambient
                 lpc.ambient = {col.x, col.y, col.z, 1.0f};
                 if (!m_firstFrameLogged)
                     LOG_INFO("Deferred3D_Light", "Ambient: color=({:.3},{:.3},{:.3})", col.x, col.y, col.z);
