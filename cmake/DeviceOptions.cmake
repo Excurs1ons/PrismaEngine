@@ -25,10 +25,6 @@ option(PRISMA_ENABLE_MESH_SHADERS "Enable Mesh Shaders" OFF)
 option(PRISMA_ENABLE_VARIABLE_RATE_SHADING "Enable VRS" OFF)
 option(PRISMA_ENABLE_BINDLESS_RESOURCES "Enable Bindless Resources" OFF)
 
-# ========== MCP Server ==========
-
-option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
-
 # ========== C# Scripting ==========
 
 set(PRISMA_ENABLE_SCRIPTING "CORECLR" CACHE STRING "C# scripting backend: OFF, MONO, CORECLR")

@@ -28,13 +28,7 @@
 #include "app/CommandLineParser.h"
 #include "scene/Scene.h"
 
-#if defined(PRISMA_ENABLE_MCP)
-#include "mcp/MCPSubSystem.h"
-#include "mcp/tools/SceneTools.h"
-#include "mcp/tools/ECSTools.h"
-#include "mcp/tools/EngineTools.h"
-#include "mcp/transport/TransportTCP.h"
-#endif
+
 
 
 namespace Prisma {
@@ -82,36 +76,6 @@ int Engine::Initialize() {
     m_SceneManager = AddSystem<SceneManager>();
     m_PhysicsSystem = AddSystem<PhysicsSystem>();
     AddSystem<Graphic::ShaderLibrary>();
-
-#if defined(PRISMA_ENABLE_MCP)
-    LOG_INFO("Engine", "MCP 子系统正在初始化");
-    auto& cli = CommandLineParser::Get();
-    std::string transportType = "stdio";
-    uint16_t tcpPort = 3100;
-    if (cli.IsOptionSet("mcp-transport")) transportType = cli.GetOptionValue("mcp-transport");
-    if (cli.IsOptionSet("mcp-port")) {
-        auto portStr = cli.GetOptionValue("mcp-port");
-        if (!portStr.empty()) tcpPort = static_cast<uint16_t>(std::stoul(portStr));
-    }
-    auto* mcp = AddSystem<MCP::MCPSubSystem>();
-    if (transportType == "tcp") {
-        LOG_INFO("MCP", "TCP transport selected (port: {})", tcpPort);
-        mcp->SetTransport(std::make_unique<MCP::TransportTCP>(tcpPort));
-    }
-    else {
-        LOG_INFO("MCP", "Stdio transport selected (default)");
-    }
-    mcp->RegisterTool<MCP::SceneHierarchyTool>(this);
-    mcp->RegisterTool<MCP::SceneEntityTool>(this);
-    mcp->RegisterTool<MCP::SceneCreateEntityTool>(this);
-    mcp->RegisterTool<MCP::SceneDeleteEntityTool>(this);
-    mcp->RegisterTool<MCP::ECSComponentListTool>(this);
-    mcp->RegisterTool<MCP::ECSComponentGetTool>(this);
-    mcp->RegisterTool<MCP::ECSComponentSetTool>(this);
-    mcp->RegisterTool<MCP::EngineStatusTool>(this);
-    mcp->RegisterTool<MCP::EngineStateHashTool>(this);
-    mcp->RegisterTool<MCP::EngineBuildInfoTool>(this);
-#endif
 
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {

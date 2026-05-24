@@ -10,13 +10,6 @@ CommandLineParser::CommandLineParser() {
         return true;  // 显示帮助后退出
     });
 
-    // MCP options
-#if defined(PRISMA_ENABLE_MCP)
-    AddOption("mcp", "", "启用 MCP 服务器 (AI Agent 协议)", false);
-    AddOption("mcp-transport", "", "MCP 传输方式: stdio (默认) 或 tcp", true);
-    AddOption("mcp-port", "", "MCP TCP 端口 (默认 3100)", true);
-#endif
-
     // WebUI options
     AddOption("webui", "", "启动全功能 WebUI 编辑器", false);
     AddOption("webui-port", "", "WebUI 监听端口 (默认 8080)", true);
