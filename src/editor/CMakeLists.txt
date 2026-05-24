@@ -1,3 +1,5 @@
+option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
+
 # ImGui 后端源文件 (根据平台条件添加)
 # -----------------------------------------------------------------------
 # [修复] 不再向 Editor 目标添加 imgui_impl_vulkan.cpp / imgui_impl_sdl3.cpp
@@ -90,4 +92,63 @@ endif()
 # Windows 平台特定
 if(WIN32)
     target_link_libraries(Editor PRIVATE dwmapi.lib)
+endif()
+
+# ========== MCP Server (Editor 层) ==========
+
+if(PRISMA_ENABLE_MCP AND TARGET Editor)
+    target_sources(Editor PRIVATE
+        mcp/MCPServer.cpp
+        mcp/MCPServer.h
+        mcp/MCPTool.cpp
+        mcp/MCPTool.h
+        mcp/MCPSubSystem.cpp
+        mcp/MCPSubSystem.h
+        mcp/MCPSession.cpp
+        mcp/MCPSession.h
+        mcp/serialization/ComponentSerializer.cpp
+        mcp/serialization/ComponentSerializer.h
+        mcp/serialization/MCPJson.cpp
+        mcp/serialization/MCPJson.h
+        mcp/session/DeltaTracker.cpp
+        mcp/session/DeltaTracker.h
+        mcp/session/TokenBudget.h
+        mcp/session/TokenBudget.cpp
+        mcp/transport/Transport.h
+        mcp/transport/TransportStdio.cpp
+        mcp/transport/TransportStdio.h
+        mcp/transport/TransportTCP.cpp
+        mcp/transport/TransportTCP.h
+        mcp/tools/SceneTools.cpp
+        mcp/tools/SceneTools.h
+        mcp/tools/ECSTools.cpp
+        mcp/tools/ECSTools.h
+        mcp/tools/EngineTools.cpp
+        mcp/tools/EngineTools.h
+        mcp/tools/DebugTools.cpp
+        mcp/tools/DebugTools.h
+        mcp/tools/AssetTools.cpp
+        mcp/tools/AssetTools.h
+        mcp/tools/EditorTools.cpp
+        mcp/tools/EditorTools.h
+        mcp/tools/GameTools.cpp
+        mcp/tools/GameTools.h
+    )
+
+    target_include_directories(Editor PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    # xxhash for hash-based delta tracking
+    add_library(xxhash STATIC "${PROJECT_SOURCE_DIR}/.dependencies/xxhash-src/xxhash.c")
+    target_include_directories(xxhash PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/xxhash-src")
+    set_target_properties(xxhash PROPERTIES POSITION_INDEPENDENT_CODE ON)
+    target_link_libraries(Editor PRIVATE xxhash)
+
+    target_compile_definitions(Editor PRIVATE PRISMA_ENABLE_MCP=1)
+
+    # TransportTCP 需要 Winsock2 (Windows)
+    if(WIN32)
+        target_link_libraries(Editor PRIVATE ws2_32)
+    endif()
 endif()

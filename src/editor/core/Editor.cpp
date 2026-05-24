@@ -51,7 +51,44 @@ int Editor::OnInitialize() {
         PushLayer(new EditorLayer());
     }
 
-    // 3. WebUI 检测
+    // 3. MCP 初始化 (Editor 层)
+#if defined(PRISMA_ENABLE_MCP)
+    {
+        LOG_INFO("Editor", "MCP 子系统正在初始化");
+        auto& cli = ::CommandLineParser::Get();
+        std::string transportType = "stdio";
+        uint16_t tcpPort = 3100;
+        if (cli.IsOptionSet("mcp-transport")) transportType = cli.GetOptionValue("mcp-transport");
+        if (cli.IsOptionSet("mcp-port")) {
+            auto portStr = cli.GetOptionValue("mcp-port");
+            if (!portStr.empty()) tcpPort = static_cast<uint16_t>(std::stoul(portStr));
+        }
+
+        m_MCP = std::make_unique<MCP::MCPSubSystem>();
+        if (transportType == "tcp") {
+            LOG_INFO("MCP", "TCP transport selected (port: {})", tcpPort);
+            m_MCP->SetTransport(std::make_unique<MCP::TransportTCP>(tcpPort));
+        }
+        else {
+            LOG_INFO("MCP", "Stdio transport selected (default)");
+        }
+
+        m_MCP->RegisterTool<MCP::SceneHierarchyTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::SceneEntityTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::SceneCreateEntityTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::SceneDeleteEntityTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::ECSComponentListTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::ECSComponentGetTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::ECSComponentSetTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::EngineStatusTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::EngineStateHashTool>(&Engine::Get());
+        m_MCP->RegisterTool<MCP::EngineBuildInfoTool>(&Engine::Get());
+
+        m_MCP->Initialize();
+    }
+#endif
+
+    // 4. WebUI 检测
     auto& parser = ::CommandLineParser::Get();
     if (parser.IsOptionSet("webui")) {
         int port = 8080;
@@ -203,6 +240,12 @@ int Editor::OnImGuiInitialize() {
 void Editor::OnUpdate(Timestep ts) {
     Application::OnUpdate(ts);
 
+#if defined(PRISMA_ENABLE_MCP)
+    if (m_MCP) {
+        m_MCP->Update(ts);
+    }
+#endif
+
     if (m_webUIEditor) {
         m_webUIEditor->Update();
     }
@@ -280,6 +323,13 @@ void Editor::OnRender() {
 // -----------------------------------------------------------------------
 void Editor::OnShutdown() {
     LOG_INFO("Editor", "正在关闭编辑器...");
+
+#if defined(PRISMA_ENABLE_MCP)
+    if (m_MCP) {
+        m_MCP->Shutdown();
+        m_MCP.reset();
+    }
+#endif
 
     if (m_webUIEditor) {
         m_webUIEditor->Stop();

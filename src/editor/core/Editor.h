@@ -9,6 +9,14 @@
 #include "logger/Logger.h"
 #include "platform/Platform.h"
 
+#if defined(PRISMA_ENABLE_MCP)
+#include "mcp/MCPSubSystem.h"
+#include "mcp/tools/SceneTools.h"
+#include "mcp/tools/ECSTools.h"
+#include "mcp/tools/EngineTools.h"
+#include "mcp/transport/TransportTCP.h"
+#endif
+
 // 显式包含 SDL3
 #include <SDL3/SDL.h>
 #include <memory>
@@ -66,6 +74,10 @@ private:
     
     // WebUI 编辑器
     std::unique_ptr<WebUIEditor> m_webUIEditor;
+
+#if defined(PRISMA_ENABLE_MCP)
+    std::unique_ptr<MCP::MCPSubSystem> m_MCP;
+#endif
 
     bool m_IsProjectDirty = false;
 };
