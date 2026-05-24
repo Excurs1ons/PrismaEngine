@@ -597,5 +597,304 @@ float4 PSMain(PS_IN input) : SV_TARGET
 }
 )";
 
+// ========== PBR 前向渲染着色器 (HLSL) ==========
+
+// PBR 前向顶点着色器 (HLSL)
+inline const char* PBR_FORWARD_VERTEX_SHADER = R"(
+cbuffer ViewProjectionBuffer : register(b0)
+{
+    matrix ViewProjection;
+    matrix View;
+    matrix Projection;
+    float4 CameraPos;
+}
+
+cbuffer WorldBuffer : register(b1)
+{
+    matrix World;
+    matrix WorldInverseTranspose;
+}
+
+cbuffer MaterialBuffer : register(b2)
+{
+    float4 BaseColor;
+    float Metallic;
+    float Roughness;
+    float AO;
+    float EmissiveIntensity;
+    float padding[2];
+}
+
+struct VS_IN
+{
+    float3 pos : POSITION;
+    float3 normal : NORMAL;
+    float2 uv : TEXCOORD0;
+    float4 color : COLOR;
+    float3 tangent : TANGENT;
+};
+
+struct PS_IN
+{
+    float4 pos : SV_POSITION;
+    float3 worldPos : POSITION1;
+    float3 worldNormal : NORMAL;
+    float2 uv : TEXCOORD0;
+    float4 color : COLOR;
+    float3 worldTangent : TANGENT;
+    float3 viewDir : TEXCOORD1;
+};
+
+PS_IN VSMain(VS_IN input)
+{
+    PS_IN output;
+
+    float4 worldPos = mul(float4(input.pos, 1.0), World);
+    output.worldPos = worldPos.xyz;
+    output.pos = mul(worldPos, ViewProjection);
+
+    output.worldNormal = normalize(mul(input.normal, (float3x3)WorldInverseTranspose));
+
+    if (length(input.tangent) > 0.001) {
+        output.worldTangent = normalize(mul(input.tangent, (float3x3)WorldInverseTranspose));
+    } else {
+        output.worldTangent = float3(0, 0, 0);
+    }
+
+    output.uv = input.uv;
+    output.color = input.color * BaseColor;
+    output.viewDir = CameraPos.xyz - worldPos.xyz;
+
+    return output;
+}
+)";
+
+// PBR 前向像素着色器 (HLSL) - 完整 PBR + IBL
+inline const char* PBR_FORWARD_PIXEL_SHADER = R"(
+// 纹理采样器
+Texture2D AlbedoMap : register(t0);
+Texture2D NormalMap : register(t1);
+Texture2D MetallicRoughnessMap : register(t2);
+Texture2D AOMap : register(t3);
+Texture2D EmissiveMap : register(t4);
+
+// IBL 环境贴图
+TextureCube IrradianceMap : register(t5);
+TextureCube PrefilterMap : register(t6);
+Texture2D BRDFLUT : register(t7);
+
+SamplerState DefaultSampler : register(s0);
+
+cbuffer MaterialBuffer : register(b2)
+{
+    float4 BaseColor;
+    float Metallic;
+    float Roughness;
+    float AO;
+    float EmissiveIntensity;
+    float padding[2];
+}
+
+cbuffer LightBuffer : register(b3)
+{
+    float3 LightDirection;
+    float LightType;
+    float3 LightColor;
+    float LightIntensity;
+    float3 LightPosition;
+    float LightRange;
+    float3 LightAttenuation;
+    float numLights;
+    float Exposure;
+    float Gamma;
+    float EnvIntensity;
+    matrix LightViewProjection;
+}
+
+cbuffer CameraBuffer : register(b4)
+{
+    matrix ViewProjection;
+    matrix View;
+    matrix Projection;
+    float3 CameraPos;
+}
+
+struct PS_IN
+{
+    float4 pos : SV_POSITION;
+    float3 worldPos : POSITION1;
+    float3 worldNormal : NORMAL;
+    float2 uv : TEXCOORD0;
+    float4 color : COLOR;
+    float3 worldTangent : TANGENT;
+    float3 viewDir : TEXCOORD1;
+};
+
+static const float PI = 3.14159265;
+static const float EPSILON = 0.0001;
+
+float3 FresnelSchlick(float3 f0, float cosTheta)
+{
+    return f0 + (1.0 - f0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
+}
+
+float3 FresnelSchlickRoughness(float3 f0, float cosTheta, float roughness)
+{
+    return f0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), f0) - f0) * pow(max(1.0 - cosTheta, 0.0), 5.0);
+}
+
+float DistributionGGX(float3 N, float3 H, float roughness)
+{
+    float alpha = max(roughness * roughness, EPSILON);
+    float alpha2 = alpha * alpha;
+    float NdotH = max(dot(N, H), 0.0);
+    float NdotH2 = NdotH * NdotH;
+    float denom = NdotH2 * (alpha2 - 1.0) + 1.0;
+    denom = max(PI * denom * denom, EPSILON);
+    return alpha2 / denom;
+}
+
+float SchlickGGX(float NdotV, float roughness)
+{
+    float r = max(roughness, EPSILON);
+    float k = (r * r) / 2.0;
+    float denom = NdotV * (1.0 - k) + k;
+    return NdotV / max(denom, EPSILON);
+}
+
+float GeometrySmith(float3 N, float3 V, float3 L, float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    return SchlickGGX(NdotV, roughness) * SchlickGGX(NdotL, roughness);
+}
+
+float3 SpecularBRDF(float3 N, float3 V, float3 L, float3 H, float roughness, float3 f0)
+{
+    float D = DistributionGGX(N, H, roughness);
+    float G = GeometrySmith(N, V, L, roughness);
+    float3 F = FresnelSchlick(f0, max(dot(H, V), 0.0));
+    float3 num = D * G * F;
+    float den = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + EPSILON;
+    return num / den;
+}
+
+float3 CalculatePBRLight(float3 albedo, float metallic, float roughness,
+                         float3 N, float3 V, float3 L, float3 radiance)
+{
+    float3 H = normalize(V + L);
+    float3 f0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
+    float3 F = FresnelSchlick(f0, max(dot(H, V), 0.0));
+    float3 kS = F;
+    float3 kD = (1.0 - kS) * (1.0 - metallic);
+    float NdotL = max(dot(N, L), 0.0);
+    float3 diffuse = kD * albedo / PI;
+    float3 specular = SpecularBRDF(N, V, L, H, roughness, f0);
+    return (diffuse + specular) * radiance * NdotL;
+}
+
+float3 ACESToneMapping(float3 color, float exposure)
+{
+    color *= exposure;
+    const float A = 2.51;
+    const float B = 0.03;
+    const float C = 2.43;
+    const float D = 0.59;
+    const float E = 0.14;
+    return (color * (A * color + B)) / (color * (C * color + D) + E);
+}
+
+float4 PSMain(PS_IN input) : SV_TARGET
+{
+    // 采样材质贴图
+    float4 albedoSample = AlbedoMap.Sample(DefaultSampler, input.uv);
+    float3 albedo = BaseColor.rgb * albedoSample.rgb * input.color.rgb;
+
+    float metallic = Metallic;
+    float roughness = Roughness;
+    if (MetallicRoughnessMap.CalculateLevelOfDetail(DefaultSampler, 0).x > 1) {
+        float4 mrSample = MetallicRoughnessMap.Sample(DefaultSampler, input.uv);
+        metallic *= mrSample.b;
+        roughness *= mrSample.g;
+    }
+
+    float ao = AO;
+    if (AOMap.CalculateLevelOfDetail(DefaultSampler, 0).x > 1) {
+        ao *= AOMap.Sample(DefaultSampler, input.uv).r;
+    }
+
+    float3 emissive = float3(0, 0, 0);
+    if (EmissiveIntensity > 0.001) {
+        if (EmissiveMap.CalculateLevelOfDetail(DefaultSampler, 0).x > 1) {
+            emissive = EmissiveMap.Sample(DefaultSampler, input.uv).rgb * EmissiveIntensity;
+        } else {
+            emissive = albedo * EmissiveIntensity;
+        }
+    }
+
+    // 法线贴图
+    float3 N = normalize(input.worldNormal);
+    if (length(input.worldTangent) > 0.001 && NormalMap.CalculateLevelOfDetail(DefaultSampler, 0).x > 1) {
+        float3 T = normalize(input.worldTangent);
+        float3 B = cross(N, T);
+        float3x3 TBN = float3x3(T, B, N);
+        float3 normalTS = NormalMap.Sample(DefaultSampler, input.uv).rgb * 2.0 - 1.0;
+        N = normalize(mul(normalTS, TBN));
+    }
+
+    float3 V = normalize(input.viewDir);
+
+    // 直接光照
+    float3 directLighting = float3(0, 0, 0);
+
+    // 方向光/主光源
+    if (length(LightColor) > 0.001) {
+        float3 L = normalize(-LightDirection);
+        float3 radiance = LightColor * LightIntensity;
+        directLighting += CalculatePBRLight(albedo, metallic, roughness, N, V, L, radiance);
+    }
+
+    // IBL 环境光照
+    float3 ambientLighting = float3(0, 0, 0);
+    float3 f0 = lerp(float3(0.04, 0.04, 0.04), albedo, metallic);
+
+    // 漫反射 IBL
+    float texWidth, texHeight, texLevels;
+    IrradianceMap.GetDimensions(0, texWidth, texHeight, texLevels);
+    if (texWidth > 1) {
+        float3 irradiance = IrradianceMap.Sample(DefaultSampler, N).rgb * EnvIntensity;
+        float NdotV = max(dot(N, V), 0.0);
+        float3 kD = (1.0 - FresnelSchlickRoughness(f0, NdotV, roughness)) * (1.0 - metallic);
+        ambientLighting += kD * albedo / PI * irradiance * ao;
+    }
+
+    // 镜面反射 IBL
+    PrefilterMap.GetDimensions(0, texWidth, texHeight, texLevels);
+    BRDFLUT.GetDimensions(0, texWidth, texHeight, texLevels);
+    if (texWidth > 1) {
+        float3 R = reflect(-V, N);
+        float lod = roughness * 4.0;
+        float3 prefilteredColor = PrefilterMap.SampleLevel(DefaultSampler, R, lod).rgb * EnvIntensity;
+        float2 envBRDF = BRDFLUT.Sample(DefaultSampler, float2(max(dot(N, V), 0.0), roughness)).rg;
+        float3 F_ibl = FresnelSchlickRoughness(f0, max(dot(N, V), 0.0), roughness);
+        ambientLighting += prefilteredColor * (F_ibl * envBRDF.x + envBRDF.y);
+    }
+
+    // 环境光兜底
+    if (ambientLighting.r < 0.001 && ambientLighting.g < 0.001 && ambientLighting.b < 0.001) {
+        ambientLighting = albedo * 0.03 * ao;
+    }
+
+    // 合成
+    float3 finalColor = directLighting + ambientLighting + emissive;
+
+    // 后处理
+    finalColor = ACESToneMapping(finalColor, Exposure);
+    finalColor = pow(max(finalColor, float3(0, 0, 0)), 1.0 / Gamma);
+
+    return float4(finalColor, albedoSample.a * BaseColor.a);
+}
+)";
+
 } // namespace Graphic
-} // namespace Engine
+} // namespace Prisma
