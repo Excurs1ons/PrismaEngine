@@ -546,7 +546,7 @@ target_link_libraries(Engine
 if(PRISMA_ENABLE_AUDIO_SDL3)
     # SDL3 库链接
     # 此处使用 PUBLIC 链接，因为 Engine 的公有头文件 (如 Window.h) 和 
-    # 外部项目 (如 Template3D) 需要引用 SDL3 的头文件。
+    # 外部项目 (如 PathTracing3D) 需要引用 SDL3 的头文件。
     if(TARGET SDL3-shared)
         target_link_libraries(Engine PUBLIC SDL3-shared)
     elseif(TARGET SDL3::SDL3-shared)

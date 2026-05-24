@@ -114,7 +114,7 @@ struct PrismaAPI {
 
     void (*srpShutdown)();
 
-    // ===== 3D Camera API (for Template3D/PathTracing) =====
+    // ===== 3D Camera API (for PathTracing3D/PathTracing) =====
     void (*setCamera3DPos)(float x, float y, float z);
     void (*getCamera3DPos)(float* x, float* y, float* z);
     void (*setCameraRotation)(float pitch, float yaw);

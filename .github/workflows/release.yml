@@ -48,7 +48,7 @@ jobs:
 
     - name: Build Engine
       run: |
-        cmake -B build/windows-x64-release -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DPRISMA_BUILD_PROJECT_TEMPLATE2D=OFF -DPRISMA_BUILD_PROJECT_TEMPLATE3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
+        cmake -B build/windows-x64-release -G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release -DPRISMA_BUILD_PROJECT_PRISMA2D=OFF -DPRISMA_BUILD_PROJECT_PATHTRACING3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
         cmake --build build/windows-x64-release --config Release --parallel
 
     - name: Package SDK
@@ -92,7 +92,7 @@ jobs:
 
     - name: Build Engine
       run: |
-        cmake --preset linux-x64-release -DPRISMA_BUILD_PROJECT_TEMPLATE2D=OFF -DPRISMA_BUILD_PROJECT_TEMPLATE3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
+        cmake --preset linux-x64-release -DPRISMA_BUILD_PROJECT_PRISMA2D=OFF -DPRISMA_BUILD_PROJECT_PATHTRACING3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
         cmake --build build/linux-x64-release --parallel
 
     - name: Package SDK
@@ -139,7 +139,7 @@ jobs:
 
     - name: Build Engine
       run: |
-        cmake --preset android-arm64-release -DPRISMA_BUILD_PROJECT_TEMPLATE2D=OFF -DPRISMA_BUILD_PROJECT_TEMPLATE3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
+        cmake --preset android-arm64-release -DPRISMA_BUILD_PROJECT_PRISMA2D=OFF -DPRISMA_BUILD_PROJECT_PATHTRACING3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
         cmake --build build/android-arm64-release --parallel
 
     - name: Package SDK

@@ -312,7 +312,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 ".",
                 "scripts",
                 "../scripts",
-                "../projects/Template2D/scripts/GameScripts/bin/Release/net10.0",
+                "../projects/Prisma2D/scripts/GameScripts/bin/Release/net10.0",
                 "../projects/PrismaCraft/scripts/GameScripts/bin/Release/net10.0",
                 "../projects/SRP2D/scripts/GameScripts/bin/Release/net10.0",
             };

@@ -33,7 +33,7 @@ internal static class ScriptEngine
             // Call automatically generated script registration logic
             try { 
                 // 使用反射尝试调用，以�?Generator 还没运行
-                var registryType = Type.GetType("Prisma.Generated.ScriptRegistry, Template2D_Managed") ??
+                var registryType = Type.GetType("Prisma.Generated.ScriptRegistry, Prisma2D_Managed") ??
                                    Type.GetType("Prisma.Generated.ScriptRegistry, PrismaCraft_Managed") ??
                                    Type.GetType("Prisma.Generated.ScriptRegistry, SRP2D_Managed") ??
                                    Type.GetType("Prisma.Generated.ScriptRegistry, GameScripts") ??

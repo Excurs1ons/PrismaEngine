@@ -45,7 +45,7 @@ public:
 
     /**
      * @brief 运行引擎主循环
-     * @param pluginPath Application 插件 DLL 路径（如 "Template2D.dll"）
+     * @param pluginPath Application 插件 DLL 路径（如 "Prisma2D.dll"）
      *                   引擎内部 LoadLibrary + CreateApplication 加载
      * @return 0 = 成功，非 0 = 失败
      */

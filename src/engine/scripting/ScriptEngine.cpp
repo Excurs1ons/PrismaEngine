@@ -410,7 +410,7 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
 
     const std::string& hostDir = host.GetScriptsDir();
 
-    // 搜索 *_Managed.dll（每个项目命名不同：Template2D_Managed.dll / SRP2D_Managed.dll 等）
+    // 搜索 *_Managed.dll（每个项目命名不同：Prisma2D_Managed.dll / SRP2D_Managed.dll 等）
     std::string gameDll;
     if (std::filesystem::exists(gameDir)) {
         for (const auto& entry : std::filesystem::directory_iterator(gameDir)) {
