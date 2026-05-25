@@ -6,6 +6,7 @@
 #include "VulkanSampler.h"
 #include "VulkanSwapChain.h"
 #include "VulkanFence.h"
+#include <cstdint>
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 4324) // structure was padded due to alignment specifier
@@ -152,14 +153,77 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
     imageInfo.samples = static_cast<VkSampleCountFlagBits>(sc);
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    VmaAllocationCreateInfo allocInfo{};
-    allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
+    // ========== Exportable texture path (non-VMA, raw Vulkan) ==========
     VkImage image = VK_NULL_HANDLE;
     VmaAllocation allocation = VK_NULL_HANDLE;
-    if (vmaCreateImage(m_vmaAllocator, &imageInfo, &allocInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
-        LOG_ERROR("Vulkan", "vmaCreateImage failed for texture '{0}' ({1}x{2} fmt={3})", desc.name, desc.width, desc.height, static_cast<int>(desc.format));
-        return nullptr;
+    VkDeviceMemory externalDeviceMemory = VK_NULL_HANDLE;
+
+    if (desc.exportable) {
+        imageInfo.flags |= VK_IMAGE_CREATE_ALIAS_BIT;
+
+        if (vkCreateImage(m_vkDevice, &imageInfo, nullptr, &image) != VK_SUCCESS) {
+            LOG_ERROR("Vulkan", "vkCreateImage failed for exportable texture '{0}'", desc.name);
+            return nullptr;
+        }
+
+        VkMemoryRequirements memReqs;
+        vkGetImageMemoryRequirements(m_vkDevice, image, &memReqs);
+
+        VkPhysicalDeviceMemoryProperties memProps;
+        vkGetPhysicalDeviceMemoryProperties(m_device->GetPhysicalDevice(), &memProps);
+
+        uint32_t memTypeIndex = UINT32_MAX;
+        for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
+            if ((memReqs.memoryTypeBits & (1 << i)) &&
+                (memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+                memTypeIndex = i;
+                break;
+            }
+        }
+        if (memTypeIndex == UINT32_MAX) {
+            vkDestroyImage(m_vkDevice, image, nullptr);
+            LOG_ERROR("Vulkan", "No suitable memory type for exportable texture '{0}'", desc.name);
+            return nullptr;
+        }
+
+        VkExportMemoryAllocateInfo exportInfo{};
+        exportInfo.sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO;
+#ifdef _WIN32
+        exportInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_WIN32_BIT;
+#else
+        exportInfo.handleTypes = VK_EXTERNAL_MEMORY_HANDLE_TYPE_OPAQUE_FD_BIT;
+#endif
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.pNext = &exportInfo;
+        allocInfo.allocationSize = memReqs.size;
+        allocInfo.memoryTypeIndex = memTypeIndex;
+
+        if (vkAllocateMemory(m_vkDevice, &allocInfo, nullptr, &externalDeviceMemory) != VK_SUCCESS) {
+            vkDestroyImage(m_vkDevice, image, nullptr);
+            LOG_ERROR("Vulkan", "vkAllocateMemory failed for exportable texture '{0}'", desc.name);
+            return nullptr;
+        }
+
+        if (vkBindImageMemory(m_vkDevice, image, externalDeviceMemory, 0) != VK_SUCCESS) {
+            vkDestroyImage(m_vkDevice, image, nullptr);
+            vkFreeMemory(m_vkDevice, externalDeviceMemory, nullptr);
+            LOG_ERROR("Vulkan", "vkBindImageMemory failed for exportable texture '{0}'", desc.name);
+            return nullptr;
+        }
+
+        LOG_INFO("Vulkan", "Created exportable texture '{0}' ({1}x{2} fmt={3})",
+                 desc.name, desc.width, desc.height, static_cast<int>(desc.format));
+    } else {
+        // ========== Standard VMA path ==========
+        VmaAllocationCreateInfo allocInfo{};
+        allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
+        if (vmaCreateImage(m_vmaAllocator, &imageInfo, &allocInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
+            LOG_ERROR("Vulkan", "vmaCreateImage failed for texture '{0}' ({1}x{2} fmt={3})", desc.name, desc.width, desc.height, static_cast<int>(desc.format));
+            return nullptr;
+        }
     }
 
     VkImageViewCreateInfo viewInfo{};
@@ -175,7 +239,12 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
 
     VkImageView imageView = VK_NULL_HANDLE;
     if (vkCreateImageView(m_vkDevice, &viewInfo, nullptr, &imageView) != VK_SUCCESS) {
-        vmaDestroyImage(m_vmaAllocator, image, allocation);
+        if (desc.exportable) {
+            vkDestroyImage(m_vkDevice, image, nullptr);
+            vkFreeMemory(m_vkDevice, externalDeviceMemory, nullptr);
+        } else {
+            vmaDestroyImage(m_vmaAllocator, image, allocation);
+        }
         return nullptr;
     }
 
@@ -194,12 +263,17 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
         uavViewInfo.subresourceRange.layerCount = 1;
         if (vkCreateImageView(m_vkDevice, &uavViewInfo, nullptr, &uavView) != VK_SUCCESS) {
             vkDestroyImageView(m_vkDevice, imageView, nullptr);
-            vmaDestroyImage(m_vmaAllocator, image, allocation);
+            if (desc.exportable) {
+                vkDestroyImage(m_vkDevice, image, nullptr);
+                vkFreeMemory(m_vkDevice, externalDeviceMemory, nullptr);
+            } else {
+                vmaDestroyImage(m_vmaAllocator, image, allocation);
+            }
             return nullptr;
         }
     }
 
-    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, imageInfo.format, desc, uavView);
+    auto texture = std::make_unique<VulkanTexture>(m_vkDevice, m_vmaAllocator, image, allocation, imageView, imageInfo.format, desc, uavView, externalDeviceMemory);
 
     if (desc.allowShaderResource) {
         VkCommandPool tempPool;

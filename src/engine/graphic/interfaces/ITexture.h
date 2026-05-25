@@ -52,6 +52,7 @@ struct TextureDesc : public ResourceDesc {
     std::string filename;  // 文件名（用于从文件加载）
     uint32_t sampleCount = 1;    // 多重采样数量
     uint32_t sampleQuality = 0;  // 多重采样质量
+    bool exportable = false;     // 是否可导出到外部（Vulkan→D3D11 interop）
 };
 
 /// @brief 纹理抽象接口

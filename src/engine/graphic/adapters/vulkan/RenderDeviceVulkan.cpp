@@ -89,6 +89,14 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
                             .add_required_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
                             .add_required_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
                             .add_required_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                            // External memory sharing (NeoEditor Vulkan→D3D11 interop)
+                            .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+#ifdef _WIN32
+                            .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+#endif
                             .add_required_extension_features(accelFeatures)
                             .add_required_extension_features(rtPipelineFeatures)
                             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)

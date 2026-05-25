@@ -22,7 +22,7 @@ namespace Prisma::Graphic::Vulkan {
 
 class ENGINE_API VulkanTexture : public ITexture {
 public:
-    VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc, VkImageView defaultUAV = VK_NULL_HANDLE);
+    VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc, VkImageView defaultUAV = VK_NULL_HANDLE, VkDeviceMemory externalDeviceMemory = VK_NULL_HANDLE);
     ~VulkanTexture() override;
 
     ResourceType GetResourceType() const override { return ResourceType::Texture; }
@@ -275,6 +275,7 @@ public:
     VkImageView GetVkImageView() const { return m_imageView; }
     VkFormat GetVkFormat() const { return m_vkFormat; }
     VkDevice GetVkDevice() const { return m_device; }
+    VkDeviceMemory GetExternalDeviceMemory() const { return m_externalDeviceMemory; }
 
     // -----------------------------------------------------------------------
     // [改动] SetDebugName
@@ -296,6 +297,7 @@ private:
     VmaAllocation m_allocation = VK_NULL_HANDLE;
     VkImageView m_imageView = VK_NULL_HANDLE;
     VkImageView m_defaultUAV = VK_NULL_HANDLE;  // For compute storage image access
+    VkDeviceMemory m_externalDeviceMemory = VK_NULL_HANDLE; // For exportable textures (non-VMA managed)
 
     // -----------------------------------------------------------------------
     // [改动] m_vkFormat

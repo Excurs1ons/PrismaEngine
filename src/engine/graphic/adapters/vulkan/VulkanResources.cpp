@@ -15,8 +15,8 @@ namespace Prisma::Graphic::Vulkan {
 // 过程：
 //   初始化列表中新增 m_vkFormat(vkFormat)。
 // -----------------------------------------------------------------------
-VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc, VkImageView defaultUAV)
-    : m_device(device), m_allocator(allocator), m_image(image), m_allocation(allocation), m_imageView(imageView), m_defaultUAV(defaultUAV), m_vkFormat(vkFormat), m_desc(desc) {
+VulkanTexture::VulkanTexture(VkDevice device, VmaAllocator allocator, VkImage image, VmaAllocation allocation, VkImageView imageView, VkFormat vkFormat, const TextureDesc& desc, VkImageView defaultUAV, VkDeviceMemory externalDeviceMemory)
+    : m_device(device), m_allocator(allocator), m_image(image), m_allocation(allocation), m_imageView(imageView), m_defaultUAV(defaultUAV), m_vkFormat(vkFormat), m_desc(desc), m_externalDeviceMemory(externalDeviceMemory) {
     // 构造函数现在接收并存储 VMA 相关对象，以便在析构时能够正确释放资源。
 }
 
@@ -47,8 +47,14 @@ VulkanTexture::~VulkanTexture() {
         }
     }
 
-    if (m_allocator) {
-        // 在销毁 Texture 资源时，通过 VMA 释放关联的 VkImage 和内存。
+    // 外部内存（exportable）路径：使用原始 Vulkan API 销毁，不走 VMA
+    if (m_externalDeviceMemory != VK_NULL_HANDLE) {
+        if (m_image != VK_NULL_HANDLE) {
+            vkDestroyImage(m_device, m_image, nullptr);
+        }
+        vkFreeMemory(m_device, m_externalDeviceMemory, nullptr);
+    } else if (m_allocator) {
+        // VMA 管理路径：通过 VMA 释放关联的 VkImage 和内存
         if (m_image != VK_NULL_HANDLE && m_allocation != VK_NULL_HANDLE) {
             vmaDestroyImage(m_allocator, m_image, m_allocation);
         }
