@@ -38,6 +38,7 @@ public:
 
     // 线程池配置
     void SetPoolConfig(const std::vector<PoolConfig>& configs);
+    // 初始化后的 RegisterPool 必须在提交作业前调用（非线程安全）
     uint32_t RegisterPool(const std::string& name, uint32_t threadCount = 0);
 
     // 查询
@@ -61,7 +62,7 @@ private:
 
     std::mutex m_configMutex;
     std::vector<PoolConfig> m_pendingPoolConfigs;
-    bool m_initialized{false};
+    std::atomic<bool> m_initialized{false};
     size_t GetTotalThreadCount() const;
     std::vector<std::unique_ptr<ThreadPool>> m_threadPools;
     std::atomic<uint32_t> m_jobCounter{0};

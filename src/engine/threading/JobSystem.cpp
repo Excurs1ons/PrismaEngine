@@ -52,7 +52,7 @@ int JobSystem::Initialize() {
         LOG_INFO("JobSystem", "线程池 {0} '{1}' 创建: {2} 个线程", i, cfg.name, threadCount);
     }
 
-    m_initialized = true;
+    m_initialized.store(true, std::memory_order_release);
     LOG_INFO("JobSystem", "初始化完成: {0} 个池, {1} 个总线程",
              m_threadPools.size(), GetTotalThreadCount());
     return 0;
@@ -60,7 +60,7 @@ int JobSystem::Initialize() {
 
 void JobSystem::Shutdown() {
     LOG_DEBUG("JobSystem", "关闭开始");
-    m_initialized = false;
+    m_initialized.store(false, std::memory_order_release);
 
     for (auto& pool : m_threadPools) {
         pool->running.store(false, std::memory_order_release);
@@ -81,6 +81,12 @@ void JobSystem::Shutdown() {
         }
     }
 
+    // 清零计数器（Worker 可能在退出前来不及递减）
+    for (auto& pool : m_threadPools) {
+        pool->activeJobs.store(0, std::memory_order_release);
+    }
+    m_jobCounter.store(0, std::memory_order_release);
+
     m_threadPools.clear();
     LOG_INFO("JobSystem", "关闭完成");
 }
@@ -95,7 +101,7 @@ void JobSystem::SubmitJob(Job job, uint32_t threadPoolIndex) {
         return;
     }
 
-    if (!m_initialized || threadPoolIndex >= m_threadPools.size()) {
+    if (!m_initialized.load(std::memory_order_acquire) || threadPoolIndex >= m_threadPools.size()) {
         job();
         return;
     }
@@ -119,8 +125,9 @@ void JobSystem::WaitForAllJobs() {
             if (pool->activeJobs.load(std::memory_order_acquire) > 0) {
                 foundActive = true;
                 std::unique_lock<std::mutex> lock(pool->queueMutex);
-                pool->condition.wait_for(lock, std::chrono::milliseconds(10), [&pool]() {
-                    return pool->activeJobs.load(std::memory_order_acquire) == 0;
+                pool->condition.wait_for(lock, std::chrono::milliseconds(10), [this, &pool]() {
+                    return pool->activeJobs.load(std::memory_order_acquire) == 0
+                        || !m_initialized.load(std::memory_order_acquire);
                 });
             }
         }
@@ -150,7 +157,7 @@ void JobSystem::SetPoolConfig(const std::vector<PoolConfig>& configs) {
 uint32_t JobSystem::RegisterPool(const std::string& name, uint32_t threadCount) {
     std::lock_guard<std::mutex> lock(m_configMutex);
 
-    if (!m_initialized) {
+    if (!m_initialized.load(std::memory_order_acquire)) {
         m_pendingPoolConfigs.push_back({name, threadCount, 0});
         return static_cast<uint32_t>(m_pendingPoolConfigs.size() - 1);
     }
