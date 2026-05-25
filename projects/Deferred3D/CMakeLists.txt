@@ -111,10 +111,28 @@ if(GLSLANG_VALIDATOR)
         list(APPEND GENERATED_SPVS ${SPV_OUTPUT})
     endforeach()
 
+    # 引擎根目录的 NPR 着色器
+    file(GLOB NPR_SHADER_SOURCES
+        "${CMAKE_SOURCE_DIR}/assets/shaders/npr_*.vert"
+        "${CMAKE_SOURCE_DIR}/assets/shaders/npr_*.frag"
+        "${CMAKE_SOURCE_DIR}/assets/shaders/npr_*.comp"
+    )
+    foreach(SHADER ${NPR_SHADER_SOURCES})
+        get_filename_component(SHADER_NAME ${SHADER} NAME)
+        set(SPV_OUTPUT "${CMAKE_SOURCE_DIR}/assets/shaders/${SHADER_NAME}.spv")
+        add_custom_command(
+            OUTPUT ${SPV_OUTPUT}
+            COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
+            DEPENDS ${SHADER}
+            COMMENT "Compiling NPR ${SHADER_NAME} → SPIR-V"
+        )
+        list(APPEND GENERATED_SPVS ${SPV_OUTPUT})
+    endforeach()
+
     add_custom_target(CompileDeferredShaders DEPENDS ${GENERATED_SPVS})
     add_dependencies(${PROJECT_NAME} CompileDeferredShaders)
     add_dependencies(${DEFERRED3D_PLUGIN_NAME} CompileDeferredShaders)
-    message(STATUS "Deferred3D: GLSL→SPIR-V 编译已启用 (含 PBR 着色器)")
+    message(STATUS "Deferred3D: GLSL→SPIR-V 编译已启用 (含 PBR + NPR 着色器)")
 else()
     message(WARNING "glslangValidator 未找到 - PBR 着色器需手动编译为 SPIR-V")
 endif()

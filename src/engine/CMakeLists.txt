@@ -153,6 +153,10 @@ set(CORE_SOURCES
     graphic/pipelines/clustered/ClusteredForwardPipeline.cpp
     graphic/pipelines/clustered/ClusteredOpaquePass.cpp
 
+    # Graphic - NPR Pipeline
+    graphic/pipelines/npr/NPRPipeline.cpp
+    graphic/pipelines/npr/NPROpaquePass.cpp
+
     # Graphic - Skybox
     graphic/pipelines/SkyboxRenderPass.cpp
 
@@ -454,6 +458,7 @@ set(CORE_HEADERS
     graphic/interfaces/IComputePipeline.h
     graphic/pipelines/clustered/ClusteredForwardPipeline.h
     graphic/pipelines/clustered/ClusteredOpaquePass.h
+    graphic/pipelines/npr/NPRPipeline.h
 
     # PCH
     pch.h
