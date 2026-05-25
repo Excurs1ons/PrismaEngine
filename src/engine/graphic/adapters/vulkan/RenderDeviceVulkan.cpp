@@ -10,11 +10,17 @@
 #include "VulkanSwapChain.h"
 #include <iostream>
 
+// Win32 Vulkan external memory extension names are defined in <vulkan/vulkan_win32.h>,
+// which requires <windows.h> (HANDLE type). Define them inline to avoid that dependency.
+#if defined(_WIN32) && !defined(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+#define VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME "VK_KHR_external_memory_win32"
+#endif
+#if defined(_WIN32) && !defined(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+#define VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME "VK_KHR_external_semaphore_win32"
+#endif
+
 #define VMA_IMPLEMENTATION
 #include <SDL3/SDL_vulkan.h>
-#if defined(_WIN32)
-#include <vulkan/vulkan_win32.h>
-#endif
 #if defined(_MSC_VER)
 #pragma warning(push)
 #pragma warning(disable: 4324) // structure was padded due to alignment specifier
