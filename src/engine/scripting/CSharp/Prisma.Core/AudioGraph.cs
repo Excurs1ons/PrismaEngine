@@ -11,7 +11,10 @@ public class AudioGraph : IDisposable
 
     public AudioGraph(uint sampleRate = 48000, uint framesPerBlock = 256)
     {
-        _handle = Interop.API.AudioCreateGraph(sampleRate, framesPerBlock);
+        unsafe
+        {
+            _handle = Interop.API.AudioCreateGraph(sampleRate, framesPerBlock);
+        }
         if (_handle == 0)
             throw new InvalidOperationException("Failed to create AudioGraph");
     }
@@ -71,7 +74,10 @@ public class AudioGraph : IDisposable
         if (source == null) throw new ArgumentNullException(nameof(source));
         if (target == null) throw new ArgumentNullException(nameof(target));
 
-        return Interop.API.AudioGraphDisconnect(_handle, source.Handle, target.Handle);
+        unsafe
+        {
+            return Interop.API.AudioGraphDisconnect(_handle, source.Handle, target.Handle);
+        }
     }
 
     public void RemoveNode(DSPNode node)
@@ -80,7 +86,10 @@ public class AudioGraph : IDisposable
             throw new ObjectDisposedException(nameof(AudioGraph));
         if (node == null) throw new ArgumentNullException(nameof(node));
 
-        Interop.API.AudioGraphRemoveNode(_handle, node.Handle);
+        unsafe
+        {
+            Interop.API.AudioGraphRemoveNode(_handle, node.Handle);
+        }
         node.Invalidate();
         _nodes.Remove(node);
     }
@@ -94,7 +103,10 @@ public class AudioGraph : IDisposable
             node.Invalidate();
         _nodes.Clear();
 
-        Interop.API.AudioDestroyGraph(_handle);
+        unsafe
+        {
+            Interop.API.AudioDestroyGraph(_handle);
+        }
         _handle = 0;
     }
 

@@ -10,7 +10,10 @@ public class SpectrumAnalyzerNode : IDisposable
 
     public SpectrumAnalyzerNode(uint fftSize = 2048)
     {
-        _handle = Interop.API.AudioCreateSpectrumAnalyzer(fftSize);
+        unsafe
+        {
+            _handle = Interop.API.AudioCreateSpectrumAnalyzer(fftSize);
+        }
         if (_handle == 0)
             throw new InvalidOperationException("Failed to create SpectrumAnalyzer");
     }
@@ -74,7 +77,7 @@ public class SpectrumAnalyzerNode : IDisposable
         get
         {
             if (_disposed) throw new ObjectDisposedException(nameof(SpectrumAnalyzerNode));
-            return Interop.API.AudioSpectrumGetPeak(_handle);
+            unsafe { return Interop.API.AudioSpectrumGetPeak(_handle); }
         }
     }
 
@@ -82,7 +85,7 @@ public class SpectrumAnalyzerNode : IDisposable
     {
         if (_disposed) return;
         _disposed = true;
-        Interop.API.AudioDestroySpectrumAnalyzer(_handle);
+        unsafe { Interop.API.AudioDestroySpectrumAnalyzer(_handle); }
         _handle = 0;
     }
 }

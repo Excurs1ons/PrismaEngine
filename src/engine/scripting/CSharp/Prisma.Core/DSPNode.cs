@@ -84,7 +84,7 @@ public class DSPNode : IDisposable
         if (_disposed) return;
         _disposed = true;
 
-        Interop.API.AudioNodeDestroy(_handle);
+        unsafe { Interop.API.AudioNodeDestroy(_handle); }
         _handle = 0;
         _graph = null;
     }
