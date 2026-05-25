@@ -332,39 +332,69 @@ static uint32_t S_PTGetMaxSamples() {
 
 // ==================== Audio API ====================
 
+static Audio::IAudioDevice* GetScriptAudioDevice() {
+    return Engine::Get().GetAudioDevice();
+}
+
 static bool S_IsAudioInitialized() {
-    auto& engine = Engine::Get();
-    // Check via Engine audio device or AudioAPI
-    return false; // Stub — will be wired when audio system is integrated
+    auto* dev = GetScriptAudioDevice();
+    return dev && dev->IsInitialized();
 }
 
 static float S_AudioGetMasterVolume() {
-    return 1.0f;
+    auto* dev = GetScriptAudioDevice();
+    return dev ? dev->GetMasterVolume() : 1.0f;
 }
 
 static void S_AudioSetMasterVolume(float vol) {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->SetMasterVolume(std::clamp(vol, 0.0f, 1.0f));
+    }
 }
 
 static uint32_t S_AudioPlayClip(const char* path, void* desc) {
     if (!path) return 0;
+    auto* dev = GetScriptAudioDevice();
+    if (!dev) return 0;
+
     auto clip = Audio::AudioAPI::LoadClip(path);
     if (!clip) return 0;
+
     Audio::PlayDesc playDesc;
-    auto* ad = (Prisma::Audio::PlayDesc*)desc; // Placeholder cast
-    return 1; // Voice ID stub
+    if (desc) {
+        playDesc = *static_cast<const Audio::PlayDesc*>(desc);
+    }
+    playDesc.volume = std::clamp(playDesc.volume, 0.0f, 1.0f);
+
+    Prisma::Audio::AudioVoiceId voiceId = dev->PlayClip(*clip, playDesc);
+    return voiceId;
 }
 
 static void S_AudioStop(uint32_t voiceId) {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->Stop(voiceId);
+    }
 }
 
 static void S_AudioStopAll() {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->StopAll();
+    }
 }
 
 static void S_AudioSetVolume(uint32_t voiceId, float vol) {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->SetVolume(voiceId, std::clamp(vol, 0.0f, 1.0f));
+    }
 }
 
 static bool S_AudioIsPlaying(uint32_t voiceId) {
-    return false;
+    auto* dev = GetScriptAudioDevice();
+    return dev && dev->IsPlaying(voiceId);
 }
 
 // ==================== AudioGraph API ====================

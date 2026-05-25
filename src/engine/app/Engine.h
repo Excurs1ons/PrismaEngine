@@ -103,6 +103,7 @@ public:
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
     ConsoleSystem* GetConsoleSystem() { return GetSystem<ConsoleSystem>(); }
+    Audio::IAudioDevice* GetAudioDevice() { return m_audioDevice.get(); }
     
     // 通用系统获取
     template<typename T>

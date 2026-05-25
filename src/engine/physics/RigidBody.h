@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "CollisionSystem.h"
 #include <memory>
 #include <cstdint>
 
@@ -36,6 +37,32 @@ namespace Prisma {
                 static_cast<uint32_t>(a) & static_cast<uint32_t>(b)
             );
         }
+
+        /* 运动状态 - 存储前一帧变换用于渲染插值 */
+        struct MotionState {
+            glm::dvec3 previousPosition{ 0.0 };
+            glm::dquat previousRotation{ 1.0, 0.0, 0.0, 0.0 };
+            glm::dvec3 currentPosition{ 0.0 };
+            glm::dquat currentRotation{ 1.0, 0.0, 0.0, 0.0 };
+
+            void storeCurrentState() {
+                previousPosition = currentPosition;
+                previousRotation = currentRotation;
+            }
+
+            void setCurrentState(const glm::dvec3& pos, const glm::dquat& rot) {
+                currentPosition = pos;
+                currentRotation = rot;
+            }
+
+            glm::dmat4 getInterpolatedTransform(float alpha) const {
+                double a = static_cast<double>(alpha);
+                glm::dvec3 pos = glm::mix(previousPosition, currentPosition, a);
+                glm::dquat rot = glm::slerp(previousRotation, currentRotation, a);
+                glm::dmat4 t = glm::translate(glm::dmat4(1.0), pos);
+                return t * glm::mat4_cast(rot);
+            }
+        };
 
         /* 刚体类 */
         class RigidBody {
@@ -250,7 +277,37 @@ namespace Prisma {
             // 获取用户数据指针
             void* getUserData() const { return m_userData; }
 
+            // 获取运动状态引用
+            MotionState& getMotionState() { return m_motionState; }
+            const MotionState& getMotionState() const { return m_motionState; }
+
+            // 更新运动状态
+            void updateMotionState() {
+                m_motionState.storeCurrentState();
+                m_motionState.setCurrentState(m_position, m_rotation);
+            }
+
+            // ========== 碰撞形状属性 ==========
+
+            // 获取碰撞形状 AABB（世界空间）
+            AABB getWorldAABB() const {
+                glm::dvec3 halfSize = m_collisionHalfSize;
+                glm::dvec3 worldMin = m_position - halfSize;
+                glm::dvec3 worldMax = m_position + halfSize;
+                return AABB(worldMin.x, worldMin.y, worldMin.z,
+                           worldMax.x, worldMax.y, worldMax.z);
+            }
+
+            // 设置碰撞半尺寸
+            void setCollisionHalfSize(const glm::dvec3& halfSize) { m_collisionHalfSize = halfSize; }
+
+            // 获取碰撞半尺寸
+            const glm::dvec3& getCollisionHalfSize() const { return m_collisionHalfSize; }
+
         private:
+            friend class PhysicsSystem;
+            friend class ConstraintSolver;
+
             // ========== 类型和标志 ==========
             RigidBodyType m_type;              // 刚体类型
             CollisionFlags m_collisionFlags;     // 碰撞标志
@@ -280,6 +337,10 @@ namespace Prisma {
             // ========== 力和力矩累加 ==========
             glm::dvec3 m_accumulatedForce;   // 累加的力
             glm::dvec3 m_accumulatedTorque; // 累加的力矩
+
+            // ========== 碰撞形状 ==========
+            glm::dvec3 m_collisionHalfSize;   // 碰撞半尺寸（用于 AABB 计算）
+            MotionState m_motionState;         // 运动状态（渲染插值）
 
             // ========== 用户数据 ==========
             void* m_userData;                 // 用户数据指针

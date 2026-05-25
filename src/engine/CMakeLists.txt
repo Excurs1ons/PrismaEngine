@@ -73,6 +73,8 @@ set(CORE_SOURCES
 
     # Physics
     physics/PhysicsSystem.cpp
+    physics/RigidBody.cpp
+    physics/TriggerManager.cpp
 
     # Profiling
     profiling/ProfilerGPU.cpp
@@ -417,6 +419,11 @@ set(CORE_HEADERS
     physics/CollisionSystem.h
     physics/PhysicsComponents.h
     physics/RigidBody.h
+    physics/Constraint.h
+    physics/JointConstraint.h
+    physics/ConstraintSolver.h
+    physics/TriggerVolume.h
+    physics/TriggerManager.h
 
     # Profiling
     profiling/ProfilerCPU.h
@@ -688,6 +695,7 @@ target_include_directories(Engine
 target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/glm-src")
 target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/stb-src")
 target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/vma-src/include")
+target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/dr_libs-src")
 
 # Linux 平台额外 include
 if(LINUX)

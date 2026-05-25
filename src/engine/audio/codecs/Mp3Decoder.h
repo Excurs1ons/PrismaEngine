@@ -4,11 +4,10 @@
 #include <vector>
 #include <string>
 #include <cstdint>
+#include <cstring>
 
-#define MINIMP3_IMPLEMENTATION
-#define MINIMP3_ONLY_MP3
-#include <minimp3.h>
-#include <minimp3_ex.h>
+#define DR_MP3_IMPLEMENTATION
+#include <dr_mp3.h>
 
 namespace Prisma::Audio::Codecs {
 
@@ -26,58 +25,56 @@ public:
     static bool Decode(const uint8_t* data, size_t size, AudioClip& outClip) {
         if (!data || size < 4) return false;
 
-        mp3dec_t dec;
-        mp3dec_init(&dec);
+        drmp3_config config;
+        drmp3_uint64 totalFrameCount = 0;
+        drmp3_int16* pcmData = drmp3_open_memory_and_read_pcm_frames_s16(
+            data, size, &config, &totalFrameCount, nullptr);
 
-        mp3dec_file_info_t info = {};
-        if (mp3dec_load_buf(&dec, data, static_cast<int>(size), &info, nullptr, nullptr)) {
+        if (!pcmData) return false;
+        if (totalFrameCount == 0 || config.channels == 0) {
+            drmp3_free(pcmData, nullptr);
             return false;
         }
 
-        if (info.samples == 0 || info.channels == 0) {
-            free(info.buffer);
-            return false;
-        }
-
-        outClip.format.sampleRate = info.hz;
-        outClip.format.channels = static_cast<uint16_t>(info.channels);
+        outClip.format.sampleRate = config.sampleRate;
+        outClip.format.channels = static_cast<uint16_t>(config.channels);
         outClip.format.bitsPerSample = 16;
 
-        size_t byteCount = info.samples * sizeof(mp3d_sample_t);
+        size_t sampleCount = static_cast<size_t>(totalFrameCount) * config.channels;
+        size_t byteCount = sampleCount * sizeof(drmp3_int16);
         outClip.data.resize(byteCount);
-        memcpy(outClip.data.data(), info.buffer, byteCount);
+        memcpy(outClip.data.data(), pcmData, byteCount);
 
-        outClip.duration = static_cast<float>(info.samples / info.channels) / info.hz;
+        outClip.duration = static_cast<float>(totalFrameCount) / static_cast<float>(config.sampleRate);
 
-        free(info.buffer);
+        drmp3_free(pcmData, nullptr);
         return true;
     }
 
     static bool DecodeFile(const std::string& path, AudioClip& outClip) {
-        mp3dec_t dec;
-        mp3dec_init(&dec);
+        drmp3_config config;
+        drmp3_uint64 totalFrameCount = 0;
+        drmp3_int16* pcmData = drmp3_open_file_and_read_pcm_frames_s16(
+            path.c_str(), &config, &totalFrameCount, nullptr);
 
-        mp3dec_file_info_t info = {};
-        if (mp3dec_load(&dec, path.c_str(), &info, nullptr, nullptr)) {
+        if (!pcmData) return false;
+        if (totalFrameCount == 0 || config.channels == 0) {
+            drmp3_free(pcmData, nullptr);
             return false;
         }
 
-        if (info.samples == 0 || info.channels == 0) {
-            free(info.buffer);
-            return false;
-        }
-
-        outClip.format.sampleRate = info.hz;
-        outClip.format.channels = static_cast<uint16_t>(info.channels);
+        outClip.format.sampleRate = config.sampleRate;
+        outClip.format.channels = static_cast<uint16_t>(config.channels);
         outClip.format.bitsPerSample = 16;
 
-        size_t byteCount = info.samples * sizeof(mp3d_sample_t);
+        size_t sampleCount = static_cast<size_t>(totalFrameCount) * config.channels;
+        size_t byteCount = sampleCount * sizeof(drmp3_int16);
         outClip.data.resize(byteCount);
-        memcpy(outClip.data.data(), info.buffer, byteCount);
+        memcpy(outClip.data.data(), pcmData, byteCount);
 
-        outClip.duration = static_cast<float>(info.samples / info.channels) / info.hz;
+        outClip.duration = static_cast<float>(totalFrameCount) / static_cast<float>(config.sampleRate);
 
-        free(info.buffer);
+        drmp3_free(pcmData, nullptr);
         return true;
     }
 };
