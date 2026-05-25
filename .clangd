@@ -12,6 +12,7 @@ CompileFlags:
     - "-I./src/engine/graphic/pipelines"
     - "-I./src/engine/graphic/upscaler"
     - "-I./src/engine/audio"
+    - "-I./src/engine/audio/dsp"
     - "-I./src/engine/resource"
     - "-I./src/engine/tilemap"
     - "-I./src/engine/tilemap/core"

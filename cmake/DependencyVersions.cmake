@@ -76,6 +76,18 @@ set(PRISMA_DEP_XXHASH_VERSION "v0.8.2")
 # GitHub: https://github.com/jkuhlmann/cgltf
 set(PRISMA_DEP_CGLTF_VERSION "v1.15")
 
+# -------------------------------------------------------------------------------
+# 音频库 / Audio Libraries
+# -------------------------------------------------------------------------------
+
+# miniaudio - 单头文件音频播放/捕获库
+# GitHub: https://github.com/mackron/miniaudio
+set(PRISMA_DEP_MINAUDIO_VERSION "master")
+
+# dr_libs - 单体音频编解码库 (dr_mp3, dr_flac, dr_wav)
+# GitHub: https://github.com/mackron/dr_libs
+set(PRISMA_DEP_DR_LIBS_VERSION "master")
+
 # 已知问题 / Known Issues
 set(PRISMA_DEP_KNOWN_ISSUES
     "SDL3 3.2.28+: Android 构建需要 NDK r25+"

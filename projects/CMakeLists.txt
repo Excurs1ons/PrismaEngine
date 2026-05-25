@@ -58,6 +58,15 @@ elseif(NOT PRISMA_BUILD_PROJECT_DEFERRED3D)
     message(STATUS "  Skipped project: Deferred3D")
 endif()
 
+# 7. NeoEditor (编辑器)
+option(PRISMA_BUILD_PROJECT_NEOEDITOR "Build NeoEditor project" ON)
+if(PRISMA_BUILD_PROJECT_NEOEDITOR AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/NeoEditor/CMakeLists.txt)
+    add_subdirectory(NeoEditor)
+    message(STATUS "  Added project: NeoEditor")
+elseif(NOT PRISMA_BUILD_PROJECT_NEOEDITOR)
+    message(STATUS "  Skipped project: NeoEditor")
+endif()
+
 # 未激活的项目（保留供未来开发）:
 # - SRP2D/  — C# SRP 2D 渲染测试项目 (C# only, 无 C++ 目标)
 # if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/SRP2D/CMakeLists.txt)

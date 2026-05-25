@@ -56,6 +56,12 @@ Prisma_Declare_Dependency(cgltf https://github.com/jkuhlmann/cgltf.git ${PRISMA_
 
 Prisma_Declare_Dependency(imgui https://github.com/ocornut/imgui.git ${PRISMA_DEP_IMGUI_VERSION})
 
+# miniaudio - 单头文件音频播放/捕获库 (header-only, C99)
+Prisma_Declare_Dependency(miniaudio https://github.com/mackron/miniaudio.git ${PRISMA_DEP_MINAUDIO_VERSION})
+
+# dr_libs - 单体音频编解码库 (dr_mp3, dr_flac, dr_wav 等, header-only)
+Prisma_Declare_Dependency(dr_libs https://github.com/mackron/dr_libs.git ${PRISMA_DEP_DR_LIBS_VERSION})
+
 # xxhash - 极快哈希 (MCP 增量追踪)
 # 编译为静态库，禁用测试
 set(XXHASH_BUILD_XXHSUM OFF CACHE BOOL "" FORCE)
@@ -116,6 +122,16 @@ if(NOT TARGET cgltf)
 endif()
 if(NOT TARGET cgltf::cgltf)
     add_library(cgltf::cgltf ALIAS cgltf)
+endif()
+
+# miniaudio — 使用项目自带的 CMake 目标（静态库）
+if(PRISMA_ENABLE_AUDIO_MINIAUDIO AND NOT TARGET miniaudio)
+    FetchContent_MakeAvailable(miniaudio)
+endif()
+
+# dr_libs — 使用项目自带的 CMake 目标
+if((PRISMA_ENABLE_AUDIO_CODEC_MP3 OR PRISMA_ENABLE_AUDIO_CODEC_FLAC) AND NOT TARGET dr_libs)
+    FetchContent_MakeAvailable(dr_libs)
 endif()
 
 if(PRISMA_BUILD_EDITOR OR PRISMA_ENABLE_RENDER_VULKAN)
