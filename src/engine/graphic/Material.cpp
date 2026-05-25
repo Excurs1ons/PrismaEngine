@@ -229,6 +229,28 @@ std::shared_ptr<Material> Material::CreatePBR() {
     return material;
 }
 
+std::shared_ptr<Material> Material::CreateNPR() {
+    auto resourceManager = Engine::Get().GetRenderResourceManager();
+    std::shared_ptr<IShader> nprShader = nullptr;
+    if (resourceManager) {
+        nprShader = resourceManager->LoadShaderSync("assets/shaders/npr_lit.vert.spv", "main");
+        if (!nprShader) {
+            nprShader = resourceManager->LoadShaderSync("Default");
+        }
+    }
+
+    auto material = std::make_shared<Material>(nprShader);
+    material->m_IsLoaded = true;
+    material->SetBaseColor(1.0f, 1.0f, 1.0f, 1.0f);
+    material->SetRoughness(0.4f);
+    material->SetEmissiveIntensity(0.0f);
+    // NPR 默认值
+    material->SetParam("RimColor", PrismaMath::vec4(1.0f, 0.6f, 0.3f, 0.5f));
+    material->SetParam("RimPower", 2.0f);
+    material->SetParam("WrapAmount", 0.2f);
+    return material;
+}
+
 void Material::UpdateDescriptorSet() {
     if (m_DescriptorSet) return;
 
@@ -368,6 +390,79 @@ void Material::UpdateDescriptorSetPBR() {
     bindTexture(3, m_metallicRoughnessMap, "MetallicRoughnessMap");
     bindTexture(4, m_aoMap, "AOMap");
     bindTexture(5, m_emissiveMap, "EmissiveMap");
+
+    m_DescriptorSet->Update();
+}
+
+void Material::UpdateDescriptorSetNPR() {
+    auto* rf = Engine::Get().GetRenderSystem()->GetDevice()->GetResourceFactory();
+    auto* rm = Engine::Get().GetRenderResourceManager();
+    auto defaultSampler = rm->GetDefaultSampler();
+
+    // NPR 布局: Set 0, Binding 0-3
+    // Binding 0: NPRMaterialData (UBO)
+    // Binding 1: AlbedoMap (Sampler2D)
+    // Binding 2: NormalMap (Sampler2D)
+    // Binding 3: MetallicRoughnessMap (Sampler2D)
+    std::vector<ShaderResource> shaderResources;
+
+    auto addResource = [&](const std::string& name, uint32_t binding, ShaderResource::Type type) {
+        ShaderResource res;
+        res.Name = name;
+        res.ResourceType = type;
+        res.Set = 0;
+        res.Binding = binding;
+        shaderResources.push_back(res);
+    };
+
+    addResource("NPRMaterialData", 0, ShaderResource::Type::UniformBuffer);
+    addResource("AlbedoMap", 1, ShaderResource::Type::Sampler2D);
+    addResource("NormalMap", 2, ShaderResource::Type::Sampler2D);
+    addResource("MetallicRoughnessMap", 3, ShaderResource::Type::Sampler2D);
+
+    m_DescriptorSetLayout = rf->CreateDescriptorSetLayout(shaderResources);
+    m_DescriptorSet = rf->CreateDescriptorSet(m_DescriptorSetLayout.get());
+
+    if (!m_DescriptorSet) return;
+
+    // 创建 NPR 材质 UBO
+    BufferDesc uboDesc;
+    uboDesc.type = BufferType::Constant;
+    uboDesc.size = sizeof(NPRMaterialData);
+    uboDesc.usage = BufferUsage::Dynamic;
+    if (!m_MaterialUBO) {
+        m_MaterialUBO = rf->CreateBufferImpl(uboDesc);
+    }
+
+    m_DescriptorSet->BindBuffer(0, m_MaterialUBO.get(), 0, sizeof(NPRMaterialData), DescriptorType::UniformBuffer);
+
+    // 绑定纹理，缺失时用默认白色
+    auto getDefaultWhite = [&]() -> std::shared_ptr<ITexture> {
+        static std::shared_ptr<ITexture> s_defaultWhite;
+        if (!s_defaultWhite) {
+            uint32_t white = 0xFFFFFFFF;
+            TextureDesc desc;
+            desc.width = 1;
+            desc.height = 1;
+            desc.format = TextureFormat::RGBA8_UNorm;
+            s_defaultWhite = rm->CreateTextureFromMemory(&white, sizeof(white), desc);
+        }
+        return s_defaultWhite;
+    };
+    auto defaultTex = getDefaultWhite();
+
+    auto bindTex = [&](uint32_t binding, const std::string& paramName) {
+        auto texToBind = defaultTex;
+        if (auto* val = GetParam(paramName)) {
+            if (std::holds_alternative<std::shared_ptr<ITexture>>(*val))
+                texToBind = std::get<std::shared_ptr<ITexture>>(*val);
+        }
+        m_DescriptorSet->BindTexture(binding, texToBind.get(), defaultSampler.get());
+    };
+
+    bindTex(1, "AlbedoMap");
+    bindTex(2, "NormalMap");
+    bindTex(3, "MetallicRoughnessMap");
 
     m_DescriptorSet->Update();
 }

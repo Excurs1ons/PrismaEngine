@@ -68,9 +68,13 @@ public:
     // PBR 材质创建
     static std::shared_ptr<Material> CreatePBR();
 
+    // NPR 材质创建
+    static std::shared_ptr<Material> CreateNPR();
+
 private:
     void UpdateDescriptorSet();
     void UpdateDescriptorSetPBR();
+    void UpdateDescriptorSetNPR();
 
     struct MaterialData {
         alignas(16) PrismaMath::vec4 baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -81,6 +85,21 @@ private:
         float padding[3]; // 填充到 48 字节 (std140 16字节对齐)
     };
 
+public:
+    struct NPRMaterialData {
+        alignas(16) PrismaMath::vec4 baseColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+        alignas(16) PrismaMath::vec4 rimColor = { 1.0f, 0.6f, 0.3f, 0.5f };
+        alignas(16) PrismaMath::vec4 shadowColor = { 0.3f, 0.2f, 0.15f, 0.8f };
+        alignas(16) PrismaMath::vec4 horizonColor = { 1.0f, 0.7f, 0.3f, 0.3f };
+        alignas(4)  float roughness = 0.4f;
+        alignas(4)  float rimPower = 2.0f;
+        alignas(4)  float wrapAmount = 0.2f;
+        alignas(4)  float emissiveIntensity = 0.0f;
+        alignas(4)  float bloomThreshold = 0.8f;
+        float padding[3]; // pad to 96 bytes (std140 16-byte alignment)
+    };
+
+private:
     std::shared_ptr<IShader> m_Shader;
     std::unordered_map<std::string, MaterialParamValue> m_Params;
     
@@ -95,6 +114,9 @@ private:
     std::shared_ptr<ITexture> m_metallicRoughnessMap;
     std::shared_ptr<ITexture> m_aoMap;
     std::shared_ptr<ITexture> m_emissiveMap;
+
+    // NPR 材质参数
+    NPRMaterialData m_nprData;
 };
 
 } // namespace Prisma::Graphic
