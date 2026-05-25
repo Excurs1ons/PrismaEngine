@@ -17,8 +17,10 @@
 #include "scripting/MonoRuntime.h"
 #include "scripting/CoreCLRHost.h"
 #include "scripting/ScriptEngine.h"
+#include "memory/MemorySystem.h"
 #include "audio/AudioAPI.h"
 #include "audio/AudioTypes.h"
+#include <cassert>
 #include <typeinfo>
 #include <string_view>
 #include <filesystem>
@@ -29,6 +31,9 @@
 #include "threading/ThreadManager.h"
 #include "app/CommandLineParser.h"
 #include "scene/Scene.h"
+#include "console/ConsoleSystem.h"
+#include "console/ConsoleUI.h"
+#include "profiling/ProfilerSystem.h"
 
 
 
@@ -72,11 +77,13 @@ int Engine::Initialize() {
         AssetDatabase::Get().Refresh("assets");
     }
 
+    m_MemorySystem = AddSystem<Memory::MemorySystem>();
     m_JobSystem = AddSystem<JobSystem>();
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
     m_SceneManager = AddSystem<SceneManager>();
     m_PhysicsSystem = AddSystem<PhysicsSystem>();
+    AddSystem<ConsoleSystem>();
     AddSystem<Graphic::ShaderLibrary>();
 
     for (auto& sys : m_Systems) {
@@ -118,6 +125,13 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
     m_CurrentApp = std::move(app);
     m_Running = true;
+
+    // 将控制台 UI 层添加到应用层栈
+    if (auto* console = GetSystem<ConsoleSystem>()) {
+        if (auto* ui = console->GetConsoleUI()) {
+            m_CurrentApp->PushOverlay(ui);
+        }
+    }
 
     // 从项目名称对应的文件读取配置
     auto scriptingBackend = ScriptingBackend::CoreCLR;
@@ -394,6 +408,13 @@ int Engine::Run(std::unique_ptr<Application> app) {
         if (m_RenderSystem->GetDevice()) {
             m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
         }
+
+        // 性能分析子系统（在渲染系统就绪后初始化）
+        m_ProfilerSystem = AddSystem<Profiling::ProfilerSystem>();
+        if (m_ProfilerSystem->Initialize() != 0) {
+            LOG_WARNING("Engine", "性能分析系统初始化失败，继续运行");
+            m_ProfilerSystem = nullptr;
+        }
     }
 
     // 自动加载入口场景
@@ -516,6 +537,11 @@ Scripting::MonoRuntime& Engine::GetMonoRuntime() { return Scripting::MonoRuntime
 #endif
 AssetDatabase& Engine::GetAssetDatabase() { return AssetDatabase::Get(); }
 Core::ECS::World& Engine::GetWorld() { return Core::ECS::World::Get(); }
+Scene& Engine::GetScene() {
+    auto* scene = m_SceneManager ? m_SceneManager->GetCurrentScene() : nullptr;
+    assert(scene && "No active scene. Ensure a scene is loaded before calling GetScene().");
+    return *scene;
+}
 ThreadManager& Engine::GetThreadManager() { return *ThreadManager::Get(); }
 CommandLineParser& Engine::GetCommandLineParser() { return CommandLineParser::Get(); }
 

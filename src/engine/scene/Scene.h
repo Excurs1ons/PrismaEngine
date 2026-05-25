@@ -1,5 +1,6 @@
 #pragma once
 #include "core/Node.h"
+#include "core/Component.h"
 #include "graphic/RenderCommandContext.h"
 #include "graphic/RenderComponent.h"
 #include "graphic/ICamera.h"
@@ -84,6 +85,46 @@ public:
     // ── 获取场景中所有光源 ──
     std::vector<Prisma::Graphic::Light> GetLights() const;
 
+    // ── ECS 实体管理（替代已废弃的 ECS::World） ──
+    using Entity = uint32_t;
+    static constexpr Entity INVALID_ENTITY = 0;
+
+    /// 创建一个新实体（本质是创建一个 Node，返回其 handle 作为 Entity）
+    Entity CreateEntity(const std::string& name = "Entity") {
+        Node node = CreateNode(name);
+        return node.handle;
+    }
+
+    /// 销毁实体（销毁对应的 Node 及其所有组件）
+    void DestroyEntity(Entity entity) {
+        RemoveNode(Node(entity));
+    }
+
+    /// 遍历所有同时拥有 T1 和 T2 组件的实体，对每个实体调用 callback(component1, component2)
+    template<typename T1, typename T2, typename Func>
+    void ForEach(Func&& callback) {
+        for (const auto& node : m_nodes) {
+            auto comp1 = GetComponent<T1>(node);
+            auto comp2 = GetComponent<T2>(node);
+            if (comp1 && comp2) {
+                callback(*comp1, *comp2);
+            }
+        }
+    }
+
+    /// 筛选所有拥有 T 组件且满足谓词的实体，返回 Entity 列表
+    template<typename T, typename Pred>
+    std::vector<Entity> Filter(Pred&& predicate) {
+        std::vector<Entity> result;
+        for (const auto& node : m_nodes) {
+            auto comp = GetComponent<T>(node);
+            if (comp && predicate(*comp)) {
+                result.push_back(node.handle);
+            }
+        }
+        return result;
+    }
+
     // ── 序列化 ──
     bool Deserialize(const std::string& path);
     bool Serialize(const std::string& path) const;
@@ -100,3 +141,8 @@ private:
 };
 
 } // namespace Prisma
+
+// 在 ECS 命名空间中提供 Scene 别名，方便从 ECS::World 迁移到 Scene
+namespace Prisma::Core::ECS {
+    using Scene = ::Prisma::Scene;
+}

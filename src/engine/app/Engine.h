@@ -13,6 +13,7 @@
 class CommandLineParser;
 
 namespace Prisma::Audio { class IAudioDevice; struct AudioDesc; }
+namespace Prisma::Memory { class MemorySystem; }
 
 namespace Prisma {
 
@@ -24,10 +25,13 @@ namespace Input { class InputManager; }
 namespace Graphic { class RenderSystem; class IRenderResourceManager; }
 namespace Scripting { class CoreCLRHost; class ScriptEngine; class MonoRuntime; }
 namespace Core::ECS { class World; }
+class Scene;
 class SceneManager;
 class PhysicsSystem;
 class ThreadManager;
 class EntityManager;
+namespace Profiling { class ProfilerSystem; }
+class ConsoleSystem;
 
 // 引擎配置规范
 struct EngineSpecification {
@@ -87,15 +91,18 @@ public:
     SceneManager* GetSceneManager() { return m_SceneManager; }
     PhysicsSystem* GetPhysicsSystem() { return m_PhysicsSystem; }
     JobSystem* GetJobSystem() { return m_JobSystem; }
+    Profiling::ProfilerSystem* GetProfilerSystem() { return m_ProfilerSystem; }
 #if PRISMA_ENABLE_SCRIPTING > 0
     Scripting::MonoRuntime& GetMonoRuntime();
     Scripting::CoreCLRHost& GetCoreCLRHost() { return *m_coreCLRHost; }
     Scripting::ScriptEngine& GetScriptEngine() { return *m_scriptEngine; }
 #endif
+    Memory::MemorySystem* GetMemorySystem() { return m_MemorySystem; }
     EntityManager& GetEntityManager() { return *m_entityManager; }
     Core::ECS::World& GetWorld();
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
+    ConsoleSystem* GetConsoleSystem() { return GetSystem<ConsoleSystem>(); }
     
     // 通用系统获取
     template<typename T>
@@ -146,6 +153,8 @@ private:
     SceneManager* m_SceneManager = nullptr;
     PhysicsSystem* m_PhysicsSystem = nullptr;
     JobSystem* m_JobSystem = nullptr;
+    Profiling::ProfilerSystem* m_ProfilerSystem = nullptr;
+    Memory::MemorySystem* m_MemorySystem = nullptr;
 
     bool m_Initialized = false;
     bool m_Running = false;

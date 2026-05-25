@@ -14,6 +14,9 @@ endif()
 
 # ========== 收集核心源文件 (所有平台共用) ==========
 set(CORE_SOURCES
+    # Memory
+    memory/MemorySystem.cpp
+
     # App
     app/CommandLineParser.cpp
     app/Engine.cpp
@@ -64,8 +67,16 @@ set(CORE_SOURCES
     input/InputDevice.cpp
     input/InputManager.cpp
 
+    # Console
+    console/ConsoleSystem.cpp
+    console/ConsoleUI.cpp
+
     # Physics
     physics/PhysicsSystem.cpp
+
+    # Profiling
+    profiling/ProfilerGPU.cpp
+    profiling/ProfilerSystem.cpp
 
     # Resource
     resource/AssetSerializer.cpp
@@ -306,6 +317,14 @@ endif()
 
 # ========== 收集核心头文件 ==========
 set(CORE_HEADERS
+    # Memory
+    memory/MemoryAllocator.h
+    memory/PoolAllocator.h
+    memory/FrameAllocator.h
+    memory/StackAllocator.h
+    memory/MemoryManager.h
+    memory/MemorySystem.h
+
     # App
     app/CommandLineParser.h
     app/Engine.h
@@ -387,11 +406,24 @@ set(CORE_HEADERS
     input/drivers/InputDriverSDL3.h
     input/drivers/InputDriverWin32.h
 
+    # Console
+    console/CVar.h
+    console/ConsoleCommand.h
+    console/ConsoleSystem.h
+    console/ConsoleUI.h
+
     # Physics
     physics/PhysicsSystem.h
     physics/CollisionSystem.h
     physics/PhysicsComponents.h
     physics/RigidBody.h
+
+    # Profiling
+    profiling/ProfilerCPU.h
+    profiling/ProfilerGPU.h
+    profiling/ProfilerMacros.h
+    profiling/ProfilerSystem.h
+    profiling/ProfilerPanel.h
 
     # Resource
     resource/AssetSerializer.h
@@ -495,6 +527,7 @@ target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 # 渲染后端宏定义 (仅 Vulkan)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
+target_compile_definitions(Engine PUBLIC PRISMA_PROFILING_ENABLED=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_DSP=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_MINIAUDIO=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SYNTHESIZER=1)
@@ -566,6 +599,8 @@ target_link_libraries(Engine
         glaze::glaze
         stb
         cgltf::cgltf
+    PRIVATE
+        imgui::imgui
 )
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
@@ -633,6 +668,7 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/2d>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/input>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/memory>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/app>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scene>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/object>
