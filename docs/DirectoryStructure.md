@@ -10,13 +10,13 @@ This document describes the directory organization of Prisma Engine.
 PrismaEngine/
 ├── src/                      # Source code / 源代码
 ├── resources/                # Engine resources / 引擎资源
-├── projects/                 # Platform-specific projects / 平台特定项目
+├── projects/                 # Sample projects / 示例项目
+├── sdk/                      # Public SDK headers + CMake config
 ├── cmake/                    # CMake modules / CMake 模块
 ├── docs/                     # Documentation / 文档
-├── assets/                   # Example/demo assets / 示例/演示资产
+├── assets/                   # Shaders and demo assets / 着色器和示例资产
+├── .dependencies/            # Vendored third-party libraries / 第三方库缓存
 ├── build*/                   # Build outputs (gitignored) / 构建输出
-├── vcpkg/                    # vcpkg package manager / vcpkg 包管理器
-├── installer/                # Windows installer / Windows 安装程序
 └── scripts/                  # Build and setup scripts / 构建和设置脚本
 ```
 
@@ -26,131 +26,257 @@ PrismaEngine/
 
 ```
 src/engine/
+├── app/                     # Engine application layer
+│   ├── Engine.h/cpp         # Main engine lifecycle
+│   ├── Application.*        # Application interface
+│   ├── ECSApplication.*     # ECS-based application
+│   ├── EditorApplication.*  # Editor-mode application
+│   ├── EngineCAPI.*         # C API for engine interop
+│   └── ProjectConfig.h      # Project configuration
+│
 ├── audio/                    # Audio system / 音频系统
 │   ├── AudioAPI.h/cpp        # Audio API interface
-│   ├── AudioBackend.h        # Audio backend abstraction
-│   ├── AudioDeviceXAudio2.*  # Windows XAudio2 implementation
-│   ├── AudioDeviceSDL3.h     # SDL3 cross-platform backend
-│   └── AudioManager.h        # Audio system manager
+│   ├── AudioDevice.{h,cpp}   # Audio device abstraction
+│   ├── AudioDeviceSDL3.*     # SDL3 audio backend
+│   ├── backends/             # Audio backend implementations
+│   │   └── AudioDeviceMiniaudio.*  # Miniaudio backend
+│   ├── codecs/               # Audio codec decoders
+│   │   ├── WavDecoder.h
+│   │   ├── FlacDecoder.h
+│   │   ├── Mp3Decoder.h
+│   │   └── OggDecoder.h
+│   ├── components/           # ECS audio components
+│   │   ├── AudioSourceComponent.h
+│   │   ├── AudioListenerComponent.h
+│   │   ├── ReverbZoneComponent.h
+│   │   └── AudioSystem.h
+│   ├── dsp/                  # DSP node graph engine
+│   │   ├── AudioNode.h       # Base DSP node
+│   │   ├── AudioBuffer.h     # Audio buffer management
+│   │   └── nodes/            # 22 DSP node types
+│   │       ├── OscillatorNode.h / DelayNode.h / ReverbNode.h
+│   │       ├── BiquadFilterNode.h / SVFNode.h / CompressorNode.h
+│   │       ├── ConvolutionReverbNode.h / ChorusNode.h / FlangerNode.h
+│   │       └── ... (22 total DSP node types)
+│   └── raytracing/           # Acoustic raytracing
+│       ├── AcousticEngine.h
+│       └── AcousticRay.h
+│
+├── config/                   # Engine configuration
+│   ├── EngineConfig.h
+│   ├── RenderBackendConfig.h
+│   └── AudioBackendConfig.h
 │
 ├── core/                     # Core engine components / 核心引擎组件
-│   ├── AssetManager.h/cpp    # Asset loading and management
-│   ├── AssetBase.h           # Base asset interface
-│   ├── Components.h          # ECS component definitions
 │   ├── ECS.h/cpp             # Entity Component System
+│   ├── Component.h/cpp       # Component base
+│   ├── ComponentRegistry.*   # Component type registry
+│   ├── EntityManager.*       # Entity management
+│   ├── AssetManager.h/cpp    # Asset loading and management
+│   ├── Asset.h               # Base asset interface
+│   ├── Handle.h              # Type-safe Handle<T> generational index
+│   ├── Event.h               # Event system
+│   ├── Layer.h/cpp           # Application Layer system
+│   ├── Node.h/cpp            # Scene Node
+│   ├── UUID.h/cpp            # UUID generation
+│   ├── Singleton.h           # Singleton base
 │   └── Systems.h             # System definitions
 │
 ├── graphic/                  # Rendering system / 渲染系统
-│   ├── adapters/             # Platform-specific renderers / 平台特定渲染器
-│   │   ├── dx12/            # DirectX 12 adapter (Windows)
-│   │   │   ├── DX12ResourceFactory.*
-│   │   │   └── DX12Backend.*
-│   │   └── vulkan/          # Vulkan adapter (Cross-platform)
-│   │       └── VulkanShader.h
+│   ├── adapters/vulkan/      # Vulkan RHI implementation
+│   │   ├── RenderDeviceVulkan.*    # Main Vulkan device
+│   │   ├── VulkanCommandBuffer.*   # Command buffer wrapper
+│   │   ├── VulkanResources.*       # Resource management
+│   │   ├── VulkanShader.*          # Shader compilation
+│   │   ├── VulkanSwapChain.*       # Swap chain
+│   │   └── ... (16+ Vulkan adapter files)
 │   │
-│   ├── interfaces/           # Rendering interfaces / 渲染接口
-│   │   ├── ICamera.h         # Camera interface
-│   │   ├── IPass.h           # Render pass interface
-│   │   ├── IResourceFactory.h # Resource creation interface
-│   │   ├── IResourceManager.h # Resource management interface
-│   │   └── RenderTypes.h     # Common rendering types
+│   ├── interfaces/           # Rendering RHI interfaces / 渲染接口
+│   │   ├── IRenderDevice.h   # Device context interface
+│   │   ├── ICommandBuffer.h  # Command recording interface
+│   │   ├── IBuffer.h         # Buffer interface
+│   │   ├── ITexture.h        # Texture interface
+│   │   ├── IShader.h         # Shader interface
+│   │   ├── IPipeline.h       # Pipeline interface
+│   │   ├── IResourceFactory.h
+│   │   └── ... (20+ RHI interface files)
 │   │
 │   ├── pipelines/            # Render pipelines / 渲染管线
-│   │   ├── deferred/         # Deferred rendering pipeline
-│   │   │   ├── GeometryPass.*
-│   │   │   ├── CompositionPass.*
-│   │   │   └── DeferredPipeline.*
-│   │   └── forward/          # Forward rendering pipeline
-│   │       ├── DepthPrePass.*
-│   │       ├── ForwardPipeline.*
-│   │       ├── OpaquePass.*
-│   │       └── TransparentPass.*
+│   │   ├── forward/          # Forward rendering
+│   │   │   ├── ForwardPipeline.*
+│   │   │   ├── OpaquePass.*
+│   │   │   ├── TransparentPass.*
+│   │   │   └── DepthPrePass.*
+│   │   ├── deferred/         # Deferred rendering
+│   │   │   ├── DeferredPipeline.*
+│   │   │   ├── GBuffer.* / GeometryPass.*
+│   │   │   ├── LightingPass.* / CompositionPass.*
+│   │   ├── clustered/        # Clustered forward rendering
+│   │   │   ├── ClusteredForwardPipeline.*
+│   │   │   └── ClusteredOpaquePass.*
+│   │   ├── npr/              # Non-photorealistic rendering
+│   │   │   ├── NPRPipeline.*
+│   │   │   └── NPROpaquePass.*
+│   │   └── pathtracing/      # Path tracing (Vulkan RT + software)
+│   │       ├── PathTracingPipeline.*
+│   │       └── VulkanRTBackend.*
+│   │
+│   ├── 2d/                   # 2D rendering system
+│   │   ├── Pipeline2D.*      # 2D render pipeline
+│   │   ├── Graphics2D.*      # 2D graphics API
+│   │   ├── CanvasPass2D.*    # Canvas rendering pass
+│   │   ├── Light2D.*         # 2D lighting
+│   │   ├── LightManager2D.*  # 2D light management
+│   │   ├── PostProcessPass2D.*
+│   │   └── UIPass2D.*
 │   │
 │   ├── ui/                   # UI rendering components
-│   │   └── TextRendererComponent.*
+│   │   ├── FontAtlas.*       # Font atlas generation
+│   │   ├── TextRendererComponent.*
+│   │   └── UIPass.*
 │   │
-│   ├── Camera.h/cpp          # Camera implementation
-│   ├── CameraController.*    # Camera control logic
-│   ├── Material.h/cpp        # Material system
+│   ├── RenderGraph.*         # Render graph system
+│   ├── Renderer.*            # Main renderer
 │   ├── Mesh.h/cpp            # Mesh geometry
-│   ├── RenderComponent.*     # Render component
-│   ├── RenderDesc.h          # Render description structures
-│   ├── RenderSystemNew.*     # Render system interface
-│   └── Shader.h/cpp          # Shader abstraction
+│   ├── Material.h/cpp        # Material system
+│   ├── Shader.h/cpp          # Shader abstraction
+│   ├── TextureAtlas.*        # Texture atlas
+│   ├── VoxelRenderer.*       # Voxel/chunk rendering
+│   └── ... (80+ rendering files total)
 │
-├── input/                   # Input system / 输入系统
-│   └── InputManager.*        # Input management
+├── input/                    # Input system / 输入系统
+│   ├── InputManager.*        # Input management
+│   ├── InputDevice.*         # Device abstraction
+│   ├── EnhancedInputManager.h # Enhanced input with action mappings
+│   ├── core/IInputDriver.h   # Input driver interface
+│   └── drivers/              # Platform input drivers
+│       ├── InputDriverSDL3.*
+│       └── InputDriverWin32.*
 │
-├── math/                    # Mathematics library / 数学库
-│   ├── MathTypes.h          # Unified math types (Vector3, Matrix4, etc.)
-│   ├── Color.h/cpp          # Color utilities (removed, use MathTypes)
-│   ├── MatrixUtils.h        # Matrix helper functions
-│   └── Math.h/cpp           # Math functions (removed, use MathTypes)
+├── math/                     # Mathematics library / 数学库
+│   ├── MathTypes.h           # Unified math types (Vector3, Matrix4, etc.)
+│   └── MatrixUtils.h         # Matrix helper functions
 │
-├── platform/                # Platform abstraction / 平台抽象层
-│   ├── Platform.h/cpp       # Platform detection
-│   ├── PlatformWindows.cpp  # Windows implementation
-│   ├── PlatformSDL.cpp      # SDL-based implementation
-│   ├── PlatformAndroid.cpp  # Android implementation
-│   └── Application.*        # Application interface
+├── physics/                  # Physics system
+│   ├── CollisionSystem.h     # AABB collision, raycast, sweep
+│   ├── PhysicsSystem.*       # Physics simulation
+│   └── RigidBody.h
 │
-├── resource/                # Resource management / 资源管理
-│   ├── Asset.h/cpp          # Asset base class
-│   ├── AssetSerializer.*    # Asset serialization
-│   ├── Archive.*            # Archive formats (JSON, binary)
-│   ├── TextureAsset.*       # Texture loading
-│   ├── MeshAsset.*          # Mesh loading
-│   ├── ResourceFallback.*   # Fallback resources
-│   └── embedded/            # Embedded resources
+├── platform/                 # Platform abstraction / 平台抽象层
+│   ├── Platform.h/cpp        # Platform detection and utilities
+│   ├── DynamicLoader.*       # Dynamic library loading
+│   └── Platform.cpp          # Platform implementation
 │
-├── scripting/               # Scripting system / 脚本系统
-│   ├── MonoRuntime.*        # Mono/.NET integration
-│   └── ScriptSystem.*       # Script management
+├── resource/                 # Resource management / 资源管理
+│   ├── AssetSerializer.*     # Asset serialization
+│   ├── Archive.*             # Archive formats (JSON, binary)
+│   ├── TextureAsset.*        # Texture loading
+│   ├── MeshAsset.*           # Mesh loading
+│   ├── OBJParser.*           # OBJ file parser
+│   ├── CubemapTextureAsset.* # Cubemap loading
+│   ├── ResourceFallback.*    # Fallback resources
+│   └── embedded/             # Embedded resources
 │
-└── [Other core systems]     # Engine, Scene, GameObject, etc.
+├── scripting/                # Scripting system / 脚本系统
+│   ├── CoreCLRHost.*         # .NET CoreCLR self-hosted runtime
+│   ├── ScriptEngine.*        # Script engine manager
+│   ├── ScriptSystem.*        # Script lifecycle system
+│   ├── SRPGraphicsAPI.*      # Scriptable Render Pipeline C++ API
+│   ├── EditorAPI.*           # Editor scripting API
+│   └── CSharp/               # C# source files
+│       ├── Prisma.Core/      # PrismaEngine.Core managed library
+│       │   ├── Script.cs / Node.cs / World.cs
+│       │   ├── SRP/           # C# SRP bindings (CommandBuffer, Pipeline, etc.)
+│       │   ├── DSPNodes/     # C# DSP node wrappers
+│       │   ├── UI/           # C# UI components (Button, Canvas, Text, etc.)
+│       │   └── ... (80+ C# files)
+│       ├── Prisma.Generators/ # Roslyn source generators
+│       └── PrismaEngine.Host/ # Self-contained .NET host
+│
+├── serialization/            # Serialization
+│   ├── Serializable.*
+│   └── ScriptComponent.*
+│
+├── threading/                # Threading / 线程系统
+│   ├── JobSystem.*           # Job-based task system
+│   ├── ThreadManager.*       # Thread pool manager
+│   └── WorkerThread.*        # Worker thread abstraction
+│
+├── transform/                # Transform system
+│   ├── Transform.*           # Transform component
+│   ├── Camera.*              # Camera component
+│   └── CameraController.*    # Camera control logic
+│
+├── ui/                       # UI system
+│   ├── 2d/                   # 2D UI components
+│   │   ├── CanvasComponent.*
+│   │   └── ButtonComponent.*
+│   ├── UIComponent.*
+│   └── UIInputManager.*
+│
+├── window/                   # Window management
+│   └── Window.*
+│
+├── logger/                   # Logger system / 日志系统
+│   ├── Logger.*
+│   └── LogScope.*
+│
+├── utils/                    # Utilities
+│   └── ImageUtils.*
+│
+├── object/                   # Object model
+│   ├── Object.*
+│   └── Model.h
+│
+└── scene/                    # Scene management
+    ├── Scene.*
+    ├── SceneManager.*
+    └── SceneNode.*
 ```
 
 ### Launcher / src/launcher/
 
-Platform-specific runtime implementations (similar to Unity Player).
+Platform-specific runtime entry point.
 
-平台特定的运行时实现（类似于 Unity Player）。
+平台特定的运行时入口点。
 
 ```
 src/launcher/
-├── windows/                 # Windows launcher / Windows 启动器
-│   └── WindowsLauncher.cpp  # Windows entry point
-│
-├── linux/                   # Linux launcher / Linux 启动器
-│   └── LinuxLauncher.cpp    # Linux entry point
-│
-└── android/                 # Android launcher / Android 启动器
-    ├── AndroidLauncher.cpp  # Android entry point
-    ├── Renderer.*           # Renderer abstraction
-    ├── RendererOpenGL.*     # OpenGL rendering
-    ├── RendererVulkan.*     # Vulkan rendering
-    ├── ShaderOpenGL.*       # OpenGL shaders
-    ├── ShaderVulkan.*       # SPIR-V shaders
-    ├── VulkanContext.*      # Vulkan context management
-    ├── TextureAsset.*       # Texture loading (Android)
-    ├── CubemapTextureAsset.* # Cubemap loading
-    ├── SkyboxRenderer.*     # Skybox rendering
-    ├── Utility.*            # Utility functions
-    ├── AndroidOut.*         # Android logging
-    ├── renderer/            # Android renderer implementation
-    │   ├── API/             # Vulkan API wrappers
-    │   ├── RenderPass.*     # Render pass implementations
-    │   ├── RenderPipeline.* # Render pipeline
-    │   └── TextRenderer.*   # Text rendering
-    └── stb_impl.cpp         # STB library implementation
+└── core/
+    └── LauncherMain.cpp     # Platform-independent launcher entry
 ```
 
 ### Editor / src/editor/
 
 ```
 src/editor/
-├── Editor.h/cpp             # Main editor application
-└── [Editor-specific code]
+├── core/                    # Editor core
+│   ├── Editor.*             # Main editor application
+│   ├── EditorService.*      # Transport-agnostic editor backend
+│   ├── WebUIEditor.*        # Browser-based editor (HTTP server)
+│   ├── CommandLineEditor.*
+│   └── Environment.*
+│
+├── mcp/                     # Model Context Protocol server
+│   ├── MCPServer.*          # JSON-RPC router
+│   ├── MCPSession.*         # Session management + hash delta
+│   ├── MCPSubSystem.*       # Engine lifecycle integration
+│   ├── MCPTool.*            # Tool registry
+│   ├── serialization/       # MCP JSON serialization
+│   ├── transport/           # Transport layer (Stdio, TCP)
+│   ├── session/             # Delta tracker, Token budget
+│   └── tools/               # 17 tools (Scene, ECS, Engine, Debug, Asset, Editor, Game)
+│
+├── panels/                  # ImGui editor panels
+│   ├── EditorLayer.*
+│   └── ProfilerPanel.*
+│
+├── windows/                 # Editor windows
+│   └── ProjectSettingsWindow.*
+│
+└── graphic/                 # Editor graphics
+    ├── ImGuiVulkanResourceManager.*
+    └── ViewportRenderPass.*
 ```
 
 ### Game / src/game/
@@ -186,9 +312,12 @@ resources/
 projects/
 ├── PacManGame/              # 2D 吃豆人游戏示例
 ├── PrismaCraft/             # Minecraft 风格体素游戏
+├── Prisma2D/                # 2D 游戏项目模板（含 C# 脚本）
+├── PathTracing3D/           # 3D 路径追踪模板（含 Hardware RT + SSBO）
+├── ClusteredForward3D/      # 聚簇前向渲染演示
+├── Deferred3D/              # 延迟渲染演示（含 SSGI）
 ├── SRP2D/                   # 2D Scriptable Render Pipeline 示例
-├── Prisma2D/              # 2D 游戏项目模板（含 C# 脚本）
-└── PathTracing3D/              # 3D 游戏项目模板（含 Path Tracing）
+└── NeoEditor/               # WinUI3 C# 编辑器原型
 ```
 
 > **Note**: The Android project (`projects/android/PrismaAndroid/`) has been migrated into the engine's core build system.
@@ -203,9 +332,13 @@ Example/demo game assets (not part of the engine).
 
 ```
 assets/
-├── shaders/                 # Example shaders
-├── materials/               # Example materials
-└── scenes/                  # Example scenes
+└── shaders/                 # Shader source files
+    ├── pbr_*.glsl / pbr_*.vert / pbr_*.frag        # PBR shaders
+    ├── npr_*.glsl / npr_*.vert / npr_*.frag        # NPR toon shaders
+    ├── clustered/                                    # Clustered forward shaders
+    ├── LitSprite.frag / UnlitSprite.frag             # 2D sprite shaders
+    ├── PointLight2D.* / ReflectionSprite.frag        # 2D light shaders
+    └── pbr_ibl_*.comp                                # IBL compute shaders
 ```
 
 ## CMake Modules / cmake/
@@ -218,8 +351,7 @@ cmake/
 ├── EditorPostTargets.cmake      # Editor post-build steps
 ├── EditorTargets.cmake          # Editor build targets
 ├── EngineTargets.cmake          # Engine library targets
-├── FetchThirdPartyDeps.cmake    # FetchContent dependency management
-├── FindMono.cmake               # Mono runtime finder
+├── FetchThirdPartyDeps.cmake    # FetchContent dependency management (15+ deps)
 ├── InstallConfig.cmake          # Install configuration
 ├── LauncherTargets.cmake        # Launcher build targets
 ├── OutputDirectories.cmake      # Output directory configuration
@@ -235,14 +367,17 @@ cmake/
 ```
 docs/
 ├── Index.md                  # Documentation index (start here)
+├── Roadmap.md                # Module status, code stats, future plans
 ├── Architecture.md           # High-level system design
 ├── RenderingSystem.md        # Rendering system docs
 ├── VulkanIntegration.md      # Android/Vulkan integration
 ├── AssetSerialization.md     # Asset serialization
+├── AudioSystem.md            # Audio system architecture
+├── ScriptingSystem.md        # CoreCLR scripting docs
 ├── DirectoryStructure.md     # This file
-├── ...                       # See Index.md for full list
+├── ...                       # See Index.md for full list (50+ doc files)
 ├── plans/                    # Implementation plans (date-prefixed)
-└── superpowers/              # Advanced design specs and plans
+└── plans/archived/           # Completed/archived plans
 ```
 
 > **Note**: The root-level `CLAUDE.md`, `README.md`, and `GEMINI.md` are project-level configuration files, not documentation.
