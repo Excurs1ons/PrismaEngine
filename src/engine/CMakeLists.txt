@@ -199,6 +199,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         scripting/ScriptEngine.cpp
         scripting/ScriptSystem.cpp
         scripting/SRPGraphicsAPI.cpp
+        scripting/EditorAPI.cpp
     )
     set(PRISMA_SCRIPTING_HEADERS
         scripting/MonoRuntime.h
@@ -206,6 +207,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         scripting/ScriptEngine.h
         scripting/ScriptSystem.h
         scripting/SRPGraphicsAPI.h
+        scripting/EditorAPI.h
     )
     list(APPEND CORE_SOURCES ${PRISMA_SCRIPTING_SOURCES})
 
@@ -362,6 +364,15 @@ set(CORE_HEADERS
     audio/IAudioDevice.h
     audio/core/IAudioDriver.h
 
+    # Audio DSP
+    audio/dsp/AudioBuffer.h
+    audio/dsp/AudioNode.h
+    audio/dsp/AudioMath.h
+    audio/dsp/ParameterBlock.h
+    audio/dsp/AudioMemoryPool.h
+    audio/dsp/SpscQueue.h
+    audio/dsp/TestRenderer.h
+
     # Input
     input/InputDevice.h
     input/InputManager.h
@@ -479,6 +490,14 @@ target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 # 渲染后端宏定义 (仅 Vulkan)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_DSP=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_MINIAUDIO=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SYNTHESIZER=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_EFFECTS=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_RAYTRACING=0)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_OGG=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_MP3=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_FLAC=1)
 
 # C# Scripting 编译定义
 #   PRISMA_ENABLE_SCRIPTING=0 → OFF（不编译脚本子系统）
@@ -558,6 +577,10 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
     endif()
 endif()
 
+if(PRISMA_ENABLE_AUDIO_MINIAUDIO)
+    target_link_libraries(Engine PUBLIC miniaudio)
+endif()
+
 if(PRISMA_ENABLE_RENDER_VULKAN)
     target_link_libraries(Engine PUBLIC Vulkan::Vulkan)
     if(TARGET vma)
@@ -599,6 +622,7 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/math>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/resource>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio/dsp>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/graphic>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/2d>

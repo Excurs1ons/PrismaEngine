@@ -17,6 +17,8 @@
 #include "scripting/MonoRuntime.h"
 #include "scripting/CoreCLRHost.h"
 #include "scripting/ScriptEngine.h"
+#include "audio/AudioAPI.h"
+#include "audio/AudioTypes.h"
 #include <typeinfo>
 #include <string_view>
 #include <filesystem>
@@ -81,6 +83,29 @@ int Engine::Initialize() {
         if (sys->Initialize() != 0) {
             LOG_FATAL("Engine", "系统初始化失败！");
             return -1;
+        }
+    }
+
+    // 音频子系统初始化 (非致命 — 允许无音频运行)
+    {
+        std::string cliDisable;
+        if (m_Spec.Headless) {
+            LOG_INFO("Engine", "无头模式: 跳过音频初始化");
+        } else {
+            AudioDesc audioDesc;
+            audioDesc.deviceType = AudioDeviceType::SDL3;
+            audioDesc.outputFormat = AudioFormat(48000, 2, 32);
+            audioDesc.bufferSize = 256;
+            audioDesc.enableEffects = true;
+            m_audioDevice = AudioAPI::CreateDevice(audioDesc.deviceType, audioDesc);
+            if (m_audioDevice && m_audioDevice->Initialize(audioDesc)) {
+                LOG_INFO("Engine", "音频系统已初始化 ({}), 设备: {}",
+                         AudioAPI::GetDeviceName(audioDesc.deviceType),
+                         m_audioDevice->GetDeviceInfo().name);
+            } else {
+                LOG_WARNING("Engine", "音频初始化失败, 将继续运行 (静音模式)");
+                m_audioDevice.reset();
+            }
         }
     }
 
@@ -420,6 +445,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
         if (m_Spec.Headless || !m_Minimized) {
             Update(Timestep(std::min(deltaTime, 0.1f)));
+
+            // 音频更新 (非阻塞设备轮询)
+            if (m_audioDevice) m_audioDevice->Update();
+
             // C# 脚本更新（在 App OnUpdate 之后、渲染之前）
 #if PRISMA_ENABLE_SCRIPTING > 0
             if (m_scriptEngine->IsInitialized())
@@ -532,9 +561,10 @@ void Engine::Shutdown() {
     // VulkanPipelineState 析构访问已销毁的 VkDevice 句柄导致崩溃
     Scripting::SRPGraphicsAPI::Get().Shutdown();
 #endif
+    if (m_audioDevice) { m_audioDevice->Shutdown(); m_audioDevice.reset(); }
     if (m_RenderSystem) m_RenderSystem->Shutdown();
     if (m_Window) { m_Window->Shutdown(); m_Window.reset(); }
-    m_Systems.clear(); m_CurrentApp = nullptr; m_AssetManager = nullptr; m_InputManager = nullptr; m_RenderSystem = nullptr; m_SceneManager = nullptr; m_PhysicsSystem = nullptr; m_JobSystem = nullptr; m_Initialized = false; m_Running = false;
+    m_Systems.clear(); m_CurrentApp = nullptr; m_AssetManager = nullptr; m_InputManager = nullptr; m_RenderSystem = nullptr; m_SceneManager = nullptr; m_PhysicsSystem = nullptr; m_JobSystem = nullptr; m_audioDevice = nullptr; m_Initialized = false; m_Running = false;
 }
 
 } // namespace Prisma

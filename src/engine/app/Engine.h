@@ -12,6 +12,8 @@
 
 class CommandLineParser;
 
+namespace Audio { class IAudioDevice; struct AudioDesc; }
+
 namespace Prisma {
 
 class Application;
@@ -164,6 +166,9 @@ private:
     std::unique_ptr<Scripting::ScriptEngine> m_scriptEngine;
 #endif
     std::unique_ptr<EntityManager> m_entityManager;
+
+    // 音频设备 (optional, 通过 IAudioDevice 接口)
+    std::unique_ptr<Audio::IAudioDevice> m_audioDevice;
 
     static Engine* s_Instance;
 };
