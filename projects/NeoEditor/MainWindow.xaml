@@ -1,0 +1,94 @@
+<Window x:Class="NeoEditor.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:controls="using:Microsoft.UI.Xaml.Controls"
+        xmlns:dock="using:WinUI.Dock"
+        xmlns:local="using:NeoEditor"
+        mc:Ignorable="d">
+
+    <Grid x:Name="RootLayout">
+        <Grid.RowDefinitions>
+            <!-- MenuBar -->
+            <RowDefinition Height="Auto" />
+            <!-- ToolBar -->
+            <RowDefinition Height="Auto" />
+            <!-- DockManager -->
+            <RowDefinition Height="*" />
+            <!-- StatusBar -->
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- MenuBar (extracted to MenuBar.xaml) -->
+        <local:EditorMenuBar Grid.Row="0" />
+
+        <!-- ToolBar (extracted to ToolBar.xaml) -->
+        <local:EditorToolBar Grid.Row="1" />
+
+        <!-- WinUI.Dock DockManager — 4-panel dockable layout -->
+        <dock:DockManager Grid.Row="2" x:Name="MainDockManager">
+            <dock:LayoutPanel Orientation="Vertical">
+                <!-- Top row: Hierarchy | Scene Viewport | Inspector -->
+                <dock:LayoutPanel Orientation="Horizontal">
+                    <dock:DocumentGroup Width="240" CompactTabs="True">
+                        <dock:Document Title="Hierarchy"
+                                       CanClose="False"
+                                       CanPin="False">
+                            <WebView2 x:Name="HierarchyWebView" />
+                        </dock:Document>
+                    </dock:DocumentGroup>
+
+                    <dock:DocumentGroup ShowWhenEmpty="True">
+                        <dock:Document Title="Scene Viewport"
+                                       CanClose="False"
+                                       CanPin="False">
+                            <SwapChainPanel x:Name="SceneViewport"
+                                            IsTabStop="True" />
+                        </dock:Document>
+                    </dock:DocumentGroup>
+
+                    <dock:DocumentGroup Width="300" CompactTabs="True">
+                        <dock:Document Title="Inspector"
+                                       CanClose="False"
+                                       CanPin="False">
+                            <WebView2 x:Name="InspectorWebView" />
+                        </dock:Document>
+                    </dock:DocumentGroup>
+                </dock:LayoutPanel>
+
+                <!-- Bottom row: Console | Assets -->
+                <dock:LayoutPanel Height="200" Orientation="Horizontal">
+                    <dock:DocumentGroup TabPosition="Bottom">
+                        <dock:Document Title="Console"
+                                       CanClose="False"
+                                       CanPin="False">
+                            <WebView2 x:Name="ConsoleWebView" />
+                        </dock:Document>
+                    </dock:DocumentGroup>
+
+                    <dock:DocumentGroup CompactTabs="True" TabPosition="Bottom">
+                        <dock:Document Title="Assets"
+                                       CanClose="False"
+                                       CanPin="False">
+                            <WebView2 x:Name="AssetsWebView" />
+                        </dock:Document>
+                    </dock:DocumentGroup>
+                </dock:LayoutPanel>
+            </dock:LayoutPanel>
+        </dock:DockManager>
+
+        <!-- StatusBar -->
+        <Grid Grid.Row="3" Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock Grid.Column="0" Text="Ready" Margin="8,2" />
+            <TextBlock Grid.Column="2" x:Name="StatusFps" Text="FPS: 0" Margin="8,2" />
+            <TextBlock Grid.Column="3" Text="| Vulkan" Margin="8,2" />
+        </Grid>
+    </Grid>
+</Window>
