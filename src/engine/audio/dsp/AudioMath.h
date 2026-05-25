@@ -17,7 +17,7 @@ namespace AudioMath {
 /// @brief Convert decibels to linear gain scale.
 /// @param db  Gain in decibels.
 /// @return    10^(db/20)
-inline constexpr float DB_TO_LINEAR(float db)
+inline float DB_TO_LINEAR(float db)
 {
     return std::pow(10.0f, db / 20.0f);
 }
@@ -25,7 +25,7 @@ inline constexpr float DB_TO_LINEAR(float db)
 /// @brief Convert linear gain to decibels.
 /// @param linear  Linear gain value.
 /// @return        20*log10(linear), or -144 dB when linear <= 0.
-inline constexpr float LINEAR_TO_DB(float linear)
+inline float LINEAR_TO_DB(float linear)
 {
     return linear <= 0.0f ? -144.0f : 20.0f * std::log10(linear);
 }
