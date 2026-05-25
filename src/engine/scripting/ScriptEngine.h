@@ -8,6 +8,7 @@
 #include "Export.h"
 #include "core/Node.h"
 #include "SRPGraphicsAPI.h"
+#include "EditorAPI.h"
 
 namespace Prisma {
 namespace Scripting {
@@ -139,6 +140,37 @@ struct PrismaAPI {
     bool (*ptIsConverged)();
     uint32_t (*ptGetMaxSamples)();
 
+    // ===== Audio API =====
+    bool     (*isAudioInitialized)();
+    float    (*audioGetMasterVolume)();
+    void     (*audioSetMasterVolume)(float vol);
+    uint32_t (*audioPlayClip)(const char* path, void* desc);
+    void     (*audioStop)(uint32_t voiceId);
+    void     (*audioStopAll)();
+    void     (*audioSetVolume)(uint32_t voiceId, float vol);
+    bool     (*audioIsPlaying)(uint32_t voiceId);
+
+    // ===== AudioGraph API (DSP node graph) =====
+    uint64_t (*audioCreateGraph)(uint32_t sampleRate, uint32_t framesPerBlock);
+    void     (*audioDestroyGraph)(uint64_t graphHandle);
+    uint64_t (*audioGraphCreateNode)(uint64_t graphHandle, const char* nodeType, const char* name);
+    void     (*audioGraphRemoveNode)(uint64_t graphHandle, uint64_t nodeHandle);
+    bool     (*audioGraphConnect)(uint64_t graphHandle, uint64_t srcHandle, const char* srcPin, uint64_t dstHandle, const char* dstPin);
+    bool     (*audioGraphDisconnect)(uint64_t graphHandle, uint64_t srcHandle, uint64_t dstHandle);
+    void     (*audioNodeSetParam)(uint64_t nodeHandle, const char* name, float value);
+    float    (*audioNodeGetParam)(uint64_t nodeHandle, const char* name);
+    const char* (*audioNodeGetName)(uint64_t nodeHandle);
+    void     (*audioNodeSetName)(uint64_t nodeHandle, const char* name);
+    void     (*audioNodeDestroy)(uint64_t nodeHandle);
+
+    // ===== Level Meter + Spectrum Readback =====
+    bool     (*audioGetLevelMeterData)(uint64_t nodeHandle, uint32_t channel, float* peak, float* rms, float* peakDb, float* rmsDb);
+    uint64_t (*audioCreateSpectrumAnalyzer)(uint32_t fftSize);
+    void     (*audioDestroySpectrumAnalyzer)(uint64_t handle);
+    void     (*audioSpectrumProcessFloats)(uint64_t handle, const float* input, uint32_t frames, uint32_t sampleRate);
+    uint32_t (*audioSpectrumGetBins)(uint64_t handle, float* freqOut, float* magOut, float* phaseOut, uint32_t maxBins);
+    float    (*audioSpectrumGetPeak)(uint64_t handle);
+
     // [诊断] 结构体大小，用于 C++/C# 版本校验
     // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)
     // C# 侧在 Init 中校验，不匹配时抛出明确异常
@@ -157,6 +189,7 @@ public:
 
     bool IsInitialized() const { return m_initialized; }
     const PrismaAPI& GetAPI() const { return m_api; }
+    EditorAPI& GetEditorAPI() { return m_editorAPI; }
     void GetCameraPos(float* x, float* y) const { *x = m_cameraPosX; *y = m_cameraPosY; }
 
 private:
@@ -177,6 +210,7 @@ private:
     void (*m_srpRenderFn)(float) = nullptr;
 
     PrismaAPI m_api = {};
+    EditorAPI m_editorAPI = {};
 
     float m_cameraPosX = 0.0f, m_cameraPosY = 0.0f;
     float m_lastDeltaTime = 0.016f;
