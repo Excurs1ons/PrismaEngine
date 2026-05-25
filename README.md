@@ -15,7 +15,7 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 [中文文档](./docs/README_zh.md) | [English](./README.md)
 
 > **Current Status**: CoreCLR C# scripting functional. SoA entity pool with 1M virtual capacity. Android Vulkan runtime production-ready.
-> **Last Updated**: 2026-05-22
+> **Last Updated**: 2026-05-25
 
 ## CI/CD Status
 
