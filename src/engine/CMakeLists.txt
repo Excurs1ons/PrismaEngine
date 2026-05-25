@@ -543,6 +543,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
     endif()
 endif()
 if(MSVC)
+    target_compile_definitions(Engine PRIVATE _USE_MATH_DEFINES)
     target_compile_options(Engine PRIVATE 
         /utf-8
         $<$<CONFIG:Release>:/O2 /Oi /Gy>
