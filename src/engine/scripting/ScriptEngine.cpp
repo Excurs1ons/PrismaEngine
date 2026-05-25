@@ -347,10 +347,10 @@ static void S_AudioSetMasterVolume(float vol) {
 
 static uint32_t S_AudioPlayClip(const char* path, void* desc) {
     if (!path) return 0;
-    auto clip = AudioAPI::LoadClip(path);
+    auto clip = Audio::AudioAPI::LoadClip(path);
     if (!clip) return 0;
-    PlayDesc playDesc;
-    auto* ad = (Audio::PlayDesc*)desc; // Placeholder cast
+    Audio::PlayDesc playDesc;
+    auto* ad = (Prisma::Audio::PlayDesc*)desc; // Placeholder cast
     return 1; // Voice ID stub
 }
 
@@ -435,7 +435,7 @@ static uint64_t S_AudioGraphCreateNode(uint64_t graphHandle, const char* nodeTyp
     else if (type == "SRC")            node = graph->CreateNode(std::make_unique<SampleRateConverterNode>());
     else if (type == "MixerManager")   node = graph->CreateNode(std::make_unique<MixerManagerNode>());
     else {
-        Logger::Get().Log(LogLevel::Error, "ScriptEngine", "Unknown AudioNode type: {}", type);
+        LOG_ERROR("ScriptEngine", "Unknown AudioNode type: {}", type);
         return 0;
     }
 

@@ -97,7 +97,10 @@ public:
     }
 
     void Reset() override {
-        m_x1 = m_x2 = m_y1 = m_y2 = {0.0f, 0.0f};
+        m_x1[0] = m_x1[1] = 0.0f;
+        m_x2[0] = m_x2[1] = 0.0f;
+        m_y1[0] = m_y1[1] = 0.0f;
+        m_y2[0] = m_y2[1] = 0.0f;
     }
 
 private:

@@ -44,7 +44,9 @@ public:
     }
 
     void Reset() override {
-        m_biquads = {};
+        for (auto& band : m_biquads)
+            for (auto& bq : band)
+                bq = Biquad{};
     }
 
 private:

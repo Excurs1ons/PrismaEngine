@@ -36,7 +36,7 @@ public:
 
     void Process(AudioBuffer& output, const AudioProcessContext& ctx) override {
         AudioBuffer* input = ReadInput("Input");
-        if (!input || !HasIR()) { output.CopyFrom(*input ? *input : output); return; }
+        if (!input || !HasIR()) { if (input) output.CopyFrom(*input); return; }
 
         float mix = std::clamp(GetParameter("mix"), 0.0f, 1.0f);
         float gain = GetParameter("gain");

@@ -33,8 +33,8 @@ public:
         float maxDelayMs = baseDelay + depth * 15.0f;
         uint32_t maxSamples = static_cast<uint32_t>(maxDelayMs * ctx.sampleRate / 1000.0f) + 2;
 
-        if (m_buffer.size() < maxSamples + ctx.frames) {
-            m_buffer.resize(maxSamples + ctx.frames, 0.0f);
+        if (m_buffer.size() < maxSamples + ctx.framesPerBlock) {
+            m_buffer.resize(maxSamples + ctx.framesPerBlock, 0.0f);
         }
 
         uint32_t ch = std::min(output.GetChannels(), input->GetChannels());

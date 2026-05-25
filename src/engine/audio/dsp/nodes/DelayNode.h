@@ -34,7 +34,7 @@ public:
         uint32_t delaySamples = static_cast<uint32_t>(delaySec * ctx.sampleRate + 0.5f);
         uint32_t spreadSamples = static_cast<uint32_t>(spread * ctx.sampleRate + 0.5f);
 
-        uint32_t neededSize = delaySamples + spreadSamples + ctx.frames;
+        uint32_t neededSize = delaySamples + spreadSamples + ctx.framesPerBlock;
         if (m_buffer.size() < neededSize) {
             m_buffer.resize(neededSize, 0.0f);
             m_writePos = 0;

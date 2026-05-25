@@ -29,8 +29,8 @@ public:
         float mix = std::clamp(GetParameter("mix"), 0.0f, 1.0f);
 
         uint32_t maxDelay = static_cast<uint32_t>(10.0f * ctx.sampleRate / 1000.0f) + 2;
-        if (m_buffer.size() < maxDelay + ctx.frames) {
-            m_buffer.resize(maxDelay + ctx.frames, 0.0f);
+        if (m_buffer.size() < maxDelay + ctx.framesPerBlock) {
+            m_buffer.resize(maxDelay + ctx.framesPerBlock, 0.0f);
         }
 
         uint32_t ch = std::min(output.GetChannels(), input->GetChannels());

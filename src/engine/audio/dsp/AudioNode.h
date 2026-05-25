@@ -149,7 +149,7 @@ public:
     float GetParameter(const std::string& name) const {
         auto it = m_params.find(name);
         if (it != m_params.end()) {
-            return it->second.GetValue();
+            return it->second.PeekValue();
         }
         return 0.0f;
     }

@@ -74,8 +74,8 @@ public:
     }
 
     void Reset() override {
-        m_ic1eq.assign(2, 0.0f);
-        m_ic2eq.assign(2, 0.0f);
+        m_ic1eq[0] = m_ic1eq[1] = 0.0f;
+        m_ic2eq[0] = m_ic2eq[1] = 0.0f;
     }
 
 private:
