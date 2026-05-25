@@ -3,14 +3,14 @@ using System.Runtime.InteropServices;
 
 namespace Prisma;
 
-public static class Audio
+public static unsafe class Audio
 {
-    public static bool IsInitialized => API.IsAudioInitialized();
+    public static bool IsInitialized => Interop.API.IsAudioInitialized();
 
     public static float MasterVolume
     {
-        get => API.AudioGetMasterVolume();
-        set => API.AudioSetMasterVolume(value);
+        get => Interop.API.AudioGetMasterVolume();
+        set => Interop.API.AudioSetMasterVolume(value);
     }
 
     public static uint PlayClip(string path, float volume = 1.0f, float pitch = 1.0f, bool loop = false)
@@ -23,14 +23,14 @@ public static class Audio
                 pitch = pitch,
                 loop = loop ? 1 : 0
             };
-            return API.AudioPlayClip(p, &desc);
+            return Interop.API.AudioPlayClip(p, &desc);
         }
     }
 
-    public static void Stop(uint voiceId) => API.AudioStop(voiceId);
-    public static void StopAll() => API.AudioStopAll();
-    public static void SetVolume(uint voiceId, float volume) => API.AudioSetVolume(voiceId, volume);
-    public static bool IsPlaying(uint voiceId) => API.AudioIsPlaying(voiceId);
+    public static void Stop(uint voiceId) => Interop.API.AudioStop(voiceId);
+    public static void StopAll() => Interop.API.AudioStopAll();
+    public static void SetVolume(uint voiceId, float volume) => Interop.API.AudioSetVolume(voiceId, volume);
+    public static bool IsPlaying(uint voiceId) => Interop.API.AudioIsPlaying(voiceId);
 }
 
 [StructLayout(LayoutKind.Sequential)]

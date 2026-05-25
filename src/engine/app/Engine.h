@@ -12,7 +12,7 @@
 
 class CommandLineParser;
 
-namespace Audio { class IAudioDevice; struct AudioDesc; }
+namespace Prisma::Audio { class IAudioDevice; struct AudioDesc; }
 
 namespace Prisma {
 

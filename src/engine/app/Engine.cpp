@@ -92,15 +92,15 @@ int Engine::Initialize() {
         if (m_Spec.Headless) {
             LOG_INFO("Engine", "无头模式: 跳过音频初始化");
         } else {
-            AudioDesc audioDesc;
-            audioDesc.deviceType = AudioDeviceType::SDL3;
-            audioDesc.outputFormat = AudioFormat(48000, 2, 32);
+            Audio::AudioDesc audioDesc;
+            audioDesc.deviceType = Audio::AudioDeviceType::SDL3;
+            audioDesc.outputFormat = Audio::AudioFormat(48000, 2, 32);
             audioDesc.bufferSize = 256;
             audioDesc.enableEffects = true;
-            m_audioDevice = AudioAPI::CreateDevice(audioDesc.deviceType, audioDesc);
+            m_audioDevice = Audio::AudioAPI::CreateDevice(audioDesc.deviceType, audioDesc);
             if (m_audioDevice && m_audioDevice->Initialize(audioDesc)) {
                 LOG_INFO("Engine", "音频系统已初始化 ({}), 设备: {}",
-                         AudioAPI::GetDeviceName(audioDesc.deviceType),
+                         Audio::AudioAPI::GetDeviceName(audioDesc.deviceType),
                          m_audioDevice->GetDeviceInfo().name);
             } else {
                 LOG_WARNING("Engine", "音频初始化失败, 将继续运行 (静音模式)");
@@ -447,7 +447,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
             Update(Timestep(std::min(deltaTime, 0.1f)));
 
             // 音频更新 (非阻塞设备轮询)
-            if (m_audioDevice) m_audioDevice->Update();
+            if (m_audioDevice) m_audioDevice->Update(std::min(deltaTime, 0.1f));
 
             // C# 脚本更新（在 App OnUpdate 之后、渲染之前）
 #if PRISMA_ENABLE_SCRIPTING > 0
