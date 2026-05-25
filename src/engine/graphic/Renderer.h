@@ -7,10 +7,7 @@
 
 namespace Prisma::Graphic {
 
-/**
- * @brief 渲染指令 (Draw Command)
- * 极其轻量级，只存必要的变换和句柄。
- */
+/* 渲染指令 (Draw Command) */
 struct RenderCommand {
     Mesh* mesh;
     Material* material;
@@ -19,10 +16,7 @@ struct RenderCommand {
     Prisma::Color color;
 };
 
-/**
- * @brief 高层渲染器入口
- * 静态 API，方便应用层提交。
- */
+/* 高层渲染器入口 */
 class ENGINE_API Renderer {
 public:
     struct SceneData {

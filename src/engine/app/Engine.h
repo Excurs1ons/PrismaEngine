@@ -29,9 +29,7 @@ class PhysicsSystem;
 class ThreadManager;
 class EntityManager;
 
-/**
- * @brief 引擎配置规范
- */
+// 引擎配置规范
 struct EngineSpecification {
     const char* Name = "Prisma Engine";
     bool Headless = false;
@@ -49,9 +47,7 @@ struct EngineSpecification {
     uint32_t MaxSamples = 0;
 };
 
-/**
- * @brief 引擎核心类
- */
+// 引擎核心类
 class ENGINE_API Engine {
 public:
     Engine(const EngineSpecification& spec = EngineSpecification());
@@ -118,9 +114,7 @@ public:
     const EngineSpecification& GetSpecification() const;
     bool IsRunning() const { return m_Running; }
 
-    /**
-     * @brief 提交一个函数到主线程执行 (线程安全)
-     */
+    // 提交一个函数到主线程执行 (线程安全)
     void SubmitToMainThread(std::function<void()>&& func);
 
     // 通用系统添加 (用于非核心扩展)

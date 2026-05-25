@@ -5,10 +5,7 @@
 
 namespace Prisma {
 
-/**
- * @brief 静态输入轮询类 (Cherno Style)
- * 简化了在 Update 逻辑中对按键和鼠标状态的查询。
- */
+/* 静态输入轮询类 (Cherno Style) */
 class ENGINE_API Input {
 public:
     static bool IsKeyPressed(Prisma::Input::KeyCode key) {

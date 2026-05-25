@@ -14,7 +14,7 @@ typedef void* LIB_HANDLE;
 namespace Prisma {
 
 /**
- * @brief 运行时动态加载系统 Webview 内核
+ * 运行时动态加载系统 Webview 内核
  * 
  * Windows: 加载 WebView2Loader.dll
  * Linux: 加载 libwebkit2gtk-4.1.so.0

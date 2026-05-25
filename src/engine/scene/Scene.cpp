@@ -41,7 +41,7 @@ struct SceneFileData {
 
 } // namespace Prisma
 
-// ── Glaze 元数据（全局命名空间） ──
+// Glaze 元数据（全局命名空间）
 
 template <>
 struct glz::meta<Prisma::SceneComponentEntry> {
@@ -73,7 +73,7 @@ struct glz::meta<Prisma::SceneFileData> {
 
 namespace Prisma {
 
-// ── 生命周期 ──
+// 生命周期
 
 Scene::Scene() {}
 
@@ -144,7 +144,7 @@ void Scene::Update(Timestep ts) {
     }
 }
 
-// ── Node 名称 ──
+// Node 名称
 
 std::string Scene::GetNodeName(Node node) const {
     uint32_t idx = node.GetIndex();
@@ -161,7 +161,7 @@ void Scene::SetNodeName(Node node, const std::string& name) {
     }
 }
 
-// ── 层级 API ──
+// 层级 API
 
 void Scene::SetParent(Node child, Node parent) {
     if (!child.IsValid()) return;
@@ -234,7 +234,7 @@ Matrix4x4 Scene::GetWorldTransform(Node node) const {
     return world;
 }
 
-// ── 组件 API ──
+// 组件 API
 
 const std::vector<std::shared_ptr<Component>>& Scene::GetComponents(Node node) const {
     static std::vector<std::shared_ptr<Component>> empty;
@@ -256,7 +256,7 @@ void Scene::RemoveComponent(Node node, Component* comp) {
     }
 }
 
-// ── 相机 ──
+// 相机
 
 std::shared_ptr<Prisma::Graphic::ICamera> Scene::GetMainCamera() {
     for (auto& node : m_nodes) {
@@ -285,7 +285,7 @@ std::vector<Prisma::Graphic::Light> Scene::GetLights() const {
     return result;
 }
 
-// ── 序列化 ──
+// 序列化
 
 bool Scene::Deserialize(const std::string& path) {
     SceneFileData sfd;
@@ -327,7 +327,7 @@ bool Scene::Deserialize(const std::string& path) {
         Node node = nameToNode[nfd.name];
         uint32_t idx = node.GetIndex();
 
-        // ── 层级 ──
+        // 层级
         if (nfd.parent && !nfd.parent->empty()) {
             auto it = nameToNode.find(*nfd.parent);
             if (it != nameToNode.end()) {
@@ -337,7 +337,7 @@ bool Scene::Deserialize(const std::string& path) {
             }
         }
 
-        // ── Transform 组件（3D 变换） ──
+        // Transform 组件（3D 变换）
         auto transform = AddComponent<Transform>(node);
         Transform::Data td;
         if (nfd.position) td.position = *nfd.position;
@@ -345,7 +345,7 @@ bool Scene::Deserialize(const std::string& path) {
         if (nfd.scale)    td.scale    = *nfd.scale;
         transform->SetData(td);
 
-        // ── 其他组件（通过 ComponentRegistry 反序列化） ──
+        // 其他组件（通过 ComponentRegistry 反序列化）
         auto& reg = ComponentRegistry::Get();
         for (auto& compEntry : nfd.components) {
             auto comp = reg.Create(compEntry.type);
@@ -386,7 +386,7 @@ bool Scene::Serialize(const std::string& path) const {
         SceneNodeFileData nfd;
         nfd.name = (idx < m_nodeNames.size()) ? m_nodeNames[idx] : "Node";
 
-        // ── 父节点 ──
+        // 父节点
         if (idx < m_nodeData.size() && m_nodeData[idx].parent != UINT32_MAX) {
             auto it = idxToName.find(m_nodeData[idx].parent);
             if (it != idxToName.end()) {
@@ -394,7 +394,7 @@ bool Scene::Serialize(const std::string& path) const {
             }
         }
 
-        // ── Transform 组件 ──
+        // Transform 组件
         auto transform = GetComponent<Transform>(node);
         if (transform) {
             auto td = transform->GetData();
@@ -403,7 +403,7 @@ bool Scene::Serialize(const std::string& path) const {
             nfd.scale    = td.scale;
         }
 
-        // ── 其他组件 ──
+        // 其他组件
         auto comps = GetComponents(node);
         for (auto& comp : comps) {
             auto typeName = reg.GetTypeName(*comp);

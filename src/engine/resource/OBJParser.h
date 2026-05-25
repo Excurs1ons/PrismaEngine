@@ -11,41 +11,31 @@
 namespace Prisma {
 namespace Resource {
 
-/**
- * @brief OBJ纹理坐标数据结构
- */
+// OBJ纹理坐标数据结构
 struct OBJTexCoord {
     float u, v;
 };
 
-/**
- * @brief OBJ面索引数据结构
- */
+// OBJ面索引数据结构
 struct OBJFaceIndices {
     uint32_t vertexIndex;
     uint32_t texCoordIndex;
     uint32_t normalIndex;
 };
 
-/**
- * @brief OBJ面数据结构
- */
+// OBJ面数据结构
 struct OBJFace {
     std::vector<OBJFaceIndices> indices;
 };
 
-/**
- * @brief OBJ组数据结构
- */
+// OBJ组数据结构
 struct OBJGroup {
     std::string name;
     std::vector<OBJFace> faces;
     uint32_t materialIndex;
 };
 
-/**
- * @brief OBJ材质数据结构
- */
+// OBJ材质数据结构
 struct OBJMaterial {
     std::string name;
     float ambient[3];
@@ -56,9 +46,7 @@ struct OBJMaterial {
     float dissolve;
 };
 
-/**
- * @brief OBJ文件解析结果
- */
+// OBJ文件解析结果
 struct OBJParseResult {
     bool success;
     std::string error;
@@ -80,23 +68,16 @@ struct OBJParseResult {
     OBJParseResult() : success(false) {}
 };
 
-/**
- * @brief OBJ文件解析器
- */
+// OBJ文件解析器
 class OBJParser {
 public:
     /**
      * @brief 解析OBJ文件
-     * @param filePath OBJ文件路径
-     * @return 解析结果
      */
     static OBJParseResult Parse(const std::string& filePath);
 
     /**
      * @brief 从内存解析OBJ数据
-     * @param data OBJ文件数据
-     * @param size 数据大小
-     * @return 解析结果
      */
     static OBJParseResult ParseFromMemory(const char* data, size_t size);
 

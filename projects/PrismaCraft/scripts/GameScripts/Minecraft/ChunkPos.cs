@@ -2,7 +2,7 @@ using System;
 
 namespace GameScripts.Minecraft;
 
-/// <summary>区块坐标。对应 net.minecraft.core.ChunkPos</summary>
+区块坐标。对应 net.minecraft.core.ChunkPos</summary>
 public readonly struct ChunkPos : IEquatable<ChunkPos>
 {
     public readonly int X, Z;
@@ -23,7 +23,7 @@ public readonly struct ChunkPos : IEquatable<ChunkPos>
     public override string ToString() => $"[{X},{Z}]";
 }
 
-/// <summary>Section (16x16x16) 坐标。对应 net.minecraft.core.SectionPos</summary>
+Section (16x16x16) 坐标。对应 net.minecraft.core.SectionPos</summary>
 public readonly struct SectionPos : IEquatable<SectionPos>
 {
     public readonly int X, Y, Z;

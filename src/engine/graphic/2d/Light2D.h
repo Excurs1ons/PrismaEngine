@@ -7,10 +7,7 @@
 namespace Prisma {
 namespace Graphic {
 
-/**
- * @brief 2D 光源类
- * 支持点光源、方向光和聚光灯
- */
+/* 2D 光源类 */
 class Light2D {
 public:
     enum class Type {

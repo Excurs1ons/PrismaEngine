@@ -5,7 +5,6 @@ using Microsoft.UI.Xaml.Controls;
 
 namespace NeoEditor.Core;
 
-/// <summary>
 /// 窗口管理器 (T15): 集中处理 WinUI3 窗口生命周期事件，链式触发视口纹理尺寸更新。
 ///
 /// 职责:
@@ -13,7 +12,6 @@ namespace NeoEditor.Core;
 ///   - DPI 变化 → 重新计算物理像素尺寸
 ///   - 最小化/恢复 → 暂停/恢复渲染帧泵
 ///   - 窗口关闭 → 先停止引擎线程，再释放资源
-/// </summary>
 internal sealed class WindowManager : IDisposable
 {
     private readonly Window _window;
@@ -24,10 +22,10 @@ internal sealed class WindowManager : IDisposable
     private readonly CoreWindow _coreWindow;
     private bool _disposed;
 
-    /// <summary>窗口最小化时触发，UI 层应暂停帧泵。</summary>
+窗口最小化时触发，UI 层应暂停帧泵。</summary>
     public event Action? RenderingPaused;
 
-    /// <summary>窗口恢复时触发，UI 层应恢复帧泵。</summary>
+窗口恢复时触发，UI 层应恢复帧泵。</summary>
     public event Action? RenderingResumed;
 
     public WindowManager(
@@ -50,7 +48,7 @@ internal sealed class WindowManager : IDisposable
         _coreWindow = CoreWindow.GetForCurrentThread();
     }
 
-    /// <summary>订阅所有窗口生命周期事件。在 ViewportSurface 初始化完成后调用。</summary>
+订阅所有窗口生命周期事件。在 ViewportSurface 初始化完成后调用。</summary>
     public void Start()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -68,7 +66,7 @@ internal sealed class WindowManager : IDisposable
         _window.Closed += OnWindowClosing;
     }
 
-    /// <summary>取消订阅所有事件。在 Dispose 前调用以确保有序拆卸。</summary>
+取消订阅所有事件。在 Dispose 前调用以确保有序拆卸。</summary>
     public void Stop()
     {
         _window.SizeChanged -= OnWindowSizeChanged;

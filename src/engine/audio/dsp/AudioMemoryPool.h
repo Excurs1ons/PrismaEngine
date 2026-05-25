@@ -31,10 +31,8 @@ namespace Prisma::Audio::DSP {
 // ============================================================================
 class AudioMemoryPool {
 public:
-    /// @brief 构造内存池
-    /// @param totalBytes  预分配总字节数
-    /// @param blockSize   每个块的大小（字节）
-    /// @note totalBytes 不必是 blockSize 的整数倍，末尾不足一块的部分浪费
+    // 构造内存池
+    // note: totalBytes 不必是 blockSize 的整数倍，末尾不足一块的部分浪费
     AudioMemoryPool(size_t totalBytes, size_t blockSize)
         : m_capacity(totalBytes / blockSize)
     {
@@ -61,9 +59,8 @@ public:
     // 核心接口
     // ========================================================================
 
-    /// @brief 从池中分配一个块
-    /// @return 块指针，池空时返回 nullptr
-    /// @note 实时安全：不抛异常，不阻塞
+    // 从池中分配一个块
+    // note: 实时安全：不抛异常，不阻塞
     [[nodiscard]] void* Allocate() noexcept {
         Node* head = m_freeList.load(std::memory_order_acquire);
         while (head) {
@@ -80,9 +77,8 @@ public:
         return nullptr;
     }
 
-    /// @brief 将块归还到池中
-    /// @param ptr 之前由 Allocate() 返回的指针，可为 nullptr（无操作）
-    /// @note 实时安全：不抛异常，不阻塞
+    // 将块归还到池中
+    // note: 实时安全：不抛异常，不阻塞
     void Free(void* ptr) noexcept {
         if (!ptr) { return; }
 
@@ -103,33 +99,33 @@ public:
     // 状态查询
     // ========================================================================
 
-    /// @brief 当前已分配的块数
+    // 当前已分配的块数
     [[nodiscard]] size_t GetUsed() const noexcept {
         return m_used.load(std::memory_order_relaxed);
     }
 
-    /// @brief 池中总块数
+    // 池中总块数
     [[nodiscard]] size_t GetCapacity() const noexcept {
         return m_capacity;
     }
 
-    /// @brief 池中剩余可用块数
+    // 池中剩余可用块数
     [[nodiscard]] size_t GetAvailable() const noexcept {
         return m_capacity - GetUsed();
     }
 
-    /// @brief 每个块的大小（字节）
+    // 每个块的大小（字节）
     [[nodiscard]] size_t GetBlockSize() const noexcept {
         return m_blockSize;
     }
 
-    /// @brief 是否使用无锁原子操作（仅用于调试断言）
+    // 是否使用无锁原子操作（仅用于调试断言）
     [[nodiscard]] bool IsLockFree() const noexcept {
         return m_freeList.is_lock_free();
     }
 
-    /// @brief 重置池（回到初始全空状态）
-    /// @note 调用后所有已分配的指针失效
+    // 重置池（回到初始全空状态）
+    // note: 调用后所有已分配的指针失效
     void Reset() noexcept {
         m_used.store(0, std::memory_order_relaxed);
         InitFreeList();
@@ -162,19 +158,19 @@ private:
     // 成员变量（热点数据加 cacheline padding）
     // ========================================================================
 
-    /// @brief 原子 freelist 头部指针
+    // 原子 freelist 头部指针
     alignas(64) std::atomic<Node*> m_freeList{nullptr};
 
-    /// @brief 预分配的连续内存块
+    // 预分配的连续内存块
     std::vector<std::byte> m_memory;
 
-    /// @brief 每个块的大小（字节）
+    // 每个块的大小（字节）
     size_t m_blockSize = 0;
 
-    /// @brief 已分配块数计数
+    // 已分配块数计数
     alignas(64) std::atomic<size_t> m_used{0};
 
-    /// @brief 总块数
+    // 总块数
     size_t m_capacity = 0;
 };
 
@@ -205,8 +201,7 @@ class NodePool {
         "Node type T must be at least sizeof(void*) for freelist embedding");
 
 public:
-    /// @brief 构造节点池
-    /// @param capacity 预分配的节点数量
+    // 构造节点池
     explicit NodePool(size_t capacity)
         : m_capacity(capacity)
     {
@@ -238,8 +233,7 @@ public:
     // 核心接口
     // ========================================================================
 
-    /// @brief 分配一个节点槽位
-    /// @return T* 指针（存储已分配但未构造，调用者需要 placement new）
+    // 分配一个节点槽位
     ///         池满时返回 nullptr
     [[nodiscard]] T* Allocate() noexcept {
         Node* head = m_freeList.load(std::memory_order_acquire);
@@ -259,9 +253,8 @@ public:
         return nullptr;
     }
 
-    /// @brief 归还节点到池中
-    /// @param ptr 由 Allocate() 返回的指针，可为 nullptr（无操作）
-    /// @note 调用者应确保已调用析构函数（placement delete）
+    // 归还节点到池中
+    // note: 调用者应确保已调用析构函数（placement delete）
     void Free(T* ptr) noexcept {
         if (!ptr) { return; }
 
@@ -300,44 +293,44 @@ public:
     // 状态查询
     // ========================================================================
 
-    /// @brief 当前正在使用的节点数
+    // 当前正在使用的节点数
     [[nodiscard]] size_t GetUsed() const noexcept {
         const size_t allocd = m_allocCount.load(std::memory_order_relaxed);
         const size_t freed  = m_freeCount.load(std::memory_order_relaxed);
         return allocd > freed ? allocd - freed : 0;
     }
 
-    /// @brief 池中总节点数
+    // 池中总节点数
     [[nodiscard]] size_t GetCapacity() const noexcept {
         return m_capacity;
     }
 
-    /// @brief 剩余可用节点数
+    // 剩余可用节点数
     [[nodiscard]] size_t GetAvailable() const noexcept {
         return m_capacity - GetUsed();
     }
 
-    /// @brief 总分配次数（包括已释放的）
+    // 总分配次数（包括已释放的）
     [[nodiscard]] size_t GetAllocCount() const noexcept {
         return m_allocCount.load(std::memory_order_relaxed);
     }
 
-    /// @brief 总释放次数
+    // 总释放次数
     [[nodiscard]] size_t GetFreeCount() const noexcept {
         return m_freeCount.load(std::memory_order_relaxed);
     }
 
-    /// @brief 检测分配/释放计数是否平衡（无泄漏）
+    // 检测分配/释放计数是否平衡（无泄漏）
     [[nodiscard]] bool HasLeaks() const noexcept {
         return GetAllocCount() != GetFreeCount();
     }
 
-    /// @brief 是否使用无锁原子操作
+    // 是否使用无锁原子操作
     [[nodiscard]] bool IsLockFree() const noexcept {
         return m_freeList.is_lock_free();
     }
 
-    /// @brief 重置池（所有统计清零，所有节点回到 freelist）
+    // 重置池（所有统计清零，所有节点回到 freelist）
     void Reset() noexcept {
         m_allocCount.store(0, std::memory_order_relaxed);
         m_freeCount.store(0, std::memory_order_relaxed);
@@ -356,7 +349,7 @@ private:
     // 内部类型
     // ========================================================================
 
-    /// @brief Freelist 节点（独立于 T 的存储，避免对齐冲突）
+    // Freelist 节点（独立于 T 的存储，避免对齐冲突）
     struct Node {
         std::atomic<Node*> next{nullptr};
     };
@@ -365,22 +358,22 @@ private:
     // 成员变量（热点数据加 cacheline padding）
     // ========================================================================
 
-    /// @brief 原子 freelist 头部
+    // 原子 freelist 头部
     alignas(64) std::atomic<Node*> m_freeList{nullptr};
 
-    /// @brief 预分配的节点存储（对齐到 alignof(T)）
+    // 预分配的节点存储（对齐到 alignof(T)）
     alignas(64) std::vector<std::byte> m_storage;
 
-    /// @brief Freelist 链接节点
+    // Freelist 链接节点
     std::vector<Node> m_nodes;
 
-    /// @brief 总节点数
+    // 总节点数
     size_t m_capacity = 0;
 
-    /// @brief 调试统计：分配次数
+    // 调试统计：分配次数
     alignas(64) std::atomic<size_t> m_allocCount{0};
 
-    /// @brief 调试统计：释放次数
+    // 调试统计：释放次数
     alignas(64) std::atomic<size_t> m_freeCount{0};
 };
 

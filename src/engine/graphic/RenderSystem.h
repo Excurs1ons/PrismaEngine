@@ -39,10 +39,7 @@ struct RenderSystemDesc {
     std::string name           = "PrismaApp";
 };
 
-/**
- * @brief 渲染系统 (子系统)
- * 没有任何单例，由 Engine 拥有。
- */
+/* 渲染系统 (子系统) */
 class ENGINE_API RenderSystem : public ISubSystem {
 public:
     RenderSystem(const RenderSystemDesc& desc);

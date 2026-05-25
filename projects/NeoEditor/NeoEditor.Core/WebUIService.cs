@@ -3,7 +3,6 @@ using System.Text;
 
 namespace NeoEditor.Core;
 
-/// <summary>
 /// 轻量级 HTTP 服务器，为 WebView2 面板提供 REST API 通信。
 /// 使用 System.Net.HttpListener 实现，不需要 ASP.NET Core。
 /// 集成 EventBus 事件广播，支持 HTTP 轮询回退。
@@ -12,7 +11,6 @@ namespace NeoEditor.Core;
 ///   HttpListener 需要注册 URL ACL。如果启动失败，以管理员身份运行一次:
 ///     netsh http add urlacl http://localhost:8080/ user=Everyone
 ///   或者使用管理员权限运行 NeoEditor。
-/// </summary>
 internal sealed class WebUIService : IDisposable
 {
     private readonly HttpListener _listener;

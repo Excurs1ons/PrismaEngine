@@ -5,13 +5,13 @@
 
 namespace Prisma {
 
-/// @brief 子系统基类接口
+// 子系统基类接口
 template <typename T> 
 class ManagerBase : public ISubSystem {
 public:
     virtual ~ManagerBase() = default;
 
-    /// @brief 获取子系统名称 (默认使用 typeid)
+    // 获取子系统名称 (默认使用 typeid)
     const char* GetName() const override { return typeid(T).name(); }
 
 protected:

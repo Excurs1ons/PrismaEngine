@@ -4,11 +4,9 @@ using System.Text;
 
 namespace NeoEditor.Core.Interop;
 
-/// <summary>
 /// EditorAPI 函数指针表（与 C++ Prisma::Scripting::EditorAPI 内存布局一致）。
 /// 25 个函数指针 + 1 个 uint32 structSize = 26 字段。
 /// 布局: Scene(4) → Transform(6) → Selection(3) → Viewport(3) → Asset(3) → Editor(3) → Log(2) → Memory(1) → Size(1)
-/// </summary>
 [StructLayout(LayoutKind.Sequential)]
 internal unsafe struct EditorAPI_Interop
 {
@@ -60,9 +58,7 @@ internal unsafe struct EditorAPI_Interop
     public uint StructSize;
 }
 
-/// <summary>
 /// EditorAPI 高级封装。类型安全包装，自动处理字符串编组和内存释放。
-/// </summary>
 public static unsafe class EditorAPI
 {
     private static EditorAPI_Interop s_api;
@@ -297,7 +293,6 @@ public static unsafe class EditorAPI
     // Log API
     // ===================================================================
 
-    /// <param name="level">-1=全部, 0=Info, 1=Warning, 2=Error</param>
     public static string GetLogs(int level, int count)
     {
         var ptr = s_api.LogGetLogs(level, count);

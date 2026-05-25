@@ -5,7 +5,7 @@
 namespace Prisma {
 
 /**
- * @brief NeoEditor Plugin Application — 由 Launcher 加载
+ NeoEditor Plugin Application — 由 Launcher 加载
  *
  * 插件模式 = 无头控制台模式，通过 MCP/CLI 交互。
  * 不创建窗口，不启动渲染管线。

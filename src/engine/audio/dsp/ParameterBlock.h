@@ -28,8 +28,6 @@ public:
     }
 
     /// 设置参数目标值，启动平滑过渡
-    /// @param value         目标值
-    /// @param rampFrames    过渡帧数（0 = 立即跳变）
     void SetSmooth(float value, uint32_t rampFrames) {
         if (rampFrames == 0) {
             SetValue(value);

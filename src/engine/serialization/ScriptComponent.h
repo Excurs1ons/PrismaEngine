@@ -7,7 +7,7 @@
 
 namespace Prisma::Scripting {
 
-/// @brief C# 脚本组件桥接类
+// C# 脚本组件桥接类
 /// 允许在 C++ Scene 序列化中保存 C# Script 的类名和字段值，
 /// 序列化格式：{"scriptClass":"...", "fields":{...}}
 /// 等 C# ScriptEngine 加载时解析 fields JSON 创建实际 Script 实例。

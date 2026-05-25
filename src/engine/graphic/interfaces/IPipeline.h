@@ -13,9 +13,7 @@ class IRenderDevice;
 class ICommandBuffer;
 class RenderPass;
 
-/**
- * @brief 强类型相机数据
- */
+// 强类型相机数据
 struct CameraData {
     PrismaMath::mat4 viewMatrix;
     PrismaMath::mat4 projectionMatrix;
@@ -27,9 +25,7 @@ struct CameraData {
 
 class ITexture;
 
-/**
- * @brief 强类型渲染上下文
- */
+// 强类型渲染上下文
 struct RenderContext {
     IRenderDevice* device = nullptr;
     ICommandBuffer* commandBuffer = nullptr;
@@ -49,9 +45,7 @@ struct RenderContext {
     uint32_t height = 0;
 };
 
-/**
- * @brief 渲染管线接口
- */
+// 渲染管线接口
 class IPipeline {
 public:
     virtual ~IPipeline() = default;

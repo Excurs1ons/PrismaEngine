@@ -11,16 +11,14 @@ namespace Prisma::Graphic::Vulkan {
 class VulkanRenderDevice;
 class VulkanResourceFactory;
 
-/// @brief Vulkan材质适配器
+// Vulkan材质适配器
 /// 实现IMaterial接口，管理Vulkan特定的材质资源
 class VulkanMaterial : public IMaterial {
 public:
-    /// @brief 构造函数
-    /// @param device Vulkan渲染设备
-    /// @param factory Vulkan资源工厂
+    // 构造函数
     VulkanMaterial(VulkanRenderDevice* device, VulkanResourceFactory* factory);
 
-    /// @brief 析构函数
+    // 析构函数
     ~VulkanMaterial() override;
 
     // IMaterial接口实现
@@ -39,15 +37,13 @@ public:
     void UpdateConstantBuffer() override;
 
     // Vulkan特定方法
-    /// @brief 获取描述符集
-    /// @return 描述符集
+    // 获取描述符集
     VkDescriptorSet GetDescriptorSet() const { return m_descriptorSet; }
 
-    /// @brief 获取描述符集布局
-    /// @return 描述符集布局
+    // 获取描述符集布局
     VkDescriptorSetLayout GetDescriptorSetLayout() const { return m_descriptorSetLayout; }
 
-    /// @brief 更新描述符集
+    // 更新描述符集
     /// 当纹理改变时调用
     void UpdateDescriptorSet();
 
@@ -66,16 +62,16 @@ private:
     VkDescriptorSetLayout m_descriptorSetLayout = VK_NULL_HANDLE;
     void* m_mappedData = nullptr;
 
-    /// @brief 创建统一缓冲区
+    // 创建统一缓冲区
     void CreateUniformBuffer();
 
-    /// @brief 创建描述符集
+    // 创建描述符集
     void CreateDescriptorSet();
 
-    /// @brief 更新统一缓冲区数据
+    // 更新统一缓冲区数据
     void UpdateUniformBufferData();
 
-    /// @brief 清理资源
+    // 清理资源
     void Cleanup();
 };
 

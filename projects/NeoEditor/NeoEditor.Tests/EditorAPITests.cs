@@ -4,20 +4,16 @@ using Xunit;
 
 namespace NeoEditor.Tests;
 
-/// <summary>
 /// EditorAPI 结构体绑定和高级封装的单元测试。
 /// C# 绑定与 C++ EditorAPI.h 的字段布局一致性验证。
-/// </summary>
 public unsafe class EditorAPITests
 {
     // ===================================================================
     // Struct layout validation
     // ===================================================================
 
-    /// <summary>
     /// 验证 EditorAPI_Interop 结构体在 64 位平台上的预期大小。
     /// C++ 侧 structSize 字段必须与 C# sizeof 一致。
-    /// </summary>
     [Fact]
     public void StructSizeMatches()
     {
@@ -29,9 +25,7 @@ public unsafe class EditorAPITests
         Assert.Equal(expectedOnX64, actualSize);
     }
 
-    /// <summary>
     /// 验证结构体大小在合理范围内（避免因平台差异导致测试过于严格）。
-    /// </summary>
     [Fact]
     public void StructSize_IsReasonable()
     {
@@ -56,10 +50,8 @@ public unsafe class EditorAPITests
         Assert.Equal("apiPtr", ex.ParamName);
     }
 
-    /// <summary>
     /// 使用合法的 mock 结构体初始化后，IsInitialized 必须为 true。
     /// 此测试验证 Initialize 完整路径：IntPtr 转换 → 结构体复制 → StructSize 校验 → 设置标记。
-    /// </summary>
     [Fact]
     public unsafe void Initialize_SetsInitialized()
     {
@@ -86,10 +78,8 @@ public unsafe class EditorAPITests
         // Stub: 不执行任何操作。模拟 C++ freeString 的安全调用。
     }
 
-    /// <summary>
     /// 验证 freeString 委托可在空指针和非法指针上安全调用（不崩溃）。
     /// 这确保 C# MarshalAndFree 能够安全地释放 C++ 分配的字符串。
-    /// </summary>
     [Fact]
     public void FreeString_DoesNotCrash()
     {

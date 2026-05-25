@@ -6,9 +6,7 @@
 
 namespace Prisma::Math {
 
-/**
- * @brief MurmurHash3 128位版本 (针对 x64 优化)
- */
+// MurmurHash3 128位版本 (针对 x64 优化)
 struct Hash128 {
     uint64_t low;
     uint64_t high;

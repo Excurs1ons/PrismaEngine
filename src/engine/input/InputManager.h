@@ -93,10 +93,7 @@ enum class MouseButton : uint32_t { Left = 0, Right = 1, Middle = 2, X1 = 3, X2 
 // 输入动作类型
 enum class InputAction { Pressed, Released, Held, DoubleClick };
 
-/**
- * @brief 输入管理器 (由 Engine 拥有)
- * 删掉所有静态 Get() 和垃圾单例逻辑。
- */
+/* 输入管理器 (由 Engine 拥有) */
 class ENGINE_API InputManager : public ISubSystem {
 public:
     InputManager();

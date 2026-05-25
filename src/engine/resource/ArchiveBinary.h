@@ -6,9 +6,7 @@
 namespace Prisma {
 namespace Serialization {
 
-/**
- * @brief 二进制输出存档
- */
+// 二进制输出存档
 class ENGINE_API BinaryOutputArchive : public OutputArchive {
 public:
     void BeginObject(const std::string& name) override {}
@@ -41,9 +39,7 @@ private:
     std::vector<uint8_t> m_data;
 };
 
-/**
- * @brief 二进制输入存档
- */
+// 二进制输入存档
 class ENGINE_API BinaryInputArchive : public InputArchive {
 public:
     explicit BinaryInputArchive(const std::vector<uint8_t>& data) : m_data(data), m_offset(0) {}

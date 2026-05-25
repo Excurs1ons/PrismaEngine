@@ -9,9 +9,7 @@
 
 namespace Prisma::Graphic {
 
-/**
- * @brief 现代着色器资产 (Shader Asset)
- */
+// 现代着色器资产 (Shader Asset)
 class ENGINE_API Shader : public Prisma::Asset, public IShader {
 public:
     Shader() = default;

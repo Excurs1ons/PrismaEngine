@@ -8,9 +8,7 @@
 namespace Prisma {
 namespace Graphic {
 
-/**
- * @brief 2D 正交相机实现
- */
+// 2D 正交相机实现
 class ENGINE_API OrthographicCamera : public ICamera {
 public:
     OrthographicCamera() : OrthographicCamera(-640.0f, 640.0f, -360.0f, 360.0f) {}

@@ -8,19 +8,19 @@
 
 namespace Prisma {
 
-/// @brief UI 输入管理器（最简实现）
+// UI 输入管理器（最简实现）
 /// 处理鼠标/触摸输入并分发到 UI 组件
 class UIInputManager {
 public:
     static UIInputManager& Get();
 
-    /// @brief 注册 UI 组件
+    // 注册 UI 组件
     void RegisterComponent(UIComponent* component);
 
-    /// @brief 注销 UI 组件
+    // 注销 UI 组件
     void UnregisterComponent(UIComponent* component);
 
-    /// @brief 处理输入事件（每帧调用）
+    // 处理输入事件（每帧调用）
     void ProcessInput(const Input::InputManager& inputManager);
 
 private:

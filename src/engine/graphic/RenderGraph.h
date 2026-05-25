@@ -11,9 +11,7 @@
 
 namespace Prisma::Graphic {
 
-/**
- * @brief 渲染图资源描述
- */
+// 渲染图资源描述
 struct RGResourceDesc {
     enum class Type { Texture2D, Buffer, RenderTarget };
     enum class Format { RGBA8, RGBA16F, D32F };
@@ -28,17 +26,13 @@ struct RGResourceDesc {
     }
 };
 
-/**
- * @brief 渲染图资源句柄 (强类型)
- */
+// 渲染图资源句柄 (强类型)
 struct RGResourceHandle {
     uint32_t id = 0xFFFFFFFF;
     bool IsValid() const { return id != 0xFFFFFFFF; }
 };
 
-/**
- * @brief 渲染图执行上下文
- */
+// 渲染图执行上下文
 class RGContext {
 public:
     RGContext(RenderCommandContext* cmd) : m_Cmd(cmd) {}
@@ -47,9 +41,7 @@ private:
     RenderCommandContext* m_Cmd;
 };
 
-/**
- * @brief 渲染图构建器 (由 Pass 使用)
- */
+// 渲染图构建器 (由 Pass 使用)
 class RenderGraph;
 class RGBuilder {
 public:
@@ -64,9 +56,7 @@ private:
     uint32_t m_PassIndex;
 };
 
-/**
- * @brief 现代渲染图 (Render Graph)
- */
+// 现代渲染图 (Render Graph)
 class ENGINE_API RenderGraph {
 public:
     RenderGraph(IRenderDevice* device);

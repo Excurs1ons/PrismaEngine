@@ -4,10 +4,8 @@ using Random = Prisma.Random;
 
 namespace GameScripts;
 
-/// <summary>
-/// 旋转精灵脚本�?
+/// 旋转精灵脚本�?
 /// Rotating sprite script.
-/// </summary>
 [Serializable]
 public partial class RotatingSprite : Script
 {
@@ -23,6 +21,6 @@ public partial class RotatingSprite : Script
     public override void OnUpdate(TimeContext time, InputContext input)
     {
         Rotation += Speed * time.DeltaTime;
-        // 自动循环处理由底层或业务按需决定，此处保持简�?
+        // 自动循环处理由底层或业务按需决定，此处保持简�?
     }
 }

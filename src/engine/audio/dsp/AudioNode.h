@@ -107,12 +107,10 @@ public:
 
     // --- 纯虚接口 ---
 
-    /// @brief 处理音频数据
-    /// @param output  输出缓冲（节点写入处理结果）
-    /// @param ctx     处理上下文（采样率、块大小等）
+    // 处理音频数据
     virtual void Process(AudioBuffer& output, const AudioProcessContext& ctx) = 0;
 
-    /// @brief 重置节点状态（如包络复位、滤波器清空）
+    // 重置节点状态（如包络复位、滤波器清空）
     virtual void Reset() {}
 
     // --- 引脚管理 ---
@@ -167,7 +165,7 @@ public:
     uint64_t GetId() const { return m_id; }
 
 protected:
-    /// @brief 读取指定输入引脚的缓冲（从上游节点）
+    // 读取指定输入引脚的缓冲（从上游节点）
     AudioBuffer* ReadInput(const std::string& pinName) {
         auto* pin = GetInputPin(pinName);
         if (pin && pin->IsConnected()) {
@@ -335,7 +333,7 @@ public:
 
     // --- 拓扑排序 ---
 
-    /// @brief 使用 Kahn 算法进行拓扑排序
+    // 使用 Kahn 算法进行拓扑排序
     void TopologicalSort() {
         m_sortedNodes.clear();
 

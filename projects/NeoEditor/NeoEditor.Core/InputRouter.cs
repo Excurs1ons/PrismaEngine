@@ -6,9 +6,7 @@ using Windows.UI.Core;
 
 namespace NeoEditor.Core;
 
-/// <summary>
 /// 输入事件类型，用于区分不同类型的输入事件。
-/// </summary>
 internal enum InputEventType
 {
     KeyDown,
@@ -19,10 +17,8 @@ internal enum InputEventType
     MouseWheel
 }
 
-/// <summary>
 /// 输入事件结构体，包含所有的输入事件数据。
 /// 通过消息队列投递到引擎线程，由引擎线程消费。
-/// </summary>
 internal struct InputEvent
 {
     public InputEventType Type;
@@ -33,7 +29,6 @@ internal struct InputEvent
     public bool IsDown;                // MouseDown/Up: 按下/释放
 }
 
-/// <summary>
 /// 输入路由 (T14): WinUI3 键盘/鼠标事件 → Engine 后台线程的输入路由。
 /// 将 WinUI3 输入事件通过消息队列投递到引擎线程。
 ///
@@ -42,7 +37,6 @@ internal struct InputEvent
 /// - 将事件转换为 InputEvent 结构体，通过 Action 闭包投递到 UIToEngineQueue
 /// - 引擎线程在每帧 Drain 时执行这些 Action，调用 InputManager API
 /// - 编辑器热键（F/Delete/Ctrl+S）直接在 UI 线程通过 EditorAPI 处理
-/// </summary>
 internal sealed class InputRouter : IDisposable
 {
     private readonly UIToEngineQueue _inputQueue;
@@ -56,30 +50,22 @@ internal sealed class InputRouter : IDisposable
         _inputQueue = inputQueue ?? throw new ArgumentNullException(nameof(inputQueue));
     }
 
-    /// <summary>
     /// 当前鼠标 X 坐标（UI 线程坐标）。
-    /// </summary>
     public int MouseX => _mouseX;
 
-    /// <summary>
     /// 当前鼠标 Y 坐标（UI 线程坐标）。
-    /// </summary>
     public int MouseY => _mouseY;
 
-    /// <summary>
     /// 鼠标右键是否处于按下状态。
-    /// </summary>
     public bool IsRightButtonDown => _isRightButtonDown;
 
     // ================================================================
     // 键盘事件
     // ================================================================
 
-    /// <summary>
     /// 处理 WinUI3 KeyDown 事件。
     /// 先检查是否为编辑器热键（F/Delete/Ctrl+S），如果是则直接处理不投递。
     /// 否则将按键事件投递到引擎线程。
-    /// </summary>
     public void OnKeyDown(VirtualKey key)
     {
         if (_disposed) return;
@@ -111,10 +97,8 @@ internal sealed class InputRouter : IDisposable
         }
     }
 
-    /// <summary>
     /// 处理 WinUI3 KeyUp 事件。
     /// 从按下状态集合移除，并投递到引擎线程。
-    /// </summary>
     public void OnKeyUp(VirtualKey key)
     {
         if (_disposed) return;
@@ -133,10 +117,8 @@ internal sealed class InputRouter : IDisposable
         }
     }
 
-    /// <summary>
     /// 焦点丢失时释放所有按键。
     /// 遍历所有按下的键，逐个发送 KeyUp 事件并清空状态。
-    /// </summary>
     public void ReleaseAllKeys()
     {
         if (_disposed) return;
@@ -162,10 +144,8 @@ internal sealed class InputRouter : IDisposable
     // 鼠标事件
     // ================================================================
 
-    /// <summary>
     /// 处理 WinUI3 PointerMoved 事件。
     /// 计算鼠标增量并投递到引擎线程。
-    /// </summary>
     public void OnPointerMoved(int x, int y)
     {
         if (_disposed) return;
@@ -185,10 +165,8 @@ internal sealed class InputRouter : IDisposable
         });
     }
 
-    /// <summary>
     /// 处理 WinUI3 PointerPressed 事件。
     /// 检查鼠标按钮状态并投递 MouseDown 事件。
-    /// </summary>
     public void OnPointerPressed(PointerPoint point)
     {
         if (_disposed) return;
@@ -208,10 +186,8 @@ internal sealed class InputRouter : IDisposable
         }
     }
 
-    /// <summary>
     /// 处理 WinUI3 PointerReleased 事件。
     /// 检查鼠标按钮状态并投递 MouseUp 事件。
-    /// </summary>
     public void OnPointerReleased(PointerPoint point)
     {
         if (_disposed) return;
@@ -232,10 +208,8 @@ internal sealed class InputRouter : IDisposable
         }
     }
 
-    /// <summary>
     /// 处理 WinUI3 PointerWheelChanged 事件。
     /// 投递滚轮事件到引擎线程（用于摄像机缩放）。
-    /// </summary>
     public void OnPointerWheelChanged(int delta)
     {
         if (_disposed) return;
@@ -251,10 +225,8 @@ internal sealed class InputRouter : IDisposable
     // 编辑器热键
     // ================================================================
 
-    /// <summary>
     /// 处理编辑器热键。
     /// 返回 true 表示已处理（不再投递到引擎线程）。
-    /// </summary>
     private bool HandleEditorHotkey(VirtualKey key)
     {
         bool ctrl = _pressedKeys.Contains(VirtualKey.Control);
@@ -354,11 +326,9 @@ internal sealed class InputRouter : IDisposable
     // 键码映射: WinUI3 VirtualKey → 引擎 KeyCode (SDL scancode)
     // ================================================================
 
-    /// <summary>
     /// 将 WinUI3 VirtualKey 映射到引擎 KeyCode (SDL scancode) 值。
     /// 参考: sdk/include/PrismaEngine/input/InputManager.h 的 KeyCode 枚举。
     /// 返回 0 表示 Unknown（不支持的按键）。
-    /// </summary>
     private static int MapVirtualKey(VirtualKey key) => key switch
     {
         // A-Z (VirtualKey: 65-90 → SDL scancode: 4-29)
@@ -410,10 +380,8 @@ internal sealed class InputRouter : IDisposable
         _ => 0  // KeyCode::Unknown
     };
 
-    /// <summary>
     /// 判断是否为修饰键 (Shift/Control/Menu)。
     /// 修饰键在 WinUI3 中按住时可能重复触发 KeyDown。
-    /// </summary>
     private static bool IsModifierKey(VirtualKey key) => key switch
     {
         VirtualKey.Shift    => true,
@@ -426,10 +394,8 @@ internal sealed class InputRouter : IDisposable
     // 消息投递
     // ================================================================
 
-    /// <summary>
     /// 将输入事件投递到引擎线程的消息队列。
     /// Action 在引擎线程执行时调用 InputManager 的对应方法。
-    /// </summary>
     private void EnqueueInputEvent(InputEvent evt)
     {
         // 捕获 InputEvent 结构体（值类型，闭包安全）

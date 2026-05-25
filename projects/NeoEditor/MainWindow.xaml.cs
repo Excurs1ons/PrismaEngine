@@ -183,10 +183,8 @@ public sealed partial class MainWindow : Window
     // Event Sync (T17): Engine ↔ WebUI 双向事件同步
     // ================================================================
 
-    /// <summary>
     /// 启动事件同步循环。
     /// 连接引擎线程事件到 EventBus，并启动周期性状态推送（500ms）。
-    /// </summary>
     private void StartEventSync()
     {
         // 连接引擎线程事件 (当引擎运行时)
@@ -219,10 +217,8 @@ public sealed partial class MainWindow : Window
         Debug.WriteLine("[MainWindow] Event sync started (500ms interval)");
     }
 
-    /// <summary>
     /// 定时器回调: 发布引擎状态事件。
     /// 计算简单 FPS 计数器，推送缓存的状态快照。
-    /// </summary>
     private void OnEventSyncTick(object? state)
     {
         // 简单 FPS 计算: 每 500ms tick = 2 ticks/sec
@@ -283,10 +279,8 @@ public sealed partial class MainWindow : Window
     // WebView2 panel initialization
     // ================================================================
 
-    /// <summary>
     /// 并行初始化所有 WebView2 面板，提升启动速度。
     /// 每个面板导航到 WebUI 服务的对应路径。
-    /// </summary>
     private async Task InitializeWebView2Panels()
     {
         // 面板路径映射: WebView2 名称 → HTTP 路径

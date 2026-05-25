@@ -206,24 +206,20 @@ internal static class HResult
 // ============================================================================
 // D3D11Device — Direct3D 11 device wrapper
 // ============================================================================
-/// <summary>
 /// Wraps an ID3D11Device with adapter LUID tracking for Vulkan interop.
 /// The device is created with D3D11_CREATE_DEVICE_BGRA_SUPPORT for SwapChainPanel compatibility.
-/// </summary>
 internal unsafe class D3D11Device : IDisposable
 {
     private bool _disposed;
 
-    /// <summary>ID3D11Device*</summary>
+ID3D11Device*</summary>
     public IntPtr NativeDevice { get; }
 
-    /// <summary>ID3D11DeviceContext*</summary>
+ID3D11DeviceContext*</summary>
     public IntPtr ImmediateContext { get; }
 
-    /// <summary>
     /// Adapter LUID (Locally Unique Identifier) used to match this D3D11 device
     /// with the Vulkan physical device for cross-API memory sharing.
-    /// </summary>
     public long Luid { get; }
 
     private D3D11Device(IntPtr device, IntPtr context, long luid)
@@ -233,16 +229,9 @@ internal unsafe class D3D11Device : IDisposable
         Luid = luid;
     }
 
-    /// <summary>
     /// Creates a D3D11 device, optionally matching a specific GPU adapter by LUID.
-    /// </summary>
-    /// <param name="preferredLuid">
     /// If non-null, enumerates all DXGI adapters to find one matching this LUID.
     /// If null, creates the device on the default adapter.
-    /// </param>
-    /// <param name="debug">Enable D3D11 debug layer.</param>
-    /// <param name="forceWarp">Use WARP software rasterizer.</param>
-    /// <returns>A new D3D11Device, or null if creation fails.</returns>
     public static D3D11Device? Create(
         long?  preferredLuid = null,
         bool   debug         = false,
@@ -309,9 +298,7 @@ internal unsafe class D3D11Device : IDisposable
     // Adapter enumeration
     // ================================================================
 
-    /// <summary>
     /// Enumerates all DXGI adapters and returns the first whose LUID matches.
-    /// </summary>
     private static IntPtr FindAdapterByLuid(long targetLuid)
     {
         Guid factoryGuid = DXGIGuid.IDXGIFactory1;
@@ -350,9 +337,7 @@ internal unsafe class D3D11Device : IDisposable
         return IntPtr.Zero;
     }
 
-    /// <summary>
     /// Retrieves the LUID of the adapter associated with a D3D11 device.
-    /// </summary>
     private static long QueryDeviceLuid(IntPtr device)
     {
         // ID3D11Device → IDXGIDevice → IDXGIAdapter → IDXGIAdapter1 → GetDesc1
@@ -426,13 +411,11 @@ internal unsafe class D3D11Device : IDisposable
 // ============================================================================
 // SharedTextureManager — Imports Vulkan-exported Win32 handles as D3D11 textures
 // ============================================================================
-/// <summary>
 /// Manages the lifecycle of D3D11 shared textures imported from Vulkan via
 /// ID3D11Device1::OpenSharedResource1.
 ///
 /// The imported texture shares GPU memory with a Vulkan VkImage, enabling
 /// cross-API zero-copy rendering.
-/// </summary>
 internal unsafe class SharedTextureManager : IDisposable
 {
     private readonly IntPtr _d3d11Device1Ptr;  // ID3D11Device1* (via QI)
@@ -449,15 +432,8 @@ internal unsafe class SharedTextureManager : IDisposable
                 $"Failed to query ID3D11Device1. HRESULT: {hr}");
     }
 
-    /// <summary>
     /// Imports a Win32 shared handle (exported from Vulkan via
     /// vkGetMemoryWin32HandleKHR) as an ID3D11Texture2D.
-    /// </summary>
-    /// <param name="win32Handle">NT handle exported from Vulkan.</param>
-    /// <param name="width">Texture width in pixels.</param>
-    /// <param name="height">Texture height in pixels.</param>
-    /// <param name="format">DXGI format matching the Vulkan image format.</param>
-    /// <returns>ID3D11Texture2D pointer, or IntPtr.Zero on failure.</returns>
     public IntPtr ImportSharedTexture(
         IntPtr           win32Handle,
         int              width,
@@ -480,9 +456,7 @@ internal unsafe class SharedTextureManager : IDisposable
         return texture;
     }
 
-    /// <summary>
     /// Releases a previously imported shared texture.
-    /// </summary>
     public void ReleaseSharedTexture(IntPtr win32Handle)
     {
         if (_sharedTextures.TryGetValue(win32Handle, out IntPtr texture))
@@ -509,26 +483,18 @@ internal unsafe class SharedTextureManager : IDisposable
 // ============================================================================
 // SwapChainManager — DXGI composition swap chain for SwapChainPanel
 // ============================================================================
-/// <summary>
 /// Creates and manages an IDXGISwapChain1 suitable for use with a WinUI3
 /// SwapChainPanel via the ISwapChainPanelNative interface.
 ///
 /// Uses CreateSwapChainForComposition for overlay/composition scenarios.
-/// </summary>
 internal unsafe class SwapChainManager : IDisposable
 {
     private bool _disposed;
 
-    /// <summary>IDXGISwapChain1*</summary>
+IDXGISwapChain1*</summary>
     public IntPtr SwapChain { get; private set; }
 
-    /// <summary>
     /// Creates a DXGI composition swap chain backed by the given D3D11 device.
-    /// </summary>
-    /// <param name="d3d11Device">ID3D11Device*</param>
-    /// <param name="width">Initial back-buffer width.</param>
-    /// <param name="height">Initial back-buffer height.</param>
-    /// <param name="format">Back-buffer format (default B8G8R8A8_UNORM).</param>
     public void CreateCompositionSwapChain(
         IntPtr      d3d11Device,
         int         width,
@@ -612,9 +578,7 @@ internal unsafe class SwapChainManager : IDisposable
         }
     }
 
-    /// <summary>
     /// Resizes the swap chain buffers (call when the SwapChainPanel is resized).
-    /// </summary>
     public void ResizeBuffers(int width, int height)
     {
         if (SwapChain == IntPtr.Zero)
@@ -628,10 +592,7 @@ internal unsafe class SwapChainManager : IDisposable
         HResult.ThrowOnFailure(hr);
     }
 
-    /// <summary>
     /// Presents the rendered frame.
-    /// </summary>
-    /// <param name="vsync">If true, wait for vertical sync (Present(1,0)).</param>
     public void Present(bool vsync = false)
     {
         if (SwapChain == IntPtr.Zero)
@@ -644,10 +605,8 @@ internal unsafe class SwapChainManager : IDisposable
         HResult.ThrowOnFailure(hr);
     }
 
-    /// <summary>
     /// Returns the back buffer (ID3D11Texture2D*) for the swap chain.
     /// Caller must Release the returned pointer when done.
-    /// </summary>
     public IntPtr GetBackBuffer()
     {
         if (SwapChain == IntPtr.Zero)
@@ -679,19 +638,14 @@ internal unsafe class SwapChainManager : IDisposable
 // ============================================================================
 // ISwapChainPanelNative — WinUI3 COM interface for SwapChainPanel binding
 // ============================================================================
-/// <summary>
 /// COM interface for associating a DXGI swap chain with a WinUI3 SwapChainPanel.
 /// GUID: 3E3F1D7D-E21F-43E1-BC1C-FAD9306572D7
-/// </summary>
 [ComImport]
 [Guid("3E3F1D7D-E21F-43E1-BC1C-FAD9306572D7")]
 [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
 internal interface ISwapChainPanelNative
 {
-    /// <summary>
     /// Sets the DXGI swap chain for the SwapChainPanel.
-    /// </summary>
-    /// <param name="swapChain">IDXGISwapChain* pointer.</param>
     void SetSwapChain(IntPtr swapChain);
 }
 
@@ -700,10 +654,8 @@ internal interface ISwapChainPanelNative
 // ============================================================================
 internal static class D3D11Extensions
 {
-    /// <summary>
     /// Converts a Vulkan VkFormat to the equivalent DXGI_FORMAT.
     /// Only common formats used for interop rendering are handled.
-    /// </summary>
     internal static DXGI_FORMAT VkFormatToDxgi(int vkFormat)
     {
         // VK_FORMAT enum values (only the ones we care about)

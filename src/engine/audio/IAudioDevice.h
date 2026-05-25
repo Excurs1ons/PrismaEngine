@@ -8,7 +8,7 @@
 
 namespace Prisma::Audio {
 
-/// @brief 音频设备抽象接口
+// 音频设备抽象接口
 /// 这是音频系统的核心抽象，不同的音频后端只需要实现这一个接口
 class IAudioDevice {
 public:
@@ -18,25 +18,21 @@ public:
     virtual std::string GenerateDebugReport()                                        = 0;
     // ========== 初始化和关闭 ==========
     virtual AudioDeviceType GetDeviceType() const = 0;
-    /// @brief 初始化音频设备
-    /// @param desc 设备初始化描述
-    /// @return 是否初始化成功
+    // 初始化音频设备
     virtual bool Initialize(const AudioDesc& desc) = 0;
 
-    /// @brief 关闭音频设备
+    // 关闭音频设备
     virtual void Shutdown() = 0;
 
-    /// @brief 检查设备是否已初始化
-    /// @return 是否已初始化
+    // 检查设备是否已初始化
     virtual bool IsInitialized() const = 0;
 
-    /// @brief 更新音频设备（每帧调用）
-    /// @param ts 时间增量（秒）
+    // 更新音频设备（每帧调用）
     virtual void Update(Prisma::Timestep ts) = 0;
 
     // ========== 设备信息 ==========
 
-    /// @brief 设备信息
+    // 设备信息
     struct DeviceInfo {
         std::string name;              // 设备名称
         std::string driver;            // 驱动名称
@@ -47,190 +43,140 @@ public:
         bool supportsEffects = false;  // 是否支持音效
     };
 
-    /// @brief 获取当前设备信息
-    /// @return 设备信息
+    // 获取当前设备信息
     virtual DeviceInfo GetDeviceInfo() const = 0;
 
-    /// @brief 获取所有可用设备列表
-    /// @return 设备信息列表
+    // 获取所有可用设备列表
     virtual std::vector<DeviceInfo> GetAvailableDevices() const = 0;
 
-    /// @brief 设置当前设备（如果支持）
-    /// @param deviceName 设备名称
+    // 设置当前设备（如果支持）
     virtual bool SetDevice(const std::string&) {
         return false;
     }
 
     // ========== 基本播放控制 ==========
 
-    /// @brief 播放音频
-    /// @param clip 音频剪辑
-    /// @param desc 播放描述
-    /// @return 音频Voice ID，失败返回INVALID_VOICE_ID
+    // 播放音频
     virtual AudioVoiceId Play(const AudioClip& clip, const PlayDesc& desc = {}) = 0;
 
-    /// @brief 停止播放
-    /// @param voiceId 音频Voice ID
+    // 停止播放
     virtual void Stop(AudioVoiceId voiceId) = 0;
 
-    /// @brief 暂停播放
-    /// @param voiceId 音频Voice ID
+    // 暂停播放
     virtual void Pause(AudioVoiceId voiceId) = 0;
 
-    /// @brief 恢复播放
-    /// @param voiceId 音频Voice ID
+    // 恢复播放
     virtual void Resume(AudioVoiceId voiceId) = 0;
 
-    /// @brief 停止所有正在播放的音频
+    // 停止所有正在播放的音频
     virtual void StopAll() = 0;
 
-    /// @brief 暂停所有正在播放的音频
+    // 暂停所有正在播放的音频
     virtual void PauseAll() = 0;
 
-    /// @brief 恢复所有暂停的音频
+    // 恢复所有暂停的音频
     virtual void ResumeAll() = 0;
 
     // ========== 实时控制 ==========
 
-    /// @brief 设置音量
-    /// @param voiceId 音频Voice ID
-    /// @param volume 音量 (0.0 - 1.0)
+    // 设置音量
     virtual void SetVolume(AudioVoiceId voiceId, float volume) = 0;
 
-    /// @brief 设置音调
-    /// @param voiceId 音频Voice ID
-    /// @param pitch 音调倍数 (0.5 - 2.0)
+    // 设置音调
     virtual void SetPitch(AudioVoiceId voiceId, float pitch) = 0;
 
-    /// @brief 设置播放位置
-    /// @param voiceId 音频Voice ID
-    /// @param time 时间位置（秒）
+    // 设置播放位置
     virtual void SetPlaybackPosition(AudioVoiceId voiceId, float time) = 0;
 
     // ========== 3D音频 ==========
 
-    /// @brief 设置音频源3D位置
-    /// @param voiceId 音频Voice ID
-    /// @param position 位置 (x, y, z)
+    // 设置音频源3D位置
     virtual void SetVoice3DPosition(AudioVoiceId voiceId, const float position[3]) = 0;
 
-    /// @brief 设置音频源3D速度
-    /// @param voiceId 音频Voice ID
-    /// @param velocity 速度 (vx, vy, vz)
+    // 设置音频源3D速度
     virtual void SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) = 0;
 
-    /// @brief 设置音频源3D direction
-    /// @param voiceId 音频Voice ID
-    /// @param direction 方向 (dx, dy, dz)
+    // 设置音频源3D direction
     virtual void SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) = 0;
 
-    /// @brief 设置音频源3D属性
-    /// @param voiceId 音频Voice ID
-    /// @param attributes 3D属性
+    // 设置音频源3D属性
     virtual void SetVoice3DAttributes(AudioVoiceId voiceId, const Audio3DAttributes& attributes) = 0;
 
-    /// @brief 设置监听器（听者）属性
-    /// @param listener 监听器属性
+    // 设置监听器（听者）属性
     virtual void SetListener(const AudioListener& listener) = 0;
 
-    /// @brief 设置距离模型
-    /// @param model 距离模型
+    // 设置距离模型
     virtual void SetDistanceModel(DistanceModel model) = 0;
 
-    /// @brief 设置多普勒因子
-    /// @param factor 多普勒因子 (0.0 - 2.0)
+    // 设置多普勒因子
     virtual void SetDopplerFactor(float factor) = 0;
 
-    /// @brief 设置声速
-    /// @param speed 声速（米/秒）
+    // 设置声速
     virtual void SetSpeedOfSound(float speed) = 0;
 
     // ========== 全局控制 ==========
 
-    /// @brief 设置主音量
-    /// @param volume 主音量 (0.0 - 1.0)
+    // 设置主音量
     virtual void SetMasterVolume(float volume) = 0;
 
-    /// @brief 获取主音量
-    /// @return 主音量
+    // 获取主音量
     virtual float GetMasterVolume() const = 0;
 
     // ========== 查询 ==========
 
-    /// @brief 检查音频是否正在播放
-    /// @param voiceId 音频Voice ID
-    /// @return 是否正在播放
+    // 检查音频是否正在播放
     virtual bool IsPlaying(AudioVoiceId voiceId) = 0;
 
-    /// @brief 检查音频是否已暂停
-    /// @param voiceId 音频Voice ID
-    /// @return 是否已暂停
+    // 检查音频是否已暂停
     virtual bool IsPaused(AudioVoiceId voiceId) = 0;
 
-    /// @brief 检查音频是否已停止
-    /// @param voiceId 音频Voice ID
-    /// @return 是否已停止
+    // 检查音频是否已停止
     virtual bool IsStopped(AudioVoiceId voiceId) = 0;
 
-    /// @brief 获取音频当前播放位置
-    /// @param voiceId 音频Voice ID
-    /// @return 播放位置（秒），失败返回-1.0f
+    // 获取音频当前播放位置
     virtual float GetPlaybackPosition(AudioVoiceId voiceId) = 0;
 
-    /// @brief 获取音频时长
-    /// @param voiceId 音频Voice ID
-    /// @return 时长（秒），失败返回-1.0f
+    // 获取音频时长
     virtual float GetDuration(AudioVoiceId voiceId) = 0;
 
-    /// @brief 获取音频Voice状态
-    /// @param voiceId 音频Voice ID
-    /// @return Voice状态
+    // 获取音频Voice状态
     virtual VoiceState GetVoiceState(AudioVoiceId voiceId) = 0;
 
-    /// @brief 获取当前正在播放的音频数量
-    /// @return 音频数量
+    // 获取当前正在播放的音频数量
     virtual uint32_t GetPlayingVoiceCount() const = 0;
 
     // ========== 音效（可选实现） ==========
 
-    /// @brief 应用音效到音频源
-    /// @param voiceId 音频Voice ID
-    /// @param effectType 音效类型
-    /// @param params 音效参数
-    /// @return 是否成功
+    // 应用音效到音频源
     virtual bool ApplyEffect(AudioVoiceId, EffectType, const void*) {
         return false;
     }
 
-    /// @brief 移除音频源的所有音效
-    /// @param voiceId 音频Voice ID
+    // 移除音频源的所有音效
     virtual void RemoveEffects(AudioVoiceId) {}
 
     // ========== 事件系统 ==========
 
-    /// @brief 设置事件回调
-    /// @param callback 回调函数
+    // 设置事件回调
     virtual void SetEventCallback(AudioEventCallback callback) = 0;
 
-    /// @brief 移除事件回调
+    // 移除事件回调
     virtual void RemoveEventCallback() = 0;
 
     // ========== 统计信息 ==========
 
-    /// @brief 获取音频统计信息
-    /// @return 统计信息
+    // 获取音频统计信息
     virtual AudioStats GetStats() const = 0;
 
-    /// @brief 重置统计信息
+    // 重置统计信息
     virtual void ResetStats() = 0;
 
     // ========== 调试功能 ==========
 
-    /// @brief 开始性能分析
+    // 开始性能分析
     virtual void BeginProfile() {}
 
-    /// @brief 结束性能分析
-    /// @return 性能报告
+    // 结束性能分析
     virtual std::string EndProfile() { return ""; }
 };
 

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GameScripts.Minecraft;
 
-/// <summary>16x16x16 切片。对应 Minecraft 的 ChunkSection</summary>
+16x16x16 切片。对应 Minecraft 的 ChunkSection</summary>
 public class ChunkSection
 {
     public const int Size = 16;
@@ -42,7 +42,7 @@ public class ChunkSection
     private static int Index(int x, int y, int z) => y << 8 | z << 4 | x;
 }
 
-/// <summary>区块。对应 Minecraft 的 LevelChunk</summary>
+区块。对应 Minecraft 的 LevelChunk</summary>
 public class LevelChunk
 {
     public ChunkPos Position { get; }
@@ -99,7 +99,7 @@ public class LevelChunk
     }
 }
 
-/// <summary>世界。对应 Minecraft 的 ServerLevel / Level</summary>
+世界。对应 Minecraft 的 ServerLevel / Level</summary>
 public class MinecraftWorld
 {
     public const int SeaLevel = 64;
@@ -111,7 +111,7 @@ public class MinecraftWorld
     public float RainStrength { get; set; }
     public float ThunderStrength { get; set; }
 
-    /// <summary>获取或创建区块</summary>
+获取或创建区块</summary>
     public LevelChunk GetOrCreateChunk(ChunkPos pos)
     {
         long key = pos.AsLong();
@@ -144,7 +144,7 @@ public class MinecraftWorld
 
     public bool IsAir(BlockPos pos) => GetBlock(pos) == 0;
 
-    /// <summary>获取最高方块 Y（含空气判断）</summary>
+获取最高方块 Y（含空气判断）</summary>
     public int GetHeight(int x, int z)
     {
         var chunk = GetChunk(new ChunkPos(x >> 4, z >> 4));
@@ -155,7 +155,7 @@ public class MinecraftWorld
     public IEnumerable<LevelChunk> GetAllChunks() => _chunks.Values;
     public int LoadedChunkCount => _chunks.Count;
 
-    /// <summary>更新世界状态（每帧调用）</summary>
+更新世界状态（每帧调用）</summary>
     public void Tick()
     {
         WorldTime = (WorldTime + 1) % 24000;

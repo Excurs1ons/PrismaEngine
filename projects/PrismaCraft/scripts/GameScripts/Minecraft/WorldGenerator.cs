@@ -2,7 +2,7 @@ using System;
 
 namespace GameScripts.Minecraft;
 
-/// <summary>简易 Perlin 噪声（用于地形生成）</summary>
+简易 Perlin 噪声（用于地形生成）</summary>
 public class PerlinNoise
 {
     private readonly int[] _perm = new int[512];
@@ -64,7 +64,7 @@ public class PerlinNoise
     }
 }
 
-/// <summary>多八度噪声组合</summary>
+多八度噪声组合</summary>
 public class OctaveNoise
 {
     private readonly PerlinNoise _noise;
@@ -100,7 +100,7 @@ public class OctaveNoise
     }
 }
 
-/// <summary>地形生成器。对应 Minecraft 的 ChunkGenerator</summary>
+地形生成器。对应 Minecraft 的 ChunkGenerator</summary>
 public class WorldGenerator
 {
     private readonly OctaveNoise _terrainNoise;
@@ -121,7 +121,7 @@ public class WorldGenerator
         _rng = new Random(s);
     }
 
-    /// <summary>生成单个区块的地形</summary>
+生成单个区块的地形</summary>
     public void GenerateChunk(LevelChunk chunk)
     {
         int cx = chunk.Position.X;

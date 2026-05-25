@@ -15,7 +15,7 @@
 
 namespace Prisma::Graphic {
 
-/// @brief 天空盒逻辑 Pass
+// 天空盒逻辑 Pass
 /// 负责渲染天空盒，不包含具体图形 API
 class SkyboxPass : public ForwardRenderPass {
 public:
@@ -24,28 +24,25 @@ public:
 
     // === IPass 接口实现 ===
 
-    /// @brief 执行 Pass
-    /// @param context 执行上下文
+    // 执行 Pass
     void Execute(const PassExecutionContext& context) override;
 
-    /// @brief 更新 Pass 数据
-    /// @param ts 时间增量
+    // 更新 Pass 数据
     void Update(Prisma::Timestep ts) override;
 
     // === 天空盒特有功能 ===
 
-    /// @brief 设置立方体纹理
-    /// @param cubeTexture 纹理接口指针
+    // 设置立方体纹理
     void SetCubeMapTexture(ITexture* cubeTexture) { m_cubeMapTexture = cubeTexture; }
 
-    /// @brief 获取立方体纹理
+    // 获取立方体纹理
     ITexture* GetCubeMapTexture() const { return m_cubeMapTexture; }
 
 private:
-    /// @brief 初始化天空盒网格
+    // 初始化天空盒网格
     void InitializeSkyboxMesh();
 
-    /// @brief 检查资源是否已正确初始化
+    // 检查资源是否已正确初始化
     bool IsInitialized() const { return m_initialized; }
 
 private:

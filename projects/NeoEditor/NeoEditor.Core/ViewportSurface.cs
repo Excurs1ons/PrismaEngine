@@ -4,7 +4,6 @@ using Microsoft.UI.Xaml.Media;
 
 namespace NeoEditor.Core.Interop;
 
-/// <summary>
 /// Manages the D3D11 SwapChainPanel integration for the 3D viewport.
 ///
 /// Responsibilities:
@@ -16,7 +15,6 @@ namespace NeoEditor.Core.Interop;
 ///
 /// MVP mode: Each frame clears the back buffer to a dark background color
 /// and presents. Full Vulkan→D3D11 texture copy will be wired in T19.
-/// </summary>
 internal sealed class ViewportSurface : IDisposable
 {
     // Clear color: dark blue-gray
@@ -58,10 +56,8 @@ internal sealed class ViewportSurface : IDisposable
     // Initialization
     // ================================================================
 
-    /// <summary>
     /// Creates D3D11 device, composition swap chain, binds to SwapChainPanel,
     /// and starts the frame pump.
-    /// </summary>
     public void Initialize(long? vulkanLuid = null)
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -92,20 +88,16 @@ internal sealed class ViewportSurface : IDisposable
         _subscribed = true;
     }
 
-    /// <summary>
     /// Optionally connects the engine-to-UI message queue so that engine
     /// commands (including shared texture handle updates) are drained on the
     /// UI thread each frame during the frame pump.
-    /// </summary>
     public void SetEngineQueue(EngineToUIQueue queue)
     {
         _engineQueue = queue;
     }
 
-    /// <summary>
     /// Called from UI thread (typically during EngineToUIQueue drain) when
     /// the Vulkan engine exports a new shared texture handle for display.
-    /// </summary>
     public void SetSharedTextureHandle(IntPtr win32Handle)
     {
         lock (_handleLock)
@@ -118,10 +110,8 @@ internal sealed class ViewportSurface : IDisposable
     // Resize
     // ================================================================
 
-    /// <summary>
     /// Recomputes physical pixel size from the panel's actual dimensions
     /// and DPI scale, then resizes the swap chain and recreates the RTV.
-    /// </summary>
     public void Resize()
     {
         if (_swapChainManager == null || _disposed)
@@ -146,10 +136,8 @@ internal sealed class ViewportSurface : IDisposable
     // Pause / Resume rendering (used by WindowManager for minimize/restore)
     // ================================================================
 
-    /// <summary>
     /// Pauses the frame pump by unsubscribing from CompositionTarget.Rendering.
     /// Called when the window is minimized (to save CPU/GPU resources).
-    /// </summary>
     public void PauseRendering()
     {
         if (_subscribed)
@@ -159,10 +147,8 @@ internal sealed class ViewportSurface : IDisposable
         }
     }
 
-    /// <summary>
     /// Resumes the frame pump by re-subscribing to CompositionTarget.Rendering.
     /// Called when the window is restored from minimized.
-    /// </summary>
     public void ResumeRendering()
     {
         if (!_subscribed && !_disposed)

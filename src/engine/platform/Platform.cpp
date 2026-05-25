@@ -156,9 +156,7 @@ void Platform::SetEnvironmentVariable(const std::string& name, const std::string
     SDL_SetEnvironmentVariable(SDL_GetEnvironment(), name.c_str(), value.c_str(), true);
 }
 
-// ------------------------------------------------------------
 // Vulkan 支持
-// ------------------------------------------------------------
 std::vector<const char*> Platform::GetRequiredVulkanInstanceExtensions() {
     uint32_t count = 0;
     const char* const* extensions = SDL_Vulkan_GetInstanceExtensions(&count);
@@ -178,9 +176,7 @@ bool Platform::CreateVulkanSurface(void* instance, WindowHandle window, void** o
     return false;
 }
 
-// ------------------------------------------------------------
 // 窗口管理
-// ------------------------------------------------------------
 WindowHandle Platform::CreateWindow(const WindowProps& desc) {
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     
@@ -241,9 +237,7 @@ WindowHandle Platform::GetCurrentWindow() {
     return s_currentWindow;
 }
 
-// ------------------------------------------------------------
 // 时间管理
-// ------------------------------------------------------------
 uint64_t Platform::GetTimeMicroseconds() {
     auto now = std::chrono::high_resolution_clock::now();
     return std::chrono::duration_cast<std::chrono::microseconds>(now.time_since_epoch()).count();
@@ -253,9 +247,7 @@ double Platform::GetTimeSeconds() {
     return GetTimeMicroseconds() / 1000000.0;
 }
 
-// ------------------------------------------------------------
 // 文件系统 (优先使用 SDL3 API)
-// ------------------------------------------------------------
 bool Platform::FileExists(const char* path) {
     SDL_PathInfo info;
     return SDL_GetPathInfo(path, &info);
@@ -320,9 +312,7 @@ const char* Platform::GetTemporaryPath() {
     return path.c_str();
 }
 
-// ------------------------------------------------------------
 // 线程和同步 (使用 SDL3 API)
-// ------------------------------------------------------------
 PlatformThreadHandle Platform::CreateThread(ThreadFunc entry, void* userData) {
     auto* context = new ThreadStartContext{entry, userData};
     SDL_Thread* thread = SDL_CreateThread(SDLThreadEntryPoint, "PrismaThread", context);
@@ -359,9 +349,7 @@ void Platform::SleepMilliseconds(uint32_t ms) {
     SDL_Delay(ms);
 }
 
-// ------------------------------------------------------------
 // IPlatformLogger 接口实现
-// ------------------------------------------------------------
 void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
     SetConsoleColor(level);
     std::cout << "[" << tag << "] " << message << std::endl;
@@ -378,9 +366,7 @@ void Platform::SetEventCallback(EventCallback callback) {
     s_eventCallback = callback;
 }
 
-// ============================================================================
 // 虚拟内存管理
-// ============================================================================
 
 void* Platform::ReserveVirtualMemory(size_t bytes) {
 #ifdef _WIN32

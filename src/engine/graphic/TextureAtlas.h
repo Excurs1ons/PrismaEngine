@@ -14,9 +14,7 @@ namespace Prisma {
         // 前向声明
         class ITexture;
 
-        /**
-         * @brief 纹理区域 - 纹理图集中单个纹理的 UV 坐标
-         */
+        // 纹理区域 - 纹理图集中单个纹理的 UV 坐标
         struct TextureRegion {
             float u0, v0;  // 左上角 UV
             float u1, v1;  // 右下角 UV
@@ -37,23 +35,17 @@ namespace Prisma {
                 : u0(u0), v0(v0), u1(u1), v1(v1)
                 , width(width), height(height), offsetX(offsetX), offsetY(offsetY) {}
 
-            /**
-             * @brief 获取 UV 坐标（vec2 版本）
-             */
+            // 获取 UV 坐标（vec2 版本）
             glm::vec2 getMin() const { return glm::vec2(u0, v0); }
             glm::vec2 getMax() const { return glm::vec2(u1, v1); }
 
-            /**
-             * @brief 计算纹理的宽高比
-             */
+            // 计算纹理的宽高比
             float getAspectRatio() const {
                 return height > 0 ? static_cast<float>(width) / height : 1.0f;
             }
         };
 
-        /**
-         * @brief 纹理图集配置
-         */
+        // 纹理图集配置
         struct AtlasConfig {
             uint32_t maxWidth = 4096;      // 图集最大宽度
             uint32_t maxHeight = 4096;     // 图集最大高度
@@ -87,91 +79,57 @@ namespace Prisma {
          */
         class TextureAtlas {
         public:
-            /**
-             * @brief 创建空的纹理图集
-             */
+            // 创建空的纹理图集
             static std::unique_ptr<TextureAtlas> create(const AtlasConfig& config = AtlasConfig());
 
             virtual ~TextureAtlas() = default;
 
             /**
              * @brief 添加纹理到图集
-             * @param texturePath 纹理文件路径
-             * @param name 纹理名称（用于查询）
-             * @return 是否成功添加
              */
             virtual bool addTexture(const std::string& texturePath, const std::string& name) = 0;
 
-            /**
-             * @brief 批量添加纹理
-             */
+            // 批量添加纹理
             virtual size_t addTextures(const std::vector<std::pair<std::string, std::string>>& textures) = 0;
 
-            /**
-             * @brief 构建/重建图集
-             * @return 是否成功构建
-             */
+            /* 构建/重建图集 */
             virtual bool build() = 0;
 
             /**
              * @brief 获取纹理区域
-             * @param name 纹理名称
-             * @return 纹理区域，如果不存在返回 nullptr
              */
             virtual const TextureRegion* getRegion(const std::string& name) const = 0;
 
-            /**
-             * @brief 检查是否包含纹理
-             */
+            // 检查是否包含纹理
             virtual bool hasRegion(const std::string& name) const = 0;
 
-            /**
-             * @brief 获取所有纹理名称
-             */
+            // 获取所有纹理名称
             virtual std::vector<std::string> getRegionNames() const = 0;
 
-            /**
-             * @brief 获取图集纹理
-             */
+            // 获取图集纹理
             virtual ITexture* getAtlasTexture() const = 0;
 
-            /**
-             * @brief 获取纹理数量
-             */
+            // 获取纹理数量
             virtual size_t getRegionCount() const = 0;
 
-            /**
-             * @brief 获取图集大小
-             */
+            // 获取图集大小
             virtual uint32_t getWidth() const = 0;
             virtual uint32_t getHeight() const = 0;
 
-            /**
-             * @brief 清空图集
-             */
+            // 清空图集
             virtual void clear() = 0;
 
-            /**
-             * @brief 保存图集到文件
-             */
+            // 保存图集到文件
             virtual bool saveToFile(const std::string& path) const = 0;
 
-            /**
-             * @brief 获取填充率（已使用面积 / 总面积）
-             */
+            // 获取填充率（已使用面积 / 总面积）
             virtual float getFillRate() const = 0;
         };
 
-        /**
-         * @brief 方块纹理管理器 - 专门为方块优化的纹理图集
-         *
-         * 对应 Minecraft 的方块纹理系统
-         */
+        /* 方块纹理管理器 - 专门为方块优化的纹理图集 */
         class BlockTextureManager {
         public:
-            /**
-             * @brief 方块面方向
-             */
+            // 方块面方向
             enum class FaceDirection {
                 TOP,        // 上方 (+Y)
                 BOTTOM,     // 下方 (-Y)
@@ -182,9 +140,7 @@ namespace Prisma {
                 ALL         // 所有方向
             };
 
-            /**
-             * @brief 方块纹理定义
-             */
+            // 方块纹理定义
             struct BlockTexture {
                 std::string name;           // 纹理名称
                 std::string top;           // 上方纹理
@@ -215,77 +171,47 @@ namespace Prisma {
 
             virtual ~BlockTextureManager() = default;
 
-            /**
-             * @brief 创建方块纹理管理器
-             */
+            // 创建方块纹理管理器
             static std::unique_ptr<BlockTextureManager> create(const AtlasConfig& config = AtlasConfig());
 
-            /**
-             * @brief 注册方块纹理
-             * @param texture 方块纹理定义
-             */
+            /* 注册方块纹理 */
             virtual void registerBlock(const BlockTexture& texture) = 0;
 
-            /**
-             * @brief 批量注册方块
-             */
+            // 批量注册方块
             virtual void registerBlocks(const std::vector<BlockTexture>& textures) = 0;
 
-            /**
-             * @brief 构建方块纹理图集
-             */
+            // 构建方块纹理图集
             virtual bool buildAtlas() = 0;
 
             /**
              * @brief 获取方块指定面的 UV 坐标
-             * @param blockName 方块名称
-             * @param direction 面方向
-             * @return UV 坐标，如果不存在返回 (0,0)-(1,1)
              */
             virtual glm::vec4 getFaceUV(const std::string& blockName, FaceDirection direction) const = 0;
 
-            /**
-             * @brief 获取方块纹理区域
-             */
+            // 获取方块纹理区域
             virtual const TextureRegion* getFaceRegion(const std::string& blockName, FaceDirection direction) const = 0;
 
-            /**
-             * @brief 获取图集纹理
-             */
+            // 获取图集纹理
             virtual ITexture* getAtlasTexture() const = 0;
 
-            /**
-             * @brief 检查是否已注册方块
-             */
+            // 检查是否已注册方块
             virtual bool hasBlock(const std::string& blockName) const = 0;
 
-            /**
-             * @brief 获取已注册方块数量
-             */
+            // 获取已注册方块数量
             virtual size_t getBlockCount() const = 0;
 
-            /**
-             * @brief 预定义常用方块纹理
-             */
+            // 预定义常用方块纹理
             static void registerDefaultBlocks(BlockTextureManager* manager);
 
         private:
-            /**
-             * @brief 内置方块纹理列表
-             */
+            // 内置方块纹理列表
             static const std::vector<BlockTexture> getDefaultBlocks();
         };
 
-        /**
-         * @brief 纹理图集构建器 - 实现纹理打包算法
-         *
-         * 使用贪心算法或 Skyline 算法进行纹理打包
-         */
+        /* 纹理图集构建器 - 实现纹理打包算法 */
         class TextureAtlasBuilder {
         public:
-            /**
-             * @brief 打包算法类型
-             */
+            // 打包算法类型
             enum class PackingAlgorithm {
                 BASIC,           // 基础行填充
                 GREEDY,          // 贪心算法
@@ -293,9 +219,7 @@ namespace Prisma {
                 SHLF,            // Shelf 算法
             };
 
-            /**
-             * @brief 构建结果
-             */
+            // 构建结果
             struct BuildResult {
                 bool success = false;
                 uint32_t atlasWidth = 0;
@@ -307,54 +231,35 @@ namespace Prisma {
 
             virtual ~TextureAtlasBuilder() = default;
 
-            /**
-             * @brief 设置打包算法
-             */
+            // 设置打包算法
             virtual void setPackingAlgorithm(PackingAlgorithm algorithm) = 0;
 
             /**
              * @brief 添加源纹理
-             * @param imageData 纹理数据（RGBA8 格式）
-             * @param width 宽度
-             * @param height 高度
-             * @param name 纹理名称
-             * @return 是否成功添加
              */
             virtual bool addSourceTexture(const std::vector<uint8_t>& imageData,
                                          uint32_t width, uint32_t height,
                                          const std::string& name) = 0;
 
-            /**
-             * @brief 从文件添加纹理
-             */
+            // 从文件添加纹理
             virtual bool addSourceTexture(const std::string& filePath, const std::string& name) = 0;
 
             /**
              * @brief 构建图集
-             * @param config 图集配置
-             * @return 构建结果
              */
             virtual BuildResult build(const AtlasConfig& config) = 0;
 
-            /**
-             * @brief 清空所有源纹理
-             */
+            // 清空所有源纹理
             virtual void clear() = 0;
 
-            /**
-             * @brief 获取源纹理数量
-             */
+            // 获取源纹理数量
             virtual size_t getSourceTextureCount() const = 0;
         };
 
-        /**
-         * @brief 纹理图集构建器工厂
-         */
+        // 纹理图集构建器工厂
         class TextureAtlasBuilderFactory {
         public:
-            /**
-             * @brief 创建纹理图集构建器
-             */
+            // 创建纹理图集构建器
             static std::unique_ptr<TextureAtlasBuilder> create(
                 TextureAtlasBuilder::PackingAlgorithm algorithm = TextureAtlasBuilder::PackingAlgorithm::SKYLINE
             );

@@ -13,9 +13,7 @@
 namespace Prisma {
 namespace Graphic {
 
-/**
- * @brief 精灵动画帧
- */
+// 精灵动画帧
 struct ENGINE_API AnimationFrame {
     Vector4 spriteRect;  // x, y, width, height
     float duration;      // 帧持续时间（秒）
@@ -25,9 +23,7 @@ struct ENGINE_API AnimationFrame {
         : spriteRect(rect), duration(dur) {}
 };
 
-/**
- * @brief 精灵动画
- */
+// 精灵动画
 class ENGINE_API SpriteAnimation {
 public:
     SpriteAnimation();
@@ -71,9 +67,7 @@ private:
     std::function<void()> m_onAnimationFinished;
 };
 
-/**
- * @brief 精灵动画组件
- */
+// 精灵动画组件
 class ENGINE_API SpriteAnimationComponent : public Component {
 public:
     SpriteAnimationComponent();

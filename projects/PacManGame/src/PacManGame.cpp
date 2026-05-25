@@ -22,7 +22,7 @@ bool HasGraphicsDeviceAvailable() {
 }
 
 /**
- * @brief Pac-Man 具体的应用程序类
+ Pac-Man 具体的应用程序类
  */
 class PacManApplication : public Prisma::Application {
 public:

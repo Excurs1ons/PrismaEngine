@@ -7,9 +7,7 @@
 #include <cstdio>
 #include <memory>
 
-// ============================================================
 // 加载 Application 插件 DLL（平台无关）
-// ============================================================
 #if defined(_WIN32)
     #ifndef WIN32_LEAN_AND_MEAN
     #define WIN32_LEAN_AND_MEAN
@@ -95,9 +93,7 @@ private:
     Prisma::Engine* m_engine;
 };
 
-// ============================================================
 // CreateInterface — Engine DLL 唯一导出函数
-// ============================================================
 extern "C" {
 
 PRISMA_ENGINE_C_API void* CreateInterface(

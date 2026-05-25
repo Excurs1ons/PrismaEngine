@@ -12,31 +12,21 @@ namespace httplib {
 
 namespace Prisma {
 
-/**
- * @brief WebUI 编辑器系统
- * 
- * 负责启动 Web 服务器，提供浏览器访问的全功能编辑器。
- */
+/* WebUI 编辑器系统 */
 class EDITOR_API WebUIEditor {
 public:
     WebUIEditor();
     ~WebUIEditor();
 
     /**
-     * @brief 启动 WebUI 服务器
-     * @param port 监听端口
-     * @return 是否启动成功
+     * 启动 WebUI 服务器
      */
     bool Start(int port = 8080);
 
-    /**
-     * @brief 停止 WebUI 服务器
-     */
+    // 停止 WebUI 服务器
     void Stop();
 
-    /**
-     * @brief 更新 WebUI（处理连接、同步状态等）
-     */
+    // 更新 WebUI（处理连接、同步状态等）
     void Update();
 
     bool IsRunning() const { return m_running; }

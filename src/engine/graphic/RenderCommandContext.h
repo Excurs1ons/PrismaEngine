@@ -88,11 +88,11 @@ public:
     /// @deprecated 使用 SetPipelineState 替代
     void SetPipelineState(void* pso);
 
-    /// @brief 设置原生渲染目标（用于兼容旧代码）
+    // 设置原生渲染目标（用于兼容旧代码）
     /// @deprecated 使用 SetRenderTarget(IRenderTarget*) 替代
     void SetNativeRenderTarget(void* renderTarget);
 
-    /// @brief 设置原生深度模板（用于兼容旧代码）
+    // 设置原生深度模板（用于兼容旧代码）
     /// @deprecated 使用 SetRenderTarget(..., IDepthStencil*) 替代
     void SetNativeDepthStencil(void* depthStencil);
 

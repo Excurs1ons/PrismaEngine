@@ -8,7 +8,7 @@
 
 namespace Prisma::Input {
 
-/// @brief 输入设备类型
+// 输入设备类型
 enum class InputDriverType {
     Auto = -1,
     Win32 = 0,           // Windows (RawInput + XInput)
@@ -16,7 +16,7 @@ enum class InputDriverType {
     SDL3 = 2,            // SDL3 跨平台
 };
 
-/// @brief 输入动作类型
+// 输入动作类型
 enum class InputAction : uint8_t {
     None = 0,
     Press,           // 按下
@@ -25,10 +25,10 @@ enum class InputAction : uint8_t {
     DoubleClick      // 双击
 };
 
-/// @brief 输入动作回调
+// 输入动作回调
 using InputActionCallback = std::function<void(KeyCode, InputAction)>;
 
-/// @brief 高层输入设备
+// 高层输入设备
 ///
 /// 职责：
 /// - 使用 IInputDriver 与平台原生输入API交互
@@ -41,74 +41,72 @@ public:
 
     // ========== 初始化 ==========
 
-    /// @brief 初始化输入设备
-    /// @param driverType 驱动类型
-    /// @return 是否成功
+    // 初始化输入设备
     bool Initialize(InputDriverType driverType = InputDriverType::Auto);
 
-    /// @brief 关闭输入设备
+    // 关闭输入设备
     void Shutdown();
 
-    /// @brief 检查是否已初始化
+    // 检查是否已初始化
     bool IsInitialized() const { return m_initialized.load(); }
 
-    /// @brief 更新输入状态（每帧调用）
+    // 更新输入状态（每帧调用）
     void Update();
 
     // ========== 键盘查询 ==========
 
-    /// @brief 检查按键是否按下
+    // 检查按键是否按下
     bool IsKeyDown(KeyCode key) const;
 
-    /// @brief 检查按键是否刚刚按下
+    // 检查按键是否刚刚按下
     bool IsKeyJustPressed(KeyCode key) const;
 
-    /// @brief 检查按键是否刚刚释放
+    // 检查按键是否刚刚释放
     bool IsKeyJustReleased(KeyCode key) const;
 
-    /// @brief 检查任意键是否按下
+    // 检查任意键是否按下
     bool IsAnyKeyDown() const;
 
     // ========== 鼠标查询 ==========
 
-    /// @brief 获取鼠标位置
+    // 获取鼠标位置
     void GetMousePosition(int& x, int& y) const;
 
-    /// @brief 获取鼠标相对移动
+    // 获取鼠标相对移动
     void GetMouseDelta(int& deltaX, int& deltaY) const;
 
-    /// @brief 检查鼠标按钮是否按下
+    // 检查鼠标按钮是否按下
     bool IsMouseButtonDown(MouseButton button) const;
 
-    /// @brief 检查鼠标按钮是否刚刚按下
+    // 检查鼠标按钮是否刚刚按下
     bool IsMouseButtonJustPressed(MouseButton button) const;
 
-    /// @brief 检查鼠标按钮是否刚刚释放
+    // 检查鼠标按钮是否刚刚释放
     bool IsMouseButtonJustReleased(MouseButton button) const;
 
-    /// @brief 获取滚轮增量
+    // 获取滚轮增量
     int GetMouseWheelDelta() const;
 
     // ========== 手柄查询 ==========
 
-    /// @brief 获取连接的手柄数量
+    // 获取连接的手柄数量
     uint32_t GetGamepadCount() const;
 
-    /// @brief 检查手柄是否连接
+    // 检查手柄是否连接
     bool IsGamepadConnected(uint32_t index = 0) const;
 
-    /// @brief 检查手柄按钮是否按下
+    // 检查手柄按钮是否按下
     bool IsGamepadButtonDown(uint32_t index, GamepadButton button) const;
 
-    /// @brief 获取手柄轴值
+    // 获取手柄轴值
     float GetGamepadAxis(uint32_t index, GamepadAxis axis) const;
 
-    /// @brief 设置手柄振动
+    // 设置手柄振动
     void SetGamepadVibration(uint32_t index, float leftMotor, float rightMotor, uint32_t duration);
 
     // ========== 输入映射 ==========
 
-    /// @brief 输入动作映射
+    // 输入动作映射
     struct ActionMapping {
         std::string name;
         KeyCode primaryKey = KeyCode::Unknown;
@@ -117,43 +115,38 @@ public:
         float deadzone = 0.0f;
     };
 
-    /// @brief 添加动作映射
-    /// @param name 动作名称
-    /// @param key 主按键
-    /// @param altKey 备用按键
+    // 添加动作映射
     void AddActionMapping(const std::string& name, KeyCode key, KeyCode altKey = KeyCode::Unknown);
 
-    /// @brief 添加手柄动作映射
-    /// @param name 动作名称
-    /// @param button 手柄按钮
+    // 添加手柄动作映射
     void AddActionMapping(const std::string& name, GamepadButton button);
 
-    /// @brief 检查动作是否触发
+    // 检查动作是否触发
     bool IsActionPressed(const std::string& name) const;
 
-    /// @brief 检查动作是否刚刚触发
+    // 检查动作是否刚刚触发
     bool IsActionJustPressed(const std::string& name) const;
 
     // ========== 文本输入 ==========
 
-    /// @brief 开始文本输入
+    // 开始文本输入
     void StartTextInput();
 
-    /// @brief 停止文本输入
+    // 停止文本输入
     void StopTextInput();
 
-    /// @brief 获取输入的文本
+    // 获取输入的文本
     const std::string& GetTextInput() const;
 
     // ========== 光标控制 ==========
 
-    /// @brief 设置光标可见性
+    // 设置光标可见性
     void SetCursorVisible(bool visible);
 
-    /// @brief 设置光标锁定
+    // 设置光标锁定
     void SetCursorLocked(bool locked);
 
-    /// @brief 获取光标锁定状态
+    // 获取光标锁定状态
     bool IsCursorLocked() const { return m_cursorLocked; }
 
 private:

@@ -2,11 +2,9 @@ using System.Diagnostics;
 
 namespace NeoEditor.Core;
 
-/// <summary>
 /// 事件总线: 单例模式，维护所有 WebUIBridge 实例。
 /// 引擎状态 / 选择变更时广播到所有已注册的 WebUI 面板。
 /// 线程安全 (锁定桥接列表)，支持 HTTP 轮询回退快照缓存。
-/// </summary>
 internal sealed class EventBus
 {
     public static EventBus Instance { get; } = new();
@@ -51,9 +49,7 @@ internal sealed class EventBus
     // 事件发布 (C# → WebUI 推送)
     // ================================================================
 
-    /// <summary>
     /// 发布选择变更事件。entityId 为选中实体的 ID 字符串。
-    /// </summary>
     public void PublishSelectionChanged(string entityId)
     {
         lock (_lock)
@@ -66,9 +62,7 @@ internal sealed class EventBus
         Debug.WriteLine($"[EventBus] SelectionChanged: {entityId}");
     }
 
-    /// <summary>
     /// 发布场景更新事件。
-    /// </summary>
     public void PublishSceneUpdated()
     {
         string timestamp = DateTime.UtcNow.ToString("O");
@@ -82,9 +76,7 @@ internal sealed class EventBus
         Debug.WriteLine($"[EventBus] SceneUpdated: {timestamp}");
     }
 
-    /// <summary>
     /// 发布引擎状态更新事件。
-    /// </summary>
     public void PublishEngineStatus(int fps, string gpu, string scene, int objects)
     {
         lock (_lock)
@@ -103,10 +95,8 @@ internal sealed class EventBus
     // HTTP 轮询回退快照
     // ================================================================
 
-    /// <summary>
     /// 获取当前事件快照 JSON，供 HTTP 轮询端点使用。
     /// WebUI 可比较 generation 值判断是否有新事件。
-    /// </summary>
     public string GetEventsSnapshot()
     {
         lock (_lock)
@@ -131,10 +121,8 @@ internal sealed class EventBus
     // 内部广播
     // ================================================================
 
-    /// <summary>
     /// 对快照中的所有桥接实例执行操作。
     /// 快照机制避免死锁，允许在迭代过程中注册/注销。
-    /// </summary>
     private void Broadcast(Action<WebUIBridge> action)
     {
         WebUIBridge[] snapshot;

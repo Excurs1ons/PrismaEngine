@@ -7,10 +7,7 @@
 namespace Prisma {
 namespace Core {
 
-/**
- * @brief 编译期/运行期 FNV-1a 字符串哈希
- * 优化资源查找性能，避免冗余的字符串哈希计算和比较
- */
+/* 编译期/运行期 FNV-1a 字符串哈希 */
 class StringHash {
 public:
     using HashType = uint32_t;
@@ -19,9 +16,7 @@ public:
     static constexpr HashType FNV_OFFSET_BASIS = 2166136261U;
     static constexpr HashType FNV_PRIME = 16777619U;
 
-    /**
-     * @brief 编译期哈希函数
-     */
+    // 编译期哈希函数
     static constexpr HashType HashCompileTime(const char* str) {
         HashType hash = FNV_OFFSET_BASIS;
         while (*str) {
@@ -31,9 +26,7 @@ public:
         return hash;
     }
 
-    /**
-     * @brief 运行期哈希函数
-     */
+    // 运行期哈希函数
     static HashType Hash(std::string_view str) {
         HashType hash = FNV_OFFSET_BASIS;
         for (char c : str) {
@@ -61,9 +54,7 @@ private:
 } // namespace Core
 } // namespace Prisma
 
-/**
- * @brief 字面量支持: "path/to/asset"_hash
- */
+// 字面量支持: "path/to/asset"_hash
 constexpr Prisma::Core::StringHash::HashType operator""_hash(const char* str, size_t) {
     return Prisma::Core::StringHash::HashCompileTime(str);
 }

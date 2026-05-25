@@ -537,10 +537,8 @@ internal abstract class WebUIBridge
         _output.WriteLine("[FullStack] EditorAPI 初始化 + 调用链验证通过");
     }
 
-    /// <summary>
     /// 验证 EditorAPI + EditorCommands HTTP 路由的完整调用链。
     /// 从 REST API 请求 → EditorCommands.Dispatch → EditorAPI 静态方法的路由正确性。
-    /// </summary>
     [Fact]
     public void FullStack_REST_API_To_EditorAPI_Route()
     {
@@ -579,10 +577,8 @@ internal abstract class WebUIBridge
     //    验证: D3D11 设备创建 → 共享纹理 → SwapChainPanel 绑定
     // ===================================================================
 
-    /// <summary>
     /// 验证 D3D11 互操作层的结构体和 COM vtable 偏移常量正确。
     /// 这是 ViewportSurface 在无 D3D11 设备时的概念验证。
-    /// </summary>
     [Fact]
     public void Viewport_D3D11_Structs_And_Vtbl_Offsets()
     {
@@ -602,9 +598,7 @@ internal abstract class WebUIBridge
         _output.WriteLine("[Viewport] D3D11 COM vtable 偏移常量验证通过");
     }
 
-    /// <summary>
     /// 验证 D3D11 结构体大小和 DXGI GUID 常量正确。
-    /// </summary>
     [Fact]
     public void Viewport_D3D11_StructSizes()
     {
@@ -629,9 +623,7 @@ internal abstract class WebUIBridge
         _output.WriteLine("[Viewport] D3D11 结构体大小验证通过");
     }
 
-    /// <summary>
     /// 验证 DXGI GUID 常量与已知值匹配。
-    /// </summary>
     [Fact]
     public void Viewport_DXGI_GUIDs_Match_Known()
     {
@@ -653,9 +645,7 @@ internal abstract class WebUIBridge
         _output.WriteLine("[Viewport] DXGI GUID 常量验证通过");
     }
 
-    /// <summary>
     /// 验证 D3D11 扩展辅助函数 — VkFormatToDxgi 格式映射正确性。
-    /// </summary>
     [Fact]
     public void Viewport_VkFormatToDxgi_Mapping()
     {
@@ -682,10 +672,8 @@ internal abstract class WebUIBridge
     //    启动 WebUIService → HttpClient 测试各端点 → 验证 JSON 响应
     // ===================================================================
 
-    /// <summary>
     /// 验证 WebUIService 启动、路由分发、JSON 响应的完整性。
     /// 不依赖于实际引擎 DLL。
-    /// </summary>
     [Fact]
     public async Task WebUI_HTTPService_Starts_And_Responds()
     {
@@ -1323,9 +1311,7 @@ internal abstract class WebUIBridge
     // 核心队列 DrainAll 辅助方法
     // ===================================================================
 
-    /// <summary>
     /// Drain 队列中的所有事件，返回事件数量。
-    /// </summary>
     private static int DrainCount(UIToEngineQueue queue)
     {
         int count = 0;
@@ -1333,18 +1319,14 @@ internal abstract class WebUIBridge
         return count;
     }
 
-    /// <summary>
     /// Drain 队列中的所有事件。
-    /// </summary>
     private static void DrainAll(UIToEngineQueue queue)
     {
         queue.Drain(_ => { });
     }
 
-    /// <summary>
     /// 模拟 HTTP POST 请求通过 EditorCommands.Dispatch 路由。
     /// 使用内存 HttpListenerRequest 的替代方案 — 直接调用 Dispatch。
-    /// </summary>
     private static string SimulatePostRequest(string path, string body)
     {
         // EditorCommands.Dispatch 期望完整的 HttpListenerRequest
@@ -1385,9 +1367,7 @@ internal abstract class WebUIBridge
     // Spy / Mock 类型
     // ===================================================================
 
-    /// <summary>
     /// 实现 WebUIBridge 接口的间谍桥接，捕捉所有 PostWebMessage 调用。
-    /// </summary>
     private sealed class BridgeSpy : WebUIBridge
     {
         private readonly Action<string> _onMessage;
@@ -1413,9 +1393,7 @@ internal abstract class WebUIBridge
         }
     }
 
-    /// <summary>
     /// 模拟 WebUI 消息收集器，验证 WebUIBridge 消息协议格式。
-    /// </summary>
     private sealed class WebMessageCollector
     {
         public List<string> Messages { get; } = new();
@@ -1426,18 +1404,14 @@ internal abstract class WebUIBridge
         }
     }
 
-    /// <summary>
     /// 最小化 WebView2 spy — 不需要真实 WebView2 运行时。
-    /// </summary>
     private sealed class WebViewSpy
     {
         // 最小的伪装对象 — 只用于满足 WebUIBridge 构造函数参数
     }
 }
 
-/// <summary>
 /// 用于测试的 WebUIBridge 基类，允许 spy 子类覆盖行为。
-/// </summary>
 internal abstract class WebUIBridge
 {
     private readonly object _webView;

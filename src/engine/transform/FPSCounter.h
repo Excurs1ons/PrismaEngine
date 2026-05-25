@@ -7,7 +7,7 @@
 
 using namespace Prisma;
 
-/// @brief FPS 计数器组件
+// FPS 计数器组件
 /// 每秒更新一次显示的 FPS 值
 class FPSCounter : public Component {
 public:

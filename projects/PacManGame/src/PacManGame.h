@@ -12,7 +12,7 @@ namespace Prisma {
 namespace PacMan {
 
 /**
- * @brief 吃豆人游戏主类
+ 吃豆人游戏主类
  * 负责初始化引擎和游戏循环
  */
 class PacManGame {
@@ -23,61 +23,61 @@ public:
     // ========== 初始化 ==========
 
     /**
-     * @brief 初始化游戏
+     初始化游戏
      */
     void Initialize();
 
     /**
-     * @brief 关闭游戏
+     关闭游戏
      */
     void Shutdown();
 
     /**
-     * @brief 运行游戏
+     运行游戏
      */
     void Run();
 
     // ========== 更新和渲染 ==========
 
     /**
-     * @brief 每帧更新
+     每帧更新
      */
     void OnUpdate(Prisma::Timestep ts);
 
     /**
-     * @brief 每帧渲染
+     每帧渲染
      */
     void OnRender();
 
     // ========== 事件处理 ==========
 
     /**
-     * @brief 窗口大小改变
+     窗口大小改变
      */
     void OnWindowResize(int width, int height);
 
     /**
-     * @brief 键盘按下
+     键盘按下
      */
     void OnKeyPress(int keyCode);
 
     /**
-     * @brief 键盘释放
+     键盘释放
      */
     void OnKeyRelease(int keyCode);
 
     /**
-     * @brief 鼠标按下
+     鼠标按下
      */
     void OnMousePress(int button, int x, int y);
 
     /**
-     * @brief 鼠标释放
+     鼠标释放
      */
     void OnMouseRelease(int button, int x, int y);
 
     /**
-     * @brief 鼠标移动
+     鼠标移动
      */
     void OnMouseMove(int x, int y);
 

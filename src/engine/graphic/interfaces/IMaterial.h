@@ -7,7 +7,7 @@
 
 namespace Prisma::Graphic {
 
-/// @brief 材质属性结构
+// 材质属性结构
 struct MaterialProperties {
     // 基础属性
     alignas(16) glm::vec4 baseColor = {1.0f, 1.0f, 1.0f, 1.0f};  // 基础颜色 (RGBA)
@@ -27,62 +27,48 @@ struct MaterialProperties {
     std::vector<TextureSlot> textures;
 };
 
-/// @brief 材质抽象接口
+// 材质抽象接口
 class IMaterial {
 public:
     virtual ~IMaterial() = default;
 
-    /// @brief 获取材质属性
-    /// @return 材质属性
+    // 获取材质属性
     virtual const MaterialProperties& GetProperties() const = 0;
 
-    /// @brief 设置基础颜色
-    /// @param color RGBA颜色
+    // 设置基础颜色
     virtual void SetBaseColor(const glm::vec4& color) = 0;
 
-    /// @brief 设置金属度
-    /// @param metallic 金属度值 [0, 1]
+    // 设置金属度
     virtual void SetMetallic(float metallic) = 0;
 
-    /// @brief 设置粗糙度
-    /// @param roughness 粗糙度值 [0, 1]
+    // 设置粗糙度
     virtual void SetRoughness(float roughness) = 0;
 
-    /// @brief 设置自发光强度
-    /// @param emissive 自发光强度
+    // 设置自发光强度
     virtual void SetEmissive(float emissive) = 0;
 
-    /// @brief 设置纹理
-    /// @param slot 纹理槽位
-    /// @param texture 纹理资源
+    // 设置纹理
     virtual void SetTexture(uint32_t slot, std::shared_ptr<ITexture> texture) = 0;
 
-    /// @brief 获取纹理
-    /// @param slot 纹理槽位
-    /// @return 纹理资源
+    // 获取纹理
     virtual std::shared_ptr<ITexture> GetTexture(uint32_t slot) const = 0;
 
-    /// @brief 绑定材质到渲染管线
-    /// @param commandBuffer 命令缓冲区
+    // 绑定材质到渲染管线
     virtual void Bind(class ICommandBuffer* commandBuffer) = 0;
 
-    /// @brief 解绑材质
-    /// @param commandBuffer 命令缓冲区
+    // 解绑材质
     virtual void Unbind(class ICommandBuffer* commandBuffer) = 0;
 
-    /// @brief 是否透明
-    /// @return 是否为透明材质
+    // 是否透明
     virtual bool IsTransparent() const = 0;
 
-    /// @brief 获取材质名称
-    /// @return 材质名称
+    // 获取材质名称
     virtual const std::string& GetName() const = 0;
 
-    /// @brief 设置材质名称
-    /// @param name 材质名称
+    // 设置材质名称
     virtual void SetName(const std::string& name) = 0;
 
-    /// @brief 更新常量缓冲区
+    // 更新常量缓冲区
     /// 当材质属性改变时调用
     virtual void UpdateConstantBuffer() = 0;
 };

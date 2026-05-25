@@ -25,10 +25,7 @@ struct ENGINE_API AssetMetadata {
     void FromJson(const glz::json_t& j);
 };
 
-/**
- * @brief 全局资源数据库，基于 mmh3 128位哈希和文件指纹策略。
- * 用于实现“秒开”工程，避免类似 Unity 的启动慢问题。
- */
+/* 全局资源数据库，基于 mmh3 128位哈希和文件指纹策略。 */
 class ENGINE_API AssetDatabase {
 public:
     static AssetDatabase& Get();
@@ -36,9 +33,7 @@ public:
     bool Load(const std::string& dbPath = "assets/metadata.json");
     void Save();
 
-    /**
-     * @brief 扫描指定目录（递归），快速同步文件状态
-     */
+    // 扫描指定目录（递归），快速同步文件状态
     void Refresh(const std::string& rootPath = "assets");
 
     // 查询接口
@@ -46,9 +41,7 @@ public:
     AssetMetadata* GetMetadata(const std::string& path);
     AssetMetadata* GetMetadata(const UUID& guid);
 
-    /**
-     * @brief 获取所有资源的元数据 (只读)
-     */
+    // 获取所有资源的元数据 (只读)
     const std::unordered_map<std::string, AssetMetadata>& GetAllMetadata() const { return m_pathMap; }
 
 private:

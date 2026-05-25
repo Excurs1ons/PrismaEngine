@@ -15,9 +15,7 @@ class IBuffer;
 class IDescriptorSet;
 class IDescriptorSetLayout;
 
-/**
- * @brief Clustered Opaque Pass
- */
+// Clustered Opaque Pass
 class ClusteredOpaquePass : public ForwardRenderPass {
 public:
     ClusteredOpaquePass();

@@ -6,7 +6,7 @@
 
 namespace Prisma {
 
-/// @brief 按钮组件（最简实现）
+// 按钮组件（最简实现）
 class ButtonComponent : public UIComponent {
 public:
     ButtonComponent() = default;

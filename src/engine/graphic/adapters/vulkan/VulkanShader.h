@@ -16,21 +16,17 @@ namespace Prisma::Graphic::Vulkan {
 // 前置声明
 class RenderDeviceVulkan;
 
-/// @brief Vulkan着色器适配器
+// Vulkan着色器适配器
 /// 实现IShader接口，包装编译后的Vulkan SPIR-V字节码
 class VulkanShader : public IShader {
 public:
-    /// @brief 构造函数
-    /// @param device Vulkan渲染设备
-    /// @param desc 着色器描述
-    /// @param spirv SPIR-V字节码
-    /// @param reflection 反射信息
+    // 构造函数
     VulkanShader(RenderDeviceVulkan* device,
                  const ShaderDesc& desc,
                  const std::vector<uint32_t>& spirv,
                  const ShaderReflection& reflection);
 
-    /// @brief 析构函数
+    // 析构函数
     ~VulkanShader() override;
 
     // IShader接口实现
@@ -78,20 +74,16 @@ public:
 
     // === Vulkan特定方法 ===
 
-    /// @brief 获取资源类型
-    /// @return 资源类型
+    // 获取资源类型
     ResourceType GetResourceType() const override;
 
-    /// @brief 获取Vulkan着色器模块
-    /// @return VkShaderModule句柄
+    // 获取Vulkan着色器模块
     VkShaderModule GetShaderModule() const { return m_shaderModule; }
 
-    /// @brief 获取SPIR-V字节码
-    /// @return SPIR-V字节码
+    // 获取SPIR-V字节码
     const std::vector<uint32_t>& GetSpirv() const { return m_spirv; }
 
-    /// @brief 获取Vulkan着色器阶段标志
-    /// @return VkShaderStageFlagBits
+    // 获取Vulkan着色器阶段标志
     VkShaderStageFlagBits GetVkShaderStage() const;
 
 
@@ -108,11 +100,10 @@ private:
     uint64_t m_fileModificationTime = 0;
     VkShaderModule m_shaderModule = VK_NULL_HANDLE;
 
-    /// @brief 创建Vulkan着色器模块
-    /// @return 是否成功
+    // 创建Vulkan着色器模块
     bool CreateShaderModule();
 
-    /// @brief 销毁着色器模块
+    // 销毁着色器模块
     void DestroyShaderModule();
 };
 

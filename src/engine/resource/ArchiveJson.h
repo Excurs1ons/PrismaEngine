@@ -10,9 +10,7 @@ namespace Serialization {
 
 using json = glz::json_t;
 
-/**
- * @brief JSON 输出存档
- */
+// JSON 输出存档
 class ENGINE_API JsonOutputArchive : public OutputArchive {
 public:
     JsonOutputArchive();
@@ -63,9 +61,7 @@ private:
     std::stack<json*> m_stack;
 };
 
-/**
- * @brief JSON 输入存档
- */
+// JSON 输入存档
 class ENGINE_API JsonInputArchive : public InputArchive {
 public:
     explicit JsonInputArchive(const json& data);

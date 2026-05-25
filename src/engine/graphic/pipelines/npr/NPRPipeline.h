@@ -12,10 +12,7 @@ class SkyboxPass;
 class PostProcessPass2D;
 class UIPass2D;
 
-/**
- * @brief NPR 渲染管线
- * 使用 NPR 风格着色器进行 Toon/Cel 渲染。
- */
+/* NPR 渲染管线 */
 class ENGINE_API NPRPipeline : public IPipeline {
 public:
     NPRPipeline();

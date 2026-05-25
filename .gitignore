@@ -52,7 +52,11 @@
 .idea/
 .vscode/
 .claude/
+
+# AI agent artifacts
 .sisyphus/
+skills/
+docs/superpowers/
 
 # Dependencies
 .dependencies/

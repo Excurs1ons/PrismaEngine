@@ -46,9 +46,7 @@ struct RenderPassDesc {
     bool clearStencil = true;
 };
 
-/**
- * @brief 命令缓冲区抽象接口 (现代化版本)
- */
+// 命令缓冲区抽象接口 (现代化版本)
 class ICommandBuffer {
 public:
     virtual ~ICommandBuffer() = default;
@@ -72,15 +70,10 @@ public:
     virtual void SetVertexBuffer(IBuffer* buffer, uint32_t slot, uint32_t offset = 0) = 0;
     virtual void SetIndexBuffer(IBuffer* buffer, bool is32Bit = true, uint32_t offset = 0) = 0;
 
-    /**
-     * @brief 绑定描述符集 (Vulkan Set / DX12 Table)
-     * @param set 索引 (0: Global, 1: Material, 2: Per-Object)
-     */
+    /* 绑定描述符集 (Vulkan Set / DX12 Table) */
     virtual void BindDescriptorSet(uint32_t set, IDescriptorSet* descriptorSet) = 0;
 
-    /**
-     * @brief 推流常量 (用于频繁更新的变换矩阵)
-     */
+    // 推流常量 (用于频繁更新的变换矩阵)
     virtual void PushConstants(ShaderType stage, const void* data, uint32_t size) = 0;
 
     // === 绘制命令 ===

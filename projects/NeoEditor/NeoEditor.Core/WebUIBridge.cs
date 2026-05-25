@@ -5,41 +5,31 @@ using Microsoft.Web.WebView2.Core;
 
 namespace NeoEditor.Core;
 
-/// <summary>
 /// WebMessage 双向通信桥接层。
 /// 管理 WebView2 与 C# 之间的 WebMessage 通信。
 ///
 /// 消息协议:
 ///   C# → WebUI (推送): {"type":"eventName","data":...}
 ///   WebUI → C# (接收): {"action":"actionName","data":...}
-/// </summary>
 internal sealed class WebUIBridge : IDisposable
 {
     private readonly WebView2 _webView;
     private bool _disposed;
 
-    /// <summary>
     /// 当 WebUI 请求选择实体时触发。
     /// 参数: entityId (字符串)
-    /// </summary>
     public event Action<string>? EntitySelected;
 
-    /// <summary>
     /// 当 WebUI 请求创建实体时触发。
     /// 参数: JSON data 中的 name 字段
-    /// </summary>
     public event Action<string>? EntityCreateRequested;
 
-    /// <summary>
     /// 当 WebUI 请求删除实体时触发。
     /// 参数: entityId (ulong)
-    /// </summary>
     public event Action<ulong>? EntityDeleteRequested;
 
-    /// <summary>
     /// 当 WebUI 发送自定义命令时触发。
     /// 参数: 命令字符串
-    /// </summary>
     public event Action<string>? CommandExecuted;
 
     public WebUIBridge(WebView2 webView)
@@ -48,10 +38,8 @@ internal sealed class WebUIBridge : IDisposable
         _webView = webView;
     }
 
-    /// <summary>
     /// 注册 CoreWebView2.WebMessageReceived 事件并注册到 EventBus。
     /// 必须在调用 EnsureCoreWebView2Async() 之后调用。
-    /// </summary>
     public void Initialize()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -72,9 +60,7 @@ internal sealed class WebUIBridge : IDisposable
     // C# → WebUI 推送
     // ================================================================
 
-    /// <summary>
     /// 向 WebUI 发送原始 JSON 消息。
-    /// </summary>
     public void PostWebMessage(string message)
     {
         if (_disposed || _webView.CoreWebView2 == null)
@@ -83,35 +69,27 @@ internal sealed class WebUIBridge : IDisposable
         _webView.CoreWebView2.PostWebMessageAsJson(message);
     }
 
-    /// <summary>
     /// 向 WebUI 发送类型化事件。
     /// data 应为 JSON 字符串 (可以是原始 JSON 对象或数组)。
-    /// </summary>
     public void PostEvent(string type, string data)
     {
         string json = $"{{\"type\":\"{SanitizeJsonString(type)}\",\"data\":{data}}}";
         PostWebMessage(json);
     }
 
-    /// <summary>
     /// 发送选中实体变更事件。
-    /// </summary>
     public void NotifySelectionChanged(string entityId)
     {
         PostEvent("selectionChanged", $"\"{SanitizeJsonString(entityId)}\"");
     }
 
-    /// <summary>
     /// 发送场景更新事件。
-    /// </summary>
     public void NotifySceneUpdated()
     {
         PostEvent("sceneUpdated", $"\"{DateTime.UtcNow:O}\"");
     }
 
-    /// <summary>
     /// 发送引擎状态事件。
-    /// </summary>
     public void NotifyEngineStatus(int fps, string gpu, string scene, int objects)
     {
         string data = $$"""

@@ -20,9 +20,7 @@
 
 namespace Prisma {
 
-/**
- * @brief 应用程序配置规范
- */
+// 应用程序配置规范
 struct ApplicationSpecification {
     std::string Name = "Prisma App";
     std::string EntryScene = "";

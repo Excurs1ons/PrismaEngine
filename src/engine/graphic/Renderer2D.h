@@ -17,10 +17,7 @@ class ITexture;
 class RenderCommandContext;
 class OrthographicCamera;
 
-/**
- * @brief 2D 渲染器 (静态接口)
- * 提供高性能的 2D 形状和精灵渲染功能，支持批处理
- */
+/* 2D 渲染器 (静态接口) */
 class ENGINE_API Renderer2D {
 public:
     struct Statistics {

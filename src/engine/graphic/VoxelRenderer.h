@@ -10,10 +10,7 @@
 namespace Prisma {
 namespace Graphic {
 
-/**
- * @brief Voxel 区块数据
- * 定义 16x16x16 的体素网格
- */
+/* Voxel 区块数据 */
 struct VoxelChunk {
     static constexpr int SIZE = 16;
     static constexpr int VOLUME = SIZE * SIZE * SIZE;
@@ -40,10 +37,7 @@ struct VoxelChunk {
     }
 };
 
-/**
- * @brief 高性能方块渲染器 (SDK 核心组件)
- * 采用异步网格烘焙和区块合并技术
- */
+/* 高性能方块渲染器 (SDK 核心组件) */
 class VoxelRenderer : public RenderComponent {
 public:
     VoxelRenderer();

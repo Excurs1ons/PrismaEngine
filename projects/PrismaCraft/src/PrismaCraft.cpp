@@ -13,7 +13,7 @@
 namespace Prisma {
 
 /**
- * @brief 现代风格的游戏逻辑层
+ 现代风格的游戏逻辑层
  */
 class GameplayLayer : public Layer {
 public:
@@ -33,7 +33,7 @@ public:
     }
 
     /**
-     * @brief 准备渲染数据并提交 (OnRender 替代 PrepareRenderData)
+     准备渲染数据并提交 (OnRender 替代 PrepareRenderData)
      */
     void OnRender() override {
         // 1. 获取相机信息并填入上下文
@@ -69,7 +69,7 @@ private:
 };
 
 /**
- * @brief PrismaCraft 应用程序实现
+ PrismaCraft 应用程序实现
  */
 class PrismaCraft : public Application {
 public:

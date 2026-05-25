@@ -2,7 +2,7 @@ using System;
 
 namespace GameScripts.Minecraft;
 
-/// <summary>不可变方块坐标。对应 net.minecraft.core.BlockPos</summary>
+不可变方块坐标。对应 net.minecraft.core.BlockPos</summary>
 public readonly struct BlockPos : IEquatable<BlockPos>
 {
     public readonly int X, Y, Z;
@@ -38,7 +38,7 @@ public readonly struct BlockPos : IEquatable<BlockPos>
     public override string ToString() => $"({X},{Y},{Z})";
 }
 
-/// <summary>可变 BlockPos，用于迭代。对应 BlockPos.MutableBlockPos</summary>
+可变 BlockPos，用于迭代。对应 BlockPos.MutableBlockPos</summary>
 public struct MutableBlockPos
 {
     public int X, Y, Z;

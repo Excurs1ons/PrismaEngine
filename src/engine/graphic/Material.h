@@ -15,15 +15,10 @@ class IShader;
 class IDescriptorSet;
 class IDescriptorSetLayout;
 
-/**
- * @brief 材质参数值 (统一存储)
- */
+// 材质参数值 (统一存储)
 using MaterialParamValue = std::variant<float, PrismaMath::vec3, PrismaMath::vec4, std::shared_ptr<ITexture>>;
 
-/**
- * @brief 材质资产 (Material)
- * 一个材质由一个 Shader 和一组参数组成。
- */
+/* 材质资产 (Material) */
 class ENGINE_API Material : public Prisma::Asset {
 public:
     Material(std::shared_ptr<IShader> shader);

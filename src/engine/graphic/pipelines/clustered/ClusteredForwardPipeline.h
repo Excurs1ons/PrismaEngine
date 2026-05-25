@@ -18,9 +18,7 @@ class IDescriptorSet;
 class IComputePipeline;
 class IBuffer;
 
-/**
- * @brief 分块前向渲染管线 (Clustered Forward Rendering Pipeline)
- */
+// 分块前向渲染管线 (Clustered Forward Rendering Pipeline)
 class ENGINE_API ClusteredForwardPipeline : public IPipeline {
 public:
     ClusteredForwardPipeline();

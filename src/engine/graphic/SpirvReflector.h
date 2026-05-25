@@ -22,18 +22,11 @@ class SpirvReflector {
 public:
     /**
      * @brief 从 SPIR-V 字节码提取反射信息
-     * @param bytecode SPIR-V 二进制数据
-     * @param outReflection 输出的反射结构
-     * @return true 反射成功, false 失败
      */
     static bool Reflect(const std::vector<uint8_t>& bytecode, ShaderReflection& outReflection);
 
     /**
      * @brief 从原始指针提取反射信息
-     * @param data SPIR-V 数据指针
-     * @param size 数据大小（字节）
-     * @param outReflection 输出的反射结构
-     * @return true 反射成功, false 失败
      */
     static bool Reflect(const void* data, size_t size, ShaderReflection& outReflection);
 };

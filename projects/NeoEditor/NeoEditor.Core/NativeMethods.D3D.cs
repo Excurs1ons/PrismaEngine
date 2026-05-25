@@ -365,9 +365,7 @@ internal static class NativeMethodsD3D
     // --------------------------------------------------------------------
     // D3D11CreateDevice
     // --------------------------------------------------------------------
-    /// <summary>
     /// Creates a Direct3D 11 device.
-    /// </summary>
     [DllImport("d3d11.dll", CallingConvention = CallingConvention.StdCall)]
     internal static extern int D3D11CreateDevice(
         IntPtr              pAdapter,          // IDXGIAdapter* or null

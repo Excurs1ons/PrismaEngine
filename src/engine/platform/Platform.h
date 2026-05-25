@@ -21,9 +21,7 @@
 #endif
 namespace Prisma {
 
-// ------------------------------------------------------------
 // 窗口相关枚举和结构
-// ------------------------------------------------------------
 enum class FullScreenMode { Window, ExclusiveFullScreen, FullScreen };
 enum class WindowShowState { Default, Show, Hide, Maximize, Minimize };
 
@@ -53,16 +51,12 @@ public:
     using EventCallback = std::function<void(Event&)>;
     static EventCallback s_eventCallback;
 
-    // ------------------------------------------------------------
     // 平台生命周期管理
-    // ------------------------------------------------------------
     ENGINE_API static bool Initialize();
     ENGINE_API static void Shutdown();
     ENGINE_API static bool IsInitialized();
 
-    // ------------------------------------------------------------
     // 调试与控制台
-    // ------------------------------------------------------------
     ENGINE_API static void DebugPrint(const char* message);
     ENGINE_API static void SetConsoleColor(LogLevel level);
     ENGINE_API static void ResetConsoleColor();
@@ -74,15 +68,11 @@ public:
     ENGINE_API static std::string GetEnvironmentVariable(const std::string& name);
     ENGINE_API static void SetEnvironmentVariable(const std::string& name, const std::string& value);
 
-    // ------------------------------------------------------------
     // Vulkan 支持
-    // ------------------------------------------------------------
     ENGINE_API static std::vector<const char*> GetRequiredVulkanInstanceExtensions();
     ENGINE_API static bool CreateVulkanSurface(void* instance, WindowHandle window, void** outSurface);
 
-    // ------------------------------------------------------------
     // 窗口管理
-    // ------------------------------------------------------------
     ENGINE_API static WindowHandle CreateWindow(const WindowProps& desc);
     ENGINE_API static void DestroyWindow(WindowHandle window);
     ENGINE_API static void GetWindowSize(WindowHandle window, int& outW, int& outH);
@@ -94,19 +84,13 @@ public:
     ENGINE_API static WindowHandle GetCurrentWindow();
 
 
-    // ------------------------------------------------------------
     // 时间管理
-    // ------------------------------------------------------------
     ENGINE_API static uint64_t GetTimeMicroseconds();
     ENGINE_API static double GetTimeSeconds();
 
-    // ------------------------------------------------------------
     // 输入管理
-    // ------------------------------------------------------------
 
-    // ------------------------------------------------------------
     // 文件系统
-    // ------------------------------------------------------------
     ENGINE_API static bool FileExists(const char* path);
     ENGINE_API static size_t FileSize(const char* path);
     ENGINE_API static size_t ReadFile(const char* path, void* dst, size_t maxBytes);
@@ -115,9 +99,7 @@ public:
     ENGINE_API static const char* GetPersistentPath();
     ENGINE_API static const char* GetTemporaryPath();
 
-    // ------------------------------------------------------------
     // 线程和同步
-    // ------------------------------------------------------------
     ENGINE_API static PlatformThreadHandle CreateThread(ThreadFunc entry, void* userData);
     ENGINE_API static void JoinThread(PlatformThreadHandle thread);
     ENGINE_API static PlatformMutexHandle CreateMutex();
@@ -126,20 +108,14 @@ public:
     ENGINE_API static void UnlockMutex(PlatformMutexHandle mtx);
     ENGINE_API static void SleepMilliseconds(uint32_t ms);
 
-    // ------------------------------------------------------------
     // IPlatformLogger 接口实现
-    // ------------------------------------------------------------
     ENGINE_API static void LogToConsole(LogLevel level, const char* tag, const char* message);
     ENGINE_API static const char* GetLogDirectoryPath();
 
-    // ------------------------------------------------------------
     // SDL 特定功能
-    // ------------------------------------------------------------
     ENGINE_API static void SetEventCallback(EventCallback callback);
 
-    // ------------------------------------------------------------
     // 虚拟内存管理（预留 VA + 按需提交物理内存）
-    // ------------------------------------------------------------
     ENGINE_API static void* ReserveVirtualMemory(size_t bytes);
     ENGINE_API static void  CommitVirtualMemory(void* addr, size_t bytes);
     ENGINE_API static void  ReleaseVirtualMemory(void* addr, size_t bytes);
