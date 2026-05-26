@@ -171,6 +171,7 @@ set(CORE_SOURCES
     graphic/2d/CanvasPass2D.cpp
     graphic/2d/PostProcessPass2D.cpp
     graphic/2d/UIPass2D.cpp
+    graphic/2d/PixelPerfectPass.cpp
 
     # Graphic - Vulkan Backend
     graphic/adapters/vulkan/VulkanAdapters.cpp

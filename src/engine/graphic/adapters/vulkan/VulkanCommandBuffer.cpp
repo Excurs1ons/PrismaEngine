@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <unordered_map>
 #include <array>
+#include <utility>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -30,41 +31,77 @@ struct OffscreenRT {
     VkDevice      device      = VK_NULL_HANDLE;
 };
 
-std::unordered_map<VkImageView, OffscreenRT> s_offscreenRTs;
+// 缓存键：颜色视图 + 深度视图（null 表示无深度）
+using OffscreenRTKey = std::pair<VkImageView, VkImageView>;
 
-OffscreenRT CreateOffscreenRT(VkDevice device, VkImageView imageView,
-                               VkFormat format, uint32_t width, uint32_t height,
-                               bool clearRT)
+struct OffscreenRTKeyHash {
+    size_t operator()(const OffscreenRTKey& key) const {
+        auto h1 = std::hash<VkImageView>()(key.first);
+        auto h2 = std::hash<VkImageView>()(key.second);
+        return h1 ^ (h2 << 1);
+    }
+};
+
+std::unordered_map<OffscreenRTKey, OffscreenRT, OffscreenRTKeyHash> s_offscreenRTs;
+
+OffscreenRT CreateOffscreenRT(VkDevice device,
+                               VkImageView colorView, VkFormat colorFormat,
+                               VkImageView depthView, VkFormat depthFormat,
+                               uint32_t width, uint32_t height,
+                               bool clearColor, bool clearDepth)
 {
     OffscreenRT rt{};
     rt.device = device;
 
-    // --- 1. 创建 RenderPass ---
-    VkAttachmentDescription colorAttachment{};
-    colorAttachment.format         = format;
+    const bool hasDepth = (depthView != VK_NULL_HANDLE);
+
+    // --- 1. 准备附件描述 ---
+    std::array<VkAttachmentDescription, 2> attachments{};
+
+    // 颜色附件 (index 0)
+    VkAttachmentDescription& colorAttachment = attachments[0];
+    colorAttachment.format         = colorFormat;
     colorAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp         = clearRT ? VK_ATTACHMENT_LOAD_OP_CLEAR
-                                             : VK_ATTACHMENT_LOAD_OP_LOAD;
+    colorAttachment.loadOp         = clearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                                : VK_ATTACHMENT_LOAD_OP_LOAD;
     colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
     colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    // initialLayout = UNDEFINED → render pass 会丢弃原有内容（LOAD_OP_CLEAR 已足够）
-    // 同时允许从任何当前 layout 自动转换，无需外部 barrier
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    // finalLayout = SHADER_READ_ONLY_OPTIMAL → 渲染完成后可供后续 Pass 采样
-    colorAttachment.finalLayout   = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkAttachmentReference colorRef{};
     colorRef.attachment = 0;
     colorRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+    VkAttachmentReference depthRef{};
+    uint32_t attachmentCount = 1;
+
+    if (hasDepth) {
+        // 深度附件 (index 1)
+        VkAttachmentDescription& depthAttachment = attachments[1];
+        depthAttachment.format         = depthFormat;
+        depthAttachment.samples        = VK_SAMPLE_COUNT_1_BIT;
+        depthAttachment.loadOp         = clearDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR
+                                                     : VK_ATTACHMENT_LOAD_OP_LOAD;
+        depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        depthRef.attachment = 1;
+        depthRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachmentCount = 2;
+    }
+
     VkSubpassDescription subpass{};
     subpass.pipelineBindPoint    = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments    = &colorRef;
+    subpass.pDepthStencilAttachment = hasDepth ? &depthRef : nullptr;
 
-    // 依赖 1: 外部 → Subpass 0（等待上一帧的着色器读取完成）
-    // 依赖 2: Subpass 0 → 外部（使颜色附件写入对后续着色器读取可见）
+    // 依赖
     std::array<VkSubpassDependency, 2> deps{};
     deps[0].srcSubpass      = VK_SUBPASS_EXTERNAL;
     deps[0].dstSubpass      = 0;
@@ -84,8 +121,8 @@ OffscreenRT CreateOffscreenRT(VkDevice device, VkImageView imageView,
 
     VkRenderPassCreateInfo rpCI{};
     rpCI.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rpCI.attachmentCount = 1;
-    rpCI.pAttachments    = &colorAttachment;
+    rpCI.attachmentCount = attachmentCount;
+    rpCI.pAttachments    = attachments.data();
     rpCI.subpassCount    = 1;
     rpCI.pSubpasses      = &subpass;
     rpCI.dependencyCount = static_cast<uint32_t>(deps.size());
@@ -96,11 +133,13 @@ OffscreenRT CreateOffscreenRT(VkDevice device, VkImageView imageView,
     }
 
     // --- 2. 创建 Framebuffer ---
+    std::array<VkImageView, 2> fbAttachments = { colorView, depthView };
+
     VkFramebufferCreateInfo fbCI{};
     fbCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fbCI.renderPass      = rt.renderPass;
-    fbCI.attachmentCount = 1;
-    fbCI.pAttachments    = &imageView;
+    fbCI.attachmentCount = attachmentCount;
+    fbCI.pAttachments    = fbAttachments.data();
     fbCI.width           = width;
     fbCI.height          = height;
     fbCI.layers          = 1;
@@ -120,11 +159,14 @@ OffscreenRT CreateOffscreenRT(VkDevice device, VkImageView imageView,
 // ============================================================================
 
 void VulkanCommandBuffer::ReleaseOffscreenResources(VkImageView imageView) {
-    auto it = s_offscreenRTs.find(imageView);
-    if (it != s_offscreenRTs.end()) {
-        vkDestroyFramebuffer(it->second.device, it->second.framebuffer, nullptr);
-        vkDestroyRenderPass(it->second.device, it->second.renderPass, nullptr);
-        s_offscreenRTs.erase(it);
+    for (auto it = s_offscreenRTs.begin(); it != s_offscreenRTs.end(); ) {
+        if (it->first.first == imageView || it->first.second == imageView) {
+            vkDestroyFramebuffer(it->second.device, it->second.framebuffer, nullptr);
+            vkDestroyRenderPass(it->second.device, it->second.renderPass, nullptr);
+            it = s_offscreenRTs.erase(it);
+        } else {
+            ++it;
+        }
     }
 }
 
@@ -152,24 +194,41 @@ void VulkanCommandBuffer::BeginRenderPass(const RenderPassDesc& desc) {
     auto vkTex = dynamic_cast<VulkanTexture*>(desc.renderTarget);
     if (!vkTex) return;
 
-    VkImageView imageView = vkTex->GetVkImageView();
+    VkImageView colorView = vkTex->GetVkImageView();
     VkDevice    device    = vkTex->GetVkDevice();
-    if (!imageView || !device) return;
+    if (!colorView || !device) return;
+
+    // 提取可选的深度模板纹理
+    VkImageView depthView = VK_NULL_HANDLE;
+    VkFormat    depthFmt  = VK_FORMAT_D32_SFLOAT;
+    bool        clearDepth = desc.clearDepth;
+    if (desc.depthStencil) {
+        auto vkDepth = dynamic_cast<VulkanTexture*>(desc.depthStencil);
+        if (vkDepth) {
+            depthView = vkDepth->GetVkImageView();
+            depthFmt  = vkDepth->GetVkFormat();
+        }
+    }
+
+    // 构建缓存键（颜色视图 + 深度视图）
+    OffscreenRTKey key{ colorView, depthView };
 
     // 从缓存查找或创建离屏 RP/FB
-    auto it = s_offscreenRTs.find(imageView);
+    auto it = s_offscreenRTs.find(key);
     if (it == s_offscreenRTs.end()) {
         OffscreenRT rt = CreateOffscreenRT(
-            device, imageView,
-            vkTex->GetVkFormat(),
+            device,
+            colorView, vkTex->GetVkFormat(),
+            depthView, depthFmt,
             static_cast<uint32_t>(vkTex->GetWidth()),
             static_cast<uint32_t>(vkTex->GetHeight()),
-            desc.clearRenderTarget
+            desc.clearRenderTarget,
+            clearDepth
         );
         if (!rt.renderPass || !rt.framebuffer) {
             return; // 创建失败，跳过（不崩溃）
         }
-        it = s_offscreenRTs.emplace(imageView, rt).first;
+        it = s_offscreenRTs.emplace(key, rt).first;
     }
 
     rpInfo.renderPass  = it->second.renderPass;
@@ -191,14 +250,17 @@ void VulkanCommandBuffer::BeginRenderPass(const RenderPassDesc& desc) {
     }
 
     // 清除值
-    VkClearValue clearColor = {{
+    const bool hasDepth = (depthView != VK_NULL_HANDLE);
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{
         desc.clearColor.r,
         desc.clearColor.g,
         desc.clearColor.b,
         desc.clearColor.a
     }};
-    rpInfo.clearValueCount = 1;
-    rpInfo.pClearValues = &clearColor;
+    clearValues[1].depthStencil = { desc.clearDepthValue, desc.clearStencilValue };
+    rpInfo.clearValueCount = hasDepth ? 2u : 1u;
+    rpInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(m_cmd, &rpInfo, VK_SUBPASS_CONTENTS_INLINE);
 }
