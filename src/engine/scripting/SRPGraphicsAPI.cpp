@@ -176,6 +176,10 @@ void SRPGraphicsAPI::DestroyDepthTarget(DepthTargetHandle h) {
     if (h > 0 && h - 1 < m_depthTargets.size()) m_depthTargets[h - 1].reset();
 }
 
+std::shared_ptr<G::IRenderTarget> SRPGraphicsAPI::GetRenderTargetPtr(RenderTargetHandle h) {
+    return (h > 0 && h - 1 < m_renderTargets.size()) ? m_renderTargets[h - 1] : nullptr;
+}
+
 // === Buffers ===
 
 BufferHandle SRPGraphicsAPI::CreateVertexBuffer(const void* data, uint32_t size, uint32_t stride) {
@@ -243,12 +247,46 @@ void SRPGraphicsAPI::EndFrame() {
     m_cmdBuffer = nullptr;
 }
 
-void SRPGraphicsAPI::CmdBeginRenderPass(uint32_t, const uint32_t*, uint32_t, const float*, float, int, int) {
+void SRPGraphicsAPI::CmdBeginRenderPass(uint32_t rtCount, const uint32_t* rtHandles,
+    uint32_t /*depthHandle*/, const float* clearColors, float /*depthClear*/,
+    int viewW, int viewH) {
     if (!m_cmdBuffer) return;
+
     G::RenderPassDesc desc;
-    desc.renderTarget = nullptr; // TODO: lookup RT handle
+    desc.renderTarget = nullptr;
     desc.clearRenderTarget = false;
     desc.renderArea = {0, 0, 0, 0};
+
+    // Look up the first render target from handle
+    if (rtCount > 0 && rtHandles && rtHandles[0] > 0) {
+        if (rtCount > 1) {
+            LOG_WARN("SRP", "CmdBeginRenderPass: multi-RT (count={}) not yet supported, using first target only", rtCount);
+        }
+
+        auto rt = GetRenderTargetPtr(rtHandles[0]);
+        if (rt) {
+            // Get the underlying ITexture* from the render target proxy
+            auto* rtProxy = dynamic_cast<G::ITextureRenderTarget*>(rt.get());
+            if (rtProxy) {
+                desc.renderTarget = rtProxy->GetTexture();
+            } else {
+                LOG_WARN("SRP", "CmdBeginRenderPass: RT handle {} is not an ITextureRenderTarget", rtHandles[0]);
+            }
+
+            desc.renderArea = {0, 0,
+                static_cast<int>(rt->GetWidth()),
+                static_cast<int>(rt->GetHeight())};
+            if (viewW > 0 && viewH > 0) {
+                desc.renderArea = {0, 0, viewW, viewH};
+            }
+        }
+    }
+
+    desc.clearRenderTarget = (clearColors != nullptr);
+    if (clearColors) {
+        desc.clearColor = G::Color(clearColors[0], clearColors[1], clearColors[2], clearColors[3]);
+    }
+
     m_cmdBuffer->BeginRenderPass(desc);
 }
 

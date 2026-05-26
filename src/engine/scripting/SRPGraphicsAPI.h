@@ -82,6 +82,7 @@ public:
     DepthTargetHandle CreateDepthTarget(int w, int h, uint32_t format);
     void DestroyRenderTarget(RenderTargetHandle h);
     void DestroyDepthTarget(DepthTargetHandle h);
+    std::shared_ptr<Graphic::IRenderTarget> GetRenderTargetPtr(RenderTargetHandle h);
 
     BufferHandle CreateVertexBuffer(const void* data, uint32_t size, uint32_t stride);
     BufferHandle CreateIndexBuffer(const void* data, uint32_t size, bool is32Bit);
