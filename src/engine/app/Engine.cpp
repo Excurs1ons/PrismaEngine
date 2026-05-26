@@ -437,6 +437,12 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 double t0 = Platform::GetTimeSeconds();
                 GetRenderSystem()->BeginFrame();
                 double t1 = Platform::GetTimeSeconds();
+
+#if PRISMA_ENABLE_SCRIPTING > 0
+                if (m_scriptEngine->IsInitialized())
+                    m_scriptEngine->Render(std::min(deltaTime, 0.1f));
+#endif
+
                 Graphic::Renderer2D::BeginGizmo();
                 m_CurrentApp->OnRender(); 
                 Graphic::Renderer2D::EndGizmo();
