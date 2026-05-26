@@ -12,7 +12,55 @@
 #include "graphic/ShaderFactory.h"
 #include "graphic/RenderDesc.h"
 #include "adapters/vulkan/RenderDeviceVulkan.h"
+#include "adapters/vulkan/VulkanResources.h"
 #include "Logger.h"
+
+// Anonymous namespace for internal helpers
+namespace {
+
+/// @brief 代理类，将 ITexture 包装为 ITextureRenderTarget
+/// 遵循 LightTextureRTProxy 模式（参见 Light2DPass.cpp）
+class SRPRenderTargetProxy final : public Prisma::Graphic::ITextureRenderTarget {
+public:
+    explicit SRPRenderTargetProxy(std::shared_ptr<Prisma::Graphic::ITexture> texture)
+        : m_texture(std::move(texture)) {}
+
+    uint32_t GetWidth() const override {
+        return m_texture ? static_cast<uint32_t>(m_texture->GetWidth()) : 0;
+    }
+    uint32_t GetHeight() const override {
+        return m_texture ? static_cast<uint32_t>(m_texture->GetHeight()) : 0;
+    }
+    Prisma::Graphic::TextureFormat GetFormat() const override {
+        return m_texture ? m_texture->GetFormat() : Prisma::Graphic::TextureFormat::Unknown;
+    }
+    Prisma::Graphic::TextureType GetType() const override {
+        return m_texture ? m_texture->GetTextureType() : Prisma::Graphic::TextureType::Texture2D;
+    }
+    void* GetNativeHandle() const override {
+        if (!m_texture) return nullptr;
+        auto* vkTex = dynamic_cast<Prisma::Graphic::Vulkan::VulkanTexture*>(m_texture.get());
+        return vkTex ? reinterpret_cast<void*>(vkTex->GetVkImageView()) : nullptr;
+    }
+    bool IsSwapChain() const override { return false; }
+    void Clear(const float color[4]) override {
+        if (m_texture) {
+            m_texture->Clear(Prisma::Graphic::Color(color[0], color[1], color[2], color[3]));
+        }
+    }
+    uint32_t GetMipLevels() const override {
+        return m_texture ? m_texture->GetMipLevels() : 0;
+    }
+    uint32_t GetArraySize() const override {
+        return m_texture ? m_texture->GetArraySize() : 0;
+    }
+    Prisma::Graphic::ITexture* GetTexture() override { return m_texture.get(); }
+
+private:
+    std::shared_ptr<Prisma::Graphic::ITexture> m_texture;
+};
+
+} // anonymous namespace
 
 namespace Prisma::Scripting {
 namespace G = Prisma::Graphic;
@@ -91,7 +139,26 @@ void SRPGraphicsAPI::DestroyPipeline(PipelineHandle h) {
 
 // === Render Target ===
 
-RenderTargetHandle SRPGraphicsAPI::CreateRenderTarget(int, int, uint32_t, int) { return 0; }
+RenderTargetHandle SRPGraphicsAPI::CreateRenderTarget(int w, int h, uint32_t format, int /*samples*/) {
+    auto* fac = GetFac();
+    if (!fac || w <= 0 || h <= 0) return 0;
+
+    G::TextureDesc td;
+    td.type = G::TextureType::Texture2D;
+    td.format = static_cast<G::TextureFormat>(format);
+    td.width = static_cast<uint32_t>(w);
+    td.height = static_cast<uint32_t>(h);
+    td.allowRenderTarget = true;
+    td.allowShaderResource = true;
+
+    auto tex = fac->CreateTextureImpl(td);
+    if (!tex) return 0;
+
+    auto rt = std::make_shared<SRPRenderTargetProxy>(std::move(tex));
+    RenderTargetHandle hdl = static_cast<RenderTargetHandle>(m_renderTargets.size() + 1);
+    m_renderTargets.push_back(std::move(rt));
+    return hdl;
+}
 
 DepthTargetHandle SRPGraphicsAPI::CreateDepthTarget(int w, int h, uint32_t fmt) {
     auto* fac = GetFac(); if (!fac) return 0;
