@@ -55,13 +55,13 @@ bool UDPTransport::Listen() {
 #ifdef _WIN32
         addr.sin_addr.s_addr = inet_addr(m_config.host.c_str());
         if (addr.sin_addr.s_addr == INADDR_NONE) {
-            CloseSocket(m_socket);
+            closesocket(m_socket);
             m_socket = INVALID_SOCKET_VALUE;
             return false;
         }
 #else
         if (inet_pton(AF_INET, m_config.host.c_str(), &addr.sin_addr) <= 0) {
-            CloseSocket(m_socket);
+            closesocket(m_socket);
             m_socket = INVALID_SOCKET_VALUE;
             return false;
         }
@@ -74,7 +74,7 @@ bool UDPTransport::Listen() {
     if (::bind(m_socket, reinterpret_cast<sockaddr*>(&addr), sizeof(addr)) < 0) {
 #endif
         LOG_ERROR("UDPTransport", "bind() failed on {0}:{1}", m_config.host, m_config.port);
-        CloseSocket(m_socket);
+        closesocket(m_socket);
         m_socket = INVALID_SOCKET_VALUE;
         return false;
     }
@@ -115,14 +115,14 @@ bool UDPTransport::Connect() {
     m_remoteAddr.sin_addr.s_addr = inet_addr(m_config.host.c_str());
     if (m_remoteAddr.sin_addr.s_addr == INADDR_NONE) {
         LOG_ERROR("UDPTransport", "Failed to resolve hostname: {0}", m_config.host);
-        CloseSocket(m_socket);
+        closesocket(m_socket);
         m_socket = INVALID_SOCKET_VALUE;
         return false;
     }
 #else
     if (inet_pton(AF_INET, m_config.host.c_str(), &m_remoteAddr.sin_addr) <= 0) {
         LOG_ERROR("UDPTransport", "Failed to resolve hostname: {0}", m_config.host);
-        CloseSocket(m_socket);
+        closesocket(m_socket);
         m_socket = INVALID_SOCKET_VALUE;
         return false;
     }
@@ -160,7 +160,7 @@ void UDPTransport::Disconnect() {
     }
 
     if (m_socket != INVALID_SOCKET_VALUE) {
-        CloseSocket(m_socket);
+        closesocket(m_socket);
         m_socket = INVALID_SOCKET_VALUE;
     }
 

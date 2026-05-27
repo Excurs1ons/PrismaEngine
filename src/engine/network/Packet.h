@@ -175,6 +175,7 @@ public:
     void WriteUint16(uint16_t v) { v = ToNetwork(v); WriteRaw(&v, sizeof(v)); }
     void WriteInt32(int32_t v) { v = ToNetwork(v); WriteRaw(&v, sizeof(v)); }
     void WriteUint32(uint32_t v) { v = ToNetwork(v); WriteRaw(&v, sizeof(v)); }
+    void WriteUint64(uint64_t v) { v = ToNetwork(v); WriteRaw(&v, sizeof(v)); }
     void WriteFloat(float v)   { WriteRaw(&v, sizeof(v)); }
     void WriteDouble(double v) { WriteRaw(&v, sizeof(v)); }
     void WriteString(const std::string& v) {
@@ -194,6 +195,7 @@ public:
     uint16_t   ReadUint16()  { uint16_t v; ReadRaw(&v, sizeof(v)); return FromNetwork(v); }
     int32_t    ReadInt32()   { int32_t v; ReadRaw(&v, sizeof(v)); return FromNetwork(v); }
     uint32_t   ReadUint32()  { uint32_t v; ReadRaw(&v, sizeof(v)); return FromNetwork(v); }
+    uint64_t   ReadUint64()  { uint64_t v; ReadRaw(&v, sizeof(v)); return FromNetwork(v); }
     float      ReadFloat()   { float v; ReadRaw(&v, sizeof(v)); return v; }
     double     ReadDouble()  { double v; ReadRaw(&v, sizeof(v)); return v; }
     std::string ReadString() {

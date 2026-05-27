@@ -1,3 +1,17 @@
+// Platform-specific networking headers (must precede TCPTransport.h for type definitions)
+#ifdef _WIN32
+    #include <winsock2.h>
+    #include <ws2tcpip.h>
+#else
+    #include <sys/socket.h>
+    #include <netinet/in.h>
+    #include <netdb.h>
+    #include <unistd.h>
+    #include <arpa/inet.h>
+    using SOCKET = int;
+    #define closesocket(fd) close(fd)
+#endif
+
 #include "network/TCPTransport.h"
 
 namespace Prisma::Network {

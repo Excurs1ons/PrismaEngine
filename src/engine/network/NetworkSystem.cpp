@@ -3,6 +3,7 @@
 #include "network/UDPTransport.h"
 #include "scene/Scene.h"
 #include "core/Node.h"
+#include "transform/Transform.h"
 #include "Logger.h"
 
 #include <cmath>

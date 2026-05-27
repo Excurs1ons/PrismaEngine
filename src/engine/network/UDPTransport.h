@@ -13,6 +13,10 @@
 #include <cstdint>
 #include <cstring>
 
+// Socket type definitions (guarded against redefinition when TCPTransport.h is also included)
+#ifndef PRISMA_SOCKET_TYPES_DEFINED
+#define PRISMA_SOCKET_TYPES_DEFINED
+
 #ifdef _WIN32
     #define WIN32_LEAN_AND_MEAN
     #include <winsock2.h>
@@ -32,7 +36,10 @@
     static constexpr SOCKET_HANDLE INVALID_SOCKET_VALUE = -1;
     static constexpr int SOCKET_ERROR_RET = -1;
     static constexpr int INVALID_SOCKET = -1;
+    #define closesocket(fd) close(fd)
 #endif
+
+#endif // PRISMA_SOCKET_TYPES_DEFINED
 
 namespace Prisma::Network {
 
