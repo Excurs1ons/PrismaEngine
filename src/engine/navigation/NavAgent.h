@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Export.h"
+#include "Logger.h"
 #include "NavMesh.h"
 #include "PathFinder.h"
 #include "PathSmoothing.h"

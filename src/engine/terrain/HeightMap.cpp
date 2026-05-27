@@ -1,7 +1,6 @@
 #include "terrain/HeightMap.h"
 #include "Logger.h"
 #include <stb_image.h>
-#include <fmt/core.h>
 #include <fstream>
 #include <algorithm>
 #include <cmath>
@@ -87,7 +86,7 @@ bool HeightMap::LoadFromFloatArray(const float* data, uint32_t width, uint32_t h
 {
     if (!data || width == 0 || height == 0) {
         LOG_ERROR("Terrain", "无效的高度图数据 (data={}, w={}, h={})",
-                  fmt::ptr(data), width, height);
+                  static_cast<const void*>(data), width, height);
         return false;
     }
 
