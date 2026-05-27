@@ -35,13 +35,13 @@ public:
     void Execute(const PassExecutionContext& context) override;
     void Update(Prisma::Timestep ts) override;
 
-    /// @brief 执行反射渲染 (由 ForwardPipeline 调用)
+    // 执行反射渲染 (由 ForwardPipeline 调用)
     void ExecuteReflection(ICommandBuffer* cmd, IRenderDevice* device, uint32_t width, uint32_t height);
 
-    /// @brief 捕获当前场景颜色到反射源纹理 (帧结束时调用)
+    // 捕获当前场景颜色到反射源纹理 (帧结束时调用)
     void CaptureScene(ICommandBuffer* cmd, IRenderDevice* device, uint32_t width, uint32_t height);
 
-    /// @brief 获取反射源纹理
+    // 获取反射源纹理
     std::shared_ptr<ITexture> GetReflectionSource() const { return m_reflectionSource; }
 
     void SetEnabled(bool enabled) { m_enabled = enabled; }

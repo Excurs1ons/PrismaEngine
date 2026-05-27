@@ -31,7 +31,9 @@ find "$SRC_DIR" -name "*.h" -type f | while read -r header; do
         pch.h|framework.h|targetver.h)     continue ;;
         *test_shader*|*DefaultShader*)     continue ;;
         *EngineShaderAdapter*|*SpirvReflector*|*ShaderFactory*) continue ;;
-    esac
+        # 显式保留 EditorAPI.h（编辑器脚本 API，必须同步到 SDK）
+        scripting/EditorAPI.h)                       ;;
+esac
 
     dest_dir="$SDK_INCLUDE_DIR/$(dirname "$relative_path")"
     mkdir -p "$dest_dir"

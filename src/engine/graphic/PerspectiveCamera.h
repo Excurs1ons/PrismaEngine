@@ -9,9 +9,7 @@
 namespace Prisma {
 namespace Graphic {
 
-/**
- * @brief 3D 透视相机实现（独立于 ECS Component 系统）
- */
+// 3D 透视相机实现（独立于 ECS Component 系统）
 class ENGINE_API PerspectiveCamera : public ICamera {
 public:
     PerspectiveCamera();

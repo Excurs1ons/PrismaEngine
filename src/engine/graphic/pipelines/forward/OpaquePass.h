@@ -12,10 +12,7 @@ class ICommandBuffer;
 class IShader;
 class IPipelineState;
 
-/**
- * @brief 不透明渲染通道 (Opaque Pass)
- * 没有任何单例，由 ForwardPipeline 调用。
- */
+/* 不透明渲染通道 (Opaque Pass) */
 class OpaquePass : public ForwardRenderPass {
 public:
     OpaquePass();

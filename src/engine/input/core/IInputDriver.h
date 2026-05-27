@@ -5,7 +5,7 @@
 
 namespace Prisma::Input {
 
-/// @brief 按键码
+// 按键码
 enum class KeyCode : uint32_t {
     // 未知
     Unknown = 0,
@@ -40,7 +40,7 @@ enum class KeyCode : uint32_t {
     Insert = 73, Home = 74, PageUp = 75, Delete = 76, End = 77, PageDown = 78
 };
 
-/// @brief 鼠标按钮
+// 鼠标按钮
 enum class MouseButton : uint8_t {
     None = 0,
     Left = 1,
@@ -50,7 +50,7 @@ enum class MouseButton : uint8_t {
     X2 = 5
 };
 
-/// @brief 手柄按钮
+// 手柄按钮
 enum class GamepadButton : uint8_t {
     None = 0,
     // 面按钮
@@ -67,7 +67,7 @@ enum class GamepadButton : uint8_t {
     DPadUp = 14, DPadDown = 15, DPadLeft = 16, DPadRight = 17
 };
 
-/// @brief 手柄轴
+// 手柄轴
 enum class GamepadAxis : uint8_t {
     LeftX = 0,
     LeftY = 1,
@@ -77,14 +77,14 @@ enum class GamepadAxis : uint8_t {
     RightTrigger = 5
 };
 
-/// @brief 输入状态
+// 输入状态
 struct InputState {
     bool pressed;    // 当前是否按下
     bool justPressed;   // 刚按下（本帧）
     bool justReleased;  // 刚释放（本帧）
 };
 
-/// @brief 鼠标状态
+// 鼠标状态
 struct MouseState {
     int x, y;           // 位置
     int deltaX, deltaY; // 相对移动
@@ -92,14 +92,14 @@ struct MouseState {
     int wheelDelta;     // 滚轮增量
 };
 
-/// @brief 手柄状态
+// 手柄状态
 struct GamepadState {
     InputState buttons[18];      // 按钮状态
     float axes[6];              // 轴值 (-1.0 到 1.0)
     bool connected;             // 是否连接
 };
 
-/// @brief 输入驱动抽象接口
+// 输入驱动抽象接口
 /// 职责：与平台原生输入API交互，提供最底层的输入数据采集
 ///
 /// 设计原则：
@@ -110,77 +110,72 @@ class IInputDriver {
 public:
     virtual ~IInputDriver() = default;
 
-    /// @brief 获取驱动名称
+    // 获取驱动名称
     virtual const char* GetName() const = 0;
 
-    /// @brief 初始化输入驱动
-    /// @return 是否成功
+    // 初始化输入驱动
     virtual bool Initialize() = 0;
 
-    /// @brief 关闭输入驱动
+    // 关闭输入驱动
     virtual void Shutdown() = 0;
 
-    /// @brief 检查是否已初始化
+    // 检查是否已初始化
     virtual bool IsInitialized() const = 0;
 
-    /// @brief 更新输入状态（每帧调用）
+    // 更新输入状态（每帧调用）
     virtual void Update() = 0;
 
     // ========== 键盘 ==========
 
-    /// @brief 检查按键是否按下
+    // 检查按键是否按下
     virtual bool IsKeyDown(KeyCode key) const = 0;
 
-    /// @brief 检查按键是否刚刚按下
+    // 检查按键是否刚刚按下
     virtual bool IsKeyJustPressed(KeyCode key) const = 0;
 
-    /// @brief 检查按键是否刚刚释放
+    // 检查按键是否刚刚释放
     virtual bool IsKeyJustReleased(KeyCode key) const = 0;
 
     // ========== 鼠标 ==========
 
-    /// @brief 获取鼠标状态
+    // 获取鼠标状态
     virtual const MouseState& GetMouseState() const = 0;
 
-    /// @brief 设置鼠标位置
+    // 设置鼠标位置
     virtual void SetMousePosition(int x, int y) = 0;
 
-    /// @brief 是否支持绝对鼠标位置
+    // 是否支持绝对鼠标位置
     virtual bool SupportsAbsolutePosition() const { return true; }
 
     // ========== 手柄 ==========
 
-    /// @brief 获取手柄数量
+    // 获取手柄数量
     virtual uint32_t GetGamepadCount() const = 0;
 
-    /// @brief 检查手柄是否连接
+    // 检查手柄是否连接
     virtual bool IsGamepadConnected(uint32_t index) const = 0;
 
-    /// @brief 获取手柄状态
+    // 获取手柄状态
     virtual const GamepadState& GetGamepadState(uint32_t index) const = 0;
 
-    /// @brief 设置手柄振动
-    /// @param index 手柄索引
-    /// @param leftMotor 左马达强度 (0.0 - 1.0)
-    /// @param rightMotor 右马达强度 (0.0 - 1.0)
-    /// @param duration 持续时间（毫秒）
+    // 设置手柄振动
     virtual void SetVibration(uint32_t index, float leftMotor, float rightMotor, uint32_t duration) = 0;
 
     // ========== 文本输入 ==========
 
-    /// @brief 获取输入的文本（本帧）
+    // 获取输入的文本（本帧）
     virtual const std::string& GetTextInput() const = 0;
 
-    /// @brief 开始文本输入（如打开IME）
+    // 开始文本输入（如打开IME）
     virtual void StartTextInput() = 0;
 
-    /// @brief 停止文本输入
+    // 停止文本输入
     virtual void StopTextInput() = 0;
 };
 
 // ========== 驱动工厂函数类型 ==========
 
-/// @brief 驱动创建函数类型
+// 驱动创建函数类型
 using DriverCreateFunc = IInputDriver*(*)();
 
 } // namespace Prisma::Input

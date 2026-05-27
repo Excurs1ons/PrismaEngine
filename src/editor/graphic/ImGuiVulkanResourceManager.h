@@ -12,7 +12,7 @@ namespace Prisma::Graphic::Vulkan {
 namespace Prisma {
 
 /**
- * @brief ImGui Vulkan 资源管理器
+ * ImGui Vulkan 资源管理器
  * 
  * [改动] 新增此类。
  * 

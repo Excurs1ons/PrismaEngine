@@ -42,6 +42,7 @@ public:
     }
 
     // 序列化
+    ComponentId GetComponentId() const override { return GetComponentTypeId<MeshRenderer>(); }
     const char* GetComponentTypeName() const override { return "MeshRenderer"; }
     Data GetData() const;
     void SetData(const Data& d);

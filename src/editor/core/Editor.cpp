@@ -379,9 +379,7 @@ void Editor::OnShutdown() {
 
 }  // namespace Prisma
 
-// ============================================================================
 // Factory
-// ============================================================================
 extern "C" EDITOR_API Prisma::Application* CreateApplication() {
     return new Prisma::Editor();
 }

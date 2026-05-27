@@ -9,8 +9,8 @@
 
 namespace Prisma::Graphic {
 
-/// @brief 混合状态描述
-/// @note 默认值为标准 alpha 混合（SrcAlpha / InvSrcAlpha），与旧硬编码 Vulkan 行为一致
+// 混合状态描述
+// note: 默认值为标准 alpha 混合（SrcAlpha / InvSrcAlpha），与旧硬编码 Vulkan 行为一致
 struct BlendState {
     bool blendEnable = true;
     bool logicOpEnable = false;
@@ -25,7 +25,7 @@ struct BlendState {
     static const BlendState Default;
 };
 
-/// @brief 光栅化器状态描述
+// 光栅化器状态描述
 struct RasterizerState {
     bool cullEnable = true;
     bool frontCounterClockwise = false;
@@ -43,7 +43,7 @@ struct RasterizerState {
     static const RasterizerState Default;
 };
 
-/// @brief 深度模板状态描述
+// 深度模板状态描述
 struct DepthStencilState {
     bool depthEnable = true;
     bool depthWriteEnable = true;
@@ -67,7 +67,7 @@ struct DepthStencilState {
     static const DepthStencilState Default;
 };
 
-/// @brief 顶点输入属性
+// 顶点输入属性
 struct VertexInputAttribute {
     std::string semanticName;
     uint32_t semanticIndex = 0;
@@ -78,185 +78,136 @@ struct VertexInputAttribute {
     uint32_t instanceDataStepRate = 0;
 };
 
-/// @brief 管线状态抽象接口
+// 管线状态抽象接口
 /// 代表一个编译好的渲染管线状态对象(PSO)
 class IPipelineState {
 public:
     virtual ~IPipelineState() = default;
 
-    /// @brief 获取管线类型
-    /// @return 管线类型
+    // 获取管线类型
     [[nodiscard]] virtual PipelineType GetType() const = 0;
 
-    /// @brief 获取管线状态
-    /// @return 是否已创建/有效
+    // 获取管线状态
     [[nodiscard]] virtual bool IsValid() const = 0;
 
     // === 着色器管理 ===
 
-    /// @brief 设置着色器
-    /// @param type 着色器类型
-    /// @param shader 着色器对象
+    // 设置着色器
     virtual void SetShader(ShaderType type, std::shared_ptr<IShader> shader) = 0;
 
-    /// @brief 获取着色器
-    /// @param type 着色器类型
-    /// @return 着色器对象
+    // 获取着色器
     [[nodiscard]] virtual std::shared_ptr<IShader> GetShader(ShaderType type) const = 0;
 
-    /// @brief 检查是否有指定类型的着色器
-    /// @param type 着色器类型
-    /// @return 是否存在
+    // 检查是否有指定类型的着色器
     [[nodiscard]] virtual bool HasShader(ShaderType type) const = 0;
 
     // === 渲染状态 ===
 
-    /// @brief 设置图元拓扑
-    /// @param topology 图元拓扑
+    // 设置图元拓扑
     virtual void SetPrimitiveTopology(PrimitiveTopology topology) = 0;
 
-    /// @brief 获取图元拓扑
-    /// @return 图元拓扑
+    // 获取图元拓扑
     [[nodiscard]] virtual PrimitiveTopology GetPrimitiveTopology() const = 0;
 
-    /// @brief 设置混合状态
-    /// @param state 混合状态
-    /// @param renderTargetIndex 渲染目标索引（如果需要独立设置）
+    // 设置混合状态
     virtual void SetBlendState(const BlendState& state, uint32_t renderTargetIndex = 0) = 0;
 
-    /// @brief 获取混合状态
-    /// @param renderTargetIndex 渲染目标索引
-    /// @return 混合状态
+    // 获取混合状态
     [[nodiscard]] virtual const BlendState& GetBlendState(uint32_t renderTargetIndex = 0) const = 0;
 
-    /// @brief 设置光栅化器状态
-    /// @param state 光栅化器状态
+    // 设置光栅化器状态
     virtual void SetRasterizerState(const RasterizerState& state) = 0;
 
-    /// @brief 获取光栅化器状态
-    /// @return 光栅化器状态
+    // 获取光栅化器状态
     [[nodiscard]] virtual const RasterizerState& GetRasterizerState() const = 0;
 
-    /// @brief 设置深度模板状态
-    /// @param state 深度模板状态
+    // 设置深度模板状态
     virtual void SetDepthStencilState(const DepthStencilState& state) = 0;
 
-    /// @brief 获取深度模板状态
-    /// @return 深度模板状态
+    // 获取深度模板状态
     [[nodiscard]] virtual const DepthStencilState& GetDepthStencilState() const = 0;
 
     // === 顶点输入 ===
 
-    /// @brief 设置顶点输入布局
-    /// @param attributes 输入属性数组
+    // 设置顶点输入布局
     virtual void SetInputLayout(const std::vector<VertexInputAttribute>& attributes) = 0;
 
-    /// @brief 获取顶点输入布局
-    /// @return 输入属性数组
+    // 获取顶点输入布局
     [[nodiscard]] virtual const std::vector<VertexInputAttribute>& GetInputLayout() const = 0;
 
-    /// @brief 获取输入属性数量
-    /// @return 属性数量
+    // 获取输入属性数量
     [[nodiscard]] virtual uint32_t GetInputAttributeCount() const = 0;
 
     // === 渲染目标 ===
 
-    /// @brief 设置渲染目标格式
-    /// @param formats 格式数组
+    // 设置渲染目标格式
     virtual void SetRenderTargetFormats(const std::vector<TextureFormat>& formats) = 0;
 
-    /// @brief 设置单个渲染目标格式
-    /// @param index 渲染目标索引
-    /// @param format 格式
+    // 设置单个渲染目标格式
     virtual void SetRenderTargetFormat(uint32_t index, TextureFormat format) = 0;
 
-    /// @brief 获取渲染目标格式
-    /// @param index 渲染目标索引
-    /// @return 格式
+    // 获取渲染目标格式
     [[nodiscard]] virtual TextureFormat GetRenderTargetFormat(uint32_t index) const = 0;
 
-    /// @brief 获取渲染目标数量
-    /// @return 数量
+    // 获取渲染目标数量
     [[nodiscard]] virtual uint32_t GetRenderTargetCount() const = 0;
 
-    /// @brief 设置深度模板格式
-    /// @param format 格式
+    // 设置深度模板格式
     virtual void SetDepthStencilFormat(TextureFormat format) = 0;
 
-    /// @brief 获取深度模板格式
-    /// @return 格式
+    // 获取深度模板格式
     [[nodiscard]] virtual TextureFormat GetDepthStencilFormat() const = 0;
 
     // === 多重采样 ===
 
-    /// @brief 设置多重采样参数
-    /// @param sampleCount 采样数
-    /// @param sampleQuality 采样质量
+    // 设置多重采样参数
     virtual void SetSampleCount(uint32_t sampleCount, uint32_t sampleQuality = 0) = 0;
 
-    /// @brief 获取采样数
-    /// @return 采样数
+    // 获取采样数
     [[nodiscard]] virtual uint32_t GetSampleCount() const = 0;
 
-    /// @brief 获取采样质量
-    /// @return 采样质量
+    // 获取采样质量
     [[nodiscard]] virtual uint32_t GetSampleQuality() const = 0;
 
     // === 缓存和编译 ===
 
-    /// @brief 创建/编译管线状态对象
-    /// @param device 渲染设备
-    /// @return 是否成功
+    // 创建/编译管线状态对象
     virtual bool Create(IRenderDevice* device) = 0;
 
-    /// @brief 重新创建（在修改状态后）
-    /// @return 是否成功
+    // 重新创建（在修改状态后）
     virtual bool Recreate() = 0;
 
-    /// @brief 验证配置是否有效
-    /// @param device 渲染设备
-    /// @param[out] errors 错误信息
-    /// @return 是否有效
+    // 验证配置是否有效
     virtual bool Validate(IRenderDevice* device, std::string& errors) const = 0;
 
     // === 缓存 ===
 
-    /// @brief 获取管线缓存键
-    /// @return 缓存键
+    // 获取管线缓存键
     virtual uint64_t GetCacheKey() const = 0;
 
-    /// @brief 从缓存加载
-    /// @param device 渲染设备
-    /// @param cacheKey 缓存键
-    /// @return 是否加载成功
+    // 从缓存加载
     virtual bool LoadFromCache(IRenderDevice* device, uint64_t cacheKey) = 0;
 
-    /// @brief 保存到缓存
-    /// @return 是否保存成功
+    // 保存到缓存
     virtual bool SaveToCache() const = 0;
 
     // === 调试 ===
 
-    /// @brief 获取创建错误信息
-    /// @return 错误信息
+    // 获取创建错误信息
     virtual const std::string& GetErrors() const = 0;
 
-    /// @brief 设置调试名称
-    /// @param name 名称
+    // 设置调试名称
     virtual void SetDebugName(const std::string& name) = 0;
 
-    /// @brief 获取调试名称
-    /// @return 名称
+    // 获取调试名称
     virtual const std::string& GetDebugName() const = 0;
 
     // === 克隆 ===
 
-    /// @brief 克隆管线状态
-    /// @return 新的管线状态对象
+    // 克隆管线状态
     virtual std::unique_ptr<IPipelineState> Clone() const = 0;
 
-    /// @brief 获取描述符集布局列表
-    /// @return 描述符集布局数组
+    // 获取描述符集布局列表
     [[nodiscard]] virtual const std::vector<std::shared_ptr<IDescriptorSetLayout>>& GetDescriptorSetLayouts() const = 0;
 
 protected:

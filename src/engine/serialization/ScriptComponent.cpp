@@ -3,7 +3,7 @@
 #include "Logger.h"
 #include <glaze/glaze.hpp>
 
-// ── Glaze 元数据 ──
+// Glaze 元数据
 template <>
 struct glz::meta<Prisma::Scripting::ScriptComponent::Data> {
     static constexpr auto value = glz::object(
@@ -12,7 +12,7 @@ struct glz::meta<Prisma::Scripting::ScriptComponent::Data> {
     );
 };
 
-// ── ComponentRegistry 注册 ──
+// ComponentRegistry 注册
 namespace {
     bool registered = []() {
         auto& reg = Prisma::ComponentRegistry::Get();

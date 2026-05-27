@@ -15,9 +15,7 @@ class TransparentPass;
 class PostProcessPass2D;
 class UIPass2D;
 
-/**
- * @brief 基础前向渲染管线
- */
+// 基础前向渲染管线
 class ForwardPipeline : public IPipeline {
 public:
     ForwardPipeline();

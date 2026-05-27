@@ -10,6 +10,15 @@
 #include "VulkanSwapChain.h"
 #include <iostream>
 
+// Win32 Vulkan external memory extension names are defined in <vulkan/vulkan_win32.h>,
+// which requires <windows.h> (HANDLE type). Define them inline to avoid that dependency.
+#if defined(_WIN32) && !defined(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+#define VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME "VK_KHR_external_memory_win32"
+#endif
+#if defined(_WIN32) && !defined(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+#define VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME "VK_KHR_external_semaphore_win32"
+#endif
+
 #define VMA_IMPLEMENTATION
 #include <SDL3/SDL_vulkan.h>
 #if defined(_MSC_VER)
@@ -89,6 +98,14 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
                             .add_required_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
                             .add_required_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
                             .add_required_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                            // External memory sharing (NeoEditor Vulkan→D3D11 interop)
+                            .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+#ifdef _WIN32
+                            .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+                            .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+#endif
                             .add_required_extension_features(accelFeatures)
                             .add_required_extension_features(rtPipelineFeatures)
                             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)

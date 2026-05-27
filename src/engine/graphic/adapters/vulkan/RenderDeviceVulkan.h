@@ -27,7 +27,7 @@ class VulkanFence;
 class VulkanSwapChain;
 class VulkanResourceFactory;
 
-/// @brief Vulkan渲染设备
+// Vulkan渲染设备
 /// 实现IRenderDevice接口，基于Vulkan 1.3+，使用 vk-bootstrap 和 VMA
 class ENGINE_API RenderDeviceVulkan : public IRenderDevice {
 public:
@@ -147,9 +147,7 @@ public:
     using OverlayRenderCallback = std::function<void(VkCommandBuffer)>;
     void SetOverlayRenderCallback(OverlayRenderCallback callback) { m_overlayRenderCallback = std::move(callback); }
 
-    /**
-     * @brief Capture current swapchain frame to host memory (Binary Raw)
-     */
+    // Capture current swapchain frame to host memory (Binary Raw)
     void CaptureFrame(void* outBuffer, size_t* outSize);
 
 private:

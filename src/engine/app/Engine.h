@@ -12,6 +12,16 @@
 
 class CommandLineParser;
 
+namespace Prisma::Audio { class IAudioDevice; struct AudioDesc; }
+namespace Prisma::Memory { class MemorySystem; }
+namespace Prisma::Animation { class AnimationSystem; }
+namespace Prisma::Terrain { class TerrainSystem; }
+namespace Prisma::Navigation { class NavigationSystem; }
+namespace Prisma::Water { class WaterSystem; }
+namespace Prisma::Localization { class LocalizationSystem; }
+namespace Prisma::AI { class AISystem; }
+namespace Prisma::Network { class NetworkSystem; }
+
 namespace Prisma {
 
 class Application;
@@ -22,14 +32,16 @@ namespace Input { class InputManager; }
 namespace Graphic { class RenderSystem; class IRenderResourceManager; }
 namespace Scripting { class CoreCLRHost; class ScriptEngine; class MonoRuntime; }
 namespace Core::ECS { class World; }
+class Scene;
 class SceneManager;
 class PhysicsSystem;
 class ThreadManager;
 class EntityManager;
+namespace Profiling { class ProfilerSystem; }
+class ConsoleSystem;
+namespace Particles { class ParticleSystem; }
 
-/**
- * @brief 引擎配置规范
- */
+// 引擎配置规范
 struct EngineSpecification {
     const char* Name = "Prisma Engine";
     bool Headless = false;
@@ -47,9 +59,7 @@ struct EngineSpecification {
     uint32_t MaxSamples = 0;
 };
 
-/**
- * @brief 引擎核心类
- */
+// 引擎核心类
 class ENGINE_API Engine {
 public:
     Engine(const EngineSpecification& spec = EngineSpecification());
@@ -89,15 +99,28 @@ public:
     SceneManager* GetSceneManager() { return m_SceneManager; }
     PhysicsSystem* GetPhysicsSystem() { return m_PhysicsSystem; }
     JobSystem* GetJobSystem() { return m_JobSystem; }
+    Profiling::ProfilerSystem* GetProfilerSystem() { return m_ProfilerSystem; }
 #if PRISMA_ENABLE_SCRIPTING > 0
     Scripting::MonoRuntime& GetMonoRuntime();
     Scripting::CoreCLRHost& GetCoreCLRHost() { return *m_coreCLRHost; }
     Scripting::ScriptEngine& GetScriptEngine() { return *m_scriptEngine; }
 #endif
+    Memory::MemorySystem* GetMemorySystem() { return m_MemorySystem; }
     EntityManager& GetEntityManager() { return *m_entityManager; }
     Core::ECS::World& GetWorld();
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
+    ConsoleSystem* GetConsoleSystem();
+    Audio::IAudioDevice* GetAudioDevice() { return m_audioDevice.get(); }
+    Animation::AnimationSystem* GetAnimationSystem() { return m_AnimationSystem; }
+    Navigation::NavigationSystem* GetNavigationSystem() { return m_NavigationSystem; }
+    AI::AISystem* GetAISystem() { return m_AISystem; }
+    Particles::ParticleSystem* GetParticleSystem();
+    Terrain::TerrainSystem* GetTerrainSystem();
+    Water::WaterSystem* GetWaterSystem();
+    Network::NetworkSystem* GetNetworkSystem() { return m_NetworkSystem; }
+    Localization::LocalizationSystem* GetLocalizationSystem() { return m_LocalizationSystem; }
+    Scene& GetScene();
     
     // 通用系统获取
     template<typename T>
@@ -116,9 +139,7 @@ public:
     const EngineSpecification& GetSpecification() const;
     bool IsRunning() const { return m_Running; }
 
-    /**
-     * @brief 提交一个函数到主线程执行 (线程安全)
-     */
+    // 提交一个函数到主线程执行 (线程安全)
     void SubmitToMainThread(std::function<void()>&& func);
 
     // 通用系统添加 (用于非核心扩展)
@@ -150,6 +171,16 @@ private:
     SceneManager* m_SceneManager = nullptr;
     PhysicsSystem* m_PhysicsSystem = nullptr;
     JobSystem* m_JobSystem = nullptr;
+    Profiling::ProfilerSystem* m_ProfilerSystem = nullptr;
+    Memory::MemorySystem* m_MemorySystem = nullptr;
+    Animation::AnimationSystem* m_AnimationSystem = nullptr;
+    AI::AISystem* m_AISystem = nullptr;
+    Terrain::TerrainSystem* m_TerrainSystem = nullptr;
+    Navigation::NavigationSystem* m_NavigationSystem = nullptr;
+    Water::WaterSystem* m_WaterSystem = nullptr;
+    Network::NetworkSystem* m_NetworkSystem = nullptr;
+    Localization::LocalizationSystem* m_LocalizationSystem = nullptr;
+    Scene* m_Scene = nullptr;
 
     bool m_Initialized = false;
     bool m_Running = false;
@@ -164,6 +195,9 @@ private:
     std::unique_ptr<Scripting::ScriptEngine> m_scriptEngine;
 #endif
     std::unique_ptr<EntityManager> m_entityManager;
+
+    // 音频设备 (optional, 通过 IAudioDevice 接口)
+    std::unique_ptr<Audio::IAudioDevice> m_audioDevice;
 
     static Engine* s_Instance;
 };

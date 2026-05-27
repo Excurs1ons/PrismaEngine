@@ -21,9 +21,7 @@ enum class AssetType {
     Tilemap
 };
 
-/**
- * @brief 资产基类
- */
+// 资产基类
 class ENGINE_API Asset : public Serialization::ISerializable {
 public:
     Asset() = default;
@@ -68,9 +66,7 @@ protected:
     bool m_IsDirty  = false;
 };
 
-/**
- * @brief 资产句柄 (强引用)
- */
+// 资产句柄 (强引用)
 template <typename T>
 class AssetHandle {
 public:

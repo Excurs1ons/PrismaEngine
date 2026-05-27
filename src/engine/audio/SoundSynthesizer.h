@@ -1,4 +1,5 @@
 #pragma once
+#include "AudioTypes.h"
 #include <cmath>
 #include <cstdint>
 #include <map>
@@ -115,7 +116,26 @@ public:
         }
     }
 };
+// 波形类型枚举
+enum class Waveform : uint8_t {
+    Sine = 0,
+    Square = 1,
+    Sawtooth = 2,
+    Triangle = 3,
+    Noise = 4
+};
+
 class SoundSynthesizer {
+public:
+    // ========== 静态生成方法 ==========
+    static Prisma::Audio::AudioClip generateSine(float frequency, float duration, uint32_t sampleRate = 44100);
+    static Prisma::Audio::AudioClip generateSquare(float frequency, float duration, uint32_t sampleRate = 44100);
+    static Prisma::Audio::AudioClip generateSawtooth(float frequency, float duration, uint32_t sampleRate = 44100);
+    static Prisma::Audio::AudioClip generateTriangle(float frequency, float duration, uint32_t sampleRate = 44100);
+    static Prisma::Audio::AudioClip generateNoise(float duration, uint32_t sampleRate = 44100);
+    static void generateWithADSR(Prisma::Audio::AudioClip& clip, float attackTime, float decayTime, float sustainLevel, float releaseTime);
+    static Prisma::Audio::AudioClip generateTone(float frequency, float duration, Waveform waveform);
+
 private:
     // 仿NES，有5个声音通道：2个方波，1个三角波，1个噪声，1个PCM
     SquareWaveGenerator pulse1;

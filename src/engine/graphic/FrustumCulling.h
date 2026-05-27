@@ -20,18 +20,12 @@ namespace Prisma {
         public:
             // ========== 平面定义 ==========
 
-            /**
-             * @brief 平面 - 使用法线-距离形式表示
-             *
-             * 平面方程：normal · point + distance = 0
-             */
+            /* 平面 - 使用法线-距离形式表示 */
             struct Plane {
                 glm::dvec3 normal;    // 平面法线（单位向量）
                 double distance;     // 到原点的距离（带符号）
 
-                /**
-                 * @brief 归一化平面（确保法线是单位向量）
-                 */
+                // 归一化平面（确保法线是单位向量）
                 void normalize() {
                     double len = glm::length(normal);
                     if (len > 1e-9) {
@@ -42,11 +36,18 @@ namespace Prisma {
 
                 /**
                  * @brief 计算点到平面的有符号距离
-                 * @param point 测试点
-                 * @return 正值表示在平面法线方向一侧，负值在另一侧
                  */
                 double distanceToPoint(const glm::dvec3& point) const {
                     return glm::dot(normal, point) + distance;
+                }
+
+                static Plane fromPoints(const glm::dvec3& p1, const glm::dvec3& p2, const glm::dvec3& p3) {
+                    Plane plane;
+                    glm::dvec3 v1 = glm::normalize(p2 - p1);
+                    glm::dvec3 v2 = glm::normalize(p3 - p1);
+                    plane.normal = glm::normalize(glm::cross(v1, v2));
+                    plane.distance = -glm::dot(plane.normal, p1);
+                    return plane;
                 }
             };
 
@@ -54,10 +55,7 @@ namespace Prisma {
 
             Frustum() = default;
 
-            /**
-             * @brief 从视图-投影矩阵创建视锥
-             * @param viewProjectionMatrix 视图-投影矩阵
-             */
+            /* 从视图-投影矩阵创建视锥 */
             void update(const glm::dmat4& viewProjectionMatrix) {
                 // 提取视锥的 6 个平面
                 // 左平面: col3 + col0
@@ -76,13 +74,6 @@ namespace Prisma {
 
             /**
              * @brief 从相机参数创建视锥
-             * @param position 相机位置
-             * @param forward 相机前方向量
-             * @param up 相机上方向量
-             * @param fovY 垂直视野角度（弧度）
-             * @param aspect 宽高比
-             * @param nearDistance 近裁剪面距离
-             * @param farDistance 远裁剪面距离
              */
             void updateFromCamera(const glm::dvec3& position, const glm::dvec3& forward,
                                    const glm::dvec3& up, double fovY, double aspect,
@@ -123,9 +114,7 @@ namespace Prisma {
 
             // ========== 可见性检测 ==========
 
-            /**
-             * @brief 检测点是否在视锥内
-             */
+            // 检测点是否在视锥内
             bool isVisible(const glm::dvec3& point) const {
                 for (const auto& plane : m_planes) {
                     if (plane.distanceToPoint(point) < 0) {
@@ -137,8 +126,6 @@ namespace Prisma {
 
             /**
              * @brief 检测球体是否在视锥内
-             * @param center 球心
-             * @param radius 半径
              */
             bool isVisible(const glm::dvec3& center, double radius) const {
                 for (const auto& plane : m_planes) {
@@ -152,8 +139,6 @@ namespace Prisma {
 
             /**
              * @brief 检测 AABB 是否在视锥内
-             * @param minAABB 包围盒最小点
-             * @param maxAABB 包围盒最大点
              */
             bool isVisible(const glm::dvec3& minAABB, const glm::dvec3& maxAABB) const {
                 // 测试 AABB 的 8 个角点
@@ -174,9 +159,7 @@ namespace Prisma {
                 return true;
             }
 
-            /**
-             * @brief 检测 AABB 是否在视锥内（重载版本）
-             */
+            // 检测 AABB 是否在视锥内（重载版本）
             bool isVisible(double minX, double minY, double minZ,
                            double maxX, double maxY, double maxZ) const {
                 return isVisible(glm::dvec3(minX, minY, minZ), glm::dvec3(maxX, maxY, maxZ));
@@ -184,8 +167,6 @@ namespace Prisma {
 
             /**
              * @brief 批量检测 AABB 可见性
-             * @param aabbs AABB 列表
-             * @return 可见索引列表
              */
             std::vector<size_t> filterVisible(const std::vector<std::pair<glm::dvec3, glm::dvec3>>& aabbs) const {
                 std::vector<size_t> visible;
@@ -218,9 +199,6 @@ namespace Prisma {
 
             /**
              * @brief 从矩阵提取平面
-             * @param matrix 视图-投影矩阵
-             * @param sign 符号（用于选择矩阵的列）
-             * @param row 行索引
              */
             static Plane extractPlane(const glm::dmat4& matrix, int sign, int row) {
                 glm::dvec3 normal;
@@ -238,16 +216,10 @@ namespace Prisma {
             }
         };
 
-        /**
-         * @brief 视锥剔除系统
-         *
-         * 管理视锥剔除，批量处理可见性检测
-         */
+        /* 视锥剔除系统 */
         class FrustumCullingSystem {
         public:
-            /**
-             * @brief 剔除统计信息
-             */
+            // 剔除统计信息
             struct CullingStats {
                 size_t totalObjects = 0;
                 size_t visibleObjects = 0;
@@ -263,9 +235,7 @@ namespace Prisma {
 
             FrustumCullingSystem() = default;
 
-            /**
-             * @brief 更新视锥
-             */
+            // 更新视锥
             void updateFrustum(const glm::dmat4& viewProjectionMatrix) {
                 m_frustum.update(viewProjectionMatrix);
             }
@@ -276,17 +246,12 @@ namespace Prisma {
                 m_frustum.updateFromCamera(position, forward, up, fovY, aspect, nearDistance, farDistance);
             }
 
-            /**
-             * @brief 获取当前视锥
-             */
+            // 获取当前视锥
             const Frustum& getFrustum() const {
                 return m_frustum;
             }
 
-            /**
-             * @brief 剔除不可见的 AABB
-             * @return 可见对象的索引
-             */
+            /* 剔除不可见的 AABB */
             template<typename AABBGetter>
             std::vector<size_t> cull(const AABBGetter& getter, size_t count) const {
                 std::vector<size_t> visible;
@@ -299,9 +264,7 @@ namespace Prisma {
                 return visible;
             }
 
-            /**
-             * @brief 批量剔除（带统计）
-             */
+            // 批量剔除（带统计）
             template<typename AABBGetter>
             std::vector<size_t> cullWithStats(const AABBGetter& getter, size_t count, CullingStats& stats) const {
                 stats.totalObjects = count;

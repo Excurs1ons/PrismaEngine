@@ -13,10 +13,7 @@ class IPipelineState;
 class ITextureRenderTarget;
 class IRenderDevice;
 
-/**
- * @brief 2D 光照渲染通道
- * 将场景中的 2D 光源渲染到离屏光照纹理中
- */
+/* 2D 光照渲染通道 */
 class Light2DPass : public ForwardRenderPass {
 public:
     Light2DPass();

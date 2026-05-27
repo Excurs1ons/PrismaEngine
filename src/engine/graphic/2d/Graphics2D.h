@@ -19,10 +19,7 @@ class ITexture;
 class RenderCommandContext;
 class OrthographicCamera;
 
-/**
- * @brief 2D 绘图系统 (Graphics2D)
- * 提供高性能的 2D 绘图 API，支持自动合批与多层级排序
- */
+/* 2D 绘图系统 (Graphics2D) */
 class ENGINE_API Graphics2D {
 public:
     struct Statistics {

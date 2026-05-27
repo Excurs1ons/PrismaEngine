@@ -15,8 +15,10 @@ namespace ECS {
 using EntityID = uint32_t;
 const EntityID INVALID_ENTITY = 0;
 
-// 系统基类
-class ISystem {
+// ── 已废弃：请使用 Scene + Component 替代 ──
+
+// 系统基类（已废弃 — 改用 Scene 直接管理组件更新）
+class [[deprecated("Use Scene+Component instead")]] ISystem {
 public:
     virtual ~ISystem() = default;
     virtual void Initialize() {}
@@ -29,8 +31,8 @@ protected:
     friend class World;
 };
 
-// ... Basic ECS implementation ...
-class World {
+// 基本 ECS 实现（已废弃 — 改用 Scene::CreateEntity / Scene::ForEach 等）
+class [[deprecated("Use Scene+Component instead")]] World {
 public:
     static World& Get() {
         static World instance;

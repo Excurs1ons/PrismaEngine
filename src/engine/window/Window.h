@@ -10,9 +10,7 @@
 
 namespace Prisma {
 
-/**
- * @brief 窗口抽象接口
- */
+// 窗口抽象接口
 class ENGINE_API Window {
 public:
     using EventCallbackFn = std::function<void(Event&)>;

@@ -10,12 +10,7 @@
 
 namespace Prisma {
 
-/**
- * @brief C# 脚本后端枚举（与编译时 PRISMA_ENABLE_SCRIPTING 值对应）
- *   Off    = 0：关闭 —— 不初始化子系统，不加载 DLL，只使用 Native 逻辑
- *   Mono   = 1：Mono 运行时
- *   CoreCLR = 2：.NET CoreCLR 宿主
- */
+/* C# 脚本后端枚举（与编译时 PRISMA_ENABLE_SCRIPTING 值对应） */
 enum class RenderMode : uint8_t {
     Mode2D = 0,
     Mode3D_Forward = 1,
@@ -71,7 +66,7 @@ struct ProjectConfig {
 
 } // namespace Prisma
 
-// ── Glaze 映射 ──
+// Glaze 映射
 
 template <>
 struct glz::meta<Prisma::RenderMode> {

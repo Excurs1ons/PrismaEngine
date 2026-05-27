@@ -1,0 +1,32 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+layout(rgba16f, binding = 0) uniform image2D inputImage;
+layout(rgba16f, binding = 1) uniform image2D outputImage;
+
+layout(push_constant) uniform BloomParams {
+    int horizontal;   // 1 = horizontal, 0 = vertical
+    float radius;     // kernel radius multiplier
+} params;
+
+const float weights[7] = {0.006, 0.061, 0.242, 0.383, 0.242, 0.061, 0.006};
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(inputImage);
+
+    if (coord.x >= imgSize.x || coord.y >= imgSize.y) return;
+
+    vec4 result = vec4(0.0);
+    for (int i = -3; i <= 3; i++) {
+        ivec2 offset;
+        if (params.horizontal == 1) {
+            offset = ivec2(i * int(params.radius), 0);
+        } else {
+            offset = ivec2(0, i * int(params.radius));
+        }
+        result += imageLoad(inputImage, coord + offset) * weights[i + 3];
+    }
+    imageStore(outputImage, coord, result);
+}

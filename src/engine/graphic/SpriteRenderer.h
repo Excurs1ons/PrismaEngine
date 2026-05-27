@@ -12,9 +12,7 @@ namespace Graphic {
 class ITexture;
 class RenderCommandContext;
 
-/**
- * @brief 2D 精灵渲染组件
- */
+// 2D 精灵渲染组件
 class ENGINE_API SpriteRenderer : public Component {
 public:
     SpriteRenderer();
@@ -67,6 +65,7 @@ public:
         float rotation = 0.0f;
     };
 
+    ComponentId GetComponentId() const override { return GetComponentTypeId<SpriteRenderer>(); }
     const char* GetComponentTypeName() const override { return "SpriteRenderer"; }
     Data GetData() const;
     void SetData(const Data& d);

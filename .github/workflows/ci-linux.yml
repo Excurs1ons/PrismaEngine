@@ -61,7 +61,7 @@ jobs:
         vulkan-use-cache: true
 
     - name: Configure CMake
-      run: cmake --preset linux-x64-debug
+      run: cmake --preset linux-x64-debug -DPRISMA_BUILD_PROJECT_NEOEDITOR=OFF
 
     - name: Build
       run: cmake --build build/linux-x64-debug --parallel

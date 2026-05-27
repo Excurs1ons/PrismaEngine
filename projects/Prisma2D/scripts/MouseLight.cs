@@ -3,9 +3,7 @@ using Prisma;
 
 namespace GameScripts;
 
-/// <summary>
 /// 点光绑定到鼠标位置，实时跟随移动
-/// </summary>
 [Serializable]
 public partial class MouseLight : Script
 {

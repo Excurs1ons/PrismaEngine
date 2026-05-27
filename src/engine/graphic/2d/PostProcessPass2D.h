@@ -41,10 +41,6 @@ public:
 
     /**
      * @brief 处理输入纹理并输出到目标
-     * @param cmd 命令缓冲
-     * @param device 渲染设备
-     * @param input 源纹理
-     * @param output 目标渲染目标 (为 nullptr 则输出到交换链)
      */
     void Process(ICommandBuffer* cmd, IRenderDevice* device, ITexture* input, IRenderTarget* output = nullptr);
 

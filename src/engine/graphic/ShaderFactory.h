@@ -8,19 +8,13 @@
 
 namespace Prisma::Graphic {
 
-/**
- * @brief 着色器工厂类
- */
+// 着色器工厂类
 class ShaderFactory {
 public:
-    /**
-     * @brief 创建着色器
-     */
+    // 创建着色器
     static std::shared_ptr<IShader> CreateShader(IRenderDevice* device, const ShaderDesc& desc);
 
-    /**
-     * @brief 从文件创建着色器
-     */
+    // 从文件创建着色器
     static std::shared_ptr<IShader> CreateShaderFromFile(IRenderDevice* device, const std::string& path, ShaderType type);
 };
 

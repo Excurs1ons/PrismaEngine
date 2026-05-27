@@ -2,7 +2,7 @@ using System;
 
 namespace GameScripts.Minecraft;
 
-/// <summary>方块注册表 ID (1:1 对应 BlockState 中的前 12 bits)</summary>
+方块注册表 ID (1:1 对应 BlockState 中的前 12 bits)</summary>
 public enum BlockId : ushort
 {
     Air = 0,
@@ -24,7 +24,7 @@ public enum BlockId : ushort
     // ... 更多方块
 }
 
-/// <summary>方块实例。对应 Minecraft 的 Block 类（每个方块类型只有一个实例）</summary>
+方块实例。对应 Minecraft 的 Block 类（每个方块类型只有一个实例）</summary>
 public class Block
 {
     public BlockId Id { get; }
@@ -50,7 +50,7 @@ public class Block
 
     public static Block? FromId(ushort id) => Registry.Get((BlockId)id);
 
-    /// <summary>方块注册表</summary>
+方块注册表</summary>
     public static class Registry
     {
         private static readonly Block?[] s_blocks = new Block?[65536];
@@ -76,10 +76,10 @@ public class Block
     }
 }
 
-/// <summary>方块状态（不可变值类型）。对应 Minecraft 的 BlockState</summary>
+方块状态（不可变值类型）。对应 Minecraft 的 BlockState</summary>
 public readonly struct BlockState : IEquatable<BlockState>
 {
-    /// <summary>压���的 ID：高 4 bits = 属性变体，低 12 bits = BlockId</summary>
+压���的 ID：高 4 bits = 属性变体，低 12 bits = BlockId</summary>
     public ushort Id { get; }
     public Block Block { get; }
 
@@ -97,7 +97,7 @@ public readonly struct BlockState : IEquatable<BlockState>
     public static bool operator !=(BlockState a, BlockState b) => !a.Equals(b);
 }
 
-/// <summary>预设方块实例。对应 Minecraft 的 Blocks 类</summary>
+预设方块实例。对应 Minecraft 的 Blocks 类</summary>
 public static class Blocks
 {
     // 在 World.Initialize() 中填充

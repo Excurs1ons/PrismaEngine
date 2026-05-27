@@ -2,7 +2,7 @@
 #include <memory>
 #include "Export.h"
 
-/// @brief 单例模板类
+// 单例模板类
 template<typename T>
 class Singleton {
 public:

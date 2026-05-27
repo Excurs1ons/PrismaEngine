@@ -11,7 +11,7 @@
 namespace PacMan {
 
 /**
- * @brief 游戏资源管理器
+ 游戏资源管理器
  * 统一管理吃豆人项目的纹理和音效
  */
 class GameResourceManager {

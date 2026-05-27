@@ -6,7 +6,7 @@
 
 namespace Prisma::Audio {
 
-/// @brief 空音频设备实现
+// 空音频设备实现
 /// 用于测试和调试，不产生任何声音
 class AudioDeviceNull : public IAudioDevice {
 public:

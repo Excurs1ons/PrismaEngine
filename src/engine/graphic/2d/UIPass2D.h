@@ -25,10 +25,6 @@ public:
 
     /**
      * @brief 执行 UI 渲染
-     * @param cmd 命令缓冲
-     * @param device 渲染设备
-     * @param width 屏幕宽度
-     * @param height 屏幕高度
      */
     void RenderUI(ICommandBuffer* cmd, IRenderDevice* device, uint32_t width, uint32_t height);
 

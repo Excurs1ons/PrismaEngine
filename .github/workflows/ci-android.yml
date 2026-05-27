@@ -63,7 +63,7 @@ jobs:
           ${{ runner.os }}-android-deps-
 
     - name: Configure CMake
-      run: cmake --preset android-arm64-debug -DPRISMA_BUILD_PROJECT_PRISMA2D=OFF -DPRISMA_BUILD_PROJECT_PATHTRACING3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF
+      run: cmake --preset android-arm64-debug -DPRISMA_BUILD_PROJECT_PRISMA2D=OFF -DPRISMA_BUILD_PROJECT_PATHTRACING3D=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_PROJECT_PACMAN=OFF -DPRISMA_BUILD_PROJECT_NEOEDITOR=OFF
 
     - name: Build
       run: cmake --build build/android-arm64-debug --parallel

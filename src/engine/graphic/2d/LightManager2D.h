@@ -8,33 +8,21 @@
 
 namespace Prisma::Graphic {
 
-/**
- * @brief 2D 光源管理器
- * 管理场景中所有的 2D 光源
- */
+/* 2D 光源管理器 */
 class ENGINE_API LightManager2D {
 public:
     static LightManager2D& Get();
 
-    /**
-     * @brief 创建一个新的 2D 光源
-     * @return 光源句柄 (Index + 1)
-     */
+    /* 创建一个新的 2D 光源 */
     uint32_t CreateLight(Light2D::Type type = Light2D::Type::Point);
 
-    /**
-     * @brief 销毁一个 2D 光源
-     */
+    // 销毁一个 2D 光源
     void DestroyLight(uint32_t handle);
 
-    /**
-     * @brief 获取光源对象
-     */
+    // 获取光源对象
     Light2D* GetLight(uint32_t handle);
 
-    /**
-     * @brief 获取所有活跃的光源
-     */
+    // 获取所有活跃的光源
     const std::vector<std::shared_ptr<Light2D>>& GetLights() const { return m_lights; }
 
     // ========== 环境光 ==========

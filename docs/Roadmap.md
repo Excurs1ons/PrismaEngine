@@ -121,7 +121,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 ---
 
 ---
-*最后更新: 2026-01-02*
+*最后更新: 2026-05-25*
 
 ---
 
@@ -133,7 +133,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 本文档跟踪 PrismaEngine 各模块的开发状态。
 
-**最后更新**: 2026-05-18 (PathTracing3D + SSBO 路径追踪)
+**最后更新**: 2026-05-25 (Code stats updated per repository analysis)
 
 ---
 
@@ -349,16 +349,15 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 | 类别 | 数量 | 总行数 |
 |------|------|--------|
-| **头文件** | 55 | ~8,400 |
-| **源文件** | 29 | ~7,400 |
-| **着色器 (GLSL)** | 10 | ~525 |
-| **着色器 (HLSL)** | 2 | ~600 |
-| **着色器 (Compute)** | 1 | ~289 |
-| **UI 资源** | 4 | ~100 |
-| **MCP 测试** | 3 | ~600 |
-| **技能文件** | 1 | ~160 |
-| **场景配置** | 1 | ~73 |
-| **总计** | 106 | ~18,147 |
+| **C/C++ 头文件** | 451 | ~43,237 |
+| **C++ 源文件** | 203 | ~28,611 |
+| **C# 脚本** | 143 | ~10,926 |
+| **着色器 (GLSL)** | 20+ | ~2,090 |
+| **CMake** | 101 | ~4,550 |
+| **JSON** | 45 | ~18,104 |
+| **YAML** | 1 | ~6,779 |
+| **Markdown 文档** | 48+ | ~1,068 |
+| **总计** | ~1,104 | ~129,348 |
 
 ---
 
@@ -597,4 +596,4 @@ option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 ---
 
-*Last Updated: 2026-05-22 (Merged from ModuleProgress.md)*
+*Last Updated: 2026-05-25 (Code stats updated per repository analysis)*

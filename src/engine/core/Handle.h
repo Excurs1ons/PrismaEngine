@@ -1,7 +1,3 @@
-//
-// Created by JasonGu on 25-12-14.
-//
-
 #ifndef HANDLE_H
 #define HANDLE_H
 #include <optional>

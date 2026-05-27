@@ -10,7 +10,7 @@
 
 namespace Prisma::Audio {
 
-/// @brief SDL3音频设备实现
+// SDL3音频设备实现
 /// SDL3提供了跨平台的音频支持，适合简单的2D游戏和基本的音频需求
 class AudioDeviceSDL3 : public IAudioDevice {
 public:

@@ -12,6 +12,32 @@
 #include "graphic/PerspectiveCamera.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
+#include "audio/AudioAPI.h"
+#include "audio/AudioTypes.h"
+#include "audio/dsp/AudioNode.h"
+#include "audio/dsp/nodes/OscillatorNode.h"
+#include "audio/dsp/nodes/ADSRNode.h"
+#include "audio/dsp/nodes/LFONode.h"
+#include "audio/dsp/nodes/SVFNode.h"
+#include "audio/dsp/nodes/DistortionNode.h"
+#include "audio/dsp/nodes/DelayNode.h"
+#include "audio/dsp/nodes/ChorusNode.h"
+#include "audio/dsp/nodes/FlangerNode.h"
+#include "audio/dsp/nodes/PhaserNode.h"
+#include "audio/dsp/nodes/CompressorNode.h"
+#include "audio/dsp/nodes/BiquadFilterNode.h"
+#include "audio/dsp/nodes/GraphicEQNode.h"
+#include "audio/dsp/nodes/ReverbNode.h"
+#include "audio/dsp/nodes/ConvolutionReverbNode.h"
+#include "audio/dsp/nodes/MasterBusNode.h"
+#include "audio/dsp/nodes/GroupBusNode.h"
+#include "audio/dsp/nodes/AuxBusNode.h"
+#include "audio/dsp/nodes/SidechainNode.h"
+#include "audio/dsp/nodes/LevelMeterNode.h"
+#include "audio/dsp/nodes/SampleRateConverterNode.h"
+#include "audio/dsp/SpectrumAnalyzer.h"
+#include "audio/dsp/nodes/MixerManagerNode.h"
+#include <unordered_map>
 #include "scene/SceneManager.h"
 #include "scene/Scene.h"
 #include <cstring>
@@ -304,6 +330,293 @@ static uint32_t S_PTGetMaxSamples() {
     return pipeline ? pipeline->GetMaxSamples() : 0;
 }
 
+// ==================== Audio API ====================
+
+static Audio::IAudioDevice* GetScriptAudioDevice() {
+    return Engine::Get().GetAudioDevice();
+}
+
+static bool S_IsAudioInitialized() {
+    auto* dev = GetScriptAudioDevice();
+    return dev && dev->IsInitialized();
+}
+
+static float S_AudioGetMasterVolume() {
+    auto* dev = GetScriptAudioDevice();
+    return dev ? dev->GetMasterVolume() : 1.0f;
+}
+
+static void S_AudioSetMasterVolume(float vol) {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->SetMasterVolume(std::clamp(vol, 0.0f, 1.0f));
+    }
+}
+
+static uint32_t S_AudioPlayClip(const char* path, void* desc) {
+    if (!path) return 0;
+    auto* dev = GetScriptAudioDevice();
+    if (!dev) return 0;
+
+    auto clip = Audio::AudioAPI::LoadClip(path);
+    if (!clip) return 0;
+
+    Audio::PlayDesc playDesc;
+    if (desc) {
+        playDesc = *static_cast<const Audio::PlayDesc*>(desc);
+    }
+    playDesc.volume = std::clamp(playDesc.volume, 0.0f, 1.0f);
+
+    Prisma::Audio::AudioVoiceId voiceId = dev->PlayClip(*clip, playDesc);
+    return voiceId;
+}
+
+static void S_AudioStop(uint32_t voiceId) {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->Stop(voiceId);
+    }
+}
+
+static void S_AudioStopAll() {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->StopAll();
+    }
+}
+
+static void S_AudioSetVolume(uint32_t voiceId, float vol) {
+    auto* dev = GetScriptAudioDevice();
+    if (dev) {
+        dev->SetVolume(voiceId, std::clamp(vol, 0.0f, 1.0f));
+    }
+}
+
+static bool S_AudioIsPlaying(uint32_t voiceId) {
+    auto* dev = GetScriptAudioDevice();
+    return dev && dev->IsPlaying(voiceId);
+}
+
+// ==================== AudioGraph API ====================
+
+using namespace Prisma::Audio::DSP;
+
+// 句柄跟踪：graph 句柄 → AudioGraph*, node 句柄 → 节点 + 所属 graph
+struct NodeEntry {
+    std::shared_ptr<AudioNode> node;
+    uint64_t graphHandle;
+};
+thread_local uint64_t s_nextAudioGraphHandle = 1;
+thread_local uint64_t s_nextAudioNodeHandle = 1;
+thread_local std::unordered_map<uint64_t, std::unique_ptr<AudioGraph>> s_audioGraphs;
+thread_local std::unordered_map<uint64_t, NodeEntry> s_audioNodes;
+thread_local std::string s_audioNameBuf;
+
+static uint64_t S_AudioCreateGraph(uint32_t sampleRate, uint32_t framesPerBlock) {
+    auto graph = std::make_unique<AudioGraph>(sampleRate, framesPerBlock);
+    uint64_t handle = s_nextAudioGraphHandle++;
+    s_audioGraphs[handle] = std::move(graph);
+    return handle;
+}
+
+static void S_AudioDestroyGraph(uint64_t graphHandle) {
+    auto git = s_audioGraphs.find(graphHandle);
+    if (git == s_audioGraphs.end()) return;
+
+    // 移除该 graph 关联的所有 node 条目
+    for (auto it = s_audioNodes.begin(); it != s_audioNodes.end(); ) {
+        if (it->second.graphHandle == graphHandle)
+            it = s_audioNodes.erase(it);
+        else
+            ++it;
+    }
+
+    s_audioGraphs.erase(git);
+}
+
+static uint64_t S_AudioGraphCreateNode(uint64_t graphHandle, const char* nodeType, const char* name) {
+    auto git = s_audioGraphs.find(graphHandle);
+    if (git == s_audioGraphs.end()) return 0;
+    AudioGraph* graph = git->second.get();
+    if (!graph) return 0;
+
+    std::shared_ptr<AudioNode> node;
+    std::string type(nodeType ? nodeType : "");
+
+    if (type == "Oscillator")          node = graph->CreateNode(std::make_unique<OscillatorNode>());
+    else if (type == "ADSR")           node = graph->CreateNode(std::make_unique<ADSRNode>());
+    else if (type == "LFO")            node = graph->CreateNode(std::make_unique<LFONode>());
+    else if (type == "SVF")            node = graph->CreateNode(std::make_unique<SVFNode>());
+    else if (type == "Distortion")     node = graph->CreateNode(std::make_unique<DistortionNode>());
+    else if (type == "Delay")          node = graph->CreateNode(std::make_unique<DelayNode>());
+    else if (type == "Chorus")         node = graph->CreateNode(std::make_unique<ChorusNode>());
+    else if (type == "Flanger")        node = graph->CreateNode(std::make_unique<FlangerNode>());
+    else if (type == "Phaser")         node = graph->CreateNode(std::make_unique<PhaserNode>());
+    else if (type == "Compressor")     node = graph->CreateNode(std::make_unique<CompressorNode>());
+    else if (type == "BiquadFilter")   node = graph->CreateNode(std::make_unique<BiquadFilterNode>());
+    else if (type == "GraphicEQ")      node = graph->CreateNode(std::make_unique<GraphicEQNode>());
+    else if (type == "Reverb")         node = graph->CreateNode(std::make_unique<ReverbNode>());
+    else if (type == "ConvolutionReverb") node = graph->CreateNode(std::make_unique<ConvolutionReverbNode>());
+    else if (type == "MasterBus")      node = graph->CreateNode(std::make_unique<MasterBusNode>());
+    else if (type == "GroupBus")       node = graph->CreateNode(std::make_unique<GroupBusNode>());
+    else if (type == "AuxBus")         node = graph->CreateNode(std::make_unique<AuxBusNode>());
+    else if (type == "Sidechain")      node = graph->CreateNode(std::make_unique<SidechainNode>());
+    else if (type == "LevelMeter")     node = graph->CreateNode(std::make_unique<LevelMeterNode>());
+    else if (type == "SRC")            node = graph->CreateNode(std::make_unique<SampleRateConverterNode>());
+    else if (type == "MixerManager")   node = graph->CreateNode(std::make_unique<MixerManagerNode>());
+    else {
+        LOG_ERROR("ScriptEngine", "Unknown AudioNode type: {}", type);
+        return 0;
+    }
+
+    if (!node) return 0;
+
+    if (name && name[0] != '\0')
+        node->SetName(name);
+
+    uint64_t nodeHandle = s_nextAudioNodeHandle++;
+    s_audioNodes[nodeHandle] = { node, graphHandle };
+    return nodeHandle;
+}
+
+static void S_AudioGraphRemoveNode(uint64_t graphHandle, uint64_t nodeHandle) {
+    auto git = s_audioGraphs.find(graphHandle);
+    auto nit = s_audioNodes.find(nodeHandle);
+    if (git == s_audioGraphs.end() || nit == s_audioNodes.end()) return;
+    if (nit->second.graphHandle != graphHandle) return;
+
+    git->second->RemoveNode(nit->second.node);
+    s_audioNodes.erase(nit);
+}
+
+static bool S_AudioGraphConnect(uint64_t graphHandle, uint64_t srcHandle, const char* srcPin,
+                                uint64_t dstHandle, const char* dstPin) {
+    auto git = s_audioGraphs.find(graphHandle);
+    if (git == s_audioGraphs.end()) return false;
+
+    auto srcIt = s_audioNodes.find(srcHandle);
+    auto dstIt = s_audioNodes.find(dstHandle);
+    if (srcIt == s_audioNodes.end() || dstIt == s_audioNodes.end()) return false;
+    if (srcIt->second.graphHandle != graphHandle || dstIt->second.graphHandle != graphHandle) return false;
+
+    return git->second->Connect(
+        srcIt->second.node,
+        srcPin ? std::string(srcPin) : "",
+        dstIt->second.node,
+        dstPin ? std::string(dstPin) : ""
+    );
+}
+
+static bool S_AudioGraphDisconnect(uint64_t graphHandle, uint64_t srcHandle, uint64_t dstHandle) {
+    auto git = s_audioGraphs.find(graphHandle);
+    if (git == s_audioGraphs.end()) return false;
+
+    auto srcIt = s_audioNodes.find(srcHandle);
+    auto dstIt = s_audioNodes.find(dstHandle);
+    if (srcIt == s_audioNodes.end() || dstIt == s_audioNodes.end()) return false;
+
+    return git->second->Disconnect(srcIt->second.node, dstIt->second.node);
+}
+
+static void S_AudioNodeSetParam(uint64_t nodeHandle, const char* name, float value) {
+    auto it = s_audioNodes.find(nodeHandle);
+    if (it == s_audioNodes.end()) return;
+    if (!name) return;
+    it->second.node->SetParameter(name, value);
+}
+
+static float S_AudioNodeGetParam(uint64_t nodeHandle, const char* name) {
+    auto it = s_audioNodes.find(nodeHandle);
+    if (it == s_audioNodes.end() || !name) return 0.0f;
+    return it->second.node->GetParameter(name);
+}
+
+static const char* S_AudioNodeGetName(uint64_t nodeHandle) {
+    auto it = s_audioNodes.find(nodeHandle);
+    if (it == s_audioNodes.end()) return "";
+    s_audioNameBuf = it->second.node->GetName();
+    return s_audioNameBuf.c_str();
+}
+
+static void S_AudioNodeSetName(uint64_t nodeHandle, const char* name) {
+    auto it = s_audioNodes.find(nodeHandle);
+    if (it == s_audioNodes.end() || !name) return;
+    it->second.node->SetName(name);
+}
+
+static void S_AudioNodeDestroy(uint64_t nodeHandle) {
+    auto it = s_audioNodes.find(nodeHandle);
+    if (it == s_audioNodes.end()) return;
+
+    // 从所属 graph 中移除
+    auto git = s_audioGraphs.find(it->second.graphHandle);
+    if (git != s_audioGraphs.end()) {
+        git->second->RemoveNode(it->second.node);
+    }
+
+    s_audioNodes.erase(it);
+}
+
+// ==================== Level Meter Readback ====================
+
+static bool S_AudioGetLevelMeterData(uint64_t nodeHandle, uint32_t channel, float* peak, float* rms, float* peakDb, float* rmsDb) {
+    auto it = s_audioNodes.find(nodeHandle);
+    if (it == s_audioNodes.end() || !peak || !rms || !peakDb || !rmsDb) return false;
+
+    auto* meter = dynamic_cast<LevelMeterNode*>(it->second.node.get());
+    if (!meter) return false;
+
+    if (channel >= meter->GetChannelCount()) return false;
+    const auto& data = meter->GetChannelData(channel);
+    *peak = data.peak;
+    *rms = data.rms;
+    *peakDb = data.peakDb;
+    *rmsDb = data.rmsDb;
+    return true;
+}
+
+// ==================== Spectrum Analyzer (standalone) ====================
+
+thread_local std::unordered_map<uint64_t, std::unique_ptr<SpectrumAnalyzer>> s_spectrumAnalyzers;
+thread_local uint64_t s_nextSpectrumId = 1;
+
+static uint64_t S_AudioCreateSpectrumAnalyzer(uint32_t fftSize) {
+    auto sa = std::make_unique<SpectrumAnalyzer>(fftSize);
+    uint64_t id = s_nextSpectrumId++;
+    s_spectrumAnalyzers[id] = std::move(sa);
+    return id;
+}
+
+static void S_AudioDestroySpectrumAnalyzer(uint64_t handle) {
+    s_spectrumAnalyzers.erase(handle);
+}
+
+static void S_AudioSpectrumProcessFloats(uint64_t handle, const float* input, uint32_t frames, uint32_t sampleRate) {
+    auto it = s_spectrumAnalyzers.find(handle);
+    if (it == s_spectrumAnalyzers.end() || !input) return;
+    it->second->Process(input, frames, sampleRate);
+}
+
+static uint32_t S_AudioSpectrumGetBins(uint64_t handle, float* freqOut, float* magOut, float* phaseOut, uint32_t maxBins) {
+    auto it = s_spectrumAnalyzers.find(handle);
+    if (it == s_spectrumAnalyzers.end()) return 0;
+
+    const auto& bins = it->second->GetBins();
+    uint32_t count = std::min(static_cast<uint32_t>(bins.size()), maxBins);
+    for (uint32_t i = 0; i < count; ++i) {
+        if (freqOut) freqOut[i] = bins[i].frequency;
+        if (magOut) magOut[i] = bins[i].magnitude;
+        if (phaseOut) phaseOut[i] = bins[i].phase;
+    }
+    return count;
+}
+
+static float S_AudioSpectrumGetPeak(uint64_t handle) {
+    auto it = s_spectrumAnalyzers.find(handle);
+    if (it == s_spectrumAnalyzers.end()) return -100.0f;
+    return it->second->GetPeakMagnitude();
+}
+
 bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     if (m_initialized) return true;
     m_host = &host;
@@ -398,6 +711,37 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.isKeyJustPressed = S_IsKeyJustPressed;
 
     // Path Tracing Pipeline Control
+    // Audio API
+    m_api.isAudioInitialized = S_IsAudioInitialized;
+    m_api.audioGetMasterVolume = S_AudioGetMasterVolume;
+    m_api.audioSetMasterVolume = S_AudioSetMasterVolume;
+    m_api.audioPlayClip = S_AudioPlayClip;
+    m_api.audioStop = S_AudioStop;
+    m_api.audioStopAll = S_AudioStopAll;
+    m_api.audioSetVolume = S_AudioSetVolume;
+    m_api.audioIsPlaying = S_AudioIsPlaying;
+
+    // AudioGraph API
+    m_api.audioCreateGraph = S_AudioCreateGraph;
+    m_api.audioDestroyGraph = S_AudioDestroyGraph;
+    m_api.audioGraphCreateNode = S_AudioGraphCreateNode;
+    m_api.audioGraphRemoveNode = S_AudioGraphRemoveNode;
+    m_api.audioGraphConnect = S_AudioGraphConnect;
+    m_api.audioGraphDisconnect = S_AudioGraphDisconnect;
+    m_api.audioNodeSetParam = S_AudioNodeSetParam;
+    m_api.audioNodeGetParam = S_AudioNodeGetParam;
+    m_api.audioNodeGetName = S_AudioNodeGetName;
+    m_api.audioNodeSetName = S_AudioNodeSetName;
+    m_api.audioNodeDestroy = S_AudioNodeDestroy;
+
+    // Level Meter + Spectrum Readback
+    m_api.audioGetLevelMeterData = S_AudioGetLevelMeterData;
+    m_api.audioCreateSpectrumAnalyzer = S_AudioCreateSpectrumAnalyzer;
+    m_api.audioDestroySpectrumAnalyzer = S_AudioDestroySpectrumAnalyzer;
+    m_api.audioSpectrumProcessFloats = S_AudioSpectrumProcessFloats;
+    m_api.audioSpectrumGetBins = S_AudioSpectrumGetBins;
+    m_api.audioSpectrumGetPeak = S_AudioSpectrumGetPeak;
+
     m_api.ptSetMaxSamples = S_PTSetMaxSamples;
     m_api.ptGetFrameCount = S_PTGetFrameCount;
     m_api.ptResetAccumulation = S_PTResetAccumulation;
@@ -443,6 +787,9 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
 
     // [诊断] 设置结构体大小，C# 侧校验 C++/C# API 版本一致性
     m_api.structSize = sizeof(PrismaAPI);
+
+    // 填充 EditorAPI 函数指针表，供 C# 通过 GetEditorAPI() 获取
+    FillEditorAPI(m_editorAPI);
 
 #ifdef _MSC_VER
     DWORD exceptionCode = 0;

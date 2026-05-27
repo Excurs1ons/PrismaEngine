@@ -5,10 +5,8 @@ using GameScripts.Minecraft;
 
 namespace GameScripts;
 
-/// <summary>
 /// PrismaCraft 游戏初始化脚本。在 Bootstrap 时运行一次。
 /// 创建初始世界状态。
-/// </summary>
 [Serializable]
 public partial class PrismaCraftGame : Script
 {
@@ -33,9 +31,7 @@ public partial class PrismaCraftGame : Script
     }
 }
 
-/// <summary>
 /// 世界管理器——管理 Minecraft World + 区块加载 + 玩家。
-/// </summary>
 [Serializable]
 public partial class WorldManager : Script
 {

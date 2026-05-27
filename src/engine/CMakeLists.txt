@@ -14,6 +14,9 @@ endif()
 
 # ========== 收集核心源文件 (所有平台共用) ==========
 set(CORE_SOURCES
+    # Memory
+    memory/MemorySystem.cpp
+
     # App
     app/CommandLineParser.cpp
     app/Engine.cpp
@@ -54,18 +57,66 @@ set(CORE_SOURCES
     transform/Camera.cpp
     transform/CameraController.cpp
 
+    # Animation
+    animation/AnimationSystem.cpp
+    animation/Skeleton.cpp
+
     # Audio
     audio/SoundSynthesizer.cpp
     audio/AudioDeviceNull.cpp
     audio/AudioDeviceSDL3.cpp
     audio/AudioAPI.cpp
+    audio/backends/SymbolStubs.cpp
 
     # Input
     input/InputDevice.cpp
     input/InputManager.cpp
 
+    # Console
+    console/ConsoleSystem.cpp
+    console/ConsoleUI.cpp
+
     # Physics
     physics/PhysicsSystem.cpp
+    physics/RigidBody.cpp
+    physics/TriggerManager.cpp
+
+    # Navigation
+    navigation/NavigationSystem.cpp
+
+    # AI
+    ai/AISystem.cpp
+
+    # Particles
+    particles/ParticleSystem.cpp
+
+    # Terrain
+    terrain/HeightMap.cpp
+    terrain/TerrainMesh.cpp
+    terrain/TerrainMaterial.cpp
+    terrain/TerrainCollision.cpp
+    terrain/TerrainSystem.cpp
+
+    # Network
+    network/TCPTransport.cpp
+    network/UDPTransport.cpp
+    network/Session.cpp
+    network/NetworkSystem.cpp
+
+    # Water
+    water/WaterMesh.cpp
+    water/WaterSystem.cpp
+    water/WaveSimulation.cpp
+    water/WaterInteraction.cpp
+
+    # Localization
+    localization/LocalizationFile.cpp
+    localization/LocalizationManager.cpp
+    localization/LocalizationSystem.cpp
+
+    # Profiling
+    profiling/ProfilerGPU.cpp
+    profiling/ProfilerSystem.cpp
 
     # Resource
     resource/AssetSerializer.cpp
@@ -153,6 +204,10 @@ set(CORE_SOURCES
     graphic/pipelines/clustered/ClusteredForwardPipeline.cpp
     graphic/pipelines/clustered/ClusteredOpaquePass.cpp
 
+    # Graphic - NPR Pipeline
+    graphic/pipelines/npr/NPRPipeline.cpp
+    graphic/pipelines/npr/NPROpaquePass.cpp
+
     # Graphic - Skybox
     graphic/pipelines/SkyboxRenderPass.cpp
 
@@ -200,6 +255,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         scripting/ScriptEngine.cpp
         scripting/ScriptSystem.cpp
         scripting/SRPGraphicsAPI.cpp
+        scripting/EditorAPI.cpp
     )
     set(PRISMA_SCRIPTING_HEADERS
         scripting/MonoRuntime.h
@@ -207,6 +263,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         scripting/ScriptEngine.h
         scripting/ScriptSystem.h
         scripting/SRPGraphicsAPI.h
+        scripting/EditorAPI.h
     )
     list(APPEND CORE_SOURCES ${PRISMA_SCRIPTING_SOURCES})
 
@@ -301,6 +358,14 @@ endif()
 
 # ========== 收集核心头文件 ==========
 set(CORE_HEADERS
+    # Memory
+    memory/MemoryAllocator.h
+    memory/PoolAllocator.h
+    memory/FrameAllocator.h
+    memory/StackAllocator.h
+    memory/MemoryManager.h
+    memory/MemorySystem.h
+
     # App
     app/CommandLineParser.h
     app/Engine.h
@@ -354,6 +419,15 @@ set(CORE_HEADERS
     transform/CameraController.h
     transform/FPSCounter.h
 
+    # Animation
+    animation/Skeleton.h
+    animation/AnimationClip.h
+    animation/AnimStateMachine.h
+    animation/SkinningRenderer.h
+    animation/IKController.h
+    animation/AnimComponent.h
+    animation/AnimationSystem.h
+
     # Audio
     audio/SoundSynthesizer.h
     audio/AudioAPI.h
@@ -362,6 +436,15 @@ set(CORE_HEADERS
     audio/AudioTypes.h
     audio/IAudioDevice.h
     audio/core/IAudioDriver.h
+
+    # Audio DSP
+    audio/dsp/AudioBuffer.h
+    audio/dsp/AudioNode.h
+    audio/dsp/AudioMath.h
+    audio/dsp/ParameterBlock.h
+    audio/dsp/AudioMemoryPool.h
+    audio/dsp/SpscQueue.h
+    audio/dsp/TestRenderer.h
 
     # Input
     input/InputDevice.h
@@ -373,11 +456,86 @@ set(CORE_HEADERS
     input/drivers/InputDriverSDL3.h
     input/drivers/InputDriverWin32.h
 
+    # Console
+    console/CVar.h
+    console/ConsoleCommand.h
+    console/ConsoleSystem.h
+    console/ConsoleUI.h
+
     # Physics
     physics/PhysicsSystem.h
     physics/CollisionSystem.h
     physics/PhysicsComponents.h
     physics/RigidBody.h
+    physics/Constraint.h
+    physics/JointConstraint.h
+    physics/ConstraintSolver.h
+    physics/CCDSolver.h
+    physics/TriggerVolume.h
+    physics/TriggerManager.h
+
+    # Navigation
+    navigation/NavMesh.h
+    navigation/NavMeshBuilder.h
+    navigation/PathFinder.h
+    navigation/PathSmoothing.h
+    navigation/NavAgent.h
+    navigation/NavAgentComponent.h
+    navigation/NavigationSystem.h
+
+    # AI
+    ai/Blackboard.h
+    ai/BehaviorTree.h
+    ai/FiniteStateMachine.h
+    ai/BuiltInTasks.h
+    ai/AIComponent.h
+    ai/AISystem.h
+
+    # Particles
+    particles/CPUParticleSystem.h
+    particles/GPUParticleSystem.h
+    particles/ParticleEmitterComponent.h
+    particles/ParticleSystem.h
+
+    # Terrain
+    terrain/TerrainConfig.h
+    terrain/HeightMap.h
+    terrain/TerrainMesh.h
+    terrain/TerrainMaterial.h
+    terrain/TerrainCollision.h
+    terrain/TerrainComponent.h
+    terrain/TerrainSystem.h
+
+    # Network
+    network/NetworkTransport.h
+    network/TCPTransport.h
+    network/UDPTransport.h
+    network/Packet.h
+    network/RPCManager.h
+    network/NetworkEntity.h
+    network/Session.h
+    network/NetworkSystem.h
+
+    # Water
+    water/WaterConfig.h
+    water/WaterMesh.h
+    water/WaveSimulation.h
+    water/WaterInteraction.h
+    water/WaterSystem.h
+
+    # Localization
+    localization/LocalizationData.h
+    localization/LocalizationFile.h
+    localization/LocalizationManager.h
+    localization/LocalizationSystem.h
+    localization/L10n.h
+
+    # Profiling
+    profiling/ProfilerCPU.h
+    profiling/ProfilerGPU.h
+    profiling/ProfilerMacros.h
+    profiling/ProfilerSystem.h
+    profiling/ProfilerPanel.h
 
     # Resource
     resource/AssetSerializer.h
@@ -444,6 +602,7 @@ set(CORE_HEADERS
     graphic/interfaces/IComputePipeline.h
     graphic/pipelines/clustered/ClusteredForwardPipeline.h
     graphic/pipelines/clustered/ClusteredOpaquePass.h
+    graphic/pipelines/npr/NPRPipeline.h
 
     # PCH
     pch.h
@@ -475,11 +634,30 @@ target_compile_definitions(Engine PRIVATE
     PRISMA_ENGINE_EXPORTS=1
     PrismaEngine_EXPORTS=1
 )
+if(MSVC)
+    # MSVC 19.44 (VS 2022 17.14): __faststorefence intrinsic 在 Debug 模式下
+    # 不被内联,产生对 __faststorefence 的外部调用。编译器将此类调用视为
+    # RenderCommandContext 的虚函数(C++ 符号修饰),导致链接错误 LNK2001。
+    # 
+    # 解决方案: 将 __faststorefence 替换为 _mm_sfence(相同语义的 CRT 函数),
+    # 然后通过 /ALTERNATENAME 将 C++ 修饰后的符号映射到 C-linkage 的 _mm_sfence。
+    target_compile_definitions(Engine PRIVATE "__faststorefence=_mm_sfence")
+    target_link_options(Engine PRIVATE "/ALTERNATENAME:?_mm_sfence@RenderCommandContext@Graphic@Prisma@@UEAAXXZ=Prisma_FastStoreFence")
+endif()
 target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 
 # 渲染后端宏定义 (仅 Vulkan)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_RENDER_VULKAN=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SDL3=1)
+target_compile_definitions(Engine PUBLIC PRISMA_PROFILING_ENABLED=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_DSP=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_MINIAUDIO=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_SYNTHESIZER=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_EFFECTS=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_RAYTRACING=0)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_OGG=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_MP3=1)
+target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_FLAC=1)
 
 # C# Scripting 编译定义
 #   PRISMA_ENABLE_SCRIPTING=0 → OFF（不编译脚本子系统）
@@ -520,6 +698,7 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
     endif()
 endif()
 if(MSVC)
+    target_compile_definitions(Engine PRIVATE _USE_MATH_DEFINES)
     target_compile_options(Engine PRIVATE 
         /utf-8
         $<$<CONFIG:Release>:/O2 /Oi /Gy>
@@ -542,6 +721,8 @@ target_link_libraries(Engine
         glaze::glaze
         stb
         cgltf::cgltf
+    PRIVATE
+        imgui::imgui
 )
 
 if(PRISMA_ENABLE_AUDIO_SDL3)
@@ -557,6 +738,10 @@ if(PRISMA_ENABLE_AUDIO_SDL3)
     elseif(TARGET SDL3)
         target_link_libraries(Engine PUBLIC SDL3)
     endif()
+endif()
+
+if(PRISMA_ENABLE_AUDIO_MINIAUDIO)
+    target_link_libraries(Engine PUBLIC miniaudio)
 endif()
 
 if(PRISMA_ENABLE_RENDER_VULKAN)
@@ -593,6 +778,69 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     endif()
 endif()
 
+# ========== 平台链接 (Windows WinSock2) ==========
+if(WIN32)
+    target_link_libraries(Engine PUBLIC ws2_32)
+endif()
+
+# ========== 粒子系统着色器编译 ==========
+set(PARTICLES_SHADER_DIR "${PROJECT_SOURCE_DIR}/resources/common/shaders/glsl/particles")
+file(GLOB PARTICLES_SHADER_SOURCES
+    "${PARTICLES_SHADER_DIR}/*.vert"
+    "${PARTICLES_SHADER_DIR}/*.frag"
+    "${PARTICLES_SHADER_DIR}/*.comp"
+)
+if(PARTICLES_SHADER_SOURCES)
+    find_program(GLSLANG_VALIDATOR glslangValidator)
+    if(GLSLANG_VALIDATOR)
+        foreach(SHADER ${PARTICLES_SHADER_SOURCES})
+            get_filename_component(SHADER_NAME ${SHADER} NAME)
+            set(SPV_OUTPUT "${PARTICLES_SHADER_DIR}/${SHADER_NAME}.spv")
+            add_custom_command(
+                OUTPUT ${SPV_OUTPUT}
+                COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
+                DEPENDS ${SHADER}
+                COMMENT "编译粒子着色器: ${SHADER_NAME} → SPIR-V"
+            )
+            list(APPEND PARTICLES_GENERATED_SPVS ${SPV_OUTPUT})
+        endforeach()
+        add_custom_target(ParticleShaders DEPENDS ${PARTICLES_GENERATED_SPVS})
+        add_dependencies(Engine ParticleShaders)
+        message(STATUS "粒子着色器 SPIR-V 编译已启用 (glslangValidator: ${GLSLANG_VALIDATOR})")
+    else()
+        message(WARNING "glslangValidator 未找到 — 粒子着色器将跳过 SPIR-V 编译，使用已有的 .spv")
+    endif()
+endif()
+
+# ========== 水体着色器编译 ==========
+set(WATER_SHADER_DIR "${PROJECT_SOURCE_DIR}/resources/common/shaders/glsl/water")
+file(GLOB WATER_SHADER_SOURCES
+    "${WATER_SHADER_DIR}/*.vert"
+    "${WATER_SHADER_DIR}/*.frag"
+    "${WATER_SHADER_DIR}/*.comp"
+)
+if(WATER_SHADER_SOURCES)
+    find_program(GLSLANG_VALIDATOR glslangValidator)
+    if(GLSLANG_VALIDATOR)
+        foreach(SHADER ${WATER_SHADER_SOURCES})
+            get_filename_component(SHADER_NAME ${SHADER} NAME)
+            set(SPV_OUTPUT "${WATER_SHADER_DIR}/${SHADER_NAME}.spv")
+            add_custom_command(
+                OUTPUT ${SPV_OUTPUT}
+                COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
+                DEPENDS ${SHADER}
+                COMMENT "Compiling water shader: ${SHADER_NAME} -> SPIR-V"
+            )
+            list(APPEND WATER_GENERATED_SPVS ${SPV_OUTPUT})
+        endforeach()
+        add_custom_target(WaterShaders DEPENDS ${WATER_GENERATED_SPVS})
+        add_dependencies(Engine WaterShaders)
+        message(STATUS "Water shader SPIR-V compilation enabled (glslangValidator: ${GLSLANG_VALIDATOR})")
+    else()
+        message(WARNING "glslangValidator not found - water shaders will skip SPIR-V compilation, using existing .spv")
+    endif()
+endif()
+
 target_include_directories(Engine
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
@@ -600,10 +848,12 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/math>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/resource>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/audio/dsp>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/graphic>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ui/2d>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/input>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/memory>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/app>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scene>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/object>
@@ -614,6 +864,14 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/window>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/platform>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/particles>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/terrain>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/navigation>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/network>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/water>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ai>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/localization>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/animation>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scripting>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/packing>
@@ -623,6 +881,7 @@ target_include_directories(Engine
 target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/glm-src")
 target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/stb-src")
 target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/vma-src/include")
+target_include_directories(Engine PUBLIC "${PROJECT_SOURCE_DIR}/.dependencies/dr_libs-src")
 
 # Linux 平台额外 include
 if(LINUX)

@@ -3,10 +3,8 @@ using Prisma;
 
 namespace GameScripts;
 
-/// <summary>
 /// 相机控制脚本
 /// Camera controller script.
-/// </summary>
 [Serializable]
 public partial class CameraController : Script 
 {

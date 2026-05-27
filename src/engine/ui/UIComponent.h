@@ -7,7 +7,7 @@
 
 namespace Prisma {
 
-/// @brief UI 组件基类（最简实现）
+// UI 组件基类（最简实现）
 /// 使用屏幕坐标系：原点在左上角，X 向右，Y 向下
 class UIComponent : public Component {
 public:
@@ -20,25 +20,25 @@ public:
     void Shutdown() override {}
 
     // === 基础属性（屏幕坐标） ===
-    /// @brief 设置位置（相对于锚点的偏移）
+    // 设置位置（相对于锚点的偏移）
     void SetPosition(const PrismaMath::vec2& pos) { m_position = pos; }
     const PrismaMath::vec2& GetPosition() const { return m_position; }
 
-    /// @brief 设置尺寸（像素）
+    // 设置尺寸（像素）
     void SetSize(const PrismaMath::vec2& size) { m_size = size; }
     const PrismaMath::vec2& GetSize() const { return m_size; }
 
-    /// @brief 设置锚点（相对于父组件，0-1 范围）
+    // 设置锚点（相对于父组件，0-1 范围）
     /// (0,0) = 左上角, (0.5,0.5) = 中心, (1,1) = 右下角
     void SetAnchor(const PrismaMath::vec2& anchor) { m_anchor = anchor; }
     const PrismaMath::vec2& GetAnchor() const { return m_anchor; }
 
-    /// @brief 设置枢轴（相对于自身，0-1 范围）
+    // 设置枢轴（相对于自身，0-1 范围）
     /// 枢轴是组件自身的旋转和缩放中心
     void SetPivot(const PrismaMath::vec2& pivot) { m_pivot = pivot; }
     const PrismaMath::vec2& GetPivot() const { return m_pivot; }
 
-    /// @brief 获取最终屏幕位置（考虑锚点和父组件）
+    // 获取最终屏幕位置（考虑锚点和父组件）
     PrismaMath::vec2 GetScreenPosition() const;
 
     void SetVisible(bool visible) { m_visible = visible; }

@@ -4,9 +4,7 @@
 
 namespace Prisma {
 
-/**
- * @brief 时间增量类
- */
+// 时间增量类
 class ENGINE_API Timestep {
 public:
     Timestep(float time = 0.0f) : m_Time(time) {}

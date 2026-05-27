@@ -1,5 +1,5 @@
 /**
- * @brief PathTracing3D Plugin Entry — 供 PrismaLauncher 运行时加载
+ PathTracing3D Plugin Entry — 供 PrismaLauncher 运行时加载
  */
 
 #include "PathTracing3DApp.h"

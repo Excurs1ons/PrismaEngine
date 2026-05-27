@@ -90,7 +90,7 @@ struct BoundingBox {
     }
 };
 
-/// @brief 子网格 GPU 资源缓冲区
+// 子网格 GPU 资源缓冲区
 struct SubMeshBuffer {
     std::string name;
     uint32_t materialIndex;
@@ -498,7 +498,7 @@ enum class ShaderCompileFlag : uint32_t {
     WarningsAsErrors = 1 << 3
 };
 
-/// @brief 着色器编译选项
+// 着色器编译选项
     struct ShaderCompileOptions {
         bool debug = false;
         bool optimize = true;

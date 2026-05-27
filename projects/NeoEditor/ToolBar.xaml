@@ -1,0 +1,21 @@
+<UserControl x:Class="NeoEditor.EditorToolBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <CommandBar x:Name="MainToolBar"
+                DefaultLabelPosition="Right"
+                Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+        <AppBarButton Icon="Play" Label="Play" ToolTipService.ToolTip="Play (Game Mode)" />
+        <AppBarButton Icon="Pause" Label="Pause" ToolTipService.ToolTip="Pause" />
+        <AppBarButton Icon="Stop" Label="Stop" ToolTipService.ToolTip="Stop (Exit Game Mode)" />
+        <AppBarSeparator />
+        <AppBarButton Icon="Undo" Label="Undo" IsEnabled="False" ToolTipService.ToolTip="Undo" />
+        <AppBarButton Icon="Redo" Label="Redo" IsEnabled="False" ToolTipService.ToolTip="Redo" />
+        <AppBarSeparator />
+        <AppBarToggleButton Icon="Shuffle" Label="Snap" ToolTipService.ToolTip="Toggle Snap" />
+        <AppBarToggleButton x:Name="GridToggle" Label="Grid" ToolTipService.ToolTip="Toggle Grid" />
+    </CommandBar>
+</UserControl>

@@ -4,11 +4,9 @@ using Prisma;
 
 namespace PathTracing3D;
 
-/// <summary>
 /// C++ 引擎通过 CoreCLR 调用的入口点。
 /// Bootstrap: 初始化脚本引擎、注册脚本、创建摄像机控制器。
 /// 场景由 engine 的 project.jsonc 反序列化加载，C# 仅处理交互逻辑。
-/// </summary>
 internal static class ScriptEntry
 {
     [UnmanagedCallersOnly]

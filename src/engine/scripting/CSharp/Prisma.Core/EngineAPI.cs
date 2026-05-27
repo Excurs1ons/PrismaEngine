@@ -156,6 +156,37 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<bool> PtIsConverged;
     public delegate* unmanaged<uint> PtGetMaxSamples;
 
+    // ===== Audio API =====
+    public delegate* unmanaged<bool> IsAudioInitialized;
+    public delegate* unmanaged<float> AudioGetMasterVolume;
+    public delegate* unmanaged<float, void> AudioSetMasterVolume;
+    public delegate* unmanaged<byte*, AudioPlayDesc*, uint> AudioPlayClip;
+    public delegate* unmanaged<uint, void> AudioStop;
+    public delegate* unmanaged<void> AudioStopAll;
+    public delegate* unmanaged<uint, float, void> AudioSetVolume;
+    public delegate* unmanaged<uint, bool> AudioIsPlaying;
+
+    // ===== AudioGraph API =====
+    public delegate* unmanaged<uint, uint, ulong> AudioCreateGraph;
+    public delegate* unmanaged<ulong, void> AudioDestroyGraph;
+    public delegate* unmanaged<ulong, byte*, byte*, ulong> AudioGraphCreateNode;
+    public delegate* unmanaged<ulong, ulong, void> AudioGraphRemoveNode;
+    public delegate* unmanaged<ulong, ulong, byte*, ulong, byte*, bool> AudioGraphConnect;
+    public delegate* unmanaged<ulong, ulong, ulong, bool> AudioGraphDisconnect;
+    public delegate* unmanaged<ulong, byte*, float, void> AudioNodeSetParam;
+    public delegate* unmanaged<ulong, byte*, float> AudioNodeGetParam;
+    public delegate* unmanaged<ulong, byte*> AudioNodeGetName;
+    public delegate* unmanaged<ulong, byte*, void> AudioNodeSetName;
+    public delegate* unmanaged<ulong, void> AudioNodeDestroy;
+
+    // ===== Level Meter + Spectrum Readback =====
+    public delegate* unmanaged<ulong, uint, float*, float*, float*, float*, bool> AudioGetLevelMeterData;
+    public delegate* unmanaged<uint, ulong> AudioCreateSpectrumAnalyzer;
+    public delegate* unmanaged<ulong, void> AudioDestroySpectrumAnalyzer;
+    public delegate* unmanaged<ulong, float*, uint, uint, void> AudioSpectrumProcessFloats;
+    public delegate* unmanaged<ulong, float*, float*, float*, uint, uint> AudioSpectrumGetBins;
+    public delegate* unmanaged<ulong, float> AudioSpectrumGetPeak;
+
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
 }
@@ -237,5 +268,27 @@ internal static unsafe class Interop
             TransformRead = API.GetTransformB();
             TransformWrite = API.GetTransformA();
         }
+    }
+
+    // ===== 字符串编组辅助 =====
+
+    /// <summary>
+    /// 将 C# string 转为以 null 结尾的 UTF-8 字节数组（配合 fixed 语句使用）
+    /// </summary>
+    internal static byte[] StringToUtf8(string s)
+    {
+        if (s == null) return new byte[] { 0 };
+        return System.Text.Encoding.UTF8.GetBytes(s + "\0");
+    }
+
+    /// <summary>
+    /// 将以 null 结尾的 UTF-8 指针转为 C# string
+    /// </summary>
+    internal static unsafe string Utf8ToString(byte* ptr)
+    {
+        if (ptr == null) return "";
+        int len = 0;
+        while (ptr[len] != 0) len++;
+        return System.Text.Encoding.UTF8.GetString(ptr, len);
     }
 }

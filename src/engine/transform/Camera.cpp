@@ -4,7 +4,7 @@
 #include "core/ComponentRegistry.h"
 #include <glaze/glaze.hpp>
 
-// ── Glaze 元数据 ──
+// Glaze 元数据
 
 template <>
 struct glz::meta<Prisma::Graphic::ProjectionMode> {
@@ -27,7 +27,7 @@ struct glz::meta<Prisma::Graphic::Camera::Data> {
     );
 };
 
-// ── ComponentRegistry 注册 ──
+// ComponentRegistry 注册
 namespace {
     bool registered = []() {
         auto& reg = Prisma::ComponentRegistry::Get();
@@ -81,7 +81,7 @@ void Camera::Update(Timestep ts) {
     UpdateViewMatrix();
 }
 
-// ── 投影模式 ──
+// 投影模式
 
 void Camera::SetProjectionMode(ProjectionMode mode) {
     m_projectionMode = mode;
@@ -111,7 +111,7 @@ void Camera::SetOrthoSize(float size) {
     m_isProjectionDirty = true;
 }
 
-// ── 数据序列化 ──
+// 数据序列化
 
 Camera::Data Camera::GetData() const {
     Data d;
@@ -134,7 +134,7 @@ void Camera::SetData(const Data& d) {
     m_isProjectionDirty = true;
 }
 
-// ── ICamera 接口 ──
+// ICamera 接口
 
 PrismaMath::vec4 Camera::GetClearColor() const {
     return m_clearColor;

@@ -32,27 +32,18 @@ class IEngine {
 public:
     virtual ~IEngine() = default;
 
-    /**
-     * @brief 设置命令行参数
-     */
+    // 设置命令行参数
     virtual void SetCommandLine(int argc, char** argv) = 0;
 
-    /**
-     * @brief 初始化引擎所有子系统
-     * @return 0 = 成功，非 0 = 失败
-     */
+    /* 初始化引擎所有子系统 */
     virtual int Initialize() = 0;
 
     /**
      * @brief 运行引擎主循环
-     * @param pluginPath Application 插件 DLL 路径（如 "Prisma2D.dll"）
      *                   引擎内部 LoadLibrary + CreateApplication 加载
-     * @return 0 = 成功，非 0 = 失败
      */
     virtual int Run(const char* pluginPath) = 0;
 
-    /**
-     * @brief 关闭引擎
-     */
+    // 关闭引擎
     virtual void Shutdown() = 0;
 };

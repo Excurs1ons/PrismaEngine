@@ -4,9 +4,7 @@ using Prisma;
 
 namespace GameScripts;
 
-/// <summary>
 /// C++ 引擎通过 CoreCLR 调用的入口点�?
-/// </summary>
 internal static class ScriptEntry
 {
     [UnmanagedCallersOnly]

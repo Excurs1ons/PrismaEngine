@@ -17,6 +17,10 @@
 #include "scripting/MonoRuntime.h"
 #include "scripting/CoreCLRHost.h"
 #include "scripting/ScriptEngine.h"
+#include "memory/MemorySystem.h"
+#include "audio/AudioAPI.h"
+#include "audio/AudioTypes.h"
+#include <cassert>
 #include <typeinfo>
 #include <string_view>
 #include <filesystem>
@@ -27,6 +31,20 @@
 #include "threading/ThreadManager.h"
 #include "app/CommandLineParser.h"
 #include "scene/Scene.h"
+#include "console/ConsoleSystem.h"
+#include "console/ConsoleUI.h"
+#include "profiling/ProfilerSystem.h"
+#include "animation/AnimationSystem.h"
+#include "particles/ParticleSystem.h"
+#include "terrain/TerrainSystem.h"
+#include "navigation/NavigationSystem.h"
+#include "ai/AISystem.h"
+#include "water/WaterSystem.h"
+#include "network/NetworkSystem.h"
+#include "localization/LocalizationSystem.h"
+
+
+
 
 
 
@@ -70,17 +88,50 @@ int Engine::Initialize() {
         AssetDatabase::Get().Refresh("assets");
     }
 
+    m_MemorySystem = AddSystem<Memory::MemorySystem>();
+    m_AnimationSystem = AddSystem<Animation::AnimationSystem>();
     m_JobSystem = AddSystem<JobSystem>();
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
     m_SceneManager = AddSystem<SceneManager>();
     m_PhysicsSystem = AddSystem<PhysicsSystem>();
+    AddSystem<ConsoleSystem>();
     AddSystem<Graphic::ShaderLibrary>();
+    AddSystem<Particles::ParticleSystem>();
+    m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
+    m_AISystem = AddSystem<AI::AISystem>();
+    m_WaterSystem = AddSystem<Water::WaterSystem>();
+    m_NavigationSystem = AddSystem<Navigation::NavigationSystem>();
+    m_NetworkSystem = AddSystem<Network::NetworkSystem>();
+    m_LocalizationSystem = AddSystem<Localization::LocalizationSystem>();
 
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {
             LOG_FATAL("Engine", "系统初始化失败！");
             return -1;
+        }
+    }
+
+    // 音频子系统初始化 (非致命 — 允许无音频运行)
+    {
+        std::string cliDisable;
+        if (m_Spec.Headless) {
+            LOG_INFO("Engine", "无头模式: 跳过音频初始化");
+        } else {
+            Audio::AudioDesc audioDesc;
+            audioDesc.deviceType = Audio::AudioDeviceType::SDL3;
+            audioDesc.outputFormat = Audio::AudioFormat(48000, 2, 32);
+            audioDesc.bufferSize = 256;
+            audioDesc.enableEffects = true;
+            m_audioDevice = Audio::AudioAPI::CreateDevice(audioDesc.deviceType, audioDesc);
+            if (m_audioDevice && m_audioDevice->Initialize(audioDesc)) {
+                LOG_INFO("Engine", "音频系统已初始化 ({}), 设备: {}",
+                         Audio::AudioAPI::GetDeviceName(audioDesc.deviceType),
+                         m_audioDevice->GetDeviceInfo().name);
+            } else {
+                LOG_WARNING("Engine", "音频初始化失败, 将继续运行 (静音模式)");
+                m_audioDevice.reset();
+            }
         }
     }
 
@@ -93,6 +144,13 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
     m_CurrentApp = std::move(app);
     m_Running = true;
+
+    // 将控制台 UI 层添加到应用层栈
+    if (auto* console = GetSystem<ConsoleSystem>()) {
+        if (auto* ui = console->GetConsoleUI()) {
+            m_CurrentApp->PushOverlay(ui);
+        }
+    }
 
     // 从项目名称对应的文件读取配置
     auto scriptingBackend = ScriptingBackend::CoreCLR;
@@ -369,6 +427,13 @@ int Engine::Run(std::unique_ptr<Application> app) {
         if (m_RenderSystem->GetDevice()) {
             m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
         }
+
+        // 性能分析子系统（在渲染系统就绪后初始化）
+        m_ProfilerSystem = AddSystem<Profiling::ProfilerSystem>();
+        if (m_ProfilerSystem->Initialize() != 0) {
+            LOG_WARNING("Engine", "性能分析系统初始化失败，继续运行");
+            m_ProfilerSystem = nullptr;
+        }
     }
 
     // 自动加载入口场景
@@ -420,6 +485,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
         if (m_Spec.Headless || !m_Minimized) {
             Update(Timestep(std::min(deltaTime, 0.1f)));
+
+            // 音频更新 (非阻塞设备轮询)
+            if (m_audioDevice) m_audioDevice->Update(std::min(deltaTime, 0.1f));
+
             // C# 脚本更新（在 App OnUpdate 之后、渲染之前）
 #if PRISMA_ENABLE_SCRIPTING > 0
             if (m_scriptEngine->IsInitialized())
@@ -493,8 +562,17 @@ Scripting::MonoRuntime& Engine::GetMonoRuntime() { return Scripting::MonoRuntime
 #endif
 AssetDatabase& Engine::GetAssetDatabase() { return AssetDatabase::Get(); }
 Core::ECS::World& Engine::GetWorld() { return Core::ECS::World::Get(); }
+Scene& Engine::GetScene() {
+    auto* scene = m_SceneManager ? m_SceneManager->GetCurrentScene() : nullptr;
+    assert(scene && "No active scene. Ensure a scene is loaded before calling GetScene().");
+    return *scene;
+}
 ThreadManager& Engine::GetThreadManager() { return *ThreadManager::Get(); }
 CommandLineParser& Engine::GetCommandLineParser() { return CommandLineParser::Get(); }
+ConsoleSystem* Engine::GetConsoleSystem() { return GetSystem<ConsoleSystem>(); }
+Particles::ParticleSystem* Engine::GetParticleSystem() { return GetSystem<Particles::ParticleSystem>(); }
+Terrain::TerrainSystem* Engine::GetTerrainSystem() { return GetSystem<Terrain::TerrainSystem>(); }
+Water::WaterSystem* Engine::GetWaterSystem() { return GetSystem<Water::WaterSystem>(); }
 
 const std::string& Engine::GetGPUName() const { return m_GPUName; }
 const EngineSpecification& Engine::GetSpecification() const { return m_Spec; }
@@ -538,9 +616,10 @@ void Engine::Shutdown() {
     // VulkanPipelineState 析构访问已销毁的 VkDevice 句柄导致崩溃
     Scripting::SRPGraphicsAPI::Get().Shutdown();
 #endif
+    if (m_audioDevice) { m_audioDevice->Shutdown(); m_audioDevice.reset(); }
     if (m_RenderSystem) m_RenderSystem->Shutdown();
     if (m_Window) { m_Window->Shutdown(); m_Window.reset(); }
-    m_Systems.clear(); m_CurrentApp = nullptr; m_AssetManager = nullptr; m_InputManager = nullptr; m_RenderSystem = nullptr; m_SceneManager = nullptr; m_PhysicsSystem = nullptr; m_JobSystem = nullptr; m_Initialized = false; m_Running = false;
+    m_Systems.clear(); m_CurrentApp = nullptr; m_AssetManager = nullptr; m_InputManager = nullptr; m_RenderSystem = nullptr; m_SceneManager = nullptr; m_PhysicsSystem = nullptr; m_JobSystem = nullptr; m_audioDevice = nullptr; m_Initialized = false; m_Running = false;
 }
 
 } // namespace Prisma

@@ -56,63 +56,60 @@ public:
     DeferredPipeline();
     ~DeferredPipeline() override;
 
-    /// @brief 初始化管线
+    // 初始化管线
     /// 创建并添加所有 Pass
     bool Initialize();
 
-    /// @brief 设置视口尺寸并重建 GBuffer
+    // 设置视口尺寸并重建 GBuffer
     void SetResolution(uint32_t width, uint32_t height);
 
-    /// @brief 更新管线数据
-    /// @param ts 时间增量
-    /// @param camera 相机接口
+    // 更新管线数据
     void Update(Prisma::Timestep ts, Prisma::Graphic::ICamera* camera);
 
-    /// @brief 执行管线渲染
-    /// @param context 执行上下文
+    // 执行管线渲染
     void Execute(const PassExecutionContext& context) override;
 
     // === Pass 访问 ===
 
-    /// @brief 获取几何 Pass
+    // 获取几何 Pass
     GeometryPass* GetGeometryPass() const { return m_geometryPass.get(); }
 
-    /// @brief 获取天空盒 Pass
+    // 获取天空盒 Pass
     SkyboxPass* GetSkyboxPass() const { return m_skyboxPass.get(); }
 
-    /// @brief 获取光照 Pass
+    // 获取光照 Pass
     LightingPass* GetLightingPass() const { return m_lightingPass.get(); }
 
-    /// @brief 获取透明物体 Pass
+    // 获取透明物体 Pass
     TransparentPass* GetTransparentPass() const { return m_transparentPass.get(); }
 
-    /// @brief 获取合成 Pass
+    // 获取合成 Pass
     CompositionPass* GetCompositionPass() const { return m_compositionPass.get(); }
 
     // === 光照设置 ===
 
-    /// @brief 添加光源
+    // 添加光源
     void AddLight(const Light& light);
 
-    /// @brief 清除所有光源
+    // 清除所有光源
     void ClearLights();
 
-    /// @brief 设置光源列表
+    // 设置光源列表
     void SetLights(const std::vector<Light>& lights);
 
-    /// @brief 获取光源列表
+    // 获取光源列表
     const std::vector<Light>& GetLights() const { return m_lights; }
 
-    /// @brief 设置环境光
+    // 设置环境光
     void SetAmbientLight(const PrismaMath::vec3& ambient);
     const PrismaMath::vec3& GetAmbientLight() const { return m_ambientLight; }
 
     // === 后处理设置 ===
 
-    /// @brief 设置后处理效果
+    // 设置后处理效果
     void SetPostProcessEffect(PostProcessEffect effect, bool enable);
 
-    /// @brief 检查后处理效果是否启用
+    // 检查后处理效果是否启用
     bool IsPostProcessEffectEnabled(PostProcessEffect effect) const;
 
     // === 渲染统计 ===
@@ -133,10 +130,10 @@ public:
     const RenderStats& GetRenderStats() const { return m_stats; }
 
 private:
-    /// @brief 更新所有 Pass 的相机数据
+    // 更新所有 Pass 的相机数据
     void UpdatePassesCameraData(Prisma::Graphic::ICamera* camera);
 
-    /// @brief 收集渲染统计
+    // 收集渲染统计
     void CollectStats();
 
 private:

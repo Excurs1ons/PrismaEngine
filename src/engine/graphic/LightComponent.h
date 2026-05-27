@@ -8,9 +8,7 @@
 
 namespace Prisma::Graphic {
 
-/**
- * @brief 3D 光源组件
- */
+// 3D 光源组件
 class ENGINE_API LightComponent : public Component {
 public:
     enum class LightType : uint32_t {
@@ -31,6 +29,7 @@ public:
     LightComponent();
     ~LightComponent() override = default;
 
+    ComponentId GetComponentId() const override { return GetComponentTypeId<LightComponent>(); }
     const char* GetComponentTypeName() const override { return "Light"; }
 
     void SetData(const Data& data) { m_Data = data; }

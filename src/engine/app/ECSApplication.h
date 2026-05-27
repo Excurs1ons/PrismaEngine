@@ -5,9 +5,7 @@
 
 namespace Prisma {
 
-/**
- * @brief 基于 ECS 架构的应用程序基类
- */
+// 基于 ECS 架构的应用程序基类
 class ENGINE_API ECSApplication : public Application {
 public:
     ECSApplication(const ApplicationSpecification& spec = ApplicationSpecification());

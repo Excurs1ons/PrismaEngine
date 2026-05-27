@@ -18,6 +18,8 @@ public:
     
     void Update(Timestep /*ts*/) override {}
     void Initialize() override {}
+    ComponentId GetComponentId() const override { return GetComponentTypeId<RigidBodyComponent>(); }
+    const char* GetComponentTypeName() const override { return "RigidBodyComponent"; }
 
     void ApplyForce(const Vector3& force) { m_AccumulatedForce += force; }
     void ApplyImpulse(const Vector3& impulse) { m_Velocity += impulse * (1.0f / m_Desc.mass); }
@@ -41,6 +43,8 @@ public:
     
     void Update(Timestep /*ts*/) override {}
     void Initialize() override {}
+    ComponentId GetComponentId() const override { return GetComponentTypeId<BoxColliderComponent>(); }
+    const char* GetComponentTypeName() const override { return "BoxColliderComponent"; }
 
     const Vector3& GetSize() const { return m_Size; }
     void SetSize(const Vector3& s) { m_Size = s; }

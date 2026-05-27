@@ -1,6 +1,3 @@
-//
-// Created by JasonGu on 26-1-1.
-//
 #pragma once
 
 #ifndef RENDERDESC_H
@@ -12,7 +9,7 @@
 namespace Prisma::Graphic {
 class IShader;
 
-/// @brief 缓冲区描述
+// 缓冲区描述
 struct BufferDesc : public ResourceDesc {
     BufferType type = BufferType::Vertex;
     uint64_t size = 0;
@@ -21,7 +18,7 @@ struct BufferDesc : public ResourceDesc {
     uint32_t stride = 0;  // 对于结构化缓冲区
 };
 
-/// @brief 着色器描述
+// 着色器描述
 struct ShaderDesc : public ResourceDesc {
     ShaderType type = ShaderType::Vertex;
     ShaderLanguage language = ShaderLanguage::HLSL;
@@ -37,7 +34,7 @@ struct ShaderDesc : public ResourceDesc {
     std::vector<std::string> includes;
 };
 
-/// @brief 管线描述
+// 管线描述
 struct PipelineDesc : public ResourceDesc {
     // 顶点输入布局
     struct VertexAttribute {
@@ -113,7 +110,7 @@ struct PipelineDesc : public ResourceDesc {
     uint32_t primitiveTopology = 4;  // 4=trianglelist
 };
 
-/// @brief 管线状态对象描述
+// 管线状态对象描述
 struct PipelineStateDesc : public ResourceDesc {
     PipelineType type = PipelineType::Graphics;
 

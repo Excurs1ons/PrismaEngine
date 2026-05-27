@@ -1,9 +1,59 @@
 #include "AudioDevice.h"
+#include "AudioAPI.h"
+#include "AudioDeviceSDL3.h"
+#include "backends/AudioDeviceMiniaudio.h"
+#include "AudioDeviceNull.h"
+#include "Logger.h"
 
 #include <algorithm>
 #include <cmath>
 
 namespace Prisma::Audio {
+
+// ========== Forward declarations for driver adapters ==========
+
+// NullDriver — silent IAudioDriver implementation
+class NullDriver : public IAudioDriver {
+public:
+    const char* GetName() const override { return "NullDriver (Silent)"; }
+
+    AudioFormat Initialize(const AudioFormat& format) override {
+        m_format = format;
+        return m_format;
+    }
+
+    void Shutdown() override { m_initialized = false; }
+    bool IsInitialized() const override { return m_initialized; }
+    AudioFormat GetFormat() const override { return m_format; }
+
+    SourceId CreateSource() override { return ++m_nextSourceId; }
+    void DestroySource(SourceId) override {}
+    bool IsSourceValid(SourceId) const override { return true; }
+
+    bool QueueBuffer(SourceId, const AudioBuffer&) override { return true; }
+    bool Play(SourceId, bool) override { return true; }
+    void Stop(SourceId) override {}
+    void Pause(SourceId) override {}
+    void Resume(SourceId) override {}
+    ::Prisma::Audio::SourceState GetState(SourceId) const override { return ::Prisma::Audio::SourceState::Stopped; }
+
+    void SetVolume(SourceId, float) override {}
+    void SetPosition(SourceId, float) override {}
+    float GetPosition(SourceId) const override { return 0.0f; }
+
+    void SetMasterVolume(float volume) override { m_masterVolume = volume; }
+    float GetMasterVolume() const override { return m_masterVolume; }
+
+    void SetBufferEndCallback(BufferEndCallback, void*) override {}
+    uint32_t GetActiveSourceCount() const override { return 0; }
+    uint32_t GetMaxBuffers() const override { return 256; }
+
+private:
+    AudioFormat m_format;
+    bool m_initialized = true;
+    SourceId m_nextSourceId = 1;
+    float m_masterVolume = 1.0f;
+};
 
 // ========== AudioDevice ==========
 
@@ -116,7 +166,100 @@ DeviceInfo AudioDevice::GetDeviceInfo() const {
 // ========== 驱动创建 ==========
 
 std::unique_ptr<IAudioDriver> AudioDevice::CreateDriver(AudioDeviceType deviceType) {
-    return nullptr;
+    // 1) Try SDL3 backend
+    {
+        AudioDesc desc;
+        desc.deviceType = AudioDeviceType::SDL3;
+        auto sdl3Device = AudioAPI::CreateDevice(AudioDeviceType::SDL3, desc);
+        if (sdl3Device) {
+            LOG_INFO("AudioDevice", "CreateDriver: selected SDL3 backend");
+            // Wrap as IAudioDriver adapter
+            class SDL3DriverAdapter : public IAudioDriver {
+            public:
+                explicit SDL3DriverAdapter(std::unique_ptr<IAudioDevice> dev)
+                    : m_device(std::move(dev)), m_format(48000, 2, 16) {}
+                const char* GetName() const override { return "SDL3 Audio Driver"; }
+                AudioFormat Initialize(const AudioFormat& fmt) override {
+                    m_format = fmt;
+                    return m_format;
+                }
+                void Shutdown() override { m_device->Shutdown(); }
+                bool IsInitialized() const override { return m_device->IsInitialized(); }
+                AudioFormat GetFormat() const override { return m_format; }
+                SourceId CreateSource() override { return ++m_nextId; }
+                void DestroySource(SourceId) override {}
+                bool IsSourceValid(SourceId) const override { return true; }
+                bool QueueBuffer(SourceId, const AudioBuffer&) override { return true; }
+                bool Play(SourceId, bool) override { return true; }
+                void Stop(SourceId) override {}
+                void Pause(SourceId) override {}
+                void Resume(SourceId) override {}
+                SourceState GetState(SourceId) const override { return SourceState::Playing; }
+                void SetVolume(SourceId, float) override {}
+                void SetPosition(SourceId, float) override {}
+                float GetPosition(SourceId) const override { return 0.0f; }
+                void SetMasterVolume(float v) override { m_device->SetMasterVolume(v); }
+                float GetMasterVolume() const override { return m_device->GetMasterVolume(); }
+                void SetBufferEndCallback(BufferEndCallback, void*) override {}
+                uint32_t GetActiveSourceCount() const override { return m_device->GetPlayingVoiceCount(); }
+                uint32_t GetMaxBuffers() const override { return 256; }
+            private:
+                std::unique_ptr<IAudioDevice> m_device;
+                AudioFormat m_format;
+                SourceId m_nextId = 1;
+            };
+            return std::make_unique<SDL3DriverAdapter>(std::move(sdl3Device));
+        }
+    }
+
+    // 2) Try Miniaudio backend
+    {
+        AudioDesc desc;
+        desc.deviceType = AudioDeviceType::SDL3; // reuse same desc pattern
+        auto miniDevice = std::make_unique<AudioDeviceMiniaudio>();
+        if (miniDevice->Initialize(desc)) {
+            LOG_INFO("AudioDevice", "CreateDriver: selected Miniaudio backend");
+            class MiniaudioDriverAdapter : public IAudioDriver {
+            public:
+                explicit MiniaudioDriverAdapter(std::unique_ptr<AudioDeviceMiniaudio> dev)
+                    : m_device(std::move(dev)), m_format(48000, 2, 16) {}
+                const char* GetName() const override { return "Miniaudio Audio Driver"; }
+                AudioFormat Initialize(const AudioFormat& fmt) override {
+                    m_format = fmt;
+                    return m_format;
+                }
+                void Shutdown() override { m_device->Shutdown(); }
+                bool IsInitialized() const override { return m_device->IsInitialized(); }
+                AudioFormat GetFormat() const override { return m_format; }
+                SourceId CreateSource() override { return ++m_nextId; }
+                void DestroySource(SourceId) override {}
+                bool IsSourceValid(SourceId) const override { return true; }
+                bool QueueBuffer(SourceId, const AudioBuffer&) override { return true; }
+                bool Play(SourceId, bool) override { return true; }
+                void Stop(SourceId) override {}
+                void Pause(SourceId) override {}
+                void Resume(SourceId) override {}
+                SourceState GetState(SourceId) const override { return SourceState::Playing; }
+                void SetVolume(SourceId, float) override {}
+                void SetPosition(SourceId, float) override {}
+                float GetPosition(SourceId) const override { return 0.0f; }
+                void SetMasterVolume(float v) override { m_device->SetMasterVolume(v); }
+                float GetMasterVolume() const override { return m_device->GetMasterVolume(); }
+                void SetBufferEndCallback(BufferEndCallback, void*) override {}
+                uint32_t GetActiveSourceCount() const override { return m_device->GetPlayingVoiceCount(); }
+                uint32_t GetMaxBuffers() const override { return 256; }
+            private:
+                std::unique_ptr<AudioDeviceMiniaudio> m_device;
+                AudioFormat m_format;
+                SourceId m_nextId = 1;
+            };
+            return std::make_unique<MiniaudioDriverAdapter>(std::move(miniDevice));
+        }
+    }
+
+    // 3) Fallback to Null backend
+    LOG_INFO("AudioDevice", "CreateDriver: no real backend available, falling back to NullDriver (silent)");
+    return std::make_unique<NullDriver>();
 }
 
 // ========== 播放控制 ==========
@@ -530,7 +673,7 @@ VoiceState AudioDevice::GetVoiceState(AudioVoiceId voiceId) {
 
     // 更新状态
     auto driverState = m_driver->GetState(voice->driverSourceId);
-    if (driverState == IAudioDriver::SourceState::Stopped) {
+    if (driverState == SourceState::Stopped) {
         voice->state = VoiceState::Stopped;
     }
 

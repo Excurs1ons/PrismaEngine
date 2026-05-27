@@ -23,7 +23,6 @@ public:
 
     /**
      * @brief 从 scriptsDir 加载 hostfxr 并初始化 CoreCLR 运行时
-     * @param scriptsDir  包含 hostfxr.dll + 运行时 + 程序集的目录
      *                    （self-contained publish 的输出目录）
      */
     bool Initialize(const std::string& scriptsDir);
@@ -33,15 +32,12 @@ public:
 
     /**
      * @brief 获取 [UnmanagedCallersOnly] 方法的函数指针
-     * @param assemblyPath  程序集文件名 (e.g. "GameScripts.dll")
-     * @param typeName      完全限定类型名 (e.g. "GameScripts.ScriptEntry")
-     * @param methodName    方法名 (e.g. "Bootstrap")
      */
     void* GetFunctionPointer(const std::string& assemblyPath,
                              const std::string& typeName,
                              const std::string& methodName);
 
-    /** @brief scriptsDir 访问 */
+    /* scriptsDir 访问  */
     const std::string& GetScriptsDir() const { return m_scriptsDir; }
 
 private:

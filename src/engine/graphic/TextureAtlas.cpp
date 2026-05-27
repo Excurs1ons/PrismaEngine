@@ -52,7 +52,6 @@ public:
 
     /**
      * @brief 插入矩形
-     * @return 如果成功，返回 (x, y)，否则返回 (-1, -1)
      */
     std::pair<int, int> insert(int width, int height) {
         int bestIndex  = -1;

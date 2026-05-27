@@ -8,7 +8,7 @@
 
 namespace Prisma::Input {
 
-/// @brief SDL3 跨平台输入驱动
+// SDL3 跨平台输入驱动
 /// 支持：键盘、鼠标、手柄
 class InputDriverSDL3 : public IInputDriver {
 public:
@@ -51,10 +51,10 @@ private:
     // ========== SDL3 事件处理 ==========
     void ProcessEvent(const SDL_Event& event);
 
-    /// @brief 映射 SDL 键码
+    // 映射 SDL 键码
     KeyCode MapSDLKey(SDL_Keycode sdlKey) const;
 
-    /// @brief 映射 SDL 手柄按钮
+    // 映射 SDL 手柄按钮
     GamepadButton MapSDLGamepadButton(SDL_GamepadButton button) const;
 
     // ========== 手柄更新 ==========
@@ -82,7 +82,7 @@ private:
     bool m_initialized = false;
 };
 
-/// @brief 创建 SDL3 输入驱动实例
+// 创建 SDL3 输入驱动实例
 inline IInputDriver* CreateSDL3InputDriver() {
     return new InputDriverSDL3();
 }

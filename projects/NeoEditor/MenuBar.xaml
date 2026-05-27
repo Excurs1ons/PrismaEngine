@@ -1,0 +1,48 @@
+<UserControl x:Class="NeoEditor.EditorMenuBar"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d">
+
+    <MenuBar x:Name="MainMenuBar">
+        <MenuBarItem Title="File">
+            <MenuFlyoutItem x:Name="FileNewScene" Text="New Scene" />
+            <MenuFlyoutItem x:Name="FileOpenScene" Text="Open Scene..." />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem x:Name="FileSave" Text="Save" />
+            <MenuFlyoutItem x:Name="FileSaveAs" Text="Save As..." />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem x:Name="FileExit" Text="Exit" />
+        </MenuBarItem>
+        <MenuBarItem Title="Edit">
+            <MenuFlyoutItem x:Name="EditUndo" Text="Undo" IsEnabled="False" />
+            <MenuFlyoutItem x:Name="EditRedo" Text="Redo" IsEnabled="False" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem x:Name="EditPreferences" Text="Preferences..." IsEnabled="False" />
+        </MenuBarItem>
+        <MenuBarItem Title="View">
+            <MenuFlyoutItem x:Name="ViewSceneView" Text="Scene View" />
+            <MenuFlyoutItem x:Name="ViewGameView" Text="Game View" />
+            <MenuFlyoutItem x:Name="ViewInspector" Text="Inspector" />
+            <MenuFlyoutItem x:Name="ViewHierarchy" Text="Hierarchy" />
+            <MenuFlyoutItem x:Name="ViewConsole" Text="Console" />
+            <MenuFlyoutSeparator />
+            <MenuFlyoutSubItem Text="Layouts">
+                <MenuFlyoutItem x:Name="LayoutDefault" Text="Default" />
+                <MenuFlyoutItem x:Name="LayoutCoding" Text="Coding" />
+                <MenuFlyoutItem x:Name="LayoutLevelDesign" Text="Level Design" />
+            </MenuFlyoutSubItem>
+            <MenuFlyoutSeparator />
+            <MenuFlyoutItem x:Name="ViewResetLayout" Text="Reset Layout" />
+        </MenuBarItem>
+        <MenuBarItem Title="Tools">
+            <MenuFlyoutItem x:Name="ToolsAssetBrowser" Text="Asset Browser" />
+            <MenuFlyoutItem x:Name="ToolsMaterialEditor" Text="Material Editor" IsEnabled="False" />
+            <MenuFlyoutItem x:Name="ToolsAnimationEditor" Text="Animation Editor" IsEnabled="False" />
+        </MenuBarItem>
+        <MenuBarItem Title="Help">
+            <MenuFlyoutItem x:Name="HelpAbout" Text="About NeoEditor" />
+        </MenuBarItem>
+    </MenuBar>
+</UserControl>

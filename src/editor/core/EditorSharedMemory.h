@@ -15,10 +15,7 @@
 
 namespace Prisma {
 
-/**
- * @brief 编辑器高性能共享内存通道
- * 用于将渲染帧从 GPU 快速传递到 Webview 或本地进程
- */
+/* 编辑器高性能共享内存通道 */
 class EditorSharedMemory {
 public:
     EditorSharedMemory(const std::string& name, size_t size) : m_name(name), m_size(size) {

@@ -8,7 +8,7 @@
 
 namespace Prisma::Graphic {
 
-/// @brief 原生图元类型（用于路径追踪等无需三角化的场景）
+// 原生图元类型（用于路径追踪等无需三角化的场景）
 enum class PrimitiveShape : uint8_t {
     Sphere = 1,
     Box    = 2,
@@ -16,7 +16,7 @@ enum class PrimitiveShape : uint8_t {
     Plane  = 0
 };
 
-/// @brief 原生图元渲染组件
+// 原生图元渲染组件
 /// 替代三角网格 MeshRenderer，直接提供解析几何体（球体/盒子/锥体/平面）。
 /// 目前仅路径追踪管线使用，Forward 渲染器仍需要三角化 MeshRenderer。
 class ENGINE_API PrimitiveComponent : public Component {
@@ -38,6 +38,7 @@ public:
     void SetEmissive(const PrismaMath::vec3& e) { m_emissive = e; }
 
     // 序列化
+    ComponentId GetComponentId() const override { return GetComponentTypeId<PrimitiveComponent>(); }
     const char* GetComponentTypeName() const override { return "PrimitiveComponent"; }
     Data GetData() const;
     void SetData(const Data& d);

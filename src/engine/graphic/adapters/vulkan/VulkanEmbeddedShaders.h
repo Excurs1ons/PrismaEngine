@@ -4,10 +4,7 @@
 
 namespace Prisma::Graphic::Vulkan {
 
-/**
- * @brief 预编译的 SPIR-V 字节码 (用于 2D Quad 渲染)
- * 这些是由简单的 HLSL 编译而来的，支持常量缓冲区 (b0: Transform)
- */
+/* 预编译的 SPIR-V 字节码 (用于 2D Quad 渲染) */
 
 // 使用 glslangValidator (frag) 和 glslc (vert) 编译的纯色 SPIR-V (Target: Vulkan 1.0)
 // Fragment: pass-through v_Color, no textures

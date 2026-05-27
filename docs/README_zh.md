@@ -12,7 +12,7 @@ Prisma Engine 是一个使用现代 C++23 构建的跨平台 3D 游戏引擎，�
 简体中文 | [English](../README.md)
 
 > **当前状态**: Android Vulkan 运行时已达到生产级，CoreCLR C# 脚本系统已集成，SoA Entity Pool 支持百万级虚拟容量。
-> **最后更新**: 2026-05-22
+> **最后更新**: 2026-05-25
 
 ## CI/CD 状态
 

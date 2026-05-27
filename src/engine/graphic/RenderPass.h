@@ -2,8 +2,8 @@
 
 /// @file RenderPass.h
 /// @deprecated 此文件已被弃用，请使用 graphic/interfaces/IPass.h 中的 IPass 接口
-/// @note 旧版 RenderPass 类将被 LogicalPass 替代
-/// @note 此文件仅为向后兼容保留，将在未来版本中移除
+// note: 旧版 RenderPass 类将被 LogicalPass 替代
+// note: 此文件仅为向后兼容保留，将在未来版本中移除
 
 #include <memory>
 #include "interfaces/IDeviceContext.h"

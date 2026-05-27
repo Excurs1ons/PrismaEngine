@@ -31,9 +31,7 @@ namespace Prisma {
             constexpr AABB(double x1, double y1, double z1, double x2, double y2, double z2) noexcept
                 : minX(x1), minY(y1), minZ(z1), maxX(x2), maxY(y2), maxZ(z2) {}
 
-            /**
-             * @brief 从中心点和尺寸创建 AABB
-             */
+            // 从中心点和尺寸创建 AABB
             static AABB fromCenterSize(double cx, double cy, double cz, double sx, double sy, double sz) {
                 return AABB(
                     cx - sx * 0.5, cy - sy * 0.5, cz - sz * 0.5,
@@ -41,27 +39,21 @@ namespace Prisma {
                 );
             }
 
-            /**
-             * @brief 创建方块大小的 AABB
-             */
+            // 创建方块大小的 AABB
             static constexpr AABB ofSize(double x, double y, double z, double size) noexcept {
                 return AABB(x, y, z, x + size, y + size, z + size);
             }
 
             // ========== 碰撞检测 ==========
 
-            /**
-             * @brief 检查是否与另一个 AABB 相交
-             */
+            // 检查是否与另一个 AABB 相交
             constexpr bool intersects(const AABB& other) const noexcept {
                 return minX < other.maxX && maxX > other.minX &&
                        minY < other.maxY && maxY > other.minY &&
                        minZ < other.maxZ && maxZ > other.minZ;
             }
 
-            /**
-             * @brief 检查是否包含点
-             */
+            // 检查是否包含点
             constexpr bool contains(double x, double y, double z) const noexcept {
                 return x >= minX && x <= maxX &&
                        y >= minY && y <= maxY &&
@@ -72,9 +64,7 @@ namespace Prisma {
                 return contains(point.x, point.y, point.z);
             }
 
-            /**
-             * @brief 检查点是否在 AABB 内部（不包括边界）
-             */
+            // 检查点是否在 AABB 内部（不包括边界）
             constexpr bool isInside(double x, double y, double z) const noexcept {
                 return x > minX && x < maxX &&
                        y > minY && y < maxY &&
@@ -83,9 +73,7 @@ namespace Prisma {
 
             // ========== AABB 操作 ==========
 
-            /**
-             * @brief 获取两个 AABB 的交集
-             */
+            // 获取两个 AABB 的交集
             AABB intersection(const AABB& other) const noexcept {
                 return AABB(
                     std::max(minX, other.minX),
@@ -97,9 +85,7 @@ namespace Prisma {
                 );
             }
 
-            /**
-             * @brief 移动 AABB
-             */
+            // 移动 AABB
             AABB move(double dx, double dy, double dz) const noexcept {
                 return AABB(minX + dx, minY + dy, minZ + dz,
                            maxX + dx, maxY + dy, maxZ + dz);
@@ -109,25 +95,19 @@ namespace Prisma {
                 return move(delta.x, delta.y, delta.z);
             }
 
-            /**
-             * @brief 缩小 AABB
-             */
+            // 缩小 AABB
             AABB shrink(double x, double y, double z) const noexcept {
                 return AABB(minX + x, minY + y, minZ + z,
                            maxX - x, maxY - y, maxZ - z);
             }
 
-            /**
-             * @brief 扩展 AABB
-             */
+            // 扩展 AABB
             AABB expand(double x, double y, double z) const noexcept {
                 return AABB(minX - x, minY - y, minZ - z,
                            maxX + x, maxY + y, maxZ + z);
             }
 
-            /**
-             * @brief 合并两个 AABB（创建包含两者的最小 AABB）
-             */
+            // 合并两个 AABB（创建包含两者的最小 AABB）
             AABB unionAABB(const AABB& other) const noexcept {
                 return AABB(
                     std::min(minX, other.minX),
@@ -141,31 +121,21 @@ namespace Prisma {
 
             // ========== 属性查询 ==========
 
-            /**
-             * @brief 获取 X 大小
-             */
+            // 获取 X 大小
             constexpr double getXsize() const noexcept { return maxX - minX; }
 
-            /**
-             * @brief 获取 Y 大小
-             */
+            // 获取 Y 大小
             constexpr double getYsize() const noexcept { return maxY - minY; }
 
-            /**
-             * @brief 获取 Z 大小
-             */
+            // 获取 Z 大小
             constexpr double getZsize() const noexcept { return maxZ - minZ; }
 
-            /**
-             * @brief 获取平均边长（用于碰撞检测误差）
-             */
+            // 获取平均边长（用于碰撞检测误差）
             constexpr double getAverageEdgeLength() const noexcept {
                 return (getXsize() + getYsize() + getZsize()) / 3.0;
             }
 
-            /**
-             * @brief 获取中心点
-             */
+            // 获取中心点
             constexpr glm::dvec3 getCenter() const noexcept {
                 return glm::dvec3(
                     (minX + maxX) * 0.5,
@@ -174,9 +144,7 @@ namespace Prisma {
                 );
             }
 
-            /**
-             * @brief 获取体积
-             */
+            // 获取体积
             constexpr double getVolume() const noexcept {
                 return (maxX - minX) * (maxY - minY) * (maxZ - minZ);
             }
@@ -193,10 +161,7 @@ namespace Prisma {
             }
         };
 
-        /**
-         * @brief 射线 - 用于射线检测和拾取
-         * 对应 Minecraft: net.minecraft.world.level.ClipContext
-         */
+        /* 射线 - 用于射线检测和拾取 */
         class Ray {
         public:
             glm::dvec3 origin;      // 射线起点
@@ -208,27 +173,19 @@ namespace Prisma {
             constexpr Ray(const glm::dvec3& origin, const glm::dvec3& direction) noexcept
                 : origin(origin), direction(direction) {}
 
-            /**
-             * @brief 获取射线上的点
-             * @param t 距离参数
-             */
+            /* 获取射线上的点 */
             constexpr glm::dvec3 getPoint(double t) const noexcept {
                 return origin + direction * t;
             }
 
-            /**
-             * @brief 从两点创建射线
-             */
+            // 从两点创建射线
             static Ray fromPoints(const glm::dvec3& from, const glm::dvec3& to) {
                 glm::dvec3 dir = glm::normalize(to - from);
                 return Ray(from, dir);
             }
         };
 
-        /**
-         * @brief 射线检测结果
-         * 对应 Minecraft: net.minecraft.world.phys.BlockHitResult
-         */
+        /* 射线检测结果 */
         struct RaycastHit {
             glm::dvec3 position;      // 碰撞位置
             glm::dvec3 normal;        // 碰撞面法线
@@ -236,9 +193,7 @@ namespace Prisma {
             bool isValid;             // 是否有效
             double distance;          // 碰撞距离
 
-            /**
-             * @brief 碰撞面方向枚举
-             */
+            // 碰撞面方向枚举
             enum class FaceDirection {
                 DOWN,   // -Y
                 UP,     // +Y
@@ -254,26 +209,16 @@ namespace Prisma {
                 : boundingBox(nullptr), isValid(false), distance(0) {}
         };
 
-        /**
-         * @brief 碰撞系统核心类
-         * 提供各种碰撞检测功能
-         */
+        /* 碰撞系统核心类 */
         class CollisionSystem {
         public:
-            /**
-             * @brief AABB vs AABB 碰撞检测
-             * @return 是否碰撞
-             */
+            /* AABB vs AABB 碰撞检测 */
             static constexpr bool checkAABB(const AABB& a, const AABB& b) noexcept {
                 return a.intersects(b);
             }
 
             /**
              * @brief AABB vs AABB 碰撞检测（带穿透深度）
-             * @param a 第一个 AABB
-             * @param b 第二个 AABB
-             * @param penetration 输出穿透向量
-             * @return 是否碰撞
              */
             static bool checkAABBPenetration(const AABB& a, const AABB& b, glm::dvec3& penetration) {
                 if (!a.intersects(b)) {
@@ -303,11 +248,6 @@ namespace Prisma {
 
             /**
              * @brief 射线 vs AABB 检测
-             * @param ray 射线
-             * @param aabb 包围盒
-             * @param tMin 输出：最近碰撞距离
-             * @param tMax 输出：最远碰撞距离
-             * @return 是否碰撞
              *
              * 使用 slab 算法实现高效的射线-AABB 检测
              */
@@ -342,10 +282,6 @@ namespace Prisma {
 
             /**
              * @brief 射线 vs AABB 检测（带法线）
-             * @param ray 射线
-             * @param aabb 包围盒
-             * @param hit 输出碰撞信息
-             * @return 是否碰撞
              */
             static bool rayCastAABB(const Ray& ray, const AABB& aabb, RaycastHit& hit) {
                 double tMin, tMax;
@@ -384,11 +320,6 @@ namespace Prisma {
 
             /**
              * @brief 多个 AABB 射线检测（返回最近的碰撞）
-             * @param ray 射线
-             * @param aabbs AABB 列表
-             * @param maxDistance 最大检测距离
-             * @param hit 输出最近的碰撞
-             * @return 是否碰撞
              */
             static bool rayCastMultiple(const Ray& ray, const std::vector<AABB>& aabbs,
                                        double maxDistance, RaycastHit& hit) {
@@ -409,11 +340,6 @@ namespace Prisma {
 
             /**
              * @brief 扫描检测（Sweep test）- 检测物体移动过程中的碰撞
-             * @param movingAABB 移动的 AABB
-             * @param movement 移动向量
-             * @param staticAABB 静态 AABB
-             * @param hitTime 输出碰撞时间 (0-1)
-             * @return 是否碰撞
              */
             static bool sweepAABB(const AABB& movingAABB, const glm::dvec3& movement,
                                  const AABB& staticAABB, double& hitTime) {
@@ -446,11 +372,6 @@ namespace Prisma {
 
             /**
              * @brief 碰撞响应 - 解决实体与环境的碰撞
-             * @param entityAABB 实体 AABB
-             * @param velocity 实体速度（会被修改）
-             * @param worldCollisions 世界中的碰撞 AABB 列表
-             * @param onGround 输出：是否在地面上
-             * @return 是否发生碰撞
              */
             static bool resolveCollisions(const AABB& entityAABB, glm::dvec3& velocity,
                                           const std::vector<AABB>& worldCollisions, bool& onGround) {
@@ -492,9 +413,7 @@ namespace Prisma {
             }
 
         private:
-            /**
-             * @brief 单轴扫描检测
-             */
+            // 单轴扫描检测
             static bool sweepAxis(const AABB& moving, const glm::dvec3& movement,
                                   const AABB& stationary, int axis,
                                   double& entryTime, double& exitTime) {

@@ -15,9 +15,7 @@
 
 namespace Prisma {
 
-/**
- * @brief 资产管理器 (一个普通的子系统，受 Engine 调遣)
- */
+// 资产管理器 (一个普通的子系统，受 Engine 调遣)
 class ENGINE_API AssetManager : public ISubSystem {
 public:
     AssetManager();

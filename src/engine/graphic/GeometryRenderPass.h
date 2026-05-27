@@ -2,8 +2,8 @@
 
 /// @file GeometryRenderPass.h
 /// @deprecated 此文件已被弃用，请使用 graphic/pipelines/deferred/GeometryPass.h
-/// @note 旧版 GeometryRenderPass 类已被新的 GeometryPass 替代
-/// @note 此文件仅为向后兼容保留，将在未来版本中移除
+// note: 旧版 GeometryRenderPass 类已被新的 GeometryPass 替代
+// note: 此文件仅为向后兼容保留，将在未来版本中移除
 
 #include "RenderPass.h"
 #include <vector>

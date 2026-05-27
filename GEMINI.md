@@ -4,15 +4,15 @@ This file provides critical context and instructions for AI agents working on th
 
 ## Project Overview
 
-Prisma Engine is a high-performance, cross-platform 3D game engine built with **modern C++20**, focusing on a **Vulkan** rendering backend and **SDL3** for platform abstraction (input, audio, window management). It utilizes a modular architecture with a **Driver-Device pattern** to decouple high-level logic from platform-specific APIs.
+Prisma Engine is a high-performance, cross-platform 3D game engine built with **modern C++23**, focusing on a **Vulkan** rendering backend and **SDL3** for platform abstraction (input, audio, window management). It utilizes a modular architecture with a **Driver-Device pattern** to decouple high-level logic from platform-specific APIs.
 
 ### Core Technologies
-- **Language:** C++20 (Concepts, Coroutines, Designated Initializers)
-- **Graphics API:** Vulkan (Primary), DirectX 12 (Windows-specific, secondary)
+- **Language:** C++23 (Concepts, Coroutines, Designated Initializers)
+- **Graphics API:** Vulkan (Primary, cross-platform), DirectX 12 (Windows-specific, secondary)
 - **Platform Layer:** SDL3
-- **Scripting:** Mono / CoreCLR (.NET)
-- **UI:** ImGui (Editor and Debug tools)
-- **Build System:** CMake (3.31+) with Presets
+- **Scripting:** CoreCLR (.NET 10) primary, Mono legacy
+- **UI:** ImGui (Editor and Debug tools), WebUI (Browser-based editor)
+- **Build System:** CMake (3.31+) with Presets, FetchContent dependency management
 
 ### Architecture
 - **Driver-Device Pattern:** Decouples platform-specific implementations (Drivers) from high-level engine services (Devices).
@@ -22,45 +22,49 @@ Prisma Engine is a high-performance, cross-platform 3D game engine built with **
 - **Modern Design Philosophy:** Explicitly avoids legacy patterns like Unity's Interop overhead, Reflection-based magic, and GC pressure (see `docs/UnityLegacyAvoidance.md`).
 
 ## Directory Structure
-- `src/engine/`: Core engine source code (Audio, Graphic, ECS, Input, etc.)
-- `src/editor/`: ImGui-based editor tools.
-- `src/runtime/`: Engine runtime executable.
-- `projects/`: Sample games and templates (e.g., `PacManGame`, `Prisma2D`).
+- `src/engine/`: Core engine source code (Audio, Graphic, ECS, Input, Scripting, etc.)
+- `src/editor/`: WebUI editor, ImGui panels, MCP server, editor core.
+- `src/launcher/`: Cross-platform runtime launcher entry point.
+- `src/tests/`: Engine tests (AudioTest).
+- `projects/`: Sample games and templates (Prisma2D, PathTracing3D, PacManGame, PrismaCraft, ClusteredForward3D, Deferred3D, SRP2D, NeoEditor).
+- `sdk/`: Public headers + CMake config for `find_package(PrismaEngine)`.
+- `assets/shaders/`: Shader source files (GLSL, PBR/NPR/clustered).
+- `.dependencies/`: Vendored third-party libraries (FetchContent cache).
 - `scripts/`: Build, package, and utility scripts.
 - `docs/`: Extensive documentation on systems and architecture.
-- `cmake/`: Modular CMake configuration files.
+- `cmake/`: Modular CMake configuration files (Engine/Editor/Launcher/SDK targets).
 
 ## Building and Running
 
 ### Prerequisites
 - CMake 3.31+
-- C++20 compatible compiler (MSVC 17.10+, GCC 11+, Clang 13+)
+- C++23 compatible compiler (MSVC 17.10+, GCC 13+, Clang 16+)
 - Vulkan SDK
 - SDL3
 
 ### Key Commands
-The engine uses a unified build script for automation:
+The engine uses CMake presets directly:
 
 ```bash
-# Build the engine (default: debug)
-./scripts/build.sh --target engine
+# Configure with preset
+cmake --preset linux-x64-debug
 
-# Build and run PacMan sample game
-./scripts/run-pacman.sh --config debug
+# Build everything
+cmake --build build/linux-x64-debug --parallel
 
-# Build the editor
-./scripts/build.sh --target editor --config release
+# Build specific target
+cmake --build build/linux-x64-debug --target Engine
 
-# Clean build directory
-./scripts/build.sh --clean
+# Build a project
+cmake --build build/linux-x64-debug --target PathTracing3D
 ```
 
-### CMake Presets
+### CMake Presets (see CMakePresets.json)
 Common presets include:
-- `engine-linux-x64-debug` / `engine-linux-x64-release`
-- `editor-linux-x64-debug` / `editor-linux-x64-release`
-- `pacman-linux-x64-debug` / `pacman-linux-x64-release`
-- `engine-android-arm64-debug` / `engine-android-arm64-release`
+- `linux-x64-debug` / `linux-x64-release`
+- `windows-x64-debug` / `windows-x64-release`
+- `linux-arm64-debug` (for ARM targets)
+- Android builds configured via Gradle + CMake
 
 ## Development Conventions
 
@@ -75,33 +79,21 @@ Common presets include:
     - Braces: Allman style (braces on new lines).
     - Indentation: 4 spaces (no tabs).
 - **Standards:**
-    - No `using namespace std;`.
-    - Prefer `smart pointers` and `RAII` over manual memory management.
-    - Use `static_cast` instead of C-style casts.
+    - C++23, no `(void)` casts — use `[[maybe_unused]]`.
+    - Namespace `PrismaEngine { namespace Graphic { ... } }` for engine code.
+    - Third-party warnings suppressed via CMake flags, never by modifying library source.
 
 ### Key Subsystems
-- **Audio:** `AudioDevice` uses `IAudioDriver` (SDL3, XAudio2, AAudio).
-- **Input:** `InputDevice` uses `IInputDriver` (SDL3, Win32, GameActivity).
-- **Graphics:** `Renderer` and `RenderGraph` manage the Vulkan pipeline.
-- **Resources:** `AssetManager` handles loading via `AssetSerializer`.
+- **Audio:** DSP node graph (22 node types), multi-backend (miniaudio/SDL3/XAudio2), acoustic raytracing.
+- **Input:** `InputDevice` uses `IInputDriver` (SDL3, Win32, GameActivity), enhanced input manager.
+- **Graphics:** Unified RHI with Vulkan backend, Forward/Deferred/Clustered/NPR/PathTracing pipelines.
+- **Resources:** Handle&lt;T&gt; generational index system, ResourcePool free-list.
+- **Scripting:** CoreCLR .NET 10 self-hosted, C# Prisma.Core library with SRP bindings.
+- **MCP:** Model Context Protocol server (17 tools, 7 categories, dual transport).
 
 ## Engineering Roadmap & TODOs
 
-### 🔴 高优先级 (High Priority)
-- **运行时着色器编译 (Runtime Shader Compilation)**: 
-    - 引入 `shaderc` (Google) 或 `DXC` (Microsoft) 作为引擎内部库依赖。
-    - 实现 `IShader::RecompileFromSource` 接口，支持 GLSL/HLSL 直接编译为 SPIR-V。
-    - 移除对外部 `glslc` 或 `dxc.exe` 的硬性环境依赖，提升工程便携性。
-- **Glaze 迁移与 nlohmann/json 清理**:
-    - 完成从 `nlohmann/json` 到 `Glaze` 的全面迁移。 (已完成构建系统和核心库重构)
-    - 移除所有源文件中对 `nlohmann/json.hpp` 的引用。 (已完成)
-- **Visual Studio 2026 兼容性维护**:
-    - 确保后续新增模块在 MSVC v144 编译器下的零警告编译。
-
-### 🟡 中优先级 (Medium Priority)
-- **依赖便携化 (Dependency Portability)**:
-    - 将 Vulkan Loader 和 .NET SDK 绿色化，放入 `.dependencies` 目录。
-    - 更新 `setup-env.ps1` 支持自动下载上述便携组件。
+Refer to [docs/Roadmap.md](docs/Roadmap.md) and [docs/Index.md](docs/Index.md) for current engineering priorities, module status, and implementation plans.
 
 ## Guidelines for AI Agents
 1. **Always use `-j2` or `-j4` for builds** on ARM/limited resources to avoid memory exhaustion (as per global context).

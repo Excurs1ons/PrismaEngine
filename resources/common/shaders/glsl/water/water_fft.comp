@@ -1,0 +1,133 @@
+#version 460
+#extension GL_EXT_scalar_block_layout : require
+
+// ============================================================================
+// PrismaEngine — Water FFT Compute Shader
+// Phillips spectrum -> IFFT -> displacement/normal map
+//
+// This compute shader generates the initial Phillips spectrum
+// for ocean wave simulation. The FFT and IFFT stages would be
+// implemented as separate compute passes.
+// ============================================================================
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// Input: Phillips spectrum (complex height + complex displacement)
+// xy = complex height (real, imag)
+// zw = complex displacement (real, imag)
+layout(std430, binding = 0) buffer SpectrumBuffer {
+    vec4 spectrum[];
+};
+
+// Output: Displacement map
+// RG = slope XZ (signed byte or float)
+// B = height (float)
+// A = fold/choppiness
+layout(rgba32f, binding = 1) uniform image2D u_DisplacementMap;
+
+// Uniforms
+layout(std140, binding = 2) uniform FFTUniforms {
+    uint  u_Resolution;     // texture resolution (power of 2)
+    float u_PatchSize;      // world size of simulated patch
+    float u_WindSpeed;      // wind speed in m/s
+    vec2  u_WindDirection;  // normalized wind direction
+    float u_Amplitude;      // wave amplitude scale
+    float u_Lambda;         // choppiness factor
+    float u_Time;           // simulation time
+    float u_Padding;
+};
+
+// Twiddle factors for FFT (precomputed)
+// In a full implementation, these would be passed as a uniform buffer
+
+// Phillips spectrum evaluation
+float phillips(float kx, float kz, float windSpeed, vec2 windDir) {
+    float kLen = sqrt(kx * kx + kz * kz);
+    if (kLen < 0.0001) return 0.0;
+
+    float L = windSpeed * windSpeed / 9.81;
+    float kHatX = kx / kLen;
+    float kHatZ = kz / kLen;
+
+    float windDotK = windDir.x * kHatX + windDir.y * kHatZ;
+    if (windDotK < 0.0) windDotK = 0.0;
+
+    float L2 = L * L;
+    float kL2 = kLen * kLen * L2;
+    float k4 = kLen * kLen * kLen * kLen;
+    float P = u_Amplitude * exp(-1.0 / kL2) / (k4) * windDotK * windDotK;
+
+    // Suppress very short waves
+    P *= exp(-kLen * kLen * 0.000001);
+
+    return P;
+}
+
+// Angular frequency for deep water waves
+float omega(float kx, float kz) {
+    float kLen = sqrt(kx * kx + kz * kz);
+    if (kLen < 0.0001) return 0.0;
+    return sqrt(9.81 * kLen);
+}
+
+void main() {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    uint res = u_Resolution;
+
+    if (pos.x >= int(res) || pos.y >= int(res)) return;
+
+    uint idx = pos.y * res + pos.x;
+
+    // Wave vector
+    float kx = (2.0 * 3.14159265 * float(pos.x)) / u_PatchSize;
+    float kz = (2.0 * 3.14159265 * float(pos.y)) / u_PatchSize;
+
+    // Handle center (DC)
+    if (pos.x == 0 && pos.y == 0) {
+        imageStore(u_DisplacementMap, pos, vec4(0.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    // Time evolution of spectrum
+    // h(k,t) = h0(k) * exp(i * omega(k) * t) + h0*(-k) * exp(-i * omega(k) * t)
+    float w = omega(kx, kz);
+
+    vec4 h0 = spectrum[idx];
+
+    // Conjugate for -k (wrap around)
+    uint negIdx = ((res - pos.y) % res) * res + ((res - pos.x) % res);
+    vec4 h0Conj = spectrum[negIdx];
+    h0Conj = vec4(h0Conj.x, -h0Conj.y, h0Conj.z, -h0Conj.w);
+
+    float cosWT = cos(w * u_Time);
+    float sinWT = sin(w * u_Time);
+
+    // h(k,t) = h0 * exp(iwt) + conj(h0) * exp(-iwt)
+    float realH = h0.x * cosWT - h0.y * sinWT + h0Conj.x * cosWT - h0Conj.y * (-sinWT);
+    float imagH = h0.x * sinWT + h0.y * cosWT + h0Conj.x * (-sinWT) + h0Conj.y * cosWT;
+
+    // Displacement (choppy waves)
+    float realD = h0.z * cosWT - h0.w * sinWT + h0Conj.z * cosWT - h0Conj.w * (-sinWT);
+    float imagD = h0.z * sinWT + h0.w * cosWT + h0Conj.z * (-sinWT) + h0Conj.w * cosWT;
+
+    // Height
+    float height = realH; // Use real part as height
+
+    // Choppy displacement in XZ
+    float dispX = 0.0;
+    float dispZ = 0.0;
+    if (kx != 0.0 || kz != 0.0) {
+        float kLen = sqrt(kx * kx + kz * kz);
+        dispX = -imagD * kx / kLen;
+        dispZ = -imagD * kz / kLen;
+    }
+
+    // Slope for normal computation
+    float slopeX = -imagH * kx;
+    float slopeZ = -imagH * kz;
+
+    // Store displacement map
+    // RG = slope XZ, B = height, A = fold/choppiness
+    imageStore(u_DisplacementMap, pos,
+               vec4(slopeX, slopeZ, height, u_Lambda * length(vec2(dispX, dispZ))));
+}
