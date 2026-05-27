@@ -1,6 +1,8 @@
 #include "ConsoleUI.h"
+#include "Logger.h"
 #include "Engine.h"
 #include "Application.h"
+#include <imgui.h>
 #include <algorithm>
 #include <cctype>
 

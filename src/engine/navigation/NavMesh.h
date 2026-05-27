@@ -1,7 +1,9 @@
 #pragma once
 
 #include "Export.h"
+#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/glm.hpp>
+#include <glm/gtx/norm.hpp>
 #include <vector>
 #include <cstdint>
 #include <cmath>

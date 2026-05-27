@@ -1,5 +1,7 @@
 #include "terrain/HeightMap.h"
 #include "Logger.h"
+#include <stb_image.h>
+#include <fmt/core.h>
 #include <fstream>
 #include <algorithm>
 #include <cmath>
@@ -55,8 +57,6 @@ bool HeightMap::LoadFromRaw(const std::string& filepath, uint32_t width,
 
 bool HeightMap::LoadFromPNG(const std::string& filepath, float heightScale)
 {
-#include <stb_image.h>
-
     int imgWidth, imgHeight, channels;
     unsigned char* imgData = stbi_load(filepath.c_str(), &imgWidth, &imgHeight,
                                         &channels, 1); // 强制单通道

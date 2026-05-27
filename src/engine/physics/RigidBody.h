@@ -319,7 +319,7 @@ namespace Prisma {
             double getCcdMotionThreshold() const { return m_ccdMotionThreshold; }
 
         private:
-            friend class PhysicsSystem;
+            friend class ::Prisma::PhysicsSystem;
             friend class ConstraintSolver;
             friend class CCDSolver;
 

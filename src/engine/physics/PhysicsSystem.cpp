@@ -161,7 +161,7 @@ void PhysicsSystem::stepCollide() {
         // 静态体不主动碰撞（但可以被碰撞）
         if (bodyA->isStatic()) continue;
 
-        AABB aabbA = bodyA->getWorldAABB();
+        Physics::AABB aabbA = bodyA->getWorldAABB();
 
         for (size_t j = i + 1; j < m_bodies.size(); ++j) {
             auto& bodyB = m_bodies[j];
@@ -169,7 +169,7 @@ void PhysicsSystem::stepCollide() {
             if (bodyA->isStatic() && bodyB->isStatic()) continue;
             if (!bodyB->isAwake() && bodyA->isStatic()) continue;
 
-            AABB aabbB = bodyB->getWorldAABB();
+            Physics::AABB aabbB = bodyB->getWorldAABB();
 
             // AABB 粗略检测
             if (!Physics::CollisionSystem::checkAABB(aabbA, aabbB)) continue;
