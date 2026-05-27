@@ -1,10 +1,5 @@
 #pragma once
 
-#ifdef _MSC_VER
-#include <intrin.h>
-#pragma intrinsic(__faststorefence)
-#endif
-
 #include "ISubSystem.h"
 #include "Export.h"
 #include "network/Session.h"

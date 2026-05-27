@@ -6,7 +6,6 @@
     #include <ws2tcpip.h>
     #ifdef _MSC_VER
         #include <intrin.h>
-        #pragma intrinsic(__faststorefence)
     #endif
     using SOCKET_HANDLE = SOCKET;
     static constexpr SOCKET_HANDLE INVALID_SOCKET_VALUE = INVALID_SOCKET;

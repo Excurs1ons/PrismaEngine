@@ -66,6 +66,7 @@ set(CORE_SOURCES
     audio/AudioDeviceNull.cpp
     audio/AudioDeviceSDL3.cpp
     audio/AudioAPI.cpp
+    audio/backends/FastStoreFence.cpp
 
     # Input
     input/InputDevice.cpp
@@ -632,12 +633,6 @@ target_compile_definitions(Engine PRIVATE
     PRISMA_ENGINE_EXPORTS=1
     PrismaEngine_EXPORTS=1
 )
-if(MSVC)
-    # MSVC 19.44+ (VS 2022 17.14) 中 __faststorefence 内建函数已被移除或
-    # 不再内联。miniaudio 库使用了 __faststorefence，导致链接器报错。
-    # 在预处理阶段将 __faststorefence 替换为 _mm_sfence()。
-    target_compile_definitions(Engine PRIVATE "__faststorefence=_mm_sfence")
-endif()
 target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 
 # 渲染后端宏定义 (仅 Vulkan)

@@ -6,9 +6,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#ifdef _MSC_VER
-#include <intrin.h>
-#endif
 
 namespace Prisma::Graphic {
 
