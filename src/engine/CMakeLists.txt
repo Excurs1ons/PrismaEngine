@@ -59,6 +59,7 @@ set(CORE_SOURCES
 
     # Animation
     animation/AnimationSystem.cpp
+    animation/Skeleton.cpp
 
     # Audio
     audio/SoundSynthesizer.cpp
@@ -95,11 +96,22 @@ set(CORE_SOURCES
     terrain/TerrainCollision.cpp
     terrain/TerrainSystem.cpp
 
+    # Network
+    network/TCPTransport.cpp
+    network/UDPTransport.cpp
+    network/Session.cpp
+    network/NetworkSystem.cpp
+
     # Water
     water/WaterMesh.cpp
     water/WaterSystem.cpp
     water/WaveSimulation.cpp
     water/WaterInteraction.cpp
+
+    # Localization
+    localization/LocalizationFile.cpp
+    localization/LocalizationManager.cpp
+    localization/LocalizationSystem.cpp
 
     # Profiling
     profiling/ProfilerGPU.cpp
@@ -492,12 +504,29 @@ set(CORE_HEADERS
     terrain/TerrainComponent.h
     terrain/TerrainSystem.h
 
+    # Network
+    network/NetworkTransport.h
+    network/TCPTransport.h
+    network/UDPTransport.h
+    network/Packet.h
+    network/RPCManager.h
+    network/NetworkEntity.h
+    network/Session.h
+    network/NetworkSystem.h
+
     # Water
     water/WaterConfig.h
     water/WaterMesh.h
     water/WaveSimulation.h
     water/WaterInteraction.h
     water/WaterSystem.h
+
+    # Localization
+    localization/LocalizationData.h
+    localization/LocalizationFile.h
+    localization/LocalizationManager.h
+    localization/LocalizationSystem.h
+    localization/L10n.h
 
     # Profiling
     profiling/ProfilerCPU.h
@@ -821,8 +850,10 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/particles>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/terrain>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/navigation>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/network>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/water>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ai>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/localization>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/animation>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scripting>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
