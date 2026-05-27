@@ -129,17 +129,17 @@ void ConsoleSystem::Update([[maybe_unused]] Timestep ts) {
 }
 
 void ConsoleSystem::RegisterDefaultCVars() {
-    m_CVarRegistry.Register(new CVar<bool>("sv_cheats", false, "允许使用作弊指令", CVarFlags::Cheat));
-    m_CVarRegistry.Register(new CVar<int>("fps_max", 60, 0, 1000, "最大帧率限制 (0=不限)", CVarFlags::None));
-    m_CVarRegistry.Register(new CVar<bool>("r_vsync", true, "垂直同步", CVarFlags::None));
-    m_CVarRegistry.Register(new CVar<int>("r_resolution_x", 1920, 640, 7680, "水平分辨率", CVarFlags::RequireRestart));
-    m_CVarRegistry.Register(new CVar<int>("r_resolution_y", 1080, 480, 4320, "垂直分辨率", CVarFlags::RequireRestart));
-    m_CVarRegistry.Register(new CVar<float>("r_render_scale", 1.0f, 0.25f, 2.0f, "渲染分辨率缩放", CVarFlags::None));
-    m_CVarRegistry.Register(new CVar<float>("s_master_volume", 1.0f, 0.0f, 1.0f, "主音量", CVarFlags::None));
-    m_CVarRegistry.Register(new CVar<float>("s_music_volume", 0.8f, 0.0f, 1.0f, "音乐音量", CVarFlags::None));
-    m_CVarRegistry.Register(new CVar<float>("s_sfx_volume", 1.0f, 0.0f, 1.0f, "音效音量", CVarFlags::None));
-    m_CVarRegistry.Register(new CVar<float>("r_mouse_sensitivity", 0.5f, 0.01f, 2.0f, "鼠标灵敏度", CVarFlags::None));
-    m_CVarRegistry.Register(new CVar<bool>("r_invert_mouse", false, "反转鼠标 Y 轴", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<bool>>("sv_cheats", false, "允许使用作弊指令", CVarFlags::Cheat));
+    m_CVarRegistry.Register(std::make_unique<CVar<int>>("fps_max", 60, 0, 1000, "最大帧率限制 (0=不限)", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<bool>>("r_vsync", true, "垂直同步", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<int>>("r_resolution_x", 1920, 640, 7680, "水平分辨率", CVarFlags::RequireRestart));
+    m_CVarRegistry.Register(std::make_unique<CVar<int>>("r_resolution_y", 1080, 480, 4320, "垂直分辨率", CVarFlags::RequireRestart));
+    m_CVarRegistry.Register(std::make_unique<CVar<float>>("r_render_scale", 1.0f, 0.25f, 2.0f, "渲染分辨率缩放", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<float>>("s_master_volume", 1.0f, 0.0f, 1.0f, "主音量", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<float>>("s_music_volume", 0.8f, 0.0f, 1.0f, "音乐音量", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<float>>("s_sfx_volume", 1.0f, 0.0f, 1.0f, "音效音量", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<float>>("r_mouse_sensitivity", 0.5f, 0.01f, 2.0f, "鼠标灵敏度", CVarFlags::None));
+    m_CVarRegistry.Register(std::make_unique<CVar<bool>>("r_invert_mouse", false, "反转鼠标 Y 轴", CVarFlags::None));
 }
 
 void ConsoleSystem::RegisterDefaultCommands() {

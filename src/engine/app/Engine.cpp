@@ -40,6 +40,9 @@
 #include "navigation/NavigationSystem.h"
 #include "ai/AISystem.h"
 #include "water/WaterSystem.h"
+#include "network/NetworkSystem.h"
+#include "localization/LocalizationSystem.h"
+
 
 
 
@@ -98,6 +101,9 @@ int Engine::Initialize() {
     m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
     m_AISystem = AddSystem<AI::AISystem>();
     m_WaterSystem = AddSystem<Water::WaterSystem>();
+    m_NavigationSystem = AddSystem<Navigation::NavigationSystem>();
+    m_NetworkSystem = AddSystem<Network::NetworkSystem>();
+    m_LocalizationSystem = AddSystem<Localization::LocalizationSystem>();
 
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {

@@ -64,6 +64,7 @@ public:
         }
 
         m_Offset = alignedOffset + size;
+        if (m_Offset > m_PeakOffset) m_PeakOffset = m_Offset;
         return static_cast<void*>(m_Memory + alignedOffset);
     }
 

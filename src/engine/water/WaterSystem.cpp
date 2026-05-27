@@ -177,7 +177,7 @@ void WaterSystem::CreateFrameBuffers()
     // Here we record the desired resolution for later use
     m_ReflectionResolution = 512;
     m_RefractionResolution = static_cast<uint32_t>(
-        static_cast<float>(m_RefractionResolution) / m_CameraAspect);
+        static_cast<float>(m_ReflectionResolution) / m_CameraAspect);
 
     LOG_INFO("Water", "Reflection/refraction framebuffers: {}x{}, {}x{}",
              m_ReflectionResolution, m_ReflectionResolution,

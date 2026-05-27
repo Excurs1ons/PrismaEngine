@@ -3,6 +3,7 @@
 #include "../Export.h"
 #include <algorithm>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -156,20 +157,19 @@ inline std::string CVar<std::string>::TypeName() { return "string"; }
 class ENGINE_API CVarRegistry {
 public:
     CVarRegistry() = default;
-    ~CVarRegistry() = default;
 
-    void Register(CVarBase* cvar) {
-        if (cvar) m_CVars[cvar->GetName()] = cvar;
+    void Register(std::unique_ptr<CVarBase> cvar) {
+        if (cvar) m_CVars[cvar->GetName()] = std::move(cvar);
     }
 
     CVarBase* Find(const std::string& name) {
         auto it = m_CVars.find(name);
-        return it != m_CVars.end() ? it->second : nullptr;
+        return it != m_CVars.end() ? it->second.get() : nullptr;
     }
 
     void ForEach(std::function<void(CVarBase*)> func) {
         for (auto& [name, cvar] : m_CVars) {
-            func(cvar);
+            func(cvar.get());
         }
     }
 
@@ -177,7 +177,7 @@ public:
         std::vector<CVarBase*> result;
         result.reserve(m_CVars.size());
         for (auto& [name, cvar] : m_CVars) {
-            result.push_back(cvar);
+            result.push_back(cvar.get());
         }
         return result;
     }
@@ -185,7 +185,7 @@ public:
     size_t GetCount() const { return m_CVars.size(); }
 
 private:
-    std::unordered_map<std::string, CVarBase*> m_CVars;
+    std::unordered_map<std::string, std::unique_ptr<CVarBase>> m_CVars;
 };
 
 } // namespace Prisma
