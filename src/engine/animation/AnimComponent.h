@@ -7,6 +7,8 @@
 #include "AnimStateMachine.h"
 #include "SkinningRenderer.h"
 
+class FABRIKSolver;
+
 #include <memory>
 #include <string>
 

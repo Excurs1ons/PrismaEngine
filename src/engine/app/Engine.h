@@ -18,7 +18,9 @@ namespace Prisma::Animation { class AnimationSystem; }
 namespace Prisma::Terrain { class TerrainSystem; }
 namespace Prisma::Navigation { class NavigationSystem; }
 namespace Prisma::Water { class WaterSystem; }
+namespace Prisma::Localization { class LocalizationSystem; }
 namespace Prisma::AI { class AISystem; }
+namespace Prisma::Network { class NetworkSystem; }
 
 namespace Prisma {
 
@@ -116,6 +118,9 @@ public:
     Particles::ParticleSystem* GetParticleSystem() { return GetSystem<Particles::ParticleSystem>(); }
     Terrain::TerrainSystem* GetTerrainSystem() { return GetSystem<Terrain::TerrainSystem>(); }
     Water::WaterSystem* GetWaterSystem() { return GetSystem<Water::WaterSystem>(); }
+    Network::NetworkSystem* GetNetworkSystem() { return m_NetworkSystem; }
+    Localization::LocalizationSystem* GetLocalizationSystem() { return m_LocalizationSystem; }
+    Scene& GetScene() { return *m_Scene; }
     
     // 通用系统获取
     template<typename T>
@@ -173,6 +178,9 @@ private:
     Terrain::TerrainSystem* m_TerrainSystem = nullptr;
     Navigation::NavigationSystem* m_NavigationSystem = nullptr;
     Water::WaterSystem* m_WaterSystem = nullptr;
+    Network::NetworkSystem* m_NetworkSystem = nullptr;
+    Localization::LocalizationSystem* m_LocalizationSystem = nullptr;
+    Scene* m_Scene = nullptr;
 
     bool m_Initialized = false;
     bool m_Running = false;

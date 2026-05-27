@@ -40,6 +40,15 @@ namespace Prisma {
                 double distanceToPoint(const glm::dvec3& point) const {
                     return glm::dot(normal, point) + distance;
                 }
+
+                static Plane fromPoints(const glm::dvec3& p1, const glm::dvec3& p2, const glm::dvec3& p3) {
+                    Plane plane;
+                    glm::dvec3 v1 = glm::normalize(p2 - p1);
+                    glm::dvec3 v2 = glm::normalize(p3 - p1);
+                    plane.normal = glm::normalize(glm::cross(v1, v2));
+                    plane.distance = -glm::dot(plane.normal, p1);
+                    return plane;
+                }
             };
 
             // ========== 构造函数 ==========
