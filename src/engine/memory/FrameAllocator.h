@@ -24,7 +24,7 @@ public:
         assert((m_Alignment & (m_Alignment - 1)) == 0 && "alignment must be power of 2");
 
         for (size_t i = 0; i < 2; ++i) {
-            m_Buffers[i] = static_cast<uint8_t*>(std::aligned_alloc(m_Alignment, m_BufferSize));
+            m_Buffers[i] = static_cast<uint8_t*>(PRISMA_ALIGNED_ALLOC(m_Alignment, m_BufferSize));
             m_Offsets[i] = 0;
         }
     }
@@ -93,7 +93,7 @@ public:
     void reset() override {
         for (size_t i = 0; i < 2; ++i) {
             if (m_Buffers[i]) {
-                std::free(m_Buffers[i]);
+                PRISMA_ALIGNED_FREE(m_Buffers[i]);
                 m_Buffers[i] = nullptr;
             }
             m_Offsets[i] = 0;

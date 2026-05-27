@@ -2,7 +2,18 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
 #include <string>
+
+// 平台兼容的对齐分配
+#ifdef _MSC_VER
+#include <malloc.h>
+#define PRISMA_ALIGNED_ALLOC(alignment, size) _aligned_malloc(size, alignment)
+#define PRISMA_ALIGNED_FREE(ptr) _aligned_free(ptr)
+#else
+#define PRISMA_ALIGNED_ALLOC(alignment, size) std::aligned_alloc(alignment, size)
+#define PRISMA_ALIGNED_FREE(ptr) std::free(ptr)
+#endif
 
 namespace Prisma::Memory {
 

@@ -34,7 +34,7 @@ public:
         m_BlockSize = (m_BlockSize + m_Alignment - 1) & ~(m_Alignment - 1);
 
         const size_t totalSize = m_BlockSize * m_MaxBlocks + m_Alignment;
-        m_Memory = static_cast<uint8_t*>(std::aligned_alloc(m_Alignment, totalSize));
+        m_Memory = static_cast<uint8_t*>(PRISMA_ALIGNED_ALLOC(m_Alignment, totalSize));
         if (!m_Memory) return;
 
         // 构建空闲链表
@@ -108,7 +108,7 @@ public:
 
     void reset() override {
         if (m_Memory) {
-            std::free(m_Memory);
+            PRISMA_ALIGNED_FREE(m_Memory);
             m_Memory = nullptr;
         }
         m_FreeHead = nullptr;

@@ -22,7 +22,7 @@ public:
         , m_Offset(0)
     {
         assert((m_Alignment & (m_Alignment - 1)) == 0 && "alignment must be power of 2");
-        m_Memory = static_cast<uint8_t*>(std::aligned_alloc(m_Alignment, m_Capacity));
+        m_Memory = static_cast<uint8_t*>(PRISMA_ALIGNED_ALLOC(m_Alignment, m_Capacity));
     }
 
     ~StackAllocator() override {
@@ -74,7 +74,7 @@ public:
 
     void reset() override {
         if (m_Memory) {
-            std::free(m_Memory);
+            PRISMA_ALIGNED_FREE(m_Memory);
             m_Memory = nullptr;
         }
         m_Offset = 0;
