@@ -22,6 +22,9 @@
       <_Parameter1>SRP2D_Managed</_Parameter1>
     </AssemblyAttribute>
     <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
+      <_Parameter1>MetroidvaniaDemo_Managed</_Parameter1>
+    </AssemblyAttribute>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleTo">
       <_Parameter1>PrismaEngine.Host</_Parameter1>
     </AssemblyAttribute>
   </ItemGroup>

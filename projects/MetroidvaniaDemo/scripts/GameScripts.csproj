@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <AssemblyName>MetroidvaniaDemo_Managed</AssemblyName>
+    <RootNamespace>GameScripts</RootNamespace>
+    <Nullable>enable</Nullable>
+    <OutputType>Library</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../../src/engine/scripting/CSharp/Prisma.Core/Prisma.Core.csproj">
+      <Private>true</Private>
+    </ProjectReference>
+    <ProjectReference Include="../../../src/engine/scripting/CSharp/Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
+    <TrimmerRootAssembly Include="MetroidvaniaDemo_Managed" />
+  </ItemGroup>
+</Project>
