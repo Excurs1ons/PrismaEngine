@@ -15,6 +15,7 @@ public:
                  bool enableNEE, bool usePrimitiveSphere);
     ~StatsOverlay() override = default;
 
+    ComponentId GetComponentId() const override { return GetComponentTypeId<StatsOverlay>(); }
     const char* GetComponentTypeName() const override { return "StatsOverlay"; }
     void Update(Timestep ts) override;
 

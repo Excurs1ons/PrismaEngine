@@ -13,6 +13,7 @@ public:
     StatsOverlay(const ApplicationSpecification& spec);
     ~StatsOverlay() override = default;
 
+    ComponentId GetComponentId() const override { return GetComponentTypeId<StatsOverlay>(); }
     const char* GetComponentTypeName() const override { return "StatsOverlay"; }
     void Update(Timestep ts) override;
 
