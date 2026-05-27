@@ -34,6 +34,8 @@
 #include "console/ConsoleSystem.h"
 #include "console/ConsoleUI.h"
 #include "profiling/ProfilerSystem.h"
+#include "animation/AnimationSystem.h"
+#include "particles/ParticleSystem.h"
 
 
 
@@ -78,6 +80,7 @@ int Engine::Initialize() {
     }
 
     m_MemorySystem = AddSystem<Memory::MemorySystem>();
+    m_AnimationSystem = AddSystem<Animation::AnimationSystem>();
     m_JobSystem = AddSystem<JobSystem>();
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
@@ -85,6 +88,7 @@ int Engine::Initialize() {
     m_PhysicsSystem = AddSystem<PhysicsSystem>();
     AddSystem<ConsoleSystem>();
     AddSystem<Graphic::ShaderLibrary>();
+    AddSystem<Particles::ParticleSystem>();
 
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {

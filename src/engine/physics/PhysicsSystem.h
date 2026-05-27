@@ -6,6 +6,7 @@
 #include "physics/Constraint.h"
 #include "physics/ConstraintSolver.h"
 #include "physics/TriggerManager.h"
+#include "physics/CCDSolver.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -113,6 +114,9 @@ private:
 
     // 约束求解器
     Physics::ConstraintSolver m_solver;
+
+    // 连续碰撞检测求解器
+    Physics::CCDSolver m_ccdSolver;
 
     // 触发管理器
     Physics::TriggerManager m_triggerManager;

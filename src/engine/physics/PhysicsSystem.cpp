@@ -147,48 +147,7 @@ void PhysicsSystem::stepIntegrateVelocity(double dt) {
 }
 
 void PhysicsSystem::stepCCD(double dt) {
-    // 对快速移动的刚体进行扫描检测
-    for (size_t i = 0; i < m_bodies.size(); ++i) {
-        auto& bodyA = m_bodies[i];
-        if (!bodyA->isActive() || bodyA->isStatic() || !bodyA->isAwake()) continue;
-
-        double speed = glm::length(bodyA->m_linearVelocity);
-        if (speed < m_ccdThreshold) continue;
-
-        // 估算移动距离
-        glm::dvec3 movement = bodyA->m_linearVelocity * dt;
-        double moveDist = glm::length(movement);
-        if (moveDist < bodyA->m_collisionHalfSize.x * 0.5) continue;
-
-        AABB bodyAABB = bodyA->getWorldAABB();
-
-        for (size_t j = 0; j < m_bodies.size(); ++j) {
-            if (i == j) continue;
-            auto& bodyB = m_bodies[j];
-            if (!bodyB->isActive()) continue;
-
-            AABB bodyBAABB = bodyB->getWorldAABB();
-
-            // 扫描检测
-            double hitTime = 1.0;
-            if (Physics::CollisionSystem::sweepAABB(bodyAABB, movement, bodyBAABB, hitTime)) {
-                // 如果检测到碰撞，调整位置到碰撞点
-                // 使用 hitTime 将 bodyA 放置在刚好接触的位置
-                glm::dvec3 adjustedPos = bodyA->m_position + movement * hitTime;
-                bodyA->m_position = adjustedPos;
-
-                // 在碰撞方向上归零速度
-                glm::dvec3 collisionNormal = glm::normalize(bodyBAABB.getCenter() - bodyA->m_position);
-                double velAlongNormal = glm::dot(bodyA->m_linearVelocity, collisionNormal);
-                if (velAlongNormal > 0.0) {
-                    bodyA->m_linearVelocity -= collisionNormal * velAlongNormal;
-                }
-
-                // 标记 bodyA 为已处理（跳过后续碰撞检测中的此体）
-                bodyA->m_collisionFlags = bodyA->m_collisionFlags;
-            }
-        }
-    }
+    m_ccdSolver.performCCD(m_bodies, dt);
 }
 
 void PhysicsSystem::stepCollide() {

@@ -1,0 +1,100 @@
+#version 460
+#extension GL_EXT_scalar_block_layout : require
+
+// ============================================================================
+// PrismaEngine — GPU 粒子更新计算着色器
+// 每个线程处理一个粒子
+// ============================================================================
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// 粒子数据 SSBO（匹配 GPUParticleData 布局）
+// position: xyz = 位置, w = 尺寸
+// velocity: xyz = 速度, w = 旋转角
+// color:    rgba
+// life:     x = 年龄, y = 总生命周期, z = unused, w = unused (w < 0 = 死亡)
+struct ParticleData {
+    vec4 position;   // xyz=pos, w=size
+    vec4 velocity;   // xyz=vel, w=rotation
+    vec4 color;      // rgba
+    vec4 life;       // x=age, y=lifetime, z=unused, w=unused
+};
+
+layout(std430, binding = 0) buffer ParticleBuffer {
+    ParticleData particles[];
+};
+
+// Uniform 数据（每帧更新）
+layout(std140, binding = 1) uniform ParticleUniforms {
+    float u_DeltaTime;
+    float u_GravityX;
+    float u_GravityY;
+    float u_GravityZ;
+    uint  u_AliveCount;
+    uint  u_MaxParticles;
+    float u_Padding0;
+    float u_Padding1;
+} uniforms;
+
+// 计数器（用于原子递增更新存活粒子数）
+layout(std430, binding = 2) buffer CounterBuffer {
+    uint aliveCounter[];
+};
+
+// 间接绘制参数
+layout(std430, binding = 3) buffer IndirectBuffer {
+    uint vertexCount;
+    uint instanceCount;
+    uint firstVertex;
+    uint firstInstance;
+} indirect;
+
+// 模板方法：从 xorshift RNG 生成 [0, 1) 随机数
+uint xorshift32(uint state) {
+    state ^= state << 13;
+    state ^= state >> 17;
+    state ^= state << 5;
+    return state;
+}
+
+float random01(inout uint state) {
+    return float(xorshift32(state)) / 4294967296.0;
+}
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= uniforms.u_MaxParticles) return;
+
+    ParticleData p = particles[idx];
+
+    // 死亡粒子（life.w < 0）跳过更新
+    if (p.life.w < 0.0) return;
+
+    // 增加年龄
+    p.life.x += uniforms.u_DeltaTime;
+
+    // 生命周期结束 → 标记死亡
+    if (p.life.x >= p.life.y) {
+        p.life.w = -1.0; // 死亡标记
+        particles[idx] = p;
+        return;
+    }
+
+    // 应用重力
+    p.velocity.x += uniforms.u_GravityX * uniforms.u_DeltaTime;
+    p.velocity.y += uniforms.u_GravityY * uniforms.u_DeltaTime;
+    p.velocity.z += uniforms.u_GravityZ * uniforms.u_DeltaTime;
+
+    // 更新位置
+    p.position.x += p.velocity.x * uniforms.u_DeltaTime;
+    p.position.y += p.velocity.y * uniforms.u_DeltaTime;
+    p.position.z += p.velocity.z * uniforms.u_DeltaTime;
+
+    // 更新旋转
+    p.velocity.w += p.velocity.w * uniforms.u_DeltaTime; // 角速度积分
+
+    // 颜色/尺寸插值由 CPU 或顶点着色器完成
+    // 计算着色器只负责物理更新
+
+    particles[idx] = p;
+}

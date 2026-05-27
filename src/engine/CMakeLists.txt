@@ -57,6 +57,9 @@ set(CORE_SOURCES
     transform/Camera.cpp
     transform/CameraController.cpp
 
+    # Animation
+    animation/AnimationSystem.cpp
+
     # Audio
     audio/SoundSynthesizer.cpp
     audio/AudioDeviceNull.cpp
@@ -75,6 +78,9 @@ set(CORE_SOURCES
     physics/PhysicsSystem.cpp
     physics/RigidBody.cpp
     physics/TriggerManager.cpp
+
+    # Particles
+    particles/ParticleSystem.cpp
 
     # Profiling
     profiling/ProfilerGPU.cpp
@@ -380,6 +386,15 @@ set(CORE_HEADERS
     transform/CameraController.h
     transform/FPSCounter.h
 
+    # Animation
+    animation/Skeleton.h
+    animation/AnimationClip.h
+    animation/AnimStateMachine.h
+    animation/SkinningRenderer.h
+    animation/IKController.h
+    animation/AnimComponent.h
+    animation/AnimationSystem.h
+
     # Audio
     audio/SoundSynthesizer.h
     audio/AudioAPI.h
@@ -422,8 +437,15 @@ set(CORE_HEADERS
     physics/Constraint.h
     physics/JointConstraint.h
     physics/ConstraintSolver.h
+    physics/CCDSolver.h
     physics/TriggerVolume.h
     physics/TriggerManager.h
+
+    # Particles
+    particles/CPUParticleSystem.h
+    particles/GPUParticleSystem.h
+    particles/ParticleEmitterComponent.h
+    particles/ParticleSystem.h
 
     # Profiling
     profiling/ProfilerCPU.h
@@ -663,6 +685,35 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     endif()
 endif()
 
+# ========== 粒子系统着色器编译 ==========
+set(PARTICLES_SHADER_DIR "${PROJECT_SOURCE_DIR}/resources/common/shaders/glsl/particles")
+file(GLOB PARTICLES_SHADER_SOURCES
+    "${PARTICLES_SHADER_DIR}/*.vert"
+    "${PARTICLES_SHADER_DIR}/*.frag"
+    "${PARTICLES_SHADER_DIR}/*.comp"
+)
+if(PARTICLES_SHADER_SOURCES)
+    find_program(GLSLANG_VALIDATOR glslangValidator)
+    if(GLSLANG_VALIDATOR)
+        foreach(SHADER ${PARTICLES_SHADER_SOURCES})
+            get_filename_component(SHADER_NAME ${SHADER} NAME)
+            set(SPV_OUTPUT "${PARTICLES_SHADER_DIR}/${SHADER_NAME}.spv")
+            add_custom_command(
+                OUTPUT ${SPV_OUTPUT}
+                COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
+                DEPENDS ${SHADER}
+                COMMENT "编译粒子着色器: ${SHADER_NAME} → SPIR-V"
+            )
+            list(APPEND PARTICLES_GENERATED_SPVS ${SPV_OUTPUT})
+        endforeach()
+        add_custom_target(ParticleShaders DEPENDS ${PARTICLES_GENERATED_SPVS})
+        add_dependencies(Engine ParticleShaders)
+        message(STATUS "粒子着色器 SPIR-V 编译已启用 (glslangValidator: ${GLSLANG_VALIDATOR})")
+    else()
+        message(WARNING "glslangValidator 未找到 — 粒子着色器将跳过 SPIR-V 编译，使用已有的 .spv")
+    endif()
+endif()
+
 target_include_directories(Engine
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
@@ -686,6 +737,8 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/window>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/platform>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/particles>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/animation>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scripting>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/packing>

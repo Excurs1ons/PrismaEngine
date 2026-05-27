@@ -14,6 +14,7 @@ class CommandLineParser;
 
 namespace Prisma::Audio { class IAudioDevice; struct AudioDesc; }
 namespace Prisma::Memory { class MemorySystem; }
+namespace Prisma::Animation { class AnimationSystem; }
 
 namespace Prisma {
 
@@ -32,6 +33,7 @@ class ThreadManager;
 class EntityManager;
 namespace Profiling { class ProfilerSystem; }
 class ConsoleSystem;
+namespace Particles { class ParticleSystem; }
 
 // 引擎配置规范
 struct EngineSpecification {
@@ -104,6 +106,8 @@ public:
     CommandLineParser& GetCommandLineParser();
     ConsoleSystem* GetConsoleSystem() { return GetSystem<ConsoleSystem>(); }
     Audio::IAudioDevice* GetAudioDevice() { return m_audioDevice.get(); }
+    Animation::AnimationSystem* GetAnimationSystem() { return m_AnimationSystem; }
+    Particles::ParticleSystem* GetParticleSystem() { return GetSystem<Particles::ParticleSystem>(); }
     
     // 通用系统获取
     template<typename T>
@@ -156,6 +160,7 @@ private:
     JobSystem* m_JobSystem = nullptr;
     Profiling::ProfilerSystem* m_ProfilerSystem = nullptr;
     Memory::MemorySystem* m_MemorySystem = nullptr;
+    Animation::AnimationSystem* m_AnimationSystem = nullptr;
 
     bool m_Initialized = false;
     bool m_Running = false;

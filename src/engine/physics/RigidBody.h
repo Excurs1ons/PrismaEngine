@@ -304,9 +304,24 @@ namespace Prisma {
             // 获取碰撞半尺寸
             const glm::dvec3& getCollisionHalfSize() const { return m_collisionHalfSize; }
 
+            // ========== CCD (连续碰撞检测) ==========
+
+            // 启用或禁用 CCD
+            void setCCDEnabled(bool enabled) { m_ccdEnabled = enabled; }
+
+            // 检查 CCD 是否启用
+            bool isCCDEnabled() const { return m_ccdEnabled; }
+
+            // 设置 CCD 速度阈值（超过此速度时触发 CCD）
+            void setCcdMotionThreshold(double threshold) { m_ccdMotionThreshold = threshold; }
+
+            // 获取 CCD 速度阈值
+            double getCcdMotionThreshold() const { return m_ccdMotionThreshold; }
+
         private:
             friend class PhysicsSystem;
             friend class ConstraintSolver;
+            friend class CCDSolver;
 
             // ========== 类型和标志 ==========
             RigidBodyType m_type;              // 刚体类型
@@ -341,6 +356,10 @@ namespace Prisma {
             // ========== 碰撞形状 ==========
             glm::dvec3 m_collisionHalfSize;   // 碰撞半尺寸（用于 AABB 计算）
             MotionState m_motionState;         // 运动状态（渲染插值）
+
+            // ========== CCD ==========
+            bool m_ccdEnabled = false;         // 是否启用连续碰撞检测
+            double m_ccdMotionThreshold = 5.0; // CCD 速度阈值
 
             // ========== 用户数据 ==========
             void* m_userData;                 // 用户数据指针
