@@ -632,6 +632,10 @@ target_compile_definitions(Engine PRIVATE
     PRISMA_ENGINE_EXPORTS=1
     PrismaEngine_EXPORTS=1
 )
+if(MSVC)
+    # 强制包含 intrin.h 以确保 __faststorefence 被正确识别为内建函数
+    target_compile_options(Engine PRIVATE /FIintrin.h)
+endif()
 target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 
 # 渲染后端宏定义 (仅 Vulkan)
