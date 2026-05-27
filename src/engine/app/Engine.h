@@ -120,7 +120,7 @@ public:
     Water::WaterSystem* GetWaterSystem() { return GetSystem<Water::WaterSystem>(); }
     Network::NetworkSystem* GetNetworkSystem() { return m_NetworkSystem; }
     Localization::LocalizationSystem* GetLocalizationSystem() { return m_LocalizationSystem; }
-    Scene& GetScene() { return *m_Scene; }
+    Scene& GetScene();
     
     // 通用系统获取
     template<typename T>
