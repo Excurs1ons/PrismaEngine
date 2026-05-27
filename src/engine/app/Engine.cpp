@@ -38,6 +38,10 @@
 #include "particles/ParticleSystem.h"
 #include "terrain/TerrainSystem.h"
 #include "navigation/NavigationSystem.h"
+#include "ai/AISystem.h"
+#include "water/WaterSystem.h"
+
+
 
 
 
@@ -92,6 +96,8 @@ int Engine::Initialize() {
     AddSystem<Graphic::ShaderLibrary>();
     AddSystem<Particles::ParticleSystem>();
     m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
+    m_AISystem = AddSystem<AI::AISystem>();
+    m_WaterSystem = AddSystem<Water::WaterSystem>();
 
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {

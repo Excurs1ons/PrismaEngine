@@ -17,6 +17,8 @@ namespace Prisma::Memory { class MemorySystem; }
 namespace Prisma::Animation { class AnimationSystem; }
 namespace Prisma::Terrain { class TerrainSystem; }
 namespace Prisma::Navigation { class NavigationSystem; }
+namespace Prisma::Water { class WaterSystem; }
+namespace Prisma::AI { class AISystem; }
 
 namespace Prisma {
 
@@ -110,8 +112,10 @@ public:
     Audio::IAudioDevice* GetAudioDevice() { return m_audioDevice.get(); }
     Animation::AnimationSystem* GetAnimationSystem() { return m_AnimationSystem; }
     Navigation::NavigationSystem* GetNavigationSystem() { return m_NavigationSystem; }
+    AI::AISystem* GetAISystem() { return m_AISystem; }
     Particles::ParticleSystem* GetParticleSystem() { return GetSystem<Particles::ParticleSystem>(); }
     Terrain::TerrainSystem* GetTerrainSystem() { return GetSystem<Terrain::TerrainSystem>(); }
+    Water::WaterSystem* GetWaterSystem() { return GetSystem<Water::WaterSystem>(); }
     
     // 通用系统获取
     template<typename T>
@@ -165,8 +169,10 @@ private:
     Profiling::ProfilerSystem* m_ProfilerSystem = nullptr;
     Memory::MemorySystem* m_MemorySystem = nullptr;
     Animation::AnimationSystem* m_AnimationSystem = nullptr;
+    AI::AISystem* m_AISystem = nullptr;
     Terrain::TerrainSystem* m_TerrainSystem = nullptr;
     Navigation::NavigationSystem* m_NavigationSystem = nullptr;
+    Water::WaterSystem* m_WaterSystem = nullptr;
 
     bool m_Initialized = false;
     bool m_Running = false;

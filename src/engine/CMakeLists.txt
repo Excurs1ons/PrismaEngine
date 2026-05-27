@@ -82,6 +82,9 @@ set(CORE_SOURCES
     # Navigation
     navigation/NavigationSystem.cpp
 
+    # AI
+    ai/AISystem.cpp
+
     # Particles
     particles/ParticleSystem.cpp
 
@@ -91,6 +94,12 @@ set(CORE_SOURCES
     terrain/TerrainMaterial.cpp
     terrain/TerrainCollision.cpp
     terrain/TerrainSystem.cpp
+
+    # Water
+    water/WaterMesh.cpp
+    water/WaterSystem.cpp
+    water/WaveSimulation.cpp
+    water/WaterInteraction.cpp
 
     # Profiling
     profiling/ProfilerGPU.cpp
@@ -460,6 +469,14 @@ set(CORE_HEADERS
     navigation/NavAgentComponent.h
     navigation/NavigationSystem.h
 
+    # AI
+    ai/Blackboard.h
+    ai/BehaviorTree.h
+    ai/FiniteStateMachine.h
+    ai/BuiltInTasks.h
+    ai/AIComponent.h
+    ai/AISystem.h
+
     # Particles
     particles/CPUParticleSystem.h
     particles/GPUParticleSystem.h
@@ -474,6 +491,13 @@ set(CORE_HEADERS
     terrain/TerrainCollision.h
     terrain/TerrainComponent.h
     terrain/TerrainSystem.h
+
+    # Water
+    water/WaterConfig.h
+    water/WaterMesh.h
+    water/WaveSimulation.h
+    water/WaterInteraction.h
+    water/WaterSystem.h
 
     # Profiling
     profiling/ProfilerCPU.h
@@ -742,6 +766,35 @@ if(PARTICLES_SHADER_SOURCES)
     endif()
 endif()
 
+# ========== 水体着色器编译 ==========
+set(WATER_SHADER_DIR "${PROJECT_SOURCE_DIR}/resources/common/shaders/glsl/water")
+file(GLOB WATER_SHADER_SOURCES
+    "${WATER_SHADER_DIR}/*.vert"
+    "${WATER_SHADER_DIR}/*.frag"
+    "${WATER_SHADER_DIR}/*.comp"
+)
+if(WATER_SHADER_SOURCES)
+    find_program(GLSLANG_VALIDATOR glslangValidator)
+    if(GLSLANG_VALIDATOR)
+        foreach(SHADER ${WATER_SHADER_SOURCES})
+            get_filename_component(SHADER_NAME ${SHADER} NAME)
+            set(SPV_OUTPUT "${WATER_SHADER_DIR}/${SHADER_NAME}.spv")
+            add_custom_command(
+                OUTPUT ${SPV_OUTPUT}
+                COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
+                DEPENDS ${SHADER}
+                COMMENT "Compiling water shader: ${SHADER_NAME} -> SPIR-V"
+            )
+            list(APPEND WATER_GENERATED_SPVS ${SPV_OUTPUT})
+        endforeach()
+        add_custom_target(WaterShaders DEPENDS ${WATER_GENERATED_SPVS})
+        add_dependencies(Engine WaterShaders)
+        message(STATUS "Water shader SPIR-V compilation enabled (glslangValidator: ${GLSLANG_VALIDATOR})")
+    else()
+        message(WARNING "glslangValidator not found - water shaders will skip SPIR-V compilation, using existing .spv")
+    endif()
+endif()
+
 target_include_directories(Engine
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/>
@@ -768,6 +821,8 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/particles>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/terrain>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/navigation>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/water>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/ai>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/animation>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scripting>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>
