@@ -72,6 +72,8 @@ class ENGINE_API SpriteAnimationComponent : public Component {
 public:
     SpriteAnimationComponent();
     virtual ~SpriteAnimationComponent() = default;
+    ComponentId GetComponentId() const override { return GetComponentTypeId<SpriteAnimationComponent>(); }
+    const char* GetComponentTypeName() const override { return "SpriteAnimationComponent"; }
 
     void AddAnimation(const std::string& name, std::shared_ptr<SpriteAnimation> animation) {
         m_animations[name] = animation;
