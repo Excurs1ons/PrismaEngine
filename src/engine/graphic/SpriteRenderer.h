@@ -65,6 +65,7 @@ public:
         float rotation = 0.0f;
     };
 
+    ComponentId GetComponentId() const override { return GetComponentTypeId<SpriteRenderer>(); }
     const char* GetComponentTypeName() const override { return "SpriteRenderer"; }
     Data GetData() const;
     void SetData(const Data& d);
