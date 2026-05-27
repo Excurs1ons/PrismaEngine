@@ -633,10 +633,10 @@ target_compile_definitions(Engine PRIVATE
     PrismaEngine_EXPORTS=1
 )
 if(MSVC)
-    # 某些 MSVC 版本 (VS 2022 17.14+) 的 Debug 模式下 __faststorefence
-    # 内建函数未被内联，产生外部符号引用。使用 /alternatename 将
-    # __faststorefence 映射到 _mm_sfence（始终可用）。
-    target_link_options(Engine PRIVATE "/ALTERNATENAME:__faststorefence=_mm_sfence")
+    # MSVC 19.44+ (VS 2022 17.14) 中 __faststorefence 内建函数已被移除或
+    # 不再内联。miniaudio 库使用了 __faststorefence，导致链接器报错。
+    # 在预处理阶段将 __faststorefence 替换为 _mm_sfence()。
+    target_compile_definitions(Engine PRIVATE "__faststorefence=_mm_sfence")
 endif()
 target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 
