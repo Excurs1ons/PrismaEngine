@@ -624,9 +624,34 @@ static float S_AudioSpectrumGetPeak(uint64_t handle) {
 static std::unordered_map<uint32_t, std::shared_ptr<Tilemap::Tilemap>> s_tilemaps;
 static uint32_t s_nextTilemapHandle = 1;
 
+// exe 目录（assets 根），由 Initialize 写入，供 ResolveAssetPath 使用
+static std::string s_assetBaseDir;
+
+// 将相对路径解析为 assetBaseDir 下的绝对路径（不依赖 CWD）
+static std::string ResolveAssetPath(const char* relPath) {
+    std::string sp(relPath);
+    // 绝对路径直接返回
+    if (!sp.empty() && (sp[0] == '/' || sp[0] == '\\' ||
+        (sp.size() > 2 && sp[1] == ':')))
+        return sp;
+    // 相对路径：拼接 assetBaseDir
+    if (!s_assetBaseDir.empty()) {
+        std::string resolved = s_assetBaseDir + "/" + sp;
+        // 规范化路径
+        auto norm = std::filesystem::weakly_canonical(resolved);
+        LOG_DEBUG("ScriptEngine", "ResolveAssetPath: {0} → {1}", relPath, norm.string());
+        return norm.string();
+    }
+    return sp;
+}
+
 static uint32_t PR_Tilemap_Load(const char* path) {
     auto tm = std::make_shared<Tilemap::Tilemap>();
-    if (!tm->LoadFromJSON(path)) return 0;
+    std::string resolved = ResolveAssetPath(path);
+    if (!tm->LoadFromJSON(resolved)) {
+        LOG_ERROR("ScriptEngine", "Tilemap_Load failed: {0} (resolved: {1})", path, resolved);
+        return 0;
+    }
     uint32_t h = s_nextTilemapHandle++;
     s_tilemaps[h] = std::move(tm);
     return h;
@@ -712,6 +737,7 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     if (m_initialized) return true;
     m_host = &host;
     m_gameDir = gameDir;
+    s_assetBaseDir = gameDir;
     s_activeEngine = this;
 
     m_api.log = S_Log;
@@ -859,17 +885,20 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
 
     // 搜索 *_Managed.dll（每个项目命名不同：Prisma2D_Managed.dll / SRP2D_Managed.dll 等）
     std::string gameDll;
+    LOG_INFO("ScriptEngine", "Scanning gameDir for *_Managed.dll: {0}", gameDir);
     if (std::filesystem::exists(gameDir)) {
         for (const auto& entry : std::filesystem::directory_iterator(gameDir)) {
             auto name = entry.path().filename().string();
             if (name.ends_with("_Managed.dll")) {
                 gameDll = name;
+                LOG_INFO("ScriptEngine", "  Matched: {0}", name);
                 break;
             }
         }
     }
 
     std::string assemblyPath = gameDir + "/" + gameDll;
+    LOG_INFO("ScriptEngine", "Loading game assembly: {0}", assemblyPath);
     auto dotPos = gameDll.rfind(".dll");
     std::string assemblyName = (dotPos != std::string::npos) ? gameDll.substr(0, dotPos) : gameDll;
     auto managedPos = assemblyName.rfind("_Managed");
@@ -877,6 +906,7 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
 
     auto tryGetFn = [&](const std::string& typePrefix) -> bool {
         std::string type = typePrefix + ".ScriptEntry, " + assemblyName;
+        LOG_INFO("ScriptEngine", "  Trying type: {0}", type);
         m_bootstrapFn = (void (*)(void*))host.GetFunctionPointer(assemblyPath, type, "Bootstrap");
         m_onFrameFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, type, "OnFrame");
         m_srpRenderFn = (void (*)(float))host.GetFunctionPointer(assemblyPath, type, "OnRender");

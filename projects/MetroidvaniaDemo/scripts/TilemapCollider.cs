@@ -9,7 +9,7 @@ public partial class TilemapCollider : Script
     const float TileSize = 16f;
     const int CollisionLayer = 0;
 
-    public string TilemapPath = "maps/test_dungeon.json";
+    public string TilemapPath = "assets/maps/test_dungeon.json";
 
     public override void OnCreate()
     {

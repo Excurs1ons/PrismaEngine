@@ -8,6 +8,8 @@
 #include "core/EntityManager.h"
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
+
+extern "C" { char* SDL_GetBasePath(void); void SDL_free(void* ptr); }
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/Shader.h"
 #include "graphic/Renderer2D.h"
@@ -329,19 +331,51 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
             }
 
-            // 游戏 DLL 搜索（*_Managed.dll 匹配各项目构建输出）
-            std::vector<std::string> gamePaths = {
-                ".",
-                "scripts",
-                "../scripts",
-                "../projects/Prisma2D/scripts/GameScripts/bin/Release/net10.0",
-                "../projects/PrismaCraft/scripts/GameScripts/bin/Release/net10.0",
-                "../projects/SRP2D/scripts/GameScripts/bin/Release/net10.0",
-            };
+            // 游戏 DLL 搜索：基于 exe 目录（不依赖 CWD）+ 项目名动态推导 + 硬编码回退
+            std::vector<std::string> gamePaths;
+
+            // 0. exe 所在目录（SDL_GetBasePath 跨平台，CMake post-build 复制 DLL 到此处）
+            char* sdlBase = SDL_GetBasePath();
+            std::string exeDir = sdlBase ? sdlBase : ".";
+            SDL_free(sdlBase);
+            while (!exeDir.empty() && (exeDir.back() == '/' || exeDir.back() == '\\'))
+                exeDir.pop_back();
+            gamePaths.push_back(exeDir);
+            gamePaths.push_back(exeDir + "/scripts");
+            LOG_INFO("Engine", "Exe dir: {0}", exeDir);
+
+            // 0b. CoreCLR host 发布目录（DLL 放这里可避免 AppContext 隔离问题）
+            if (!hostDir.empty()) {
+                gamePaths.push_back(hostDir);
+            }
+
+            // 1. 从 Application Name 动态推导项目源码构建输出路径
+            if (m_CurrentApp) {
+                std::string projName = m_CurrentApp->GetSpecification().Name;
+                if (!projName.empty() && projName != "Prisma App") {
+                    gamePaths.push_back(
+                        "../projects/" + projName + "/scripts/GameScripts/bin/Release/net10.0");
+                    LOG_INFO("Engine", "DLL search: project path for '{0}'", projName);
+                }
+            }
+
+            // 2. 硬编码回退路径
+            for (auto& p : std::vector<std::string>{
+                     ".", "scripts", "../scripts",
+                     "../projects/Prisma2D/scripts/GameScripts/bin/Release/net10.0",
+                     "../projects/PrismaCraft/scripts/GameScripts/bin/Release/net10.0",
+                     "../projects/SRP2D/scripts/GameScripts/bin/Release/net10.0",
+                 }) {
+                gamePaths.push_back(p);
+            }
+
             std::string gameDir;
             std::string gameDll;
             for (const auto& p : gamePaths) {
-                if (!std::filesystem::exists(p)) continue;
+                if (!std::filesystem::exists(p)) {
+                    LOG_DEBUG("Engine", "  DLL path skip (not exist): {0}", p);
+                    continue;
+                }
                 for (const auto& entry : std::filesystem::directory_iterator(p)) {
                     auto name = entry.path().filename().string();
                     if (name.ends_with("_Managed.dll")) {
@@ -350,7 +384,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
                         break;
                     }
                 }
-                if (!gameDir.empty()) break;
+                if (!gameDir.empty()) {
+                    LOG_INFO("Engine", "  Found game DLL: {0}/{1}", gameDir, gameDll);
+                    break;
+                }
             }
 
             if (!hostDir.empty()) {

@@ -161,6 +161,9 @@ if(PRISMA_ENABLE_SCRIPTING)
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${SCRIPTS_DIR}/bin/Release/net10.0/MetroidvaniaDemo_Managed.dll"
                 "${SCRIPTS_OUT}/MetroidvaniaDemo_Managed.dll"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${CMAKE_BINARY_DIR}/PrismaEngine.Host/win-x64/publish/Prisma.Core.dll"
+                "${SCRIPTS_OUT}/Prisma.Core.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
     )
 else()
