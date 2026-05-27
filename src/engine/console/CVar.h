@@ -157,6 +157,8 @@ inline std::string CVar<std::string>::TypeName() { return "string"; }
 class ENGINE_API CVarRegistry {
 public:
     CVarRegistry() = default;
+    CVarRegistry(const CVarRegistry&) = delete;
+    CVarRegistry& operator=(const CVarRegistry&) = delete;
 
     void Register(std::unique_ptr<CVarBase> cvar) {
         if (cvar) m_CVars[cvar->GetName()] = std::move(cvar);
