@@ -766,6 +766,11 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
     endif()
 endif()
 
+# ========== 平台链接 (Windows WinSock2) ==========
+if(WIN32)
+    target_link_libraries(Engine PUBLIC ws2_32)
+endif()
+
 # ========== 粒子系统着色器编译 ==========
 set(PARTICLES_SHADER_DIR "${PROJECT_SOURCE_DIR}/resources/common/shaders/glsl/particles")
 file(GLOB PARTICLES_SHADER_SOURCES
