@@ -84,6 +84,9 @@ set(CORE_SOURCES
     # Physics2D
     physics2d/Physics2D.cpp
 
+    # Tilemap
+    tilemap/Tilemap.cpp
+
     # Navigation
     navigation/NavigationSystem.cpp
 
@@ -481,6 +484,11 @@ set(CORE_HEADERS
     physics2d/AABB2D.h
     physics2d/Physics2D.h
 
+    # Tilemap
+    tilemap/TileSet.h
+    tilemap/TileLayer.h
+    tilemap/Tilemap.h
+
     # Navigation
     navigation/NavMesh.h
     navigation/NavMeshBuilder.h
@@ -872,6 +880,7 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/platform>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics2d>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tilemap>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/particles>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/terrain>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/navigation>
