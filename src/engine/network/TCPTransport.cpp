@@ -141,7 +141,11 @@ bool TCPTransport::Connect() {
         pollfd fd;
         fd.fd = m_clientSocket;
         fd.events = POLLOUT;
+#ifdef _WIN32
+        if (WSAPoll(&fd, 1, 5000) <= 0) {
+#else
         if (poll(&fd, 1, 5000) <= 0) {
+#endif
             LOG_ERROR("TCPTransport", "connect() timed out");
             CloseSocket(m_clientSocket);
             m_clientSocket = INVALID_SOCKET_VALUE;
