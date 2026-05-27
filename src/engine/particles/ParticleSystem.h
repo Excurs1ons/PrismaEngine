@@ -12,6 +12,10 @@ namespace Prisma::Particles {
 // 粒子系统 — 子系统包装器，管理所有活跃的粒子发射器
 class ENGINE_API ParticleSystem : public ISubSystem {
 public:
+    ParticleSystem() = default;
+    ParticleSystem(const ParticleSystem&) = delete;
+    ParticleSystem& operator=(const ParticleSystem&) = delete;
+
     // ========== 子系统接口 ==========
     int Initialize() override;
     void Shutdown() override;

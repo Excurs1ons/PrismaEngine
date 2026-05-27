@@ -67,6 +67,9 @@ public:
     explicit BTComposite(std::string name = "Composite")
         : m_name(std::move(name)) {}
 
+    BTComposite(const BTComposite&) = delete;
+    BTComposite& operator=(const BTComposite&) = delete;
+
     ~BTComposite() override = default;
 
     /** 添加子节点 */
