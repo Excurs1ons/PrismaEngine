@@ -224,9 +224,9 @@ std::vector<uint8_t> NetworkSystem::SerializeEntityState(uint32_t entityHandle,
     if (HasFlag(netComp.GetSyncFlags(), SyncFlags::Transform)) {
         auto transform = m_scene->GetComponent<Transform>(node);
         if (transform) {
-            auto pos = transform->GetLocalPosition();
-            auto rot = transform->GetLocalRotation();
-            auto scl = transform->GetLocalScale();
+            auto pos = transform->GetPosition();
+            auto rot = transform->GetRotation();
+            auto scl = transform->GetScale();
             writer.WriteFloat(pos.x);
             writer.WriteFloat(pos.y);
             writer.WriteFloat(pos.z);
@@ -270,9 +270,9 @@ void NetworkSystem::DeserializeEntityState(uint32_t entityHandle,
             scl.x = reader.ReadFloat();
             scl.y = reader.ReadFloat();
             scl.z = reader.ReadFloat();
-            transform->SetLocalPosition(pos);
-            transform->SetLocalRotation(rot);
-            transform->SetLocalScale(scl);
+            transform->SetPosition(pos);
+            transform->SetRotation(rot);
+            transform->SetScale(scl);
         }
     }
 
