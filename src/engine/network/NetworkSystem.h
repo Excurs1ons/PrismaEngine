@@ -8,6 +8,10 @@
 #include <memory>
 #include <string>
 #include <unordered_map>
+#ifdef _MSC_VER
+#include <intrin.h>
+#pragma intrinsic(__faststorefence)
+#endif
 #include <atomic>
 #include <thread>
 #include <functional>
