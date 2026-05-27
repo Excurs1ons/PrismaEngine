@@ -27,6 +27,7 @@ public:
     void Shutdown() override {}
 
     // 类型标识
+    ComponentId GetComponentId() const override { return GetComponentTypeId<ScriptComponent>(); }
     const char* GetComponentTypeName() const override { return "Script"; }
 
     // 序列化数据

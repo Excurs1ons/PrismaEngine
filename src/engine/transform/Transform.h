@@ -16,6 +16,8 @@ public:
 
     Transform() : m_Position(0.0f), m_Rotation(1.0f, 0.0f, 0.0f, 0.0f), m_Scale(1.0f), m_Matrix(1.0f), m_Dirty(true) {}
 
+    ComponentId GetComponentId() const override { return GetComponentTypeId<Transform>(); }
+
     // Setters that trigger dirty flag
     void SetPosition(const Vector3& pos) { m_Position = pos; m_Dirty = true; }
     void SetRotation(const Quaternion& rot) { m_Rotation = rot; m_Dirty = true; }

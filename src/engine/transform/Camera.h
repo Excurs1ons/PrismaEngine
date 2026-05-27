@@ -22,6 +22,7 @@ namespace Prisma::Graphic {
         // ── Component 接口 ──
         void Initialize() override;
         void Update(Timestep ts) override;
+        ComponentId GetComponentId() const override { return GetComponentTypeId<Camera>(); }
 
         // ── 投影模式 ──
         ProjectionMode GetProjectionMode() const { return m_projectionMode; }
