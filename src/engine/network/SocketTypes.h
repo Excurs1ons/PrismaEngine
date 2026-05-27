@@ -6,9 +6,13 @@
     #include <ws2tcpip.h>
     #ifdef _MSC_VER
         #include <intrin.h>
-        // MSVC 需要此内建函数声明，否则 __faststorefence()
-        // 在 miniaudio 宏展开时被当作外部函数调用
         #pragma intrinsic(__faststorefence)
+        // 某些 MSVC 版本中 __faststorefence 可能没有导出符号。
+        // 提供一个 fallback 实现以确保链接通过。
+        #if !defined(__faststorefence)
+            #pragma comment(linker, "/ALTERNATENAME:__faststorefence=_PRISMA_faststorefence_fallback")
+            static void _PRISMA_faststorefence_fallback() { _mm_sfence(); }
+        #endif
     #endif
     using SOCKET_HANDLE = SOCKET;
     static constexpr SOCKET_HANDLE INVALID_SOCKET_VALUE = INVALID_SOCKET;

@@ -28,6 +28,14 @@
 #include <sstream>
 #include <glaze/glaze.hpp>
 #include "app/ProjectConfig.h"
+
+// MSVC 某些版本中 __faststorefence 内建函数可能未被正确导出为 intrinsic，
+// 导致链接器找不到符号。提供一个显式的 sfence 实现作为 fallback。
+#ifdef _MSC_VER
+    #ifndef __faststorefence
+        extern "C" void __faststorefence() { _mm_sfence(); }
+    #endif
+#endif
 #include "threading/ThreadManager.h"
 #include "app/CommandLineParser.h"
 #include "scene/Scene.h"
