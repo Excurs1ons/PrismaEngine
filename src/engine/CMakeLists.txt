@@ -66,7 +66,6 @@ set(CORE_SOURCES
     audio/AudioDeviceNull.cpp
     audio/AudioDeviceSDL3.cpp
     audio/AudioAPI.cpp
-    audio/backends/FastStoreFence.cpp
 
     # Input
     input/InputDevice.cpp
@@ -633,6 +632,16 @@ target_compile_definitions(Engine PRIVATE
     PRISMA_ENGINE_EXPORTS=1
     PrismaEngine_EXPORTS=1
 )
+if(MSVC)
+    # MSVC 19.44 (VS 2022 17.14): __faststorefence intrinsic 在 Debug 模式下
+    # 不被内联,产生对 __faststorefence 的外部调用。编译器将此类调用视为
+    # RenderCommandContext 的虚函数(C++ 符号修饰),导致链接错误 LNK2001。
+    # 
+    # 解决方案: 将 __faststorefence 替换为 _mm_sfence(相同语义的 CRT 函数),
+    # 然后通过 /ALTERNATENAME 将 C++ 修饰后的符号映射到 C-linkage 的 _mm_sfence。
+    target_compile_definitions(Engine PRIVATE "__faststorefence=_mm_sfence")
+    target_link_options(Engine PRIVATE "/ALTERNATENAME:?_mm_sfence@RenderCommandContext@Graphic@Prisma@@UEAAXXZ=_mm_sfence")
+endif()
 target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 
 # 渲染后端宏定义 (仅 Vulkan)
