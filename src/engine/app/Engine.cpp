@@ -563,6 +563,10 @@ Scene& Engine::GetScene() {
 }
 ThreadManager& Engine::GetThreadManager() { return *ThreadManager::Get(); }
 CommandLineParser& Engine::GetCommandLineParser() { return CommandLineParser::Get(); }
+ConsoleSystem* Engine::GetConsoleSystem() { return GetSystem<ConsoleSystem>(); }
+Particles::ParticleSystem* Engine::GetParticleSystem() { return GetSystem<Particles::ParticleSystem>(); }
+Terrain::TerrainSystem* Engine::GetTerrainSystem() { return GetSystem<Terrain::TerrainSystem>(); }
+Water::WaterSystem* Engine::GetWaterSystem() { return GetSystem<Water::WaterSystem>(); }
 
 const std::string& Engine::GetGPUName() const { return m_GPUName; }
 const EngineSpecification& Engine::GetSpecification() const { return m_Spec; }

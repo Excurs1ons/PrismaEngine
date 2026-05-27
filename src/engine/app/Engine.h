@@ -110,14 +110,14 @@ public:
     Core::ECS::World& GetWorld();
     ThreadManager& GetThreadManager();
     CommandLineParser& GetCommandLineParser();
-    ConsoleSystem* GetConsoleSystem() { return GetSystem<ConsoleSystem>(); }
+    ConsoleSystem* GetConsoleSystem();
     Audio::IAudioDevice* GetAudioDevice() { return m_audioDevice.get(); }
     Animation::AnimationSystem* GetAnimationSystem() { return m_AnimationSystem; }
     Navigation::NavigationSystem* GetNavigationSystem() { return m_NavigationSystem; }
     AI::AISystem* GetAISystem() { return m_AISystem; }
-    Particles::ParticleSystem* GetParticleSystem() { return GetSystem<Particles::ParticleSystem>(); }
-    Terrain::TerrainSystem* GetTerrainSystem() { return GetSystem<Terrain::TerrainSystem>(); }
-    Water::WaterSystem* GetWaterSystem() { return GetSystem<Water::WaterSystem>(); }
+    Particles::ParticleSystem* GetParticleSystem();
+    Terrain::TerrainSystem* GetTerrainSystem();
+    Water::WaterSystem* GetWaterSystem();
     Network::NetworkSystem* GetNetworkSystem() { return m_NetworkSystem; }
     Localization::LocalizationSystem* GetLocalizationSystem() { return m_LocalizationSystem; }
     Scene& GetScene();

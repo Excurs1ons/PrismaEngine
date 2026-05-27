@@ -36,7 +36,7 @@ public:
 
 private:
     void UpdateSkeletonPose(AnimComponent& component, double deltaTime);
-    void UpdateSkinningMatrices(const AnimComponent& component);
+    void UpdateSkinningMatrices(AnimComponent& component);
 
     std::vector<AnimComponent*> m_components;
     std::vector<glm::dmat4> m_skinningMatrices;
@@ -98,7 +98,7 @@ inline void AnimationSystem::UpdateSkeletonPose(
 }
 
 inline void AnimationSystem::UpdateSkinningMatrices(
-    const AnimComponent& component)
+    AnimComponent& component)
 {
     if (!component.skeleton) return;
     size_t boneCount = component.skeleton->GetBoneCount();
