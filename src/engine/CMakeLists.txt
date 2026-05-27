@@ -633,12 +633,10 @@ target_compile_definitions(Engine PRIVATE
     PrismaEngine_EXPORTS=1
 )
 if(MSVC)
-    # 强制包含 intrin.h 以确保 __faststorefence 被正确识别为内建函数
-    target_compile_options(Engine PRIVATE /FIintrin.h)
-    # /Oi (Generate Intrinsic Functions) — 告知编译器为内建函数生成内联代码
-    # 而不是外部函数调用。Debug 模式下默认 /Oi-，导致 __faststorefence 等
-    # 内建函数产生外部符号引用。
-    target_compile_options(Engine PRIVATE /Oi)
+    # 某些 MSVC 版本 (VS 2022 17.14+) 的 Debug 模式下 __faststorefence
+    # 内建函数未被内联，产生外部符号引用。使用 /alternatename 将
+    # __faststorefence 映射到 _mm_sfence（始终可用）。
+    target_link_options(Engine PRIVATE "/ALTERNATENAME:__faststorefence=_mm_sfence")
 endif()
 target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 
