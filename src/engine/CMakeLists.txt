@@ -81,6 +81,9 @@ set(CORE_SOURCES
     physics/RigidBody.cpp
     physics/TriggerManager.cpp
 
+    # Physics2D
+    physics2d/Physics2D.cpp
+
     # Navigation
     navigation/NavigationSystem.cpp
 
@@ -474,6 +477,10 @@ set(CORE_HEADERS
     physics/TriggerVolume.h
     physics/TriggerManager.h
 
+    # Physics2D
+    physics2d/AABB2D.h
+    physics2d/Physics2D.h
+
     # Navigation
     navigation/NavMesh.h
     navigation/NavMeshBuilder.h
@@ -864,6 +871,7 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/window>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/platform>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics2d>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/particles>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/terrain>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/navigation>
