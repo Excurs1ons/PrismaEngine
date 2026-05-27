@@ -144,15 +144,23 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
         ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
 
         if (usePixelPerfect) {
-            // 整数缩放上采样
-            m_pixelPass->BlitToSwapChain(ctx.commandBuffer, m_device, nullptr);
+            // 检查是否启用 CRT 后处理
+            bool crtEnabled = m_ppPass &&
+                m_ppPass->IsEffectEnabled(PostProcessPass2D::EffectType::CRT);
+
+            if (crtEnabled) {
+                // CRT 模式：CRT 着色器同时处理上采样 + CRT 效果
+                m_ppPass->Process(ctx.commandBuffer, m_device,
+                                  m_pixelPass->GetOffscreenTexture(), nullptr);
+            } else {
+                // 普通模式：简单整数倍最近邻上采样
+                m_pixelPass->BlitToSwapChain(ctx.commandBuffer, m_device, nullptr);
+            }
         }
     }
 
-    // ── 4. 2D 后处理 ──
-    if (m_ppPass) {
-        // m_ppPass->Process(ctx.commandBuffer, m_device, ...);
-    }
+    // ── 4. 2D 后处理（非 PixelPerfect 模式下的后处理暂不启用） ──
+    // 当使用标准 2D 渲染（非像素完美模式）时，未来可在此处添加后处理
 
     // ── 5. 屏幕空间 UI 渲染 ──
     if (m_uiPass) {
