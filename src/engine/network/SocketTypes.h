@@ -4,7 +4,12 @@
     #define WIN32_LEAN_AND_MEAN
     #include <winsock2.h>
     #include <ws2tcpip.h>
-    #include <intrin.h>
+    #ifdef _MSC_VER
+        #include <intrin.h>
+        // MSVC 需要此内建函数声明，否则 __faststorefence()
+        // 在 miniaudio 宏展开时被当作外部函数调用
+        #pragma intrinsic(__faststorefence)
+    #endif
     using SOCKET_HANDLE = SOCKET;
     static constexpr SOCKET_HANDLE INVALID_SOCKET_VALUE = INVALID_SOCKET;
     static constexpr int SOCKET_ERROR_RET = SOCKET_ERROR;
