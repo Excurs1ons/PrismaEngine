@@ -16,7 +16,9 @@ ConsoleUI::ConsoleUI(ConsoleSystem* system)
 ConsoleUI::~ConsoleUI() = default;
 
 void ConsoleUI::OnAttach() {
-    LogInfo("控制台已准备就绪 (按 ~ 切换)");
+    if (m_ConsoleSystem) {
+        m_ConsoleSystem->LogInfo("控制台已准备就绪 (按 ~ 切换)");
+    }
 }
 
 void ConsoleUI::OnDetach() {

@@ -7,6 +7,8 @@
 #include <memory>
 #include <cstdint>
 
+namespace Prisma { class PhysicsSystem; }
+
 namespace Prisma {
     namespace Physics {
 
