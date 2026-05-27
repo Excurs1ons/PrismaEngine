@@ -172,8 +172,8 @@ public:
 
     // === 屏障 ===
 
-    /// @brief 执行内存屏障
-    virtual void MemoryBarrier() = 0;
+    /// @brief 执行内存屏障（注意：不能命名为 MemoryBarrier，因为 winnt.h 定义了同名的宏）
+    virtual void GpuMemoryBarrier() = 0;
 
     /// @brief 执行 UAV 屏障
     virtual void UAVBarrier() = 0;

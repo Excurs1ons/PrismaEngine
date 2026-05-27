@@ -54,7 +54,7 @@ void OpaquePass::Execute(const PassExecutionContext& context) {
         );
     }
 
-    context.deviceContext->MemoryBarrier();
+    context.deviceContext->GpuMemoryBarrier();
 }
 
 void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {

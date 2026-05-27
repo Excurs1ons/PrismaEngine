@@ -62,7 +62,7 @@ void NPROpaquePass::Execute(const PassExecutionContext& context) {
         );
     }
 
-    context.deviceContext->MemoryBarrier();
+    context.deviceContext->GpuMemoryBarrier();
 }
 
 void NPROpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {

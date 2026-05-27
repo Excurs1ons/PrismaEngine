@@ -194,7 +194,7 @@ void RenderCommandContext::ClearDepthStencil(IDepthStencil* depthStencil, float 
     m_lastStencilValue = stencil;
 }
 
-void RenderCommandContext::MemoryBarrier() {
+void RenderCommandContext::GpuMemoryBarrier() {
 }
 
 void RenderCommandContext::UAVBarrier() {

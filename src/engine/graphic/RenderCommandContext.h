@@ -57,7 +57,7 @@ public:
     void ClearDepthStencil(IDepthStencil* depthStencil, float depth, uint8_t stencil) override;
 
     // 屏障
-    void MemoryBarrier() override;
+    void GpuMemoryBarrier() override;
     void UAVBarrier() override;
 
     // 调试
