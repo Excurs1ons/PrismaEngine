@@ -40,6 +40,8 @@
 #include <unordered_map>
 #include "scene/SceneManager.h"
 #include "scene/Scene.h"
+#include "physics2d/Physics2D.h"
+#include "tilemap/Tilemap.h"
 #include <cstring>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_mouse.h>
@@ -617,6 +619,95 @@ static float S_AudioSpectrumGetPeak(uint64_t handle) {
     return it->second->GetPeakMagnitude();
 }
 
+// ==================== Tilemap wrappers ====================
+
+static std::unordered_map<uint32_t, std::shared_ptr<Tilemap::Tilemap>> s_tilemaps;
+static uint32_t s_nextTilemapHandle = 1;
+
+static uint32_t PR_Tilemap_Load(const char* path) {
+    auto tm = std::make_shared<Tilemap::Tilemap>();
+    if (!tm->LoadFromJSON(path)) return 0;
+    uint32_t h = s_nextTilemapHandle++;
+    s_tilemaps[h] = std::move(tm);
+    return h;
+}
+
+static void PR_Tilemap_Unload(uint32_t handle) {
+    s_tilemaps.erase(handle);
+}
+
+static uint32_t PR_Tilemap_GetTile(uint32_t handle, int layer, int x, int y) {
+    auto it = s_tilemaps.find(handle);
+    if (it == s_tilemaps.end()) return 0;
+    return it->second->GetTile(static_cast<uint32_t>(layer),
+                                static_cast<uint32_t>(x),
+                                static_cast<uint32_t>(y));
+}
+
+static int PR_Tilemap_IsSolid(uint32_t handle, int layer, int x, int y) {
+    auto it = s_tilemaps.find(handle);
+    if (it == s_tilemaps.end()) return 0;
+    return it->second->IsSolid(static_cast<uint32_t>(layer),
+                                static_cast<uint32_t>(x),
+                                static_cast<uint32_t>(y)) ? 1 : 0;
+}
+
+static uint32_t PR_Tilemap_GetWidth(uint32_t handle) {
+    auto it = s_tilemaps.find(handle);
+    if (it == s_tilemaps.end()) return 0;
+    return it->second->GetWidth();
+}
+
+static uint32_t PR_Tilemap_GetHeight(uint32_t handle) {
+    auto it = s_tilemaps.find(handle);
+    if (it == s_tilemaps.end()) return 0;
+    return it->second->GetHeight();
+}
+
+// ==================== Physics2D wrappers ====================
+
+static int PR_Physics2D_CheckAABB(
+    float aMinX, float aMinY, float aMaxX, float aMaxY,
+    float bMinX, float bMinY, float bMaxX, float bMaxY) {
+    namespace P2D = Prisma::Physics2D;
+    return P2D::Physics2D::CheckAABB(
+        {aMinX, aMinY, aMaxX, aMaxY},
+        {bMinX, bMinY, bMaxX, bMaxY}) ? 1 : 0;
+}
+
+static int PR_Physics2D_ResolvePlatform(
+    float px, float py, float pw, float ph,
+    float* velX, float* velY,
+    const float* solidData, int solidCount,
+    int* onGround, int* hitCeiling) {
+    namespace P2D = Prisma::Physics2D;
+    if (!velX || !velY || !onGround || !hitCeiling) return 0;
+    glm::vec2 vel(*velX, *velY);
+    bool ground = false;
+    bool ceiling = false;
+
+    // 从 float 数组恢复 AABB2D 数组：每 4 个 float = 一个 AABB2D
+    std::vector<P2D::AABB2D> solids;
+    solids.reserve(solidCount);
+    for (int i = 0; i < solidCount; i++) {
+        solids.emplace_back(
+            solidData[i * 4 + 0],
+            solidData[i * 4 + 1],
+            solidData[i * 4 + 2],
+            solidData[i * 4 + 3]);
+    }
+
+    P2D::AABB2D player(px, py, px + pw, py + ph);
+    bool hit = P2D::Physics2D::ResolvePlatform(
+        player, vel, solids.data(), solidCount, ground, ceiling);
+
+    *velX = vel.x;
+    *velY = vel.y;
+    *onGround = ground ? 1 : 0;
+    *hitCeiling = ceiling ? 1 : 0;
+    return hit ? 1 : 0;
+}
+
 bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     if (m_initialized) return true;
     m_host = &host;
@@ -751,6 +842,18 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.ptGetModeName = S_PTGetModeName;
     m_api.ptIsConverged = S_PTIsConverged;
     m_api.ptGetMaxSamples = S_PTGetMaxSamples;
+
+    // Physics2D
+    m_api.Physics2D_CheckAABB = PR_Physics2D_CheckAABB;
+    m_api.Physics2D_ResolvePlatform = PR_Physics2D_ResolvePlatform;
+
+    // Tilemap
+    m_api.Tilemap_Load = PR_Tilemap_Load;
+    m_api.Tilemap_Unload = PR_Tilemap_Unload;
+    m_api.Tilemap_GetTile = PR_Tilemap_GetTile;
+    m_api.Tilemap_IsSolid = PR_Tilemap_IsSolid;
+    m_api.Tilemap_GetWidth = PR_Tilemap_GetWidth;
+    m_api.Tilemap_GetHeight = PR_Tilemap_GetHeight;
 
     const std::string& hostDir = host.GetScriptsDir();
 

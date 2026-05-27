@@ -171,6 +171,21 @@ struct PrismaAPI {
     uint32_t (*audioSpectrumGetBins)(uint64_t handle, float* freqOut, float* magOut, float* phaseOut, uint32_t maxBins);
     float    (*audioSpectrumGetPeak)(uint64_t handle);
 
+    // ===== Physics2D =====
+    int(*Physics2D_CheckAABB)(float, float, float, float, float, float, float, float);
+    int(*Physics2D_ResolvePlatform)(float, float, float, float,
+        float* velX, float* velY,
+        const float* solidData, int solidCount,
+        int* onGround, int* hitCeiling);
+
+    // ===== Tilemap =====
+    uint32_t(*Tilemap_Load)(const char* path);
+    void(*Tilemap_Unload)(uint32_t handle);
+    uint32_t(*Tilemap_GetTile)(uint32_t handle, int layer, int x, int y);
+    int(*Tilemap_IsSolid)(uint32_t handle, int layer, int x, int y);
+    uint32_t(*Tilemap_GetWidth)(uint32_t handle);
+    uint32_t(*Tilemap_GetHeight)(uint32_t handle);
+
     // [诊断] 结构体大小，用于 C++/C# 版本校验
     // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)
     // C# 侧在 Init 中校验，不匹配时抛出明确异常

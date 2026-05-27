@@ -187,6 +187,18 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<ulong, float*, float*, float*, uint, uint> AudioSpectrumGetBins;
     public delegate* unmanaged<ulong, float> AudioSpectrumGetPeak;
 
+    // ===== Physics2D =====
+    public delegate* unmanaged<float, float, float, float, float, float, float, float, int> Physics2D_CheckAABB;
+    public delegate* unmanaged<float, float, float, float, float*, float*, float*, int, int*, int*, int> Physics2D_ResolvePlatform;
+
+    // ===== Tilemap =====
+    public delegate* unmanaged<byte*, uint> Tilemap_Load;
+    public delegate* unmanaged<uint, void> Tilemap_Unload;
+    public delegate* unmanaged<uint, int, int, int, uint> Tilemap_GetTile;
+    public delegate* unmanaged<uint, int, int, int, int> Tilemap_IsSolid;
+    public delegate* unmanaged<uint, uint> Tilemap_GetWidth;
+    public delegate* unmanaged<uint, uint> Tilemap_GetHeight;
+
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
 }
