@@ -36,6 +36,8 @@
 #include "profiling/ProfilerSystem.h"
 #include "animation/AnimationSystem.h"
 #include "particles/ParticleSystem.h"
+#include "terrain/TerrainSystem.h"
+#include "navigation/NavigationSystem.h"
 
 
 
@@ -89,6 +91,7 @@ int Engine::Initialize() {
     AddSystem<ConsoleSystem>();
     AddSystem<Graphic::ShaderLibrary>();
     AddSystem<Particles::ParticleSystem>();
+    m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
 
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {

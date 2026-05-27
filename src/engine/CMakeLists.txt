@@ -79,8 +79,18 @@ set(CORE_SOURCES
     physics/RigidBody.cpp
     physics/TriggerManager.cpp
 
+    # Navigation
+    navigation/NavigationSystem.cpp
+
     # Particles
     particles/ParticleSystem.cpp
+
+    # Terrain
+    terrain/HeightMap.cpp
+    terrain/TerrainMesh.cpp
+    terrain/TerrainMaterial.cpp
+    terrain/TerrainCollision.cpp
+    terrain/TerrainSystem.cpp
 
     # Profiling
     profiling/ProfilerGPU.cpp
@@ -441,11 +451,29 @@ set(CORE_HEADERS
     physics/TriggerVolume.h
     physics/TriggerManager.h
 
+    # Navigation
+    navigation/NavMesh.h
+    navigation/NavMeshBuilder.h
+    navigation/PathFinder.h
+    navigation/PathSmoothing.h
+    navigation/NavAgent.h
+    navigation/NavAgentComponent.h
+    navigation/NavigationSystem.h
+
     # Particles
     particles/CPUParticleSystem.h
     particles/GPUParticleSystem.h
     particles/ParticleEmitterComponent.h
     particles/ParticleSystem.h
+
+    # Terrain
+    terrain/TerrainConfig.h
+    terrain/HeightMap.h
+    terrain/TerrainMesh.h
+    terrain/TerrainMaterial.h
+    terrain/TerrainCollision.h
+    terrain/TerrainComponent.h
+    terrain/TerrainSystem.h
 
     # Profiling
     profiling/ProfilerCPU.h
@@ -738,6 +766,8 @@ target_include_directories(Engine
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/platform>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/physics>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/particles>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/terrain>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/navigation>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/animation>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/scripting>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/config>

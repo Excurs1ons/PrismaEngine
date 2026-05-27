@@ -15,6 +15,8 @@ class CommandLineParser;
 namespace Prisma::Audio { class IAudioDevice; struct AudioDesc; }
 namespace Prisma::Memory { class MemorySystem; }
 namespace Prisma::Animation { class AnimationSystem; }
+namespace Prisma::Terrain { class TerrainSystem; }
+namespace Prisma::Navigation { class NavigationSystem; }
 
 namespace Prisma {
 
@@ -107,7 +109,9 @@ public:
     ConsoleSystem* GetConsoleSystem() { return GetSystem<ConsoleSystem>(); }
     Audio::IAudioDevice* GetAudioDevice() { return m_audioDevice.get(); }
     Animation::AnimationSystem* GetAnimationSystem() { return m_AnimationSystem; }
+    Navigation::NavigationSystem* GetNavigationSystem() { return m_NavigationSystem; }
     Particles::ParticleSystem* GetParticleSystem() { return GetSystem<Particles::ParticleSystem>(); }
+    Terrain::TerrainSystem* GetTerrainSystem() { return GetSystem<Terrain::TerrainSystem>(); }
     
     // 通用系统获取
     template<typename T>
@@ -161,6 +165,8 @@ private:
     Profiling::ProfilerSystem* m_ProfilerSystem = nullptr;
     Memory::MemorySystem* m_MemorySystem = nullptr;
     Animation::AnimationSystem* m_AnimationSystem = nullptr;
+    Terrain::TerrainSystem* m_TerrainSystem = nullptr;
+    Navigation::NavigationSystem* m_NavigationSystem = nullptr;
 
     bool m_Initialized = false;
     bool m_Running = false;
