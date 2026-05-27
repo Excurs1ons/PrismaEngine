@@ -66,6 +66,7 @@ set(CORE_SOURCES
     audio/AudioDeviceNull.cpp
     audio/AudioDeviceSDL3.cpp
     audio/AudioAPI.cpp
+    audio/backends/SymbolStubs.cpp
 
     # Input
     input/InputDevice.cpp
@@ -640,7 +641,7 @@ if(MSVC)
     # 解决方案: 将 __faststorefence 替换为 _mm_sfence(相同语义的 CRT 函数),
     # 然后通过 /ALTERNATENAME 将 C++ 修饰后的符号映射到 C-linkage 的 _mm_sfence。
     target_compile_definitions(Engine PRIVATE "__faststorefence=_mm_sfence")
-    target_link_options(Engine PRIVATE "/ALTERNATENAME:?_mm_sfence@RenderCommandContext@Graphic@Prisma@@UEAAXXZ=_mm_sfence")
+    target_link_options(Engine PRIVATE "/ALTERNATENAME:?_mm_sfence@RenderCommandContext@Graphic@Prisma@@UEAAXXZ=Prisma_FastStoreFence")
 endif()
 target_compile_definitions(Engine PUBLIC ENGINE_BUILD_SHARED=1)
 
