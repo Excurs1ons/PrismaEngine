@@ -1,6 +1,7 @@
 #include "water/WaterSystem.h"
 #include "Logger.h"
 #include "Engine.h"
+#include "SceneManager.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/interfaces/IPipeline.h"
 #include "graphic/interfaces/IResourceManager.h"

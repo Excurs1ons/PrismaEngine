@@ -1,4 +1,5 @@
 #include "ProfilerSystem.h"
+#include "ProfilerMacros.h"
 #include "app/Engine.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/interfaces/IRenderDevice.h"

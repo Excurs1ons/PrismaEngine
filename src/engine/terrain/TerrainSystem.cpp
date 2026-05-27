@@ -1,6 +1,7 @@
 #include "terrain/TerrainSystem.h"
 #include "Logger.h"
 #include "Engine.h"
+#include "SceneManager.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/interfaces/IPipeline.h"
 #include "transform/Camera.h"
@@ -172,7 +173,7 @@ void TerrainSystem::UpdateLOD(const Vector3& cameraPosition)
     m_TerrainMesh->Generate(m_HeightMap, cameraPosition, m_Config);
 
     // 执行视锥剔除
-    const auto& frustum = m_FrustumCulling.GetFrustum();
+    const auto& frustum = m_FrustumCulling.getFrustum();
     auto visibility = m_TerrainMesh->CullAgainstFrustum(frustum);
 
     // 统计可见 LOD 数量
@@ -234,7 +235,7 @@ void TerrainSystem::SubmitDrawCalls()
     if (!pipeline) return;
 
     // 获取可见性
-    const auto& frustum = m_FrustumCulling.GetFrustum();
+    const auto& frustum = m_FrustumCulling.getFrustum();
     auto visibility = m_TerrainMesh->CullAgainstFrustum(frustum);
 
     // 提交每个可见 LOD 等级的三角形
