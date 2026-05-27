@@ -86,6 +86,7 @@ set(CORE_SOURCES
 
     # Tilemap
     tilemap/Tilemap.cpp
+    tilemap/TilemapRenderer.cpp
 
     # Navigation
     navigation/NavigationSystem.cpp
@@ -488,6 +489,7 @@ set(CORE_HEADERS
     tilemap/TileSet.h
     tilemap/TileLayer.h
     tilemap/Tilemap.h
+    tilemap/TilemapRenderer.h
 
     # Navigation
     navigation/NavMesh.h
