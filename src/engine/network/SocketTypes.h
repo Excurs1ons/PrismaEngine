@@ -4,6 +4,7 @@
     #define WIN32_LEAN_AND_MEAN
     #include <winsock2.h>
     #include <ws2tcpip.h>
+    #include <intrin.h>
     using SOCKET_HANDLE = SOCKET;
     static constexpr SOCKET_HANDLE INVALID_SOCKET_VALUE = INVALID_SOCKET;
     static constexpr int SOCKET_ERROR_RET = SOCKET_ERROR;
