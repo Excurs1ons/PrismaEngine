@@ -29,6 +29,7 @@ public:
     LightComponent();
     ~LightComponent() override = default;
 
+    ComponentId GetComponentId() const override { return GetComponentTypeId<LightComponent>(); }
     const char* GetComponentTypeName() const override { return "Light"; }
 
     void SetData(const Data& data) { m_Data = data; }

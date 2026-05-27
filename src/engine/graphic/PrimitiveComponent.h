@@ -38,6 +38,7 @@ public:
     void SetEmissive(const PrismaMath::vec3& e) { m_emissive = e; }
 
     // 序列化
+    ComponentId GetComponentId() const override { return GetComponentTypeId<PrimitiveComponent>(); }
     const char* GetComponentTypeName() const override { return "PrimitiveComponent"; }
     Data GetData() const;
     void SetData(const Data& d);
