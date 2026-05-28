@@ -138,15 +138,16 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
     }
 
     // ═══════════════════════════════════════════════════════════════
-    // 阶段 2: 离屏 → 交换链 (PixelPerfect Blit) + UI
+    // 阶段 2: 离屏 → 交换链 (PixelPerfect Blit / CRT 后处理)
+    //         仅在 PixelPerfect 或 CRT 模式下需要，直接渲染到交换链
+    //         时跳过此阶段，避免 LOAD_OP_CLEAR 清除阶段 1 的内容。
     // ═══════════════════════════════════════════════════════════════
     if (!ctx.targetTexture) {
-        ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
+        bool crtEnabled = m_ppPass &&
+            m_ppPass->IsEffectEnabled(PostProcessPass2D::EffectType::CRT);
 
         if (usePixelPerfect) {
-            // 检查是否启用 CRT 后处理
-            bool crtEnabled = m_ppPass &&
-                m_ppPass->IsEffectEnabled(PostProcessPass2D::EffectType::CRT);
+            ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
 
             if (crtEnabled) {
                 // CRT 模式：CRT 着色器同时处理上采样 + CRT 效果

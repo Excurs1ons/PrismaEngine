@@ -89,6 +89,8 @@ void MetroidvaniaApp::OnRender() {
     );
 
     Graphic::Renderer2D::BeginScene(ortho);
+    // 显式红色方块测试（验证管线shader是否工作）
+    Graphic::Renderer2D::DrawQuad(Vector2{128, 112}, Vector2{32, 32}, {1.0f, 0.0f, 0.0f, 1.0f});
     Graphic::Renderer2D::DrawNodesSoA();
     Graphic::Renderer2D::EndScene();
 }

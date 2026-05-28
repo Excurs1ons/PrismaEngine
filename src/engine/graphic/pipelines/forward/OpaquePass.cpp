@@ -77,14 +77,8 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
     }
 
     cmd->SetPipelineState(m_defaultPipelineState.get());
-    float width = 1.0f;
-    float height = 1.0f;
-    if (auto* swapChain = m_device->GetSwapChain()) {
-        width = static_cast<float>(swapChain->GetWidth());
-        height = static_cast<float>(swapChain->GetHeight());
-    }
-    cmd->SetViewport(Viewport{0.0f, 0.0f, width, height, 0.0f, 1.0f});
-    cmd->SetScissorRect(Rect{0, 0, static_cast<int>(width), static_cast<int>(height)});
+    // 视口/裁剪由调用方（Pipeline2D / ForwardPipeline）在 RenderPass begin 时设置，
+    // 此处不再覆盖，避免破坏离屏 RT（如 PixelPerfect 的 256×224）的视口。
 
     // 缓存上一次绑定的材质指针，跳过重复绑定
     Material* lastMaterial = nullptr;

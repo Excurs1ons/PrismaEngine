@@ -166,6 +166,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
             projName + ".json",
             "assets/" + projName + ".jsonc",
             "assets/" + projName + ".json",
+            "projects/" + projName + "/assets/" + projName + ".jsonc",
+            "projects/" + projName + "/assets/" + projName + ".json",
             "project.jsonc", // 回退兼容
             "assets/project.jsonc"
         };
