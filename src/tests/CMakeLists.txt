@@ -60,3 +60,6 @@ add_subdirectory(AudioTest)
 
 # ========== 纯逻辑测试 ==========
 add_subdirectory(unit)
+
+# ========== 集成测试 ==========
+add_subdirectory(integration)
