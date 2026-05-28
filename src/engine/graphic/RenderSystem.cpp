@@ -225,8 +225,9 @@ void RenderSystem::EndFrame() {
 
         m_mainRenderPipeline->Execute(ctx);
 
-        // 每 5 秒记录一次真实的 GPU 命令计数
-        if (now - lastLogTime >= 5.0) {
+        // 第一帧记录 GPU 命令计数（后续不再刷屏）
+        static bool s_firstEndFrame = true;
+        if (s_firstEndFrame) {
             uint32_t gpuCmdCount = 0;
             if (vkDevice) {
                 auto* vkCmd = dynamic_cast<Vulkan::VulkanCommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
@@ -234,7 +235,7 @@ void RenderSystem::EndFrame() {
             }
             LOG_DEBUG("RenderSystem", "EndFrame: {} 条(渲染器) + {} 条(GPU命令)",
                      cmdCount, gpuCmdCount);
-            lastLogTime = now;
+            s_firstEndFrame = false;
         }
 
         if (!commands.empty()) {

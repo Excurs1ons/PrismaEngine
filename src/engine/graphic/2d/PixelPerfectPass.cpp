@@ -215,8 +215,12 @@ void PixelPerfectPass::BlitToSwapChain(ICommandBuffer* cmd,
     // 全屏三角形绘制（3 个顶点，无 VBO 开销）
     cmd->Draw(3, 1, 0);
 
-    LOG_TRACE("PixelPerfect", "Blit: {}x{} -> {}x{} (scale={}, offset={},{})",
-              m_logicW, m_logicH, vpW, vpH, scale, vpX, vpY);
+    static bool s_firstFrame = true;
+    if (s_firstFrame) {
+        LOG_INFO("PixelPerfect", "Blit: {}x{} -> {}x{} (scale={}, offset={},{})",
+                 m_logicW, m_logicH, vpW, vpH, scale, vpX, vpY);
+        s_firstFrame = false;
+    }
 }
 
 } // namespace Prisma::Graphic
