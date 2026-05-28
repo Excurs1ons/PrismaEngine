@@ -549,9 +549,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                     m_scriptEngine->Render(std::min(deltaTime, 0.1f));
 #endif
 
-                Graphic::Renderer2D::BeginGizmo();
-                m_CurrentApp->OnRender(); 
-                Graphic::Renderer2D::EndGizmo();
+                m_CurrentApp->OnRender();
                 double t2 = Platform::GetTimeSeconds();
                 GetRenderSystem()->EndFrame();
                 double t3 = Platform::GetTimeSeconds();
