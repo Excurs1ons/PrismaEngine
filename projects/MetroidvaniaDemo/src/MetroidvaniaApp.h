@@ -21,10 +21,10 @@ public:
 
 private:
     bool m_autoQuit = false;
-    bool m_simInput = true;  // 默认开启模拟输入（自动化测试）
+    bool m_simInput = false; // 关闭模拟输入，正常手动操作
     int m_simFrame = 0;
     float m_elapsedTime = 0;
-    float m_autoExitTimeout = 15.0f; // 15秒自动退出
+    float m_autoExitTimeout = 30.0f; // 30秒自动退出
 };
 
 } // namespace Prisma

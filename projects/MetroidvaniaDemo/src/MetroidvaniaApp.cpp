@@ -45,6 +45,7 @@ MetroidvaniaApp::MetroidvaniaApp()
 int MetroidvaniaApp::OnInitialize() {
     LOG_INFO("Metroidvania", "Initializing C# scripted demo, resolution={0}x{1} simInput={2} autoExit={3}s",
              m_Spec.Width, m_Spec.Height, m_simInput, m_autoExitTimeout);
+    Engine::Get().GetSceneManager()->CreateNewScene();
     return 0;
 }
 
@@ -77,25 +78,24 @@ void MetroidvaniaApp::OnUpdate(Timestep ts) {
 }
 
 void MetroidvaniaApp::OnRender() {
-    auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
-    auto camera = scene ? scene->GetMainCamera() : nullptr;
-    auto ortho = std::dynamic_pointer_cast<Graphic::OrthographicCamera>(camera);
-    if (!ortho) return;
-
-    // 从 ScriptEngine 同步相机位置
+    // 从 ScriptEngine 获取相机位置，构造正交相机（Viewport 256x224 —— NES 标准）
     float camX = 0, camY = 0;
 #if PRISMA_ENABLE_SCRIPTING
     Engine::Get().GetScriptEngine().GetCameraPos(&camX, &camY);
 #endif
-    ortho->SetPosition({camX, camY});
+    Graphic::OrthographicCamera ortho(
+        camX - 128, camX + 128,  // left, right
+        camY + 112, camY - 112,  // bottom, top (flip Y for screen coords)
+        -1000.0f, 1000.0f
+    );
 
-    Graphic::Renderer2D::BeginScene(*ortho);
+    Graphic::Renderer2D::BeginScene(ortho);
     Graphic::Renderer2D::DrawNodesSoA();
     Graphic::Renderer2D::EndScene();
 
     // HUD 覆盖层
     {
-        Vector3 camPos = ortho->GetPosition();
+        Vector3 camPos = ortho.GetPosition();
         auto hud = [&](float sx, float sy) { return Vector2{sx + camPos.x, sy + camPos.y}; };
 
         uint32_t totalNodes = Engine::Get().GetEntityManager().GetAliveCount();

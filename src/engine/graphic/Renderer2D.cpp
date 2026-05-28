@@ -47,6 +47,7 @@ struct Renderer2D::Renderer2DData {
 
     std::shared_ptr<ITexture> CurrentTexture = nullptr;
     std::shared_ptr<ITexture> LightTexture = nullptr;
+    std::shared_ptr<ITexture> WhiteTexture = nullptr; // 全局 1x1 白纹理
     bool BatchingEnabled = true;
     bool InGizmoMode = false; // 当前是否在 Gizmo 绘制模式
 };
@@ -123,6 +124,7 @@ void Renderer2D::Initialize() {
     if (rm) {
         uint32_t val = 0xFFFFFFFF; TextureDesc wD; wD.width = 1; wD.height = 1; wD.format = TextureFormat::RGBA8_UNorm;
         auto wT = rm->CreateTextureFromMemory(&val, sizeof(val), wD);
+        s_Data->WhiteTexture = wT; // 全局白纹理（无纹理绘制 fallback）
         auto sS = rm->LoadShaderSync("assets/shaders/LitSprite.frag.spv");
         if (!sS) sS = rm->LoadShaderSync("DefaultPixel");
         if (sS) {
@@ -333,7 +335,8 @@ void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const Prisma:
         s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
     }
     auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
-    if (s_Data->CurrentTexture != nullptr || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
+    auto* wt = s_Data->WhiteTexture.get();
+    if (s_Data->CurrentTexture.get() != wt || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = s_Data->WhiteTexture; }
     float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
     Vertex* v = f.VertexBufferPtr;
     v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {0, 1, 0, 0} };
@@ -350,7 +353,7 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const Prisma::Color& col) {
         s_Data->Stats.QuadCount++; s_Data->Stats.DrawCalls++; return;
     }
     auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
-    if (s_Data->CurrentTexture != nullptr || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
+    if (s_Data->CurrentTexture.get() != s_Data->WhiteTexture.get() || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = s_Data->WhiteTexture; }
     PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
     Vertex* v = f.VertexBufferPtr;
     v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {0, 1, 0, 0} };
@@ -481,6 +484,10 @@ void Renderer2D::ResetStats() { if (s_Data) s_Data->Stats = Statistics(); }
 Renderer2D::Statistics Renderer2D::GetStats() { return s_Data ? s_Data->LastStats : Statistics(); }
 void Renderer2D::SetBatchingEnabled(bool enabled) { if (s_Data) s_Data->BatchingEnabled = enabled; }
 bool Renderer2D::IsBatchingEnabled() { return s_Data ? s_Data->BatchingEnabled : false; }
+
+std::shared_ptr<ITexture> Renderer2D::GetWhiteTexture() {
+    return s_Data ? s_Data->WhiteTexture : nullptr;
+}
 
 void Renderer2D::SetLightTexture(const std::shared_ptr<ITexture>& texture) {
     if (s_Data) s_Data->LightTexture = texture;

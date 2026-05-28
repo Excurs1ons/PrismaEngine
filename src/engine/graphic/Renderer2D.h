@@ -83,6 +83,9 @@ public:
     // 设置光照纹理
     static void SetLightTexture(const std::shared_ptr<ITexture>& texture);
 
+    // 全局 1x1 白纹理（无纹理绘制时的默认 fallback）
+    static std::shared_ptr<ITexture> GetWhiteTexture();
+
 private:
     static void StartBatch();
     static void NextBatch();

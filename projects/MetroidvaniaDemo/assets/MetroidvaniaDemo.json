@@ -3,7 +3,7 @@
     "window": {
         "width": 1024,
         "height": 896,
-        "vsync": 2,
+        "vsync": "Mailbox",
         "resizable": true,
         "fullscreen": false,
         "maxFPS": 0
@@ -12,7 +12,7 @@
         "maxSamples": 1,
         "maxBounces": 4,
         "hardwareRayTracing": false,
-        "pathTraceMode": false,
+        "pathTraceMode": "Flat",
         "enableNEE": false
     },
     "renderMode": "2D",
