@@ -78,42 +78,19 @@ void MetroidvaniaApp::OnUpdate(Timestep ts) {
 }
 
 void MetroidvaniaApp::OnRender() {
-    // 从 ScriptEngine 获取相机位置，构造正交相机（Viewport 256x224 —— NES 标准）
     float camX = 0, camY = 0;
 #if PRISMA_ENABLE_SCRIPTING
     Engine::Get().GetScriptEngine().GetCameraPos(&camX, &camY);
 #endif
     Graphic::OrthographicCamera ortho(
-        camX - 128, camX + 128,  // left, right
-        camY + 112, camY - 112,  // bottom, top (flip Y for screen coords)
+        camX - 128, camX + 128,
+        camY + 112, camY - 112,
         -1000.0f, 1000.0f
     );
 
     Graphic::Renderer2D::BeginScene(ortho);
     Graphic::Renderer2D::DrawNodesSoA();
     Graphic::Renderer2D::EndScene();
-
-    // HUD 覆盖层
-    {
-        Vector3 camPos = ortho.GetPosition();
-        auto hud = [&](float sx, float sy) { return Vector2{sx + camPos.x, sy + camPos.y}; };
-
-        uint32_t totalNodes = Engine::Get().GetEntityManager().GetAliveCount();
-        std::string fpsInfo = std::to_string((int)Engine::Get().GetFPS()) + " FPS | Nodes: " +
-                              std::to_string(totalNodes);
-        Graphic::Renderer2D::DrawString(fpsInfo, hud(30.0f, 30.0f), 2.0f,
-                                        {0.6f, 0.6f, 0.6f, 1.0f});
-        Graphic::Renderer2D::DrawString("Cam: (" + std::to_string((int)camX) + "," +
-                                        std::to_string((int)camY) + ")",
-                                        hud(30.0f, 65.0f), 1.5f, {0.6f, 0.6f, 0.9f, 1.0f});
-
-        // 模拟输入状态提示
-        if (m_simInput) {
-            Graphic::Renderer2D::DrawString("[SIM] auto-test mode (FPS: " +
-                                            std::to_string((int)Engine::Get().GetFPS()) + ")",
-                                            hud(30.0f, 100.0f), 2.0f, {1.0f, 0.8f, 0.2f, 1.0f});
-        }
-    }
 }
 
 void MetroidvaniaApp::OnEvent(Event& e) {

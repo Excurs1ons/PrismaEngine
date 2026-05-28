@@ -21,7 +21,7 @@ public:
 
 private:
     bool m_autoQuit = false;
-    bool m_simInput = false; // 关闭模拟输入，正常手动操作
+    bool m_simInput = true;  // 测试模式：自动移动角色 + 相机跟随
     int m_simFrame = 0;
     float m_elapsedTime = 0;
     float m_autoExitTimeout = 30.0f; // 30秒自动退出

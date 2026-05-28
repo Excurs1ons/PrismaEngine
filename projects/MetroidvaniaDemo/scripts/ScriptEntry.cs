@@ -66,6 +66,13 @@ internal static class ScriptEntry
             gate.AddScript<AbilityGate>();
             SetupSprite(gate, 0.5f, 0.5f, 0.5f, 32, 32);
 
+            // 全局环境光（避免 LightMap 全黑导致精灵不可见）
+            var envLight = new Light2D(LightType.Point);
+            envLight.Position = new Vector2(640, 240);
+            envLight.Color = new Vector3(1.0f, 1.0f, 1.0f);
+            envLight.Intensity = 2.0f;
+            envLight.Radius = 2000.0f;
+
             Console.WriteLine("[MetroidvaniaDemo] Bootstrap complete — all scene nodes ready");
         }
         catch (Exception ex)
