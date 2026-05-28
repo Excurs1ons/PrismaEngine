@@ -5,10 +5,10 @@
 // 圆形渐变纹理 + Alpha/Additive 混合支持
 // ============================================================================
 
-in vec2  v_TexCoord;
-in vec4  v_Color;
-flat in float v_Lifetime;
-flat in float v_Age;
+layout(location = 0) in vec2  v_TexCoord;
+layout(location = 1) in vec4  v_Color;
+layout(location = 2) flat in float v_Lifetime;
+layout(location = 3) flat in float v_Age;
 
 layout(location = 0) out vec4 fragColor;
 

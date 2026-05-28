@@ -138,6 +138,8 @@ endif()
 
 # 测试模块 (如果启用)
 if(PRISMA_BUILD_TESTING)
+    enable_testing()
+    include(cmake/TestingDeps.cmake)
     add_subdirectory(src/tests)
     message(STATUS "已添加测试模块")
 else()

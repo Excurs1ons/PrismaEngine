@@ -15,6 +15,7 @@ public:
     void Write(const std::string& key, float value) override { WriteRaw(value); }
     void Write(const std::string& key, int32_t value) override { WriteRaw(value); }
     void Write(const std::string& key, uint32_t value) override { WriteRaw(value); }
+    void Write(const std::string& key, uint64_t value) override { WriteRaw(value); }
     void Write(const std::string& key, bool value) override { WriteRaw(value); }
     void Write(const std::string& key, const std::string& value) override {
         uint32_t size = static_cast<uint32_t>(value.size());
@@ -50,6 +51,7 @@ public:
     bool Read(const std::string& key, float& value) override { return ReadRaw(value); }
     bool Read(const std::string& key, int32_t& value) override { return ReadRaw(value); }
     bool Read(const std::string& key, uint32_t& value) override { return ReadRaw(value); }
+    bool Read(const std::string& key, uint64_t& value) override { return ReadRaw(value); }
     bool Read(const std::string& key, bool& value) override { return ReadRaw(value); }
     bool Read(const std::string& key, std::string& value) override {
         uint32_t size = 0;

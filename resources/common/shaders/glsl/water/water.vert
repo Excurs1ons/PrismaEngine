@@ -50,14 +50,14 @@ layout(std430, binding = 2) buffer GerstnerBuffer {
 } waves;
 
 // Output to fragment shader
-out vec3 v_WorldPos;
-out vec3 v_Normal;
-out vec2 v_TexCoord;
-out vec3 v_Tangent;
-out vec3 v_Bitangent;
-out vec3 v_ViewDir;
-out float v_WaveHeight;
-flat out float v_FarPlane;
+layout(location = 0) out vec3 v_WorldPos;
+layout(location = 1) out vec3 v_Normal;
+layout(location = 2) out vec2 v_TexCoord;
+layout(location = 3) out vec3 v_Tangent;
+layout(location = 4) out vec3 v_Bitangent;
+layout(location = 5) out vec3 v_ViewDir;
+layout(location = 6) out float v_WaveHeight;
+layout(location = 7) flat out float v_FarPlane;
 
 // Compute Gerstner wave displacement and normal
 void computeGerstner(vec3 position, float time,

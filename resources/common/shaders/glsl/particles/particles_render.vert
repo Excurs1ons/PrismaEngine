@@ -29,10 +29,10 @@ layout(std140, binding = 1) uniform CameraUniforms {
 } camera;
 
 // 输出到片段着色器
-out vec2 v_TexCoord;
-out vec4 v_Color;
-flat out float v_Lifetime;
-flat out float v_Age;
+layout(location = 0) out vec2 v_TexCoord;
+layout(location = 1) out vec4 v_Color;
+layout(location = 2) flat out float v_Lifetime;
+layout(location = 3) flat out float v_Age;
 
 // 用于生成公告板四边形的 4 个角偏移
 // 0: (-1, -1), 1: (1, -1), 2: (-1, 1), 3: (1, 1)

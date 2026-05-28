@@ -5,14 +5,14 @@
 // Fresnel (Schlick), reflection + refraction, depth fog, specular
 // ============================================================================
 
-in vec3 v_WorldPos;
-in vec3 v_Normal;
-in vec2 v_TexCoord;
-in vec3 v_Tangent;
-in vec3 v_Bitangent;
-in vec3 v_ViewDir;
-in float v_WaveHeight;
-flat in float v_FarPlane;
+layout(location = 0) in vec3 v_WorldPos;
+layout(location = 1) in vec3 v_Normal;
+layout(location = 2) in vec2 v_TexCoord;
+layout(location = 3) in vec3 v_Tangent;
+layout(location = 4) in vec3 v_Bitangent;
+layout(location = 5) in vec3 v_ViewDir;
+layout(location = 6) in float v_WaveHeight;
+layout(location = 7) flat in float v_FarPlane;
 
 layout(location = 0) out vec4 fragColor;
 
