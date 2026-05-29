@@ -1,0 +1,46 @@
+#version 450
+
+// ============================================================================
+// PrismaEngine — Bloom 预过滤计算着色器
+// 从 HDR 颜色纹理中提取亮度超过阈值的部分
+// 输出用于后续 Kawase 模糊的光晕纹理
+// ============================================================================
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// HDR 场景颜色纹理
+layout(rgba16f, binding = 0) uniform image2D u_InputImage;
+
+// 亮度过滤输出纹理
+layout(rgba16f, binding = 1) uniform image2D u_OutputImage;
+
+layout(push_constant) uniform BloomPrefilterParams {
+    float u_Threshold;       // 亮度阈值
+    float u_SoftThreshold;   // 软拐点平滑过渡范围（0 = 硬截止）
+} params;
+
+// BT.709 亮度系数
+const vec3 LUMINANCE_COEFFS = vec3(0.299, 0.587, 0.114);
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(u_InputImage);
+
+    if (coord.x >= imgSize.x || coord.y >= imgSize.y) return;
+
+    vec4 hdrColor = imageLoad(u_InputImage, coord);
+    float luminance = dot(hdrColor.rgb, LUMINANCE_COEFFS);
+
+    // 软拐点: 在阈值附近做 smoothstep 过渡，避免硬截止导致的闪烁
+    float amount = luminance - params.u_Threshold;
+    if (params.u_SoftThreshold > 0.0) {
+        amount = smoothstep(0.0, params.u_SoftThreshold, amount);
+    } else {
+        amount = step(0.0, amount);
+    }
+
+    // 提取超过阈值的光晕颜色，保留原始色相
+    vec3 bloomColor = hdrColor.rgb * max(amount, 0.0);
+
+    imageStore(u_OutputImage, coord, vec4(bloomColor, 1.0));
+}

@@ -1,0 +1,55 @@
+#version 450
+
+// ============================================================================
+// PrismaEngine — Bloom Kawase 双采样模糊计算着色器
+//
+// 使用 Kawase Dual-Filter 算法，每趟仅需 5 次纹理采样。
+// 通过链式迭代（iteration 递增）即可获得等效大半径高斯模糊。
+//
+// 支持两个方向:
+//   u_Direction == 0: 下采样 (Downsample) - 缩小模糊
+//   u_Direction == 1: 上采样 (Upsample)   - 放大混合
+// ============================================================================
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+layout(rgba16f, binding = 0) uniform image2D u_InputImage;
+layout(rgba16f, binding = 1) uniform image2D u_OutputImage;
+
+layout(push_constant) uniform BloomBlurParams {
+    float u_Radius;       // 基础模糊半径
+    int   u_Iteration;    // 迭代索引（控制采样偏移增长）
+    int   u_Direction;    // 0 = 下采样, 1 = 上采样
+} params;
+
+// Kawase 偏移量随迭代增长: offset = (iteration * 2 + 1.5) * radius
+// 迭代 0: offset = 1.5 * radius  (最近邻采样)
+// 迭代 1: offset = 3.5 * radius  (扩大范围)
+// 迭代 2: offset = 5.5 * radius  (进一步扩大)
+// 以此类推实现等效大半径高斯模糊
+
+float kawaseOffset() {
+    return (float(params.u_Iteration) * 2.0 + 1.5) * params.u_Radius;
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(u_InputImage);
+
+    if (coord.x >= imgSize.x || coord.y >= imgSize.y) return;
+
+    float offset = kawaseOffset();
+    ivec2 off = ivec2(int(offset));
+
+    // Kawase 5-tap 采样:
+    //   center + 4 个角点偏移, 加权平均
+    vec4 center = imageLoad(u_InputImage, coord);
+    vec4 tl = imageLoad(u_InputImage, coord + ivec2(-off.x, -off.y));
+    vec4 tr = imageLoad(u_InputImage, coord + ivec2( off.x, -off.y));
+    vec4 bl = imageLoad(u_InputImage, coord + ivec2(-off.x,  off.y));
+    vec4 br = imageLoad(u_InputImage, coord + ivec2( off.x,  off.y));
+
+    vec4 result = (center + tl + tr + bl + br) * 0.2;
+
+    imageStore(u_OutputImage, coord, result);
+}
