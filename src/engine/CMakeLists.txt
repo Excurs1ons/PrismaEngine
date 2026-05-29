@@ -280,15 +280,17 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         message(STATUS "Scripting: 找到 dotnet, 将构建 C# 核心库")
         
         # 动态确定运行时标识符 (RID)
+        # Cache 变量，供子项目 CMakeLists.txt 引用（如 MetroidvaniaDemo）
         if(WIN32)
-            set(CS_RID "win-x64")
+            set(CS_RID "win-x64" CACHE STRING ".NET Runtime Identifier for C# scripting host")
         else()
             if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
-                set(CS_RID "linux-arm64")
+                set(CS_RID "linux-arm64" CACHE STRING ".NET Runtime Identifier for C# scripting host")
             else()
-                set(CS_RID "linux-x64")
+                set(CS_RID "linux-x64" CACHE STRING ".NET Runtime Identifier for C# scripting host")
             endif()
         endif()
+        mark_as_advanced(CS_RID)
 
         set(CS_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/Prisma.Core")
         set(CS_HOST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/PrismaEngine.Host")

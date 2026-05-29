@@ -34,17 +34,19 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 | Rendering Architecture | ✅ 90% | Core Pass + Feature system + Compute Pipeline RHI |
 | Resource Management | ✅ 95% | Handle<T> system + resource pools |
 | Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
-| DirectX 12 Backend | ⏳ 70% | Primary Windows rendering backend |
+| DirectX 12 Backend | ❌ 已暂停 | 已暂停，专注 Vulkan 后端 |
 | Platform Layer | ✅ 95% | Unified Windows/Linux/Android abstraction |
 | Logger System | ✅ 100% | Thread-safe cross-platform logging |
 | Audio System | ✅ 50% | XAudio2/SDL3 backends with 3D spatial support |
 | Shaders | ✅ 50% | PBR lighting shaders (lit/unlit) |
+| Physics System | ✅ 30% | 碰撞检测、刚体、约束求解、CCD |
 | Android Runtime | ✅ 90% | Optimized Vulkan runtime (integrated GameActivity) |
-| Editor Tools | ⏳ 15% | ImGui-based inspector |
+| Editor Tools | ✅ 40% | ImGui 编辑器 + MCP 集成 + WebUI |
 | MCP Protocol | ✅ 85% | 17 tools, 7 categories, dual transport, hash delta tracking |
 | WebUI Editor | ✅ 80% | Browser-based editor with scene/game viewport, hierarchy, inspector |
+| Testing Infrastructure | ✅ 50% | GTest 单元测试 + 集成测试 (66 files) |
 
-**Overall: ~82%**
+**Overall: ~83%**
 
 ## Quick Start
 
