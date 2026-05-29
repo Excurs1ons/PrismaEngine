@@ -1,7 +1,67 @@
+# Clangd configuration for PrismaEngine (cross-platform: Windows + Linux).
+#
+# On Windows: CMake + Visual Studio produces MSVC-style compile_commands.json.
+#   The Remove/Add rules below strip MSVC-specific flags (response files, /W4,
+#   /wd, /Zc:, /Fo, etc.) and add GCC-style equivalents, so the result is
+#   GCC-style flags that the "clang" driver can parse.
+#
+# On Linux: CMake + Ninja produces GCC-style compile_commands.json natively.
+#   The Remove/Add rules are mostly no-ops (the patterns don't match) but the
+#   supplemental -I and -D entries still apply.
+#
+# Key principle: after transformation all flags are GCC-style, so we use
+# "clang" (not "clang-cl") as the compiler driver — it works on both platforms.
+
 CompileFlags:
+  Compiler: clang
+
+  Remove:
+    # CMake -external:* wrapping (clang-cl doesn't understand it)
+    - "-external:"
+    - "/external:"
+    # MSVC response files (@file.modmap)
+    - "@"
+    # MSVC output/PDB flags (clangd doesn't need them)
+    - "-Fo"
+    - "-Fd"
+    - "-Fe"
+    # MSVC preprocessor/permissive flags (not supported by clang)
+    - "-Zc:"
+    - "/Zc:"
+    - "-permissive-"
+    - "/permissive-"
+    # MSVC warning-control flags (clang uses different -W flags)
+    - "-W4"
+    - "/W4"
+    - "-W3"
+    - "/W3"
+    - "-wd"
+    - "/wd"
+    - "-we"
+    - "/we"
+    - "-WX"
+    - "/WX"
+    # MSVC sync-PDB flag
+    - "-FS"
+    - "/FS"
+
   Add:
+    # ===== C++ standard =====
     - "-std=c++23"
-    - "-xc++"
+    # ===== Preprocessor defines =====
+    - "-DNOMINMAX"
+    - "-DWIN32_LEAN_AND_MEAN"
+    - "-D_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR"
+    - "-DENGINE_BUILD_SHARED=1"
+    - "-DENGINE_EXPORTS=1"
+    - "-DPRISMA_ENABLE_RENDER_VULKAN=1"
+    - "-DPRISMA_ENABLE_AUDIO_SDL3=1"
+    - "-DPRISMA_ENABLE_SCRIPTING=2"
+    - "-DPRISMA_ENABLE_MCP=1"
+    - "-DPRISMA_ENGINE_EXPORTS=1"
+    - "-DPRISMA_HAS_GLSLANG=1"
+    - "-DTINYXML2_DEBUG"
+    # ===== Engine include paths =====
     - "-I./src"
     - "-I./src/engine"
     - "-I./src/engine/core"
@@ -38,6 +98,7 @@ CompileFlags:
     - "-I./src/engine/object"
     - "-I./src/engine/mcp"
     - "-I./src/projects"
+    # ===== Third-party dependency includes =====
     - "-I./.dependencies/glm-src"
     - "-I./.dependencies/stb-src"
     - "-I./.dependencies/glaze-src/include"
@@ -48,20 +109,18 @@ CompileFlags:
     - "-I./.dependencies/Vulkan-Headers-src/include"
     - "-I./.dependencies/Vulkan-Headers-src/include/vulkan"
     - "-I./.dependencies/vk-bootstrap-src/include"
+    - "-I./.dependencies/vk-bootstrap-src/src"
     - "-I./.dependencies/SDL3-src/include"
     - "-I./.dependencies/SDL3-src/include/SDL3"
     - "-I./.dependencies/DirectX-Headers-src/include"
-    - "-DPRISMA_ENABLE_RENDER_VULKAN=1"
-    - "-DPRISMA_ENABLE_AUDIO_SDL3=1"
-    - "-DPRISMA_PLATFORM_WINDOWS=1"
-    - "-D_CRT_SECURE_NO_WARNINGS"
-    - "-DNOMINMAX"
-    - "-DWIN32_LEAN_AND_MEAN"
-    - "-DENGINE_EXPORTS=1"
-  Remove:
-    - "-W*"
-    - "-external:*"
-  Compiler: clang
+    - "-I./.dependencies/imgui-src"
+    - "-I./.dependencies/imgui-src/backends"
+    - "-I./.dependencies/nlohmann_json-src/include"
+    - "-I./.dependencies/spirv-reflect-src"
+    - "-I./.dependencies/xxhash-src"
+    # ===== Build-generated headers =====
+    - "-I./build/windows-x64-debug/_deps/SDL3-build/include-revision"
+    - "-I./build/windows-x64-debug/_deps/SDL3-build/include-config-debug/build_config"
 
 Index:
   Background: Build
