@@ -46,11 +46,10 @@ private:
     std::shared_ptr<IShader> m_prefilterShader;
     std::shared_ptr<IShader> m_blurShader;
     std::shared_ptr<IShader> m_compositeShader;
-    std::shared_ptr<IShader> m_compositeVertShader;
 
     std::shared_ptr<IComputePipeline> m_prefilterPipeline;
     std::shared_ptr<IComputePipeline> m_blurPipeline;
-    std::shared_ptr<IPipelineState> m_compositePSO;
+    std::shared_ptr<IComputePipeline> m_compositePipeline;
 
     std::shared_ptr<ITexture> m_brightTexture;
     std::shared_ptr<ITexture> m_tempTextureA;

@@ -1,0 +1,43 @@
+#version 450
+
+// ============================================================================
+// PrismaEngine — Bloom 合成计算着色器
+// 将原始 HDR 场景颜色与模糊后的 Bloom 光晕混合，
+// 并应用色调映射和伽马校正输出最终 LDR 颜色。
+// ============================================================================
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// 原始 HDR 场景颜色（采样器，带线性过滤）
+layout(binding = 0) uniform sampler2D u_OriginalTexture;
+
+// 模糊后的 Bloom 光晕（采样器，带线性过滤）
+layout(binding = 1) uniform sampler2D u_BloomTexture;
+
+// 输出图像（存储图像）
+layout(rgba16f, binding = 2) uniform image2D u_OutputImage;
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(u_OutputImage);
+
+    if (coord.x >= imgSize.x || coord.y >= imgSize.y) return;
+
+    // 将像素坐标映射到纹理坐标（像素中心对齐）
+    vec2 texCoord = (vec2(coord) + 0.5) / vec2(imgSize);
+
+    vec3 original = texture(u_OriginalTexture, texCoord).rgb;
+    vec3 bloom = texture(u_BloomTexture, texCoord).rgb;
+
+    // Bloom 合成: 原始 HDR + Bloom (叠加混合)
+    vec3 hdrResult = original + bloom;
+
+    // Reinhard 色调映射: HDR -> LDR
+    vec3 mapped = hdrResult / (hdrResult + vec3(1.0));
+
+    // 伽马校正
+    const float GAMMA = 2.2;
+    vec3 gammaCorrected = pow(mapped, vec3(1.0 / GAMMA));
+
+    imageStore(u_OutputImage, coord, vec4(gammaCorrected, 1.0));
+}
