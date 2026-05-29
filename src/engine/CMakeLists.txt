@@ -67,6 +67,7 @@ set(CORE_SOURCES
     audio/AudioDeviceSDL3.cpp
     audio/AudioAPI.cpp
     audio/backends/SymbolStubs.cpp
+    audio/backends/AudioDeviceMiniaudio.cpp
 
     # Input
     input/InputDevice.cpp
@@ -188,6 +189,9 @@ set(CORE_SOURCES
     graphic/SpirvReflector.cpp
     graphic/LogicalPass.cpp
     graphic/LogicalPipeline.cpp
+    graphic/IBLGenerator.cpp
+    graphic/ShadowMapManager.cpp
+    graphic/HeadlessRenderer.cpp
     graphic/interfaces/IPipelineState.cpp
 
     # Graphic - Forward Pipeline
@@ -195,7 +199,10 @@ set(CORE_SOURCES
     graphic/pipelines/forward/DepthPrePass.cpp
     graphic/pipelines/forward/OpaquePass.cpp
     graphic/pipelines/forward/TransparentPass.cpp
+    graphic/pipelines/forward/ShadowPass.cpp
     graphic/pipelines/forward/BloomPostProcessPass.cpp
+    graphic/pipelines/forward/SSAOPass.cpp
+    graphic/pipelines/forward/TAAPass.cpp
 
     # Graphic - PathTracing Pipeline
     graphic/pipelines/pathtracing/PathTracingPipeline.cpp

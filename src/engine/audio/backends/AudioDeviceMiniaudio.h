@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Engine/audio/IAudioDevice.h>
-#include <Engine/audio/dsp/AudioNode.h>
+#include "IAudioDevice.h"
+#include "AudioNode.h"
 
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
@@ -58,6 +58,10 @@ public:
     void SetVoice3DAttributes(AudioVoiceId voiceId, const Audio3DAttributes& attributes) override;
     void SetListener(const AudioListener& listener) override;
 
+    // ========== Miniaudio 扩展 3D 方法 ==========
+    void SetConeAngles(AudioVoiceId voiceId, float innerAngle, float outerAngle);
+    void SetRolloffFactor(AudioVoiceId voiceId, float factor);
+
     // ========== 全局控制 ==========
     void SetMasterVolume(float volume) override;
     float GetMasterVolume() const override { return m_masterVolume; }
@@ -91,6 +95,15 @@ private:
         PlayDesc desc;
         VoiceState state = VoiceState::Stopped;
         size_t readCursor = 0;
+
+        // 3D 音频属性
+        float position[3] = {0.0f, 0.0f, 0.0f};
+        float velocity[3] = {0.0f, 0.0f, 0.0f};
+        float direction[3] = {0.0f, 0.0f, 1.0f};
+        float coneInnerAngle = 360.0f;
+        float coneOuterAngle = 360.0f;
+        float coneOuterGain = 0.0f;
+        float rolloffFactor = 1.0f;
     };
 
     ma_device m_device = {};
@@ -105,6 +118,12 @@ private:
     AudioVoiceId m_nextVoiceId = 1;
     float m_masterVolume = 1.0f;
     AudioDesc m_desc;
+
+    // 3D 音频状态
+    AudioListener m_listener;
+    DistanceModel m_distanceModel = DistanceModel::InverseClamped;
+    float m_dopplerFactor = 1.0f;
+    float m_speedOfSound = 343.3f;
 
     AudioEventCallback m_eventCallback;
 };
