@@ -35,6 +35,7 @@ struct ApplicationSpecification {
     bool HardwareRayTracing = false;
     Graphic::PathTraceMode PathTraceMode = Graphic::PathTraceMode::BVH;
     bool EnableNEE = false;
+    uint32_t MaxBatchQuads = 10000;
     uint32_t HeadlessFrames = 500;
     uint32_t HeadlessWidth = 1080;
     uint32_t HeadlessHeight = 1080;

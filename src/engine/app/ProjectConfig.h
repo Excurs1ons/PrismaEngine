@@ -43,6 +43,7 @@ struct RenderingConfig {
     bool hardwareRayTracing = false; // DXR 硬件加速预留
     Graphic::PathTraceMode pathTraceMode = Graphic::PathTraceMode::BVH;
     bool enableNEE = false;            // 下一事件估计（小光源时显著提升收敛）
+    uint32_t maxBatchQuads = 10000;    // 2D 合批渲染器最大四边形数
 };
 
 struct HeadlessConfig {
@@ -133,7 +134,8 @@ struct glz::meta<Prisma::RenderingConfig> {
         "maxBounces", &Prisma::RenderingConfig::maxBounces,
         "hardwareRayTracing", &Prisma::RenderingConfig::hardwareRayTracing,
         "pathTraceMode", &Prisma::RenderingConfig::pathTraceMode,
-        "enableNEE", &Prisma::RenderingConfig::enableNEE
+        "enableNEE", &Prisma::RenderingConfig::enableNEE,
+        "maxBatchQuads", &Prisma::RenderingConfig::maxBatchQuads
     );
 };
 

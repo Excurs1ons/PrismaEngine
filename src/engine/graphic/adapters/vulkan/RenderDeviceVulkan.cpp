@@ -89,6 +89,13 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         rtPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
         rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
 
+        VkPhysicalDeviceVulkan12Features vk12features{};
+        vk12features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        vk12features.bufferDeviceAddress = VK_TRUE; // VUID 03331
+        vk12features.hostQueryReset = VK_TRUE;      // VUID 02665
+
+        accelFeatures.pNext = &vk12features;
+
         vkb::PhysicalDeviceSelector selector{m_vkbInstance};
         if (!m_headless) {
             selector.set_surface(m_surface);
@@ -108,6 +115,7 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
 #endif
                             .add_required_extension_features(accelFeatures)
                             .add_required_extension_features(rtPipelineFeatures)
+                            .add_required_extension_features(vk12features)
                             .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
                             .select();
         if (!phys_ret)

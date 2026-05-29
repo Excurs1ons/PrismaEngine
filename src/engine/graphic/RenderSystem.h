@@ -35,6 +35,7 @@ struct RenderSystemDesc {
     uint32_t maxSamples        = 512;
     uint32_t maxBounces        = 8;
     bool hardwareRayTracing    = false;
+    uint32_t maxBatchQuads     = 10000;
     uint32_t maxFramesInFlight = 3;
     std::string name           = "PrismaApp";
 };

@@ -204,6 +204,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 spec.HardwareRayTracing = config.rendering.hardwareRayTracing;
                 spec.PathTraceMode      = config.rendering.pathTraceMode;
                 spec.EnableNEE          = config.rendering.enableNEE;
+                spec.MaxBatchQuads      = config.rendering.maxBatchQuads;
                 spec.HeadlessFrames     = config.headless.frames;
                 spec.HeadlessWidth      = config.headless.width;
                 spec.HeadlessHeight     = config.headless.height;
@@ -279,7 +280,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
         rDesc.maxSamples         = appSpec.MaxSamples;
         rDesc.maxBounces         = appSpec.MaxBounces;
         rDesc.hardwareRayTracing = appSpec.HardwareRayTracing;
-        rDesc.enableValidation   = false;
+        rDesc.maxBatchQuads      = appSpec.MaxBatchQuads;
+        rDesc.enableValidation   = true;
         
         m_RenderSystem = AddSystem<Graphic::RenderSystem>(rDesc);
         if (m_RenderSystem->Initialize() != 0) {
@@ -452,7 +454,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         rDesc.width                = appSpec.Width;
         rDesc.height               = appSpec.Height;
         rDesc.enableDebug          = false;
-        rDesc.enableValidation     = false;
+        rDesc.enableValidation     = true;
         rDesc.headless             = true;
         rDesc.renderMode           = renderMode;
         rDesc.presentMode          = appSpec.PresentMode;

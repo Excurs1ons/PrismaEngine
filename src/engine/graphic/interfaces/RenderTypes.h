@@ -247,6 +247,7 @@ enum class ShaderType {
     Hull,
     Domain,
     Compute,
+    VertexAndPixel, // 同时推送到 Vertex 和 Pixel 阶段，对应 VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT
     Unknown
 };
 

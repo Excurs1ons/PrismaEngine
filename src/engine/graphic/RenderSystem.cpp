@@ -51,6 +51,7 @@ int RenderSystem::Initialize() {
 
     // 2D 渲染器：SRP 模式不初始化，由 C# 管线完全接管
     if (m_desc.renderMode != RenderMode::SRP) {
+        Renderer2D::SetMaxBatchQuads(m_desc.maxBatchQuads);
         Renderer2D::Initialize();
         LOG_DEBUG("Renderer", "2D 渲染器初始化成功。");
     } else {

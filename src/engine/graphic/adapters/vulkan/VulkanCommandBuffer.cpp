@@ -392,13 +392,14 @@ void VulkanCommandBuffer::PushConstants([[maybe_unused]] ShaderType stage, const
         flag = VK_SHADER_STAGE_COMPUTE_BIT;
     } else {
         switch (stage) {
-            case ShaderType::Vertex:   flag = VK_SHADER_STAGE_VERTEX_BIT; break;
-            case ShaderType::Pixel:    flag = VK_SHADER_STAGE_FRAGMENT_BIT; break;
-            case ShaderType::Compute:  flag = VK_SHADER_STAGE_COMPUTE_BIT; break;
-            case ShaderType::Geometry: flag = VK_SHADER_STAGE_GEOMETRY_BIT; break;
-            case ShaderType::Hull:     flag = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; break;
-            case ShaderType::Domain:   flag = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
-            default:                   flag = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; break;
+            case ShaderType::Vertex:         flag = VK_SHADER_STAGE_VERTEX_BIT; break;
+            case ShaderType::Pixel:          flag = VK_SHADER_STAGE_FRAGMENT_BIT; break;
+            case ShaderType::Compute:        flag = VK_SHADER_STAGE_COMPUTE_BIT; break;
+            case ShaderType::Geometry:       flag = VK_SHADER_STAGE_GEOMETRY_BIT; break;
+            case ShaderType::Hull:           flag = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; break;
+            case ShaderType::Domain:         flag = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
+            case ShaderType::VertexAndPixel: flag = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; break;
+            default:                         flag = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; break;
         }
     }
     vkCmdPushConstants(m_cmd, m_currentLayout, flag, 0, size, data);

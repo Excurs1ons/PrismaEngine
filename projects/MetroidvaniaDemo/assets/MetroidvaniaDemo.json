@@ -13,7 +13,8 @@
         "maxBounces": 4,
         "hardwareRayTracing": false,
         "pathTraceMode": "Flat",
-        "enableNEE": false
+        "enableNEE": false,
+        "maxBatchQuads": 1024
     },
     "renderMode": "2D",
     "scriptingBackend": "CoreCLR",

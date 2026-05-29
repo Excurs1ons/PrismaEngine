@@ -18,9 +18,9 @@
 
 namespace Prisma::Graphic {
 
-static constexpr uint32_t MAX_BATCH_QUADS = 50000;
-static constexpr uint32_t MAX_BATCH_VERTICES = MAX_BATCH_QUADS * 4;
-static constexpr uint32_t MAX_BATCH_INDICES = MAX_BATCH_QUADS * 6;
+static uint32_t MAX_BATCH_QUADS = 50000;
+static uint32_t MAX_BATCH_VERTICES = 50000 * 4;
+static uint32_t MAX_BATCH_INDICES = 50000 * 6;
 static constexpr uint32_t FRAME_SLOTS = 3;
 
 struct Renderer2D::Renderer2DData {
@@ -144,6 +144,12 @@ void Renderer2D::Shutdown() {
         }
         delete s_Data; s_Data = nullptr;
     }
+}
+
+void Renderer2D::SetMaxBatchQuads(uint32_t maxBatchQuads) {
+    MAX_BATCH_QUADS   = maxBatchQuads;
+    MAX_BATCH_VERTICES = maxBatchQuads * 4;
+    MAX_BATCH_INDICES  = maxBatchQuads * 6;
 }
 
 void Renderer2D::BeginScene(const OrthographicCamera& camera) {

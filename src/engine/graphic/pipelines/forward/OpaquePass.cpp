@@ -186,8 +186,7 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
             QuadPushConstants pushConstants{};
             pushConstants.mvp = m_projection * m_view * command.transform;
             pushConstants.color = command.color;
-            cmd->PushConstants(ShaderType::Vertex, &pushConstants, sizeof(pushConstants));
-            cmd->PushConstants(ShaderType::Pixel, &pushConstants, sizeof(pushConstants));
+            cmd->PushConstants(ShaderType::VertexAndPixel, &pushConstants, sizeof(pushConstants));
 
             for (const auto& subMesh : command.mesh->GetSubMeshes()) {
                 if (subMesh.vertexBuffer && subMesh.indexBuffer) {

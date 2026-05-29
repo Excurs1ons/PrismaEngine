@@ -80,6 +80,9 @@ public:
     static void SetBatchingEnabled(bool enabled);
     static bool IsBatchingEnabled();
 
+    // 设置最大合批四边形数（需在 Initialize 前调用）
+    static void SetMaxBatchQuads(uint32_t maxBatchQuads);
+
     // 设置光照纹理
     static void SetLightTexture(const std::shared_ptr<ITexture>& texture);
 
