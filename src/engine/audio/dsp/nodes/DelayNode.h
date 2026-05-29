@@ -51,7 +51,7 @@ public:
             for (uint32_t f = 0; f < frames; ++f) {
                 float dry = src[f];
 
-                uint32_t readPos = (m_writePos + m_buffer.size() - chDelay) % m_buffer.size();
+                uint32_t readPos = static_cast<uint32_t>((m_writePos + m_buffer.size() - chDelay) % m_buffer.size());
                 float delayed = m_buffer[readPos];
 
                 m_lpfState = m_lpfState + lpf * (delayed - m_lpfState);

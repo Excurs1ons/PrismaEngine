@@ -73,7 +73,7 @@ if(NOT WIN32)
     message(STATUS "NeoEditor EXE: Windows-only (WinUI3), skipping EXE target.")
 else()
     add_executable(${PROJECT_NAME}
-        # WinUI3 entry point — scaffold only, full implementation in future tasks
+        main.cpp
     )
 
     setup_target_defaults(${PROJECT_NAME})

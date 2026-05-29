@@ -279,11 +279,11 @@ void UDPTransport::Poll() {
 // ── Private Helpers ──
 
 ConnectionHandle UDPTransport::GetOrCreatePeer(const sockaddr_in& addr) {
-    char addrStr[INET_ADDRSTRLEN];
 #ifdef _WIN32
     const char* result = inet_ntoa(addr.sin_addr);
     std::string key = std::string(result) + ":" + std::to_string(ntohs(addr.sin_port));
 #else
+    char addrStr[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &addr.sin_addr, addrStr, sizeof(addrStr));
     std::string key = std::string(addrStr) + ":" + std::to_string(ntohs(addr.sin_port));
 #endif

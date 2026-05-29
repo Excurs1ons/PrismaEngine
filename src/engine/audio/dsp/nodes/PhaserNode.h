@@ -67,8 +67,8 @@ public:
             }
         }
 
-        m_phase += 2.0f * M_PI * rate / ctx.sampleRate * frames;
-        if (m_phase > 2.0f * M_PI) m_phase -= 2.0f * M_PI;
+        m_phase += 2.0f * float(M_PI) * rate / ctx.sampleRate * frames;
+        if (m_phase > 2.0f * float(M_PI)) m_phase -= 2.0f * float(M_PI);
     }
 
     void Reset() override {

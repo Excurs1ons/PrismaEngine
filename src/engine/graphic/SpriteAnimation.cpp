@@ -37,10 +37,10 @@ const AnimationFrame& SpriteAnimation::GetCurrentFrame() const {
 
 SpriteAnimationComponent::SpriteAnimationComponent() {}
 
-void SpriteAnimationComponent::PlayAnimation(const std::string& name, bool restart) {
-    if (m_currentAnimation == name && !restart) return;
+void SpriteAnimationComponent::PlayAnimation(const std::string& animationName, bool restart) {
+    if (m_currentAnimation == animationName && !restart) return;
 
-    auto anim = GetAnimation(name);
+    auto anim = GetAnimation(animationName);
     if (anim) {
         if (auto current = GetAnimation(m_currentAnimation)) {
             current->Stop();

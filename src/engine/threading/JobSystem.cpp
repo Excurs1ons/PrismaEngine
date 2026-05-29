@@ -203,7 +203,7 @@ size_t JobSystem::GetTotalThreadCount() const {
     return total;
 }
 
-void JobSystem::ThreadPool::WorkerThread(uint32_t poolIndex, JobSystem* jobSystem) {
+void JobSystem::ThreadPool::WorkerThread(uint32_t poolIdx, JobSystem* jobSystem) {
     while (running.load(std::memory_order_acquire)) {
         Job job;
         {
@@ -223,9 +223,9 @@ void JobSystem::ThreadPool::WorkerThread(uint32_t poolIndex, JobSystem* jobSyste
             try {
                 job();
             } catch (const std::exception& e) {
-                LOG_ERROR("JobSystem", "池 {0} Worker 任务异常: {1}", poolIndex, e.what());
+                LOG_ERROR("JobSystem", "池 {0} Worker 任务异常: {1}", poolIdx, e.what());
             } catch (...) {
-                LOG_ERROR("JobSystem", "池 {0} Worker 未知异常", poolIndex);
+                LOG_ERROR("JobSystem", "池 {0} Worker 未知异常", poolIdx);
             }
         }
 

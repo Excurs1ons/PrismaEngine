@@ -1,4 +1,4 @@
-#include "OpaquePass.h"
+﻿#include "OpaquePass.h"
 #include "app/Engine.h"
 #include "Platform.h"
 #include "graphic/interfaces/ICommandBuffer.h"
@@ -433,7 +433,7 @@ void OpaquePass::EnsurePBRDescriptors() {
     // Scene UBO (Set 1, Binding 0)
     BufferDesc uboDesc;
     uboDesc.type = BufferType::Constant;
-    uboDesc.size = sizeof(SceneData);
+    uboDesc.size  = sizeof(Prisma::Graphic::SceneData);
     uboDesc.usage = BufferUsage::Dynamic;
     m_sceneUBO = factory->CreateBufferImpl(uboDesc);
     if (!m_sceneUBO) {
@@ -465,7 +465,8 @@ void OpaquePass::EnsurePBRDescriptors() {
         m_sceneDescriptorSetLayout = factory->CreateDescriptorSetLayout(resources);
         m_sceneDescriptorSet = factory->CreateDescriptorSet(m_sceneDescriptorSetLayout.get());
         if (m_sceneDescriptorSet) {
-            m_sceneDescriptorSet->BindBuffer(0, m_sceneUBO.get(), 0, sizeof(SceneData), DescriptorType::UniformBuffer);
+            m_sceneDescriptorSet->BindBuffer(
+                0, m_sceneUBO.get(), 0, sizeof(Prisma::Graphic::SceneData), DescriptorType::UniformBuffer);
             m_sceneDescriptorSet->Update();
         }
     }
@@ -492,11 +493,11 @@ void OpaquePass::EnsurePBRDescriptors() {
 void OpaquePass::UpdateSceneUBO() {
     if (!m_sceneUBO) return;
 
-    SceneData data{};
-    data.view = m_view;
-    data.projection = m_projection;
-    data.viewProjection = m_viewProjection;
-    data.cameraPos = PrismaMath::vec4(m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, 0.0f);
+    Prisma::Graphic::SceneData data{};
+    data.camera.view = m_view;
+    data.camera.projection = m_projection;
+    data.camera.viewProjection = m_viewProjection;
+    data.camera.position = PrismaMath::vec4(m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, 0.0f);
 
     m_sceneUBO->UpdateData(&data, sizeof(data), 0);
 }

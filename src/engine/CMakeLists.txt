@@ -195,6 +195,7 @@ set(CORE_SOURCES
     graphic/pipelines/forward/DepthPrePass.cpp
     graphic/pipelines/forward/OpaquePass.cpp
     graphic/pipelines/forward/TransparentPass.cpp
+    graphic/pipelines/forward/BloomPostProcessPass.cpp
 
     # Graphic - PathTracing Pipeline
     graphic/pipelines/pathtracing/PathTracingPipeline.cpp

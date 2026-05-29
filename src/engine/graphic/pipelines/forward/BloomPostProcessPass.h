@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "interfaces/RenderTypes.h"
 #include "graphic/interfaces/IComputePipeline.h"
@@ -11,7 +11,7 @@
 #include "graphic/interfaces/ISampler.h"
 #include "graphic/interfaces/IRenderTarget.h"
 #include <memory>
-
+#include "Export.h"
 namespace Prisma::Graphic {
 
 class ENGINE_API BloomPostProcessPass {

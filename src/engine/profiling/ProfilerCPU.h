@@ -196,7 +196,7 @@ inline ScopedTimer::ScopedTimer(const char* name)
     : m_name(name) {
     auto& profiler = CpuProfiler::Get();
     profiler.EnterScope();
-    m_timer.Start();
+    (void)m_timer.Start();
 }
 
 inline ScopedTimer::~ScopedTimer() {

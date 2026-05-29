@@ -35,6 +35,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     # MSVC 编译器选项
     add_compile_options(/W4)
     # 禁用一些常见但无用的警告
+    add_compile_options(/wd4100)  # 禁用未引用形参警告（代码库策略已用 [[maybe_unused]] 标注意图）
     add_compile_options(/wd4996)  # 禁用不安全函数警告
 elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
     # GCC/Clang 编译器选项

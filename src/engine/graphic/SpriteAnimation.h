@@ -75,18 +75,18 @@ public:
     ComponentId GetComponentId() const override { return GetComponentTypeId<SpriteAnimationComponent>(); }
     const char* GetComponentTypeName() const override { return "SpriteAnimationComponent"; }
 
-    void AddAnimation(const std::string& name, std::shared_ptr<SpriteAnimation> animation) {
-        m_animations[name] = animation;
+    void AddAnimation(const std::string& animationName, std::shared_ptr<SpriteAnimation> animation) {
+        m_animations[animationName] = animation;
     }
 
-    std::shared_ptr<SpriteAnimation> GetAnimation(const std::string& name) const {
-        auto it = m_animations.find(name);
+    std::shared_ptr<SpriteAnimation> GetAnimation(const std::string& animationName) const {
+        auto it = m_animations.find(animationName);
         return it != m_animations.end() ? it->second : nullptr;
     }
 
-    bool HasAnimation(const std::string& name) const { return m_animations.count(name) > 0; }
+    bool HasAnimation(const std::string& animationName) const { return m_animations.count(animationName) > 0; }
 
-    void PlayAnimation(const std::string& name, bool restart = false);
+    void PlayAnimation(const std::string& animationName, bool restart = false);
     const std::string& GetCurrentAnimation() const { return m_currentAnimation; }
 
     virtual void Update(Timestep ts) override;

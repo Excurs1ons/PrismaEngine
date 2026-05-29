@@ -127,6 +127,9 @@ endif()
 # miniaudio — 使用项目自带的 CMake 目标（静态库）
 if(PRISMA_ENABLE_AUDIO_MINIAUDIO AND NOT TARGET miniaudio)
     FetchContent_MakeAvailable(miniaudio)
+    if(TARGET miniaudio AND MSVC)
+        target_compile_options(miniaudio PRIVATE /wd4244)
+    endif()
 endif()
 
 # dr_libs — 使用项目自带的 CMake 目标

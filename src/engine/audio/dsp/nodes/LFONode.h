@@ -34,8 +34,8 @@ public:
                 case 2: val = (m_phase < M_PI) ? 1.0f : -1.0f; break;
                 case 3: val = m_phase / M_PI - 1.0f; break;
                 case 4: {
-                    if (m_phase >= 2.0f * M_PI) {
-                        m_phase -= 2.0f * M_PI;
+                    if (m_phase >= 2.0f * float(M_PI)) {
+                        m_phase -= 2.0f * float(M_PI);
                         m_shValue = m_noiseDist(m_rng) * 2.0f - 1.0f;
                     }
                     val = m_shValue;
@@ -49,8 +49,8 @@ public:
             for (uint32_t c = 0; c < channels; ++c)
                 output.GetChannel(c)[f] = out;
 
-            m_phase += 2.0f * M_PI * rate / ctx.sampleRate;
-            if (m_phase >= 2.0f * M_PI) m_phase -= 2.0f * M_PI;
+            m_phase += 2.0f * float(M_PI) * rate / ctx.sampleRate;
+            if (m_phase >= 2.0f * float(M_PI)) m_phase -= 2.0f * float(M_PI);
         }
     }
 
