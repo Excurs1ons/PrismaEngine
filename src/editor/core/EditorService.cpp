@@ -5,6 +5,8 @@
 #include "core/AssetDatabase.h"
 #include "transform/Transform.h"
 #include "transform/Camera.h"
+#include "graphic/MeshRenderer.h"
+#include "graphic/LightComponent.h"
 #include "EditorSharedMemory.h"
 #include "logger/Logger.h"
 #include <glaze/glaze.hpp>
@@ -95,19 +97,72 @@ glz::json_t EditorService::GetHierarchy() {
     return glz::json_t::object_t{{"entities", std::move(res)}};
 }
 
+static const char* LightTypeToString(Prisma::Graphic::LightComponent::LightType type) {
+    using LT = Prisma::Graphic::LightComponent::LightType;
+    switch (type) {
+        case LT::Directional: return "Directional";
+        case LT::Point:       return "Point";
+        case LT::Spot:        return "Spot";
+        case LT::Ambient:     return "Ambient";
+        default:              return "Unknown";
+    }
+}
+
 glz::json_t EditorService::GetEntity(uint32_t id) {
     auto* s = Engine::Get().GetSceneManager()->GetCurrentScene();
     const auto& nodes = s->GetNodes();
     if(!s || id >= nodes.size()) return glz::json_t::object_t{{"error", "NA"}};
     auto ent = nodes[id];
-    auto transform = s->GetComponent<Transform>(ent);
-    auto p = transform ? transform->GetPosition() : PrismaMath::vec3(0);
     
-    glz::json_t::array_t posArr = { p.x, p.y, p.z };
-    glz::json_t::object_t transformData = {{"position", std::move(posArr)}};
-    glz::json_t::object_t component = {{"type", "Transform"}, {"data", std::move(transformData)}};
     glz::json_t::array_t components;
-    components.push_back(std::move(component));
+
+    // ── Transform ──
+    auto transform = s->GetComponent<Transform>(ent);
+    if (transform) {
+        auto p = transform->GetPosition();
+        auto r = transform->GetEulerAngles(); // pitch, yaw, roll in radians
+        auto sc = transform->GetScale();
+        glz::json_t::object_t data;
+        data["position"] = glz::json_t::array_t{ p.x, p.y, p.z };
+        data["rotation"] = glz::json_t::array_t{ glm::degrees(r.x), glm::degrees(r.y), glm::degrees(r.z) };
+        data["scale"]    = glz::json_t::array_t{ sc.x, sc.y, sc.z };
+        components.push_back(glz::json_t::object_t{{"type", "Transform"}, {"data", std::move(data)}});
+    }
+
+    // ── MeshRenderer ──
+    auto meshRenderer = s->GetComponent<Prisma::Graphic::MeshRenderer>(ent);
+    if (meshRenderer) {
+        auto d = meshRenderer->GetData();
+        glz::json_t::object_t data;
+        data["mesh"]     = d.meshPath;
+        data["material"] = d.material;
+        data["color"]    = glz::json_t::array_t{ d.color[0], d.color[1], d.color[2], d.color[3] };
+        components.push_back(glz::json_t::object_t{{"type", "MeshRenderer"}, {"data", std::move(data)}});
+    }
+
+    // ── Camera ──
+    auto camera = s->GetComponent<Prisma::Graphic::Camera>(ent);
+    if (camera) {
+        auto d = camera->GetData();
+        glz::json_t::object_t data;
+        data["projection"] = d.projectionMode == Prisma::Graphic::ProjectionMode::Perspective ? "Perspective" : "Orthographic";
+        data["fov"]  = d.fovDeg;
+        data["near"] = d.nearPlane;
+        data["far"]  = d.farPlane;
+        components.push_back(glz::json_t::object_t{{"type", "Camera"}, {"data", std::move(data)}});
+    }
+
+    // ── Light ──
+    auto light = s->GetComponent<Prisma::Graphic::LightComponent>(ent);
+    if (light) {
+        auto d = light->GetData();
+        glz::json_t::object_t data;
+        data["lightType"] = LightTypeToString(d.type);
+        data["color"]     = glz::json_t::array_t{ d.color[0], d.color[1], d.color[2] };
+        data["intensity"] = d.intensity;
+        data["range"]     = d.range;
+        components.push_back(glz::json_t::object_t{{"type", "Light"}, {"data", std::move(data)}});
+    }
 
     return glz::json_t::object_t{
         {"name", s->GetNodeName(ent)}, 
