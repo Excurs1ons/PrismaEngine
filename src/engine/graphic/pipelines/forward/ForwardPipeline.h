@@ -8,6 +8,7 @@
 
 namespace Prisma::Graphic {
 
+class BloomPostProcessPass;
 class DepthPrePass;
 class OpaquePass;
 class SkyboxPass;
@@ -38,6 +39,8 @@ private:
     std::shared_ptr<UIPass2D> m_uiPass;
     std::shared_ptr<SkyboxPass> m_skyboxPass;
     std::shared_ptr<TransparentPass> m_transparentPass;
+
+    std::shared_ptr<BloomPostProcessPass> m_bloomPass;
 
     // Gizmo 覆盖层管线（UnlitVertex：纯顶点色，无纹理无光照）
     std::shared_ptr<IShader> m_gizmoVertShader;

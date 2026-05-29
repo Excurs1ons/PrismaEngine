@@ -58,6 +58,17 @@ bool WebUIEditor::Start(int port) {
         canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; touch-action: pan-y; }
         .p-header { background:#383838; padding:8px 12px; font-size:10px; font-weight:bold; color:#888; text-transform:uppercase; border-bottom:1px solid #111; }
         .card { background:#333; margin:10px; padding:15px; border-radius:4px; }
+        .comp-section { margin: 8px 0; padding: 8px; background: #2a2a2a; border-radius: 3px; }
+        .comp-header { font-size: 11px; font-weight: bold; color: #4e94f8; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px; }
+        .comp-section label { display: block; font-size: 10px; color: #888; margin-top: 4px; }
+        .comp-section .field { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px; }
+        .comp-section .field label { margin: 0; font-size: 11px; color: #999; }
+        .comp-section .field .val { color: #ddd; font-family: monospace; }
+        .comp-section .vec3 { display: flex; gap: 4px; margin: 2px 0; }
+        .comp-section .vec3 input { width: 60px; padding: 3px 4px; font-size: 11px; background: #1e1e1e; border: 1px solid #555; color: white; }
+        .comp-section .vec3.ro { gap: 8px; font-size: 11px; color: #aaa; font-family: monospace; }
+        .comp-section .vec3.ro span { color: #ddd; }
+        .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 2px; vertical-align: middle; border: 1px solid #555; }
         input { background:#1e1e1e; border:1px solid #555; color:white; padding:8px; width:100%; box-sizing:border-box; }
         .item { padding:8px 12px; border-bottom: 1px solid #222; cursor: pointer; }
         .item.sel { background: #3c5a81; }
@@ -128,17 +139,66 @@ bool WebUIEditor::Start(int port) {
             } catch(e){}
         }
 
+        function renderComp(e, id, comp) {
+            const type = comp.type, d = comp.data;
+            let html = '<div class="comp-section"><div class="comp-header">' + type + '</div>';
+
+            if (type === 'Transform') {
+                const p = d.position || [0,0,0];
+                const r = d.rotation || [0,0,0];
+                const s = d.scale || [1,1,1];
+                html += '<label>Position</label><div class="vec3">' +
+                    'X: <input type="number" step="0.1" value="' + p[0].toFixed(2) + '" onchange="updatePos(' + id + ',0,this.value)">' +
+                    'Y: <input type="number" step="0.1" value="' + p[1].toFixed(2) + '" onchange="updatePos(' + id + ',1,this.value)">' +
+                    'Z: <input type="number" step="0.1" value="' + p[2].toFixed(2) + '" onchange="updatePos(' + id + ',2,this.value)">' +
+                    '</div>';
+                html += '<label>Rotation (°)</label><div class="vec3">' +
+                    'X: <input type="number" step="0.1" value="' + r[0].toFixed(1) + '" onchange="updateRot(' + id + ',0,this.value)">' +
+                    'Y: <input type="number" step="0.1" value="' + r[1].toFixed(1) + '" onchange="updateRot(' + id + ',1,this.value)">' +
+                    'Z: <input type="number" step="0.1" value="' + r[2].toFixed(1) + '" onchange="updateRot(' + id + ',2,this.value)">' +
+                    '</div>';
+                html += '<label>Scale</label><div class="vec3">' +
+                    'X: <input type="number" step="0.1" value="' + s[0].toFixed(2) + '" onchange="updateScl(' + id + ',0,this.value)">' +
+                    'Y: <input type="number" step="0.1" value="' + s[1].toFixed(2) + '" onchange="updateScl(' + id + ',1,this.value)">' +
+                    'Z: <input type="number" step="0.1" value="' + s[2].toFixed(2) + '" onchange="updateScl(' + id + ',2,this.value)">' +
+                    '</div>';
+            }
+            else if (type === 'MeshRenderer') {
+                const c = d.color || [1,1,1,1];
+                html += '<div class="field"><label>Mesh</label><span class="val">' + (d.mesh || 'none') + '</span></div>';
+                html += '<div class="field"><label>Material</label><span class="val">' + (d.material || 'none') + '</span></div>';
+                html += '<div class="field"><label>Color</label><span class="val"><span class="swatch" style="background:rgba(' +
+                    Math.round(c[0]*255)+','+Math.round(c[1]*255)+','+Math.round(c[2]*255)+','+c[3].toFixed(2)+')"></span> ' +
+                    c[0].toFixed(2) + ', ' + c[1].toFixed(2) + ', ' + c[2].toFixed(2) + ', ' + c[3].toFixed(2) + '</span></div>';
+            }
+            else if (type === 'Camera') {
+                html += '<div class="field"><label>Projection</label><span class="val">' + (d.projection || 'Perspective') + '</span></div>';
+                html += '<div class="field"><label>FOV</label><span class="val">' + (d.fov || 70).toFixed(1) + '°</span></div>';
+                html += '<div class="field"><label>Near</label><span class="val">' + (d.near || 0.1).toFixed(3) + '</span></div>';
+                html += '<div class="field"><label>Far</label><span class="val">' + (d.far || 1000).toFixed(1) + '</span></div>';
+            }
+            else if (type === 'Light') {
+                const c = d.color || [1,1,1];
+                html += '<div class="field"><label>Type</label><span class="val">' + (d.lightType || 'Directional') + '</span></div>';
+                html += '<div class="field"><label>Color</label><span class="val"><span class="swatch" style="background:rgb(' +
+                    Math.round(c[0]*255)+','+Math.round(c[1]*255)+','+Math.round(c[2]*255)+')"></span> ' +
+                    c[0].toFixed(2) + ', ' + c[1].toFixed(2) + ', ' + c[2].toFixed(2) + '</span></div>';
+                html += '<div class="field"><label>Intensity</label><span class="val">' + (d.intensity || 1).toFixed(2) + '</span></div>';
+                html += '<div class="field"><label>Range</label><span class="val">' + (d.range || 10).toFixed(1) + '</span></div>';
+            }
+            html += '</div>';
+            return html;
+        }
+
         async function select(id) {
             selectedId = id; sync();
             const e = await api('entity/get', { id });
-            const p = e.components.find(c=>c.type==='Transform').data.position;
-            document.getElementById('inspector').innerHTML = `
-                <div class="card">
-                    <b>${e.name}</b><hr>
-                    X: <input type="number" step="0.1" value="${p[0]}" onchange="updatePos(${id},0,this.value)">
-                    Y: <input type="number" step="0.1" value="${p[1]}" onchange="updatePos(${id},1,this.value)">
-                </div>
-            `;
+            let inspHtml = '<div class="card"><b>' + e.name + '</b><hr>';
+            for (const comp of e.components) {
+                inspHtml += renderComp(e, id, comp);
+            }
+            inspHtml += '</div>';
+            document.getElementById('inspector').innerHTML = inspHtml;
         }
 
         async function updatePos(id, axis, v) {
@@ -146,6 +206,20 @@ bool WebUIEditor::Start(int port) {
             const p = e.components.find(x=>x.type==='Transform').data.position;
             p[axis] = Number(v);
             await api('entity/update', { id, data: { transform: { position: p } } });
+        }
+
+        async function updateRot(id, axis, v) {
+            const e = await api('entity/get', { id });
+            const r = e.components.find(x=>x.type==='Transform').data.rotation;
+            r[axis] = Number(v);
+            await api('entity/update', { id, data: { transform: { rotation: r } } });
+        }
+
+        async function updateScl(id, axis, v) {
+            const e = await api('entity/get', { id });
+            const s = e.components.find(x=>x.type==='Transform').data.scale;
+            s[axis] = Number(v);
+            await api('entity/update', { id, data: { transform: { scale: s } } });
         }
 
         setInterval(sync, 2000); sync(); stream();

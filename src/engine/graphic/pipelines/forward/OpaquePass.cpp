@@ -30,6 +30,22 @@ struct alignas(16) QuadPushConstants {
     Prisma::Color color;
 };
 
+// PBR push constants — matches lit.vert layout(push_constant)
+struct alignas(16) PBRPushConstants {
+    PrismaMath::mat4 world;
+    Prisma::Color color;
+};
+
+// Scene UBO data — matches lit.frag SceneData (std140)
+struct alignas(16) SceneData {
+    PrismaMath::mat4 view;
+    PrismaMath::mat4 projection;
+    PrismaMath::mat4 viewProjection;
+    PrismaMath::vec4 cameraPos; // xyz = position, w = padding
+};
+
+// Max PBR point lights (matches lit.frag MAX_LIGHTS)
+constexpr uint32_t kMaxPBRLights = 3;
 }
 
 void OpaquePass::SetLights(const std::vector<Light>& lights) {
@@ -68,53 +84,114 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
         return;
     }
 
-    // 根据当前模式选择交换链 PSO 或离屏 PSO
-    if (m_useOffscreen) {
-        if (!EnsureOffscreenPipeline()) {
-            LOG_ERROR("OpaquePass", "确保离屏管线失败，跳过绘制");
+    // 检测材质类型以选择管线 — 扫描所有命令，若有任意 PBR 则使用 PBR 路径
+    bool usePBR = false;
+    for (const auto& c : commands) {
+        if (c.material && c.material->GetMaterialType() == MaterialType::PBR) {
+            usePBR = true;
+            break;
+        }
+    }
+
+    if (usePBR) {
+        // ── PBR 渲染路径 ──
+        if (!EnsurePBRPipeline()) {
+            LOG_ERROR("OpaquePass", "确保 PBR 管线失败，跳过绘制");
             return;
         }
-        cmd->SetPipelineState(m_offscreenPipelineState.get());
+        EnsurePBRDescriptors();
+
+        // 选择 PBR PSO
+        if (m_useOffscreen) {
+            if (!m_pbrOffscreenPipelineState) {
+                LOG_ERROR("OpaquePass", "PBR 离屏 PSO 未创建，跳过绘制");
+                return;
+            }
+            cmd->SetPipelineState(m_pbrOffscreenPipelineState.get());
+        } else {
+            cmd->SetPipelineState(m_pbrSwapchainPipelineState.get());
+        }
+
+        // 更新场景和光源数据
+        UpdateSceneUBO();
+        UpdateLightBuffer();
+
+        // 绑定场景 Set 1 和光源 Set 2
+        if (m_sceneDescriptorSet) {
+            cmd->BindDescriptorSet(1, m_sceneDescriptorSet.get());
+        }
+        if (m_lightDescriptorSet) {
+            cmd->BindDescriptorSet(2, m_lightDescriptorSet.get());
+        }
+
+        Material* lastMaterial = nullptr;
+        for (const auto& command : commands) {
+            if (!command.mesh) continue;
+
+            if (command.material && command.material != lastMaterial) {
+                command.material->Bind(cmd);
+                lastMaterial = command.material;
+            }
+
+            PBRPushConstants pushConstants{};
+            pushConstants.world = command.transform;
+            pushConstants.color = command.color;
+            cmd->PushConstants(ShaderType::Vertex, &pushConstants, sizeof(pushConstants));
+
+            for (const auto& subMesh : command.mesh->GetSubMeshes()) {
+                if (subMesh.vertexBuffer && subMesh.indexBuffer) {
+                    cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                    cmd->SetIndexBuffer(subMesh.indexBuffer.get());
+                    cmd->DrawIndexed(subMesh.indexCount);
+                }
+            }
+        }
     } else {
-        if (!EnsureSwapchainPipeline()) {
-            LOG_ERROR("OpaquePass", "确保交换链管线失败，跳过绘制");
-            return;
-        }
-        cmd->SetPipelineState(m_swapchainPipelineState.get());
-    }
-
-    static double lastLog = 0;
-    double now = Platform::GetTimeSeconds();
-    if (now - lastLog >= 5.0) {
-        LOG_DEBUG("OpaquePass", "绘制 {} 条命令, PSO={}, shaders ok={}",
-                 commands.size(), (void*)(m_useOffscreen ? m_offscreenPipelineState.get() : m_swapchainPipelineState.get()),
-                 m_defaultVertexShader && m_defaultPixelShader);
-        lastLog = now;
-    }
-    // 视口/裁剪由调用方（Pipeline2D / ForwardPipeline）在 RenderPass begin 时设置，
-    // 此处不再覆盖，避免破坏离屏 RT（如 PixelPerfect 的 256×224）的视口。
-
-    // 缓存上一次绑定的材质指针，跳过重复绑定
-    Material* lastMaterial = nullptr;
-    for (const auto& command : commands) {
-        if (!command.mesh) continue;
-
-        if (command.material && command.material != lastMaterial) {
-            command.material->Bind(cmd);
-            lastMaterial = command.material;
+        // ── 原有 Unlit/LitSprite 渲染路径 ──
+        if (m_useOffscreen) {
+            if (!EnsureOffscreenPipeline()) {
+                LOG_ERROR("OpaquePass", "确保离屏管线失败，跳过绘制");
+                return;
+            }
+            cmd->SetPipelineState(m_offscreenPipelineState.get());
+        } else {
+            if (!EnsureSwapchainPipeline()) {
+                LOG_ERROR("OpaquePass", "确保交换链管线失败，跳过绘制");
+                return;
+            }
+            cmd->SetPipelineState(m_swapchainPipelineState.get());
         }
 
-        QuadPushConstants pushConstants{};
-        pushConstants.mvp = m_projection * m_view * command.transform;
-        pushConstants.color = command.color;
-        cmd->PushConstants(ShaderType::Vertex, &pushConstants, sizeof(pushConstants));
-        cmd->PushConstants(ShaderType::Pixel, &pushConstants, sizeof(pushConstants));
+        static double lastLog = 0;
+        double now = Platform::GetTimeSeconds();
+        if (now - lastLog >= 5.0) {
+            LOG_DEBUG("OpaquePass", "绘制 {} 条命令, PSO={}, shaders ok={}",
+                     commands.size(), (void*)(m_useOffscreen ? m_offscreenPipelineState.get() : m_swapchainPipelineState.get()),
+                     m_defaultVertexShader && m_defaultPixelShader);
+            lastLog = now;
+        }
 
-        for (const auto& subMesh : command.mesh->GetSubMeshes()) {
-            if (subMesh.vertexBuffer && subMesh.indexBuffer) {
-                cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
-                cmd->SetIndexBuffer(subMesh.indexBuffer.get());
-                cmd->DrawIndexed(subMesh.indexCount);
+        Material* lastMaterial = nullptr;
+        for (const auto& command : commands) {
+            if (!command.mesh) continue;
+
+            if (command.material && command.material != lastMaterial) {
+                command.material->Bind(cmd);
+                lastMaterial = command.material;
+            }
+
+            QuadPushConstants pushConstants{};
+            pushConstants.mvp = m_projection * m_view * command.transform;
+            pushConstants.color = command.color;
+            cmd->PushConstants(ShaderType::Vertex, &pushConstants, sizeof(pushConstants));
+            cmd->PushConstants(ShaderType::Pixel, &pushConstants, sizeof(pushConstants));
+
+            for (const auto& subMesh : command.mesh->GetSubMeshes()) {
+                if (subMesh.vertexBuffer && subMesh.indexBuffer) {
+                    cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);
+                    cmd->SetIndexBuffer(subMesh.indexBuffer.get());
+                    cmd->DrawIndexed(subMesh.indexCount);
+                }
             }
         }
     }
@@ -249,6 +326,193 @@ bool OpaquePass::EnsureOffscreenPipeline() {
     m_offscreenPipelineState = std::shared_ptr<IPipelineState>(std::move(pso));
     LOG_DEBUG("OpaquePass", "离屏 PSO 创建成功");
     return true;
+}
+
+bool OpaquePass::EnsurePBRPipeline() {
+    if (m_pbrSwapchainPipelineState) {
+        return true;
+    }
+
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("OpaquePass", "EnsurePBRPipeline: Resource factory is null");
+        return false;
+    }
+
+    auto resourceManager = Engine::Get().GetRenderResourceManager();
+    if (!resourceManager) {
+        LOG_ERROR("OpaquePass", "EnsurePBRPipeline: Resource manager is null");
+        return false;
+    }
+
+    m_pbrVertexShader = resourceManager->LoadShaderSync("assets/shaders/pbr_lit.vert.spv", "main");
+    if (!m_pbrVertexShader) {
+        LOG_ERROR("OpaquePass", "无法加载 PBR 顶点着色器: assets/shaders/pbr_lit.vert.spv");
+        return false;
+    }
+
+    m_pbrPixelShader = resourceManager->LoadShaderSync("assets/shaders/pbr_lit.frag.spv", "main");
+    if (!m_pbrPixelShader) {
+        LOG_ERROR("OpaquePass", "无法加载 PBR 片段着色器: assets/shaders/pbr_lit.frag.spv");
+        return false;
+    }
+
+    auto createPBRPSO = [&](VkRenderPass customRP) -> std::shared_ptr<IPipelineState> {
+        auto pso = factory->CreatePipelineStateImpl();
+        if (!pso) return nullptr;
+
+        pso->SetShader(ShaderType::Vertex, m_pbrVertexShader);
+        pso->SetShader(ShaderType::Pixel, m_pbrPixelShader);
+        pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+
+        std::vector<VertexInputAttribute> attributes = {
+            { "POSITION",  0, TextureFormat::RGBA32_Float, 0, 0   },
+            { "COLOR",     0, TextureFormat::RGBA32_Float, 0, 16  },
+            { "TEXCOORD",  0, TextureFormat::RGBA32_Float, 0, 32  },
+            { "NORMAL",    0, TextureFormat::RGBA32_Float, 0, 48  },
+            { "TEXCOORD2", 0, TextureFormat::RGBA32_Float, 0, 64  },
+            { "TANGENT",   0, TextureFormat::RGBA32_Float, 0, 80  },
+        };
+        pso->SetInputLayout(attributes);
+
+        RasterizerState rs;
+        rs.cullMode = CullMode::Back;
+        rs.frontCounterClockwise = true;
+        pso->SetRasterizerState(rs);
+
+        DepthStencilState ds{};
+        ds.depthEnable = true;
+        ds.depthWriteEnable = true;
+        ds.depthFunc = ComparisonFunc::Less;
+        pso->SetDepthStencilState(ds);
+
+        if (customRP) {
+            auto* vkPSO = dynamic_cast<Vulkan::VulkanPipelineState*>(pso.get());
+            if (vkPSO) {
+                vkPSO->SetCustomRenderPass(customRP);
+            }
+        }
+
+        if (!pso->Create(m_device)) {
+            LOG_ERROR("OpaquePass", "PBR PSO 创建失败: {0}", pso->GetErrors());
+            return nullptr;
+        }
+
+        return std::shared_ptr<IPipelineState>(std::move(pso));
+    };
+
+    m_pbrSwapchainPipelineState = createPBRPSO(nullptr);
+    if (!m_pbrSwapchainPipelineState) {
+        return false;
+    }
+
+    if (m_offscreenRenderPass != nullptr && !m_pbrOffscreenPipelineState) {
+        m_pbrOffscreenPipelineState = createPBRPSO(m_offscreenRenderPass);
+        if (!m_pbrOffscreenPipelineState) {
+            LOG_WARNING("OpaquePass", "PBR 离屏 PSO 创建失败，将使用交换链 PSO 回落");
+        }
+    }
+
+    LOG_DEBUG("OpaquePass", "PBR 管线创建成功 (vert={}, frag={})",
+              static_cast<void*>(m_pbrVertexShader.get()),
+              static_cast<void*>(m_pbrPixelShader.get()));
+    return true;
+}
+
+void OpaquePass::EnsurePBRDescriptors() {
+    if (m_sceneDescriptorSet) return;
+
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) {
+        LOG_ERROR("OpaquePass", "EnsurePBRDescriptors: Resource factory is null");
+        return;
+    }
+
+    uint32_t lightBufferSize = sizeof(Light) * kMaxPBRLights;
+
+    // Scene UBO (Set 1, Binding 0)
+    BufferDesc uboDesc;
+    uboDesc.type = BufferType::Constant;
+    uboDesc.size = sizeof(SceneData);
+    uboDesc.usage = BufferUsage::Dynamic;
+    m_sceneUBO = factory->CreateBufferImpl(uboDesc);
+    if (!m_sceneUBO) {
+        LOG_ERROR("OpaquePass", "创建场景 UBO 失败");
+        return;
+    }
+
+    // Light SSBO (Set 2, Binding 0)
+    BufferDesc ssboDesc;
+    ssboDesc.type = BufferType::Structured;
+    ssboDesc.size = lightBufferSize;
+    ssboDesc.usage = BufferUsage::Dynamic;
+    m_lightBuffer = factory->CreateBufferImpl(ssboDesc);
+    if (!m_lightBuffer) {
+        LOG_ERROR("OpaquePass", "创建光源 SSBO 失败");
+        return;
+    }
+
+    // Scene descriptor set (Set 1)
+    {
+        std::vector<ShaderResource> resources;
+        ShaderResource res;
+        res.Name = "SceneData";
+        res.ResourceType = ShaderResource::Type::UniformBuffer;
+        res.Set = 1;
+        res.Binding = 0;
+        resources.push_back(res);
+
+        m_sceneDescriptorSetLayout = factory->CreateDescriptorSetLayout(resources);
+        m_sceneDescriptorSet = factory->CreateDescriptorSet(m_sceneDescriptorSetLayout.get());
+        if (m_sceneDescriptorSet) {
+            m_sceneDescriptorSet->BindBuffer(0, m_sceneUBO.get(), 0, sizeof(SceneData), DescriptorType::UniformBuffer);
+            m_sceneDescriptorSet->Update();
+        }
+    }
+
+    // Light descriptor set (Set 2)
+    {
+        std::vector<ShaderResource> resources;
+        ShaderResource res;
+        res.Name = "LightBuffer";
+        res.ResourceType = ShaderResource::Type::StorageBuffer;
+        res.Set = 2;
+        res.Binding = 0;
+        resources.push_back(res);
+
+        m_lightDescriptorSetLayout = factory->CreateDescriptorSetLayout(resources);
+        m_lightDescriptorSet = factory->CreateDescriptorSet(m_lightDescriptorSetLayout.get());
+        if (m_lightDescriptorSet) {
+            m_lightDescriptorSet->BindBuffer(0, m_lightBuffer.get(), 0, lightBufferSize, DescriptorType::StorageBuffer);
+            m_lightDescriptorSet->Update();
+        }
+    }
+}
+
+void OpaquePass::UpdateSceneUBO() {
+    if (!m_sceneUBO) return;
+
+    SceneData data{};
+    data.view = m_view;
+    data.projection = m_projection;
+    data.viewProjection = m_viewProjection;
+    data.cameraPos = PrismaMath::vec4(m_cameraPos.x, m_cameraPos.y, m_cameraPos.z, 0.0f);
+
+    m_sceneUBO->UpdateData(&data, sizeof(data), 0);
+}
+
+void OpaquePass::UpdateLightBuffer() {
+    if (!m_lightBuffer) return;
+
+    // 填充光源数据到栈上数组，最多 kMaxPBRLights 个
+    Light lights[kMaxPBRLights] = {};
+    uint32_t count = std::min(static_cast<uint32_t>(m_Lights.size()), kMaxPBRLights);
+    for (uint32_t i = 0; i < count; ++i) {
+        lights[i] = m_Lights[i];
+    }
+    // 剩余槽位保持零值（无效光源，着色器中 length(radiance) < EPSILON 会跳过）
+
+    m_lightBuffer->UpdateData(lights, sizeof(lights), 0);
 }
 
 } // namespace Prisma::Graphic

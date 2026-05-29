@@ -117,6 +117,7 @@ std::shared_ptr<Material> Material::CreateDefault() {
     auto material = std::make_shared<Material>(defaultShader);
     material->m_IsLoaded = true;
     material->SetBaseColor(1.0f, 1.0f, 1.0f, 1.0f);
+    material->m_materialType = MaterialType::Unlit;
     return material;
 }
 
@@ -226,6 +227,7 @@ std::shared_ptr<Material> Material::CreatePBR() {
     material->SetRoughness(0.5f);
     material->SetAO(1.0f);
     material->SetEmissiveIntensity(0.0f);
+    material->m_materialType = MaterialType::PBR;
     return material;
 }
 
@@ -248,6 +250,7 @@ std::shared_ptr<Material> Material::CreateNPR() {
     material->SetParam("RimColor", PrismaMath::vec4(1.0f, 0.6f, 0.3f, 0.5f));
     material->SetParam("RimPower", 2.0f);
     material->SetParam("WrapAmount", 0.2f);
+    material->m_materialType = MaterialType::NPR;
     return material;
 }
 

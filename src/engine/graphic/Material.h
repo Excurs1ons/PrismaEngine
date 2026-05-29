@@ -18,6 +18,13 @@ class IDescriptorSetLayout;
 // 材质参数值 (统一存储)
 using MaterialParamValue = std::variant<float, PrismaMath::vec3, PrismaMath::vec4, std::shared_ptr<ITexture>>;
 
+// 材质类型枚举 (用于 OpaquePass 选择对应 PSO)
+enum class MaterialType : uint8_t {
+    Unlit = 0,
+    PBR = 1,
+    NPR = 2
+};
+
 /* 材质资产 (Material) */
 class ENGINE_API Material : public Prisma::Asset {
 public:
@@ -56,6 +63,10 @@ public:
 
     // 状态绑定 (由 OpaquePass 调用)
     void Bind(class ICommandBuffer* cmd);
+
+    // 材质类型 (用于 PSO 选择)
+    MaterialType GetMaterialType() const { return m_materialType; }
+    void SetMaterialType(MaterialType type) { m_materialType = type; }
 
     // 获取描述符集
     IDescriptorSet* GetDescriptorSet() const { return m_DescriptorSet.get(); }
@@ -112,6 +123,9 @@ private:
 
     // NPR 材质参数
     NPRMaterialData m_nprData;
+
+    // 材质类型 (默认 Unlit, 由工厂方法设置)
+    MaterialType m_materialType = MaterialType::Unlit;
 };
 
 } // namespace Prisma::Graphic

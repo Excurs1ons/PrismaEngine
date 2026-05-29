@@ -1,4 +1,5 @@
 #include "ForwardPipeline.h"
+#include "BloomPostProcessPass.h"
 #include "DepthPrePass.h"
 #include "OpaquePass.h"
 #include "TransparentPass.h"
@@ -77,6 +78,10 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
     m_uiPass = std::make_shared<UIPass2D>();
     m_skyboxPass = std::make_shared<SkyboxPass>();
     m_transparentPass = std::make_shared<TransparentPass>();
+
+    m_bloomPass = std::make_shared<BloomPostProcessPass>();
+    m_bloomPass->Setup(device);
+
     return 0;
 }
 
@@ -85,6 +90,10 @@ void ForwardPipeline::Shutdown() {
     m_opaquePass.reset();
     m_skyboxPass.reset();
     m_transparentPass.reset();
+    if (m_bloomPass) {
+        m_bloomPass->Cleanup();
+        m_bloomPass.reset();
+    }
     m_postProcessPass.reset();
     m_uiPass.reset();
     m_gizmoPSO.reset();
@@ -217,14 +226,17 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         }
     }
 
+    if (m_bloomPass && m_bloomPass->IsReady() && ctx.commandBuffer && ctx.targetTexture) {
+        TextureRenderTargetProxy bloomTarget(ctx.targetTexture);
+        m_bloomPass->Execute(ctx.commandBuffer, ctx.targetTexture, &bloomTarget);
+    }
+
     // ── Post Processing 2D ──
-    // [规划中] 在所有 2D 和场景渲染完成后应用后处理
     if (m_postProcessPass && ctx.commandBuffer) {
         // m_postProcessPass->Process(ctx.commandBuffer, ctx.device, sceneResultTexture);
     }
 
     // ── UI Pass 2D ──
-    // [规划中] UI 应该在最后渲染，且不受后处理影响
     if (m_uiPass && ctx.commandBuffer) {
         m_uiPass->RenderUI(ctx.commandBuffer, ctx.device, ctx.width, ctx.height);
     }
