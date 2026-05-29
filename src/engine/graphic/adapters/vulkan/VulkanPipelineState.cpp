@@ -438,6 +438,7 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     // ========== 前置校验 ==========
 
     // Only require swapchain when using swapchain's render pass (no custom RP)
+    VulkanSwapChain* vkSwapChain = nullptr;
     if (m_customRenderPass == VK_NULL_HANDLE) {
         if (!deviceVulkan || !deviceVulkan->GetSwapChain()) {
             m_errors = "SwapChain required for pipeline creation (no custom RenderPass set)";
@@ -445,7 +446,7 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
             return false;
         }
 
-        auto vkSwapChain = dynamic_cast<VulkanSwapChain*>(deviceVulkan->GetSwapChain());
+        vkSwapChain = dynamic_cast<VulkanSwapChain*>(deviceVulkan->GetSwapChain());
         if (!vkSwapChain) {
             m_errors = "VulkanSwapChain required for pipeline creation";
             m_isValid = false;
