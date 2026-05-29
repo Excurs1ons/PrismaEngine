@@ -10,15 +10,15 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 | 模块 | 完成度 | 状态 |
 |------|--------|------|
-| 基础架构 (ECS/Scene/Resource) | 75% | 🟡 进行中 |
-| DirectX 12 后端 | 65% | 🟡 进行中 |
+| 基础架构 (ECS/Scene/Resource) | 85% | 🟡 进行中 |
+| DirectX 12 后端 | 0% | ⏸️ 已暂停 |
 | Vulkan 后端 (PrismaAndroid) | 85% | 🟢 已完成 |
 | Platform 层 | 95% | 🟢 已完成 |
 | Logger 系统 | 95% | 🟢 已完成 |
 | 音频系统 | 40% | 🟡 进行中 |
 | 跨平台支持 | 80% | 🟢 已完成 |
-| 编辑器工具 | 10% | 🔴 未开始 |
-| 物理系统 | 5% | 🔴 未开始 |
+| 编辑器工具 | 40% | 🟡 进行中 |
+| 物理系统 | 30% | 🟡 进行中 |
 
 ## Vulkan 后端迁移计划
 
@@ -26,11 +26,11 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 | 阶段 | 内容 | 状态 |
 |------|------|------|
-| Phase 1 | 渲染抽象层设计 | 🔄 进行中 |
-| Phase 2 | VulkanContext 迁移 | ⏳ 计划中 |
-| Phase 3 | RendererVulkan 迁移 | ⏳ 计划中 |
-| Phase 4 | Shader/Texture 迁移 | ⏳ 计划中 |
-| Phase 5 | 集成测试与优化 | ⏳ 计划中 |
+| Phase 1 | 渲染抽象层设计 | ✅ 已完成 |
+| Phase 2 | VulkanContext 迁移 | ✅ 已完成 |
+| Phase 3 | RendererVulkan 迁移 | ✅ 已完成 |
+| Phase 4 | Shader/Texture 迁移 | ✅ 已完成 |
+| Phase 5 | 集成测试与优化 | ✅ 已完成 |
 
 详细文档: [VulkanIntegration.md](VulkanIntegration.md)
 
@@ -70,7 +70,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 ### 其他系统
 - 🔄 音频系统 (架构已定义)
-- ❌ 物理系统 ([JoltPhysics](https://github.com/jrouwe/JoltPhysics))
+- ✅ 物理系统 (30% - src/engine/physics/ 13文件 + physics2d/ 3文件)
 - ❌ 动画系统 (角色/骨骼动画)
 - ❌ UI 补间动画 ([Tweeny](https://github.com/mobius3/tweeny))
 - 🔄 编辑器框架
@@ -102,6 +102,14 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 
 ## 最近更新
 
+### 2026-05-29
+- ✅ 文档审计 — 修正进度数据与代码实际状态对齐
+- ✅ 物理系统进度从 5% → 30% (src/engine/physics/ 13文件 + physics2d/ 3文件)
+- ✅ 基础架构进度从 75% → 85% (ECS/Scene/Resource 完善)
+- ✅ 编辑器工具进度从 10% → 40% (WebUI 编辑器 + MCP 工具)
+- ✅ DirectX 12 后端标记为已暂停 (目录不存在，Vulkan 为主要后端)
+- ✅ Vulkan 后端迁移计划全部标记为已完成 (26文件完整适配器)
+
 ### 2026-01-02
 - ✅ 重构组件系统和游戏对象管理
   - 优化 ECS 架构，组件生命周期管理更清晰
@@ -121,7 +129,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 ---
 
 ---
-*最后更新: 2026-05-25*
+*最后更新: 2026-05-29*
 
 ---
 
@@ -596,4 +604,4 @@ option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 ---
 
-*Last Updated: 2026-05-25 (Code stats updated per repository analysis)*
+*Last Updated: 2026-05-29 (Code stats updated per repository analysis)*
