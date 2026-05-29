@@ -643,8 +643,10 @@ void Engine::Shutdown() {
     LOG_INFO("Engine", "正在关闭引擎...");
 
     // 先关脚本引擎（C# 世界析构 + CoreCLR 卸载），再关 C++ 系统
+#if PRISMA_ENABLE_SCRIPTING > 0
     if (m_scriptEngine) m_scriptEngine->Shutdown();
     if (m_coreCLRHost) m_coreCLRHost->Shutdown();
+#endif
 
     {
         for (auto it = m_Systems.rbegin(); it != m_Systems.rend(); ++it) {
