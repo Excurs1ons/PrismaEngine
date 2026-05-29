@@ -404,6 +404,10 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
 
     // [修复] 从 m_blendState 读取混合状态，不再硬编码 alpha blending
     // 此前硬编码为 srcAlpha / oneMinusSrcAlpha，导致 additive blending（如 2D 光照叠加）失效
+    // NOTE: When m_customRenderPass is set, rtCount uses m_renderTargetFormats.size()
+    // which may not match the actual RP color attachment count for multi-attachment RPs.
+    // This is fine for single-attachment custom RPs (the common case). For advanced use
+    // with multi-attachment RPs, rtCount should be derived from the RP's attachment count.
     uint32_t rtCount = m_customRenderPass != VK_NULL_HANDLE
         ? std::max(1u, static_cast<uint32_t>(m_renderTargetFormats.size()))
         : 1u;
@@ -433,17 +437,20 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
 
     // ========== 前置校验 ==========
 
-    if (!deviceVulkan || !deviceVulkan->GetSwapChain()) {
-        m_errors = "RenderPass required for pipeline creation";
-        m_isValid = false;
-        return false;
-    }
+    // Only require swapchain when using swapchain's render pass (no custom RP)
+    if (m_customRenderPass == VK_NULL_HANDLE) {
+        if (!deviceVulkan || !deviceVulkan->GetSwapChain()) {
+            m_errors = "SwapChain required for pipeline creation (no custom RenderPass set)";
+            m_isValid = false;
+            return false;
+        }
 
-    auto vkSwapChain = dynamic_cast<VulkanSwapChain*>(deviceVulkan->GetSwapChain());
-    if (!vkSwapChain) {
-        m_errors = "VulkanSwapChain required for pipeline creation";
-        m_isValid = false;
-        return false;
+        auto vkSwapChain = dynamic_cast<VulkanSwapChain*>(deviceVulkan->GetSwapChain());
+        if (!vkSwapChain) {
+            m_errors = "VulkanSwapChain required for pipeline creation";
+            m_isValid = false;
+            return false;
+        }
     }
 
     if (shaderStages.empty()) {
@@ -591,43 +598,11 @@ uint64_t VulkanPipelineState::GetCacheKey() const {
 }
 
 bool VulkanPipelineState::LoadFromCache(IRenderDevice* device, uint64_t cacheKey) {
-    if (device != nullptr && m_device == VK_NULL_HANDLE) {
-        m_device = device->GetVkDevice();
-    }
-    if (m_device == VK_NULL_HANDLE) {
-        return false;
-    }
-
-    const auto cachePath = fs::path(".pipeline_cache") / (std::to_string(cacheKey) + ".cache");
-    if (!fs::exists(cachePath)) {
-        return false;
-    }
-
-    std::ifstream stream(cachePath, std::ios::binary);
-    if (!stream.is_open()) {
-        return false;
-    }
-
-    uint64_t storedKey = 0;
-    stream.read(reinterpret_cast<char*>(&storedKey), sizeof(storedKey));
-    if (!stream || storedKey != cacheKey) {
-        return false;
-    }
-
-    uint32_t shaderCount = 0;
-    stream.read(reinterpret_cast<char*>(&shaderCount), sizeof(shaderCount));
-    stream.read(reinterpret_cast<char*>(&m_sampleCount), sizeof(m_sampleCount));
-
-    VkPipelineLayoutCreateInfo layoutInfo{};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    if (m_pipelineLayout == VK_NULL_HANDLE &&
-        vkCreatePipelineLayout(m_device, &layoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
-        return false;
-    }
-
-    m_isValid = true;
-    m_errors.clear();
-    return true;
+    // LoadFromCache is not yet implemented. Pipeline recreation should always
+    // go through the full Create() path to ensure correct state.
+    (void)device;
+    (void)cacheKey;
+    return false;
 }
 
 bool VulkanPipelineState::SaveToCache() const {

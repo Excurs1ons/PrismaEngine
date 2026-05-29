@@ -38,6 +38,7 @@ private:
     std::shared_ptr<PixelPerfectPass> m_pixelPass;   // Pixel-perfect 离屏 + 整数缩放 (可选)
     std::shared_ptr<PostProcessPass2D> m_ppPass;     // 2D 后处理
     std::shared_ptr<UIPass2D> m_uiPass;              // 渲染屏幕空间的 UI
+
 };
 
 } // namespace Prisma::Graphic

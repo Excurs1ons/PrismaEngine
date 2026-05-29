@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <array>
 #include <utility>
+#include <mutex>
 
 namespace Prisma::Graphic::Vulkan {
 
@@ -43,6 +44,7 @@ struct OffscreenRTKeyHash {
 };
 
 std::unordered_map<OffscreenRTKey, OffscreenRT, OffscreenRTKeyHash> s_offscreenRTs;
+std::mutex s_offscreenRTsMutex;
 
 OffscreenRT CreateOffscreenRT(VkDevice device,
                                VkImageView colorView, VkFormat colorFormat,
@@ -67,7 +69,8 @@ OffscreenRT CreateOffscreenRT(VkDevice device,
     colorAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
     colorAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+    colorAttachment.initialLayout  = clearColor ? VK_IMAGE_LAYOUT_UNDEFINED
+                                                 : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     colorAttachment.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
     VkAttachmentReference colorRef{};
@@ -87,7 +90,8 @@ OffscreenRT CreateOffscreenRT(VkDevice device,
         depthAttachment.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         depthAttachment.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        depthAttachment.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAttachment.initialLayout  = clearDepth ? VK_IMAGE_LAYOUT_UNDEFINED
+                                                      : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         depthAttachment.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
         depthRef.attachment = 1;
@@ -159,23 +163,78 @@ OffscreenRT CreateOffscreenRT(VkDevice device,
 // ============================================================================
 
 void VulkanCommandBuffer::ReleaseOffscreenResources(VkImageView imageView) {
-    for (auto it = s_offscreenRTs.begin(); it != s_offscreenRTs.end(); ) {
-        if (it->first.first == imageView || it->first.second == imageView) {
-            vkDestroyFramebuffer(it->second.device, it->second.framebuffer, nullptr);
-            vkDestroyRenderPass(it->second.device, it->second.renderPass, nullptr);
-            it = s_offscreenRTs.erase(it);
-        } else {
-            ++it;
+    std::vector<OffscreenRT> toDestroy;
+
+    {
+        std::lock_guard<std::mutex> lock(s_offscreenRTsMutex);
+        for (auto it = s_offscreenRTs.begin(); it != s_offscreenRTs.end(); ) {
+            if (it->first.first == imageView || it->first.second == imageView) {
+                toDestroy.push_back(it->second);
+                it = s_offscreenRTs.erase(it);
+            } else {
+                ++it;
+            }
         }
+    }
+
+    for (const auto& rt : toDestroy) {
+        vkDestroyFramebuffer(rt.device, rt.framebuffer, nullptr);
+        vkDestroyRenderPass(rt.device, rt.renderPass, nullptr);
     }
 }
 
 void VulkanCommandBuffer::ReleaseAllOffscreenResources() {
-    for (auto& [key, rt] : s_offscreenRTs) {
+    std::vector<OffscreenRT> toDestroy;
+
+    {
+        std::lock_guard<std::mutex> lock(s_offscreenRTsMutex);
+        toDestroy.reserve(s_offscreenRTs.size());
+        for (auto& [key, rt] : s_offscreenRTs) {
+            toDestroy.push_back(rt);
+        }
+        s_offscreenRTs.clear();
+    }
+
+    for (const auto& rt : toDestroy) {
         vkDestroyFramebuffer(rt.device, rt.framebuffer, nullptr);
         vkDestroyRenderPass(rt.device, rt.renderPass, nullptr);
     }
-    s_offscreenRTs.clear();
+}
+
+VkRenderPass VulkanCommandBuffer::PreCreateOffscreenRenderPass(
+    VkDevice device,
+    VkImageView colorView, VkFormat colorFormat,
+    VkImageView depthView, VkFormat depthFormat,
+    uint32_t width, uint32_t height,
+    bool clearColor, bool clearDepth)
+{
+    OffscreenRTKey key{ colorView, depthView };
+
+    {
+        std::lock_guard<std::mutex> lock(s_offscreenRTsMutex);
+        auto it = s_offscreenRTs.find(key);
+        if (it != s_offscreenRTs.end()) {
+            return it->second.renderPass;
+        }
+    }
+
+    OffscreenRT rt = CreateOffscreenRT(
+        device,
+        colorView, colorFormat,
+        depthView, depthFormat,
+        width, height,
+        clearColor, clearDepth
+    );
+
+    if (!rt.renderPass) {
+        return VK_NULL_HANDLE;
+    }
+
+    {
+        std::lock_guard<std::mutex> lock(s_offscreenRTsMutex);
+        s_offscreenRTs.emplace(key, rt);
+    }
+    return rt.renderPass;
 }
 
 // ============================================================================
@@ -212,10 +271,19 @@ void VulkanCommandBuffer::BeginRenderPass(const RenderPassDesc& desc) {
 
     // 构建缓存键（颜色视图 + 深度视图）
     OffscreenRTKey key{ colorView, depthView };
+    bool found = false;
 
-    // 从缓存查找或创建离屏 RP/FB
-    auto it = s_offscreenRTs.find(key);
-    if (it == s_offscreenRTs.end()) {
+    {
+        std::lock_guard<std::mutex> lock(s_offscreenRTsMutex);
+        auto it = s_offscreenRTs.find(key);
+        if (it != s_offscreenRTs.end()) {
+            rpInfo.renderPass  = it->second.renderPass;
+            rpInfo.framebuffer = it->second.framebuffer;
+            found = true;
+        }
+    }
+
+    if (!found) {
         OffscreenRT rt = CreateOffscreenRT(
             device,
             colorView, vkTex->GetVkFormat(),
@@ -228,11 +296,14 @@ void VulkanCommandBuffer::BeginRenderPass(const RenderPassDesc& desc) {
         if (!rt.renderPass || !rt.framebuffer) {
             return; // 创建失败，跳过（不崩溃）
         }
-        it = s_offscreenRTs.emplace(key, rt).first;
-    }
 
-    rpInfo.renderPass  = it->second.renderPass;
-    rpInfo.framebuffer = it->second.framebuffer;
+        {
+            std::lock_guard<std::mutex> lock(s_offscreenRTsMutex);
+            auto it = s_offscreenRTs.emplace(key, rt).first;
+            rpInfo.renderPass  = it->second.renderPass;
+            rpInfo.framebuffer = it->second.framebuffer;
+        }
+    }
 
     // 渲染区域
     if (desc.renderArea.width > 0 && desc.renderArea.height > 0) {

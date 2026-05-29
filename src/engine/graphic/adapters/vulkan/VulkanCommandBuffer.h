@@ -80,6 +80,16 @@ public:
     static void ReleaseOffscreenResources(VkImageView imageView);
     static void ReleaseAllOffscreenResources();
 
+    /// 预创建并缓存离屏渲染通道（RenderPass）。
+    /// 在初始化阶段调用，使得 PSO 可以在任何 BeginRenderPass 调用之前
+    /// 使用正确的 RenderPass 创建。返回 VkRenderPass 句柄。
+    static VkRenderPass PreCreateOffscreenRenderPass(
+        VkDevice device,
+        VkImageView colorView, VkFormat colorFormat,
+        VkImageView depthView, VkFormat depthFormat,
+        uint32_t width, uint32_t height,
+        bool clearColor = true, bool clearDepth = true);
+
 private:
     VkCommandBuffer m_cmd;
     VkPipelineLayout m_currentLayout = VK_NULL_HANDLE;

@@ -8,6 +8,9 @@
 #include "graphic/Renderer2D.h"
 #include "graphic/RenderCommandContext.h"
 #include "graphic/pipelines/forward/OpaquePass.h"
+#include "adapters/vulkan/RenderDeviceVulkan.h"
+#include "adapters/vulkan/VulkanCommandBuffer.h"
+#include "adapters/vulkan/VulkanResources.h"
 #include "Logger.h"
 
 namespace Prisma::Graphic {
@@ -26,6 +29,32 @@ int Pipeline2D::Initialize(IRenderDevice* device) {
     m_canvasPass = std::make_shared<CanvasPass2D>();
     m_pixelPass = std::make_shared<PixelPerfectPass>();
     m_pixelPass->Initialize(device);
+
+    // 使用 VulkanCommandBuffer 缓存机制创建离屏 RenderPass
+    // 确保 BeginRenderPass 使用与 PSO 创建相同的 VkRenderPass 对象
+    {
+        auto* vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(device);
+        auto* offscreenTex = dynamic_cast<Vulkan::VulkanTexture*>(m_pixelPass->GetOffscreenTexture());
+        auto* depthTex = dynamic_cast<Vulkan::VulkanTexture*>(m_pixelPass->GetDepthTexture());
+        if (vkDevice && offscreenTex) {
+            VkRenderPass rp = Vulkan::VulkanCommandBuffer::PreCreateOffscreenRenderPass(
+                vkDevice->GetVkDevice(),
+                offscreenTex->GetVkImageView(), offscreenTex->GetVkFormat(),
+                depthTex ? depthTex->GetVkImageView() : VK_NULL_HANDLE,
+                depthTex ? depthTex->GetVkFormat() : VK_FORMAT_D32_SFLOAT,
+                static_cast<uint32_t>(offscreenTex->GetWidth()),
+                static_cast<uint32_t>(offscreenTex->GetHeight()),
+                true, true);
+            if (rp != VK_NULL_HANDLE) {
+                m_opaquePass->CreatePipelineForRenderPass(rp);
+                LOG_INFO("Pipeline2D", "离屏 RenderPass 已创建并传递给 OpaquePass");
+            } else {
+                LOG_ERROR("Pipeline2D", "创建离屏 RenderPass 失败");
+            }
+        } else {
+            LOG_WARN("Pipeline2D", "非 Vulkan 设备或无离屏纹理，跳过离屏 RenderPass 创建");
+        }
+    }
     m_ppPass = std::make_shared<PostProcessPass2D>();
     m_uiPass = std::make_shared<UIPass2D>();
 
@@ -43,6 +72,7 @@ void Pipeline2D::Shutdown() {
     m_canvasPass.reset();
     m_ppPass.reset();
     m_uiPass.reset();
+
 }
 
 void Pipeline2D::Execute(const RenderContext& ctx) {
@@ -116,6 +146,12 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
         ctx.commandBuffer->SetScissorRect(scissor);
     } else if (!ctx.targetTexture) {
         ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
+    } else if (ctx.targetTexture) {
+        RenderPassDesc rpDesc;
+        rpDesc.renderTarget = ctx.targetTexture;
+        rpDesc.clearRenderTarget = false;
+        rpDesc.clearDepth = false;
+        ctx.commandBuffer->BeginRenderPass(rpDesc);
     }
 
     // ── 2. 渲染 Renderer2D 内容 (Sprite batching) ──
@@ -123,6 +159,7 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
     if (!commands.empty() && m_opaquePass) {
         m_opaquePass->SetViewMatrix(view);
         m_opaquePass->SetProjectionMatrix(proj);
+        m_opaquePass->SetUseOffscreenPipeline(usePixelPerfect);
         m_opaquePass->Execute(ctx.commandBuffer, commands);
     }
 
@@ -135,6 +172,8 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
         ctx.commandBuffer->EndRenderPass();
     } else if (!ctx.targetTexture) {
         ctx.device->EndSwapChainRenderPass();
+    } else {
+        ctx.commandBuffer->EndRenderPass();
     }
 
     // ═══════════════════════════════════════════════════════════════

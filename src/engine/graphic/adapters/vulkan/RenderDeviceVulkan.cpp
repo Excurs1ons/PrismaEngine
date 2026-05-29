@@ -283,6 +283,9 @@ void RenderDeviceVulkan::Shutdown() {
         LOG_DEBUG("VulkanDevice", "GPU 已空闲");
     }
 
+    // 释放所有离屏渲染资源（VkRenderPass / VkFramebuffer），防止引擎退出时泄漏
+    VulkanCommandBuffer::ReleaseAllOffscreenResources();
+
     // 1. 先销毁由此设备管理的子资源
     if (m_resourceFactory) {
         LOG_DEBUG("VulkanDevice", "关闭资源工厂...");

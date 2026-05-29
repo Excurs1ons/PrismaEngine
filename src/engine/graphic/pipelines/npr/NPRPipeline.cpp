@@ -143,6 +143,10 @@ void NPRPipeline::Execute(const RenderContext& ctx) {
     if (m_uiPass && ctx.commandBuffer) {
         m_uiPass->RenderUI(ctx.commandBuffer, ctx.device, ctx.width, ctx.height);
     }
+
+    if (!ctx.targetTexture) {
+        ctx.device->EndSwapChainRenderPass();
+    }
 }
 
 } // namespace Prisma::Graphic

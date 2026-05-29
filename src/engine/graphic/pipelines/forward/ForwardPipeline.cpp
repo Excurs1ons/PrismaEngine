@@ -164,7 +164,6 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         m_opaquePass->SetViewMatrix(view);
         m_opaquePass->SetProjectionMatrix(proj);
         m_opaquePass->SetLights(ctx.lights);
-        m_opaquePass->Execute(passContext);
         if (ctx.commandBuffer) {
             // [修复] ICommandBuffer* 现在直接传递
             m_opaquePass->Execute(ctx.commandBuffer, commands);
@@ -228,6 +227,10 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
     // [规划中] UI 应该在最后渲染，且不受后处理影响
     if (m_uiPass && ctx.commandBuffer) {
         m_uiPass->RenderUI(ctx.commandBuffer, ctx.device, ctx.width, ctx.height);
+    }
+
+    if (!ctx.targetTexture) {
+        ctx.device->EndSwapChainRenderPass();
     }
 }
 

@@ -664,6 +664,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
             }
             RenderOverlay(cmd);
             if (m_overlayCB) m_overlayCB(cmd);
+            m_device->EndSwapChainRenderPass();
         }
         return;
     }
@@ -693,10 +694,6 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         if (m_mode == PathTraceMode::HardwareRT && m_rtBackend && m_rtResourcesBuilt) {
             UpdateTLASInstances(cmd);
         }
-    }
-
-    if (!headless) {
-        m_device->EndSwapChainRenderPass();
     }
 
     // ===== 每帧 UBO 填充（两模式共用） =====
@@ -779,6 +776,7 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         // Gizmo + 应用 HUD
         RenderOverlay(cmd);
         if (m_overlayCB) m_overlayCB(cmd);
+        m_device->EndSwapChainRenderPass();
     }
 }
 

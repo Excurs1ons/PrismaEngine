@@ -12,6 +12,11 @@
 #include "graphic/Shader.h"
 #include "graphic/interfaces/ISwapChain.h"
 #include "logger/Logger.h"
+
+// 离屏管线支持所需（Bug 5 修复）
+#include "adapters/vulkan/VulkanPipelineState.h"
+#include "adapters/vulkan/RenderDeviceVulkan.h"
+
 #include <fstream>
 #include <iterator>
 
@@ -24,6 +29,7 @@ struct alignas(16) QuadPushConstants {
     PrismaMath::mat4 mvp;
     Prisma::Color color;
 };
+
 }
 
 void OpaquePass::SetLights(const std::vector<Light>& lights) {
@@ -59,24 +65,32 @@ void OpaquePass::Execute(const PassExecutionContext& context) {
 
 void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands) {
     if (!cmd || commands.empty() || !m_device) {
-        // LOG_DEBUG("OpaquePass", "跳过 Execute: cmd={} empty={} device={}", (void*)cmd, commands.empty(), (void*)m_device);
         return;
     }
-    if (!EnsureDefaultPipeline()) {
-        LOG_ERROR("OpaquePass", "确保默认管线失败，跳过绘制");
-        return;
+
+    // 根据当前模式选择交换链 PSO 或离屏 PSO
+    if (m_useOffscreen) {
+        if (!EnsureOffscreenPipeline()) {
+            LOG_ERROR("OpaquePass", "确保离屏管线失败，跳过绘制");
+            return;
+        }
+        cmd->SetPipelineState(m_offscreenPipelineState.get());
+    } else {
+        if (!EnsureSwapchainPipeline()) {
+            LOG_ERROR("OpaquePass", "确保交换链管线失败，跳过绘制");
+            return;
+        }
+        cmd->SetPipelineState(m_swapchainPipelineState.get());
     }
 
     static double lastLog = 0;
     double now = Platform::GetTimeSeconds();
     if (now - lastLog >= 5.0) {
         LOG_DEBUG("OpaquePass", "绘制 {} 条命令, PSO={}, shaders ok={}",
-                 commands.size(), (void*)m_defaultPipelineState.get(),
+                 commands.size(), (void*)(m_useOffscreen ? m_offscreenPipelineState.get() : m_swapchainPipelineState.get()),
                  m_defaultVertexShader && m_defaultPixelShader);
         lastLog = now;
     }
-
-    cmd->SetPipelineState(m_defaultPipelineState.get());
     // 视口/裁剪由调用方（Pipeline2D / ForwardPipeline）在 RenderPass begin 时设置，
     // 此处不再覆盖，避免破坏离屏 RT（如 PixelPerfect 的 256×224）的视口。
 
@@ -106,8 +120,8 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
     }
 }
 
-bool OpaquePass::EnsureDefaultPipeline() {
-    if (m_defaultPipelineState) {
+bool OpaquePass::EnsureSwapchainPipeline() {
+    if (m_swapchainPipelineState) {
         return true;
     }
     if (!m_device || !m_device->GetResourceFactory()) {
@@ -153,12 +167,87 @@ bool OpaquePass::EnsureDefaultPipeline() {
     rs.cullMode = CullMode::None; // 2D 渲染通常不开启裁剪
     pso->SetRasterizerState(rs);
 
+    std::vector<VertexInputAttribute> attributes = {
+        { "POSITION", 0, TextureFormat::RGB32_Float, 0, 0  },
+        { "TEXCOORD", 0, TextureFormat::RG32_Float,  0, 12 },
+        { "COLOR",    0, TextureFormat::RGBA32_Float, 0, 20 },
+    };
+    pso->SetInputLayout(attributes);
+
     if (!pso->Create(m_device)) {
         LOG_ERROR("OpaquePass", "创建 Renderer2D 管线失败: {0}", pso->GetErrors());
         return false;
     }
 
-    m_defaultPipelineState = std::shared_ptr<IPipelineState>(std::move(pso));
+    m_swapchainPipelineState = std::shared_ptr<IPipelineState>(std::move(pso));
+    return true;
+}
+
+void OpaquePass::CreatePipelineForRenderPass(VkRenderPass rp) {
+    m_offscreenRenderPass = rp;
+    LOG_DEBUG("OpaquePass", "离屏管线已配置 RenderPass: 0x{:x}", reinterpret_cast<uintptr_t>(rp));
+}
+
+bool OpaquePass::EnsureOffscreenPipeline() {
+    if (m_offscreenPipelineState) {
+        return true;
+    }
+    if (!m_device || !m_device->GetResourceFactory() || m_offscreenRenderPass == VK_NULL_HANDLE) {
+        LOG_ERROR("OpaquePass", "离屏管线未配置 RenderPass 或设备无效");
+        return false;
+    }
+
+    auto resourceManager = Engine::Get().GetRenderResourceManager();
+    if (!resourceManager) {
+        return false;
+    }
+
+    // 如果着色器尚未加载，先调用 EnsureSwapchainPipeline 加载共享着色器
+    if (!m_defaultVertexShader || !m_defaultPixelShader) {
+        if (!EnsureSwapchainPipeline()) {
+            return false;
+        }
+    }
+
+    if (!m_defaultVertexShader || !m_defaultPixelShader) {
+        LOG_ERROR("OpaquePass", "无法加载着色器资源，离屏管线无法创建。");
+        return false;
+    }
+
+    auto pso = m_device->GetResourceFactory()->CreatePipelineStateImpl();
+    if (!pso) {
+        return false;
+    }
+
+    pso->SetShader(ShaderType::Vertex, m_defaultVertexShader);
+    pso->SetShader(ShaderType::Pixel, m_defaultPixelShader);
+    pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+
+    RasterizerState rs;
+    rs.cullMode = CullMode::None;
+    pso->SetRasterizerState(rs);
+
+    std::vector<VertexInputAttribute> attributes = {
+        { "POSITION", 0, TextureFormat::RGB32_Float, 0, 0  },
+        { "TEXCOORD", 0, TextureFormat::RG32_Float,  0, 12 },
+        { "COLOR",    0, TextureFormat::RGBA32_Float, 0, 20 },
+    };
+    pso->SetInputLayout(attributes);
+
+    auto* vkPSO = dynamic_cast<Vulkan::VulkanPipelineState*>(pso.get());
+    if (!vkPSO) {
+        LOG_ERROR("OpaquePass", "创建的 PSO 不是 VulkanPipelineState");
+        return false;
+    }
+    vkPSO->SetCustomRenderPass(m_offscreenRenderPass);
+
+    if (!pso->Create(m_device)) {
+        LOG_ERROR("OpaquePass", "创建离屏管线失败: {0}", pso->GetErrors());
+        return false;
+    }
+
+    m_offscreenPipelineState = std::shared_ptr<IPipelineState>(std::move(pso));
+    LOG_DEBUG("OpaquePass", "离屏 PSO 创建成功");
     return true;
 }
 
