@@ -15,7 +15,7 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 [中文文档](./docs/README_zh.md) | [English](./README.md)
 
 > **Current Status**: CoreCLR C# scripting functional. SoA entity pool with 1M virtual capacity. Android Vulkan runtime production-ready.
-> **Last Updated**: 2026-05-25
+> **Last Updated**: 2026-05-29
 
 ## CI/CD Status
 
@@ -31,22 +31,22 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 |--------|--------|-------------|
 | SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
 | CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
-| Rendering Architecture | ✅ 90% | Core Pass + Feature system + Compute Pipeline RHI |
+| Rendering Architecture | ✅ 95% | Core Pass + Feature system + Compute Pipeline RHI |
 | Resource Management | ✅ 95% | Handle<T> system + resource pools |
 | Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
 | DirectX 12 Backend | ❌ 已暂停 | 已暂停，专注 Vulkan 后端 |
 | Platform Layer | ✅ 95% | Unified Windows/Linux/Android abstraction |
 | Logger System | ✅ 100% | Thread-safe cross-platform logging |
 | Audio System | ✅ 50% | XAudio2/SDL3 backends with 3D spatial support |
-| Shaders | ✅ 50% | PBR lighting shaders (lit/unlit) |
+| Shaders | ✅ 60% | PBR lighting shaders (lit/unlit) |
 | Physics System | ✅ 30% | 碰撞检测、刚体、约束求解、CCD |
 | Android Runtime | ✅ 90% | Optimized Vulkan runtime (integrated GameActivity) |
-| Editor Tools | ✅ 40% | ImGui 编辑器 + MCP 集成 + WebUI |
+| Editor Tools | ✅ 45% | ImGui 编辑器 + MCP 集成 + WebUI |
 | MCP Protocol | ✅ 85% | 17 tools, 7 categories, dual transport, hash delta tracking |
 | WebUI Editor | ✅ 80% | Browser-based editor with scene/game viewport, hierarchy, inspector |
-| Testing Infrastructure | ✅ 50% | GTest 单元测试 + 集成测试 (66 files) |
+| Testing Infrastructure | ✅ 55% | GTest 单元测试 + 集成测试 (66 files) |
 
-**Overall: ~83%**
+**Overall: ~85%**
 
 ## Quick Start
 
