@@ -98,6 +98,13 @@ private:
 
     // 当前场景文件路径（用于保存/另存为）
     std::string m_sceneFilePath;
+
+    // Play/Stop 游戏模式
+    bool m_playing = false;
+
+    // FPS / FrameTime 统计
+    float m_fps = 0.0f;
+    float m_frameTime = 0.0f;
 };
 
 }  // namespace Prisma

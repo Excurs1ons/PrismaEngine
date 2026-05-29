@@ -3,6 +3,8 @@
 #include "../UIStrings.h"
 #include "../graphic/ImGuiVulkanResourceManager.h"
 #include "../graphic/ViewportRenderPass.h"
+#include "graphic/LightComponent.h"
+#include "graphic/MeshRenderer.h"
 #include "graphic/adapters/vulkan/VulkanCommandBuffer.h"
 #include "transform/Transform.h"
 #include <glm/gtx/matrix_decompose.hpp>
@@ -20,6 +22,16 @@ Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
 }
 
 void Prisma::EditorLayer::OnUpdate(Timestep ts) {
+    // FPS / FrameTime tracking
+    if (ts.GetSeconds() > 0.0f) {
+        m_fps = 0.9f * m_fps + 0.1f * (1.0f / ts.GetSeconds());
+        m_frameTime = 0.9f * m_frameTime + 0.1f * ts.GetSeconds();
+    }
+
+    // 游戏模式运行时禁用编辑器相机控制
+    if (m_playing)
+        return;
+
     if (!m_viewportHovered || !ImGui::IsMouseDown(ImGuiMouseButton_Right))
         return;
 
@@ -208,6 +220,18 @@ void Prisma::EditorLayer::OnImGuiRender() {
             }
             ImGui::EndMenu();
         }
+
+        // Play / Stop 游戏模式
+        if (!m_playing) {
+            if (ImGui::MenuItem("> Play", "F5")) {
+                m_playing = true;
+            }
+        } else {
+            if (ImGui::MenuItem("[] Stop", "F5")) {
+                m_playing = false;
+            }
+        }
+
         ImGui::EndMenuBar();
     }
 
@@ -216,6 +240,43 @@ void Prisma::EditorLayer::OnImGuiRender() {
     // Viewport Panel
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2{0, 0});
     ImGui::Begin(UI::WINDOW_VIEWPORT);
+
+    // Gizmo Toolbar
+    {
+        bool translatePressed = ImGui::Button("W##Translate");
+        ImGui::SameLine();
+        bool rotatePressed = ImGui::Button("E##Rotate");
+        ImGui::SameLine();
+        bool scalePressed = ImGui::Button("R##Scale");
+        ImGui::SameLine();
+        ImGui::Text("|");
+        ImGui::SameLine();
+        bool worldLocalPressed = ImGui::Button(m_gizmoMode == ImGuizmo::LOCAL ? "Local" : "World");
+        ImGui::SameLine();
+        ImGui::Text("|");
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Snap", &m_gizmoSnap)) {}
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(80.0f);
+        ImGui::DragFloat("##SnapVal", &m_gizmoSnapTranslation, 0.1f, 0.01f, 100.0f, "%.2f");
+
+        if (translatePressed || ImGui::IsKeyPressed(ImGuiKey_W)) m_gizmoOperation = ImGuizmo::TRANSLATE;
+        if (rotatePressed    || ImGui::IsKeyPressed(ImGuiKey_E)) m_gizmoOperation = ImGuizmo::ROTATE;
+        if (scalePressed     || ImGui::IsKeyPressed(ImGuiKey_R)) m_gizmoOperation = ImGuizmo::SCALE;
+        if (worldLocalPressed) m_gizmoMode = (m_gizmoMode == ImGuizmo::LOCAL) ? ImGuizmo::WORLD : ImGuizmo::LOCAL;
+
+        // 高亮当前 Gizmo 操作模式
+        ImGui::SameLine();
+        ImGui::TextUnformatted("|");
+        ImGui::SameLine();
+        ImGui::Text("%s", m_gizmoOperation == ImGuizmo::TRANSLATE ? "Translate" :
+                          m_gizmoOperation == ImGuizmo::ROTATE    ? "Rotate" :
+                          m_gizmoOperation == ImGuizmo::SCALE     ? "Scale" : "?");
+        ImGui::SameLine();
+        ImGui::TextUnformatted("|");
+        ImGui::SameLine();
+        ImGui::Text("%s", m_gizmoMode == ImGuizmo::LOCAL ? "Local" : "World");
+    }
 
     m_viewportFocused = ImGui::IsWindowFocused();
     m_viewportHovered = ImGui::IsWindowHovered();
@@ -439,16 +500,75 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 if (ImGui::IsItemClicked()) {
                     m_selectedEntity = node;
                 }
+                // Right-click on tree node opens context menu
+                if (ImGui::IsItemClicked(ImGuiMouseButton_Right)) {
+                    m_selectedEntity = node;
+                    ImGui::OpenPopup("HierarchyContextMenu");
+                }
                 if (opened) {
                     ImGui::TreePop();
                 }
             }
 
-            // Right-click on blank space
-            if (ImGui::BeginPopupContextWindow(nullptr, ImGuiPopupFlags_MouseButtonRight)) {
+            // Right-click context menu (tree node or blank space)
+            if (ImGui::BeginPopupContextWindow("HierarchyContextMenu", ImGuiPopupFlags_MouseButtonRight)) {
                 if (ImGui::MenuItem("Create Empty GameObject")) {
                     auto newNode = scene->CreateNode("New GameObject");
                     m_selectedEntity = newNode;
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem("Duplicate Entity", "Ctrl+D", false, m_selectedEntity.IsValid())) {
+                    if (m_selectedEntity.IsValid()) {
+                        auto newNode = scene->CreateNode(scene->GetNodeName(m_selectedEntity) + " (Copy)");
+                        // Copy Transform
+                        auto srcTransform = scene->GetComponent<Transform>(m_selectedEntity);
+                        if (srcTransform) {
+                            auto dstTransform = scene->AddComponent<Transform>(newNode);
+                            if (dstTransform) {
+                                dstTransform->SetPosition(srcTransform->GetPosition());
+                                dstTransform->SetRotation(srcTransform->GetRotation());
+                                dstTransform->SetScale(srcTransform->GetScale());
+                            }
+                        }
+                        // Copy Camera
+                        auto srcCamera = scene->GetComponent<Graphic::Camera>(m_selectedEntity);
+                        if (srcCamera) {
+                            scene->AddComponent<Graphic::Camera>(newNode);
+                        }
+                        // Copy RigidBody
+                        auto srcRb = scene->GetComponent<RigidBodyComponent>(m_selectedEntity);
+                        if (srcRb) {
+                            auto dstRb = scene->AddComponent<RigidBodyComponent>(newNode);
+                            if (dstRb) {
+                                dstRb->SetVelocity(srcRb->GetVelocity());
+                            }
+                        }
+                        // Copy Light
+                        auto srcLight = scene->GetComponent<Graphic::LightComponent>(m_selectedEntity);
+                        if (srcLight) {
+                            auto dstLight = scene->AddComponent<Graphic::LightComponent>(newNode);
+                            if (dstLight) {
+                                dstLight->SetData(srcLight->GetData());
+                            }
+                        }
+                        // Copy MeshRenderer
+                        auto srcMesh = scene->GetComponent<Graphic::MeshRenderer>(m_selectedEntity);
+                        if (srcMesh) {
+                            auto dstMesh = scene->AddComponent<Graphic::MeshRenderer>(newNode);
+                            if (dstMesh) {
+                                dstMesh->SetData(srcMesh->GetData());
+                            }
+                        }
+                        m_selectedEntity = newNode;
+                        scene->SetDirty(true);
+                    }
+                }
+                if (ImGui::MenuItem("Delete", "Del", false, m_selectedEntity.IsValid())) {
+                    if (m_selectedEntity.IsValid()) {
+                        scene->RemoveNode(m_selectedEntity);
+                        m_selectedEntity = Node{};
+                        scene->SetDirty(true);
+                    }
                 }
                 ImGui::EndPopup();
             }
@@ -518,6 +638,74 @@ void Prisma::EditorLayer::OnImGuiRender() {
             }
         }
 
+        // Light Component display
+        auto light = propsScene->GetComponent<Graphic::LightComponent>(m_selectedEntity);
+        if (light) {
+            if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
+                auto data = light->GetData();
+                int typeInt = (int)data.type;
+                const char* types[] = {"Directional", "Point", "Spot", "Ambient"};
+                if (ImGui::Combo("Type", &typeInt, types, 4)) {
+                    data.type = (Graphic::LightComponent::LightType)typeInt;
+                    light->SetData(data);
+                    propsScene->SetDirty(true);
+                }
+                if (ImGui::ColorEdit3("Color", data.color.data())) {
+                    light->SetData(data);
+                    propsScene->SetDirty(true);
+                }
+                if (ImGui::DragFloat("Intensity", &data.intensity, 0.1f, 0.0f, 100.0f)) {
+                    light->SetData(data);
+                    propsScene->SetDirty(true);
+                }
+                if (data.type == Graphic::LightComponent::LightType::Point ||
+                    data.type == Graphic::LightComponent::LightType::Spot) {
+                    if (ImGui::DragFloat("Range", &data.range, 0.1f, 0.1f, 1000.0f)) {
+                        light->SetData(data);
+                        propsScene->SetDirty(true);
+                    }
+                }
+                if (data.type == Graphic::LightComponent::LightType::Spot) {
+                    if (ImGui::DragFloat("Spot Angle", &data.spotAngle, 1.0f, 1.0f, 179.0f)) {
+                        light->SetData(data);
+                        propsScene->SetDirty(true);
+                    }
+                }
+            }
+        }
+
+        // MeshRenderer Component display
+        auto meshRenderer = propsScene->GetComponent<Graphic::MeshRenderer>(m_selectedEntity);
+        if (meshRenderer) {
+            if (ImGui::CollapsingHeader("Mesh Renderer", ImGuiTreeNodeFlags_DefaultOpen)) {
+                auto data = meshRenderer->GetData();
+                char meshPath[256];
+                strncpy(meshPath, data.meshPath.c_str(), sizeof(meshPath));
+                meshPath[sizeof(meshPath) - 1] = '\0';
+                if (ImGui::InputText("Mesh", meshPath, sizeof(meshPath))) {
+                    data.meshPath = meshPath;
+                    meshRenderer->SetData(data);
+                    propsScene->SetDirty(true);
+                }
+                if (ImGui::ColorEdit3("Color", data.color.data())) {
+                    meshRenderer->SetData(data);
+                    propsScene->SetDirty(true);
+                }
+                if (ImGui::ColorEdit3("Emissive", data.emissive.data())) {
+                    meshRenderer->SetData(data);
+                    propsScene->SetDirty(true);
+                }
+                char matPath[256];
+                strncpy(matPath, data.material.c_str(), sizeof(matPath));
+                matPath[sizeof(matPath) - 1] = '\0';
+                if (ImGui::InputText("Material", matPath, sizeof(matPath))) {
+                    data.material = matPath;
+                    meshRenderer->SetData(data);
+                    propsScene->SetDirty(true);
+                }
+            }
+        }
+
         // Add Component button
         ImGui::Spacing();
         ImGui::Separator();
@@ -535,6 +723,18 @@ void Prisma::EditorLayer::OnImGuiRender() {
             if (ImGui::MenuItem("RigidBody")) {
                 if (!propsScene->GetComponent<RigidBodyComponent>(m_selectedEntity)) {
                     propsScene->AddComponent<RigidBodyComponent>(m_selectedEntity);
+                    propsScene->SetDirty(true);
+                }
+            }
+            if (ImGui::MenuItem("Light")) {
+                if (!propsScene->GetComponent<Graphic::LightComponent>(m_selectedEntity)) {
+                    propsScene->AddComponent<Graphic::LightComponent>(m_selectedEntity);
+                    propsScene->SetDirty(true);
+                }
+            }
+            if (ImGui::MenuItem("Mesh Renderer")) {
+                if (!propsScene->GetComponent<Graphic::MeshRenderer>(m_selectedEntity)) {
+                    propsScene->AddComponent<Graphic::MeshRenderer>(m_selectedEntity);
                     propsScene->SetDirty(true);
                 }
             }
@@ -602,6 +802,25 @@ void Prisma::EditorLayer::OnImGuiRender() {
 
     if (m_showDemoWindow) {
         ImGui::ShowDemoWindow(&m_showDemoWindow);
+    }
+
+    // Status bar
+    {
+        ImGuiViewport* viewportBar = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(ImVec2(viewportBar->Pos.x, viewportBar->Pos.y + viewportBar->Size.y - 25));
+        ImGui::SetNextWindowSize(ImVec2(viewportBar->Size.x, 25));
+        ImGuiWindowFlags statusFlags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoScrollbar |
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings |
+            ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoBringToFrontOnFocus;
+        ImGui::Begin("##StatusBar", nullptr, statusFlags);
+        auto* sceneManagerStatus = Engine::Get().GetSceneManager();
+        size_t entityCount = sceneManagerStatus && sceneManagerStatus->GetCurrentScene()
+            ? sceneManagerStatus->GetCurrentScene()->GetNodes().size() : 0;
+        ImGui::Text("FPS: %.1f | Frame: %.2f ms | Entities: %zu",
+            m_fps, m_frameTime * 1000.0f, entityCount);
+        ImGui::SameLine(ImGui::GetWindowWidth() - 150);
+        ImGui::Text("PrismaEngine Editor");
+        ImGui::End();
     }
 
     ProfilerPanel::OnImGuiRender();

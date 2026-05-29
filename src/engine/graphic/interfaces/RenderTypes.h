@@ -48,6 +48,15 @@ struct Vertex {
     constexpr static uint32_t GetVertexStride() { return sizeof(Vertex); }
 };
 
+// 2D 渲染简化顶点（posUV(vec4) + color(vec4) = 32 bytes）
+// posUV.xy = 屏幕位置, posUV.zw = 纹理坐标
+// 聚合体，可直接 brace-init: { Vector4(px,py,u,v), colorVec4 }
+struct Vertex2D {
+    Vector4 posUV;
+    Vector4 color;
+    constexpr static uint32_t GetVertexStride() { return sizeof(Vertex2D); }
+};
+
 
 // 简单的包围盒结构
 struct BoundingBox {

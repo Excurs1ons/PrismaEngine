@@ -10,7 +10,7 @@ namespace Prisma {
         class RenderCommandContext;
 
         // 渲染组件，用于渲染几何体
-        class RenderComponent : public Component {
+        class ENGINE_API RenderComponent : public Component {
         public:
             RenderComponent();
 

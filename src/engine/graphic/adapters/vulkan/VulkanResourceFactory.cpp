@@ -141,7 +141,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
     imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageInfo.usage = 0;
-    if (desc.allowRenderTarget)    imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    if (desc.allowRenderTarget && !desc.allowDepthStencil)    imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     if (desc.allowDepthStencil)    imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     if (desc.allowShaderResource)  imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     if (desc.allowUnorderedAccess) imageInfo.usage |= VK_IMAGE_USAGE_STORAGE_BIT;

@@ -75,6 +75,22 @@ static VkFormat ToVkFormat(TextureFormat format) {
     }
 }
 
+// 辅助函数：TextureFormat → byte size
+static uint32_t GetFormatSize(TextureFormat format) {
+    switch (format) {
+        case TextureFormat::R8_UNorm:    return 1;
+        case TextureFormat::RG8_UNorm:   return 2;
+        case TextureFormat::RGB8_UNorm:  return 3;
+        case TextureFormat::RGBA8_UNorm: return 4;
+        case TextureFormat::R32_Float:   return 4;
+        case TextureFormat::RG32_Float:  return 8;
+        case TextureFormat::RGB32_Float: return 12;
+        case TextureFormat::RGBA32_Float:return 16;
+        case TextureFormat::D32_Float:   return 4;
+        default: return 4;
+    }
+}
+
 // ============================================================
 // 辅助函数：BlendOp → VkBlendOp
 // ============================================================
@@ -343,28 +359,32 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
 
     VkVertexInputBindingDescription bindingDescription{};
     bindingDescription.binding = 0;
-    bindingDescription.stride = sizeof(Prisma::Graphic::Vertex);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
     if (m_inputAttributes.empty()) {
         // 默认回退：使用 Prisma::Vertex 基础布局 (Pos, Color, UV)
+        bindingDescription.stride = sizeof(Prisma::Graphic::Vertex);
         attributeDescriptions.resize(3);
         attributeDescriptions[0] = { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, position) };
         attributeDescriptions[1] = { 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, color) };
         attributeDescriptions[2] = { 2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, uv) };
     } else {
-        // 使用用户自定义布局
+        // 使用用户自定义布局，自动计算 stride
+        uint32_t maxStride = 0;
         for (uint32_t i = 0; i < (uint32_t)m_inputAttributes.size(); ++i) {
             const auto& attr = m_inputAttributes[i];
             VkVertexInputAttributeDescription vkAttr{};
             vkAttr.binding = attr.inputSlot;
-            vkAttr.location = i; // 假设 location 对应数组索引，或者可以在 VertexInputAttribute 中增加 Location 字段
+            vkAttr.location = i;
             vkAttr.format = ToVkFormat(attr.format);
             vkAttr.offset = attr.alignedByteOffset;
             attributeDescriptions.push_back(vkAttr);
+            uint32_t attrSize = GetFormatSize(attr.format);
+            uint32_t attrEnd = attr.alignedByteOffset + attrSize;
+            if (attrEnd > maxStride) maxStride = attrEnd;
         }
-    }
+        bindingDescription.stride = maxStride;
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;

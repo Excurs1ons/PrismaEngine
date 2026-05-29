@@ -37,8 +37,8 @@ struct Renderer2D::Renderer2DData {
         std::shared_ptr<IBuffer> IBO;
         std::shared_ptr<Mesh> MeshObj;
         std::vector<std::shared_ptr<Material>> FrameMaterials;
-        Vertex* VertexBufferBase = nullptr; 
-        Vertex* VertexBufferPtr = nullptr;  
+        Vertex2D* VertexBufferBase = nullptr; 
+        Vertex2D* VertexBufferPtr = nullptr;  
         uint32_t QuadCount = 0;
     };
     FrameResource Frames[FRAME_SLOTS];      // 场景 VBO（受光照影响）
@@ -84,12 +84,12 @@ void Renderer2D::Initialize() {
         // ── 场景 VBO (Frames) ──
         for (uint32_t i = 0; i < FRAME_SLOTS; ++i) {
             auto& f = s_Data->Frames[i];
-            BufferDesc bvd; bvd.type = BufferType::Vertex; bvd.size = MAX_BATCH_VERTICES * sizeof(Vertex); bvd.usage = BufferUsage::Dynamic;
+            BufferDesc bvd; bvd.type = BufferType::Vertex; bvd.size = MAX_BATCH_VERTICES * sizeof(Vertex2D); bvd.usage = BufferUsage::Dynamic;
             f.VBO = rf->CreateBufferImpl(bvd);
             BufferDesc bid; bid.type = BufferType::Index; bid.size = MAX_BATCH_INDICES * sizeof(uint32_t); bid.usage = BufferUsage::Dynamic;
             f.IBO = rf->CreateBufferImpl(bid);
             f.MeshObj = std::make_shared<Mesh>();
-            f.VertexBufferBase = new Vertex[MAX_BATCH_VERTICES];
+            f.VertexBufferBase = new Vertex2D[MAX_BATCH_VERTICES];
             f.VertexBufferPtr = f.VertexBufferBase;
             std::vector<uint32_t> bI(MAX_BATCH_INDICES);
             uint32_t off = 0;
@@ -102,12 +102,12 @@ void Renderer2D::Initialize() {
         // ── Gizmo VBO (GizmoFrames) — 动态 Ring Buffer，每帧更新 ──
         for (uint32_t i = 0; i < FRAME_SLOTS; ++i) {
             auto& f = s_Data->GizmoFrames[i];
-            BufferDesc bvd; bvd.type = BufferType::Vertex; bvd.size = MAX_BATCH_VERTICES * sizeof(Vertex); bvd.usage = BufferUsage::Dynamic;
+            BufferDesc bvd; bvd.type = BufferType::Vertex; bvd.size = MAX_BATCH_VERTICES * sizeof(Vertex2D); bvd.usage = BufferUsage::Dynamic;
             f.VBO = rf->CreateBufferImpl(bvd);
             BufferDesc bid; bid.type = BufferType::Index; bid.size = MAX_BATCH_INDICES * sizeof(uint32_t); bid.usage = BufferUsage::Dynamic;
             f.IBO = rf->CreateBufferImpl(bid);
             f.MeshObj = std::make_shared<Mesh>();
-            f.VertexBufferBase = new Vertex[MAX_BATCH_VERTICES];
+            f.VertexBufferBase = new Vertex2D[MAX_BATCH_VERTICES];
             f.VertexBufferPtr = f.VertexBufferBase;
             std::vector<uint32_t> bI(MAX_BATCH_INDICES);
             uint32_t off = 0;
@@ -212,7 +212,7 @@ void Renderer2D::Flush() {
         ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot]
         : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (f.QuadCount == 0) return;
-    f.VBO->UpdateData(f.VertexBufferBase, (uint32_t)(f.VertexBufferPtr - f.VertexBufferBase) * sizeof(Vertex), 0);
+    f.VBO->UpdateData(f.VertexBufferBase, (uint32_t)(f.VertexBufferPtr - f.VertexBufferBase) * sizeof(Vertex2D), 0);
     auto& sub = const_cast<std::vector<SubMeshBuffer>&>(f.MeshObj->GetSubMeshes());
     if (!sub.empty()) { sub[0].indexCount = f.QuadCount * 6; sub[0].vertexCount = f.QuadCount * 4; }
     
@@ -344,11 +344,11 @@ void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const Prisma:
     auto* wt = s_Data->WhiteTexture.get();
     if (s_Data->CurrentTexture.get() != wt || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = s_Data->WhiteTexture; }
     float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
-    Vertex* v = f.VertexBufferPtr;
-    v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {0, 1, 0, 0} };
-    v[1] = { {pos.x + hw, pos.y - hh, 0, 1}, tint, {1, 1, 0, 0} };
-    v[2] = { {pos.x + hw, pos.y + hh, 0, 1}, tint, {1, 0, 0, 0} };
-    v[3] = { {pos.x - hw, pos.y + hh, 0, 1}, tint, {0, 0, 0, 0} };
+    Vertex2D* v = f.VertexBufferPtr;
+    v[0] = { Vector4(pos.x - hw, pos.y - hh, 0, 1), tint };
+    v[1] = { Vector4(pos.x + hw, pos.y - hh, 1, 1), tint };
+    v[2] = { Vector4(pos.x + hw, pos.y + hh, 1, 0), tint };
+    v[3] = { Vector4(pos.x - hw, pos.y + hh, 0, 0), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
@@ -361,11 +361,11 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const Prisma::Color& col) {
     auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (s_Data->CurrentTexture.get() != s_Data->WhiteTexture.get() || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = s_Data->WhiteTexture; }
     PrismaMath::vec4 tint = {col.r, col.g, col.b, col.a};
-    Vertex* v = f.VertexBufferPtr;
-    v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {0, 1, 0, 0} };
-    v[1] = { trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1), tint, {1, 1, 0, 0} };
-    v[2] = { trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1), tint, {1, 0, 0, 0} };
-    v[3] = { trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1), tint, {0, 0, 0, 0} };
+    Vertex2D* v = f.VertexBufferPtr;
+    v[0] = { Vector4((trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1)).y, 0, 1), tint };
+    v[1] = { Vector4((trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1)).y, 1, 1), tint };
+    v[2] = { Vector4((trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).y, 1, 0), tint };
+    v[3] = { Vector4((trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).y, 0, 0), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
@@ -382,11 +382,11 @@ void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const std::sh
     auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
-    Vertex* v = f.VertexBufferPtr;
-    v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {0, 1, 0, 0} };
-    v[1] = { {pos.x + hw, pos.y - hh, 0, 1}, tint, {1, 1, 0, 0} };
-    v[2] = { {pos.x + hw, pos.y + hh, 0, 1}, tint, {1, 0, 0, 0} };
-    v[3] = { {pos.x - hw, pos.y + hh, 0, 1}, tint, {0, 0, 0, 0} };
+    Vertex2D* v = f.VertexBufferPtr;
+    v[0] = { Vector4(pos.x - hw, pos.y - hh, 0, 1), tint };
+    v[1] = { Vector4(pos.x + hw, pos.y - hh, 1, 1), tint };
+    v[2] = { Vector4(pos.x + hw, pos.y + hh, 1, 0), tint };
+    v[3] = { Vector4(pos.x - hw, pos.y + hh, 0, 0), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
@@ -402,11 +402,11 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>&
     auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
-    Vertex* v = f.VertexBufferPtr;
-    v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {0, 1, 0, 0} };
-    v[1] = { trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1), tint, {1, 1, 0, 0} };
-    v[2] = { trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1), tint, {1, 0, 0, 0} };
-    v[3] = { trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1), tint, {0, 0, 0, 0} };
+    Vertex2D* v = f.VertexBufferPtr;
+    v[0] = { Vector4((trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1)).y, 0, 1), tint };
+    v[1] = { Vector4((trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1)).y, 1, 1), tint };
+    v[2] = { Vector4((trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).y, 1, 0), tint };
+    v[3] = { Vector4((trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).y, 0, 0), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
@@ -417,11 +417,11 @@ void Renderer2D::DrawQuad(const Vector2& pos, const Vector2& size, const std::sh
     auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     float hw = size.x * 0.5f, hh = size.y * 0.5f; PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
-    Vertex* v = f.VertexBufferPtr;
-    v[0] = { {pos.x - hw, pos.y - hh, 0, 1}, tint, {uv[0].x, uv[0].y, 0, 0} };
-    v[1] = { {pos.x + hw, pos.y - hh, 0, 1}, tint, {uv[1].x, uv[1].y, 0, 0} };
-    v[2] = { {pos.x + hw, pos.y + hh, 0, 1}, tint, {uv[2].x, uv[2].y, 0, 0} };
-    v[3] = { {pos.x - hw, pos.y + hh, 0, 1}, tint, {uv[3].x, uv[3].y, 0, 0} };
+    Vertex2D* v = f.VertexBufferPtr;
+    v[0] = { Vector4(pos.x - hw, pos.y - hh, uv[0].x, uv[0].y), tint };
+    v[1] = { Vector4(pos.x + hw, pos.y - hh, uv[1].x, uv[1].y), tint };
+    v[2] = { Vector4(pos.x + hw, pos.y + hh, uv[2].x, uv[2].y), tint };
+    v[3] = { Vector4(pos.x - hw, pos.y + hh, uv[3].x, uv[3].y), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
@@ -432,11 +432,11 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>&
     auto& f = s_Data->InGizmoMode ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot] : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (texChanged || f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = tex; }
     PrismaMath::vec4 tint = {tC.r, tC.g, tC.b, tC.a};
-    Vertex* v = f.VertexBufferPtr;
-    v[0] = { trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1), tint, {uv[0].x, uv[0].y, 0, 0} };
-    v[1] = { trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1), tint, {uv[1].x, uv[1].y, 0, 0} };
-    v[2] = { trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1), tint, {uv[2].x, uv[2].y, 0, 0} };
-    v[3] = { trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1), tint, {0, 0, 0, 0} };
+    Vertex2D* v = f.VertexBufferPtr;
+    v[0] = { Vector4((trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f, -0.5f, 0, 1)).y, uv[0].x, uv[0].y), tint };
+    v[1] = { Vector4((trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f, -0.5f, 0, 1)).y, uv[1].x, uv[1].y), tint };
+    v[2] = { Vector4((trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).y, uv[2].x, uv[2].y), tint };
+    v[3] = { Vector4((trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).y, uv[3].x, uv[3].y), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
 }
 
@@ -472,11 +472,11 @@ void Renderer2D::DrawString(const std::string& text, const Vector2& pos, float s
                 if (data & (1 << row)) {
                     if (f.QuadCount >= MAX_BATCH_QUADS) { NextBatch(); s_Data->CurrentTexture = nullptr; }
                     float px = cur.x + col * pixelSize, py = cur.y + (7 - row) * pixelSize;
-                    Vertex* v = f.VertexBufferPtr;
-                    v[0] = {{px, py, 0, 1}, tint, {0, 1, 0, 0}};
-                    v[1] = {{px + pixelSize, py, 0, 1}, tint, {1, 1, 0, 0}};
-                    v[2] = {{px + pixelSize, py + pixelSize, 0, 1}, tint, {1, 0, 0, 0}};
-                    v[3] = {{px, py + pixelSize, 0, 1}, tint, {0, 0, 0, 0}};
+                    Vertex2D* v = f.VertexBufferPtr;
+                    v[0] = { Vector4(px, py, 0, 1), tint };
+                    v[1] = { Vector4(px + pixelSize, py, 1, 1), tint };
+                    v[2] = { Vector4(px + pixelSize, py + pixelSize, 1, 0), tint };
+                    v[3] = { Vector4(px, py + pixelSize, 0, 0), tint };
                     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
                 }
             }
