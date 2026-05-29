@@ -14,7 +14,7 @@
 
 const float PBR_PI = 3.14159265359;
 const float PBR_EPSILON = 0.0001;
-const int MAX_LIGHTS = 3;
+const int MAX_LIGHTS = 32;
 
 // ---- 片元输入 (来自 lit.vert) ----
 layout(location = 0) in vec3 v_WorldPos;

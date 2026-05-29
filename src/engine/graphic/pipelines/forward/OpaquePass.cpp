@@ -44,8 +44,8 @@ struct alignas(16) SceneData {
     PrismaMath::vec4 cameraPos; // xyz = position, w = padding
 };
 
-// Max PBR point lights (matches lit.frag MAX_LIGHTS)
-constexpr uint32_t kMaxPBRLights = 3;
+// Max PBR lights — matches pbr_lit.frag SSBO capacity
+constexpr uint32_t kMaxPBRLights = 32;
 }
 
 void OpaquePass::SetLights(const std::vector<Light>& lights) {
