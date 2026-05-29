@@ -110,6 +110,14 @@ public:
 
     bool IsHeadless() const override { return m_headless; }
 
+    // ========== Headless 离屏资源访问 ==========
+    VkImage GetHeadlessColorImage()    const { return m_headlessColorImage; }
+    VkImageView GetHeadlessColorView()  const { return m_headlessColorView; }
+    VkRenderPass GetHeadlessRenderPass()  const { return m_headlessRenderPass; }
+    VkFramebuffer GetHeadlessFramebuffer() const { return m_headlessFramebuffer; }
+    uint32_t GetHeadlessWidth()  const { return m_headlessWidth; }
+    uint32_t GetHeadlessHeight() const { return m_headlessHeight; }
+
     bool ReadbackTexture(class ITexture* texture, uint32_t width, uint32_t height,
                          void* outBuffer, size_t bufferSize) override;
 
@@ -191,6 +199,21 @@ private:
     std::unique_ptr<VulkanResourceFactory> m_resourceFactory;
 
     bool m_headless = false;
+
+    // 离屏渲染资源（headless 模式）
+    VkImage m_headlessColorImage       = VK_NULL_HANDLE;
+    VkImageView m_headlessColorView     = VK_NULL_HANDLE;
+    VkDeviceMemory m_headlessColorMemory = VK_NULL_HANDLE;
+    VkImage m_headlessDepthImage       = VK_NULL_HANDLE;
+    VkImageView m_headlessDepthView     = VK_NULL_HANDLE;
+    VkDeviceMemory m_headlessDepthMemory = VK_NULL_HANDLE;
+    VkRenderPass m_headlessRenderPass   = VK_NULL_HANDLE;
+    VkFramebuffer m_headlessFramebuffer = VK_NULL_HANDLE;
+    uint32_t m_headlessWidth  = 0;
+    uint32_t m_headlessHeight = 0;
+
+    bool CreateHeadlessResources(uint32_t width, uint32_t height);
+    void DestroyHeadlessResources();
 
     // 设备能力
     struct DeviceFeatures {

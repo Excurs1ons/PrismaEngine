@@ -1,11 +1,17 @@
 #include "AudioAPI.h"
 #include "AudioDeviceNull.h"
 #include "AudioDeviceSDL3.h"
+#include "backends/AudioDeviceMiniaudio.h"
+#include "codecs/OggDecoder.h"
+#include "codecs/Mp3Decoder.h"
+#include "codecs/FlacDecoder.h"
 #include <SDL3/SDL.h>
 
 #include "../logger/Logger.h"
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <sstream>
@@ -20,6 +26,9 @@ std::unique_ptr<IAudioDevice> AudioAPI::CreateDevice(AudioDeviceType deviceType,
     switch (deviceType) {
         case AudioDeviceType::SDL3:
             return CreateSDL3Device(desc);
+
+        case AudioDeviceType::Miniaudio:
+            return CreateMiniaudioDevice(desc);
 
         case AudioDeviceType::Null:
             return CreateNullDevice(desc);
@@ -45,8 +54,48 @@ std::unique_ptr<IAudioDevice> AudioAPI::CreateBestDevice(const AudioDesc& desc) 
 }
 
 std::shared_ptr<AudioClip> AudioAPI::LoadClip(const std::string& path) {
-    // 根据后缀选择加载器，目前仅支持 WAV
-    if (path.find(".wav") != std::string::npos || path.find(".WAV") != std::string::npos) {
+    std::string ext = std::filesystem::path(path).extension().string();
+    for (auto& c : ext) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+
+    auto clip = std::make_shared<AudioClip>();
+
+#ifdef PRISMA_ENABLE_AUDIO_CODEC_OGG
+    if (ext == ".ogg") {
+        if (Codecs::OggDecoder::DecodeFile(path, *clip)) {
+            clip->path = path;
+            LOG_DEBUG("Audio", "成功加载 Ogg Vorbis: {0} ({1}s)", path, clip->duration);
+            return clip;
+        }
+        LOG_ERROR("Audio", "加载 Ogg 失败: {0}", path);
+        return nullptr;
+    }
+#endif
+
+#ifdef PRISMA_ENABLE_AUDIO_CODEC_MP3
+    if (ext == ".mp3") {
+        if (Codecs::Mp3Decoder::DecodeFile(path, *clip)) {
+            clip->path = path;
+            LOG_DEBUG("Audio", "成功加载 MP3: {0} ({1}s)", path, clip->duration);
+            return clip;
+        }
+        LOG_ERROR("Audio", "加载 MP3 失败: {0}", path);
+        return nullptr;
+    }
+#endif
+
+#ifdef PRISMA_ENABLE_AUDIO_CODEC_FLAC
+    if (ext == ".flac") {
+        if (Codecs::FlacDecoder::DecodeFile(path, *clip)) {
+            clip->path = path;
+            LOG_DEBUG("Audio", "成功加载 FLAC: {0} ({1}s)", path, clip->duration);
+            return clip;
+        }
+        LOG_ERROR("Audio", "加载 FLAC 失败: {0}", path);
+        return nullptr;
+    }
+#endif
+
+    if (ext == ".wav") {
         return LoadWAV(path);
     }
 
@@ -94,6 +143,9 @@ std::vector<AudioDeviceType> AudioAPI::GetSupportedDevices() {
 #ifdef PRISMA_ENABLE_AUDIO_SDL3
     devices.push_back(AudioDeviceType::SDL3);
 #endif
+#ifdef PRISMA_ENABLE_AUDIO_MINIAUDIO
+    devices.push_back(AudioDeviceType::Miniaudio);
+#endif
     return devices;
 }
 
@@ -108,12 +160,20 @@ bool AudioAPI::IsDeviceSupported(AudioDeviceType deviceType) {
 #endif
     }
 
+    if (deviceType == AudioDeviceType::Miniaudio) {
+#ifdef PRISMA_ENABLE_AUDIO_MINIAUDIO
+        return true;
+#endif
+    }
+
     return false;
 }
 
 AudioDeviceType AudioAPI::GetRecommendedDevice() {
 #ifdef PRISMA_ENABLE_AUDIO_SDL3
     return AudioDeviceType::SDL3;
+#elif defined(PRISMA_ENABLE_AUDIO_MINIAUDIO)
+    return AudioDeviceType::Miniaudio;
 #else
     return AudioDeviceType::Null;
 #endif
@@ -128,6 +188,17 @@ std::string AudioAPI::GetDeviceVersion(AudioDeviceType deviceType) {
             return info.version;
         }
 #endif
+    }
+
+    if (deviceType == AudioDeviceType::Miniaudio) {
+#ifdef PRISMA_ENABLE_AUDIO_MINIAUDIO
+        auto device = CreateMiniaudioDevice({});
+        if (device) {
+            auto info = device->GetDeviceInfo();
+            return info.version;
+        }
+#endif
+        return "0.11.21 (Miniaudio)";
     }
 
     if (deviceType == AudioDeviceType::Null) {
@@ -174,6 +245,16 @@ std::unique_ptr<IAudioDevice> AudioAPI::CreateSDL3Device(const AudioDesc& desc) 
 }
 #endif
 
+#ifdef PRISMA_ENABLE_AUDIO_MINIAUDIO
+std::unique_ptr<IAudioDevice> AudioAPI::CreateMiniaudioDevice(const AudioDesc& desc) {
+    auto device = std::make_unique<AudioDeviceMiniaudio>();
+    if (device->Initialize(desc)) {
+        return device;
+    }
+    return nullptr;
+}
+#endif
+
 std::unique_ptr<IAudioDevice> AudioAPI::CreateNullDevice(const AudioDesc& desc) {
     auto device = std::make_unique<AudioDeviceNull>();
     if (device->Initialize(desc)) {
@@ -193,6 +274,8 @@ AudioDeviceType AudioAPI::GetDeviceFromEnvironment() {
 
     if (device == "sdl3" || device == "sdl")
         return AudioDeviceType::SDL3;
+    if (device == "miniaudio" || device == "mini")
+        return AudioDeviceType::Miniaudio;
     if (device == "null" || device == "none")
         return AudioDeviceType::Null;
 

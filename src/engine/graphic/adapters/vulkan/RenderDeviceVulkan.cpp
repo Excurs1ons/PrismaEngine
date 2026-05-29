@@ -258,6 +258,12 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
                     vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
                 }
             }
+        } else {
+            // 9b. Headless 模式：创建离屏渲染资源替代交换链
+            if (!CreateHeadlessResources(desc.width, desc.height)) {
+                LOG_ERROR("Vulkan", "创建离屏渲染资源失败");
+                return -7;
+            }
         }
 
         m_deviceFeatures.supportsRayTracing = true;
@@ -285,6 +291,9 @@ void RenderDeviceVulkan::Shutdown() {
 
     // 释放所有离屏渲染资源（VkRenderPass / VkFramebuffer），防止引擎退出时泄漏
     VulkanCommandBuffer::ReleaseAllOffscreenResources();
+
+    // 0. 清理 headless 离屏资源（必须在 swapchain 和 VMA 之前）
+    DestroyHeadlessResources();
 
     // 1. 先销毁由此设备管理的子资源
     if (m_resourceFactory) {
@@ -416,17 +425,26 @@ void RenderDeviceVulkan::EndSwapChainRenderPass() {
 }
 
 void RenderDeviceVulkan::BeginSwapChainRenderPass(const Prisma::Vector4& clearColorValue) {
-    if (!m_initialized || !m_frameActive || m_isDefaultRenderPassActive || !m_swapChain)
+    if (!m_initialized || !m_frameActive || m_isDefaultRenderPassActive)
         return;
     m_clearColor = clearColorValue;
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
     
     VkRenderPassBeginInfo rpInfo{};
     rpInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    rpInfo.renderPass        = m_swapChain->GetRenderPass();
-    rpInfo.framebuffer       = m_swapChain->GetCurrentFramebuffer();
     rpInfo.renderArea.offset = {0, 0};
-    rpInfo.renderArea.extent = m_swapChain->GetExtent();
+
+    if (m_headless && m_headlessRenderPass != VK_NULL_HANDLE) {
+        rpInfo.renderPass  = m_headlessRenderPass;
+        rpInfo.framebuffer = m_headlessFramebuffer;
+        rpInfo.renderArea.extent = {m_headlessWidth, m_headlessHeight};
+    } else if (!m_headless && m_swapChain) {
+        rpInfo.renderPass  = m_swapChain->GetRenderPass();
+        rpInfo.framebuffer = m_swapChain->GetCurrentFramebuffer();
+        rpInfo.renderArea.extent = m_swapChain->GetExtent();
+    } else {
+        return;
+    }
     
     // 设置两个清除值：0 是颜色，1 是深度
     std::array<VkClearValue, 2> clearValues{};
@@ -447,6 +465,12 @@ void RenderDeviceVulkan::EndFrame() {
     VkCommandBuffer cmd = m_commandBuffers[m_currentFrame];
 
     if (m_headless) {
+        // 结束活动中离屏 RenderPass
+        if (m_isDefaultRenderPassActive) {
+            vkCmdEndRenderPass(cmd);
+            m_isDefaultRenderPassActive = false;
+        }
+
         vkEndCommandBuffer(cmd);
 
         VkSubmitInfo submitInfo{};
@@ -780,6 +804,285 @@ bool RenderDeviceVulkan::ReadbackTexture(ITexture* texture, uint32_t width, uint
     auto* vkTex = static_cast<VulkanTexture*>(texture);
     if (!vkTex || !vkTex->GetVkImage()) return false;
     return ReadbackImage(vkTex->GetVkImage(), width, height, vkTex->GetVkFormat(), outBuffer, bufferSize);
+}
+
+bool RenderDeviceVulkan::CreateHeadlessResources(uint32_t width, uint32_t height) {
+    if (!m_device || m_headlessRenderPass != VK_NULL_HANDLE) {
+        return false;
+    }
+
+    m_headlessWidth  = width;
+    m_headlessHeight = height;
+
+    VkDevice device = m_device;
+    VkFormat colorFormat = VK_FORMAT_B8G8R8A8_UNORM;
+    VkFormat depthFormat = VK_FORMAT_D32_SFLOAT;
+
+    // ---------- A. 离屏颜色图像 ----------
+    {
+        VkImageCreateInfo imgCI{};
+        imgCI.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imgCI.imageType     = VK_IMAGE_TYPE_2D;
+        imgCI.extent.width  = width;
+        imgCI.extent.height = height;
+        imgCI.extent.depth  = 1;
+        imgCI.mipLevels     = 1;
+        imgCI.arrayLayers   = 1;
+        imgCI.format        = colorFormat;
+        imgCI.tiling        = VK_IMAGE_TILING_OPTIMAL;
+        imgCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imgCI.usage         = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+                            | VK_IMAGE_USAGE_TRANSFER_SRC_BIT
+                            | VK_IMAGE_USAGE_SAMPLED_BIT;
+        imgCI.samples       = VK_SAMPLE_COUNT_1_BIT;
+        imgCI.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateImage(device, &imgCI, nullptr, &m_headlessColorImage) != VK_SUCCESS) {
+            LOG_ERROR("Vulkan", "CreateHeadlessResources: 无法创建离屏颜色图像");
+            return false;
+        }
+
+        VkMemoryRequirements memReq;
+        vkGetImageMemoryRequirements(device, m_headlessColorImage, &memReq);
+
+        VkPhysicalDeviceMemoryProperties memProps;
+        vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProps);
+
+        uint32_t memType = VK_MAX_MEMORY_TYPES;
+        for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
+            if ((memReq.memoryTypeBits & (1u << i)) &&
+                (memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+                memType = i;
+                break;
+            }
+        }
+        if (memType == VK_MAX_MEMORY_TYPES) {
+            vkDestroyImage(device, m_headlessColorImage, nullptr);
+            m_headlessColorImage = VK_NULL_HANDLE;
+            return false;
+        }
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize  = memReq.size;
+        allocInfo.memoryTypeIndex = memType;
+
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &m_headlessColorMemory) != VK_SUCCESS) {
+            vkDestroyImage(device, m_headlessColorImage, nullptr);
+            m_headlessColorImage  = VK_NULL_HANDLE;
+            m_headlessColorMemory = VK_NULL_HANDLE;
+            return false;
+        }
+
+        vkBindImageMemory(device, m_headlessColorImage, m_headlessColorMemory, 0);
+
+        VkImageViewCreateInfo viewCI{};
+        viewCI.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewCI.image    = m_headlessColorImage;
+        viewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewCI.format   = colorFormat;
+        viewCI.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_COLOR_BIT;
+        viewCI.subresourceRange.baseMipLevel   = 0;
+        viewCI.subresourceRange.levelCount     = 1;
+        viewCI.subresourceRange.baseArrayLayer = 0;
+        viewCI.subresourceRange.layerCount     = 1;
+
+        if (vkCreateImageView(device, &viewCI, nullptr, &m_headlessColorView) != VK_SUCCESS) {
+            return false;
+        }
+    }
+
+    // ---------- B. 离屏深度图像 ----------
+    {
+        VkImageCreateInfo imgCI{};
+        imgCI.sType         = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+        imgCI.imageType     = VK_IMAGE_TYPE_2D;
+        imgCI.extent.width  = width;
+        imgCI.extent.height = height;
+        imgCI.extent.depth  = 1;
+        imgCI.mipLevels     = 1;
+        imgCI.arrayLayers   = 1;
+        imgCI.format        = depthFormat;
+        imgCI.tiling        = VK_IMAGE_TILING_OPTIMAL;
+        imgCI.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imgCI.usage         = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+        imgCI.samples       = VK_SAMPLE_COUNT_1_BIT;
+        imgCI.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
+
+        if (vkCreateImage(device, &imgCI, nullptr, &m_headlessDepthImage) != VK_SUCCESS) {
+            LOG_ERROR("Vulkan", "CreateHeadlessResources: 无法创建离屏深度图像");
+            return false;
+        }
+
+        VkMemoryRequirements memReq;
+        vkGetImageMemoryRequirements(device, m_headlessDepthImage, &memReq);
+
+        VkPhysicalDeviceMemoryProperties memProps;
+        vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memProps);
+
+        uint32_t memType = VK_MAX_MEMORY_TYPES;
+        for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
+            if ((memReq.memoryTypeBits & (1u << i)) &&
+                (memProps.memoryTypes[i].propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)) {
+                memType = i;
+                break;
+            }
+        }
+
+        VkMemoryAllocateInfo allocInfo{};
+        allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+        allocInfo.allocationSize  = memReq.size;
+        allocInfo.memoryTypeIndex = (memType != VK_MAX_MEMORY_TYPES) ? memType : 0u;
+
+        if (vkAllocateMemory(device, &allocInfo, nullptr, &m_headlessDepthMemory) != VK_SUCCESS) {
+            return false;
+        }
+
+        vkBindImageMemory(device, m_headlessDepthImage, m_headlessDepthMemory, 0);
+
+        VkImageViewCreateInfo viewCI{};
+        viewCI.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+        viewCI.image    = m_headlessDepthImage;
+        viewCI.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewCI.format   = depthFormat;
+        viewCI.subresourceRange.aspectMask     = VK_IMAGE_ASPECT_DEPTH_BIT;
+        viewCI.subresourceRange.baseMipLevel   = 0;
+        viewCI.subresourceRange.levelCount     = 1;
+        viewCI.subresourceRange.baseArrayLayer = 0;
+        viewCI.subresourceRange.layerCount     = 1;
+
+        if (vkCreateImageView(device, &viewCI, nullptr, &m_headlessDepthView) != VK_SUCCESS) {
+            return false;
+        }
+    }
+
+    // ---------- C. RenderPass ----------
+    {
+        VkAttachmentDescription colorAtt{};
+        colorAtt.format         = colorFormat;
+        colorAtt.samples        = VK_SAMPLE_COUNT_1_BIT;
+        colorAtt.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        colorAtt.storeOp        = VK_ATTACHMENT_STORE_OP_STORE;
+        colorAtt.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAtt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        colorAtt.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        colorAtt.finalLayout    = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+        VkAttachmentReference colorRef{};
+        colorRef.attachment = 0;
+        colorRef.layout     = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentDescription depthAtt{};
+        depthAtt.format         = depthFormat;
+        depthAtt.samples        = VK_SAMPLE_COUNT_1_BIT;
+        depthAtt.loadOp         = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        depthAtt.storeOp        = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAtt.stencilLoadOp  = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        depthAtt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        depthAtt.initialLayout  = VK_IMAGE_LAYOUT_UNDEFINED;
+        depthAtt.finalLayout    = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkAttachmentReference depthRef{};
+        depthRef.attachment = 1;
+        depthRef.layout     = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint       = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount    = 1;
+        subpass.pColorAttachments       = &colorRef;
+        subpass.pDepthStencilAttachment = &depthRef;
+
+        VkSubpassDependency dep{};
+        dep.srcSubpass    = VK_SUBPASS_EXTERNAL;
+        dep.dstSubpass    = 0;
+        dep.srcStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                          | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dep.dstStageMask  = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                          | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+        dep.srcAccessMask = 0;
+        dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+                          | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+        VkAttachmentDescription attachments[2] = {colorAtt, depthAtt};
+        VkRenderPassCreateInfo rpCI{};
+        rpCI.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        rpCI.attachmentCount = 2;
+        rpCI.pAttachments    = attachments;
+        rpCI.subpassCount    = 1;
+        rpCI.pSubpasses      = &subpass;
+        rpCI.dependencyCount = 1;
+        rpCI.pDependencies   = &dep;
+
+        if (vkCreateRenderPass(device, &rpCI, nullptr, &m_headlessRenderPass) != VK_SUCCESS) {
+            LOG_ERROR("Vulkan", "CreateHeadlessResources: 无法创建离屏 RenderPass");
+            return false;
+        }
+    }
+
+    // ---------- D. Framebuffer ----------
+    {
+        VkImageView attachments[2] = {m_headlessColorView, m_headlessDepthView};
+        VkFramebufferCreateInfo fbCI{};
+        fbCI.sType           = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+        fbCI.renderPass      = m_headlessRenderPass;
+        fbCI.attachmentCount = 2;
+        fbCI.pAttachments    = attachments;
+        fbCI.width           = width;
+        fbCI.height          = height;
+        fbCI.layers          = 1;
+
+        if (vkCreateFramebuffer(device, &fbCI, nullptr, &m_headlessFramebuffer) != VK_SUCCESS) {
+            LOG_ERROR("Vulkan", "CreateHeadlessResources: 无法创建离屏 Framebuffer");
+            return false;
+        }
+    }
+
+    LOG_INFO("Vulkan", "离屏渲染资源已创建: {}x{} (headless)", width, height);
+    return true;
+}
+
+void RenderDeviceVulkan::DestroyHeadlessResources() {
+    VkDevice device = m_device;
+    if (device == VK_NULL_HANDLE)
+        return;
+
+    if (m_headlessFramebuffer) {
+        vkDestroyFramebuffer(device, m_headlessFramebuffer, nullptr);
+        m_headlessFramebuffer = VK_NULL_HANDLE;
+    }
+    if (m_headlessRenderPass) {
+        vkDestroyRenderPass(device, m_headlessRenderPass, nullptr);
+        m_headlessRenderPass = VK_NULL_HANDLE;
+    }
+    if (m_headlessColorView) {
+        vkDestroyImageView(device, m_headlessColorView, nullptr);
+        m_headlessColorView = VK_NULL_HANDLE;
+    }
+    if (m_headlessColorImage) {
+        vkDestroyImage(device, m_headlessColorImage, nullptr);
+        m_headlessColorImage = VK_NULL_HANDLE;
+    }
+    if (m_headlessColorMemory) {
+        vkFreeMemory(device, m_headlessColorMemory, nullptr);
+        m_headlessColorMemory = VK_NULL_HANDLE;
+    }
+    if (m_headlessDepthView) {
+        vkDestroyImageView(device, m_headlessDepthView, nullptr);
+        m_headlessDepthView = VK_NULL_HANDLE;
+    }
+    if (m_headlessDepthImage) {
+        vkDestroyImage(device, m_headlessDepthImage, nullptr);
+        m_headlessDepthImage = VK_NULL_HANDLE;
+    }
+    if (m_headlessDepthMemory) {
+        vkFreeMemory(device, m_headlessDepthMemory, nullptr);
+        m_headlessDepthMemory = VK_NULL_HANDLE;
+    }
+
+    m_headlessWidth  = 0;
+    m_headlessHeight = 0;
+
+    LOG_DEBUG("Vulkan", "离屏渲染资源已销毁");
 }
 
 }  // namespace Prisma::Graphic::Vulkan

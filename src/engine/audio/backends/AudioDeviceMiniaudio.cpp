@@ -1,5 +1,7 @@
 #include "AudioDeviceMiniaudio.h"
 #include <Engine/audio/dsp/AudioBuffer.h>
+#include <algorithm>
+#include <cmath>
 #include <cstring>
 
 namespace Prisma::Audio {
@@ -52,13 +54,13 @@ IAudioDevice::DeviceInfo AudioDeviceMiniaudio::GetDeviceInfo() const {
     info.version = "0.11.21";
     info.isDefault = true;
     info.maxVoices = 256;
-    info.supports3D = false;
+    info.supports3D = true;
     info.supportsEffects = false;
     return info;
 }
 
 AudioDeviceType AudioDeviceMiniaudio::GetDeviceType() const {
-    return AudioDeviceType::Null;
+    return AudioDeviceType::Miniaudio;
 }
 
 std::vector<IAudioDevice::DeviceInfo> AudioDeviceMiniaudio::GetAvailableDevices() const {
@@ -110,6 +112,23 @@ AudioVoiceId AudioDeviceMiniaudio::PlayClip(const AudioClip& clip, const PlayDes
     voice.desc = desc;
     voice.state = VoiceState::Playing;
     voice.readCursor = static_cast<size_t>(desc.startTime * clip.format.sampleRate) * clip.format.GetFrameSize();
+
+    // 复制 3D 空间属性
+    if (desc.is3D) {
+        voice.position[0] = desc.spatial.position[0];
+        voice.position[1] = desc.spatial.position[1];
+        voice.position[2] = desc.spatial.position[2];
+        voice.velocity[0] = desc.spatial.velocity[0];
+        voice.velocity[1] = desc.spatial.velocity[1];
+        voice.velocity[2] = desc.spatial.velocity[2];
+        voice.direction[0] = desc.spatial.direction[0];
+        voice.direction[1] = desc.spatial.direction[1];
+        voice.direction[2] = desc.spatial.direction[2];
+        voice.rolloffFactor = desc.spatial.rolloffFactor;
+        voice.coneInnerAngle = desc.spatial.coneInnerAngle;
+        voice.coneOuterAngle = desc.spatial.coneOuterAngle;
+        voice.coneOuterGain = desc.spatial.coneOuterGain;
+    }
 
     {
         ma_mutex_lock(&m_mutex);
@@ -262,27 +281,80 @@ uint32_t AudioDeviceMiniaudio::GetPlayingVoiceCount() const {
 }
 
 void AudioDeviceMiniaudio::SetVoice3DPosition(AudioVoiceId voiceId, float x, float y, float z) {
-    (void)voiceId; (void)x; (void)y; (void)z;
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it != m_voices.end()) {
+        it->second.position[0] = x;
+        it->second.position[1] = y;
+        it->second.position[2] = z;
+        it->second.desc.spatial.position[0] = x;
+        it->second.desc.spatial.position[1] = y;
+        it->second.desc.spatial.position[2] = z;
+    }
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetVoice3DPosition(AudioVoiceId voiceId, const float position[3]) {
-    (void)voiceId; (void)position;
+    if (!position) return;
+    SetVoice3DPosition(voiceId, position[0], position[1], position[2]);
 }
 
 void AudioDeviceMiniaudio::SetVoice3DVelocity(AudioVoiceId voiceId, const float velocity[3]) {
-    (void)voiceId; (void)velocity;
+    if (!velocity) return;
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it != m_voices.end()) {
+        it->second.velocity[0] = velocity[0];
+        it->second.velocity[1] = velocity[1];
+        it->second.velocity[2] = velocity[2];
+        it->second.desc.spatial.velocity[0] = velocity[0];
+        it->second.desc.spatial.velocity[1] = velocity[1];
+        it->second.desc.spatial.velocity[2] = velocity[2];
+    }
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetVoice3DDirection(AudioVoiceId voiceId, const float direction[3]) {
-    (void)voiceId; (void)direction;
+    if (!direction) return;
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it != m_voices.end()) {
+        it->second.direction[0] = direction[0];
+        it->second.direction[1] = direction[1];
+        it->second.direction[2] = direction[2];
+        it->second.desc.spatial.direction[0] = direction[0];
+        it->second.desc.spatial.direction[1] = direction[1];
+        it->second.desc.spatial.direction[2] = direction[2];
+    }
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetVoice3DAttributes(AudioVoiceId voiceId, const Audio3DAttributes& attributes) {
-    (void)voiceId; (void)attributes;
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it != m_voices.end()) {
+        it->second.desc.spatial = attributes;
+        it->second.position[0] = attributes.position[0];
+        it->second.position[1] = attributes.position[1];
+        it->second.position[2] = attributes.position[2];
+        it->second.velocity[0] = attributes.velocity[0];
+        it->second.velocity[1] = attributes.velocity[1];
+        it->second.velocity[2] = attributes.velocity[2];
+        it->second.direction[0] = attributes.direction[0];
+        it->second.direction[1] = attributes.direction[1];
+        it->second.direction[2] = attributes.direction[2];
+        it->second.rolloffFactor = attributes.rolloffFactor;
+        it->second.coneInnerAngle = attributes.coneInnerAngle;
+        it->second.coneOuterAngle = attributes.coneOuterAngle;
+        it->second.coneOuterGain = attributes.coneOuterGain;
+    }
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetListener(const AudioListener& listener) {
-    (void)listener;
+    ma_mutex_lock(&m_mutex);
+    m_listener = listener;
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetMasterVolume(float volume) {
@@ -290,15 +362,43 @@ void AudioDeviceMiniaudio::SetMasterVolume(float volume) {
 }
 
 void AudioDeviceMiniaudio::SetDistanceModel(DistanceModel model) {
-    (void)model;
+    ma_mutex_lock(&m_mutex);
+    m_distanceModel = model;
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetDopplerFactor(float factor) {
-    (void)factor;
+    ma_mutex_lock(&m_mutex);
+    m_dopplerFactor = std::max(0.0f, factor);
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetSpeedOfSound(float speed) {
-    (void)speed;
+    ma_mutex_lock(&m_mutex);
+    m_speedOfSound = std::max(1.0f, speed);
+    ma_mutex_unlock(&m_mutex);
+}
+
+void AudioDeviceMiniaudio::SetConeAngles(AudioVoiceId voiceId, float innerAngle, float outerAngle) {
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it != m_voices.end()) {
+        it->second.coneInnerAngle = innerAngle;
+        it->second.coneOuterAngle = outerAngle;
+        it->second.desc.spatial.coneInnerAngle = innerAngle;
+        it->second.desc.spatial.coneOuterAngle = outerAngle;
+    }
+    ma_mutex_unlock(&m_mutex);
+}
+
+void AudioDeviceMiniaudio::SetRolloffFactor(AudioVoiceId voiceId, float factor) {
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it != m_voices.end()) {
+        it->second.rolloffFactor = std::max(0.0f, factor);
+        it->second.desc.spatial.rolloffFactor = std::max(0.0f, factor);
+    }
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::SetEventCallback(AudioEventCallback callback) {
@@ -319,10 +419,30 @@ void AudioDeviceMiniaudio::ResetStats() {
 }
 
 std::string AudioDeviceMiniaudio::GenerateDebugReport() {
-    return "AudioDeviceMiniaudio Debug Report\n"
-           "  Backend: miniaudio\n"
-           "  Voices: " + std::to_string(m_voices.size()) + "\n"
-           "  Master Volume: " + std::to_string(m_masterVolume) + "\n";
+    std::string report = "AudioDeviceMiniaudio Debug Report\n"
+                         "  Backend: miniaudio\n"
+                         "  Voices: " + std::to_string(m_voices.size()) + "\n"
+                         "  Master Volume: " + std::to_string(m_masterVolume) + "\n"
+                         "  Distance Model: " + std::to_string(static_cast<int>(m_distanceModel)) + "\n"
+                         "  Doppler Factor: " + std::to_string(m_dopplerFactor) + "\n"
+                         "  Speed of Sound: " + std::to_string(m_speedOfSound) + "\n"
+                         "  Listener: (" + std::to_string(m_listener.position[0]) + ", "
+                                        + std::to_string(m_listener.position[1]) + ", "
+                                        + std::to_string(m_listener.position[2]) + ")\n";
+
+    ma_mutex_lock(&m_mutex);
+    for (const auto& [id, voice] : m_voices) {
+        report += "  Voice " + std::to_string(id) + ": "
+                  "pos(" + std::to_string(voice.position[0]) + ", "
+                         + std::to_string(voice.position[1]) + ", "
+                         + std::to_string(voice.position[2]) + ") "
+                  "cone(" + std::to_string(voice.coneInnerAngle) + "/"
+                          + std::to_string(voice.coneOuterAngle) + ") "
+                  "rolloff=" + std::to_string(voice.rolloffFactor) + "\n";
+    }
+    ma_mutex_unlock(&m_mutex);
+
+    return report;
 }
 
 void AudioDeviceMiniaudio::FireEvent(AudioEventType type, AudioVoiceId voiceId, const std::string& msg) {

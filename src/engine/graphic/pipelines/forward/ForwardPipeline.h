@@ -13,8 +13,12 @@ class DepthPrePass;
 class OpaquePass;
 class SkyboxPass;
 class TransparentPass;
+class ShadowPass;
 class PostProcessPass2D;
 class UIPass2D;
+class ShadowMapManager;
+class IBLGenerator;
+class ICamera;
 
 // 基础前向渲染管线
 class ForwardPipeline : public IPipeline {
@@ -26,6 +30,9 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+
+    void SetLights(const std::vector<Light>& lights) { m_lights = lights; }
+    void SetEnvironmentMap(class ITexture* envMap);
 
 private:
     void EnsureGizmoPSO();
@@ -41,6 +48,14 @@ private:
     std::shared_ptr<TransparentPass> m_transparentPass;
 
     std::shared_ptr<BloomPostProcessPass> m_bloomPass;
+
+    // 阴影映射
+    std::shared_ptr<ShadowPass> m_shadowPass;
+    std::shared_ptr<ShadowMapManager> m_shadowMapManager;
+    std::vector<Light> m_lights;
+
+    // IBL 环境光照
+    std::shared_ptr<IBLGenerator> m_iblGenerator;
 
     // Gizmo 覆盖层管线（UnlitVertex：纯顶点色，无纹理无光照）
     std::shared_ptr<IShader> m_gizmoVertShader;

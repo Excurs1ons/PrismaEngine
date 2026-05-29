@@ -247,6 +247,61 @@ namespace Prisma {
             }
 
             /**
+             * @brief Sphere vs AABB 碰撞检测
+             *
+             * 计算 AABB 上离球心最近的点，检查距离是否小于半径
+             */
+            static bool checkSphereAABB(const AABB& aabb, const glm::dvec3& sphereCenter, double sphereRadius) {
+                glm::dvec3 closestPoint(
+                    std::clamp(sphereCenter.x, aabb.minX, aabb.maxX),
+                    std::clamp(sphereCenter.y, aabb.minY, aabb.maxY),
+                    std::clamp(sphereCenter.z, aabb.minZ, aabb.maxZ)
+                );
+                glm::dvec3 diff = sphereCenter - closestPoint;
+                double distSq = glm::dot(diff, diff);
+                return distSq <= sphereRadius * sphereRadius;
+            }
+
+            /**
+             * @brief Capsule vs AABB 碰撞检测
+             *
+             * 胶囊体定义为沿 Y 轴的线段 + 半径球体扫描体
+             * 找到线段上离 AABB 最近的点，计算到 AABB 上最近点的距离
+             */
+            static bool checkCapsuleAABB(const AABB& aabb, const glm::dvec3& capsuleCenter, double radius, double height) {
+                // 胶囊体中轴线段（沿 Y 轴）
+                double halfHeight = height * 0.5;
+                glm::dvec3 segStart(capsuleCenter.x, capsuleCenter.y - halfHeight, capsuleCenter.z);
+                glm::dvec3 segEnd(capsuleCenter.x, capsuleCenter.y + halfHeight, capsuleCenter.z);
+
+                // 找到线段上离 AABB 中心最近的点
+                glm::dvec3 aabbCenter = aabb.getCenter();
+                glm::dvec3 segDir = segEnd - segStart;
+                double segLen = glm::length(segDir);
+
+                glm::dvec3 closestOnSeg;
+                if (segLen < 1e-9) {
+                    closestOnSeg = capsuleCenter;
+                } else {
+                    segDir /= segLen;
+                    double t = glm::dot(aabbCenter - segStart, segDir);
+                    t = std::clamp(t, 0.0, segLen);
+                    closestOnSeg = segStart + segDir * t;
+                }
+
+                // AABB 上离 closestOnSeg 最近的点
+                glm::dvec3 closestOnAABB(
+                    std::clamp(closestOnSeg.x, aabb.minX, aabb.maxX),
+                    std::clamp(closestOnSeg.y, aabb.minY, aabb.maxY),
+                    std::clamp(closestOnSeg.z, aabb.minZ, aabb.maxZ)
+                );
+
+                glm::dvec3 diff = closestOnSeg - closestOnAABB;
+                double distSq = glm::dot(diff, diff);
+                return distSq <= radius * radius;
+            }
+
+            /**
              * @brief 射线 vs AABB 检测
              *
              * 使用 slab 算法实现高效的射线-AABB 检测
@@ -368,6 +423,58 @@ namespace Prisma {
                 }
 
                 return hitTime < 1.0;
+            }
+
+            /**
+             * @brief 球体 vs AABB 碰撞检测
+             *
+             * 计算球心到 AABB 的最近点，检查距离是否小于半径。
+             * 对应 Box2D/CraftBlock 中的 checkSphereAABB 实现。
+             */
+            static bool checkSphereAABB(const AABB& aabb, const glm::dvec3& center, double radius) noexcept {
+                // 找到 AABB 上距离球心最近的点（在 AABB 各轴上 clamp）
+                double closestX = std::max(aabb.minX, std::min(center.x, aabb.maxX));
+                double closestY = std::max(aabb.minY, std::min(center.y, aabb.maxY));
+                double closestZ = std::max(aabb.minZ, std::min(center.z, aabb.maxZ));
+
+                glm::dvec3 closest(closestX, closestY, closestZ);
+                glm::dvec3 diff = center - closest;
+                double distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
+
+                return distSq <= radius * radius;
+            }
+
+            /**
+             * @brief 胶囊体 vs AABB 碰撞检测
+             *
+             * 胶囊体定义为线段 p1-p2 扩展半径 radius 的体。
+             * 算法：将 AABB 扩展半径后检测线段是否与扩展 AABB 相交。
+             * 对应 Minecraft 物理中 axisAlignedIntercept 的胶囊碰撞。
+             */
+            static bool checkCapsuleAABB(const AABB& aabb, const glm::dvec3& p1, const glm::dvec3& p2, double radius) noexcept {
+                // 扩展 AABB 半径为胶囊半径
+                AABB expanded = aabb.expand(radius, radius, radius);
+
+                // 检查端点是否在扩展 AABB 内
+                if (expanded.contains(p1) || expanded.contains(p2)) return true;
+
+                // 线段方向
+                glm::dvec3 dir = p2 - p1;
+                double len = glm::length(dir);
+                if (len < 1e-9) {
+                    return expanded.contains(p1);
+                }
+                dir /= len;
+
+                // 使用射线-AABB 检测线段与扩展 AABB 的相交
+                Ray ray(p1, dir);
+                double tMin = 0.0, tMax = 0.0;
+                if (rayCastAABB(ray, expanded, tMin, tMax)) {
+                    // tMin 是沿归一化射线的距离，len 是线段长度
+                    return tMin <= len;
+                }
+
+                return false;
             }
 
             /**

@@ -5,6 +5,7 @@
 #include "../graphic/ViewportRenderPass.h"
 #include "graphic/adapters/vulkan/VulkanCommandBuffer.h"
 #include "transform/Transform.h"
+#include <glm/gtx/matrix_decompose.hpp>
 
 Prisma::EditorLayer::EditorLayer() : Layer("EditorLayer") {
     auto* sceneMgr = Engine::Get().GetSceneManager();
@@ -97,6 +98,8 @@ void Prisma::EditorLayer::OnRender() {
 }
 
 void Prisma::EditorLayer::OnImGuiRender() {
+    ImGuizmo::BeginFrame();
+
     static bool dockspaceOpen                 = true;
     static bool opt_fullscreen                = true;
     static bool opt_padding                   = false;
@@ -303,6 +306,93 @@ void Prisma::EditorLayer::OnImGuiRender() {
         ImGui::Image((ImTextureID)m_viewportDescriptorSet, ImVec2{m_viewportSize.x, m_viewportSize.y});
     } else {
         // ... (此处省略，代码已存在)
+    }
+
+    // -----------------------------------------------------------------------
+    // ImGuizmo 变换操作器
+    // -----------------------------------------------------------------------
+    // Gizmo 键盘快捷键（右键未按下时触发，避免与相机 WASD 冲突）
+    if (m_viewportHovered && !ImGui::IsMouseDown(ImGuiMouseButton_Right)) {
+        if (ImGui::IsKeyPressed(ImGuiKey_W)) m_gizmoOperation = ImGuizmo::TRANSLATE;
+        if (ImGui::IsKeyPressed(ImGuiKey_E)) m_gizmoOperation = ImGuizmo::ROTATE;
+        if (ImGui::IsKeyPressed(ImGuiKey_R)) m_gizmoOperation = ImGuizmo::SCALE;
+        if (ImGui::IsKeyPressed(ImGuiKey_T))
+            m_gizmoMode = (m_gizmoMode == ImGuizmo::LOCAL) ? ImGuizmo::WORLD : ImGuizmo::LOCAL;
+        if (ImGui::IsKeyPressed(ImGuiKey_X)) m_gizmoSnap = !m_gizmoSnap;
+    }
+
+    // 始终绘制 ImGuizmo 网格
+    if (m_editorCamera) {
+        auto viewMatrix  = m_editorCamera->GetViewMatrix();
+        auto projMatrix  = m_editorCamera->GetProjectionMatrix();
+        Matrix4x4 gridMatrix(1.0f);
+        ImGuizmo::DrawGrid(glm::value_ptr(viewMatrix), glm::value_ptr(projMatrix),
+                           glm::value_ptr(gridMatrix), 100.0f);
+    }
+
+    // 选中实体时的操作器
+    if (m_selectedEntity.IsValid()) {
+        auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
+        if (scene) {
+            auto transform = scene->GetComponent<Transform>(m_selectedEntity);
+            if (transform && m_editorCamera) {
+                // 视口内容区域（不含窗口装饰）
+                ImVec2 viewMin = ImGui::GetWindowContentRegionMin();
+                ImVec2 viewMax = ImGui::GetWindowContentRegionMax();
+                ImVec2 winPos  = ImGui::GetWindowPos();
+                float gizmoX   = winPos.x + viewMin.x;
+                float gizmoY   = winPos.y + viewMin.y;
+                float gizmoW   = viewMax.x - viewMin.x;
+                float gizmoH   = viewMax.y - viewMin.y;
+
+                auto viewMatrix = m_editorCamera->GetViewMatrix();
+                auto projMatrix = m_editorCamera->GetProjectionMatrix();
+                Matrix4x4 modelMatrix = transform->GetMatrix();
+
+                ImGuizmo::SetDrawlist();
+                ImGuizmo::SetRect(gizmoX, gizmoY, gizmoW, gizmoH);
+
+                float snap[3] = {};
+                if (m_gizmoSnap) {
+                    switch (m_gizmoOperation) {
+                        case ImGuizmo::TRANSLATE:
+                            snap[0] = snap[1] = snap[2] = m_gizmoSnapTranslation;
+                            break;
+                        case ImGuizmo::ROTATE:
+                            snap[0] = snap[1] = snap[2] = m_gizmoSnapRotation;
+                            break;
+                        case ImGuizmo::SCALE:
+                            snap[0] = snap[1] = snap[2] = m_gizmoSnapScale;
+                            break;
+                        default: break;
+                    }
+                }
+
+                ImGuizmo::Manipulate(
+                    glm::value_ptr(viewMatrix),
+                    glm::value_ptr(projMatrix),
+                    m_gizmoOperation,
+                    m_gizmoMode,
+                    glm::value_ptr(modelMatrix),
+                    nullptr,
+                    m_gizmoSnap ? snap : nullptr
+                );
+
+                // 将修改后的矩阵分解回 Transform 组件
+                if (ImGuizmo::IsUsing()) {
+                    Vector3 position, scale;
+                    Quaternion rotation;
+                    glm::vec3 skew;
+                    glm::vec4 perspective;
+                    glm::decompose(modelMatrix, scale, rotation, position, skew, perspective);
+
+                    transform->SetPosition(position);
+                    transform->SetRotation(rotation);
+                    transform->SetScale(scale);
+                    scene->SetDirty(true);
+                }
+            }
+        }
     }
 
     ImGui::End();

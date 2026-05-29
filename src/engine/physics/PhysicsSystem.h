@@ -7,6 +7,7 @@
 #include "physics/ConstraintSolver.h"
 #include "physics/TriggerManager.h"
 #include "physics/CCDSolver.h"
+#include "physics/SweepAndPrune.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -14,6 +15,21 @@
 #include <functional>
 
 namespace Prisma {
+
+namespace Physics {
+
+/// 射线检测结果
+struct RaycastResult {
+    bool hit = false;               ///< 是否命中
+    glm::dvec3 point{ 0.0 };       ///< 碰撞点（世界空间）
+    glm::dvec3 normal{ 0.0, 1.0, 0.0 }; ///< 碰撞法线
+    double distance = 0.0;          ///< 从射线起点到碰撞点的距离
+    RigidBody* body = nullptr;      ///< 命中的刚体
+};
+
+} // namespace Physics
+
+
 
 class ENGINE_API PhysicsSystem : public ISubSystem {
 public:
@@ -74,6 +90,17 @@ public:
     void setCCDEnabled(bool enabled) { m_ccdEnabled = enabled; }
     bool isCCDEnabled() const { return m_ccdEnabled; }
 
+    // ========== 射线检测 ==========
+
+    /**
+     * @brief 对场景中所有刚体执行射线检测
+     * @param origin 射线起点
+     * @param direction 射线方向（不需要归一化）
+     * @param maxDistance 最大检测距离
+     * @return 最近的命中结果（hit=false 表示无碰撞）
+     */
+    Physics::RaycastResult raycast(const glm::dvec3& origin, const glm::dvec3& direction, double maxDistance);
+
 private:
     // ========== 内部物理步 ==========
 
@@ -117,6 +144,9 @@ private:
 
     // 连续碰撞检测求解器
     Physics::CCDSolver m_ccdSolver;
+
+    // Sweep and Prune 宽相碰撞检测（按 X 轴排序）
+    Physics::SweepAndPrune<0> m_sap;
 
     // 触发管理器
     Physics::TriggerManager m_triggerManager;

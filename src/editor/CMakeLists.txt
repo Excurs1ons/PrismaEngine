@@ -32,6 +32,7 @@ set(EDITOR_SOURCES
         core/main.cpp
         panels/EditorLayer.cpp
         panels/ProfilerPanel.cpp
+        vendor/ImGuizmo/ImGuizmo.cpp
         windows/ProjectSettingsWindow.cpp
         graphic/ImGuiVulkanResourceManager.cpp
         graphic/ViewportRenderPass.cpp

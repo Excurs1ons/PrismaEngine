@@ -12,6 +12,8 @@ namespace Prisma { class PhysicsSystem; }
 namespace Prisma {
     namespace Physics {
 
+        struct PhysicsMaterial; // 前向声明
+
         // 刚体类型枚举
         enum class RigidBodyType {
             Static,     // 静态刚体（不受力影响，不可移动）
@@ -33,6 +35,13 @@ namespace Prisma {
                 static_cast<uint32_t>(a) | static_cast<uint32_t>(b)
             );
         }
+
+        // 碰撞形状类型枚举
+        enum class CollisionShapeType {
+            Box = 0,        ///< AABB 盒碰撞体（使用 m_collisionHalfSize）
+            Sphere = 1,     ///< 球体碰撞体（使用 m_collisionRadius）
+            Capsule = 2     ///< 胶囊碰撞体（使用 m_collisionRadius + m_collisionHeight）
+        };
 
         inline CollisionFlags operator&(CollisionFlags a, CollisionFlags b) {
             return static_cast<CollisionFlags>(
@@ -293,11 +302,33 @@ namespace Prisma {
 
             // 获取碰撞形状 AABB（世界空间）
             AABB getWorldAABB() const {
-                glm::dvec3 halfSize = m_collisionHalfSize;
-                glm::dvec3 worldMin = m_position - halfSize;
-                glm::dvec3 worldMax = m_position + halfSize;
-                return AABB(worldMin.x, worldMin.y, worldMin.z,
-                           worldMax.x, worldMax.y, worldMax.z);
+                switch (m_shapeType) {
+                    case CollisionShapeType::Sphere:
+                        return AABB(
+                            m_position.x - m_collisionRadius,
+                            m_position.y - m_collisionRadius,
+                            m_position.z - m_collisionRadius,
+                            m_position.x + m_collisionRadius,
+                            m_position.y + m_collisionRadius,
+                            m_position.z + m_collisionRadius);
+                    case CollisionShapeType::Capsule: {
+                        double halfTotal = m_collisionHeight * 0.5 + m_collisionRadius;
+                        return AABB(
+                            m_position.x - m_collisionRadius,
+                            m_position.y - halfTotal,
+                            m_position.z - m_collisionRadius,
+                            m_position.x + m_collisionRadius,
+                            m_position.y + halfTotal,
+                            m_position.z + m_collisionRadius);
+                    }
+                    case CollisionShapeType::Box:
+                    default: {
+                        glm::dvec3 halfSize = m_collisionHalfSize;
+                        return AABB(
+                            m_position.x - halfSize.x, m_position.y - halfSize.y, m_position.z - halfSize.z,
+                            m_position.x + halfSize.x, m_position.y + halfSize.y, m_position.z + halfSize.z);
+                    }
+                }
             }
 
             // 设置碰撞半尺寸
@@ -305,6 +336,32 @@ namespace Prisma {
 
             // 获取碰撞半尺寸
             const glm::dvec3& getCollisionHalfSize() const { return m_collisionHalfSize; }
+
+            // ========== 碰撞形状属性 ==========
+
+            // 获取碰撞形状类型
+            CollisionShapeType getShapeType() const { return m_shapeType; }
+
+            // 设置碰撞形状类型
+            void setShapeType(CollisionShapeType type) { m_shapeType = type; }
+
+            // 获取碰撞球体/胶囊半径
+            double getCollisionRadius() const { return m_collisionRadius; }
+
+            // 设置碰撞球体/胶囊半径
+            void setCollisionRadius(double radius) { m_collisionRadius = radius; }
+
+            // 获取胶囊碰撞体高度（不含半径）
+            double getCollisionHeight() const { return m_collisionHeight; }
+
+            // 设置胶囊碰撞体高度（不含半径）
+            void setCollisionHeight(double height) { m_collisionHeight = height; }
+
+            // 获取物理材质指针
+            PhysicsMaterial* getMaterial() const { return m_material; }
+
+            // 设置物理材质指针
+            void setMaterial(PhysicsMaterial* material) { m_material = material; }
 
             // ========== CCD (连续碰撞检测) ==========
 
@@ -357,6 +414,10 @@ namespace Prisma {
 
             // ========== 碰撞形状 ==========
             glm::dvec3 m_collisionHalfSize;   // 碰撞半尺寸（用于 AABB 计算）
+            CollisionShapeType m_shapeType = CollisionShapeType::Box; // 碰撞形状类型
+            double m_collisionRadius = 0.5;    // 球体/胶囊半径
+            double m_collisionHeight = 1.0;    // 胶囊体高度（不含半径）
+            PhysicsMaterial* m_material = nullptr; // 物理材质指针
             MotionState m_motionState;         // 运动状态（渲染插值）
 
             // ========== CCD ==========

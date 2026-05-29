@@ -69,6 +69,14 @@ layout(set = 3, binding = 1) uniform LightCount {
     uint numLights;
 } lightCount;
 
+// ---- Set 3: 级联阴影数据 ----
+layout(set = 3, binding = 2) uniform ShadowCascadeData {
+    mat4 cascadeMatrices[4];   // 每级联的光源视投影矩阵
+    vec4 cascadeSplits;        // x/y/z/w = 级联 0/1/2/3 视空间远平面距离
+} shadowCascade;
+
+layout(set = 3, binding = 3) uniform sampler2DArrayShadow u_ShadowMap;
+
 // ===================== PBR 函数 =====================
 
 vec3 FresnelSchlick(vec3 f0, float cosTheta) {
@@ -200,6 +208,47 @@ vec3 ACESToneMapping(vec3 color, float exposure) {
     return (color * (A * color + B)) / (color * (C * color + D) + E);
 }
 
+// ---- 级联阴影 ----
+
+/// 根据视空间深度选择级联索引 (0~3)
+uint SelectCascade(float viewDepth) {
+    uint index = 0;
+    if (viewDepth > shadowCascade.cascadeSplits.x) index = 1;
+    if (viewDepth > shadowCascade.cascadeSplits.y) index = 2;
+    if (viewDepth > shadowCascade.cascadeSplits.z) index = 3;
+    return index;
+}
+
+/// 4-tap PCF (2×2) 级联阴影采样
+/// @param worldPos 世界空间片元位置
+/// @param cascadeIndex 级联索引 [0, 3]
+/// @return 阴影因子 [0, 1], 0=全阴影, 1=全光照
+float sampleShadowMap(vec3 worldPos, uint cascadeIndex) {
+    vec4 lightPos = shadowCascade.cascadeMatrices[cascadeIndex] * vec4(worldPos, 1.0);
+    vec3 ndc = lightPos.xyz / lightPos.w;
+    vec3 shadowUV = ndc * 0.5 + 0.5;
+
+    // 在阴影视锥体外则视为全光照 (避免边缘硬切)
+    if (any(lessThan(shadowUV, vec3(0.0))) || any(greaterThan(shadowUV, vec3(1.0)))) {
+        return 1.0;
+    }
+
+    float shadow = 0.0;
+    vec2 texelSize = 1.0 / vec2(textureSize(u_ShadowMap, 0));
+
+    // 2×2 PCF: 采样四邻域并平均
+    for (int x = 0; x < 2; x++) {
+        for (int y = 0; y < 2; y++) {
+            vec2 offset = (vec2(x, y) - 0.5) * texelSize;
+            shadow += texture(u_ShadowMap,
+                vec4(shadowUV.xy + offset, cascadeIndex, shadowUV.z));
+        }
+    }
+    shadow /= 4.0;
+
+    return shadow;
+}
+
 void main() {
     // ===== 1. 采样材质贴图 =====
     vec4 baseColorSample = texture(albedoMap, v_UV);
@@ -234,6 +283,12 @@ void main() {
     vec3 N = SampleWorldNormal();
     vec3 V = normalize(v_ViewDir);
 
+    // ===== 阴影计算 =====
+    vec4 viewPos = scene.view * vec4(v_WorldPos, 1.0);
+    float viewDepth = -viewPos.z;
+    uint cascadeIndex = SelectCascade(viewDepth);
+    float shadowFactor = sampleShadowMap(v_WorldPos, cascadeIndex);
+
     // ===== 3. 直接光照 =====
     vec3 directLighting = vec3(0.0);
 
@@ -244,7 +299,14 @@ void main() {
 
         if (length(radiance) < PBR_EPSILON) continue;
 
-        directLighting += CalculatePBRLight(albedo, metallic, roughness, N, V, L, radiance);
+        vec3 litColor = CalculatePBRLight(albedo, metallic, roughness, N, V, L, radiance);
+
+        // 对方向光 (type==0) 应用级联阴影
+        if (int(light.direction.w + 0.5) == 0) {
+            litColor *= shadowFactor;
+        }
+
+        directLighting += litColor;
     }
 
     // ===== 4. IBL 环境光照 =====

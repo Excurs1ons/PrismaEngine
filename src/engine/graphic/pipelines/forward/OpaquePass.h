@@ -102,6 +102,10 @@ private:
     std::shared_ptr<IDescriptorSetLayout> m_lightDescriptorSetLayout;
     std::shared_ptr<IDescriptorSet> m_lightDescriptorSet;
 
+    // 阴影贴图描述符 (Set 3) — 级联阴影贴图纹理数组
+    std::shared_ptr<IDescriptorSetLayout> m_shadowDescriptorSetLayout;
+    std::shared_ptr<IDescriptorSet> m_shadowDescriptorSet;
+
     // 上一次使用的材质类型 (用于检测是否需要切换 PSO)
     MaterialType m_lastMaterialType = MaterialType::Unlit;
 };

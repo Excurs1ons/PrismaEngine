@@ -116,12 +116,15 @@ void OpaquePass::Execute(ICommandBuffer* cmd, const std::vector<RenderCommand>& 
         UpdateSceneUBO();
         UpdateLightBuffer();
 
-        // 绑定场景 Set 1 和光源 Set 2
+        // 绑定场景 Set 1、光源 Set 2、阴影 Set 3
         if (m_sceneDescriptorSet) {
             cmd->BindDescriptorSet(1, m_sceneDescriptorSet.get());
         }
         if (m_lightDescriptorSet) {
             cmd->BindDescriptorSet(2, m_lightDescriptorSet.get());
+        }
+        if (m_shadowDescriptorSet) {
+            cmd->BindDescriptorSet(3, m_shadowDescriptorSet.get());
         }
 
         Material* lastMaterial = nullptr;
@@ -486,6 +489,25 @@ void OpaquePass::EnsurePBRDescriptors() {
         if (m_lightDescriptorSet) {
             m_lightDescriptorSet->BindBuffer(0, m_lightBuffer.get(), 0, lightBufferSize, DescriptorType::StorageBuffer);
             m_lightDescriptorSet->Update();
+        }
+    }
+
+    // Shadow map descriptor set (Set 3)
+    // Binding 0: shadow cascade textures as a combined image sampler array
+    {
+        std::vector<ShaderResource> resources;
+        ShaderResource res;
+        res.Name = "ShadowMapArray";
+        res.ResourceType = ShaderResource::Type::Sampler2D;
+        res.Set = 3;
+        res.Binding = 0;
+        resources.push_back(res);
+
+        m_shadowDescriptorSetLayout = factory->CreateDescriptorSetLayout(resources);
+        m_shadowDescriptorSet = factory->CreateDescriptorSet(m_shadowDescriptorSetLayout.get());
+        if (m_shadowDescriptorSet) {
+            // 临时绑定一个空描述符；实际阴影纹理由 ForwardPipeline 在每帧绑定
+            m_shadowDescriptorSet->Update();
         }
     }
 }

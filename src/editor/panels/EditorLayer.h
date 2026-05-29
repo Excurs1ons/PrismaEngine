@@ -15,6 +15,9 @@
 #include <imgui_impl_sdl3.h>
 #include <vulkan/vulkan.h>
 
+// ImGuizmo - 3D 变换操作器
+#include "../vendor/ImGuizmo/ImGuizmo.h"
+
 // Vulkan 后端支持
 #include "../graphic/ViewportRenderPass.h"
 #include "graphic/adapters/vulkan/RenderDeviceVulkan.h"
@@ -84,6 +87,17 @@ private:
         uint32_t framesLeft;
     };
     std::vector<DeferredTexture> m_textureDeletionQueue;
+
+    // ImGuizmo 变换操作器状态
+    ImGuizmo::OPERATION m_gizmoOperation = ImGuizmo::TRANSLATE;
+    ImGuizmo::MODE m_gizmoMode           = ImGuizmo::LOCAL;
+    bool m_gizmoSnap                     = false;
+    float m_gizmoSnapTranslation         = 0.5f;
+    float m_gizmoSnapRotation            = 45.0f;
+    float m_gizmoSnapScale               = 0.5f;
+
+    // 当前场景文件路径（用于保存/另存为）
+    std::string m_sceneFilePath;
 };
 
 }  // namespace Prisma

@@ -30,7 +30,8 @@ enum class AudioDeviceType : int {
     XAudio2 = 1,    // XAudio2 (Windows)
     AAudio = 2,     // AAudio (Android)
     SDL3 = 3,       // SDL3 Audio (跨平台)
-    Null = 4        // 空实现（静音）
+    Null = 4,        // 空实现（静音）
+    Miniaudio = 5   // Miniaudio (跨平台)
 };
 
 // DeviceInfo 已在 IAudioDevice.h 中定义（新系统）

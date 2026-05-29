@@ -9,6 +9,7 @@
 namespace Prisma::Audio {
 
 class AudioDeviceSDL3;
+class AudioDeviceMiniaudio;
 class AudioDeviceNull;
 
 class ENGINE_API AudioAPI {
@@ -45,6 +46,8 @@ public:
 private:
     static std::unique_ptr<IAudioDevice> CreateSDL3Device(const AudioDesc& desc);
 
+    static std::unique_ptr<IAudioDevice> CreateMiniaudioDevice(const AudioDesc& desc);
+
     static std::unique_ptr<IAudioDevice> CreateNullDevice(const AudioDesc& desc);
 
     static AudioDeviceType GetDeviceFromEnvironment();
@@ -56,6 +59,7 @@ inline std::string AudioAPI::GetDeviceName(AudioDeviceType deviceType) {
     switch (deviceType) {
         case AudioDeviceType::Auto: return "Auto";
         case AudioDeviceType::SDL3: return "SDL3 Audio";
+        case AudioDeviceType::Miniaudio: return "Miniaudio";
         case AudioDeviceType::Null: return "Null (Silent)";
         default: return "Unknown";
     }
@@ -67,6 +71,8 @@ inline std::string AudioAPI::GetDeviceDescription(AudioDeviceType deviceType) {
             return "Auto select best audio device";
         case AudioDeviceType::SDL3:
             return "Cross-platform simple audio API";
+        case AudioDeviceType::Miniaudio:
+            return "Cross-platform audio via miniaudio (Ogg/MP3/FLAC)";
         case AudioDeviceType::Null:
             return "Silent device for testing";
         default:

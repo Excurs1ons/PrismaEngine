@@ -1,4 +1,5 @@
 #include "PhysicsSystem.h"
+#include "SweepAndPrune.h"
 #include "Logger.h"
 #include "SceneManager.h"
 #include "Engine.h"
@@ -153,54 +154,90 @@ void PhysicsSystem::stepCCD(double dt) {
 void PhysicsSystem::stepCollide() {
     m_solver.clear();
 
-    // 对所有体对进行碰撞检测
+    // 收集活跃刚体的 AABB（Sweep and Prune 宽阶段输入）
+    std::vector<Physics::AABB> aabbs;
+    std::vector<size_t> indices;
+    aabbs.reserve(m_bodies.size());
+    indices.reserve(m_bodies.size());
+
     for (size_t i = 0; i < m_bodies.size(); ++i) {
-        auto& bodyA = m_bodies[i];
-        if (!bodyA->isActive() || !bodyA->isAwake()) continue;
-
-        // 静态体不主动碰撞（但可以被碰撞）
-        if (bodyA->isStatic()) continue;
-
-        Physics::AABB aabbA = bodyA->getWorldAABB();
-
-        for (size_t j = i + 1; j < m_bodies.size(); ++j) {
-            auto& bodyB = m_bodies[j];
-            if (!bodyB->isActive()) continue;
-            if (bodyA->isStatic() && bodyB->isStatic()) continue;
-            if (!bodyB->isAwake() && bodyA->isStatic()) continue;
-
-            Physics::AABB aabbB = bodyB->getWorldAABB();
-
-            // AABB 粗略检测
-            if (!Physics::CollisionSystem::checkAABB(aabbA, aabbB)) continue;
-
-            // AABB 穿透检测（获取穿透深度和方向）
-            glm::dvec3 penetration(0.0);
-            if (!Physics::CollisionSystem::checkAABBPenetration(aabbA, aabbB, penetration)) continue;
-
-            // 创建接触约束
-            Physics::ContactConstraint contact;
-            contact.bodyA = bodyA.get();
-            contact.bodyB = bodyB.get();
-            contact.penetration = glm::length(penetration);
-
-            // 法线方向（从 A 指向 B）
-            if (contact.penetration > 1e-8) {
-                contact.contactNormal = penetration / contact.penetration;
-            } else {
-                contact.contactNormal = glm::dvec3(0.0, 1.0, 0.0);
-            }
-
-            // 接触点：两个 AABB 中心的中点
-            contact.contactPoint = (aabbA.getCenter() + aabbB.getCenter()) * 0.5;
-
-            // 默认恢复系数和摩擦
-            contact.restitution = 0.3;
-            contact.friction = 0.5;
-
-            // 应用到求解器
-            m_solver.addContact(contact);
+        if (m_bodies[i]->isActive()) {
+            aabbs.push_back(m_bodies[i]->getWorldAABB());
+            indices.push_back(i);
         }
+    }
+
+    // SAP 宽阶段：O(n log n) 替代 O(n²)
+    m_sap.update(aabbs);
+    const auto& pairs = m_sap.getOverlappingPairs();
+
+    for (auto [i, j] : pairs) {
+        auto& bodyA = m_bodies[indices[i]];
+        auto& bodyB = m_bodies[indices[j]];
+
+        // 静态体排除逻辑（与原有 O(n²) 代码保持一致）
+        if (!bodyA->isAwake()) continue;
+        if (bodyA->isStatic()) continue;
+        if (!bodyB->isActive()) continue;
+        if (bodyA->isStatic() && bodyB->isStatic()) continue;
+        if (!bodyB->isAwake() && bodyA->isStatic()) continue;
+
+        Physics::AABB& aabbA = aabbs[i];
+        Physics::AABB& aabbB = aabbs[j];
+
+        // 根据碰撞形状类型进行窄阶段检测
+        Physics::CollisionShapeType shapeA = bodyA->getShapeType();
+        Physics::CollisionShapeType shapeB = bodyB->getShapeType();
+        bool narrowphasePass = true;
+
+        if (shapeA == Physics::CollisionShapeType::Box &&
+            shapeB == Physics::CollisionShapeType::Box) {
+            // Box-Box：AABB 重叠即通过
+            narrowphasePass = true;
+        } else if (shapeA == Physics::CollisionShapeType::Sphere) {
+            narrowphasePass = Physics::CollisionSystem::checkSphereAABB(
+                aabbB, bodyA->getPosition(), bodyA->getCollisionRadius());
+        } else if (shapeB == Physics::CollisionShapeType::Sphere) {
+            narrowphasePass = Physics::CollisionSystem::checkSphereAABB(
+                aabbA, bodyB->getPosition(), bodyB->getCollisionRadius());
+        } else if (shapeA == Physics::CollisionShapeType::Capsule) {
+            narrowphasePass = Physics::CollisionSystem::checkCapsuleAABB(
+                aabbB, bodyA->getPosition(),
+                bodyA->getCollisionRadius(), bodyA->getCollisionHeight());
+        } else if (shapeB == Physics::CollisionShapeType::Capsule) {
+            narrowphasePass = Physics::CollisionSystem::checkCapsuleAABB(
+                aabbA, bodyB->getPosition(),
+                bodyB->getCollisionRadius(), bodyB->getCollisionHeight());
+        }
+
+        if (!narrowphasePass) continue;
+
+        // AABB 穿透检测（获取穿透深度和方向）
+        glm::dvec3 penetration(0.0);
+        if (!Physics::CollisionSystem::checkAABBPenetration(aabbA, aabbB, penetration)) continue;
+
+        // 创建接触约束
+        Physics::ContactConstraint contact;
+        contact.bodyA = bodyA.get();
+        contact.bodyB = bodyB.get();
+        contact.penetration = glm::length(penetration);
+
+        // 法线方向（从 A 指向 B）
+        if (contact.penetration > 1e-8) {
+            contact.contactNormal = penetration / contact.penetration;
+        } else {
+            contact.contactNormal = glm::dvec3(0.0, 1.0, 0.0);
+        }
+
+        // 接触点：两个 AABB 中心的中点
+        contact.contactPoint = (aabbA.getCenter() + aabbB.getCenter()) * 0.5;
+
+        // 默认恢复系数和摩擦
+        contact.restitution = 0.3;
+        contact.friction = 0.5;
+
+        // 应用到求解器
+        m_solver.addContact(contact);
     }
 }
 
@@ -267,6 +304,31 @@ void PhysicsSystem::stepTriggers(double dt) {
 
     // 更新触发管理器
     m_triggerManager.update(dt, entityAABBs);
+}
+
+Physics::RaycastResult PhysicsSystem::raycast(const glm::dvec3& origin, const glm::dvec3& direction, double maxDistance) {
+    Physics::RaycastResult result;
+    result.distance = maxDistance;
+
+    Physics::Ray ray(origin, glm::normalize(direction));
+
+    for (auto& body : m_bodies) {
+        if (!body->isActive()) continue;
+        if (!body->isAwake() && body->isStatic()) continue;
+
+        Physics::RaycastHit hit;
+        if (Physics::CollisionSystem::rayCastAABB(ray, body->getWorldAABB(), hit)) {
+            if (hit.distance < result.distance) {
+                result.hit = true;
+                result.point = hit.position;
+                result.normal = hit.normal;
+                result.distance = hit.distance;
+                result.body = body.get();
+            }
+        }
+    }
+
+    return result;
 }
 
 } // namespace Prisma

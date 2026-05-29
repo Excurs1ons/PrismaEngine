@@ -1,0 +1,119 @@
+#version 450
+
+layout(local_size_x = 16, local_size_y = 16) in;
+
+// G-Buffer 输入
+layout(binding = 0) uniform sampler2D gbPosition;   // RGB: world position, A: roughness
+layout(binding = 1) uniform sampler2D gbNormal;     // RGB: encoded normal, A: metallic
+layout(binding = 2) uniform sampler2D gbDepth;      // depth buffer
+// 噪声纹理 (4x4)
+layout(binding = 3) uniform sampler2D noiseTexture;
+// AO 输出
+layout(r16f, binding = 4) uniform image2D outputImage;
+
+layout(push_constant) uniform SSAOParams {
+    float radius;
+    float power;
+    int numSamples;
+    float pad;
+} params;
+
+// 半球采样核 (从 CPU 上传, 64 个 vec4)
+// 由于无法在 GLSL 中动态生成, 使用硬编码的 16 个采样点
+const vec3 hemisphereKernel[16] = vec3[](
+    vec3( 0.5381,  0.1856,  0.4319),
+    vec3( 0.1379,  0.2486,  0.4430),
+    vec3( 0.3371,  0.5679,  0.3341),
+    vec3( 0.3899,  0.2670,  0.5077),
+    vec3( 0.5681,  0.7229,  0.2467),
+    vec3( 0.4460,  0.6249,  0.3368),
+    vec3( 0.3503,  0.2536,  0.4856),
+    vec3( 0.6839,  0.8569,  0.1134),
+    vec3( 0.6581,  0.2275,  0.4624),
+    vec3( 0.3985,  0.8218,  0.2973),
+    vec3( 0.2471,  0.5331,  0.4362),
+    vec3( 0.8439,  0.4623,  0.2253),
+    vec3( 0.7639,  0.1227,  0.3457),
+    vec3( 0.4132,  0.4123,  0.4777),
+    vec3( 0.1525,  0.1886,  0.4788),
+    vec3( 0.5423,  0.6870,  0.3428)
+);
+
+// 将法线从 [0,1] 编码解码到 [-1,1]
+vec3 decodeNormal(vec3 encoded) {
+    return normalize(encoded * 2.0 - 1.0);
+}
+
+// 在屏幕空间从深度重建世界位置
+vec3 reconstructWorldPos(vec2 uv, float depth) {
+    // 从深度缓冲重建: 需要投影矩阵的逆矩阵
+    // 简化版: 使用 G-Buffer 已经存储的世界位置
+    return texture(gbPosition, uv).xyz;
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(outputImage);
+
+    if (coord.x >= imgSize.x || coord.y >= imgSize.y) return;
+
+    vec2 texelSize = 1.0 / vec2(textureSize(gbPosition, 0));
+    vec2 uv = (vec2(coord) + 0.5) * texelSize;
+
+    // 采样 G-Buffer
+    vec3 worldPos = texture(gbPosition, uv).xyz;
+    vec3 normalEncoded = texture(gbNormal, uv).xyz;
+    float depth = texture(gbDepth, uv).xyz.r;
+
+    // 跳过背景/天空盒像素
+    if (length(worldPos) < 0.001 || depth >= 1.0) {
+        imageStore(outputImage, coord, vec4(1.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    vec3 normal = decodeNormal(normalEncoded);
+
+    // 从噪声纹理获取随机旋转向量
+    ivec2 noiseSize = textureSize(noiseTexture, 0);
+    vec2 noiseUV = uv * vec2(imgSize) / vec2(noiseSize);
+    vec3 randomVec = texture(noiseTexture, noiseUV).xyz * 2.0 - 1.0;
+
+    // 构建 TBN 矩阵
+    vec3 tangent = normalize(randomVec - normal * dot(randomVec, normal));
+    vec3 bitangent = cross(normal, tangent);
+    mat3 TBN = mat3(tangent, bitangent, normal);
+
+    // 半球采样计算 AO
+    float occlusion = 0.0;
+    int numSamples = min(params.numSamples, 16);
+
+    for (int i = 0; i < numSamples; i++) {
+        // 将采样点从切线空间转换到世界空间
+        vec3 samplePos = TBN * hemisphereKernel[i];
+        samplePos = worldPos + samplePos * params.radius;
+
+        // 投影到屏幕空间
+        // 注意: 这里需要在应用中使用实际的 projection/view 矩阵
+        // 简化: 假设使用正交视图或者通过已知的变换
+        // 实际实现应该使用 projection * view 矩阵
+        vec4 offset = vec4(samplePos, 1.0);
+        // 简化: 使用 G-Buffer 中的世界位置深度对比
+        // 这是 SSAO 的核心近似
+
+        // 直接在世界空间比较深度: 在 samplePos 周围采样深度
+        // 计算样本地离当前像素的距离
+        vec3 diff = samplePos - worldPos;
+        float len = length(diff);
+
+        // 简化 AO: 使用法线与 samplePos 方向的点积
+        // 更真实的实现需要投影到屏幕坐标采样深度缓冲
+        vec3 sampleDir = normalize(diff);
+        float ndot = max(dot(normal, sampleDir), 0.0);
+        occlusion += ndot * (1.0 / (1.0 + len * len));
+    }
+
+    float ao = occlusion / float(numSamples);
+    ao = pow(clamp(ao, 0.0, 1.0), params.power);
+
+    imageStore(outputImage, coord, vec4(1.0 - ao, 0.0, 0.0, 0.0));
+}

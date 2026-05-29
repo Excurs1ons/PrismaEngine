@@ -3,6 +3,7 @@
 #include "DepthPrePass.h"
 #include "OpaquePass.h"
 #include "TransparentPass.h"
+#include "ShadowPass.h"
 #include "../../2d/PostProcessPass2D.h"
 #include "../../2d/UIPass2D.h"
 #include "../SkyboxRenderPass.h"
@@ -11,6 +12,8 @@
 #include "graphic/RenderCommandContext.h"
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/interfaces/IResourceFactory.h"
+#include "graphic/ShadowMapManager.h"
+#include "graphic/IBLGenerator.h"
 #include "app/Engine.h"
 #include "Logger.h"
 
@@ -82,6 +85,22 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
     m_bloomPass = std::make_shared<BloomPostProcessPass>();
     m_bloomPass->Setup(device);
 
+    // 初始化阴影映射
+    auto* factory = device->GetResourceFactory();
+    m_shadowMapManager = std::make_shared<ShadowMapManager>();
+    if (m_shadowMapManager->Initialize(device, factory)) {
+        m_shadowPass = std::make_shared<ShadowPass>();
+        if (m_shadowPass->Setup(device, factory)) {
+            m_shadowPass->SetShadowMapManager(m_shadowMapManager.get());
+        }
+    }
+
+    // 初始化 IBL 生成器
+    m_iblGenerator = std::make_shared<IBLGenerator>();
+    if (!m_iblGenerator->Setup(device)) {
+        m_iblGenerator.reset();
+    }
+
     return 0;
 }
 
@@ -94,11 +113,31 @@ void ForwardPipeline::Shutdown() {
         m_bloomPass->Cleanup();
         m_bloomPass.reset();
     }
+    if (m_shadowPass) {
+        m_shadowPass->Cleanup();
+        m_shadowPass.reset();
+    }
+    if (m_shadowMapManager) {
+        m_shadowMapManager->Cleanup();
+        m_shadowMapManager.reset();
+    }
+    if (m_iblGenerator) {
+        m_iblGenerator->Cleanup();
+        m_iblGenerator.reset();
+    }
     m_postProcessPass.reset();
     m_uiPass.reset();
     m_gizmoPSO.reset();
     m_gizmoVertShader.reset();
     m_gizmoFragShader.reset();
+}
+
+void ForwardPipeline::SetEnvironmentMap(ITexture* envMap) {
+    if (m_iblGenerator) {
+        m_iblGenerator->SetCubemapSource(envMap);
+        // IBLGenerator 内部管理 irradiance/prefilter/BRDF LUT 纹理的创建和更新
+        // 外部仅设置环境贴图源，生成管线由 IBLGenerator 按需触发
+    }
 }
 
 void ForwardPipeline::EnsureGizmoPSO() {
@@ -162,6 +201,36 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
     // TODO: 目前各 Pass 内部仍硬编码了对交换链 RenderPass 的依赖。
     // 在后续重构中，需要将 targetTexture 传入 Pass 内部。
     // 暂时保持逻辑链路畅通，修复嵌套崩溃。
+
+    // ── 阴影映射 Pass ──
+    // 在几何体 Pass 前执行，为当前光源生成级联阴影贴图
+    if (m_shadowMapManager && m_shadowPass && m_shadowMapManager->IsValid()) {
+        // 从 RenderContext 提取阴影光源
+        // Light::direction.w = 0 表示方向光，1 表示点光源
+        std::vector<ShadowLight> shadowLights;
+        for (const auto& light : ctx.lights) {
+            if (light.direction.w < 0.5f) {
+                ShadowLight sl;
+                sl.direction = PrismaMath::vec3(light.direction.x, light.direction.y, light.direction.z);
+                sl.color = PrismaMath::vec3(light.color.x, light.color.y, light.color.z);
+                sl.intensity = light.color.w;
+                sl.shadowBias = 0.005f;
+                sl.shadowNormalBias = 0.02f;
+                sl.castShadows = true;
+                shadowLights.push_back(sl);
+            }
+        }
+
+        if (!shadowLights.empty()) {
+            // 更新阴影贴图管理器（计算级联矩阵 + 设置光源）
+            m_shadowMapManager->Update(view, proj, shadowLights);
+
+            // 执行阴影渲染 Pass
+            if (ctx.commandBuffer) {
+                m_shadowPass->Execute(ctx.commandBuffer, shadowLights);
+            }
+        }
+    }
 
     if (m_depthPrePass) {
         m_depthPrePass->SetViewMatrix(view);
