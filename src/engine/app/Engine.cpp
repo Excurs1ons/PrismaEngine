@@ -589,6 +589,15 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
     m_CurrentApp->OnShutdown();
     if (GetRenderSystem() && GetRenderSystem()->GetDevice()) GetRenderSystem()->GetDevice()->WaitForIdle();
+
+    // 从 LayerStack 中移除 ConsoleUI，避免 LayerStack 析构时重复删除
+    // ConsoleUI 归 ConsoleSystem 管理，会在后续 engine.Shutdown() 中被正确释放
+    if (auto* console = GetSystem<ConsoleSystem>()) {
+        if (auto* ui = console->GetConsoleUI()) {
+            m_CurrentApp->GetLayerStack().PopOverlay(ui);
+        }
+    }
+
     m_CurrentApp.reset();
     return 0;
 }

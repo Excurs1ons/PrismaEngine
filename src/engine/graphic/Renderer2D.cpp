@@ -125,7 +125,7 @@ void Renderer2D::Initialize() {
         uint32_t val = 0xFFFFFFFF; TextureDesc wD; wD.width = 1; wD.height = 1; wD.format = TextureFormat::RGBA8_UNorm;
         auto wT = rm->CreateTextureFromMemory(&val, sizeof(val), wD);
         s_Data->WhiteTexture = wT; // 全局白纹理（无纹理绘制 fallback）
-        auto sS = rm->LoadShaderSync("assets/shaders/LitSprite.frag.spv");
+        auto sS = rm->LoadShaderSync("assets/shaders/UnlitSprite.frag.spv");
         if (!sS) sS = rm->LoadShaderSync("DefaultPixel");
         if (sS) {
             s_Data->DefaultMaterial = std::make_shared<Material>(sS);

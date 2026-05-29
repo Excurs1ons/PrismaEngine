@@ -92,7 +92,7 @@ void Graphics2D::Initialize() {
 
     auto rm = Engine::Get().GetRenderResourceManager();
     if (rm) {
-        auto sS = rm->LoadShaderSync("assets/shaders/LitSprite.frag.spv");
+        auto sS = rm->LoadShaderSync("assets/shaders/UnlitSprite.frag.spv");
         if (sS) s_Data->DefaultMaterial = std::make_shared<Material>(sS);
     }
     if (!s_Data->DefaultMaterial) s_Data->DefaultMaterial = Material::CreateDefault();

@@ -1,44 +1,44 @@
-# Clangd configuration for PrismaEngine (cross-platform: Windows + Linux).
+# Clangd configuration for PrismaEngine.
 #
-# On Windows: CMake + Visual Studio produces MSVC-style compile_commands.json.
-#   The Remove/Add rules below strip MSVC-specific flags (response files, /W4,
-#   /wd, /Zc:, /Fo, etc.) and add GCC-style equivalents, so the result is
-#   GCC-style flags that the "clang" driver can parse.
+# On Windows (primary): CMake + Visual Studio produces MSVC-style
+#   compile_commands.json. We use "clang-cl" as the compiler driver because
+#   it natively understands MSVC-style flags (/MDd, /Zi, /Fo, etc.).
 #
-# On Linux: CMake + Ninja produces GCC-style compile_commands.json natively.
-#   The Remove/Add rules are mostly no-ops (the patterns don't match) but the
-#   supplemental -I and -D entries still apply.
+# On Linux: compile_commands.json is produced by CMake + Ninja with GCC-style
+#   flags. The "clang-cl" binary doesn't exist there, but clangd gracefully
+#   falls back to the compiler detected in compile_commands.json (clang++).
+#   The Remove rules below are largely no-ops (GCC flags don't match).
 #
-# Key principle: after transformation all flags are GCC-style, so we use
-# "clang" (not "clang-cl") as the compiler driver — it works on both platforms.
+# Remove rules strip only flags that are unnecessary for clangd (response
+# files, output paths, warnings, etc.). clang-cl handles the rest natively.
 
 CompileFlags:
-  Compiler: clang
+  Compiler: clang-cl
 
   Remove:
-    # CMake -external:* wrapping (clang-cl doesn't understand it)
-    - "-external:"
-    - "/external:"
+    # CMake external wrapping
+    - "-external:*"
+    - "/external:*"
     # MSVC response files (@file.modmap)
-    - "@"
+    - "@*"
     # MSVC output/PDB flags (clangd doesn't need them)
-    - "-Fo"
-    - "-Fd"
-    - "-Fe"
-    # MSVC preprocessor/permissive flags (not supported by clang)
-    - "-Zc:"
-    - "/Zc:"
+    - "-Fo*"
+    - "-Fd*"
+    - "-Fe*"
+    # MSVC preprocessor/permissive flags
+    - "-Zc:*"
+    - "/Zc:*"
     - "-permissive-"
     - "/permissive-"
-    # MSVC warning-control flags (clang uses different -W flags)
+    # MSVC warning-control flags
     - "-W4"
     - "/W4"
     - "-W3"
     - "/W3"
-    - "-wd"
-    - "/wd"
-    - "-we"
-    - "/we"
+    - "-wd*"
+    - "/wd*"
+    - "-we*"
+    - "/we*"
     - "-WX"
     - "/WX"
     # MSVC sync-PDB flag
