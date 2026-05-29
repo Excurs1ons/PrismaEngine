@@ -293,25 +293,25 @@ function Build-Abi {
         exit 1
     }
 
-    # 构建
-    Write-Info "开始编译..."
+    # 构建引擎
+    Write-Info "开始编译 Engine..."
     $result = ninja -j2 -v Engine 2>&1
-    $buildOutput = $result -join "`n"
-    Write-Host $buildOutput
-
     if ($LASTEXITCODE -ne 0) {
-        Pop-Location
-        Write-Error "编译失败"
-        # 显示完整的错误输出
-        Write-Host "编译失败，完整输出信息:" -ForegroundColor Yellow
-        Write-Host $buildOutput
-
-        # 保存完整输出到文件
-        $errorLogFile = "..\build\error-$AbiName.log"
-        $buildOutput | Out-File -FilePath $errorLogFile -Encoding UTF8
-        Write-Host "完整错误日志已保存到: $errorLogFile" -ForegroundColor Green
+        Write-Error "Engine 编译失败"
         exit 1
     }
+
+    # 构建项目插件 (PathTracing3D)
+    Write-Info "开始编译 PathTracing3D..."
+    $result = ninja -j2 -v PathTracing3D_plugin 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Error "PathTracing3D 编译失败"
+        exit 1
+    }
+
+    # 编译 Shader 到 SPV
+    Write-Info "编译 Shaders..."
+    $result = ninja CompileShaders 2>&1
 
     # 安装
     Write-Info "安装到输出目录..."
@@ -320,6 +320,22 @@ function Build-Abi {
         Pop-Location
         Write-Error "安装失败"
         exit 1
+    }
+
+    # 将生成的 .so 复制到 Android 工程的 jniLibs
+    $jniLibsDir = "$projectRoot\projects\android\PrismaAndroid\app\src\main\jniLibs\$AbiName"
+    if (!(Test-Path $jniLibsDir)) {
+        New-Item -ItemType Directory -Path $jniLibsDir -Force | Out-Null
+    }
+
+    Write-Info "同步库文件到 jniLibs: $jniLibsDir"
+    Copy-Item "lib\libEngine.so" "$jniLibsDir\libPrisma.so" -Force
+    Copy-Item "lib\libPathTracing3D.so" "$jniLibsDir\libPathTracing3D.so" -Force
+    
+    # 查找并复制依赖库 (如 SDL3)
+    $sdlPath = "..\..\vcpkg_installed\arm64-android\lib\libSDL3.so"
+    if (Test-Path $sdlPath) {
+        Copy-Item $sdlPath "$jniLibsDir\libSDL3.so" -Force
     }
 
     Pop-Location

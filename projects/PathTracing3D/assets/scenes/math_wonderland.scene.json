@@ -1,0 +1,68 @@
+{
+    "name": "Math Wonderland",
+    "nodes": [
+        {
+            "name": "SkyLight",
+            "transform": {"position": [0, 20, 0], "rotation": [90, 0, 0], "scale": [1, 1, 1]},
+            "components": [
+                {"type": "LightComponent", "data": {"type": "Directional", "color": [1, 1, 1], "intensity": 1.0}}
+            ]
+        },
+        {
+            "name": "Floor",
+            "transform": {"position": [0, -1, 0], "rotation": [0, 0, 0], "scale": [50, 1, 50]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat"}}
+            ]
+        },
+        {
+            "name": "Ceiling",
+            "transform": {"position": [0, 10, 0], "rotation": [180, 0, 0], "scale": [50, 1, 50]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat"}}
+            ]
+        },
+        {
+            "name": "RedWall",
+            "transform": {"position": [-10, 5, 0], "rotation": [0, 0, -90], "scale": [10, 1, 50]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/red.mat"}}
+            ]
+        },
+        {
+            "name": "GreenWall",
+            "transform": {"position": [10, 5, 0], "rotation": [0, 0, 90], "scale": [10, 1, 50]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/green.mat"}}
+            ]
+        },
+        {
+            "name": "BackWall",
+            "transform": {"position": [0, 5, 10], "rotation": [-90, 0, 0], "scale": [20, 1, 10]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat"}}
+            ]
+        },
+        {
+            "name": "LargeSphere",
+            "transform": {"position": [-3, 2, 0], "rotation": [0, 0, 0], "scale": [2, 2, 2]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Sphere", "material": "assets/materials/white.mat"}}
+            ]
+        },
+        {
+            "name": "TallBox",
+            "transform": {"position": [3, 3, -2], "rotation": [0, 45, 0], "scale": [2, 6, 2]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Box", "material": "assets/materials/white.mat"}}
+            ]
+        },
+        {
+            "name": "LightPanel",
+            "transform": {"position": [0, 9.9, 0], "rotation": [180, 0, 0], "scale": [4, 1, 4]},
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/light.mat", "emissive": [15, 15, 15]}}
+            ]
+        }
+    ]
+}

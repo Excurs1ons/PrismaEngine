@@ -24,8 +24,15 @@ AssetManager::~AssetManager() {
 }
 
 int AssetManager::Initialize() {
-    // 默认初始化到当前工作目录
+    // 在 Android 上，优先使用 SDL3 的 PrefPath 或解压路径
+#ifdef __ANDROID__
+    // 这里我们假设 Java 层解压到了 FilesDir
+    // 由于 SDL3 尚未初始化完成时可能无法获取 PrefPath，我们先尝试标准路径
+    // 或者在 Engine::Initialize 中显式传入
+    return Initialize("/data/data/com.prismaengine.android/files") ? 0 : -1;
+#else
     return Initialize(std::filesystem::current_path()) ? 0 : -1;
+#endif
 }
 
 bool AssetManager::Initialize(const std::filesystem::path& projectRoot) {

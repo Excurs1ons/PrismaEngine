@@ -12,40 +12,54 @@ import org.libsdl.app.SDLActivity;
 public class PrismaActivity extends SDLActivity {
     @Override
     protected String[] getLibraries() {
-        return new String[] { "SDL3", "Prisma" };
+        return new String[] { "SDL3", "Prisma", "PathTracing3D" };
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        extractRuntimeAssets();
+        extractAssets("runtime");
+        extractAssets("scenes");
+        extractAssets("materials");
+        extractAssets("shaders");
+        extractAssets("models");
         super.onCreate(savedInstanceState);
     }
 
-    private void extractRuntimeAssets() {
-        File runtimeDir = new File(getFilesDir(), "runtime");
-        if (runtimeDir.exists()) {
-            return;
+    private void extractAssets(String path) {
+        File outDir = new File(getFilesDir(), path);
+        if (!outDir.exists()) {
+            outDir.mkdirs();
         }
-        runtimeDir.mkdirs();
 
         AssetManager am = getAssets();
         try {
-            String[] assets = am.list("runtime");
+            String[] assets = am.list(path);
             if (assets == null || assets.length == 0) return;
 
             for (String asset : assets) {
-                File outFile = new File(runtimeDir, asset);
-                try (InputStream in = am.open("runtime/" + asset);
-                     OutputStream out = new FileOutputStream(outFile)) {
-                    byte[] buf = new byte[8192];
-                    int len;
-                    while ((len = in.read(buf)) > 0) {
-                        out.write(buf, 0, len);
+                String fullPath = path + "/" + asset;
+                // Check if it's a directory by trying to list its content
+                String[] subAssets = am.list(fullPath);
+                if (subAssets != null && subAssets.length > 0) {
+                    extractAssets(fullPath);
+                } else {
+                    File outFile = new File(getFilesDir(), fullPath);
+                    // For performance, you might want to check file size or hash here, 
+                    // but for a demo, we overwrite if missing.
+                    if (outFile.exists()) continue; 
+
+                    try (InputStream in = am.open(fullPath);
+                         OutputStream out = new FileOutputStream(outFile)) {
+                        byte[] buf = new byte[8192];
+                        int len;
+                        while ((len = in.read(buf)) > 0) {
+                            out.write(buf, 0, len);
+                        }
                     }
                 }
             }
         } catch (Exception e) {
-            android.util.Log.e("PrismaActivity", "extract runtime failed: " + e.getMessage());
+            android.util.Log.e("PrismaActivity", "extract " + path + " failed: " + e.getMessage());
         }
     }
 }

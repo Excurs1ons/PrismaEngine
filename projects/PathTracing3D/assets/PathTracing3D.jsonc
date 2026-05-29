@@ -3,10 +3,11 @@
     "name": "PathTracing3D（3D路径追踪模板）",
 
     // 入口场景（相对 assets/ 搜索路径）
-    "entryScene": "scenes/cornell_box.scene.json",
+    "entryScene": "scenes/math_wonderland.scene.json",
 
     // 可选多场景列表（F6 下一场景 F7 上一场景）
     "scenes": [
+        "scenes/math_wonderland.scene.json",
         "scenes/cornell_box.scene.json"
     ],
 

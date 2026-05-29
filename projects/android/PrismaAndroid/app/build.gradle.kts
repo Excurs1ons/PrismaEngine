@@ -30,6 +30,7 @@ android {
 }
 
 val engineRoot = file("../../../..").absoluteFile
+val pt3dRoot = file("$engineRoot/projects/PathTracing3D").absoluteFile
 val csRuntimeDir = file("$engineRoot/build/android-arm64-debug/PrismaEngine.Host/android-arm64/publish")
 
 tasks.register<Copy>("copyCsRuntime") {
@@ -38,14 +39,34 @@ tasks.register<Copy>("copyCsRuntime") {
     onlyIf { csRuntimeDir.exists() }
 }
 
-tasks.register<Copy>("copyShaders") {
-    from("$engineRoot/resources/common/shaders/glsl") { into("shaders") }
+tasks.register<Copy>("copyEngineShaders") {
+    from("$engineRoot/resources/common/shaders/glsl") { 
+        include("**/*.spv")
+        into("shaders") 
+    }
+    into("src/main/assets")
+}
+
+tasks.register<Copy>("copyPt3dAssets") {
+    // Copy scenes and materials from PT3D
+    from("$pt3dRoot/assets") {
+        include("scenes/**")
+        include("materials/**")
+        include("models/**")
+        include("PathTracing3D.jsonc")
+    }
+    // Copy shaders from PT3D (already compiled to .spv)
+    from("$pt3dRoot/assets/shaders") {
+        include("*.spv")
+        into("shaders")
+    }
     into("src/main/assets")
 }
 
 tasks.named("preBuild") {
     dependsOn("copyCsRuntime")
-    dependsOn("copyShaders")
+    dependsOn("copyEngineShaders")
+    dependsOn("copyPt3dAssets")
 }
 
 dependencies {
