@@ -283,6 +283,11 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         # Cache 变量，供子项目 CMakeLists.txt 引用（如 MetroidvaniaDemo）
         if(WIN32)
             set(CS_RID "win-x64" CACHE STRING ".NET Runtime Identifier for C# scripting host")
+        elseif(ANDROID)
+            # Android 使用 android-arm64 RID
+            # dotnet publish -r android-arm64 --self-contained 产出
+            # libhostfxr.so / libcoreclr.so 等原生库供 CoreCLRHost 加载
+            set(CS_RID "android-arm64" CACHE STRING ".NET Runtime Identifier for C# scripting host")
         else()
             if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64")
                 set(CS_RID "linux-arm64" CACHE STRING ".NET Runtime Identifier for C# scripting host")
