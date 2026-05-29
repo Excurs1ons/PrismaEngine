@@ -16,7 +16,7 @@
 #include <vulkan/vulkan.h>
 
 // ImGuizmo - 3D 变换操作器
-#include "../vendor/ImGuizmo/ImGuizmo.h"
+#include "ImGuizmo.h"
 
 // Vulkan 后端支持
 #include "../graphic/ViewportRenderPass.h"

@@ -1,4 +1,4 @@
-#include "ConsoleUI.h"
+#include "ConsoleLayer.h"
 #include "Logger.h"
 #include "Engine.h"
 #include "Application.h"
@@ -8,23 +8,23 @@
 
 namespace Prisma {
 
-ConsoleUI::ConsoleUI(ConsoleSystem* system)
+ConsoleLayer::ConsoleLayer(ConsoleSystem* system)
     : Layer("Console")
     , m_ConsoleSystem(system) {
 }
 
-ConsoleUI::~ConsoleUI() = default;
+ConsoleLayer::~ConsoleLayer() = default;
 
-void ConsoleUI::OnAttach() {
+void ConsoleLayer::OnAttach() {
     if (m_ConsoleSystem) {
         m_ConsoleSystem->LogInfo("控制台已准备就绪 (按 ~ 切换)");
     }
 }
 
-void ConsoleUI::OnDetach() {
+void ConsoleLayer::OnDetach() {
 }
 
-void ConsoleUI::OnEvent(Event& e) {
+void ConsoleLayer::OnEvent(Event& e) {
     if (!m_Open) return;
     if (e.GetEventType() == EventType::KeyPressed) {
         auto& keyEvent = static_cast<KeyPressedEvent&>(e);
@@ -35,7 +35,7 @@ void ConsoleUI::OnEvent(Event& e) {
     }
 }
 
-void ConsoleUI::OnImGuiRender() {
+void ConsoleLayer::OnImGuiRender() {
     // 同步 ImGui 上下文（与 Editor 共享）
     if (auto* appCtx = Application::Get().GetImGuiContext()) {
         ImGui::SetCurrentContext(static_cast<ImGuiContext*>(appCtx));
@@ -163,7 +163,7 @@ void ConsoleUI::OnImGuiRender() {
     ImGui::End();
 }
 
-void ConsoleUI::HandleKeybinds() {
+void ConsoleLayer::HandleKeybinds() {
     ImGuiIO& io = ImGui::GetIO();
 
     if (ImGui::IsKeyPressed(ImGuiKey_GraveAccent)) {
@@ -184,7 +184,7 @@ void ConsoleUI::HandleKeybinds() {
     }
 }
 
-void ConsoleUI::ExecuteCommand() {
+void ConsoleLayer::ExecuteCommand() {
     std::string cmd(m_InputBuffer);
     m_InputBuffer[0] = '\0';
 
@@ -201,7 +201,7 @@ void ConsoleUI::ExecuteCommand() {
     m_ScrollToBottom = true;
 }
 
-void ConsoleUI::UpdateAutocomplete() {
+void ConsoleLayer::UpdateAutocomplete() {
     std::string input(m_InputBuffer);
     m_AutocompleteMatches.clear();
     m_AutocompleteIndex = -1;
@@ -239,11 +239,11 @@ void ConsoleUI::UpdateAutocomplete() {
     m_ShowAutocomplete = !m_AutocompleteMatches.empty();
 }
 
-void ConsoleUI::ScrollToBottom() {
+void ConsoleLayer::ScrollToBottom() {
     m_ScrollToBottom = true;
 }
 
-void ConsoleUI::AddMessage(const ConsoleMessage& msg) {
+void ConsoleLayer::AddMessage(const ConsoleMessage& msg) {
     m_ScrollToBottom = true;
 }
 

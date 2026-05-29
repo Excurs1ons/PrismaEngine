@@ -3,6 +3,7 @@
 #include "graphic/interfaces/IDescriptorSet.h"
 #include "graphic/interfaces/ISampler.h"
 #include <algorithm>
+#include <vector>
 
 namespace Prisma::Graphic {
 
@@ -28,22 +29,18 @@ ShadowPass::~ShadowPass() {
 }
 
 void ShadowPass::Execute(const PassExecutionContext& context) {
-    if (!m_ready || !m_device) return;
+    if (!m_ready || !m_device || !context.deviceContext) return;
 
-    // 从 context 获取命令缓冲区
-    ICommandBuffer* cmd = nullptr;
-    if (context.deviceContext) {
-        cmd = context.deviceContext->GetCommandBuffer();
-    }
-
-    if (!cmd) return;
-
-    // 从场景数据获取光源
-    // 注意: 实际光源列表通过 ShadowMapManager 传入
-    // 这里使用备用路径: 通过 m_shadowMapManager 获取光源
-    if (m_shadowMapManager && m_shadowMapManager->IsValid()) {
-        const auto& lights = m_shadowMapManager->GetLights();
-        Execute(cmd, lights);
+    // 注意: IDeviceContext 不提供 ICommandBuffer 转换，
+    // 真正的阴影渲染通过 Execute(ICommandBuffer*, const std::vector<ShadowLight>&) 执行。
+    // ForwardPipeline 直接调用 ICommandBuffer* 版本，不走此路径。
+    // 此处仅执行基本的设备上下文设置操作。
+    if (context.sceneData) {
+        context.deviceContext->SetViewport(
+            0.0f, 0.0f,
+            static_cast<float>(context.sceneData->viewport.width),
+            static_cast<float>(context.sceneData->viewport.height)
+        );
     }
 }
 

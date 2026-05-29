@@ -21,6 +21,7 @@ namespace Prisma::Graphic {
 // 前向声明
 class IRenderTarget;
 class IDepthStencil;
+struct RenderCommand;
 
 // 阴影 Pass
 /// 渲染方向光的阴影贴图 (CSM)，每光源最多 4 个级联

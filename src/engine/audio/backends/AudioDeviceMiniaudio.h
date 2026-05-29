@@ -3,7 +3,6 @@
 #include "IAudioDevice.h"
 #include "AudioNode.h"
 
-#define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
 namespace Prisma::Audio {

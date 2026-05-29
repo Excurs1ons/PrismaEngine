@@ -12,7 +12,7 @@
 
 namespace Prisma {
 
-class ConsoleUI;
+class ConsoleLayer;
 
 enum class ConsoleMessageLevel : uint8_t {
     Info,
@@ -45,7 +45,7 @@ public:
     CVarRegistry& GetCVarRegistry() { return m_CVarRegistry; }
     CommandRegistry& GetCommandRegistry() { return m_CommandRegistry; }
 
-    ConsoleUI* GetConsoleUI() { return m_ConsoleUI.get(); }
+    ConsoleLayer* GetConsoleLayer() { return m_ConsoleLayer.get(); }
 
     void Log(const std::string& message, ConsoleMessageLevel level = ConsoleMessageLevel::Info);
     void LogInfo(const std::string& msg) { Log(msg, ConsoleMessageLevel::Info); }
@@ -64,7 +64,7 @@ private:
 
     CVarRegistry m_CVarRegistry;
     CommandRegistry m_CommandRegistry;
-    std::unique_ptr<ConsoleUI> m_ConsoleUI;
+    std::unique_ptr<ConsoleLayer> m_ConsoleLayer;
 
     std::vector<ConsoleMessage> m_Messages;
     size_t m_MaxMessages = 1000;

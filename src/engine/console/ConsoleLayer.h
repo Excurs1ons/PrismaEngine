@@ -8,10 +8,10 @@
 
 namespace Prisma {
 
-class ENGINE_API ConsoleUI : public Layer {
+class ENGINE_API ConsoleLayer : public Layer {
 public:
-    explicit ConsoleUI(ConsoleSystem* system);
-    ~ConsoleUI() override;
+    explicit ConsoleLayer(ConsoleSystem* system);
+    ~ConsoleLayer() override;
 
     void OnAttach() override;
     void OnDetach() override;

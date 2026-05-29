@@ -1,5 +1,6 @@
+#define MINIAUDIO_IMPLEMENTATION
 #include "AudioDeviceMiniaudio.h"
-#include <Engine/audio/dsp/AudioBuffer.h>
+#include "audio/dsp/AudioBuffer.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>

@@ -1,5 +1,5 @@
 #include "ConsoleSystem.h"
-#include "ConsoleUI.h"
+#include "ConsoleLayer.h"
 #include "Engine.h"
 #include "Logger.h"
 #include <sstream>
@@ -114,14 +114,14 @@ int ConsoleSystem::Initialize() {
     RegisterDefaultCVars();
     RegisterDefaultCommands();
 
-    m_ConsoleUI = std::make_unique<ConsoleUI>(this);
+    m_ConsoleLayer = std::make_unique<ConsoleLayer>(this);
 
     LogInfo("控制台系统已初始化。输入 help 查看命令列表。");
     return 0;
 }
 
 void ConsoleSystem::Shutdown() {
-    m_ConsoleUI.reset();
+    m_ConsoleLayer.reset();
     LOG_INFO("Console", "控制台系统已关闭。");
 }
 

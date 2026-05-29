@@ -1,4 +1,4 @@
-option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
+﻿option(PRISMA_ENABLE_MCP "Enable MCP server for AI agent support" ON)
 
 # ImGui 后端源文件 (根据平台条件添加)
 # -----------------------------------------------------------------------
@@ -32,7 +32,7 @@ set(EDITOR_SOURCES
         core/main.cpp
         panels/EditorLayer.cpp
         panels/ProfilerPanel.cpp
-        vendor/ImGuizmo/ImGuizmo.cpp
+        ${ImGuizmo_SOURCE_DIR}/src/ImGuizmo.cpp
         windows/ProjectSettingsWindow.cpp
         graphic/ImGuiVulkanResourceManager.cpp
         graphic/ViewportRenderPass.cpp
@@ -76,6 +76,8 @@ target_link_libraries(Editor PRIVATE
 target_include_directories(Editor PRIVATE
     ${CMAKE_SOURCE_DIR}/src/engine
     ${CMAKE_SOURCE_DIR}/src/engine/logger
+    ${ImGuizmo_SOURCE_DIR}
+    ${ImGuizmo_SOURCE_DIR}/src
 )
 
 # ========== 路径与输出配置 ==========

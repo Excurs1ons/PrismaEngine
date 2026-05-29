@@ -34,7 +34,7 @@ extern "C" { char* SDL_GetBasePath(void); void SDL_free(void* ptr); }
 #include "app/CommandLineParser.h"
 #include "scene/Scene.h"
 #include "console/ConsoleSystem.h"
-#include "console/ConsoleUI.h"
+#include "console/ConsoleLayer.h"
 #include "profiling/ProfilerSystem.h"
 #include "animation/AnimationSystem.h"
 #include "particles/ParticleSystem.h"
@@ -149,7 +149,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
     // 将控制台 UI 层添加到应用层栈
     if (auto* console = GetSystem<ConsoleSystem>()) {
-        if (auto* ui = console->GetConsoleUI()) {
+        if (auto* ui = console->GetConsoleLayer()) {
             m_CurrentApp->PushOverlay(ui);
         }
     }
@@ -590,10 +590,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
     m_CurrentApp->OnShutdown();
     if (GetRenderSystem() && GetRenderSystem()->GetDevice()) GetRenderSystem()->GetDevice()->WaitForIdle();
 
-    // 从 LayerStack 中移除 ConsoleUI，避免 LayerStack 析构时重复删除
-    // ConsoleUI 归 ConsoleSystem 管理，会在后续 engine.Shutdown() 中被正确释放
+    // 从 LayerStack 中移除 ConsoleLayer，避免 LayerStack 析构时重复删除
+    // ConsoleLayer 归 ConsoleSystem 管理，会在后续 engine.Shutdown() 中被正确释放
     if (auto* console = GetSystem<ConsoleSystem>()) {
-        if (auto* ui = console->GetConsoleUI()) {
+        if (auto* ui = console->GetConsoleLayer()) {
             m_CurrentApp->GetLayerStack().PopOverlay(ui);
         }
     }

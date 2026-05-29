@@ -75,7 +75,7 @@ set(CORE_SOURCES
 
     # Console
     console/ConsoleSystem.cpp
-    console/ConsoleUI.cpp
+    console/ConsoleLayer.cpp
 
     # Physics
     physics/PhysicsSystem.cpp
@@ -482,7 +482,7 @@ set(CORE_HEADERS
     console/CVar.h
     console/ConsoleCommand.h
     console/ConsoleSystem.h
-    console/ConsoleUI.h
+    console/ConsoleLayer.h
 
     # Physics
     physics/PhysicsSystem.h

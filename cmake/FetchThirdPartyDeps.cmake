@@ -73,6 +73,12 @@ FetchContent_MakeAvailable(xxhash)
 Prisma_Declare_Dependency(glaze https://github.com/stephenberry/glaze.git ${PRISMA_DEP_GLAZE_VERSION})
 FetchContent_MakeAvailable(glaze)
 
+# ImGuizmo - 3D 变换操作器 (ImGui Gizmo, Editor only)
+Prisma_Declare_Dependency(ImGuizmo https://github.com/CedricGuillemet/ImGuizmo.git ${PRISMA_DEP_IMGUIZMO_VERSION})
+if(PRISMA_BUILD_EDITOR)
+    FetchContent_MakeAvailable(ImGuizmo)
+endif()
+
 # ========== 依赖项加载与配置 ==========
 
 # 禁用所有不需要的测试、示例和程序

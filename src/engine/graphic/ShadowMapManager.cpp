@@ -199,7 +199,7 @@ void ShadowMapManager::Update(const PrismaMath::mat4& cameraView,
         }
 
         // 计算每级联矩阵
-        ComputeCascadeMatrices(lightIdx, cameraView);
+        ComputeCascadeMatrices(lightIdx, cameraView, cameraProj);
     }
 }
 
@@ -322,7 +322,8 @@ void ShadowMapManager::ComputeCascadeSplits(const PrismaMath::mat4& cameraProj) 
 }
 
 void ShadowMapManager::ComputeCascadeMatrices(uint32_t lightIndex,
-                                               const PrismaMath::mat4& cameraView) {
+                                               const PrismaMath::mat4& cameraView,
+                                               const PrismaMath::mat4& cameraProj) {
     const auto& light = m_shadowLights[lightIndex];
     if (!light.castShadows) return;
 
@@ -394,21 +395,5 @@ void ShadowMapManager::ComputeCascadeMatrices(uint32_t lightIndex,
     }
 }
 
-void ShadowMapManager::BuildFrustumCorners(uint32_t cascadeIndex,
-                                            const PrismaMath::mat4& cameraView,
-                                            PrismaMath::vec3 corners[8]) const {
-    // 使用级联的分割距离构建
-    float nearZ = m_cascadeSplits[cascadeIndex];
-    float farZ = m_cascadeSplits[cascadeIndex + 1];
-
-    // 从空间 view 矩阵计算基本参数
-    float fovY = 45.0f * (3.14159265f / 180.0f); // 默认 45度
-    float aspect = 1.0f;
-
-    // 尝试从 view 位置附近提取 FOV (简化版)
-    // 实际上在 Update() 中已计算，此处使用保守默认值
-
-    BuildFrustumCorners(nearZ, farZ, fovY, aspect, corners);
-}
 
 } // namespace Prisma::Graphic

@@ -426,25 +426,6 @@ namespace Prisma {
             }
 
             /**
-             * @brief 球体 vs AABB 碰撞检测
-             *
-             * 计算球心到 AABB 的最近点，检查距离是否小于半径。
-             * 对应 Box2D/CraftBlock 中的 checkSphereAABB 实现。
-             */
-            static bool checkSphereAABB(const AABB& aabb, const glm::dvec3& center, double radius) noexcept {
-                // 找到 AABB 上距离球心最近的点（在 AABB 各轴上 clamp）
-                double closestX = std::max(aabb.minX, std::min(center.x, aabb.maxX));
-                double closestY = std::max(aabb.minY, std::min(center.y, aabb.maxY));
-                double closestZ = std::max(aabb.minZ, std::min(center.z, aabb.maxZ));
-
-                glm::dvec3 closest(closestX, closestY, closestZ);
-                glm::dvec3 diff = center - closest;
-                double distSq = diff.x * diff.x + diff.y * diff.y + diff.z * diff.z;
-
-                return distSq <= radius * radius;
-            }
-
-            /**
              * @brief 胶囊体 vs AABB 碰撞检测
              *
              * 胶囊体定义为线段 p1-p2 扩展半径 radius 的体。

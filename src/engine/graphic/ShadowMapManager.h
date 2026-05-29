@@ -136,12 +136,9 @@ private:
     void ComputeCascadeSplits(const PrismaMath::mat4& cameraProj);
 
     // 计算指定光源的所有级联视投影矩阵
-    void ComputeCascadeMatrices(uint32_t lightIndex, const PrismaMath::mat4& cameraView);
-
-    // 构建级联视锥体八个角点 (视空间)
-    void BuildFrustumCorners(uint32_t cascadeIndex,
-                             const PrismaMath::mat4& cameraView,
-                             PrismaMath::vec3 corners[8]) const;
+    void ComputeCascadeMatrices(uint32_t lightIndex,
+                                const PrismaMath::mat4& cameraView,
+                                const PrismaMath::mat4& cameraProj);
 
     // 设备/工厂指针
     IRenderDevice* m_device = nullptr;

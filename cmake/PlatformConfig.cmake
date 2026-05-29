@@ -49,4 +49,4 @@ message(STATUS "")
 
 # ========== Editor 构建选项 ==========
 
-option(PRISMA_BUILD_EDITOR "Build Editor application" ON)
+option(PRISMA_BUILD_EDITOR "Build Editor application" OFF)

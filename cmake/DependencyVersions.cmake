@@ -68,6 +68,10 @@ set(PRISMA_DEP_SPIRV_REFLECT_VERSION "vulkan-sdk-1.4.350.0")
 # 使用分支名而不是 commit SHA
 set(PRISMA_DEP_IMGUI_VERSION "docking")
 
+# ImGuizmo - 3D 变换操作器 (ImGui Gizmo)
+# GitHub: https://github.com/CedricGuillemet/ImGuizmo
+set(PRISMA_DEP_IMGUIZMO_VERSION "1.10")
+
 # xxHash - 极快哈希 (MCP 增量追踪)
 # GitHub: https://github.com/Cyan4973/xxHash
 set(PRISMA_DEP_XXHASH_VERSION "v0.8.2")
