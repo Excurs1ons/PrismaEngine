@@ -24,9 +24,9 @@ cmake --build build/linux-x64-debug --target PathTracing3D
 
 ## C# scripting
 
-- **CoreCLR** backend. Set `DPRISMA_ENABLE_SCRIPTING=CORECLR` (default).
-- Managed assemblies follow the pattern `<Project>_Managed.dll` (e.g. `Prisma2D_Managed.dll`).
-- InternalsVisibleTo is used — each project's managed DLL is listed in `Prisma.Core.csproj`.
+- CoreCLR backend. Set `DPRISMA_ENABLE_SCRIPTING=CORECLR` (default).
+- Managed assemblies follow the pattern `<Project>.Scripts.dll` (e.g. `Prisma2D.Scripts.dll`).
+- InternalsVisibleTo is used — each project's managed DLL is listed in `Prisma.Bindings.csproj`.
 - Script entry point: `ScriptEntry.Bootstrap()` / `ScriptEntry.OnFrame()`.
 - Script search path is hardcoded in `src/engine/app/Engine.cpp`.
 - Termux/restricted VM: `.NET 10+` GC region reservation may fail — set `DOTNET_GCRegionRange=0x10000000`.

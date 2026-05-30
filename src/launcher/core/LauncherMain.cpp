@@ -76,11 +76,11 @@ int main(int argc, char* argv[]) {
     // ---- 2. 加载 Engine DLL ----
     static const char* kEngineNames[] = {
 #if defined(_WIN32)
-        "Prisma.dll",
+        "Prisma.Core.dll",
 #elif defined(__APPLE__)
-        "libPrisma.dylib",
+        "libPrisma.Core.dylib",
 #else
-        "libPrisma.so",
+        "libPrisma.Core.so",
 #endif
     };
     LibHandle engineLib = nullptr;

@@ -4112,7 +4112,7 @@ C# [UnmanagedCallersOnly] → C++ 函数指针
 C# 通过 InternalsVisibleTo 访问引擎 API
 数据通过 SoA 实体池共享 (共享内存指针)
 
-C# 构件: Prisma.Core.dll + Prisma.Generators.dll + 游戏 Assembly
+C# 构件: Prisma.Bindings.dll + Prisma.Generators.dll + 游戏 Assembly (.Scripts.dll)
 C++ Engine 加载 CoreCLR → Bootstrap() → OnFrame() 循环
 ```
 

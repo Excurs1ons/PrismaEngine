@@ -103,7 +103,7 @@ add_library(${PRISMACRAFT_PLUGIN_NAME} SHARED
 )
 
 set_target_properties(${PRISMACRAFT_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "PrismaCraft"              # 生成 PrismaCraft.dll（与旧名一致）
+    OUTPUT_NAME "PrismaCraft.Core"              # 生成 PrismaCraft.Core.dll
     DEBUG_POSTFIX ""                        # Debug 也不加后缀
 )
 
@@ -182,8 +182,8 @@ if(PRISMA_ENABLE_SCRIPTING)
         COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${SCRIPTS_DIR}/GameScripts/GameScripts.csproj"
                 -c Release --nologo --no-restore
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/PrismaCraft_Managed.dll"
-                "${SCRIPTS_OUT}/PrismaCraft_Managed.dll"
+                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/PrismaCraft.Scripts.dll"
+                "${SCRIPTS_OUT}/PrismaCraft.Scripts.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
         DEPENDS "${PC_RESTORE_STAMP}"
     )

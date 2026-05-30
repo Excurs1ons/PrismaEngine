@@ -329,7 +329,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
             }
 
-            // 游戏 DLL 搜索：优先寻找 [m_ProjectName]_Managed.dll
+            // 游戏 DLL 搜索：优先寻找 [m_ProjectName].Scripts.dll
             std::vector<std::string> gamePaths;
 
             // 0. exe 所在目录
@@ -355,7 +355,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
             }
 
             std::string gameDir;
-            std::string gameDll = (m_ProjectName.empty() ? "GameScripts" : m_ProjectName) + "_Managed.dll";
+            std::string gameDll = (m_ProjectName.empty() ? "GameScripts" : m_ProjectName) + ".Scripts.dll";
             
             for (const auto& p : gamePaths) {
                 std::string fullDllPath = p + "/" + gameDll;

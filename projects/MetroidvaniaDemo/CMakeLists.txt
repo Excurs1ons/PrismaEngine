@@ -102,7 +102,7 @@ add_library(${MV_PLUGIN_NAME} SHARED
 )
 
 set_target_properties(${MV_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "MetroidvaniaDemo"
+    OUTPUT_NAME "MetroidvaniaDemo.Core"
     DEBUG_POSTFIX ""
 )
 
@@ -159,8 +159,8 @@ if(PRISMA_ENABLE_SCRIPTING)
         COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${SCRIPTS_DIR}/GameScripts.csproj"
                 -c Release --nologo
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SCRIPTS_DIR}/bin/Release/net10.0/MetroidvaniaDemo_Managed.dll"
-                "${SCRIPTS_OUT}/MetroidvaniaDemo_Managed.dll"
+                "${SCRIPTS_DIR}/bin/Release/net10.0/MetroidvaniaDemo.Scripts.dll"
+                "${SCRIPTS_OUT}/MetroidvaniaDemo.Scripts.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
     )
 else()

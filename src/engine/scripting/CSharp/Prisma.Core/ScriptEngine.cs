@@ -32,12 +32,15 @@ internal static class ScriptEngine
             // 调用自动生成的脚本注册逻辑
             // Call automatically generated script registration logic
             try { 
-                // 使用反射尝试调用，以�?Generator 还没运行
-                var registryType = Type.GetType("Prisma.Generated.ScriptRegistry, Prisma2D_Managed") ??
-                                   Type.GetType("Prisma.Generated.ScriptRegistry, PrismaCraft_Managed") ??
-                                   Type.GetType("Prisma.Generated.ScriptRegistry, SRP2D_Managed") ??
-                                   Type.GetType("Prisma.Generated.ScriptRegistry, GameScripts") ??
-                                   Type.GetType("Prisma.Generated.ScriptRegistry, Prisma.Core");
+                string projectName = Interop.Utf8ToString(api->ProjectName);
+                if (string.IsNullOrEmpty(projectName)) projectName = "GameScripts";
+
+                string assemblyName = projectName + ".Scripts";
+
+                // 优先尝试 [Project].Scripts.dll，回退到 Prisma.Bindings.dll (引擎内置)
+                var registryType = Type.GetType($"Prisma.Generated.ScriptRegistry, {assemblyName}") ??
+                                   Type.GetType("Prisma.Generated.ScriptRegistry, Prisma.Bindings");
+
                 registryType?.GetMethod("RegisterAll")?.Invoke(null, null);
             } catch { /* Ignore */ }
         }

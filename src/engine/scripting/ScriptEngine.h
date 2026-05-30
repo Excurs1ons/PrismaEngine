@@ -190,6 +190,8 @@ struct PrismaAPI {
     void* (*readAssetData)(const char* path, size_t* outSize);
     void  (*freeAssetData)(void* data);
 
+    const char* projectName;
+
     // [诊断] 结构体大小，用于 C++/C# 版本校验
     // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)
     // C# 侧在 Init 中校验，不匹配时抛出明确异常

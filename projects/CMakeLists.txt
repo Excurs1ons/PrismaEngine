@@ -68,7 +68,7 @@ elseif(NOT PRISMA_BUILD_PROJECT_METROIDVANIADEMO)
 endif()
 
 # 8. NeoEditor (编辑器)
-option(PRISMA_BUILD_PROJECT_NEOEDITOR "Build NeoEditor project" ON)
+option(PRISMA_BUILD_PROJECT_NEOEDITOR "Build NeoEditor project" OFF)
 if(PRISMA_BUILD_PROJECT_NEOEDITOR AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/NeoEditor/CMakeLists.txt)
     add_subdirectory(NeoEditor)
     message(STATUS "  Added project: NeoEditor")

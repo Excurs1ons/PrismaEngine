@@ -15,7 +15,8 @@
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
         "PRISMA_BUILD_ENGINE": "ON",
-        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_PROJECT_NEOEDITOR": "OFF",
         "PRISMA_BUILD_LAUNCHER": "ON",
         "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
         "PRISMA_ENABLE_RENDER_VULKAN": "ON",
@@ -102,7 +103,8 @@
       "cacheVariables": {
         "PRISMA_USE_FETCHCONTENT": "ON",
         "PRISMA_BUILD_ENGINE": "ON",
-        "PRISMA_BUILD_EDITOR": "ON",
+        "PRISMA_BUILD_EDITOR": "OFF",
+        "PRISMA_BUILD_PROJECT_NEOEDITOR": "OFF",
         "PRISMA_BUILD_LAUNCHER": "ON",
         "PRISMA_ENABLE_IMGUI_DEBUG": "ON",
         "PRISMA_ENABLE_RENDER_VULKAN": "ON",

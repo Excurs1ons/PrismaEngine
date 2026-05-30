@@ -15,7 +15,7 @@ public class PrismaActivity extends SDLActivity {
     @Override
     protected String[] getLibraries() {
         // 加载核心运行时和项目插件
-        return new String[] { "SDL3", "Prisma", "PathTracing3D" };
+        return new String[] { "SDL3", "Prisma.Core", "PathTracing3D.Core" };
     }
 
     @Override

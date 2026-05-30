@@ -58,7 +58,7 @@ add_library(${NEOEDITOR_PLUGIN_NAME} SHARED
 )
 
 set_target_properties(${NEOEDITOR_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "NeoEditor"
+    OUTPUT_NAME "NeoEditor.Core"
     DEBUG_POSTFIX ""
 )
 

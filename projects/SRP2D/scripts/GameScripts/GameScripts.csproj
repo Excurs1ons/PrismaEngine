@@ -2,7 +2,7 @@
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>SRP2D_Managed</AssemblyName>
+    <AssemblyName>SRP2D.Scripts</AssemblyName>
     <RootNamespace>SRP2D</RootNamespace>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -10,10 +10,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../../../src/engine/scripting/CSharp/Prisma.Core/Prisma.Core.csproj">
+    <ProjectReference Include="../../../../src/engine/scripting/CSharp/Prisma.Core/Prisma.Bindings.csproj">
       <Private>true</Private>
     </ProjectReference>
     <ProjectReference Include="../../../../src/engine/scripting/CSharp/Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
-    <TrimmerRootAssembly Include="SRP2D_Managed" />
+    <TrimmerRootAssembly Include="SRP2D.Scripts" />
   </ItemGroup>
 </Project>

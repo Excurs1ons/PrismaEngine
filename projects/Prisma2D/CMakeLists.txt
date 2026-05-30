@@ -102,7 +102,7 @@ add_library(${PRISMA2D_PLUGIN_NAME} SHARED
 )
 
 set_target_properties(${PRISMA2D_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "Prisma2D"
+    OUTPUT_NAME "Prisma2D.Core"
     DEBUG_POSTFIX ""
 )
 
@@ -160,8 +160,8 @@ if(PRISMA_ENABLE_SCRIPTING)
         COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${SCRIPTS_DIR}/GameScripts.csproj"
                 -c Release --nologo
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SCRIPTS_DIR}/bin/Release/net10.0/Prisma2D_Managed.dll"
-                "${SCRIPTS_OUT}/Prisma2D_Managed.dll"
+                "${SCRIPTS_DIR}/bin/Release/net10.0/Prisma2D.Scripts.dll"
+                "${SCRIPTS_OUT}/Prisma2D.Scripts.dll"
         COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
     )
 else()

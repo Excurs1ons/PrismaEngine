@@ -203,6 +203,8 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<byte*, nuint*, void*> ReadAssetData;
     public delegate* unmanaged<void*, void> FreeAssetData;
 
+    public byte* ProjectName;
+
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
 }
@@ -260,7 +262,7 @@ internal static unsafe class Interop
                       $"  C++ sizeof(PrismaAPI) = {api->StructSize}\n" +
                       $"  C#  sizeof(PrismaAPI) = {expectedSize}\n" +
                       $"  请确保 C++ ScriptEngine.h 与 C# EngineAPI.cs 字段完全一致，\n" +
-                      $"  并重新编译 Prisma.Core.dll 与 GameScripts.dll。";
+                      $"  并重新编译 Prisma.Bindings.dll 与 GameScripts.dll。";
             throw new InvalidOperationException(msg);
         }
 

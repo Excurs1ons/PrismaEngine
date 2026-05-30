@@ -14,12 +14,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../Prisma.Core/Prisma.Core.csproj">
+    <ProjectReference Include="../Prisma.Core/Prisma.Bindings.csproj">
       <Private>true</Private>
     </ProjectReference>
     <ProjectReference Include="../Prisma.Generators/Prisma.Generators.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     <TrimmerRootAssembly Include="PrismaEngine.Host" />
-    <TrimmerRootAssembly Include="Prisma.Core" />
+    <TrimmerRootAssembly Include="Prisma.Bindings" />
   </ItemGroup>
 
   <!--

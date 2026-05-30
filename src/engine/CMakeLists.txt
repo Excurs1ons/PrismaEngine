@@ -305,9 +305,9 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
         endif()
         mark_as_advanced(CS_RID)
 
-        set(CS_CORE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/Prisma.Core")
+        set(CS_BINDINGS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/Prisma.Core")
         set(CS_HOST_DIR "${CMAKE_CURRENT_SOURCE_DIR}/scripting/CSharp/PrismaEngine.Host")
-        set(CS_OUTPUT_FILE "${CMAKE_BINARY_DIR}/bin/Prisma.Core.dll")
+        set(CS_OUTPUT_FILE "${CMAKE_BINARY_DIR}/bin/Prisma.Bindings.dll")
 
         # 强制 .NET 工具链输出英文（避免中文乱码）
         set(DOTNET_ENV_CMD ${CMAKE_COMMAND} -E env
@@ -315,23 +315,23 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
             "VSLANG=1033")
 
         # NuGet restore（避免并行构建冲突）
-        set(CS_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prisma_core_restored")
+        set(CS_RESTORE_STAMP "${CMAKE_BINARY_DIR}/.prisma_bindings_restored")
         add_custom_command(
             OUTPUT "${CS_RESTORE_STAMP}"
-            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} restore "${CS_CORE_DIR}/Prisma.Core.csproj" -p:RestorePackagesWithLockFile=false
+            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} restore "${CS_BINDINGS_DIR}/Prisma.Bindings.csproj" -p:RestorePackagesWithLockFile=false
             COMMAND ${CMAKE_COMMAND} -E touch "${CS_RESTORE_STAMP}"
-            DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj"
-            COMMENT "Restoring Prisma.Core NuGet packages"
+            DEPENDS "${CS_BINDINGS_DIR}/Prisma.Bindings.csproj"
+            COMMENT "Restoring Prisma.Bindings NuGet packages"
         )
 
         add_custom_command(
             OUTPUT "${CS_OUTPUT_FILE}"
-            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${CS_CORE_DIR}/Prisma.Core.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin" --no-restore
-            DEPENDS "${CS_CORE_DIR}/Prisma.Core.csproj" "${CS_RESTORE_STAMP}"
-            COMMENT "Building Prisma.Core C# library"
+            COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${CS_BINDINGS_DIR}/Prisma.Bindings.csproj" -c Release -o "${CMAKE_BINARY_DIR}/bin" --no-restore
+            DEPENDS "${CS_BINDINGS_DIR}/Prisma.Bindings.csproj" "${CS_RESTORE_STAMP}"
+            COMMENT "Building Prisma.Bindings C# library"
         )
 
-        add_custom_target(PrismaCore ALL
+        add_custom_target(PrismaBindings ALL
             DEPENDS "${CS_OUTPUT_FILE}"
         )
 
@@ -370,8 +370,8 @@ if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "
             COMMAND ${DOTNET_ENV_CMD} ${DOTNET} build "${CS_GENERATORS_DIR}/Prisma.Generators.csproj" -c Release --nologo --no-restore
             COMMENT "Building Prisma.Generators (Roslyn source generators)"
         )
-        add_dependencies(PrismaGenerators PrismaCore)
-        add_dependencies(PrismaEngineHost PrismaCore)
+        add_dependencies(PrismaGenerators PrismaBindings)
+        add_dependencies(PrismaEngineHost PrismaBindings)
         
     else()
         message(WARNING "Scripting: 未找到 dotnet, 无法构建 C# 核心库")
@@ -712,21 +712,21 @@ else()
     message(STATUS "Scripting: 关闭")
 endif()
 
-set_target_properties(Engine PROPERTIES OUTPUT_NAME Prisma)
+set_target_properties(Engine PROPERTIES OUTPUT_NAME Prisma.Core)
 
-# 确保 Engine 构建完成后，将 Prisma.Core.dll 复制到 Engine 的实际输出目录 (Debug/Release)
+# 确保 Engine 构建完成后，将 Prisma.Bindings.dll 复制到 Engine 的实际输出目录 (Debug/Release)
 if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
     if(DOTNET)
         add_custom_command(TARGET Engine POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "${CS_OUTPUT_FILE}"
-                "$<TARGET_FILE_DIR:Engine>/Prisma.Core.dll"
+                "$<TARGET_FILE_DIR:Engine>/Prisma.Bindings.dll"
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${CMAKE_BINARY_DIR}/bin/Prisma.Core.pdb"
-                "$<TARGET_FILE_DIR:Engine>/Prisma.Core.pdb"
-            COMMENT "Deploying Prisma.Core.dll to Engine output directory"
+                "${CMAKE_BINARY_DIR}/bin/Prisma.Bindings.pdb"
+                "$<TARGET_FILE_DIR:Engine>/Prisma.Bindings.pdb"
+            COMMENT "Deploying Prisma.Bindings.dll to Engine output directory"
         )
-        add_dependencies(Engine PrismaCore PrismaEngineHost)
+        add_dependencies(Engine PrismaBindings PrismaEngineHost)
 
         # 编译时嵌入 Host 发布目录路径，运行时无需猜测 CWD
         target_compile_definitions(Engine PRIVATE

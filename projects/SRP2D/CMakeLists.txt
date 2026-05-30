@@ -32,8 +32,8 @@ if(PRISMA_ENABLE_SCRIPTING)
                 -c Release --nologo
         COMMAND ${CMAKE_COMMAND} -E make_directory "${SCRIPTS_OUT}"
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/SRP2D_Managed.dll"
-                "${SCRIPTS_OUT}/SRP2D_Managed.dll"
+                "${SCRIPTS_DIR}/GameScripts/bin/Release/net10.0/SRP2D.Scripts.dll"
+                "${SCRIPTS_OUT}/SRP2D.Scripts.dll"
         COMMENT "SRP2D: Building C# scripts"
     )
 endif()

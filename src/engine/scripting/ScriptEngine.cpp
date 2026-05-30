@@ -905,13 +905,15 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.readAssetData = S_ReadAssetData;
     m_api.freeAssetData = S_FreeAssetData;
 
-    // 搜索 *_Managed.dll（每个项目命名不同：Prisma2D_Managed.dll / SRP2D_Managed.dll 等）
+    m_api.projectName = Engine::Get().GetProjectName().c_str();
+
+    // 搜索 *.Scripts.dll（每个项目命名不同：Prisma2D.Scripts.dll / SRP2D.Scripts.dll 等）
     std::string gameDll;
-    LOG_INFO("ScriptEngine", "Scanning gameDir for *_Managed.dll: {0}", gameDir);
+    LOG_INFO("ScriptEngine", "Scanning gameDir for *.Scripts.dll: {0}", gameDir);
     if (std::filesystem::exists(gameDir)) {
         for (const auto& entry : std::filesystem::directory_iterator(gameDir)) {
             auto name = entry.path().filename().string();
-            if (name.ends_with("_Managed.dll")) {
+            if (name.ends_with(".Scripts.dll")) {
                 gameDll = name;
                 LOG_INFO("ScriptEngine", "  Matched: {0}", name);
                 break;
@@ -923,8 +925,8 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     LOG_INFO("ScriptEngine", "Loading game assembly: {0}", assemblyPath);
     auto dotPos = gameDll.rfind(".dll");
     std::string assemblyName = (dotPos != std::string::npos) ? gameDll.substr(0, dotPos) : gameDll;
-    auto managedPos = assemblyName.rfind("_Managed");
-    std::string projectPrefix = (managedPos != std::string::npos) ? assemblyName.substr(0, managedPos) : assemblyName;
+    size_t scriptsPos = assemblyName.rfind(".Scripts");
+    std::string projectPrefix = (scriptsPos != std::string::npos) ? assemblyName.substr(0, scriptsPos) : assemblyName;
 
     auto tryGetFn = [&](const std::string& typePrefix) -> bool {
         std::string type = typePrefix + ".ScriptEntry, " + assemblyName;
@@ -950,10 +952,10 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     DWORD exceptionCode = 0;
     if (!TryBootstrap(m_bootstrapFn, &m_api, exceptionCode)) {
         LOG_ERROR("ScriptEngine", "C# Bootstrap 崩溃！异常代码: 0x{0:08X}", exceptionCode);
-        LOG_ERROR("ScriptEngine", "可能原因: Prisma.Core.dll 与 C++ PrismaAPI 结构体版本不一致");
+        LOG_ERROR("ScriptEngine", "可能原因: Prisma.Bindings.dll 与 C++ PrismaAPI 结构体版本不一致");
         LOG_ERROR("ScriptEngine", "请确保 C++ (ScriptEngine.h) 与 C# (EngineAPI.cs) PrismaAPI 字段完全匹配");
         LOG_ERROR("ScriptEngine", "C++ structSize={0}, 请对比 C# sizeof(PrismaAPI)", sizeof(PrismaAPI));
-        LOG_ERROR("ScriptEngine", "然后重新编译 Prisma.Core 与 GameScripts 并部署到输出目录");
+        LOG_ERROR("ScriptEngine", "然后重新编译 Prisma.Bindings 与 GameScripts 并部署到输出目录");
         s_activeEngine = nullptr;
         return false;
     }

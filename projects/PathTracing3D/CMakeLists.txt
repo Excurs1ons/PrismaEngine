@@ -83,7 +83,7 @@ add_library(${PATHTRACING3D_PLUGIN_NAME} SHARED
 )
 
 set_target_properties(${PATHTRACING3D_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "PathTracing3D"
+    OUTPUT_NAME "PathTracing3D.Core"
     DEBUG_POSTFIX ""
 )
 
@@ -190,8 +190,8 @@ if(PRISMA_ENABLE_SCRIPTING)
             COMMAND ${DOTNET} build "${CS_PROJ}"
                     -c Release --nologo
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${SCRIPTS_DIR}/bin/Release/net10.0/PathTracing3D_Managed.dll"
-                    "${SCRIPTS_OUT}/PathTracing3D_Managed.dll"
+                    "${SCRIPTS_DIR}/bin/Release/net10.0/PathTracing3D.Scripts.dll"
+                    "${SCRIPTS_OUT}/PathTracing3D.Scripts.dll"
             COMMENT "Building C# scripts (runtime by PrismaEngine.Host)"
         )
     else()

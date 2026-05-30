@@ -66,7 +66,7 @@ add_library(${DEFERRED3D_PLUGIN_NAME} SHARED
 )
 
 set_target_properties(${DEFERRED3D_PLUGIN_NAME} PROPERTIES
-    OUTPUT_NAME "Deferred3D"
+    OUTPUT_NAME "Deferred3D.Core"
     DEBUG_POSTFIX ""
 )
 

@@ -256,7 +256,7 @@ projects/MetroidvaniaDemo/
 - New option `PRISMA_BUILD_PROJECT_METROIDVANIADEMO` in `projects/CMakeLists.txt`
 - Follows same pattern as `PRISMA_BUILD_PROJECT_PRISMA2D`
 - Links against `Engine` library
-- Builds C# project as `MetroidvaniaDemo_Managed.dll`
+- Builds C# project as `MetroidvaniaDemo.Scripts.dll`
 
 ## Key Decisions
 

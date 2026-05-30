@@ -329,8 +329,8 @@ function Build-Abi {
     }
 
     Write-Info "同步库文件到 jniLibs: $jniLibsDir"
-    Copy-Item "lib\libEngine.so" "$jniLibsDir\libPrisma.so" -Force
-    Copy-Item "lib\libPathTracing3D.so" "$jniLibsDir\libPathTracing3D.so" -Force
+    Copy-Item "lib\libPrisma.Core.so" "$jniLibsDir\libPrisma.Core.so" -Force
+    Copy-Item "lib\libPathTracing3D.Core.so" "$jniLibsDir\libPathTracing3D.Core.so" -Force
     
     # 查找并复制依赖库 (如 SDL3)
     $sdlPath = "..\..\vcpkg_installed\arm64-android\lib\libSDL3.so"
