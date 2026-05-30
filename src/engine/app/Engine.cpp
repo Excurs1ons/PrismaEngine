@@ -159,7 +159,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
     auto renderMode = RenderMode::Mode3D_Forward;
     {
         auto& spec = m_CurrentApp->GetSpecification();
-        std::string projName = m_Spec.Name;
+        // 优先使用显式设置的项目名
+        std::string projName = m_ProjectName.empty() ? m_Spec.Name : m_ProjectName;
         
         std::vector<std::string> projPaths = {
             projName + ".jsonc",
@@ -168,19 +169,15 @@ int Engine::Run(std::unique_ptr<Application> app) {
             "assets/" + projName + ".json",
             "projects/" + projName + "/assets/" + projName + ".jsonc",
             "projects/" + projName + "/assets/" + projName + ".json",
-            "project.jsonc", // 回退兼容
+            "project.jsonc",
             "assets/project.jsonc"
         };
         for (const auto& p : projPaths) {
-            // 手动读取文件（可处理 BOM）
-            std::ifstream fileStream(p, std::ios::binary | std::ios::ate);
-            if (!fileStream) continue;
-            std::streamsize sz = fileStream.tellg();
-            fileStream.seekg(0);
-            std::string buf(static_cast<size_t>(sz), '\0');
-            fileStream.read(buf.data(), buf.size());
+            auto data = Platform::ReadBinaryFile(p.c_str());
+            if (data.empty()) continue;
 
-            // 跳过 UTF-8 BOM (EF BB BF) — 使用 unsigned char 避免 sign 扩展问题
+            std::string buf(data.begin(), data.end());
+            // 跳过 UTF-8 BOM
             if (buf.size() >= 3) {
                 const auto* uBuf = reinterpret_cast<const unsigned char*>(buf.data());
                 if (uBuf[0] == 0xEF && uBuf[1] == 0xBB && uBuf[2] == 0xBF) {
@@ -210,7 +207,6 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 spec.HeadlessHeight     = config.headless.height;
                 spec.HeadlessOutputPath = config.headless.outputPath;
 
-                // CLI args 覆盖 project.jsonc 默认值（0/空 = 不覆盖）
                 if (m_Spec.HeadlessFrames)    spec.HeadlessFrames     = m_Spec.HeadlessFrames;
                 if (m_Spec.HeadlessWidth)     spec.HeadlessWidth      = m_Spec.HeadlessWidth;
                 if (m_Spec.HeadlessHeight)    spec.HeadlessHeight     = m_Spec.HeadlessHeight;
@@ -225,20 +221,17 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
                 scriptingBackend = config.scriptingBackend;
                 renderMode       = config.renderMode;
+                
+                // 如果配置中有明确名称且我们之前没有（或为默认），则更新项目名
+                if (m_ProjectName.empty() || m_ProjectName == "Prisma Engine") {
+                    m_ProjectName = config.name;
+                }
+
                 LOG_INFO("Engine",
-                         "项目配置已加载: {0} ({1}x{2}), 渲染模式: {3}, 脚本后端: {4}",
-                         config.name,
-                         config.window.width,
-                         config.window.height,
-                         renderMode == RenderMode::SRP                  ? "SRP"
-                         : renderMode == RenderMode::Mode2D             ? "2D"
-                         : renderMode == RenderMode::Mode3D_PathTracing ? "PathTracing"
-                                                                        : "3D",
-                         scriptingBackend == ScriptingBackend::Off    ? "Off"
-                         : scriptingBackend == ScriptingBackend::Mono ? "Mono"
-                                                                      : "CoreCLR");
-            } else {
-                LOG_ERROR("Engine", "项目配置文件解析失败: {} (错误: {})", p, glz::format_error(err, buf));
+                         "项目配置已加载: {0}, 渲染模式: {1}, 脚本后端: {2}",
+                         projName,
+                         renderMode == RenderMode::Mode3D_PathTracing ? "PathTracing" : "Standard",
+                         scriptingBackend == ScriptingBackend::CoreCLR ? "CoreCLR" : "Off");
             }
             break;
         }
@@ -336,10 +329,10 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
             }
 
-            // 游戏 DLL 搜索：基于 exe 目录（不依赖 CWD）+ 项目名动态推导 + 硬编码回退
+            // 游戏 DLL 搜索：优先寻找 [m_ProjectName]_Managed.dll
             std::vector<std::string> gamePaths;
 
-            // 0. exe 所在目录（SDL_GetBasePath 跨平台，CMake post-build 复制 DLL 到此处）
+            // 0. exe 所在目录
             char* sdlBase = SDL_GetBasePath();
             std::string exeDir = sdlBase ? sdlBase : ".";
             SDL_free(sdlBase);
@@ -347,86 +340,44 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 exeDir.pop_back();
 
 #ifdef __ANDROID__
-            // Android 专用：托管库通常在 runtime 资产目录下
             gamePaths.push_back("runtime");
 #endif
             gamePaths.push_back(exeDir);
             gamePaths.push_back(exeDir + "/scripts");
-            LOG_INFO("Engine", "Exe dir: {0}", exeDir);
 
-            // 0b. CoreCLR host 发布目录（DLL 放这里可避免 AppContext 隔离问题）
             if (!hostDir.empty()) {
                 gamePaths.push_back(hostDir);
             }
 
-            // 1. 从 Application Name 动态推导项目源码构建输出路径
-            if (m_CurrentApp) {
-                std::string projName = m_CurrentApp->GetSpecification().Name;
-                if (!projName.empty() && projName != "Prisma App") {
-                    gamePaths.push_back(
-                        "../projects/" + projName + "/scripts/GameScripts/bin/Release/net10.0");
-                    LOG_INFO("Engine", "DLL search: project path for '{0}'", projName);
-                }
-            }
-
-            // 2. 硬编码回退路径
-            for (auto& p : std::vector<std::string>{
-                     ".", "scripts", "../scripts",
-                     "../projects/Prisma2D/scripts/GameScripts/bin/Release/net10.0",
-                     "../projects/PrismaCraft/scripts/GameScripts/bin/Release/net10.0",
-                     "../projects/SRP2D/scripts/GameScripts/bin/Release/net10.0",
-                 }) {
-                gamePaths.push_back(p);
+            // 1. 项目源码构建输出路径 (回退用)
+            if (!m_ProjectName.empty() && m_ProjectName != "Prisma App") {
+                gamePaths.push_back("../projects/" + m_ProjectName + "/scripts/GameScripts/bin/Release/net10.0");
             }
 
             std::string gameDir;
-            std::string gameDll;
+            std::string gameDll = (m_ProjectName.empty() ? "GameScripts" : m_ProjectName) + "_Managed.dll";
+            
             for (const auto& p : gamePaths) {
-                if (!Platform::FileExists(p.c_str())) {
-                    LOG_DEBUG("Engine", "  DLL path skip (not exist): {0}", p);
-                    continue;
-                }
-
-#ifdef __ANDROID__
-                // [优化] 对于 Android APK 路径，directory_iterator 无效
-                // 我们直接尝试推导项目 DLL 名
-                if (m_CurrentApp) {
-                     // 处理中文名或特殊字符，通常 DLL 名是英文
-                     // 这里我们简单处理，优先查找 PathTracing3D_Managed.dll
-                     std::string guessDll = "PathTracing3D_Managed.dll"; 
-                     if (Platform::FileExists((p + "/" + guessDll).c_str())) {
-                         gameDll = guessDll;
-                         gameDir = p;
-                         break;
-                     }
-                }
-#endif
-
-                if (std::filesystem::exists(p)) {
-                    for (const auto& entry : std::filesystem::directory_iterator(p)) {
-                        auto name = entry.path().filename().string();
-                        if (name.ends_with("_Managed.dll")) {
-                            gameDll = name;
-                            gameDir = std::filesystem::absolute(p).string();
-                            break;
-                        }
+                std::string fullDllPath = p + "/" + gameDll;
+                if (Platform::FileExists(fullDllPath.c_str())) {
+                    gameDir = p;
+                    // 如果是普通路径，转为绝对路径方便 CoreCLR 加载
+                    if (std::filesystem::exists(p)) {
+                        gameDir = std::filesystem::absolute(p).string();
                     }
-                }
-
-                if (!gameDir.empty()) {
-                    LOG_INFO("Engine", "  Found game DLL: {0}/{1}", gameDir, gameDll);
                     break;
                 }
             }
 
-            if (!hostDir.empty()) {
+            if (!gameDir.empty()) {
+                LOG_INFO("Engine", "Found game DLL: {0} in {1}", gameDll, gameDir);
                 if (m_coreCLRHost->Initialize(hostDir)) {
                     if (m_scriptEngine->Initialize(*m_coreCLRHost, gameDir)) {
                         LOG_INFO("Engine", "C# 脚本系统已启动 (CoreCLR)");
                     }
                 }
             } else {
-                LOG_WARNING("Engine", "未找到 PrismaEngine.Host 发布目录（先执行 dotnet publish PrismaEngine.Host --self-contained）");
+                LOG_WARNING("Engine", "未找到游戏程序集: {0}", gameDll);
             }
         } else if (scriptingBackend == ScriptingBackend::Mono) {
 #if PRISMA_ENABLE_MONO

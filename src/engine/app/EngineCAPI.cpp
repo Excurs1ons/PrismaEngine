@@ -65,6 +65,17 @@ public:
             return -1;
         }
 
+        // 获取项目名称 (可选)
+        using GetNameFn = const char* (*)();
+        auto fnGetName = (GetNameFn)GetPluginSym(plugin, "GetProjectName");
+        if (fnGetName) {
+            const char* name = fnGetName();
+            if (name) {
+                m_engine->SetProjectName(name);
+                std::printf("[Engine] Project Name identified: %s\n", name);
+            }
+        }
+
         using CreateAppFn = Prisma::Application* (*)();
         auto fnCreateApp = (CreateAppFn)GetPluginSym(plugin, "CreateApplication");
         if (!fnCreateApp) {

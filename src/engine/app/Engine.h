@@ -142,6 +142,9 @@ public:
     // 提交一个函数到主线程执行 (线程安全)
     void SubmitToMainThread(std::function<void()>&& func);
 
+    void SetProjectName(const std::string& name) { m_ProjectName = name; }
+    const std::string& GetProjectName() const { return m_ProjectName; }
+
     // 通用系统添加 (用于非核心扩展)
     template<typename T, typename... Args>
     T* AddSystem(Args&&... args) {
@@ -156,6 +159,7 @@ private:
     void ExecuteMainThreadQueue();
     
     EngineSpecification m_Spec;
+    std::string m_ProjectName;
     std::vector<std::unique_ptr<ISubSystem>> m_Systems;
     std::unique_ptr<Application> m_CurrentApp;
     std::unique_ptr<Window> m_Window;

@@ -24,6 +24,17 @@ extern "C" int SDL_main(int argc, char* argv[]) {
         return -1;
     }
 
+    // 获取项目名称
+    using GetNameFn = const char* (*)();
+    auto fnGetName = (GetNameFn)dlsym(handle, "GetProjectName");
+    if (fnGetName) {
+        const char* name = fnGetName();
+        if (name) {
+            engine.SetProjectName(name);
+            LOG_INFO("SDLMain", "Project Name identified: {0}", name);
+        }
+    }
+
     auto createFunc = (Prisma::Application* (*)())dlsym(handle, "CreateApplication");
     if (!createFunc) {
         LOG_FATAL("SDLMain", "Failed to find CreateApplication in libPathTracing3D.so");

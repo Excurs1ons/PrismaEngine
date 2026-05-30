@@ -6,6 +6,10 @@
 
 extern "C" {
 
+GAME_API const char* GetProjectName() {
+    return "PathTracing3D";
+}
+
 GAME_API Prisma::Application* CreateApplication() {
     return new Prisma::PathTracing3DApp();
 }
