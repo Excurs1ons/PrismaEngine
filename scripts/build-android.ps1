@@ -311,7 +311,7 @@ function Build-Abi {
 
     # 编译 Shader 到 SPV
     Write-Info "编译 Shaders..."
-    $result = ninja CompileShaders 2>&1
+    $result = ninja CompileShaders_PathTracing3D 2>&1
 
     # 安装
     Write-Info "安装到输出目录..."

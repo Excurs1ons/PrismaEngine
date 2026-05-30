@@ -134,9 +134,9 @@ if(GLSLANG_VALIDATOR)
     endforeach()
 
     # 将 SPIR-V 编译目标添加为显式依赖，确保在复制之前编译
-    add_custom_target(CompileShaders DEPENDS ${GENERATED_SPVS})
-    add_dependencies(${PROJECT_NAME} CompileShaders)
-    add_dependencies(${PATHTRACING3D_PLUGIN_NAME} CompileShaders)
+    add_custom_target(CompileShaders_PathTracing3D DEPENDS ${GENERATED_SPVS})
+    add_dependencies(${PROJECT_NAME} CompileShaders_PathTracing3D AssetShaders)
+    add_dependencies(${PATHTRACING3D_PLUGIN_NAME} CompileShaders_PathTracing3D AssetShaders)
     message(STATUS "GLSL→SPIR-V 编译已启用 (glslangValidator: ${GLSLANG_VALIDATOR})")
 else()
     message(WARNING "glslangValidator 未找到 — 着色器将使用已有的 .spv 文件")
