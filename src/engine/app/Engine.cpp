@@ -301,7 +301,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
             // 优先使用 CMake 编译时嵌入的路径（精确、不受 CWD 影响）
 #ifdef PRISMA_HOST_DIR
-            if (std::filesystem::exists(PRISMA_HOST_DIR "/PrismaEngine.Host.runtimeconfig.json")) {
+            if (Platform::FileExists(PRISMA_HOST_DIR "/PrismaEngine.Host.runtimeconfig.json")) {
                 hostDir = PRISMA_HOST_DIR;
             }
 #endif
@@ -328,8 +328,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
                     "PrismaEngine.Host/win-x64/publish",
                 };
                 for (const auto& p : hostPaths) {
-                    if (std::filesystem::exists(p + "/PrismaEngine.Host.runtimeconfig.json")) {
-                        hostDir = std::filesystem::canonical(p).string();
+                    std::string configPath = p + "/PrismaEngine.Host.runtimeconfig.json";
+                    if (Platform::FileExists(configPath.c_str())) {
+                        hostDir = std::filesystem::absolute(p).string();
                         break;
                     }
                 }
@@ -344,6 +345,11 @@ int Engine::Run(std::unique_ptr<Application> app) {
             SDL_free(sdlBase);
             while (!exeDir.empty() && (exeDir.back() == '/' || exeDir.back() == '\\'))
                 exeDir.pop_back();
+
+#ifdef __ANDROID__
+            // Android 专用：托管库通常在 runtime 资产目录下
+            gamePaths.push_back("runtime");
+#endif
             gamePaths.push_back(exeDir);
             gamePaths.push_back(exeDir + "/scripts");
             LOG_INFO("Engine", "Exe dir: {0}", exeDir);
@@ -376,18 +382,37 @@ int Engine::Run(std::unique_ptr<Application> app) {
             std::string gameDir;
             std::string gameDll;
             for (const auto& p : gamePaths) {
-                if (!std::filesystem::exists(p)) {
+                if (!Platform::FileExists(p.c_str())) {
                     LOG_DEBUG("Engine", "  DLL path skip (not exist): {0}", p);
                     continue;
                 }
-                for (const auto& entry : std::filesystem::directory_iterator(p)) {
-                    auto name = entry.path().filename().string();
-                    if (name.ends_with("_Managed.dll")) {
-                        gameDll = name;
-                        gameDir = std::filesystem::canonical(p).string();
-                        break;
+
+#ifdef __ANDROID__
+                // [优化] 对于 Android APK 路径，directory_iterator 无效
+                // 我们直接尝试推导项目 DLL 名
+                if (m_CurrentApp) {
+                     // 处理中文名或特殊字符，通常 DLL 名是英文
+                     // 这里我们简单处理，优先查找 PathTracing3D_Managed.dll
+                     std::string guessDll = "PathTracing3D_Managed.dll"; 
+                     if (Platform::FileExists((p + "/" + guessDll).c_str())) {
+                         gameDll = guessDll;
+                         gameDir = p;
+                         break;
+                     }
+                }
+#endif
+
+                if (std::filesystem::exists(p)) {
+                    for (const auto& entry : std::filesystem::directory_iterator(p)) {
+                        auto name = entry.path().filename().string();
+                        if (name.ends_with("_Managed.dll")) {
+                            gameDll = name;
+                            gameDir = std::filesystem::absolute(p).string();
+                            break;
+                        }
                     }
                 }
+
                 if (!gameDir.empty()) {
                     LOG_INFO("Engine", "  Found game DLL: {0}/{1}", gameDir, gameDll);
                     break;
