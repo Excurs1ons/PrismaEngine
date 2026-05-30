@@ -14,7 +14,7 @@ endif()
 # ============================================================
 
 if(PRISMA_ENABLE_SCRIPTING)
-    add_dependencies(${PROJECT_NAME} PrismaCore PrismaEngineHost)
+    add_dependencies(${PROJECT_NAME} PrismaBindings PrismaEngineHost)
 
     find_program(DOTNET dotnet REQUIRED)
 

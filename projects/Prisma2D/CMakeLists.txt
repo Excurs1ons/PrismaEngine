@@ -142,8 +142,8 @@ add_custom_command(TARGET ${PRISMA2D_PLUGIN_NAME} POST_BUILD
 # ============================================================
 
 if(PRISMA_ENABLE_SCRIPTING)
-    add_dependencies(${PROJECT_NAME} PrismaCore PrismaEngineHost)
-    add_dependencies(${PRISMA2D_PLUGIN_NAME} PrismaCore)
+    add_dependencies(${PROJECT_NAME} PrismaBindings PrismaEngineHost)
+    add_dependencies(${PRISMA2D_PLUGIN_NAME} PrismaBindings)
 
     find_program(DOTNET dotnet REQUIRED)
 

@@ -177,8 +177,8 @@ if(PRISMA_ENABLE_SCRIPTING)
     set(CS_PROJ "${CMAKE_CURRENT_SOURCE_DIR}/scripts/GameScripts.csproj")
 
     if(EXISTS "${CS_PROJ}")
-        add_dependencies(${PROJECT_NAME} PrismaCore PrismaEngineHost)
-        add_dependencies(${PATHTRACING3D_PLUGIN_NAME} PrismaCore)
+        add_dependencies(${PROJECT_NAME} PrismaBindings PrismaEngineHost)
+        add_dependencies(${PATHTRACING3D_PLUGIN_NAME} PrismaBindings)
 
         find_program(DOTNET dotnet REQUIRED)
 
