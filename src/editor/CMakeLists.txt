@@ -78,6 +78,8 @@ target_include_directories(Editor PRIVATE
     ${CMAKE_SOURCE_DIR}/src/engine/logger
     ${ImGuizmo_SOURCE_DIR}
     ${ImGuizmo_SOURCE_DIR}/src
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
 )
 
 # ========== 路径与输出配置 ==========

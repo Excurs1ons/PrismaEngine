@@ -905,8 +905,6 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.readAssetData = S_ReadAssetData;
     m_api.freeAssetData = S_FreeAssetData;
 
-    const std::string& hostDir = host.GetScriptsDir();
-
     // 搜索 *_Managed.dll（每个项目命名不同：Prisma2D_Managed.dll / SRP2D_Managed.dll 等）
     std::string gameDll;
     LOG_INFO("ScriptEngine", "Scanning gameDir for *_Managed.dll: {0}", gameDir);
