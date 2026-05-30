@@ -87,7 +87,8 @@ void AssetManager::AddSearchPath(const std::filesystem::path& path) {
 std::optional<std::filesystem::path> AssetManager::FindResource(const std::string& relativePath) const {
     for (const auto& path : m_Impl->searchPaths) {
         auto fullPath = path / relativePath;
-        if (std::filesystem::exists(fullPath)) {
+        std::string pathStr = fullPath.string();
+        if (Platform::FileExists(pathStr.c_str())) {
             return fullPath;
         }
     }
@@ -122,6 +123,26 @@ void AssetManager::RegisterAsset(Core::StringHash::HashType hash, std::shared_pt
         entry.lastWriteTime = std::filesystem::last_write_time(asset->GetPath());
     }
     m_Impl->assets[hash] = entry;
+}
+
+// C API 导出实现
+extern "C" {
+    void* Prisma_AssetManager_GetAssetData(const char* path, size_t* outSize) {
+        auto data = Platform::ReadBinaryFile(path);
+        if (data.empty()) {
+            if (outSize) *outSize = 0;
+            return nullptr;
+        }
+        
+        if (outSize) *outSize = data.size();
+        void* buffer = malloc(data.size());
+        std::memcpy(buffer, data.data(), data.size());
+        return buffer;
+    }
+
+    void Prisma_AssetManager_FreeAssetData(void* data) {
+        if (data) free(data);
+    }
 }
 
 } // namespace Prisma

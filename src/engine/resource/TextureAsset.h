@@ -14,6 +14,7 @@ public:
 
     // Asset接口实现
     bool Load(const std::filesystem::path& path) override;
+    bool LoadFromMemory(const uint8_t* data, size_t size) override;
     void Unload() override;
     AssetType GetType() const override { return AssetType::Texture; }
 

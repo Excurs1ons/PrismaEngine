@@ -199,6 +199,10 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<uint, uint> Tilemap_GetWidth;
     public delegate* unmanaged<uint, uint> Tilemap_GetHeight;
 
+    // ===== FileSystem / Asset IO =====
+    public delegate* unmanaged<byte*, nuint*, void*> ReadAssetData;
+    public delegate* unmanaged<void*, void> FreeAssetData;
+
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
 }

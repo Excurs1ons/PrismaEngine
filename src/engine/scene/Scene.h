@@ -127,6 +127,7 @@ public:
 
     // ── 序列化 ──
     bool Deserialize(const std::string& path);
+    bool DeserializeFromMemory(const std::string& jsonData);
     bool Serialize(const std::string& path) const;
 
 private:

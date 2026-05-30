@@ -186,6 +186,10 @@ struct PrismaAPI {
     uint32_t(*Tilemap_GetWidth)(uint32_t handle);
     uint32_t(*Tilemap_GetHeight)(uint32_t handle);
 
+    // ===== FileSystem / Asset IO =====
+    void* (*readAssetData)(const char* path, size_t* outSize);
+    void  (*freeAssetData)(void* data);
+
     // [诊断] 结构体大小，用于 C++/C# 版本校验
     // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)
     // C# 侧在 Init 中校验，不匹配时抛出明确异常

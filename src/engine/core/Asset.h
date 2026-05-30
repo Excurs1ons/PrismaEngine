@@ -32,6 +32,10 @@ public:
     void SetName(const std::string& name) { m_Name = name; }
     const std::string& GetName() const { return m_Name; }
     virtual bool Load(const std::filesystem::path& path) = 0;
+    virtual bool LoadFromMemory(const uint8_t* data, size_t size) { 
+        (void)data; (void)size; 
+        return false; 
+    }
     virtual void Unload() = 0;
 
     virtual bool IsLoaded() const { return m_IsLoaded; }

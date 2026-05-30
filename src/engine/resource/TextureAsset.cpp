@@ -1,5 +1,6 @@
 #include "TextureAsset.h"
 #include "Logger.h"
+#include "../core/ImageLoaderSTB.h"
 #include <filesystem>
 
 namespace Prisma {
@@ -13,6 +14,23 @@ bool TextureAsset::Load(const std::filesystem::path& path) {
     }
 
     SetPath(path);
+    SetLoaded(true);
+    return true;
+}
+
+bool TextureAsset::LoadFromMemory(const uint8_t* data, size_t size) {
+    Core::ImageLoaderSTB loader;
+    auto result = loader.loadFromMemory(data, size);
+    if (!result.success) {
+        LOG_ERROR("TextureAsset", "从内存加载纹理失败: {0}", result.error);
+        return false;
+    }
+
+    m_Width = result.width;
+    m_Height = result.height;
+    m_Channels = result.channels;
+    m_Data = std::move(result.data);
+
     SetLoaded(true);
     return true;
 }

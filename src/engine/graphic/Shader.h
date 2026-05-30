@@ -17,6 +17,7 @@ public:
 
     // Asset 接口
     bool Load(const std::filesystem::path& path) override;
+    bool LoadFromMemory(const uint8_t* data, size_t size) override;
     void Unload() override;
     bool IsLoaded() const override { return m_IsLoaded; }
     Prisma::AssetType GetType() const override { return Prisma::AssetType::Shader; }

@@ -272,6 +272,17 @@ size_t Platform::ReadFile(const char* path, void* dst, size_t maxBytes) {
     return toCopy;
 }
 
+std::vector<uint8_t> Platform::ReadBinaryFile(const char* path) {
+    size_t size = 0;
+    void* data = SDL_LoadFile(path, &size);
+    if (!data) return {};
+
+    std::vector<uint8_t> buffer(size);
+    std::memcpy(buffer.data(), data, size);
+    SDL_free(data);
+    return buffer;
+}
+
 bool Platform::SetCurrentDirectory(const char* path) {
     if (!path) return false;
     try {

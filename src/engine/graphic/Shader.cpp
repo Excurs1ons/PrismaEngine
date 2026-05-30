@@ -33,6 +33,23 @@ bool Shader::Load(const std::filesystem::path& path) {
     return m_IsLoaded;
 }
 
+bool Shader::LoadFromMemory(const uint8_t* data, size_t size) {
+    m_Bytecode.clear();
+    m_BytecodeBytes.clear();
+    m_Reflection.Resources.clear();
+    m_ResourceMap.clear();
+
+    if (size > 0) {
+        m_BytecodeBytes.assign(data, data + size);
+        const size_t wordCount = size / sizeof(uint32_t);
+        m_Bytecode.resize(wordCount);
+        std::memcpy(m_Bytecode.data(), data, wordCount * sizeof(uint32_t));
+    }
+
+    m_IsLoaded = !m_Bytecode.empty();
+    return m_IsLoaded;
+}
+
 void Shader::Unload() {
     m_Bytecode.clear();
     m_BytecodeBytes.clear();

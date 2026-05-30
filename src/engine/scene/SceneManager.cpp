@@ -48,9 +48,16 @@ bool SceneManager::LoadFromFile(const std::string& path) {
         if (found) actualPath = found->string();
     }
 
+    auto data = Platform::ReadBinaryFile(actualPath.c_str());
+    if (data.empty()) {
+        LOG_ERROR("SceneManager", "读取场景数据失败: {0}", path);
+        return false;
+    }
+
     auto newScene = std::make_shared<Scene>();
-    if (!newScene->Deserialize(actualPath)) {
-        LOG_ERROR("SceneManager", "从文件加载场景失败: {0}", path);
+    std::string buffer(data.begin(), data.end());
+    if (!newScene->DeserializeFromMemory(buffer)) {
+        LOG_ERROR("SceneManager", "解析场景失败: {0}", path);
         return false;
     }
 

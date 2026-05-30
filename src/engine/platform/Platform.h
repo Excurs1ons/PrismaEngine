@@ -94,6 +94,7 @@ public:
     ENGINE_API static bool FileExists(const char* path);
     ENGINE_API static size_t FileSize(const char* path);
     ENGINE_API static size_t ReadFile(const char* path, void* dst, size_t maxBytes);
+    ENGINE_API static std::vector<uint8_t> ReadBinaryFile(const char* path);
     ENGINE_API static bool SetCurrentDirectory(const char* path);
     ENGINE_API static const char* GetExecutablePath();
     ENGINE_API static const char* GetPersistentPath();

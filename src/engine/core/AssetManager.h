@@ -57,9 +57,19 @@ public:
         asset->SetName(relativePath);
         asset->SetPath(*fullPath);
 
-        if (!asset->Load(*fullPath)) {
-            LOG_ERROR("AssetManager", "加载资源失败: {0}", relativePath);
-            return AssetHandle<T>();
+        // 优先尝试内存加载以适配 Android 资产
+        auto data = Platform::ReadBinaryFile(fullPath->string().c_str());
+        if (!data.empty()) {
+            if (!asset->LoadFromMemory(data.data(), data.size())) {
+                LOG_ERROR("AssetManager", "从内存加载资源失败: {0}", relativePath);
+                return AssetHandle<T>();
+            }
+        } else {
+            // 回退到路径加载
+            if (!asset->Load(*fullPath)) {
+                LOG_ERROR("AssetManager", "通过路径加载资源失败: {0}", relativePath);
+                return AssetHandle<T>();
+            }
         }
 
         RegisterAsset(hash, asset);
@@ -118,5 +128,11 @@ private:
     struct Impl;
     std::unique_ptr<Impl> m_Impl;
 };
+
+// C API 导出，供 C# 内存加载程序集使用
+extern "C" {
+    ENGINE_API void* Prisma_AssetManager_GetAssetData(const char* path, size_t* outSize);
+    ENGINE_API void  Prisma_AssetManager_FreeAssetData(void* data);
+}
 
 }  // namespace Prisma

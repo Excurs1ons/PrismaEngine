@@ -689,6 +689,26 @@ static uint32_t PR_Tilemap_GetHeight(uint32_t handle) {
     return it->second->GetHeight();
 }
 
+// ==================== FileSystem / Asset IO ====================
+
+static void* S_ReadAssetData(const char* path, size_t* outSize) {
+    if (!path) return nullptr;
+    auto data = Platform::ReadBinaryFile(path);
+    if (data.empty()) {
+        if (outSize) *outSize = 0;
+        return nullptr;
+    }
+    
+    if (outSize) *outSize = data.size();
+    void* buffer = std::malloc(data.size());
+    std::memcpy(buffer, data.data(), data.size());
+    return buffer;
+}
+
+static void S_FreeAssetData(void* data) {
+    if (data) std::free(data);
+}
+
 // ==================== Physics2D wrappers ====================
 
 static int PR_Physics2D_CheckAABB(
@@ -880,6 +900,10 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.Tilemap_IsSolid = PR_Tilemap_IsSolid;
     m_api.Tilemap_GetWidth = PR_Tilemap_GetWidth;
     m_api.Tilemap_GetHeight = PR_Tilemap_GetHeight;
+
+    // FileSystem / Asset IO
+    m_api.readAssetData = S_ReadAssetData;
+    m_api.freeAssetData = S_FreeAssetData;
 
     const std::string& hostDir = host.GetScriptsDir();
 

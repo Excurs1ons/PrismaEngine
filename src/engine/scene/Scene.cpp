@@ -288,17 +288,21 @@ std::vector<Prisma::Graphic::Light> Scene::GetLights() const {
 // 序列化
 
 bool Scene::Deserialize(const std::string& path) {
-    SceneFileData sfd;
-
-    // 手动读取文件内容（而非使用 read_file_jsonc），以便预处理 BOM
-    std::string buffer;
-    auto file_ec = glz::file_to_buffer(buffer, path);
-    if (bool(file_ec)) {
-        LOG_ERROR("Scene", "读取场景文件失败: {}", path);
+    auto data = Platform::ReadBinaryFile(path.c_str());
+    if (data.empty()) {
+        LOG_ERROR("Scene", "读取场景文件失败: {0}", path);
         return false;
     }
 
-    // 跳过 UTF-8 BOM (EF BB BF)，某些编辑器会附带
+    std::string buffer(data.begin(), data.end());
+    return DeserializeFromMemory(buffer);
+}
+
+bool Scene::DeserializeFromMemory(const std::string& jsonData) {
+    SceneFileData sfd;
+    std::string buffer = jsonData;
+
+    // 跳过 UTF-8 BOM (EF BB BF)
     if (buffer.size() >= 3 &&
         (static_cast<uint8_t>(buffer[0]) == 0xEF) &&
         (static_cast<uint8_t>(buffer[1]) == 0xBB) &&
@@ -306,16 +310,22 @@ bool Scene::Deserialize(const std::string& path) {
         buffer.erase(0, 3);
     }
 
-    // 解析 JSON（支持注释，同 read_file_jsonc 行为一致）
+    // 解析 JSON
     auto error = glz::read_jsonc(sfd, buffer);
     if (error) {
-        LOG_ERROR("Scene", "解析场景文件失败: {0}", glz::format_error(error, ""));
+        LOG_ERROR("Scene", "解析场景数据失败: {0}", glz::format_error(error, ""));
         return false;
     }
 
     SetName(sfd.name);
+    
+    // 清理当前场景数据
+    m_nodes.clear();
+    m_nodeData.clear();
+    m_nodeNames.clear();
+    m_nodeComponents.clear();
 
-    // 第一遍：创建所有 Node，建立 name→node 映射
+    // 第一遍：创建所有 Node
     std::unordered_map<std::string, Node> nameToNode;
     for (auto& nfd : sfd.nodes) {
         Node node = CreateNode(nfd.name);
@@ -337,7 +347,7 @@ bool Scene::Deserialize(const std::string& path) {
             }
         }
 
-        // Transform 组件（3D 变换）
+        // Transform 组件
         auto transform = AddComponent<Transform>(node);
         Transform::Data td;
         if (nfd.position) td.position = *nfd.position;
@@ -345,7 +355,7 @@ bool Scene::Deserialize(const std::string& path) {
         if (nfd.scale)    td.scale    = *nfd.scale;
         transform->SetData(td);
 
-        // 其他组件（通过 ComponentRegistry 反序列化）
+        // 其他组件
         auto& reg = ComponentRegistry::Get();
         for (auto& compEntry : nfd.components) {
             auto comp = reg.Create(compEntry.type);
@@ -365,7 +375,7 @@ bool Scene::Deserialize(const std::string& path) {
         }
     }
 
-    LOG_DEBUG("Scene", "场景已加载: {0} ({1} 个 Node)", sfd.name, m_nodes.size());
+    LOG_DEBUG("Scene", "场景已从内存加载: {0} ({1} 个 Node)", sfd.name, m_nodes.size());
     return true;
 }
 
