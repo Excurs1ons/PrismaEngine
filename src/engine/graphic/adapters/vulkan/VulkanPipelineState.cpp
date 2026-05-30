@@ -385,6 +385,7 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
             if (attrEnd > maxStride) maxStride = attrEnd;
         }
         bindingDescription.stride = maxStride;
+    }
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
