@@ -93,7 +93,9 @@ imgui.ini
 .cxx/
 local.properties
 /*/build/
+build/export/
 projects/android/PrismaAndroid/app/src/main/assets/
+gradle-daemon-jvm.properties
 
 # Compiled shader binaries
 *.spv
@@ -103,6 +105,9 @@ projects/android/PrismaAndroid/app/src/main/assets/
 *.tmp
 *.log
 vcpkg_installed/
+
+# Editor export output
+src/editor/export/
 
 # SDK Packaging Artifacts
 PrismaEngine-SDK-*

@@ -42,7 +42,7 @@ using PlatformThreadHandle = void*;
 using PlatformMutexHandle  = void*;
 using ThreadFunc = void* (*)(void*);
 
-class Platform {
+class Platform : public IPlatformLogger {
 public:
     static bool s_initialized;
     static bool s_shouldClose;
@@ -109,9 +109,13 @@ public:
     ENGINE_API static void UnlockMutex(PlatformMutexHandle mtx);
     ENGINE_API static void SleepMilliseconds(uint32_t ms);
 
-    // IPlatformLogger 接口实现
-    ENGINE_API static void LogToConsole(LogLevel level, const char* tag, const char* message);
-    ENGINE_API static const char* GetLogDirectoryPath();
+    // IPlatformLogger 接口实现（虚函数覆盖）
+    void LogToConsole(LogLevel level, const char* tag, const char* message) override;
+    const char* GetLogDirectoryPath() const override;
+
+    // 静态便捷方法（委托到 IPlatformLogger 实现）
+    ENGINE_API static void LogToPlatformConsole(LogLevel level, const char* tag, const char* message);
+    ENGINE_API static const char* GetPlatformLogDirectoryPath();
 
     // SDL 特定功能
     ENGINE_API static void SetEventCallback(EventCallback callback);

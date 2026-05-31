@@ -5,6 +5,7 @@
 #include "app/Engine.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/interfaces/IDescriptorSet.h"
+#include "platform/Platform.h"
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -631,9 +632,10 @@ bool VulkanPipelineState::LoadFromCache(IRenderDevice* device, uint64_t cacheKey
 }
 
 bool VulkanPipelineState::SaveToCache() const {
-    fs::create_directories(".pipeline_cache");
+    const auto cacheDir = fs::path(Platform::GetPersistentPath()) / "pipeline_cache";
+    fs::create_directories(cacheDir);
     const auto cacheKey = GetCacheKey();
-    const auto cachePath = fs::path(".pipeline_cache") / (std::to_string(cacheKey) + ".cache");
+    const auto cachePath = cacheDir / (std::to_string(cacheKey) + ".cache");
     std::ofstream stream(cachePath, std::ios::binary | std::ios::trunc);
     if (!stream.is_open()) {
         return false;

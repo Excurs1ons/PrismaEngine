@@ -76,50 +76,87 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
             }
         }
 
-        // 2. 选择物理设备
+// 2. 选择物理设备
         VkPhysicalDeviceFeatures features{};
         features.samplerAnisotropy = VK_TRUE;
-
-        // 光线追踪所需的扩展特性
-        VkPhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures = {};
-        accelFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
-        accelFeatures.accelerationStructure = VK_TRUE;
-
-        VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures = {};
-        rtPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-        rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
 
         VkPhysicalDeviceVulkan12Features vk12features{};
         vk12features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
         vk12features.bufferDeviceAddress = VK_TRUE; // VUID 03331
         vk12features.hostQueryReset = VK_TRUE;      // VUID 02665
 
-        accelFeatures.pNext = &vk12features;
-
         vkb::PhysicalDeviceSelector selector{m_vkbInstance};
         if (!m_headless) {
             selector.set_surface(m_surface);
         }
-        auto phys_ret = selector.set_minimum_version(1, 3)
-                            .set_required_features(features)
-                            .add_required_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
-                            .add_required_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
-                            .add_required_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
-                            // External memory sharing (NeoEditor Vulkan→D3D11 interop)
-                            .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
-                            .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
-                            .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+
+        // 光线追踪扩展仅在 PathTracing 模式下为必需
+        const bool needRayTracing = m_desc.requireRayTracing;
+
+        auto selectorBuilder = selector.set_minimum_version(1, 3)
+                                   .set_required_features(features)
+                                   .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
+                                   .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
+                                   .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
 #ifdef _WIN32
-                            .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
-                            .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+                                   .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+                                   .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
 #endif
-                            .add_required_extension_features(accelFeatures)
-                            .add_required_extension_features(rtPipelineFeatures)
-                            .add_required_extension_features(vk12features)
-                            .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
-                            .select();
-        if (!phys_ret)
-            return -2;
+                                   .add_required_extension_features(vk12features)
+                                   .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete);
+
+        if (needRayTracing) {
+            // 光线追踪所需的扩展特性
+            VkPhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures = {};
+            accelFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+            accelFeatures.accelerationStructure = VK_TRUE;
+
+            VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures = {};
+            rtPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+            rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
+
+            accelFeatures.pNext = &vk12features;
+
+            selectorBuilder = selectorBuilder
+                .add_required_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                .add_required_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
+                .add_required_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                .add_required_extension_features(accelFeatures)
+                .add_required_extension_features(rtPipelineFeatures);
+        }
+
+        auto phys_ret = selectorBuilder.select();
+        if (!phys_ret) {
+            if (needRayTracing) {
+                LOG_WARN("Vulkan", "物理设备不支持光线追踪扩展，回退到 Forward 渲染模式");
+                // 回退：不要求光线追踪扩展，重新选择物理设备
+                auto phys_ret_fallback = selector.set_minimum_version(1, 3)
+                    .set_required_features(features)
+                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
+                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
+                    .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+#ifdef _WIN32
+                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+#endif
+                    .add_required_extension_features(vk12features)
+                    .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+                    .select();
+                if (!phys_ret_fallback) {
+                    LOG_ERROR("Vulkan", "物理设备选择失败（回退模式）: {0}", phys_ret_fallback.error().message());
+                    return -2;
+                }
+                phys_ret = phys_ret_fallback;
+                m_desc.requireRayTracing = false;
+                m_rayTracingSupported = false;
+                LOG_INFO("Vulkan", "已回退到 Forward 渲染模式");
+            } else {
+                LOG_ERROR("Vulkan", "物理设备选择失败: {0}", phys_ret.error().message());
+                return -2;
+            }
+} else {
+            m_rayTracingSupported = needRayTracing;
+        }
         m_vkbPhysicalDevice = phys_ret.value();
         m_physicalDevice    = m_vkbPhysicalDevice.physical_device;
 

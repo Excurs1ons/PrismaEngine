@@ -20,6 +20,7 @@
         "height": 720,      // 初始窗口高度（像素）
         "fullscreen": false, // 是否全屏
         "resizable": true,   // 是否可调整大小
+        "orientation": "landscape", // 屏幕方向（仅 Android）: landscape / portrait
 
         // 垂直同步模式（PresentMode 枚举）:
         //   0 = Immediate  — 立即呈现（关闭垂直同步，可能画面撕裂）

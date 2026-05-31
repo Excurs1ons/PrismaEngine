@@ -336,6 +336,7 @@ struct DeviceDesc {
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;
     bool headless = false;
+    bool requireRayTracing = false;  // 是否要求光线追踪扩展（PathTracing 模式）
 };
 
 // 纹理过滤模式

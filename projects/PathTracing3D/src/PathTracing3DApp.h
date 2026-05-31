@@ -43,6 +43,7 @@ private:
     int m_currentSceneIndex = -1;           // index in m_sceneList (F6/F7)
 
     // Core state
+    bool m_fallbackMode = false;           // true when ray tracing unavailable, using Forward
     bool m_ptConverged = false;
     uint32_t m_ptMaxSamples = 512;
     bool m_enableNEE = false;

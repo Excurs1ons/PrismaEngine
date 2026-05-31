@@ -46,6 +46,9 @@ public:
     /// @brief 获取 GPU 名称
     virtual std::string GetGPUName() const = 0;
 
+    /// @brief 获取设备是否支持光线追踪（设备可能因不支持而回退）
+    virtual bool IsRayTracingSupported() const = 0;
+
     // === 命令缓冲区管理 ===
 
     /// @brief 创建命令缓冲区

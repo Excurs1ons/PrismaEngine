@@ -77,13 +77,19 @@ Engine::~Engine() {
 int Engine::Initialize() {
     if (m_Initialized) return 0;
 
-    Logger::Get().Initialize();
-    Logger::Get().SetMinLevel(m_Spec.MinLogLevel);
-    LOG_INFO("Engine", "Prisma 引擎正在初始化: {0}", m_Spec.Name);
-
+    // 先初始化平台层（SDL），因为 Logger 的平台路径依赖 SDL_GetPrefPath
     if (!Platform::IsInitialized()) {
         Platform::Initialize();
     }
+
+    // 设置平台日志器，确保 Logger 使用平台特定的日志目录路径
+    // （Android 上 SDL_GetPrefPath 返回内部存储路径，而非只读的 CWD）
+    static Platform s_PlatformLogger;
+    Logger::Get().SetPlatformLogger(&s_PlatformLogger);
+
+    Logger::Get().Initialize();
+    Logger::Get().SetMinLevel(m_Spec.MinLogLevel);
+    LOG_INFO("Engine", "Prisma 引擎正在初始化: {0}", m_Spec.Name);
 
     AssetDatabase::Get().Load("assets/metadata.json");
     if (m_Spec.RefreshAssetDatabaseOnStartup) {
@@ -174,6 +180,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
         };
         for (const auto& p : projPaths) {
             auto data = Platform::ReadBinaryFile(p.c_str());
+            LOG_INFO("Engine", "[配置] 尝试加载路径: {}, 大小: {}", p, data.size());
             if (data.empty()) continue;
 
             std::string buf(data.begin(), data.end());
@@ -187,7 +194,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
             ProjectConfig config;
             auto err = glz::read_jsonc(config, buf);
-            if (!err) {
+            if (err) {
+                LOG_WARNING("Engine", "[配置] glaze 解析失败: {}", glz::format_error(err, buf));
+            } else {
                 spec.Name               = config.name;
                 spec.EntryScene         = config.entryScene;
                 spec.Width              = config.window.width;
@@ -221,6 +230,9 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
                 scriptingBackend = config.scriptingBackend;
                 renderMode       = config.renderMode;
+                LOG_INFO("Engine", "[诊断] config.renderMode={}, renderMode={}",
+                         static_cast<int>(config.renderMode),
+                         static_cast<int>(renderMode));
                 
                 // 如果配置中有明确名称且我们之前没有（或为默认），则更新项目名
                 if (m_ProjectName.empty() || m_ProjectName == "Prisma Engine") {
@@ -628,6 +640,16 @@ void Engine::ExecuteMainThreadQueue() {
 void Engine::Shutdown() {
     if (!m_Initialized) return;
     LOG_INFO("Engine", "正在关闭引擎...");
+
+    // 在 Systems shutdown 之前，从 Application LayerStack 中移除 ConsoleLayer，
+    // 避免 ConsoleSystem::Shutdown() 释放 ConsoleLayer 后 LayerStack 析构再次 delete
+    if (m_CurrentApp) {
+        if (auto* console = GetSystem<ConsoleSystem>()) {
+            if (auto* ui = console->GetConsoleLayer()) {
+                m_CurrentApp->GetLayerStack().PopOverlay(ui);
+            }
+        }
+    }
 
     // 先关脚本引擎（C# 世界析构 + CoreCLR 卸载），再关 C++ 系统
 #if PRISMA_ENABLE_SCRIPTING > 0

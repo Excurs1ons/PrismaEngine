@@ -8,6 +8,7 @@
 #include "graphic/interfaces/ISampler.h"
 #include "graphic/interfaces/IResourceFactory.h"
 #include "graphic/pipelines/forward/ForwardPipeline.h"
+#include "platform/Platform.h"
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -603,48 +604,25 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
         return sharedShader;
     }
 
-    // === 详细日志：记录 SPIR-V 文件的绝对路径、大小和 magic number ===
-    std::error_code ec;
-    auto absPath = std::filesystem::absolute(std::filesystem::path(filename), ec);
-    if (ec) {
-        LOG_WARNING("RenderResourceManager", "无法解析 SPIR-V 文件绝对路径: {0} (err={1})", filename, ec.message());
-    }
-
-    std::ifstream file(filename, std::ios::binary);
-    if (!file.is_open()) {
-        if (!absPath.empty()) {
-            LOG_ERROR("RenderResourceManager", "无法打开 SPIR-V 文件: {0}", absPath.string());
-        } else {
-            LOG_ERROR("RenderResourceManager", "无法打开 SPIR-V 文件: {0}", filename);
-        }
+    // === 使用平台文件读取（Android 上通过 SDL_LoadFile 支持 APK assets） ===
+    auto fileData = Platform::ReadBinaryFile(filename.c_str());
+    if (fileData.empty()) {
+        LOG_ERROR("RenderResourceManager", "无法打开 SPIR-V 文件: {0}", filename);
         return nullptr;
     }
     
-    // 获取文件大小
-    file.seekg(0, std::ios::end);
-    std::streamoff rawSize = file.tellg();
-    size_t size = static_cast<size_t>(rawSize);
-    file.seekg(0, std::ios::beg);
-
-    // 读取前 4 字节验证 SPIR-V magic number
+    size_t size = fileData.size();
     uint32_t magic = 0;
     if (size >= 4) {
-        file.read(reinterpret_cast<char*>(&magic), 4);
-        file.seekg(0, std::ios::beg); // 重新定位到文件头
+        std::memcpy(&magic, fileData.data(), 4);
     }
 
-    {
-        auto magicHex = static_cast<unsigned long>(magic);
-        if (!absPath.empty()) {
-            LOG_DEBUG("RenderResourceManager", "加载 SPIR-V: {0} | size={1} bytes | magic=0x{2:08X}",
-                absPath.string(), size, magicHex);
-        } else {
-            LOG_DEBUG("RenderResourceManager", "加载 SPIR-V: {0} | magic=0x{1:08X}", filename, magicHex);
-        }
+    LOG_DEBUG("RenderResourceManager", "加载 SPIR-V: {0} | size={1} bytes | magic=0x{2:08X}",
+        filename, size, static_cast<unsigned long>(magic));
 
-        if (magic != 0x07230203) {
-            LOG_WARNING("RenderResourceManager", "SPIR-V magic number 异常: 0x{0:08X} (预期 0x07230203)", magicHex);
-        }
+    if (magic != 0x07230203) {
+        LOG_WARNING("RenderResourceManager", "SPIR-V magic number 异常: 0x{0:08X} (预期 0x07230203)",
+            static_cast<unsigned long>(magic));
     }
 
     if (size == 0 || size % 4 != 0) {
@@ -653,13 +631,7 @@ std::shared_ptr<IShader> RenderResourceManager::LoadShaderSync(const std::string
         return nullptr;
     }
 
-    std::vector<uint8_t> bytecode(size);
-    file.read(reinterpret_cast<char*>(bytecode.data()), size);
-    size_t bytesRead = static_cast<size_t>(file.gcount());
-    if (bytesRead != size) {
-        LOG_ERROR("RenderResourceManager", "SPIR-V 文件读取不完整: 期望 {0} bytes, 实际读取 {1} bytes", size, bytesRead);
-        return nullptr;
-    }
+    std::vector<uint8_t> bytecode = std::move(fileData);
     
     ShaderDesc desc;
     desc.filename = filename;

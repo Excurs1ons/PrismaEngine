@@ -166,49 +166,60 @@ if(PRISMA_ENABLE_RENDER_VULKAN)
 
     # glslang — GLSL→SPIR-V 编译（来自 Vulkan SDK）
     # 手动创建 IMPORTED 目标（SDK 自带 cmake config 因 SPIRV-Tools 路径 bug 不可用）
+    # 注意: 仅在 HOST 平台（Windows/Linux/macOS）上使用 SDK 的预编译库。
+    #       Android 等交叉编译目标不应链接 Windows .lib，运行时 GLSL→SPIR-V
+    #       由构建时 glslangValidator 处理，不需要运行时 glslang。
+    # macro 必须在 if/else 外部定义（CMake 限制）
+    macro(_add_glslang_target _name)
+        if(NOT TARGET "glslang::${_name}")
+            add_library("glslang::${_name}" STATIC IMPORTED)
+            set_target_properties("glslang::${_name}" PROPERTIES
+                IMPORTED_LOCATION_DEBUG         "${_VK_LIB}/${_name}d.lib"
+                IMPORTED_LOCATION_RELWITHDEBINFO "${_VK_LIB}/${_name}.lib"
+                IMPORTED_LOCATION_RELEASE        "${_VK_LIB}/${_name}.lib"
+                IMPORTED_LOCATION_MINSIZEREL     "${_VK_LIB}/${_name}.lib"
+                INTERFACE_INCLUDE_DIRECTORIES    "${_VK_INC}"
+            )
+        endif()
+    endmacro()
+
     if(DEFINED ENV{VULKAN_SDK})
         set(_VK_SDK "$ENV{VULKAN_SDK}")
         if(EXISTS "${_VK_SDK}/Lib/glslang.lib" OR EXISTS "${_VK_SDK}/lib/libglslang.a")
-            message(STATUS "  glslang: configuring from ${_VK_SDK}")
-            set(_VK_LIB "${_VK_SDK}/Lib")
-            set(_VK_INC "${_VK_SDK}/Include/glslang")
+            # 交叉编译时跳过 glslang 链接（SDK 库是 HOST 平台的）
+            if(ANDROID)
+                message(STATUS "  glslang: SKIPPED (Android cross-compile, shaders pre-compiled via glslangValidator)")
+                set(glslang_FOUND FALSE)
+            else()
+                message(STATUS "  glslang: configuring from ${_VK_SDK}")
+                set(_VK_LIB "${_VK_SDK}/Lib")
+                # Include 路径必须指向 SDK 的 Include/ 目录（不是 Include/glslang/），
+                # 因为 glslang 头文件内部使用 #include "glslang/Include/visibility.h" 这样的相对路径
+                set(_VK_INC "${_VK_SDK}/Include")
 
-            # 为 Debug 与 RelWithDebInfo/Release 指定不同向后缀
-            macro(_add_glslang_target _name)
-                if(NOT TARGET "glslang::${_name}")
-                    add_library("glslang::${_name}" STATIC IMPORTED)
-                    set_target_properties("glslang::${_name}" PROPERTIES
-                        IMPORTED_LOCATION_DEBUG         "${_VK_LIB}/${_name}d.lib"
-                        IMPORTED_LOCATION_RELWITHDEBINFO "${_VK_LIB}/${_name}.lib"
-                        IMPORTED_LOCATION_RELEASE        "${_VK_LIB}/${_name}.lib"
-                        IMPORTED_LOCATION_MINSIZEREL     "${_VK_LIB}/${_name}.lib"
-                        INTERFACE_INCLUDE_DIRECTORIES    "${_VK_INC}"
-                    )
-                endif()
-            endmacro()
+                _add_glslang_target(glslang)
+                _add_glslang_target(SPIRV)
+                _add_glslang_target(OSDependent)
+                _add_glslang_target(MachineIndependent)
+                _add_glslang_target(GenericCodeGen)
+                _add_glslang_target(glslang-default-resource-limits)
 
-            _add_glslang_target(glslang)
-            _add_glslang_target(SPIRV)
-            _add_glslang_target(OSDependent)
-            _add_glslang_target(MachineIndependent)
-            _add_glslang_target(GenericCodeGen)
-            _add_glslang_target(glslang-default-resource-limits)
+                # SPIRV-Tools (glslang 的 SpvTools.obj 引用其符号)
+                foreach(_spv_tgt SPIRV-Tools SPIRV-Tools-opt)
+                    if(NOT TARGET "${_spv_tgt}")
+                        add_library("${_spv_tgt}" STATIC IMPORTED)
+                        string(REPLACE "-" "_" _prop_name "${_spv_tgt}")
+                        set_target_properties("${_spv_tgt}" PROPERTIES
+                            IMPORTED_LOCATION_DEBUG         "${_VK_LIB}/${_spv_tgt}d.lib"
+                            IMPORTED_LOCATION_RELWITHDEBINFO "${_VK_LIB}/${_spv_tgt}.lib"
+                            IMPORTED_LOCATION_RELEASE        "${_VK_LIB}/${_spv_tgt}.lib"
+                            IMPORTED_LOCATION_MINSIZEREL     "${_VK_LIB}/${_spv_tgt}.lib"
+                        )
+                    endif()
+                endforeach()
 
-            # SPIRV-Tools (glslang 的 SpvTools.obj 引用其符号)
-            foreach(_spv_tgt SPIRV-Tools SPIRV-Tools-opt)
-                if(NOT TARGET "${_spv_tgt}")
-                    add_library("${_spv_tgt}" STATIC IMPORTED)
-                    string(REPLACE "-" "_" _prop_name "${_spv_tgt}")
-                    set_target_properties("${_spv_tgt}" PROPERTIES
-                        IMPORTED_LOCATION_DEBUG         "${_VK_LIB}/${_spv_tgt}d.lib"
-                        IMPORTED_LOCATION_RELWITHDEBINFO "${_VK_LIB}/${_spv_tgt}.lib"
-                        IMPORTED_LOCATION_RELEASE        "${_VK_LIB}/${_spv_tgt}.lib"
-                        IMPORTED_LOCATION_MINSIZEREL     "${_VK_LIB}/${_spv_tgt}.lib"
-                    )
-                endif()
-            endforeach()
-
-            set(glslang_FOUND TRUE)
+                set(glslang_FOUND TRUE)
+            endif()
         endif()
     endif()
     if(glslang_FOUND)

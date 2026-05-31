@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app/ProjectConfig.h"
 #include "math/MathTypes.h"
 #include <cstdint>
 #include <memory>
@@ -326,6 +327,7 @@ struct DeviceDesc {
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;
     bool headless = false;
+    bool requireRayTracing = false;
 };
 
 // 纹理过滤模式

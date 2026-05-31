@@ -7,6 +7,7 @@
 #endif
 
 #include <algorithm>
+#include <cmath>
 
 namespace Prisma::Input {
 

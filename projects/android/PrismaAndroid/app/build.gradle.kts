@@ -40,9 +40,15 @@ tasks.register<Copy>("copyCsRuntime") {
 }
 
 tasks.register<Copy>("copyEngineShaders") {
-    from("$engineRoot/resources/common/shaders/glsl") { 
+    // 根 assets/shaders/（PBR IBL、2D、Forward、Deferred、SSAO 等全平台 shader）
+    from("$engineRoot/assets/shaders") {
         include("**/*.spv")
-        into("shaders") 
+        into("shaders")
+    }
+    // resources/common/shaders/glsl/（water、particles 等子目录 shader）
+    from("$engineRoot/resources/common/shaders/glsl") {
+        include("**/*.spv")
+        into("shaders")
     }
     into("src/main/assets")
 }

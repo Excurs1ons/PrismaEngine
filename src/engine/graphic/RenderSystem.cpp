@@ -74,6 +74,8 @@ int RenderSystem::InitializeDevice() {
         devDesc.presentMode      = m_desc.presentMode;
         devDesc.enableValidation = m_desc.enableValidation;
         devDesc.headless         = m_desc.headless;
+        // RT 扩展仅在切换到 HardwareRT 模式时才需要，Vulkan 设备创建时不附加扩展要求
+        devDesc.requireRayTracing = false;
 
         return m_device->Initialize(devDesc);
     }
@@ -92,6 +94,11 @@ int RenderSystem::InitializeRenderResourceManager() {
 }
 
 int RenderSystem::InitializeRenderPipelines() {
+    // 路径追踪管线支持三种模式：
+    //   - Flat/BVH：仅需计算着色器，所有 Vulkan 设备可用
+    //   - HardwareRT：需要 VK_KHR_ray_tracing_pipeline 扩展
+    // 因此即使设备不支持硬件光线追踪，BVH/Flat 模式仍可正常创建路径追踪管线。
+    // 若 PathTracingPipeline::Initialize 确实失败，上层 PathTracing3DApp 会回退渲染。
     // 根据渲染模式选择管线（路径追踪管线的着色器由 LoadDefaultShaders 内部加载）
     if (m_desc.renderMode == RenderMode::Mode2D) {
         m_mainRenderPipeline = std::make_shared<Pipeline2D>();

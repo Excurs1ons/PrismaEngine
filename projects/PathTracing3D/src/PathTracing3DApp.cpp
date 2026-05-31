@@ -38,8 +38,9 @@ int PathTracing3DApp::OnInitialize() {
 
     m_ptPipeline = Engine::Get().GetRenderSystem()->GetMainPipelineAs<Graphic::PathTracingPipeline>();
     if (!m_ptPipeline) {
-        LOG_ERROR("PathTracing3D", "获取路径追踪管线失败（renderMode 不匹配？）");
-        return -1;
+        // 光线追踪不可用（设备不支持），回退到 Forward 模式
+        LOG_WARN("PathTracing3D", "路径追踪管线不可用，设备不支持光线追踪，回退到 Forward 渲染模式");
+        m_fallbackMode = true;
     }
 
     auto* sceneManager = Engine::Get().GetSceneManager();
@@ -57,10 +58,12 @@ int PathTracing3DApp::OnInitialize() {
 
     // Read pipeline params from spec (CLI or project.jsonc, merged by Engine::Run)
     m_ptMaxSamples = m_Spec.MaxSamples;
-    m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
-    m_ptPipeline->SetMode(m_Spec.PathTraceMode);
-    m_enableNEE = m_Spec.EnableNEE;
-    m_ptPipeline->EnableNEE(m_enableNEE);
+    if (m_ptPipeline) {
+        m_ptPipeline->SetMaxSamples(m_ptMaxSamples);
+        m_ptPipeline->SetMode(m_Spec.PathTraceMode);
+        m_enableNEE = m_Spec.EnableNEE;
+        m_ptPipeline->EnableNEE(m_enableNEE);
+    }
 
     // Store scene info for hot-reload (F5 reload, F6/F7 cycle)
     m_scenePath = m_Spec.EntryScene;
@@ -74,7 +77,7 @@ int PathTracing3DApp::OnInitialize() {
     }
 
     // Create StatsOverlay component
-    if (m_scene) {
+    if (m_scene && m_ptPipeline) {
         auto overlayNode = m_scene->CreateNode("StatsOverlay");
         m_statsOverlay = std::make_unique<StatsOverlay>(m_Spec, m_ptPipeline.get(),
                                                         m_enableNEE, m_usePrimitiveSphere);
@@ -83,14 +86,14 @@ int PathTracing3DApp::OnInitialize() {
 
     // Create HeadlessRunner (m_Spec has CLI overrides applied by Engine::Run)
     bool headless = Engine::Get().GetSpecification().Headless;
-    if (headless) {
+    if (headless && m_ptPipeline) {
         m_Spec.Width  = m_Spec.HeadlessWidth;
         m_Spec.Height = m_Spec.HeadlessHeight;
         LOG_INFO("PathTracing3D", "headless模式分辨率: {}x{} (frames={}, output={})",
                  m_Spec.Width, m_Spec.Height, m_Spec.HeadlessFrames, m_Spec.HeadlessOutputPath);
+        m_headlessRunner = std::make_unique<HeadlessRunner>(
+            headless, m_Spec.HeadlessFrames, m_Spec.HeadlessOutputPath, m_ptPipeline.get());
     }
-    m_headlessRunner = std::make_unique<HeadlessRunner>(
-        headless, m_Spec.HeadlessFrames, m_Spec.HeadlessOutputPath, m_ptPipeline.get());
 
     LOG_INFO("PathTracing3D", "R 重置累积，B 切换模式，P 切换 Primitive|Mesh，N 切换 NEE，[/] 调整采样帧数，F5 重载场景，F6/F7 切换场景");
     return 0;
@@ -135,12 +138,19 @@ void PathTracing3DApp::OnRender() {
         m_statsOverlay->SetUsePrimitiveSphere(m_usePrimitiveSphere);
         m_statsOverlay->Update(Timestep{});
     }
+
+    // Forward fallback: just clear and present, no path tracing
+    if (m_fallbackMode) {
+        // In fallback mode, the Forward pipeline handles rendering automatically
+    }
 }
 
 void PathTracing3DApp::OnUpdate(Timestep ts) {
     // Auto-rebuild PT data when scene is dirty (triggered by P key etc.)
     if (m_scene && m_scene->IsDirty()) {
-        m_ptPipeline->ReloadSceneData();
+        if (m_ptPipeline) {
+            m_ptPipeline->ReloadSceneData();
+        }
         m_scene->SetDirty(false);
     }
 

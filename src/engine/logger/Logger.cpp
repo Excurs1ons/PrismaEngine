@@ -296,7 +296,12 @@ std::string Logger::GetTimestamp(const std::chrono::system_clock::time_point& ti
 
 void Logger::WriteToConsole(const std::string& message, bool useColors) {
     (void)useColors;
-    std::cout << message << std::endl;
+    if (m_PlatformLogger) {
+        // 平台日志器接管输出（Android 输出到 logcat，而非 stdout）
+        m_PlatformLogger->LogToConsole(LogLevel::Info, "PRISMA", message.c_str());
+    } else {
+        std::cout << message << std::endl;
+    }
 }
 
 void Logger::WriteToFile(const std::string& message) {

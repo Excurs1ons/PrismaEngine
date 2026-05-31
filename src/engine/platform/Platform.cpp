@@ -13,6 +13,9 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 #include <vulkan/vulkan.h>
+#if defined(__ANDROID__)
+#include <android/log.h>
+#endif
 #include <chrono>
 #include <thread>
 #include <mutex>
@@ -22,6 +25,7 @@
 #include <ctime>
 #include <memory>
 #include <cstdlib>
+#include <cstring>
 
 #ifdef _WIN32
     #include <process.h>
@@ -274,7 +278,20 @@ size_t Platform::ReadFile(const char* path, void* dst, size_t maxBytes) {
 
 std::vector<uint8_t> Platform::ReadBinaryFile(const char* path) {
     size_t size = 0;
+
+#if defined(__ANDROID__)
+    // Android: AAssetManager_open 的路径是相对于 APK 内 assets/ 目录的。
+    // 代码中统一使用 "assets/shaders/..." 路径（桌面和 Android 一致），
+    // 在 Android 上自动去掉 "assets/" 前缀，因为 AAssetManager 已经在 assets/ 中查找。
+    const char* effectivePath = path;
+    if (path && (std::strncmp(path, "assets/", 7) == 0)) {
+        effectivePath = path + 7;
+    }
+    void* data = SDL_LoadFile(effectivePath, &size);
+#else
     void* data = SDL_LoadFile(path, &size);
+#endif
+
     if (!data) return {};
 
     std::vector<uint8_t> buffer(size);
@@ -360,17 +377,41 @@ void Platform::SleepMilliseconds(uint32_t ms) {
     SDL_Delay(ms);
 }
 
-// IPlatformLogger 接口实现
+// IPlatformLogger 接口实现（虚函数覆盖）
 void Platform::LogToConsole(LogLevel level, const char* tag, const char* message) {
+#if defined(__ANDROID__)
+    android_LogPriority prio = ANDROID_LOG_DEBUG;
+    switch (level) {
+        case LogLevel::Trace:   prio = ANDROID_LOG_VERBOSE; break;
+        case LogLevel::Debug:   prio = ANDROID_LOG_DEBUG; break;
+        case LogLevel::Info:    prio = ANDROID_LOG_INFO; break;
+        case LogLevel::Warning: prio = ANDROID_LOG_WARN; break;
+        case LogLevel::Error:   prio = ANDROID_LOG_ERROR; break;
+        case LogLevel::Fatal:   prio = ANDROID_LOG_FATAL; break;
+    }
+    __android_log_print(prio, tag, "%s", message);
+#else
     SetConsoleColor(level);
     std::cout << "[" << tag << "] " << message << std::endl;
     ResetConsoleColor();
+#endif
 }
 
-const char* Platform::GetLogDirectoryPath() {
+const char* Platform::GetLogDirectoryPath() const {
     static std::string path = std::string(GetPersistentPath()) + "/Logs";
     std::filesystem::create_directories(path);
     return path.c_str();
+}
+
+// 静态便捷方法
+void Platform::LogToPlatformConsole(LogLevel level, const char* tag, const char* message) {
+    static Platform instance;
+    instance.LogToConsole(level, tag, message);
+}
+
+const char* Platform::GetPlatformLogDirectoryPath() {
+    static Platform instance;
+    return instance.GetLogDirectoryPath();
 }
 
 void Platform::SetEventCallback(EventCallback callback) {

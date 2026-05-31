@@ -40,6 +40,7 @@ public:
     std::string GetName() const override;
     std::string GetAPIName() const override;
     std::string GetGPUName() const override;
+    bool IsRayTracingSupported() const override { return m_rayTracingSupported; }
 
     // 命令缓冲区
     std::unique_ptr<ICommandBuffer> CreateCommandBuffer(CommandBufferType type) override;
@@ -199,6 +200,7 @@ private:
     std::unique_ptr<VulkanResourceFactory> m_resourceFactory;
 
     bool m_headless = false;
+    bool m_rayTracingSupported = false;
 
     // 离屏渲染资源（headless 模式）
     VkImage m_headlessColorImage       = VK_NULL_HANDLE;

@@ -16,6 +16,6 @@ layout(set = 0, binding = 1) uniform sampler2D AlbedoMap;
 void main() {
     vec4 texColor = texture(AlbedoMap, v_UV);
     float alpha = texColor.a * material.baseColor.a;
-    // 输出预乘 alpha
+    // 杈撳嚭棰勪箻 alpha
     outColor = vec4(v_Color.rgb * texColor.rgb, v_Color.a * alpha);
 }

@@ -33,6 +33,7 @@ struct WindowConfig {
     uint32_t height = 1080;
     bool fullscreen = true;
     bool resizable = true;
+    std::string orientation = "landscape"; // 屏幕方向（Android）: landscape / portrait
     Graphic::PresentMode vsync = Graphic::PresentMode::Mailbox;
     uint32_t maxFPS = 0;
 };
@@ -122,6 +123,7 @@ struct glz::meta<Prisma::WindowConfig> {
         "height", &Prisma::WindowConfig::height,
         "fullscreen", &Prisma::WindowConfig::fullscreen,
         "resizable", &Prisma::WindowConfig::resizable,
+        "orientation", &Prisma::WindowConfig::orientation,
         "vsync", &Prisma::WindowConfig::vsync,
         "maxFPS", &Prisma::WindowConfig::maxFPS
     );
