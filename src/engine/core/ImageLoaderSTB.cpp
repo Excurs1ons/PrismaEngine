@@ -3,13 +3,12 @@
 #include <algorithm>
 #include <cstring>
 
-#define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
 namespace Prisma::Core {
 
-ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
-    ImageLoadResult result;
+IImageLoader::ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
+    IImageLoader::ImageLoadResult result;
 
     std::string extension = filePath.substr(filePath.find_last_of('.') + 1);
     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
@@ -47,8 +46,8 @@ ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
     return result;
 }
 
-ImageLoadResult ImageLoaderSTB::loadFromMemory(const uint8_t* data, size_t size) {
-    ImageLoadResult result;
+IImageLoader::ImageLoadResult ImageLoaderSTB::loadFromMemory(const uint8_t* data, size_t size) {
+    IImageLoader::ImageLoadResult result;
 
     int width = 0, height = 0, channels = 0;
     stbi_uc* imageData = stbi_load_from_memory(reinterpret_cast<const unsigned char*>(data), 
@@ -64,9 +63,9 @@ ImageLoadResult ImageLoaderSTB::loadFromMemory(const uint8_t* data, size_t size)
     result.success = true;
     result.width = static_cast<uint32_t>(width);
     result.height = static_cast<uint32_t>(height);
-    result.channels = static_cast<uint32_t>(channels);
+    result.channels = static_cast<uint32_t>(4);
 
-    size_t dataSize = width * height * channels;
+    size_t dataSize = width * height * 4;
     result.data.resize(dataSize);
     std::memcpy(result.data.data(), imageData, dataSize);
 

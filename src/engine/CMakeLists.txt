@@ -148,6 +148,7 @@ set(CORE_SOURCES
     core/UUID.cpp
     core/SpriteRendererComponent.cpp
     core/Packaging.cpp
+    core/ImageLoaderSTB.cpp
 
     # UI
     ui/UIComponent.cpp

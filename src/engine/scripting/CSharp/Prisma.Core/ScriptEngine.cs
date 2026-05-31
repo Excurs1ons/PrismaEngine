@@ -32,7 +32,8 @@ internal static class ScriptEngine
             // 调用自动生成的脚本注册逻辑
             // Call automatically generated script registration logic
             try { 
-                string projectName = Interop.Utf8ToString(api->ProjectName);
+                string projectName;
+                unsafe { projectName = Interop.Utf8ToString(Interop.API.ProjectName); }
                 if (string.IsNullOrEmpty(projectName)) projectName = "GameScripts";
 
                 string assemblyName = projectName + ".Scripts";
