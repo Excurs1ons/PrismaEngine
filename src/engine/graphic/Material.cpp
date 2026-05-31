@@ -268,11 +268,13 @@ void Material::UpdateDescriptorSet() {
     m_MaterialUBO = rf->CreateBufferImpl(uboDesc);
 
     // 检测是否有 PBR 纹理贴图设置，选择对应的描述符布局
+    // PBR 判定：需要 NormalMap 或 MetallicRoughnessMap 纹理，仅 AlbedoMap 不算 PBR（2D sprite 兼容）
     auto* albedoVal = GetParam("AlbedoMap");
     auto* normalVal = GetParam("NormalMap");
     auto* mrVal = GetParam("MetallicRoughnessMap");
-    bool hasPBRTextures = (albedoVal && std::holds_alternative<std::shared_ptr<ITexture>>(*albedoVal)) ||
-                          (normalVal && std::holds_alternative<std::shared_ptr<ITexture>>(*normalVal));
+    bool hasPBRTextures = (normalVal && std::holds_alternative<std::shared_ptr<ITexture>>(*normalVal)) ||
+                          (mrVal && std::holds_alternative<std::shared_ptr<ITexture>>(*mrVal)) ||
+                          m_materialType == MaterialType::PBR;
 
     if (hasPBRTextures) {
         UpdateDescriptorSetPBR();

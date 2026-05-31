@@ -154,8 +154,8 @@ endif()
 # ============================================================
 
 if(PRISMA_ENABLE_SCRIPTING)
-    add_dependencies(${PROJECT_NAME} PrismaBindings PrismaEngineHost)
-    add_dependencies(${PRISMACRAFT_PLUGIN_NAME} PrismaBindings)
+    add_dependencies(${PROJECT_NAME} Engine PrismaEngineHost)
+    add_dependencies(${PRISMACRAFT_PLUGIN_NAME} Engine)
 
     find_program(DOTNET dotnet REQUIRED)
 

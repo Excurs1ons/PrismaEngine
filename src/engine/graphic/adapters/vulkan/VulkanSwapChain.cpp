@@ -90,6 +90,10 @@ TextureFormat ToTextureFormat(VkFormat format) {
 
 }  // namespace
 
+TextureFormat VulkanSwapChain::GetFormat() const {
+    return ToTextureFormat(m_format);
+}
+
 VulkanSwapChain::VulkanSwapChain(RenderDeviceVulkan* device)
     : m_device(device) {
 }

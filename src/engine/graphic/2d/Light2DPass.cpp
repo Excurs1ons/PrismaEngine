@@ -10,6 +10,9 @@
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IRenderTarget.h"
 #include "graphic/RenderCommandContext.h"
+#include "adapters/vulkan/VulkanCommandBuffer.h"
+#include "adapters/vulkan/VulkanPipelineState.h"
+#include "adapters/vulkan/VulkanResources.h"
 #include "Logger.h"
 
 namespace Prisma::Graphic {
@@ -51,7 +54,9 @@ struct LightPushConstants {
     alignas(16) Matrix4 invVP;
 };
 
-Light2DPass::Light2DPass() : ForwardRenderPass("Light2DPass") {
+// 注：此 Pass 使用 invVP 仅为了从屏幕 UV 反推世界坐标算光照距离，
+// 并非 3D 前向渲染。对 ortho 2D 来说可简化为 scale+translate，暂保留现有实现。
+Light2DPass::Light2DPass() : Pass2D("Light2DPass") {
     m_priority = 120;
 }
 
@@ -104,7 +109,7 @@ void Light2DPass::ExecuteLight(ICommandBuffer* cmd, IRenderDevice* device, uint3
         pc.falloff = light->GetFalloffCurve();
         pc.invVP = invVP;
         
-        cmd->PushConstants(ShaderType::Pixel, &pc, sizeof(pc));
+        cmd->PushConstants(ShaderType::VertexAndPixel, &pc, sizeof(pc));
         cmd->Draw(3, 1, 0); // 全屏三角形技巧
     }
     
@@ -139,25 +144,53 @@ void Light2DPass::EnsureResources(uint32_t width, uint32_t height, IRenderDevice
         m_pointLightPixelShader = rm->LoadShaderSync("assets/shaders/PointLight2D.frag.spv");
         
         if (m_pointLightVertexShader && m_pointLightPixelShader) {
-            PipelineStateDesc desc;
-            desc.vertexShader = m_pointLightVertexShader;
-            desc.pixelShader = m_pointLightPixelShader;
-            desc.primitiveTopology = PrimitiveTopology::TriangleList;
-            
+            // 为光照纹理格式创建自定义 RenderPass（RGBA16_Float ≠ 交换链 B8G8R8A8）
+            auto* vkTex = dynamic_cast<Vulkan::VulkanTexture*>(m_lightTexture.get());
+            VkRenderPass lightRP = VK_NULL_HANDLE;
+            if (vkTex) {
+                lightRP = Vulkan::VulkanCommandBuffer::PreCreateOffscreenRenderPass(
+                    vkTex->GetVkDevice(),
+                    vkTex->GetVkImageView(), vkTex->GetVkFormat(),
+                    VK_NULL_HANDLE, VK_FORMAT_UNDEFINED,
+                    width, height, true, false);
+            }
+
+            auto pso = rf->CreatePipelineStateImpl();
+            pso->SetShader(ShaderType::Vertex, m_pointLightVertexShader);
+            pso->SetShader(ShaderType::Pixel, m_pointLightPixelShader);
+            pso->SetPrimitiveTopology(PrimitiveTopology::TriangleList);
+
             // Additive Blending: SrcColor * 1 + DestColor * 1
-            desc.blendState.blendEnable = true;
-            desc.blendState.srcBlend = BlendFactorType::One;
-            desc.blendState.destBlend = BlendFactorType::One;
-            desc.blendState.blendOp = BlendOp::Add;
-            
-            desc.depthStencilState.depthEnable = false;
-            desc.depthStencilState.depthWriteEnable = false;
-            desc.rasterizerState.cullEnable = false;
-            
-            desc.renderTargetFormats[0] = TextureFormat::RGBA16_Float;
-            desc.numRenderTargets = 1;
-            
-            m_pointLightPSO = rm->CreatePipelineState(desc);
+            BlendState bs;
+            bs.blendEnable = true;
+            bs.srcBlend = BlendFactorType::One;
+            bs.destBlend = BlendFactorType::One;
+            bs.blendOp = BlendOp::Add;
+            pso->SetBlendState(bs);
+
+            DepthStencilState ds;
+            ds.depthEnable = false;
+            ds.depthWriteEnable = false;
+            pso->SetDepthStencilState(ds);
+
+            RasterizerState rs;
+            rs.cullEnable = false;
+            pso->SetRasterizerState(rs);
+
+            pso->SetRenderTargetFormat(0, TextureFormat::RGBA16_Float);
+            pso->SetInputLayout({});  // 全屏三角形（vertex_id），无顶点输入
+
+            // 设置离屏 RenderPass，确保格式兼容
+            auto* vkPSO = dynamic_cast<Vulkan::VulkanPipelineState*>(pso.get());
+            if (vkPSO && lightRP != VK_NULL_HANDLE) {
+                vkPSO->SetCustomRenderPass(lightRP);
+            }
+
+            if (pso->Create(device)) {
+                m_pointLightPSO = std::shared_ptr<IPipelineState>(std::move(pso));
+            } else {
+                LOG_ERROR("Light2DPass", "创建光照 PSO 失败: {}", pso->GetErrors());
+            }
         } else {
             LOG_ERROR("Light2DPass", "无法加载 2D 光照着色器");
         }

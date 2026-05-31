@@ -24,7 +24,7 @@ public:
     uint32_t GetCurrentBufferIndex() const override { return m_currentImageIndex; }
     uint32_t GetWidth() const override { return m_extent.width; }
     uint32_t GetHeight() const override { return m_extent.height; }
-    TextureFormat GetFormat() const override { return TextureFormat::RGBA8_UNorm; }
+    TextureFormat GetFormat() const override;
     PresentMode GetMode() const override { return m_mode; }
     bool IsHDR() const override { return m_hdrEnabled; }
 

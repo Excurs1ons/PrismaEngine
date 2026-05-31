@@ -8,7 +8,7 @@ namespace Prisma::Graphic {
 
 class CanvasPass2D;
 class Light2DPass;
-class OpaquePass;
+class BlitPass2D;
 class PixelPerfectPass;
 class UIPass2D;
 class PostProcessPass2D;
@@ -33,7 +33,7 @@ private:
 
     // 2D 专属 Pass 集合
     std::shared_ptr<Light2DPass> m_lightPass;        // 生成光照贴图
-    std::shared_ptr<OpaquePass> m_opaquePass;        // 渲染 Renderer2D 内容
+    std::shared_ptr<BlitPass2D> m_blitPass;          // 渲染 Renderer2D 内容 (Vertex2D)
     std::shared_ptr<CanvasPass2D> m_canvasPass;      // 渲染世界空间的 Canvas (Graphics2D)
     std::shared_ptr<PixelPerfectPass> m_pixelPass;   // Pixel-perfect 离屏 + 整数缩放 (可选)
     std::shared_ptr<PostProcessPass2D> m_ppPass;     // 2D 后处理

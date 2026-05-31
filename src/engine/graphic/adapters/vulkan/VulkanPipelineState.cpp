@@ -110,6 +110,12 @@ VulkanPipelineState::VulkanPipelineState() {
     m_rasterizerState = RasterizerState::Default;
     m_depthStencilState = DepthStencilState::Default;
     m_renderTargetFormats.push_back(TextureFormat::RGBA8_UNorm);
+    // 默认输入布局 (Vertex 格式): 兼容不显式设置 inputLayout 的旧 PSO
+    m_inputAttributes = {
+        { "POSITION", 0, TextureFormat::RGBA32_Float, 0, offsetof(Prisma::Graphic::Vertex, position) },
+        { "COLOR",    0, TextureFormat::RGBA32_Float, 0, offsetof(Prisma::Graphic::Vertex, color) },
+        { "TEXCOORD", 0, TextureFormat::RGBA32_Float, 0, offsetof(Prisma::Graphic::Vertex, uv) },
+    };
 }
 
 VulkanPipelineState::~VulkanPipelineState() {
@@ -358,19 +364,16 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
     // ========== 顶点输入状态 ==========
 
     VkVertexInputBindingDescription bindingDescription{};
-    bindingDescription.binding = 0;
-    bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+
     if (m_inputAttributes.empty()) {
-        // 默认回退：使用 Prisma::Vertex 基础布局 (Pos, Color, UV)
-        bindingDescription.stride = sizeof(Prisma::Graphic::Vertex);
-        attributeDescriptions.resize(3);
-        attributeDescriptions[0] = { 0, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, position) };
-        attributeDescriptions[1] = { 1, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, color) };
-        attributeDescriptions[2] = { 2, 0, VK_FORMAT_R32G32B32A32_SFLOAT, offsetof(Prisma::Graphic::Vertex, uv) };
+        // 显式空输入布局 — 着色器使用 gl_VertexIndex 或完全程序化顶点（全屏三角形等）
+        // No vertex bindings or attributes
     } else {
-        // 使用用户自定义布局，自动计算 stride
+        bindingDescription.binding = 0;
+        bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+        // 使用自定义布局，自动计算 stride
         uint32_t maxStride = 0;
         for (uint32_t i = 0; i < (uint32_t)m_inputAttributes.size(); ++i) {
             const auto& attr = m_inputAttributes[i];
@@ -389,10 +392,10 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
 
     VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
     vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertexInputInfo.vertexBindingDescriptionCount = 1;
-    vertexInputInfo.pVertexBindingDescriptions = &bindingDescription;
+    vertexInputInfo.vertexBindingDescriptionCount = m_inputAttributes.empty() ? 0u : 1u;
+    vertexInputInfo.pVertexBindingDescriptions = m_inputAttributes.empty() ? nullptr : &bindingDescription;
     vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertexInputInfo.pVertexAttributeDescriptions = m_inputAttributes.empty() ? nullptr : attributeDescriptions.data();
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
     inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     inputAssembly.topology = ToVkPrimitiveTopology(m_topology);

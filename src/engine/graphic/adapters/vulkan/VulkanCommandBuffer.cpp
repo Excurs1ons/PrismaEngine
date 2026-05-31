@@ -548,4 +548,48 @@ void VulkanCommandBuffer::PipelineBarrier(const std::vector<ImageBarrier>& image
     }
 }
 
+// ============================================================================
+// VK_EXT_debug_utils 调试标签 — 用于 validation error 溯源到具体 Pass
+// ============================================================================
+
+static PFN_vkCmdBeginDebugUtilsLabelEXT  s_vkCmdBeginDebugUtilsLabelEXT  = nullptr;
+static PFN_vkCmdEndDebugUtilsLabelEXT    s_vkCmdEndDebugUtilsLabelEXT    = nullptr;
+static bool                              s_debugUtilsLoaded               = false;
+
+static void TryLoadDebugUtils(VkDevice device) {
+    if (s_debugUtilsLoaded) return;
+    s_vkCmdBeginDebugUtilsLabelEXT = (PFN_vkCmdBeginDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdBeginDebugUtilsLabelEXT");
+    s_vkCmdEndDebugUtilsLabelEXT   = (PFN_vkCmdEndDebugUtilsLabelEXT)vkGetDeviceProcAddr(device, "vkCmdEndDebugUtilsLabelEXT");
+    s_debugUtilsLoaded = true;
+}
+
+void VulkanCommandBuffer::BeginDebugGroup(const std::string& name) {
+    // 就近查找设备句柄（通过 command buffer 反向查找或缓存）
+    // 简化：首次调用时通过 vkGetDeviceProcAddr 加载（需缓存 device）
+    if (!s_vkCmdBeginDebugUtilsLabelEXT) return;
+
+    VkDebugUtilsLabelEXT label{};
+    label.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+    label.pLabelName = name.c_str();
+    // 使用随机颜色区分不同 pass
+    std::hash<std::string> hasher;
+    auto h = hasher(name);
+    label.color[0] = ((h >>  0) & 0xFF) / 255.0f;
+    label.color[1] = ((h >>  8) & 0xFF) / 255.0f;
+    label.color[2] = ((h >> 16) & 0xFF) / 255.0f;
+    label.color[3] = 1.0f;
+
+    s_vkCmdBeginDebugUtilsLabelEXT(m_cmd, &label);
+}
+
+void VulkanCommandBuffer::EndDebugGroup() {
+    if (!s_vkCmdEndDebugUtilsLabelEXT) return;
+    s_vkCmdEndDebugUtilsLabelEXT(m_cmd);
+}
+
+// 在设备创建后调用，激活调试标签功能
+void VulkanCommandBuffer::InitDebugUtils(VkDevice device) {
+    TryLoadDebugUtils(device);
+}
+
 } // namespace Prisma::Graphic::Vulkan

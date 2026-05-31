@@ -68,9 +68,12 @@ public:
     }
     void PipelineBarrier(const std::vector<ImageBarrier>& imageBarriers) override;
 
-    // === 调试 (修复接口匹配) ===
-    void BeginDebugGroup([[maybe_unused]] const std::string& name) override { }
-    void EndDebugGroup() override {}
+    // === 调试 (VK_EXT_debug_utils labels — 用于 validation error 溯源) ===
+    void BeginDebugGroup(const std::string& name) override;
+    void EndDebugGroup() override;
+
+    /// 设备创建后调用一次，激活调试标签功能
+    static void InitDebugUtils(VkDevice device);
 
     void* GetNativeHandle() const override { return reinterpret_cast<void*>(m_cmd); }
     VkCommandBuffer GetVkCommandBuffer() const { return m_cmd; }

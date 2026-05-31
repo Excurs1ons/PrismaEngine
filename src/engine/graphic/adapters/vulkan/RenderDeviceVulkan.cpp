@@ -136,12 +136,29 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         }
 
         // 3. 创建逻辑设备
+        // 启用 GPU-assisted + 同步校验 + 最佳实践 (需 VK_EXT_validation_features)
+        VkValidationFeaturesEXT validationFeatures{};
+        VkValidationFeatureEnableEXT enabledFeatures[] = {
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+        };
+        validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        validationFeatures.enabledValidationFeatureCount = static_cast<uint32_t>(std::size(enabledFeatures));
+        validationFeatures.pEnabledValidationFeatures = enabledFeatures;
+
         vkb::DeviceBuilder device_builder{m_vkbPhysicalDevice};
+        if (desc.enableValidation) {
+            device_builder.add_pNext(&validationFeatures);
+        }
         auto dev_ret = device_builder.build();
         if (!dev_ret)
             return -3;
         m_vkbDevice = dev_ret.value();
         m_device    = m_vkbDevice.device;
+
+        // 激活 command buffer 调试标签 (VK_EXT_debug_utils)
+        VulkanCommandBuffer::InitDebugUtils(m_device);
 
         // 4. 获取队列
         m_graphicsQueue       = m_vkbDevice.get_queue(vkb::QueueType::graphics).value();

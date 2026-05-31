@@ -8,7 +8,7 @@
 namespace Prisma::Core {
 
 IImageLoader::ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& filePath) {
-    IImageLoader::ImageLoadResult result;
+    ImageLoadResult result;
 
     std::string extension = filePath.substr(filePath.find_last_of('.') + 1);
     std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
@@ -47,7 +47,7 @@ IImageLoader::ImageLoadResult ImageLoaderSTB::loadFromFile(const std::string& fi
 }
 
 IImageLoader::ImageLoadResult ImageLoaderSTB::loadFromMemory(const uint8_t* data, size_t size) {
-    IImageLoader::ImageLoadResult result;
+    ImageLoadResult result;
 
     int width = 0, height = 0, channels = 0;
     stbi_uc* imageData = stbi_load_from_memory(reinterpret_cast<const unsigned char*>(data), 
@@ -63,9 +63,9 @@ IImageLoader::ImageLoadResult ImageLoaderSTB::loadFromMemory(const uint8_t* data
     result.success = true;
     result.width = static_cast<uint32_t>(width);
     result.height = static_cast<uint32_t>(height);
-    result.channels = static_cast<uint32_t>(4);
+    result.channels = static_cast<uint32_t>(channels);
 
-    size_t dataSize = width * height * 4;
+    size_t dataSize = width * height * channels;
     result.data.resize(dataSize);
     std::memcpy(result.data.data(), imageData, dataSize);
 

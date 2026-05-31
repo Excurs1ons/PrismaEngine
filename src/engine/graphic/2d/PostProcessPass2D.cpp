@@ -182,7 +182,7 @@ void PostProcessPass2D::Process(ICommandBuffer* cmd, IRenderDevice* device,
     params.logicalWidth = static_cast<float>(input->GetWidth());
     params.logicalHeight = static_cast<float>(input->GetHeight());
 
-    cmd->PushConstants(ShaderType::Pixel, &params, sizeof(params));
+    cmd->PushConstants(ShaderType::VertexAndPixel, &params, sizeof(params));
 
     // 绘制全屏三角形（3 个顶点，gl_VertexIndex，无 VBO）
     cmd->Draw(3, 1, 0);

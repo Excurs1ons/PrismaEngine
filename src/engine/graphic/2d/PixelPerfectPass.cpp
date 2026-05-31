@@ -45,7 +45,7 @@ void PixelPerfectPass::EnsureResources(IRenderDevice* device) {
     // ── 1. 创建离屏颜色纹理 (256×224, RGBA8_UNorm) ──
     TextureDesc texDesc;
     texDesc.type = TextureType::Texture2D;
-    texDesc.format = TextureFormat::RGBA8_UNorm;
+    texDesc.format = TextureFormat::BGRA8_UNorm;  // 对齐交换链格式，避免 RenderPass 兼容性错误
     texDesc.width = m_logicW;
     texDesc.height = m_logicH;
     texDesc.allowRenderTarget = true;
@@ -126,7 +126,7 @@ void PixelPerfectPass::EnsureResources(IRenderDevice* device) {
     pso->SetInputLayout({});
 
     // 设置渲染目标格式为交换链格式 (RGBA8_UNorm)
-    pso->SetRenderTargetFormat(0, TextureFormat::RGBA8_UNorm);
+    pso->SetRenderTargetFormat(0, TextureFormat::BGRA8_UNorm);  // 对齐交换链格式 (B8G8R8A8)
 
     if (pso->Create(device)) {
         m_blitPSO = std::shared_ptr<IPipelineState>(std::move(pso));
