@@ -29,6 +29,11 @@ public:
     void Execute(const RenderContext& ctx) override;
     RenderMode GetMode() const override { return RenderMode::Mode2D; }
 
+    /// @brief 设置 PixelPerfect 整数缩放（可选）
+    void SetPixelPerfectEnabled(bool enabled);
+    /// @brief 设置 CRT 后处理效果（可选）
+    void SetCRTEnabled(bool enabled);
+
 private:
     IRenderDevice* m_device = nullptr;
 

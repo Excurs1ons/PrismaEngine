@@ -45,7 +45,25 @@ MetroidvaniaApp::MetroidvaniaApp()
 int MetroidvaniaApp::OnInitialize() {
     LOG_INFO("Metroidvania", "Initializing C# scripted demo, resolution={0}x{1} simInput={2} autoExit={3}s",
              m_Spec.Width, m_Spec.Height, m_simInput, m_autoExitTimeout);
-    Engine::Get().GetSceneManager()->CreateNewScene();
+
+    auto* sceneMgr = Engine::Get().GetSceneManager();
+    if (!sceneMgr->GetCurrentScene()) {
+        sceneMgr->CreateNewScene();
+    }
+
+    // 加载地砖地图，使用引擎内置 1x1 白色纹理作为视觉 fallback
+    m_tilemap = std::make_shared<Tilemap::Tilemap>();
+    if (m_tilemap->LoadFromJSON("assets/maps/test_dungeon.json")) {
+        m_tilemapRenderer.SetTilemap(m_tilemap);
+        m_tilemapRenderer.SetTexture(Graphic::Renderer2D::GetWhiteTexture());
+        LOG_INFO("Metroidvania", "Tilemap loaded: {}x{} tiles, {} layers",
+                 m_tilemap->GetWidth(), m_tilemap->GetHeight(),
+                 m_tilemap->GetLayerCount());
+    } else {
+        LOG_WARNING("Metroidvania", "Failed to load tilemap, tile rendering disabled");
+        m_tilemap.reset();
+    }
+
     return 0;
 }
 
@@ -92,6 +110,7 @@ void MetroidvaniaApp::OnRender() {
     // 显式红色方块测试（验证管线shader是否工作）
     Graphic::Renderer2D::DrawQuad(Vector2{128, 112}, Vector2{32, 32}, {1.0f, 0.0f, 0.0f, 1.0f});
     Graphic::Renderer2D::DrawNodesSoA();
+    if (m_tilemap) m_tilemapRenderer.Render(ortho);
     Graphic::Renderer2D::EndScene();
 }
 

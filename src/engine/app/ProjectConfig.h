@@ -32,6 +32,8 @@ struct RenderingConfig {
     Graphic::PathTraceMode pathTraceMode = Graphic::PathTraceMode::BVH;
     bool enableNEE = false;            // 下一事件估计（小光源时显著提升收敛）
     uint32_t maxBatchQuads = 10000;    // 2D 合批渲染器最大四边形数
+    bool pixelPerfect = true;          // 2D PixelPerfect 整数缩放（仅 2D 管线）
+    bool crtEffect = false;            // 2D CRT 扫描线效果（仅 2D 管线）
 };
 
 struct HeadlessConfig {
@@ -137,7 +139,9 @@ struct glz::meta<Prisma::RenderingConfig> {
         "rtMode", &Prisma::RenderingConfig::rtMode,
         "pathTraceMode", &Prisma::RenderingConfig::pathTraceMode,
         "enableNEE", &Prisma::RenderingConfig::enableNEE,
-        "maxBatchQuads", &Prisma::RenderingConfig::maxBatchQuads
+        "maxBatchQuads", &Prisma::RenderingConfig::maxBatchQuads,
+        "pixelPerfect",  &Prisma::RenderingConfig::pixelPerfect,
+        "crtEffect",     &Prisma::RenderingConfig::crtEffect
     );
 };
 

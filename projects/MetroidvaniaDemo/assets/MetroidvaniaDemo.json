@@ -14,7 +14,9 @@
         "rtMode": "None",
         "pathTraceMode": "Flat",
         "enableNEE": false,
-        "maxBatchQuads": 1024
+        "maxBatchQuads": 1024,
+        "pixelPerfect": true,
+        "crtEffect": false
     },
     "renderMode": "2D",
     "scriptingBackend": "CoreCLR",

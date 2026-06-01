@@ -280,7 +280,7 @@ void Renderer2D::DrawNodesSoA() {
     for (uint32_t i = 0; i < count; ++i) {
         if (!rb->active[i]) continue;
 
-        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i] + rb->sizeW[i] * 0.5f, tb->posY[i] + rb->sizeH[i] * 0.5f, 0.0f));
+        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i], tb->posY[i], 0.0f));
         if (std::abs(tb->rotation[i]) > 0.001f)
             t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
         t = glm::scale(t, glm::vec3(rb->sizeW[i], rb->sizeH[i], 1.0f));

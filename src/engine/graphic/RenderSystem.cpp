@@ -196,23 +196,28 @@ void RenderSystem::EndFrame() {
             ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
         }
 
-        // 优先从当前场景获取相机数据（适用于所有管线类型）
+        // 2D 管线由 Renderer2D 管理正交相机，场景相机是 3D 透视的，不可覆盖
         bool hasSceneCamera = false;
-        auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
-        if (sceneMgr) {
-            auto* scene = sceneMgr->GetCurrentScene();
-            if (scene) {
-                auto camera = scene->GetMainCamera();
-                if (camera) {
-                    ctx.camera.viewMatrix       = camera->GetViewMatrix();
-                    ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
-                    ctx.camera.position         = camera->GetPosition();
-                    ctx.camera.nearPlane        = camera->GetNearPlane();
-                    ctx.camera.farPlane         = camera->GetFarPlane();
-                    ctx.camera.fov              = camera->GetFOV();
-                    ctx.clearColor              = camera->GetClearColor();
-                    ctx.lights                  = scene->GetLights();
-                    hasSceneCamera = true;
+        bool skipSceneCamera = m_mainRenderPipeline &&
+            m_mainRenderPipeline->GetMode() == RenderMode::Mode2D;
+
+        if (!skipSceneCamera) {
+            auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
+            if (sceneMgr) {
+                auto* scene = sceneMgr->GetCurrentScene();
+                if (scene) {
+                    auto camera = scene->GetMainCamera();
+                    if (camera) {
+                        ctx.camera.viewMatrix       = camera->GetViewMatrix();
+                        ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
+                        ctx.camera.position         = camera->GetPosition();
+                        ctx.camera.nearPlane        = camera->GetNearPlane();
+                        ctx.camera.farPlane         = camera->GetFarPlane();
+                        ctx.camera.fov              = camera->GetFOV();
+                        ctx.clearColor              = camera->GetClearColor();
+                        ctx.lights                  = scene->GetLights();
+                        hasSceneCamera = true;
+                    }
                 }
             }
         }

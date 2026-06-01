@@ -13,6 +13,7 @@ extern "C" { char* SDL_GetBasePath(void); void SDL_free(void* ptr); }
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/Shader.h"
 #include "graphic/Renderer2D.h"
+#include "graphic/2d/Pipeline2D.h"
 #include "SceneManager.h"
 #include "PhysicsSystem.h"
 #include "core/ECS.h"
@@ -239,6 +240,8 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 spec.PathTraceMode      = config.rendering.pathTraceMode;
                 spec.EnableNEE          = config.rendering.enableNEE;
                 spec.MaxBatchQuads      = config.rendering.maxBatchQuads;
+                spec.PixelPerfect       = config.rendering.pixelPerfect;
+                spec.CRTEffect          = config.rendering.crtEffect;
                 spec.HeadlessFrames     = config.headless.frames;
                 spec.HeadlessWidth      = config.headless.width;
                 spec.HeadlessHeight     = config.headless.height;
@@ -352,6 +355,16 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
         if (m_RenderSystem->GetDevice()) {
             m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
+        }
+
+        // 应用 2D 管线配置
+        if (renderMode == RenderMode::Mode2D) {
+            if (auto pipeline2D = m_RenderSystem->GetMainPipelineAs<Graphic::Pipeline2D>()) {
+                pipeline2D->SetPixelPerfectEnabled(appSpec.PixelPerfect);
+                pipeline2D->SetCRTEnabled(appSpec.CRTEffect);
+                LOG_INFO("Engine", "2D 管线配置: pixelPerfect={}, crtEffect={}",
+                         appSpec.PixelPerfect, appSpec.CRTEffect);
+            }
         }
 
 #if PRISMA_ENABLE_SCRIPTING > 0
