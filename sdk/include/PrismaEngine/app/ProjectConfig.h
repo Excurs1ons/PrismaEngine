@@ -44,7 +44,7 @@ struct WindowConfig {
 struct RenderingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
-    bool hardwareRayTracing = false; // DXR 硬件加速预留
+    Graphic::RTMode rtMode = Graphic::RTMode::HardwareRT;  // 光线追踪模式
     Graphic::PathTraceMode pathTraceMode = Graphic::PathTraceMode::BVH;
     bool enableNEE = false;            // 下一事件估计（小光源时显著提升收敛）
 };
@@ -118,6 +118,16 @@ struct glz::meta<Prisma::Graphic::PathTraceMode> {
 };
 
 template <>
+struct glz::meta<Prisma::Graphic::RTMode> {
+    using enum Prisma::Graphic::RTMode;
+    static constexpr auto value = glz::enumerate(
+        "None", None,
+        "RayQuery", RayQuery,
+        "HardwareRT", HardwareRT
+    );
+};
+
+template <>
 struct glz::meta<Prisma::WindowConfig> {
     static constexpr auto value = glz::object(
         "width", &Prisma::WindowConfig::width,
@@ -134,7 +144,7 @@ struct glz::meta<Prisma::RenderingConfig> {
     static constexpr auto value = glz::object(
         "maxSamples", &Prisma::RenderingConfig::maxSamples,
         "maxBounces", &Prisma::RenderingConfig::maxBounces,
-        "hardwareRayTracing", &Prisma::RenderingConfig::hardwareRayTracing,
+        "rtMode", &Prisma::RenderingConfig::rtMode,
         "pathTraceMode", &Prisma::RenderingConfig::pathTraceMode,
         "enableNEE", &Prisma::RenderingConfig::enableNEE
     );

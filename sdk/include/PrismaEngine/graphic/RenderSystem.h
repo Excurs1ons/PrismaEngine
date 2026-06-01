@@ -34,7 +34,7 @@ struct RenderSystemDesc {
     PresentMode presentMode    = PresentMode::VSync;
     uint32_t maxSamples        = 512;
     uint32_t maxBounces        = 8;
-    bool hardwareRayTracing    = false;
+    RTMode rtMode              = RTMode::HardwareRT;
     uint32_t maxFramesInFlight = 3;
     std::string name           = "PrismaApp";
 };
