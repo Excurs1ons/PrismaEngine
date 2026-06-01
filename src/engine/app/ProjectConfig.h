@@ -59,6 +59,7 @@ struct ProjectConfig {
     std::string entryScene;
     std::vector<std::string> assets;
     std::vector<std::string> scenes;   // 可选的多场景列表（F6/F7 切换）
+    std::vector<std::string> subsystems; // 非核心子系统白名单，如 ["Physics", "Audio"]
     WindowConfig window;
     RenderMode renderMode = RenderMode::Mode3D_Forward;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
@@ -169,6 +170,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "entryScene", &Prisma::ProjectConfig::entryScene,
         "assets", &Prisma::ProjectConfig::assets,
         "scenes", &Prisma::ProjectConfig::scenes,
+        "subsystems", &Prisma::ProjectConfig::subsystems,
         "window", &Prisma::ProjectConfig::window,
         "renderMode", &Prisma::ProjectConfig::renderMode,
         "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,

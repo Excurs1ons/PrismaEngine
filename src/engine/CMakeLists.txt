@@ -57,30 +57,9 @@ set(CORE_SOURCES
     transform/Camera.cpp
     transform/CameraController.cpp
 
-    # Animation
-    animation/AnimationSystem.cpp
-    animation/Skeleton.cpp
-
-    # Audio
-    audio/SoundSynthesizer.cpp
-    audio/AudioDeviceNull.cpp
-    audio/AudioDeviceSDL3.cpp
-    audio/AudioAPI.cpp
-    audio/backends/SymbolStubs.cpp
-    audio/backends/AudioDeviceMiniaudio.cpp
-
     # Input
     input/InputDevice.cpp
     input/InputManager.cpp
-
-    # Console
-    console/ConsoleSystem.cpp
-    console/ConsoleLayer.cpp
-
-    # Physics
-    physics/PhysicsSystem.cpp
-    physics/RigidBody.cpp
-    physics/TriggerManager.cpp
 
     # Physics2D
     physics2d/Physics2D.cpp
@@ -88,43 +67,6 @@ set(CORE_SOURCES
     # Tilemap
     tilemap/Tilemap.cpp
     tilemap/TilemapRenderer.cpp
-
-    # Navigation
-    navigation/NavigationSystem.cpp
-
-    # AI
-    ai/AISystem.cpp
-
-    # Particles
-    particles/ParticleSystem.cpp
-
-    # Terrain
-    terrain/HeightMap.cpp
-    terrain/TerrainMesh.cpp
-    terrain/TerrainMaterial.cpp
-    terrain/TerrainCollision.cpp
-    terrain/TerrainSystem.cpp
-
-    # Network
-    network/TCPTransport.cpp
-    network/UDPTransport.cpp
-    network/Session.cpp
-    network/NetworkSystem.cpp
-
-    # Water
-    water/WaterMesh.cpp
-    water/WaterSystem.cpp
-    water/WaveSimulation.cpp
-    water/WaterInteraction.cpp
-
-    # Localization
-    localization/LocalizationFile.cpp
-    localization/LocalizationManager.cpp
-    localization/LocalizationSystem.cpp
-
-    # Profiling
-    profiling/ProfilerGPU.cpp
-    profiling/ProfilerSystem.cpp
 
     # Resource
     resource/AssetSerializer.cpp
@@ -264,9 +206,115 @@ set(CORE_SOURCES
     pch.cpp
 )
 
+# ========== 子系统条件编译 ==========
+# Physics
+if(PRISMA_BUILD_SUBSYSTEM_PHYSICS)
+    list(APPEND CORE_SOURCES
+        physics/PhysicsSystem.cpp
+        physics/RigidBody.cpp
+        physics/TriggerManager.cpp
+    )
+endif()
+
+# Audio
+if(PRISMA_BUILD_SUBSYSTEM_AUDIO)
+    list(APPEND CORE_SOURCES
+        audio/SoundSynthesizer.cpp
+        audio/AudioDeviceNull.cpp
+        audio/AudioDeviceSDL3.cpp
+        audio/AudioAPI.cpp
+        audio/backends/SymbolStubs.cpp
+        audio/backends/AudioDeviceMiniaudio.cpp
+    )
+endif()
+
+# Navigation
+if(PRISMA_BUILD_SUBSYSTEM_NAVIGATION)
+    list(APPEND CORE_SOURCES
+        navigation/NavigationSystem.cpp
+    )
+endif()
+
+# AI
+if(PRISMA_BUILD_SUBSYSTEM_AI)
+    list(APPEND CORE_SOURCES
+        ai/AISystem.cpp
+    )
+endif()
+
+# Particles
+if(PRISMA_BUILD_SUBSYSTEM_PARTICLES)
+    list(APPEND CORE_SOURCES
+        particles/ParticleSystem.cpp
+    )
+endif()
+
+# Terrain
+if(PRISMA_BUILD_SUBSYSTEM_TERRAIN)
+    list(APPEND CORE_SOURCES
+        terrain/HeightMap.cpp
+        terrain/TerrainMesh.cpp
+        terrain/TerrainMaterial.cpp
+        terrain/TerrainCollision.cpp
+        terrain/TerrainSystem.cpp
+    )
+endif()
+
+# Water
+if(PRISMA_BUILD_SUBSYSTEM_WATER)
+    list(APPEND CORE_SOURCES
+        water/WaterMesh.cpp
+        water/WaterSystem.cpp
+        water/WaveSimulation.cpp
+        water/WaterInteraction.cpp
+    )
+endif()
+
+# Network
+if(PRISMA_BUILD_SUBSYSTEM_NETWORK)
+    list(APPEND CORE_SOURCES
+        network/TCPTransport.cpp
+        network/UDPTransport.cpp
+        network/Session.cpp
+        network/NetworkSystem.cpp
+    )
+endif()
+
+# Localization
+if(PRISMA_BUILD_SUBSYSTEM_LOCALIZATION)
+    list(APPEND CORE_SOURCES
+        localization/LocalizationFile.cpp
+        localization/LocalizationManager.cpp
+        localization/LocalizationSystem.cpp
+    )
+endif()
+
+# Profile
+if(PRISMA_BUILD_SUBSYSTEM_PROFILING)
+    list(APPEND CORE_SOURCES
+        profiling/ProfilerGPU.cpp
+        profiling/ProfilerSystem.cpp
+    )
+endif()
+
+# Animation
+if(PRISMA_BUILD_SUBSYSTEM_ANIMATION)
+    list(APPEND CORE_SOURCES
+        animation/AnimationSystem.cpp
+        animation/Skeleton.cpp
+    )
+endif()
+
+# Console
+if(PRISMA_BUILD_SUBSYSTEM_CONSOLE)
+    list(APPEND CORE_SOURCES
+        console/ConsoleSystem.cpp
+        console/ConsoleLayer.cpp
+    )
+endif()
 
 # ========== C# Scripting (条件编译) ==========
-if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
+if(PRISMA_BUILD_SUBSYSTEM_SCRIPTING AND (PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR"))
     set(PRISMA_SCRIPTING_SOURCES
         scripting/MonoRuntime.cpp
         scripting/CoreCLRHost.cpp
@@ -643,7 +691,7 @@ set(CORE_HEADERS
     pch.h
 )
 
-if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
+if(PRISMA_BUILD_SUBSYSTEM_SCRIPTING AND (PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR"))
     list(APPEND CORE_HEADERS ${PRISMA_SCRIPTING_HEADERS})
 endif()
 
@@ -699,6 +747,24 @@ target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_OGG=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_MP3=1)
 target_compile_definitions(Engine PUBLIC PRISMA_ENABLE_AUDIO_CODEC_FLAC=1)
 
+# 子系统编译时定义（传递给 Engine.cpp 的条件编译）
+target_compile_definitions(Engine PRIVATE
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_PHYSICS}>:PRISMA_SUBSYSTEM_PHYSICS=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_AUDIO}>:PRISMA_SUBSYSTEM_AUDIO=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_NAVIGATION}>:PRISMA_SUBSYSTEM_NAVIGATION=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_AI}>:PRISMA_SUBSYSTEM_AI=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_PARTICLES}>:PRISMA_SUBSYSTEM_PARTICLES=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_TERRAIN}>:PRISMA_SUBSYSTEM_TERRAIN=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_WATER}>:PRISMA_SUBSYSTEM_WATER=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_NETWORK}>:PRISMA_SUBSYSTEM_NETWORK=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_LOCALIZATION}>:PRISMA_SUBSYSTEM_LOCALIZATION=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_SCRIPTING}>:PRISMA_SUBSYSTEM_SCRIPTING=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_EDITOR}>:PRISMA_SUBSYSTEM_EDITOR=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_PROFILING}>:PRISMA_SUBSYSTEM_PROFILING=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_ANIMATION}>:PRISMA_SUBSYSTEM_ANIMATION=1>
+    $<$<BOOL:${PRISMA_BUILD_SUBSYSTEM_CONSOLE}>:PRISMA_SUBSYSTEM_CONSOLE=1>
+)
+
 # C# Scripting 编译定义
 #   PRISMA_ENABLE_SCRIPTING=0 → OFF（不编译脚本子系统）
 #   PRISMA_ENABLE_SCRIPTING=1 → MONO（Mono 运行时）
@@ -718,7 +784,7 @@ endif()
 set_target_properties(Engine PROPERTIES OUTPUT_NAME Prisma.Core)
 
 # 确保 Engine 构建完成后，将 Prisma.Bindings.dll 复制到 Engine 的实际输出目录 (Debug/Release)
-if(PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR")
+if(PRISMA_BUILD_SUBSYSTEM_SCRIPTING AND (PRISMA_ENABLE_SCRIPTING STREQUAL "MONO" OR PRISMA_ENABLE_SCRIPTING STREQUAL "CORECLR"))
     if(DOTNET)
         add_custom_command(TARGET Engine POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different

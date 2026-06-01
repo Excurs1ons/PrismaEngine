@@ -96,23 +96,51 @@ int Engine::Initialize() {
         AssetDatabase::Get().Refresh("assets");
     }
 
+    // 1. 核心子系统（始终初始化）
     m_MemorySystem = AddSystem<Memory::MemorySystem>();
-    m_AnimationSystem = AddSystem<Animation::AnimationSystem>();
     m_JobSystem = AddSystem<JobSystem>();
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
     m_SceneManager = AddSystem<SceneManager>();
-    m_PhysicsSystem = AddSystem<PhysicsSystem>();
     AddSystem<ConsoleSystem>();
     AddSystem<Graphic::ShaderLibrary>();
-    AddSystem<Particles::ParticleSystem>();
-    m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
-    m_AISystem = AddSystem<AI::AISystem>();
-    m_WaterSystem = AddSystem<Water::WaterSystem>();
-    m_NavigationSystem = AddSystem<Navigation::NavigationSystem>();
-    m_NetworkSystem = AddSystem<Network::NetworkSystem>();
-    m_LocalizationSystem = AddSystem<Localization::LocalizationSystem>();
 
+    // 2. 非核心子系统（根据配置条件初始化）
+    for (auto ns : m_Spec.enabledNonCoreSubsystems) {
+        switch (ns) {
+            case NonCoreSubsystem::Animation:
+                m_AnimationSystem = AddSystem<Animation::AnimationSystem>();
+                break;
+            case NonCoreSubsystem::Physics:
+                m_PhysicsSystem = AddSystem<PhysicsSystem>();
+                break;
+            case NonCoreSubsystem::Particles:
+                AddSystem<Particles::ParticleSystem>();
+                break;
+            case NonCoreSubsystem::Terrain:
+                m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
+                break;
+            case NonCoreSubsystem::AI:
+                m_AISystem = AddSystem<AI::AISystem>();
+                break;
+            case NonCoreSubsystem::Water:
+                m_WaterSystem = AddSystem<Water::WaterSystem>();
+                break;
+            case NonCoreSubsystem::Navigation:
+                m_NavigationSystem = AddSystem<Navigation::NavigationSystem>();
+                break;
+            case NonCoreSubsystem::Network:
+                m_NetworkSystem = AddSystem<Network::NetworkSystem>();
+                break;
+            case NonCoreSubsystem::Localization:
+                m_LocalizationSystem = AddSystem<Localization::LocalizationSystem>();
+                break;
+            default:
+                break;
+        }
+    }
+
+    // 3. 初始化所有已注册系统
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {
             LOG_FATAL("Engine", "系统初始化失败！");
@@ -230,6 +258,34 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
                 scriptingBackend = config.scriptingBackend;
                 renderMode       = config.renderMode;
+
+                // 从 project.jsonc 加载非核心子系统白名单
+                {
+                    auto& enabled = m_Spec.enabledNonCoreSubsystems;
+                    enabled.clear();
+                    for (const auto& name : config.subsystems) {
+                        if (name == "Physics") enabled.push_back(NonCoreSubsystem::Physics);
+                        else if (name == "Audio") enabled.push_back(NonCoreSubsystem::Audio);
+                        else if (name == "Navigation") enabled.push_back(NonCoreSubsystem::Navigation);
+                        else if (name == "AI") enabled.push_back(NonCoreSubsystem::AI);
+                        else if (name == "Particles") enabled.push_back(NonCoreSubsystem::Particles);
+                        else if (name == "Terrain") enabled.push_back(NonCoreSubsystem::Terrain);
+                        else if (name == "Water") enabled.push_back(NonCoreSubsystem::Water);
+                        else if (name == "Network") enabled.push_back(NonCoreSubsystem::Network);
+                        else if (name == "Localization") enabled.push_back(NonCoreSubsystem::Localization);
+                        else if (name == "ScriptEngine") enabled.push_back(NonCoreSubsystem::ScriptEngine);
+                        else if (name == "EditorMCP") enabled.push_back(NonCoreSubsystem::EditorMCP);
+                        else if (name == "Profiler") enabled.push_back(NonCoreSubsystem::Profiler);
+                        else if (name == "Animation") enabled.push_back(NonCoreSubsystem::Animation);
+                        else {
+                            LOG_WARNING("Engine", "未知的子系统名称: {0}", name);
+                        }
+                    }
+                    if (!enabled.empty()) {
+                        LOG_INFO("Engine", "非核心子系统白名单已加载: {} 个", enabled.size());
+                    }
+                }
+
                 LOG_INFO("Engine", "[诊断] config.renderMode={}, renderMode={}",
                          static_cast<int>(config.renderMode),
                          static_cast<int>(renderMode));
