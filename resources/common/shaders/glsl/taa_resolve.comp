@@ -1,0 +1,144 @@
+// ============================================================
+// taa_resolve.comp — PrismaEngine TAA 时序抗锯齿解析计算着色器
+//
+// 将当前帧与历史帧进行自适应混合，使用 AABB 裁剪减少鬼影。
+// 输入: 当前帧颜色, 历史帧颜色, 运动向量
+// 输出: 解析后帧
+// Push Constants: 混合因子, 抖动缩放, 锐度, 首帧标记
+// ============================================================
+
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// ---- 输入纹理 ----
+layout(binding = 0) uniform sampler2D currentFrame;  // 当前帧颜色 (RGBA16F)
+layout(binding = 1) uniform sampler2D history;       // 历史帧颜色 (RGBA16F)
+layout(binding = 2) uniform sampler2D motionVectors; // 运动向量 (RG16F)
+
+// ---- 输出存储图像 ----
+layout(rgba16f, binding = 3) uniform image2D resolvedOutput;
+
+// ---- Push Constants (匹配 C++ TAAParams) ----
+layout(push_constant) uniform TAAParams {
+    float blendFactor;  // 混合因子 (0.0=仅当前帧, 1.0=仅历史)
+    float jitterScale;  // 抖动缩放
+    float sharpness;    // 锐化强度
+    int firstFrame;     // 1=首帧 (直接拷贝), 0=正常 TAA
+} pc;
+
+// ---- AABB 裁剪: 在 luma 空间中裁剪历史颜色以减少鬼影 ----
+vec3 ClipAABB(vec3 aabbMin, vec3 aabbMax, vec3 historyColor, vec3 currentColor) {
+    // 将颜色转换到均匀空间再进行裁剪
+    vec3 p = historyColor - currentColor;
+    vec3 halfSize = (aabbMax - aabbMin) * 0.5;
+    vec3 center = (aabbMax + aabbMin) * 0.5;
+
+    // 在 AABB 内约束历史颜色
+    return clamp(historyColor, aabbMin, aabbMax);
+}
+
+// ---- 计算 3x3 邻域的颜色极值 (用于 AABB) ----
+void ComputeNeighborhoodAABB(vec2 uv, vec2 texelSize,
+                              out vec3 aabbMin, out vec3 aabbMax) {
+    // 采样 3x3 邻域
+    vec3 colors[9];
+    int idx = 0;
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
+            vec2 sampleUV = uv + vec2(float(x), float(y)) * texelSize;
+            colors[idx++] = texture(currentFrame, sampleUV).rgb;
+        }
+    }
+
+    // 计算均值和方差
+    vec3 mean = vec3(0.0);
+    for (int i = 0; i < 9; i++) {
+        mean += colors[i];
+    }
+    mean /= 9.0;
+
+    vec3 variance = vec3(0.0);
+    for (int i = 0; i < 9; i++) {
+        vec3 diff = colors[i] - mean;
+        variance += diff * diff;
+    }
+    variance /= 9.0;
+
+    // AABB = mean ± sigma (裁剪范围)
+    vec3 sigma = sqrt(variance + 1e-6);
+    aabbMin = mean - sigma;
+    aabbMax = mean + sigma;
+
+    // 扩大 AABB 以避免过度裁剪
+    float expandFactor = 0.25;
+    vec3 expansion = (aabbMax - aabbMin) * expandFactor;
+    aabbMin -= expansion;
+    aabbMax += expansion;
+}
+
+// ---- 锐化滤波 (optional) ----
+vec3 SharpeningFilter(vec2 uv, vec3 color, vec2 texelSize) {
+    if (pc.sharpness <= 0.0) return color;
+
+    // 简单的拉普拉斯锐化
+    vec3 center = color;
+    vec3 left   = texture(currentFrame, uv + vec2(-texelSize.x, 0.0)).rgb;
+    vec3 right  = texture(currentFrame, uv + vec2( texelSize.x, 0.0)).rgb;
+    vec3 up     = texture(currentFrame, uv + vec2(0.0,  texelSize.y)).rgb;
+    vec3 down   = texture(currentFrame, uv + vec2(0.0, -texelSize.y)).rgb;
+
+    vec3 laplacian = center * 4.0 - left - right - up - down;
+    return center + laplacian * pc.sharpness;
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(resolvedOutput);
+
+    if (coord.x >= imgSize.x || coord.y >= imgSize.y) return;
+
+    vec2 texelSize = 1.0 / vec2(imgSize);
+    vec2 uv = (vec2(coord) + 0.5) * texelSize;
+
+    // 采样当前帧
+    vec3 currentColor = texture(currentFrame, uv).rgb;
+
+    // === 首帧处理: 直接拷贝 ===
+    if (pc.firstFrame == 1) {
+        vec3 outputColor = SharpeningFilter(uv, currentColor, texelSize);
+        imageStore(resolvedOutput, coord, vec4(outputColor, 1.0));
+        return;
+    }
+
+    // === 正常 TAA 处理 ===
+
+    // 使用运动向量查找上一帧对应位置
+    vec2 motion = texture(motionVectors, uv).rg;
+    vec2 historyUV = uv - motion;
+
+    // 边界检测: 如果历史 UV 超出 [0,1] 范围，退化为当前帧
+    if (historyUV.x < 0.0 || historyUV.x > 1.0 ||
+        historyUV.y < 0.0 || historyUV.y > 1.0) {
+        vec3 outputColor = SharpeningFilter(uv, currentColor, texelSize);
+        imageStore(resolvedOutput, coord, vec4(outputColor, 1.0));
+        return;
+    }
+
+    // 采样历史帧
+    vec3 historyColor = texture(history, historyUV).rgb;
+
+    // AABB 裁剪: 在 3x3 邻域颜色空间内约束历史颜色
+    vec3 aabbMin, aabbMax;
+    ComputeNeighborhoodAABB(uv, texelSize, aabbMin, aabbMax);
+    historyColor = ClipAABB(aabbMin, aabbMax, historyColor, currentColor);
+
+    // 指数混合: blendFactor 控制历史帧占比
+    float blend = pc.blendFactor;
+    vec3 finalColor = mix(currentColor, historyColor, blend);
+
+    // 可选锐化
+    finalColor = SharpeningFilter(uv, finalColor, texelSize);
+
+    imageStore(resolvedOutput, coord, vec4(finalColor, 1.0));
+}
