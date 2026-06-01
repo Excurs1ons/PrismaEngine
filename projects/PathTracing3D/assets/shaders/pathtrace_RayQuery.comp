@@ -1,0 +1,597 @@
+#version 460
+#extension GL_EXT_ray_query : require
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(rgba16f, binding = 0) uniform image2D outputImage;
+layout(rgba16f, binding = 1) uniform image2D accumImage;
+
+// Camera UBO (std140)
+layout(std140, binding = 2) uniform CameraUBO {
+    vec4 cameraPos;
+    vec4 cameraDir;
+    vec4 cameraUp;
+    vec4 cameraRight;
+    float fov;
+    float aspectRatio;
+    int frameCount;
+    int maxBounces;
+    int samplesPerPixel;
+    int useAccumulation;
+    int resetAccumulation;
+    int enableNEE;
+} ubo;
+
+// Scene objects SSBO
+struct SceneObject {
+    vec4 p0;    // type=0(plane): point; type=1(sphere): center; type=2(box): center; type=3(cone): center
+    vec4 p1;    // plane: normal; sphere: (r,0,0,0); box: (hx,hy,hz,0); cone: (radius,halfHeight,0,0)
+    vec4 p2;    // plane: (umin,vmin,umax,vmax); box/cone: (cosA,sinA,0,0); sphere: unused
+    vec4 color; // rgb + emissive in w
+    mat4 worldMatrix;    // 世界矩阵
+    mat4 invWorldMatrix; // 逆矩阵（用于 local space tracing）
+};
+
+layout(std430, binding = 3) readonly buffer SceneData {
+    int objectCount;
+    SceneObject objects[];
+} scene;
+
+// Triangle mesh buffer (type=4 objects reference ranges here)
+struct Vertex {
+    vec4 pos;  // xyz + pad (匹配 C++ PTVertex::pos[4], 32 字节/顶点)
+    vec4 nrm;  // xyz + pad (匹配 C++ PTVertex::nrm[4])
+};
+
+struct Triangle {
+    Vertex vertices[3];
+};
+
+layout(std430, binding = 4) readonly buffer TriangleBuffer {
+    int triangleCount;
+    Triangle triangles[];
+} triBuf;
+
+// TLAS: hardware-accelerated ray tracing via GL_EXT_ray_query
+layout(binding = 5) uniform accelerationStructureEXT tlas;
+
+// Dummy: binding 6 no longer used (replaced by TLAS)
+layout(std430, binding = 6) buffer DummyBuffer { int dummy; } dummy;
+
+uint randState;
+
+// 固定偏移防自相交（适用于 Cornell Box 规模，整体缩放需改用相对偏移）
+const float EPS = 0.001;
+
+uint wangHash(uint seed) {
+    seed = (seed ^ 61u) ^ (seed >> 16u);
+    seed *= 9u;
+    seed = seed ^ (seed >> 4u);
+    seed *= 0x27d4eb2du;
+    seed = seed ^ (seed >> 15u);
+    return seed;
+}
+
+float randFloat() {
+    randState = randState * 747796405u + 2891336453u;
+    uint result = randState >> 16u;
+    return float(result) / 65535.0;
+}
+
+struct HitResult {
+    float t;
+    vec3 normal;
+    vec3 color;
+    float emissive;
+    int objIndex;
+};
+
+// ============ Plane intersection (type=0) ============
+bool intersectPlane(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 point = obj.p0.xyz;
+    vec3 normal = obj.p1.xyz;
+    vec4 bounds = obj.p2;
+
+    float denom = dot(dir, normal);
+    if (abs(denom) < 1e-8) return false;
+    float t = dot(point - origin, normal) / denom;
+    if (t < EPS) return false;
+
+    vec3 pt = origin + t * dir;
+
+    vec3 an = abs(normal);
+    bool valid = false;
+    if (an.x > 0.5) {
+        valid = pt.y >= bounds.x && pt.y <= bounds.z &&
+                pt.z >= bounds.y && pt.z <= bounds.w;
+    } else if (an.y > 0.5) {
+        valid = pt.x >= bounds.x && pt.x <= bounds.z &&
+                pt.z >= bounds.y && pt.z <= bounds.w;
+    } else {
+        valid = pt.x >= bounds.x && pt.x <= bounds.z &&
+                pt.y >= bounds.y && pt.y <= bounds.w;
+    }
+    if (!valid) return false;
+
+    hit.t = t;
+    // 根据光线入射方向翻转法线：从背面击中时反转，确保法线朝向射线来源
+    hit.normal = (denom < 0.0) ? normal : -normal;
+    hit.color = obj.color.rgb;
+    hit.emissive = obj.color.w;
+    return true;
+}
+
+// ============ Sphere intersection (type=1) ============
+bool intersectSphere(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    float radius = obj.p1.x;
+
+    vec3 oc = origin - center;
+    float a = dot(dir, dir);
+    float b = 2.0 * dot(oc, dir);
+    float c = dot(oc, oc) - radius * radius;
+    float disc = b * b - 4.0 * a * c;
+    if (disc < 0.0) return false;
+
+    float sqrtDisc = sqrt(disc);
+    float t = (-b - sqrtDisc) / (2.0 * a);
+    if (t < EPS) {
+        t = (-b + sqrtDisc) / (2.0 * a);
+        if (t < EPS) return false;
+    }
+
+    vec3 pt = origin + t * dir;
+    hit.t = t;
+    hit.normal = normalize(pt - center);
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
+    hit.color = obj.color.rgb;
+    hit.emissive = 0.0;
+    return true;
+}
+
+// ============ Cone intersection (type=3, with Y-axis rotation) ============
+// Cone centered at obj.p0.xyz, apex at (+halfHeight along Y), base at (-halfHeight along Y)
+// obj.p1.x = radius, obj.p1.y = halfHeight
+// obj.p2.x = cosA, obj.p2.y = sinA (Y-axis rotation)
+bool intersectCone(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    float radius = obj.p1.x;
+    float halfHeight = obj.p1.y;
+    float cosA = obj.p2.x;
+    float sinA = obj.p2.y;
+
+    if (halfHeight <= 0.0 || radius <= 0.0) return false;
+
+    // Transform ray to local space (Y-axis aligned)
+    vec3 lo = origin - center;
+    vec3 localO = vec3(
+        lo.x * cosA - lo.z * sinA, lo.y, lo.x * sinA + lo.z * cosA);
+    vec3 localD = vec3(
+        dir.x * cosA - dir.z * sinA, dir.y, dir.x * sinA + dir.z * cosA);
+
+    float k = radius / (2.0 * halfHeight); // slope: radius per unit height from apex
+    float k2 = k * k;
+
+    float ox = localO.x, oy = localO.y, oz = localO.z;
+    float dx = localD.x, dy = localD.y, dz = localD.z;
+
+    // Quadratic: A*t² + B*t + C = 0 for cone side
+    float A = dx*dx + dz*dz - k2 * dy*dy;
+    float B = 2.0 * (ox*dx + oz*dz) - 2.0 * k2 * dy * (oy - halfHeight);
+    float C = ox*ox + oz*oz - k2 * (halfHeight - oy) * (halfHeight - oy);
+
+    float tSide = 1e30;
+    float tBase = 1e30;
+
+    // Solve cone side
+    if (abs(A) > 1e-10) {
+        float disc = B*B - 4.0*A*C;
+        if (disc >= 0.0) {
+            float sqrtDisc = sqrt(disc);
+            float t1 = (-B - sqrtDisc) / (2.0 * A);
+            float t2 = (-B + sqrtDisc) / (2.0 * A);
+            // Try the closer one first
+            for (int i = 0; i < 2; i++) {
+                float t = (i == 0) ? t1 : t2;
+                if (t < EPS) continue;
+                float y = oy + t * dy;
+                if (y >= -halfHeight && y <= halfHeight) {
+                    tSide = t;
+                    break;
+                }
+            }
+        }
+    } else if (abs(B) > 1e-10) {
+        // Linear case (A ≈ 0, grazing ray)
+        float t = -C / B;
+        if (t >= EPS) {
+            float y = oy + t * dy;
+            if (y >= -halfHeight && y <= halfHeight) {
+                tSide = t;
+            }
+        }
+    }
+
+    // Solve base cap (disk at y = -halfHeight)
+    if (abs(dy) > 1e-10) {
+        float t = (-halfHeight - oy) / dy;
+        if (t >= EPS) {
+            vec3 pt = localO + t * localD;
+            if (pt.x*pt.x + pt.z*pt.z <= radius*radius) {
+                tBase = t;
+            }
+        }
+    }
+
+    // Pick the nearest valid intersection
+    float t = min(tSide, tBase);
+    if (t >= 1e29) return false;
+
+    vec3 localPos = localO + t * localD;
+    bool isSide = (t == tSide);
+
+    vec3 localNormal;
+    if (isSide) {
+        // Side normal: gradient of cone surface, points outward
+        float y = localPos.y;
+        localNormal = normalize(vec3(localPos.x, k2 * (halfHeight - y), localPos.z));
+    } else {
+        // Base normal: points downward
+        localNormal = vec3(0.0, -1.0, 0.0);
+    }
+
+    // Transform normal back to world space
+    vec3 worldNormal = vec3(
+        localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
+        -localNormal.x * sinA + localNormal.z * cosA);
+
+    hit.t = t;
+    hit.normal = normalize(worldNormal);
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
+    hit.color = obj.color.rgb;
+    hit.emissive = 0.0;
+    return true;
+}
+
+// ============ Box intersection (type=2, with Y-axis rotation) ============
+bool intersectBox(vec3 origin, vec3 dir, SceneObject obj, out HitResult hit) {
+    vec3 center = obj.p0.xyz;
+    vec3 hs = obj.p1.xyz;
+    float cosA = obj.p2.x;
+    float sinA = obj.p2.y;
+
+    vec3 rel = origin - center;
+    vec3 lo = vec3(
+        rel.x * cosA - rel.z * sinA, rel.y, rel.x * sinA + rel.z * cosA);
+    vec3 ld = vec3(
+        dir.x * cosA - dir.z * sinA, dir.y, dir.x * sinA + dir.z * cosA);
+
+    vec3 tMin = (-hs - lo) / ld;
+    vec3 tMax = (hs - lo) / ld;
+    vec3 t1 = min(tMin, tMax);
+    vec3 t2 = max(tMin, tMax);
+    float tNear = max(t1.x, max(t1.y, t1.z));
+    float tFar = min(t2.x, min(t2.y, t2.z));
+    if (tNear > tFar || tFar < EPS) return false;
+
+    float t = tNear;
+    if (t < EPS) {
+        t = tFar;
+        if (t < EPS) return false;
+    }
+
+    vec3 localPos = lo + t * ld;
+    vec3 localNormal = vec3(0.0);
+    vec3 cd = localPos / hs;
+    float ax = abs(cd.x), ay = abs(cd.y), az = abs(cd.z);
+    if (ax >= ay && ax >= az)      localNormal = vec3(sign(cd.x), 0.0, 0.0);
+    else if (ay >= ax && ay >= az) localNormal = vec3(0.0, sign(cd.y), 0.0);
+    else                           localNormal = vec3(0.0, 0.0, sign(cd.z));
+
+    // Transform normal back to world space
+    vec3 worldNormal = vec3(
+        localNormal.x * cosA + localNormal.z * sinA, localNormal.y,
+        -localNormal.x * sinA + localNormal.z * cosA);
+
+    hit.t = t;
+    hit.normal = normalize(worldNormal);
+    if (dot(dir, hit.normal) > 0.0) hit.normal = -hit.normal;
+    hit.color = obj.color.rgb;
+    hit.emissive = 0.0;
+    return true;
+}
+
+// ============ TLAS ray query (mesh type=4 via hardware) ============
+bool traceTLAS(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(rq, tlas, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF,
+                          origin, 0.001, dir, 1e30);
+    rayQueryProceedEXT(rq);
+
+    if (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionEXT) {
+        float rt = rayQueryGetIntersectionTEXT(rq, true);
+        if (rt >= 1e29) return false;
+
+        int objIndex = int(rayQueryGetIntersectionInstanceCustomIndexEXT(rq, true));
+        if (objIndex < 0 || objIndex >= scene.objectCount) return false;
+        if (objIndex == skipIndex) return false;
+
+        SceneObject obj = scene.objects[objIndex];
+
+        // Get barycentric coordinates and triangle index
+        vec2 bary = rayQueryGetIntersectionBarycentricsEXT(rq, true);
+        int triIndex = int(rayQueryGetIntersectionPrimitiveIndexEXT(rq, true));
+
+        // Get triangle vertices from buffer
+        Triangle tri = triBuf.triangles[triIndex];
+        vec3 v0 = tri.vertices[0].pos.xyz;
+        vec3 v1 = tri.vertices[1].pos.xyz;
+        vec3 v2 = tri.vertices[2].pos.xyz;
+        vec3 n0 = tri.vertices[0].nrm.xyz;
+        vec3 n1 = tri.vertices[1].nrm.xyz;
+        vec3 n2 = tri.vertices[2].nrm.xyz;
+
+        // Interpolate normal
+        vec3 interpNormal = (1.0 - bary.x - bary.y) * n0 + bary.x * n1 + bary.y * n2;
+        if (dot(interpNormal, interpNormal) < 0.001) {
+            interpNormal = cross(v1 - v0, v2 - v0);
+        }
+        if (dot(interpNormal, interpNormal) < 1e-10) return false;
+        interpNormal = normalize(interpNormal);
+        if (dot(dir, interpNormal) > 0.0) interpNormal = -interpNormal;
+
+        hit.t = rt;
+        hit.normal = interpNormal;
+        hit.color = obj.color.rgb;
+        hit.emissive = obj.color.w;
+        hit.objIndex = objIndex;
+        return true;
+    }
+    return false;
+}
+
+// ============ Scene trace: software (non-mesh) + TLAS (mesh) ============
+bool traceScene(vec3 origin, vec3 dir, int skipIndex, out HitResult hit) {
+    hit.t = 1e30; hit.emissive = 0.0; hit.objIndex = -1;
+    bool found = false;
+
+    // 非网格对象 (type 0-3): plane, sphere, box, cone — 软件求交
+    for (int i = 0; i < scene.objectCount; i++) {
+        if (i == skipIndex) continue;
+        SceneObject obj = scene.objects[i];
+        int type = int(obj.p0.w);
+        if (type == 4) continue; // mesh handled by TLAS
+        HitResult r; bool hitObj = false;
+        if (type == 0) hitObj = intersectPlane(origin, dir, obj, r);
+        else if (type == 1) hitObj = intersectSphere(origin, dir, obj, r);
+        else if (type == 2) hitObj = intersectBox(origin, dir, obj, r);
+        else if (type == 3) hitObj = intersectCone(origin, dir, obj, r);
+        if (hitObj && r.t < hit.t) { hit = r; hit.objIndex = i; found = true; }
+    }
+    // 网格对象 (type 4): TLAS ray query
+    HitResult tlasHit;
+    if (traceTLAS(origin, dir, skipIndex, tlasHit) && tlasHit.t < hit.t) {
+        hit = tlasHit; found = true;
+    }
+    return found;
+}
+
+float traceShadow(vec3 origin, vec3 dir, float maxT, int skipIndex1, int skipIndex2) {
+    // 非网格对象 (type 0-3): 软件阴影求交
+    for (int i = 0; i < scene.objectCount; i++) {
+        if (i == skipIndex1 || i == skipIndex2) continue;
+        SceneObject obj = scene.objects[i];
+        int type = int(obj.p0.w);
+        if (type == 4) continue;
+        HitResult r; bool hitObj = false;
+        if (type == 0) hitObj = intersectPlane(origin, dir, obj, r);
+        else if (type == 1) hitObj = intersectSphere(origin, dir, obj, r);
+        else if (type == 2) hitObj = intersectBox(origin, dir, obj, r);
+        else if (type == 3) hitObj = intersectCone(origin, dir, obj, r);
+        if (hitObj && r.t < maxT - EPS) return 0.0;
+    }
+    // 网格对象 (type 4): TLAS any-hit shadow query
+    // We use rayQuery with TerminateOnFirstHit to get early-out for shadows
+    rayQueryEXT rq;
+    rayQueryInitializeEXT(rq, tlas, gl_RayFlagsTerminateOnFirstHitEXT, 0xFF,
+                          origin, 0.001, dir, maxT);
+    rayQueryProceedEXT(rq);
+
+    if (rayQueryGetIntersectionTypeEXT(rq, true) == gl_RayQueryCommittedIntersectionEXT) {
+        float rt = rayQueryGetIntersectionTEXT(rq, true);
+        if (rt < maxT - EPS) {
+            int objIndex = int(rayQueryGetIntersectionInstanceCustomIndexEXT(rq, true));
+            if (objIndex >= 0 && objIndex < scene.objectCount &&
+                objIndex != skipIndex1 && objIndex != skipIndex2) {
+                return 0.0; // shadow occluded
+            }
+        }
+    }
+    return 1.0;
+}
+
+// ============ Hemisphere sampling ============
+vec3 sampleHemisphere(vec3 normal) {
+    float u1 = randFloat();
+    float u2 = randFloat();
+
+    float r = sqrt(u1);
+    float theta = 6.283185307 * u2;
+
+    vec3 tangent = abs(normal.y) < 0.9999 ?
+                   vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 bitangent = normalize(cross(normal, tangent));
+    tangent = cross(bitangent, normal);
+
+    // tangent/bitangent/normal 构成正交基，各分量平方和 = 1，无需外层 normalize
+    return tangent * r * cos(theta) +
+           bitangent * r * sin(theta) +
+           normal * sqrt(max(0.0, 1.0 - u1));
+}
+
+// ============ Light sampling (uniform area) ============
+vec3 sampleLightPoint(SceneObject obj, out vec3 normal, out float pdf) {
+    // 网格光源：三角形面积均匀采样（TLAS 模式顶点已在世界空间）
+    if (int(obj.p0.w) == 4) {
+        int firstTri = int(obj.p1.x), triCount = int(obj.p1.y);
+        int ti = clamp(firstTri + int(randFloat() * float(triCount)), firstTri, firstTri + triCount - 1);
+        Triangle tri = triBuf.triangles[ti];
+        vec3 v0 = tri.vertices[0].pos.xyz, v1 = tri.vertices[1].pos.xyz, v2 = tri.vertices[2].pos.xyz;
+        float u = randFloat(), v = randFloat();
+        if (u + v > 1.0) { u = 1.0 - u; v = 1.0 - v; }
+        vec3 lp = v0 + u * (v1 - v0) + v * (v2 - v0);
+        vec3 we1 = v1 - v0, we2 = v2 - v0;
+        vec3 cn = cross(we1, we2);
+        float triArea = 0.5 * length(cn);
+        if (triArea < 1e-10) { pdf = 0.0; return vec3(0.0); } // 退化三角形
+        normal = normalize(cn);
+        pdf = 1.0 / (triArea * float(triCount) + 1e-6);
+        return lp;
+    }
+    // 平面光源：包围盒面积均匀采样
+    vec4 bounds = obj.p2; // (umin, vmin, umax, vmax)
+    float u = bounds.x + randFloat() * (bounds.z - bounds.x);
+    float v = bounds.y + randFloat() * (bounds.w - bounds.y);
+    vec3 pt;
+    vec3 an = abs(obj.p1.xyz);
+    if (an.x > 0.5) {
+        pt = vec3(obj.p0.x, u, v);
+    } else if (an.y > 0.5) {
+        pt = vec3(u, obj.p0.y, v);
+    } else {
+        pt = vec3(u, v, obj.p0.z);
+    }
+    normal = obj.p1.xyz;
+    float area = (bounds.z - bounds.x) * (bounds.w - bounds.y);
+    pdf = 1.0 / (area + 1e-6);
+    return pt;
+}
+
+// ============ Path tracing with NEE ============
+vec3 tracePath(vec3 origin, vec3 dir, int lightIndex) {
+    vec3 radiance = vec3(0.0);
+    vec3 throughput = vec3(1.0);
+
+    for (int bounce = 0; bounce < ubo.maxBounces; bounce++) {
+        HitResult hit;
+        if (!traceScene(origin, dir, -1, hit)) break;
+
+        vec3 hitPos = origin + hit.t * dir;
+
+        // Hit emissive surface
+        if (hit.emissive > 0.0) {
+            // When NEE is enabled, emission only at bounce 0 (NEE handles the rest)
+            // When NEE is disabled, add emission at any bounce (standard path tracing)
+            if (bounce == 0 || ubo.enableNEE == 0) {
+                radiance += throughput * hit.color * hit.emissive;
+            }
+            break; // Emissive surfaces terminate the path
+        }
+
+        // NEE: sample light directly (next event estimation)
+        if (ubo.enableNEE != 0 && lightIndex >= 0) {
+            SceneObject lightObj = scene.objects[lightIndex];
+            vec3 lightNormal;
+            float lightPdf;
+            vec3 lightPt = sampleLightPoint(lightObj, lightNormal, lightPdf);
+
+            vec3 toLight = lightPt - hitPos;
+            float distSq = dot(toLight, toLight);
+            float dist = sqrt(distSq);
+            vec3 lightDir = toLight / dist;
+
+            float cosAtHit  = max(dot(lightDir, hit.normal), 0.0);
+            float cosAtLight = abs(dot(lightDir, lightNormal)); // 双面光源（与 Flat 版本一致）
+
+            if (cosAtHit > 0.0 && cosAtLight > 0.0 && lightPdf > 0.0 && distSq > 0.0001) {
+                // Shadow ray: offset along light direction to prevent self-intersection
+                float vis = traceShadow(hitPos + EPS * lightDir, lightDir, dist, hit.objIndex, lightIndex);
+                if (vis > 0.0) {
+                    // Le * (albedo/pi) * G * V / p_area
+                    // = Le * hit.color * cosAtHit * cosAtLight * V / (pi * distSq * lightPdf)
+                    vec3 direct = throughput
+                                * lightObj.color.rgb * lightObj.color.w
+                                * hit.color
+                                * cosAtHit * cosAtLight
+                                * vis
+                                / (3.14159265 * distSq * lightPdf);
+                    radiance += min(direct, vec3(10.0));
+                }
+            }
+        }
+
+        // BRDF sampling for next bounce (random walk continuation)
+        vec3 newDir = sampleHemisphere(hit.normal);
+        if (dot(newDir, hit.normal) < 0.0) break;
+
+        throughput *= hit.color;
+
+        // Russian roulette
+        if (bounce > 5) {
+            float survival = max(max(throughput.r, throughput.g), throughput.b);
+            if (survival < 1e-10) break; // 全黑终止
+            if (randFloat() > survival) break;
+            throughput /= survival;
+        }
+
+        // Offset along the outgoing direction to prevent self-intersection
+        // (normal-only offset fails for walls where the normal points into the surface)
+        origin = hitPos + EPS * newDir;
+        dir = newDir;
+    }
+
+    return radiance;
+}
+
+void main() {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(outputImage);
+    if (pix.x >= size.x || pix.y >= size.y) return;
+
+    // ── Stage 1: Verify scene SSBO and light index ──
+    int lightIndex = -1;
+    for (int i = 0; i < scene.objectCount; i++) {
+        if (scene.objects[i].color.w > 0.0) {
+            lightIndex = i;
+            break;
+        }
+    }
+
+    // ── Stage 2: Generate camera ray ──
+    vec3 camPos = ubo.cameraPos.xyz;
+    vec3 camDir = ubo.cameraDir.xyz;
+    vec3 camRight = ubo.cameraRight.xyz;
+    vec3 camUp = ubo.cameraUp.xyz;
+
+    float tanHalfFov = tan(ubo.fov * 0.5);
+    float aspectFactor = tanHalfFov * ubo.aspectRatio;
+    float invW = 1.0 / float(size.x);
+    float invH = 1.0 / float(size.y);
+
+    randState = wangHash(uint(pix.x + pix.y * size.x) + uint(ubo.frameCount * 1234567u));
+
+    float px = (float(pix.x) + randFloat()) * invW * 2.0 - 1.0;
+    float py = -((float(pix.y) + randFloat()) * invH * 2.0 - 1.0);
+    px *= aspectFactor;
+    py *= tanHalfFov;
+
+    vec3 rayDir = normalize(camDir + px * camRight + py * camUp);
+
+    // ── Stage 3: Trace path ──
+    vec3 currentRadiance = tracePath(camPos, rayDir, lightIndex);
+
+    // ── Stage 4: Temporal accumulation (Linear space) ──
+    vec3 accumulatedRadiance = currentRadiance;
+    if (ubo.useAccumulation > 0) {
+        if (ubo.frameCount > 0 && ubo.resetAccumulation == 0) {
+            vec3 prevRadiance = imageLoad(accumImage, pix).rgb;
+            float w = 1.0 / float(ubo.frameCount + 1);
+            accumulatedRadiance = mix(prevRadiance, currentRadiance, w);
+        }
+        // frame 0 or after reset: just use current radiance (no previous data)
+    }
+
+    // ── Stage 5: Store results ──
+    // outputImage 和 accumImage 绑定到同一纹理，仅写入一次
+    imageStore(accumImage, pix, vec4(accumulatedRadiance, 1.0));
+}
