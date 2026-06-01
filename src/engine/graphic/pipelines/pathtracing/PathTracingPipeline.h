@@ -7,6 +7,7 @@
 #include "interfaces/IDescriptorSet.h"
 #include "interfaces/IComputePipeline.h"
 #include "VulkanRTBackend.h"
+#include "AccelStructBuilder.h"
 #include <memory>
 #include <vector>
 #include <functional>
@@ -86,7 +87,8 @@ struct PathTracingCameraUBO {
 enum class PathTraceMode : uint8_t {
     Flat = 0,       ///< 计算着色器暴力遍历所有三角形 (pathtrace.comp)
     BVH = 1,        ///< 计算着色器 BVH 加速遍历 (pathtrace_BVH.comp)
-    HardwareRT = 2  ///< Vulkan 硬件光线追踪 (pathtrace_HardwareRT.*)
+    HardwareRT = 2, ///< Vulkan 硬件光线追踪 (pathtrace_HardwareRT.*)
+    RayQuery = 3    ///< 计算着色器 + VK_KHR_ray_query (pathtrace_RayQuery.comp)
 };
 
 class ENGINE_API PathTracingPipeline : public IPipeline {
@@ -206,6 +208,12 @@ private:
     void ExecuteHardwareRT(ICommandBuffer* cmd);  // HardwareRT 模式执行
     void UpdateTLASInstances(ICommandBuffer* cmd); // 更新 TLAS 实例变换
 
+    // Ray Query 辅助方法
+    bool BuildRayQueryResources(Scene* scene);
+    void DestroyRayQueryResources();
+    void ExecuteRayQuery(ICommandBuffer* cmd);
+    void UpdateRayQueryTLAS(VkCommandBuffer vkCmd);
+
     // 场景数据缓存（用于延迟初始化后重上传）
     PathTracingSceneData m_cachedSceneData{};
     PathTracingTriangleData m_cachedTriangleData{};
@@ -239,6 +247,11 @@ private:
     std::vector<uint8_t> m_rmissSPIRV;
     bool m_rtResourcesBuilt = false;   // BLAS/TLAS/RT pipeline 是否已构建
     bool m_sceneChangedSinceLastRTBuild = true; // 场景变更后标记需重建 AS
+
+    // ======== Ray Query 资源 ========
+    std::unique_ptr<AccelStructBuilder> m_rqBackend;
+    std::shared_ptr<IDescriptorSet> m_rqRhiDescriptorSet;
+    bool m_rqResourcesBuilt = false;
 };
 
 } // namespace Prisma::Graphic
