@@ -83,14 +83,6 @@ struct PathTracingCameraUBO {
     int enableNEE = 0;
 };
 
-/// 路径追踪渲染模式
-enum class PathTraceMode : uint8_t {
-    Flat = 0,       ///< 计算着色器暴力遍历所有三角形 (pathtrace.comp)
-    BVH = 1,        ///< 计算着色器 BVH 加速遍历 (pathtrace_BVH.comp)
-    HardwareRT = 2, ///< Vulkan 硬件光线追踪 (pathtrace_HardwareRT.*)
-    RayQuery = 3    ///< 计算着色器 + VK_KHR_ray_query (pathtrace_RayQuery.comp)
-};
-
 class ENGINE_API PathTracingPipeline : public IPipeline {
 public:
     using OverlayCallback = std::function<void(ICommandBuffer*)>;

@@ -2,26 +2,12 @@
 
 #include "Export.h"
 #include "graphic/interfaces/RenderTypes.h"
-#include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 #include <glaze/glaze.hpp>
 #include <string>
 #include <vector>
 #include <cstdint>
 
 namespace Prisma {
-
-/* C# 脚本后端枚举（与编译时 PRISMA_ENABLE_SCRIPTING 值对应） */
-enum class RenderMode : uint8_t {
-    Mode2D = 0,
-    Mode3D_Forward = 1,
-    Mode3D_ForwardPlus = 2,
-    Mode3D_Deferred = 3,
-    Mode3D_DeferredPlus = 4,
-    Mode3D_PathTracing = 5,
-    Mode3D_ClusteredForward = 6,
-    Mode3D_NPR = 8,
-    SRP = 7
-};
 
 enum class ScriptingBackend : uint8_t {
     Off     = 0,

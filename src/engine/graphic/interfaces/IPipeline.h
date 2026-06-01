@@ -8,7 +8,6 @@
 
 namespace Prisma {
     class Scene;
-    enum class RenderMode : uint8_t;
 }
 
 namespace Prisma::Graphic {
