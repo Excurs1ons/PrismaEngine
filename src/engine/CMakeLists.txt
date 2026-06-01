@@ -158,6 +158,9 @@ set(CORE_SOURCES
     graphic/pipelines/deferred/LightingPass.cpp
     graphic/pipelines/deferred/CompositionPass.cpp
     graphic/pipelines/deferred/GBuffer.cpp
+    graphic/pipelines/deferred/SSRPass.cpp
+    graphic/pipelines/deferred/TonemappingPass.cpp
+    graphic/pipelines/deferred/FogPass.cpp
 
     # Graphic - Clustered Pipeline
     graphic/pipelines/clustered/ClusteredForwardPipeline.cpp
