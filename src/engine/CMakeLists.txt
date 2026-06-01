@@ -206,6 +206,7 @@ set(CORE_SOURCES
     graphic/pipelines/forward/TAAPass.cpp
 
     # Graphic - PathTracing Pipeline
+    graphic/pipelines/pathtracing/AccelStructBuilder.cpp
     graphic/pipelines/pathtracing/PathTracingPipeline.cpp
     graphic/pipelines/pathtracing/VulkanRTBackend.cpp
 
