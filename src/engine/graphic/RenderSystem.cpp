@@ -244,6 +244,14 @@ void RenderSystem::EndFrame() {
 
         m_mainRenderPipeline->Execute(ctx);
 
+        // Water rendering callback (after main pipeline, before present)
+        if (m_onWaterRender) {
+            auto* cmd = ctx.commandBuffer;
+            if (cmd) {
+                m_onWaterRender(cmd, m_device.get());
+            }
+        }
+
         // 第一帧记录 GPU 命令计数（后续不再刷屏）
         static bool s_firstEndFrame = true;
         if (s_firstEndFrame) {
@@ -500,6 +508,10 @@ bool RenderSystem::IsRayQuerySupported() const {
 
 void RenderSystem::SetRenderModeChangedCallback(std::function<void(RenderMode, IRenderDevice*)> callback) {
     m_onRenderModeChanged = std::move(callback);
+}
+
+void RenderSystem::SetWaterRenderCallback(std::function<void(ICommandBuffer*, IRenderDevice*)> callback) {
+    m_onWaterRender = std::move(callback);
 }
 
 }  // namespace Prisma::Graphic

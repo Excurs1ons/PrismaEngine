@@ -23,6 +23,7 @@ class Scene;
 namespace Prisma::Graphic {
 
 class ForwardPipeline;
+class ICommandBuffer;
 struct RenderSystemDesc {
     RenderAPIType backendType  = RenderAPIType::Vulkan;
     void* windowHandle         = nullptr;
@@ -95,6 +96,10 @@ public:
     /// Set callback invoked after render mode changes (e.g. for scene data re-upload).
     void SetRenderModeChangedCallback(std::function<void(RenderMode, IRenderDevice*)> callback);
 
+    /// Set callback invoked after the main pipeline renders (for water, gizmos, etc.)
+    /// Called between main pipeline Execute and EndFrame, with the command buffer still active.
+    void SetWaterRenderCallback(std::function<void(ICommandBuffer*, IRenderDevice*)> callback);
+
 private:
     int InitializeDevice();
     int InitializeRenderResourceManager();
@@ -108,6 +113,7 @@ private:
     std::mutex m_recreationMutex;
     std::atomic<bool> m_isRecreating{false};
     std::function<void(RenderMode, IRenderDevice*)> m_onRenderModeChanged;
+    std::function<void(ICommandBuffer*, IRenderDevice*)> m_onWaterRender;
 
     /// Returns the RT extensions needed for a given render mode.
     RTMode GetRequiredRTMode(RenderMode mode) const;

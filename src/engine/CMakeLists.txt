@@ -249,6 +249,7 @@ endif()
 if(PRISMA_BUILD_SUBSYSTEM_PARTICLES)
     list(APPEND CORE_SOURCES
         particles/ParticleSystem.cpp
+        particles/GPUParticleSystem.cpp
     )
 endif()
 
