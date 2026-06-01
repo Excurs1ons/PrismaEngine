@@ -122,7 +122,12 @@ enum class EffectType : int {
     RingModulator = 9,
     Autowah = 10,
     Compressor = 11,
-    Equalizer = 12
+    Equalizer = 12,
+    Phaser = 13,
+    LowPass = 14,
+    HighPass = 15,
+    BandPass = 16,
+    Tremolo = 17
 };
 
 // 设备初始化描述
