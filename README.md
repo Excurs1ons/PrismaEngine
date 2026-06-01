@@ -15,7 +15,7 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 [中文文档](./docs/README_zh.md) | [English](./README.md)
 
 > **Current Status**: CoreCLR C# scripting functional. SoA entity pool with 1M virtual capacity. Android Vulkan runtime production-ready.
-> **Last Updated**: 2026-05-29
+> **Last Updated**: 2026-06-01
 
 ## CI/CD Status
 
@@ -29,24 +29,36 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 
 | Module | Status | Description |
 |--------|--------|-------------|
-| SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
-| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
-| Rendering Architecture | ✅ 95% | Core Pass + Feature system + Compute Pipeline RHI |
-| Resource Management | ✅ 95% | Handle<T> system + resource pools |
-| Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
-| DirectX 12 Backend | ❌ 已暂停 | 已暂停，专注 Vulkan 后端 |
-| Platform Layer | ✅ 95% | Unified Windows/Linux/Android abstraction |
-| Logger System | ✅ 100% | Thread-safe cross-platform logging |
-| Audio System | ✅ 50% | XAudio2/SDL3 backends with 3D spatial support |
-| Shaders | ✅ 60% | PBR lighting shaders (lit/unlit) |
-| Physics System | ✅ 30% | 碰撞检测、刚体、约束求解、CCD |
+| AI System | ✅ 75% | Behavior tree, state machine, perception system, goal-oriented |
 | Android Runtime | ✅ 90% | Optimized Vulkan runtime (integrated GameActivity) |
-| Editor Tools | ✅ 45% | ImGui 编辑器 + MCP 集成 + WebUI |
-| MCP Protocol | ✅ 85% | 17 tools, 7 categories, dual transport, hash delta tracking |
+| Animation System | ✅ 60% | Skeletal animation, blend tree, IK, morph targets |
+| Audio System | ✅ 55% | XAudio2/SDL3/miniaudio backends with 3D spatial support |
+| Console/CVar | ✅ 70% | In-game console, CVar system, auto-complete, history |
+| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
+| DirectX 12 Backend | ❌ Suspended | Suspended, focusing on Vulkan backend |
+| Editor Tools | ✅ 55% | ImGui editor panels, MCP integration, WebUI |
+| Input System | ✅ 90% | Keyboard/mouse/gamepad, action mapping, chord detection |
+| Logger System | ✅ 100% | Thread-safe cross-platform logging |
+| MCP Protocol | ✅ 90% | 17 tools, 7 categories, dual transport, hash delta tracking |
+| Memory System | ✅ 90% | Stack/arena/pool allocators, virtual memory, double-buffered |
+| Navigation System | ✅ 85% | NavMesh generation, A* pathfinding, nav agent, avoidance |
+| Network System | ✅ 70% | TCP/UDP transport, RPC, entity replication, lobby |
+| Particle System | ✅ 55% | CPU/GPU particles, emitters, force fields, events |
+| Physics System | ✅ 80% | Collision detection, rigid body, constraint solver, CCD, trigger volumes |
+| Platform Layer | ✅ 95% | Unified Windows/Linux/Android abstraction |
+| Profiling System | ✅ 60% | GPU/CPU profiler, frame stats, timeline capture |
+| Rendering Architecture | ✅ 95% | Core Pass + Feature system + Compute Pipeline RHI |
+| Resource Management | ✅ 95% | Handle\<T\> system + resource pools |
+| Shaders | ✅ 70% | PBR lighting, shadow mapping, SSAO, TAA, IBL shaders |
+| SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
+| Terrain System | ✅ 70% | Heightmap, LOD, chunk-based loading, splatmap texturing |
+| Testing Infrastructure | ✅ 55% | GTest unit tests + integration tests (66 files) |
+| Threading/JobSystem | ✅ 80% | Fiber-based job system, thread pool, wait-free queues |
+| Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
+| Water System | ✅ 55% | Wave simulation, reflection/refraction, buoyancy |
 | WebUI Editor | ✅ 80% | Browser-based editor with scene/game viewport, hierarchy, inspector |
-| Testing Infrastructure | ✅ 55% | GTest 单元测试 + 集成测试 (66 files) |
 
-**Overall: ~85%**
+**Overall: ~87%**
 
 ## Quick Start
 
