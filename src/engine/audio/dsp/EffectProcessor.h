@@ -634,7 +634,7 @@ inline void ProcessEffect(float* buffer, uint32_t frames,
     // ========================================================================
     // 7. Compression — RMS 检测 + 增益计算 (threshold/ratio/knee)
     // ========================================================================
-    case EffectType::Compression: {
+    case EffectType::Compressor: {
         auto& p = *static_cast<const CompressorParams*>(params);
 
         float thresholdDb = p.threshold;
