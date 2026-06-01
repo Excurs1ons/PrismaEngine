@@ -7,6 +7,8 @@
 #include <random>
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
+#include <vector>
 
 namespace Prisma::Graphic {
 

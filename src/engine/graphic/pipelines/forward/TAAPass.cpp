@@ -4,6 +4,8 @@
 #include "graphic/interfaces/IRenderTarget.h"
 #include "app/Engine.h"
 #include "Logger.h"
+#include <cstdint>
+#include <vector>
 
 namespace Prisma::Graphic {
 
