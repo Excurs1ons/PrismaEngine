@@ -1,5 +1,6 @@
 #include "navigation/NavigationSystem.h"
 #include "Logger.h"
+#include <fstream>
 
 namespace Prisma {
 namespace Navigation {
@@ -108,10 +109,147 @@ void NavigationSystem::UnregisterAgent(NavAgentComponent* component) {
 
 bool NavigationSystem::LoadNavMeshFromFile(const std::string& filePath) {
     LOG_INFO("NavigationSystem", "正在从文件加载导航网格: {}", filePath);
-    // TODO: 实现 NavMesh 的二进制序列化加载
-    // 当前仅作为桩函数
-    LOG_WARNING("NavigationSystem", "NavMesh 文件加载功能尚未实现: {}", filePath);
-    return false;
+
+    std::ifstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        LOG_ERROR("NavigationSystem", "无法打开文件: {}", filePath);
+        return false;
+    }
+
+    // 读取魔数 "NAVM"
+    char magic[4];
+    file.read(magic, 4);
+    if (file.gcount() != 4 ||
+        magic[0] != 'N' || magic[1] != 'A' ||
+        magic[2] != 'V' || magic[3] != 'M') {
+        LOG_ERROR("NavigationSystem", "无效的 NavMesh 文件格式: {}", filePath);
+        return false;
+    }
+
+    // 读取版本号
+    uint32_t version = 0;
+    file.read(reinterpret_cast<char*>(&version), sizeof(version));
+    if (version != 1) {
+        LOG_ERROR("NavigationSystem", "不支持的 NavMesh 版本: {}", version);
+        return false;
+    }
+
+    // 读取多边形数量
+    uint32_t polygonCount = 0;
+    file.read(reinterpret_cast<char*>(&polygonCount), sizeof(polygonCount));
+
+    std::vector<NavPolygon> polygons;
+    polygons.reserve(polygonCount);
+
+    for (uint32_t i = 0; i < polygonCount; ++i) {
+        NavPolygon poly;
+
+        // 读取三个顶点 (3 * glm::dvec3 = 9 个 double)
+        file.read(reinterpret_cast<char*>(&poly.vertices[0].x), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[0].y), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[0].z), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[1].x), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[1].y), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[1].z), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[2].x), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[2].y), sizeof(double));
+        file.read(reinterpret_cast<char*>(&poly.vertices[2].z), sizeof(double));
+
+        // 读取三个邻居索引 (3 个 int32_t)
+        file.read(reinterpret_cast<char*>(&poly.neighbors[0]), sizeof(int32_t));
+        file.read(reinterpret_cast<char*>(&poly.neighbors[1]), sizeof(int32_t));
+        file.read(reinterpret_cast<char*>(&poly.neighbors[2]), sizeof(int32_t));
+
+        // 读取区域类型 (1 字节)
+        uint8_t areaType = 0;
+        file.read(reinterpret_cast<char*>(&areaType), sizeof(uint8_t));
+        poly.areaType = static_cast<AreaType>(areaType);
+
+        // 读取多边形 ID (4 字节)
+        file.read(reinterpret_cast<char*>(&poly.id), sizeof(uint32_t));
+
+        // 跳过 3 字节填充
+        char padding[3];
+        file.read(padding, 3);
+
+        if (!file.good()) {
+            LOG_ERROR("NavigationSystem", "读取多边形数据失败，索引: {}", i);
+            return false;
+        }
+
+        polygons.push_back(poly);
+    }
+
+    file.close();
+
+    auto navMesh = std::make_unique<NavMesh>(std::move(polygons));
+    SetNavMesh(std::move(navMesh));
+
+    LOG_INFO("NavigationSystem", "成功加载导航网格: {} 个多边形", polygonCount);
+    return true;
+}
+
+bool NavigationSystem::SaveNavMeshToFile(const std::string& filePath) const {
+    if (!m_navMesh) {
+        LOG_ERROR("NavigationSystem", "没有导航网格可保存");
+        return false;
+    }
+
+    LOG_INFO("NavigationSystem", "正在保存导航网格到文件: {}", filePath);
+
+    std::ofstream file(filePath, std::ios::binary);
+    if (!file.is_open()) {
+        LOG_ERROR("NavigationSystem", "无法创建文件: {}", filePath);
+        return false;
+    }
+
+    // 写入魔数 "NAVM"
+    const char magic[4] = {'N', 'A', 'V', 'M'};
+    file.write(magic, 4);
+
+    // 写入版本号
+    const uint32_t version = 1;
+    file.write(reinterpret_cast<const char*>(&version), sizeof(version));
+
+    // 写入多边形数量
+    const auto& polygons = m_navMesh->GetPolygons();
+    const uint32_t polygonCount = static_cast<uint32_t>(polygons.size());
+    file.write(reinterpret_cast<const char*>(&polygonCount), sizeof(polygonCount));
+
+    // 写入每个多边形
+    for (const auto& poly : polygons) {
+        // 写入三个顶点 (3 * glm::dvec3 = 9 个 double)
+        file.write(reinterpret_cast<const char*>(&poly.vertices[0].x), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[0].y), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[0].z), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[1].x), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[1].y), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[1].z), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[2].x), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[2].y), sizeof(double));
+        file.write(reinterpret_cast<const char*>(&poly.vertices[2].z), sizeof(double));
+
+        // 写入三个邻居索引 (3 个 int32_t)
+        file.write(reinterpret_cast<const char*>(&poly.neighbors[0]), sizeof(int32_t));
+        file.write(reinterpret_cast<const char*>(&poly.neighbors[1]), sizeof(int32_t));
+        file.write(reinterpret_cast<const char*>(&poly.neighbors[2]), sizeof(int32_t));
+
+        // 写入区域类型 (1 字节)
+        const uint8_t areaType = static_cast<uint8_t>(poly.areaType);
+        file.write(reinterpret_cast<const char*>(&areaType), sizeof(uint8_t));
+
+        // 写入多边形 ID (4 字节)
+        file.write(reinterpret_cast<const char*>(&poly.id), sizeof(uint32_t));
+
+        // 写入 3 字节填充 (0)
+        const char padding[3] = {0, 0, 0};
+        file.write(padding, 3);
+    }
+
+    file.close();
+
+    LOG_INFO("NavigationSystem", "成功保存导航网格: {} 个多边形", polygonCount);
+    return true;
 }
 
 } // namespace Navigation

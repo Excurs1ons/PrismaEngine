@@ -48,8 +48,11 @@ public:
     /** 是否已加载导航网格 */
     bool HasNavMesh() const { return m_navMesh != nullptr; }
 
-    /** 从文件加载预烘焙的 NavMesh（未来扩展） */
+    /** 从文件加载预烘焙的 NavMesh */
     bool LoadNavMeshFromFile(const std::string& filePath);
+
+    /** 保存导航网格到二进制文件 */
+    bool SaveNavMeshToFile(const std::string& filePath) const;
 
     // ========== 寻路器 ==========
 
