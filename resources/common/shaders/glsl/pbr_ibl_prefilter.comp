@@ -1,0 +1,123 @@
+// ============================================================
+// pbr_ibl_prefilter.comp — PrismaEngine IBL 预过滤环境贴图计算着色器
+//
+// 对 HDR 环境贴图使用 GGX 重要性采样生成不同粗糙度等级的
+// 预过滤立方体贴图 mip 层级。
+// 输出: 预过滤立方体贴图 (存储图像, 每 dispatch 一个 mip/face)
+// Push Constants: 粗糙度, 采样数
+// ============================================================
+
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// ---- 输入环境贴图 ----
+layout(binding = 0) uniform samplerCube environmentMap;
+
+// ---- 输出预过滤贴图 (存储图像) ----
+layout(rgba16f, binding = 1) uniform imageCube prefilterOutput;
+
+// ---- Push Constants (匹配 C++ struct { float roughness; uint32_t sampleCount; float padding[2]; }) ----
+layout(push_constant) uniform PrefilterParams {
+    float roughness;
+    uint sampleCount;
+    float padding0;
+    float padding1;
+} pc;
+
+const float PI = 3.14159265359;
+
+// ---- Hammersley 序列 (低差异随机数) ----
+float RadicalInverse_VdC(uint bits) {
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+vec2 Hammersley(uint i, uint N) {
+    return vec2(float(i) / float(N), RadicalInverse_VdC(i));
+}
+
+// ---- GGX 重要性采样 ----
+vec3 ImportanceSampleGGX(vec2 Xi, vec3 N, float roughness) {
+    float a = roughness * roughness;
+
+    float phi = 2.0 * PI * Xi.x;
+    float cosTheta = sqrt((1.0 - Xi.y) / (1.0 + (a * a - 1.0) * Xi.y));
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+    // 从球面坐标到笛卡尔坐标 (切线空间)
+    vec3 H;
+    H.x = cos(phi) * sinTheta;
+    H.y = sin(phi) * sinTheta;
+    H.z = cosTheta;
+
+    // 从切线空间到世界空间
+    vec3 up = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent = normalize(cross(up, N));
+    vec3 bitangent = cross(N, tangent);
+
+    vec3 sampleVec = tangent * H.x + bitangent * H.y + N * H.z;
+    return normalize(sampleVec);
+}
+
+// 将立方体贴图的 face 索引和纹理坐标转换为采样方向
+vec3 GetCubeDirection(ivec2 coord, ivec2 size, int face) {
+    vec2 uv = (vec2(coord) + 0.5) / vec2(size) * 2.0 - 1.0;
+
+    switch (face) {
+        case 0: return vec3( 1.0,  uv.y, -uv.x);
+        case 1: return vec3(-1.0,  uv.y,  uv.x);
+        case 2: return vec3( uv.x,  1.0, -uv.y);
+        case 3: return vec3( uv.x, -1.0,  uv.y);
+        case 4: return vec3( uv.x,  uv.y,  1.0);
+        case 5: return vec3(-uv.x,  uv.y, -1.0);
+    }
+    return vec3(0.0);
+}
+
+void main() {
+    ivec2 coord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(prefilterOutput);
+
+    if (coord.x >= imgSize.x || coord.y >= imgSize.y) return;
+
+    int face = int(gl_GlobalInvocationID.z);
+    if (face >= 6) return;
+
+    vec3 N = normalize(GetCubeDirection(coord, imgSize, face));
+    vec3 R = N; // 反射方向 = 法线方向 (对于预过滤)
+    vec3 V = R; // 视线方向 = 反射方向
+
+    uint sampleCount = max(pc.sampleCount, 1u);
+
+    vec3 prefilteredColor = vec3(0.0);
+    float totalWeight = 0.0;
+
+    for (uint i = 0u; i < sampleCount; i++) {
+        // 生成低差异序列样本
+        vec2 Xi = Hammersley(i, sampleCount);
+        vec3 H = ImportanceSampleGGX(Xi, N, pc.roughness);
+        vec3 L = normalize(2.0 * dot(V, H) * H - V);
+
+        float NdotL = max(dot(N, L), 0.0);
+        if (NdotL > 0.0) {
+            // 使用较低的 mip 层级以避免 aliasing
+            float maxMipLevel = float(textureQueryLevels(environmentMap) - 1);
+            float resolution = float(imgSize.x);
+            float saTexel = 4.0 * PI / (6.0 * resolution * resolution);
+            float saSample = 1.0 / (float(sampleCount) * 4.0 * PI / (6.0 * resolution * resolution));
+            float mipLevel = pc.roughness == 0.0 ? 0.0 : 0.5 * log2(saSample / saTexel);
+
+            prefilteredColor += textureLod(environmentMap, L, mipLevel).rgb * NdotL;
+            totalWeight += NdotL;
+        }
+    }
+
+    prefilteredColor = prefilteredColor / max(totalWeight, 0.0001);
+
+    imageStore(prefilterOutput, coord, vec4(prefilteredColor, 1.0));
+}
