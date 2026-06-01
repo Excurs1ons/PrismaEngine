@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "navigation/NavMesh.h"
 #include <glm/glm.hpp>
+#include <cstring>
 #include <random>
 #include <type_traits>
 

@@ -169,6 +169,7 @@ set(CORE_SOURCES
     # Graphic - NPR Pipeline
     graphic/pipelines/npr/NPRPipeline.cpp
     graphic/pipelines/npr/NPROpaquePass.cpp
+    graphic/pipelines/npr/OutlinePostProcessPass.cpp
 
     # Graphic - Skybox
     graphic/pipelines/SkyboxRenderPass.cpp
