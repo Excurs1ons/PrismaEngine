@@ -1,0 +1,188 @@
+// ============================================================
+// ssr_main.comp — PrismaEngine Screen-Space Reflections
+//
+// Ray marches in screen space along the reflection direction.
+// Uses scene depth/normal/color buffers from G-buffer.
+// Output: reflection color + confidence (alpha).
+// Push Constants: stepCount, thickness, maxDistance, fadeFactor
+// ============================================================
+
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// ---- Input textures (G-buffer) ----
+layout(binding = 0) uniform sampler2D gbColor;       // HDR scene color (RGBA16F)
+layout(binding = 1) uniform sampler2D gbNormal;       // World-space normal (RGBA8_UNorm)
+layout(binding = 2) uniform sampler2D gbDepth;        // Linear depth (R32_Float)
+layout(binding = 3) uniform sampler2D gbPosition;     // World-space position (R32G32B32A32_Float)
+
+// ---- Output ----
+layout(rgba16f, binding = 4) uniform image2D ssrOutput;
+
+// ---- Push constants ----
+layout(push_constant) uniform SSRParams {
+    float stepCount;       // ray march steps (25 default)
+    float thickness;       // depth thickness tolerance (0.1 default)
+    float maxDistance;     // max reflection distance (50.0 default)
+    float fadeFactor;      // fade out factor (0.1 default)
+} pc;
+
+// ---- Helper: reconstruct world position from depth ----
+vec3 ReconstructWorldPos(vec2 uv, float depth, mat4 invViewProj) {
+    vec4 ndc = vec4(uv * 2.0 - 1.0, depth, 1.0);
+    vec4 world = invViewProj * ndc;
+    return world.xyz / world.w;
+}
+
+// ---- Helper: binary search refinement for better hit ----
+float BinarySearchDepth(vec2 uv, vec3 dir, vec3 origin, float depth, mat4 invProj, mat4 proj) {
+    float t = 0.0;
+    float step = depth * 0.5;
+
+    for (int i = 0; i < 8; i++) {
+        vec3 pos = origin + dir * t;
+        vec4 clipPos = proj * vec4(pos, 1.0);
+        vec2 sampleUV = clipPos.xy / clipPos.w * 0.5 + 0.5;
+
+        if (sampleUV.x < 0.0 || sampleUV.x > 1.0 ||
+            sampleUV.y < 0.0 || sampleUV.y > 1.0) {
+            t -= step;
+            step *= 0.5;
+            continue;
+        }
+
+        float sampleDepth = texture(gbDepth, sampleUV).r;
+        float linearDepth = clipPos.z / clipPos.w;
+
+        float depthDiff = linearDepth - sampleDepth;
+
+        if (abs(depthDiff) < pc.thickness * 0.5) {
+            return t;
+        }
+
+        if (depthDiff > 0.0) {
+            t += step;
+        } else {
+            t -= step;
+        }
+
+        step *= 0.5;
+    }
+
+    return -1.0;
+}
+
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(ssrOutput);
+
+    if (pixel.x >= imgSize.x || pixel.y >= imgSize.y) return;
+
+    vec2 texelSize = 1.0 / vec2(imgSize);
+    vec2 uv = (vec2(pixel) + 0.5) * texelSize;
+
+    // Sample G-buffer
+    vec3 color = texture(gbColor, uv).rgb;
+    vec3 normal = normalize(texture(gbNormal, uv).xyz * 2.0 - 1.0);
+    float depth = texture(gbDepth, uv).r;
+
+    // Skip sky / far plane (no reflection)
+    if (depth >= 1.0 || depth <= 0.001) {
+        imageStore(ssrOutput, pixel, vec4(0.0, 0.0, 0.0, 0.0));
+        return;
+    }
+
+    // Build projection matrices from depth
+    // NOTE: In a real deferred renderer these are passed in UBO.
+    // Here we approximate using clip-space reconstruction.
+    vec3 worldPos = texture(gbPosition, uv).xyz;
+
+    // Compute view direction and reflection
+    // NOTE: camera position needs to be known. For SSR we use
+    // the screen-space approach directly.
+    vec3 V = normalize(worldPos); // Approximate: viewDir from origin
+    vec3 R = normalize(reflect(V, normal));
+
+    // Fade near screen edges
+    vec2 edgeFactor = abs(uv - 0.5) * 2.0;
+    float edgeFade = 1.0 - smoothstep(0.7, 1.0, max(edgeFactor.x, edgeFactor.y));
+
+    // Ray march in screen space
+    vec3 rayPos = worldPos;
+    float rayLength = 0.0;
+    const float maxDist = 50.0;
+    const int maxSteps = int(pc.stepCount);
+
+    vec4 accumulatedColor = vec4(0.0);
+    float confidence = 0.0;
+
+    // Hierarchical ray march: start with larger steps
+    float stepSize = 0.5;
+
+    for (int i = 0; i < maxSteps; i++) {
+        rayPos += R * stepSize;
+        rayLength += stepSize;
+
+        if (rayLength > pc.maxDistance) break;
+
+        // Project ray position to screen space
+        // For screenspace marching, we use the projection of the ray
+        vec4 clipPos = vec4(rayPos, 1.0);
+        // NOTE: In a real implementation, this uses the view-projection matrix.
+        // Simplified: approximate based on depth difference
+
+        // Screen-space ray march using depth buffer
+        // Project current pixel into screen space via view-space z
+        float rayDepth = rayPos.z;
+
+        // Screen-space ray: compute UV delta
+        // Use a simplified screen-space approach
+        vec2 deltaUV = R.xy * stepSize / max(abs(rayPos.z), 0.01);
+        vec2 sampleUV = uv + deltaUV * float(i);
+
+        if (sampleUV.x < 0.0 || sampleUV.x > 1.0 ||
+            sampleUV.y < 0.0 || sampleUV.y > 1.0) {
+            confidence *= 0.5;
+            break;
+        }
+
+        float sceneDepth = texture(gbDepth, sampleUV).r;
+        vec3 scenePos = texture(gbPosition, sampleUV).xyz;
+
+        // Distance between ray and scene surface
+        float depthDiff = length(rayPos - scenePos);
+
+        if (depthDiff < pc.thickness && depthDiff > 0.0) {
+            // Hit detected
+            float hitQuality = 1.0 - min(depthDiff / pc.thickness, 1.0);
+
+            // Fade with distance
+            float distFade = 1.0 - smoothstep(0.0, pc.maxDistance, rayLength);
+
+            // Fade with grazing angle
+            float NdotV = max(dot(normal, V), 0.0);
+            float grazingFade = smoothstep(0.0, 0.3, NdotV);
+
+            confidence = hitQuality * distFade * grazingFade * edgeFade;
+
+            // Sample the reflected color
+            vec3 reflectedColor = texture(gbColor, sampleUV).rgb;
+
+            accumulatedColor = vec4(reflectedColor, confidence);
+            break;
+        }
+
+        // Adaptive step size: increase when far from surface
+        stepSize = 0.5 + abs(sceneDepth - rayPos.z) * 0.1;
+        stepSize = min(stepSize, 2.0);
+    }
+
+    // Fade reflection for rough surfaces (NdotV based)
+    float NdotV = max(dot(normal, V), 0.0);
+    float roughnessFade = smoothstep(0.0, 1.0, NdotV);
+    accumulatedColor.a *= roughnessFade;
+
+    // Output reflection color with confidence in alpha
+    imageStore(ssrOutput, pixel, accumulatedColor);
+}

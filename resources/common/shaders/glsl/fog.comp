@@ -1,0 +1,68 @@
+// ============================================================
+// fog.comp — PrismaEngine Volumetric Fog
+//
+// Combines depth-based fog and height-based fog.
+// Depth fog: exp(-density * depth)
+// Height fog: exp(-density * abs(height - fogHeight))
+// Push Constants: fogDensity, fogHeight, fogColor[3]
+// ============================================================
+
+#version 460 core
+
+layout(local_size_x = 16, local_size_y = 16, local_size_z = 1) in;
+
+// ---- Input ----
+layout(binding = 0) uniform sampler2D sceneColor;   // Scene HDR color
+layout(binding = 1) uniform sampler2D gbDepth;       // Linear depth
+layout(binding = 2) uniform sampler2D gbPosition;    // World position
+
+// ---- Output ----
+layout(rgba16f, binding = 3) uniform image2D fogOutput;
+
+// ---- Push constants ----
+layout(push_constant) uniform FogParams {
+    float density;
+    float height;
+    float fogColorR;
+    float fogColorG;
+    float fogColorB;
+} pc;
+
+void main() {
+    ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(fogOutput);
+
+    if (pixel.x >= imgSize.x || pixel.y >= imgSize.y) return;
+
+    vec2 texelSize = 1.0 / vec2(imgSize);
+    vec2 uv = (vec2(pixel) + 0.5) * texelSize;
+
+    // Sample inputs
+    vec3 color = texture(sceneColor, uv).rgb;
+    float depth = texture(gbDepth, uv).r;
+    vec3 worldPos = texture(gbPosition, uv).xyz;
+
+    // Skip sky
+    if (depth >= 1.0) {
+        imageStore(fogOutput, pixel, vec4(color, 1.0));
+        return;
+    }
+
+    // Depth fog: exponential falloff with distance
+    float linearDepth = depth; // Already linear in our G-buffer
+    float depthFog = 1.0 - exp(-pc.density * linearDepth);
+
+    // Height fog: exponential falloff with height difference
+    float heightDiff = abs(worldPos.y - pc.height);
+    float heightFog = 1.0 - exp(-pc.density * heightDiff * 0.5);
+
+    // Combine fog factors (max = strongest fog)
+    float fogFactor = max(depthFog, heightFog);
+    fogFactor = clamp(fogFactor, 0.0, 1.0);
+
+    // Apply fog
+    vec3 fogColor = vec3(pc.fogColorR, pc.fogColorG, pc.fogColorB);
+    vec3 finalColor = mix(color, fogColor, fogFactor);
+
+    imageStore(fogOutput, pixel, vec4(finalColor, 1.0));
+}
