@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "Tilemap.h"
 #include "graphic/OrthographicCamera.h"
 #include "graphic/interfaces/ITexture.h"
@@ -7,7 +8,7 @@
 
 namespace Prisma::Tilemap {
 
-class TilemapRenderer {
+class ENGINE_API TilemapRenderer {
 public:
     TilemapRenderer() = default;
 

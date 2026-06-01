@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Export.h"
 #include "TileSet.h"
 #include "TileLayer.h"
 #include <memory>
@@ -8,7 +9,7 @@
 
 namespace Prisma::Tilemap {
 
-class Tilemap {
+class ENGINE_API Tilemap {
 public:
     Tilemap() = default;
 
