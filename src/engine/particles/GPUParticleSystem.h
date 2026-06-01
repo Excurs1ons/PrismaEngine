@@ -4,14 +4,16 @@
 #include "graphic/interfaces/RenderTypes.h"
 #include "graphic/ICamera.h"
 #include "Export.h"
+#include "CPUParticleSystem.h"
 #include <cstdint>
 #include <memory>
+#include <random>
 #include <vector>
 
 namespace Prisma::Graphic {
 class IBuffer;
 class IComputePipeline;
-class IGraphicsPipeline;
+class IPipelineState;
 class IRenderDevice;
 class IDescriptorSet;
 class IDescriptorSetLayout;
@@ -78,7 +80,7 @@ private:
 
     // 管线
     std::shared_ptr<Graphic::IComputePipeline>  m_ComputePipeline;
-    std::shared_ptr<Graphic::IGraphicsPipeline> m_GraphicsPipeline;
+    std::shared_ptr<Graphic::IPipelineState> m_GraphicsPipeline;
     std::shared_ptr<Graphic::IDescriptorSet>    m_DescriptorSet;
     std::shared_ptr<Graphic::IDescriptorSetLayout> m_DescriptorSetLayout;
 
