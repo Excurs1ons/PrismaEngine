@@ -57,6 +57,8 @@ public:
     }
 
     const std::vector<BLASEntry>& GetBLASEntries() const { return m_blasEntries; }
+    size_t GetBLASEntryCount() const { return m_blasEntries.size(); }
+    void ClearBLASEntries() { m_blasEntries.clear(); }
 
     /// 构建 TLAS
     bool BuildTLAS(const std::vector<InstanceInput>& instances);

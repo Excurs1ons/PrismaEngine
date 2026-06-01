@@ -1736,7 +1736,7 @@ void PathTracingPipeline::ExecuteRayQuery(ICommandBuffer* cmd) {
 
 void PathTracingPipeline::UpdateRayQueryTLAS(VkCommandBuffer vkCmd) {
     if (!m_rqBackend || !m_rqBackend->GetTLAS()) return;
-    if (m_rqBackend->m_blasEntries.empty()) return;
+    if (m_rqBackend->GetBLASEntries().empty()) return;
 
     std::vector<AccelStructBuilder::InstanceInput> instances;
     uint32_t blasIdx = 0;
@@ -1744,7 +1744,7 @@ void PathTracingPipeline::UpdateRayQueryTLAS(VkCommandBuffer vkCmd) {
         auto& obj = m_cachedSceneData.objects[oi];
         int type = (int)obj.p0[3];
         if (type != 4) continue;
-        if (blasIdx >= (uint32_t)m_rqBackend->m_blasEntries.size()) break;
+        if (blasIdx >= (uint32_t)m_rqBackend->GetBLASEntries().size()) break;
 
         glm::mat4 wm;
         std::memcpy(&wm, obj.worldMatrix, sizeof(float) * 16);
@@ -1758,7 +1758,7 @@ void PathTracingPipeline::UpdateRayQueryTLAS(VkCommandBuffer vkCmd) {
         inst.transform = transform;
         inst.instanceCustomIndex = (int)oi;
         inst.blasDeviceAddress = m_rqBackend->GetBLASDeviceAddress(
-            m_rqBackend->m_blasEntries[blasIdx].handle);
+            m_rqBackend->GetBLAS(blasIdx));
         inst.instanceMask = (obj.color[3] > 0.0f) ? 0x01 : 0x02;
         instances.push_back(inst);
         blasIdx++;
@@ -1785,7 +1785,7 @@ bool PathTracingPipeline::BuildRayQueryResources([[maybe_unused]] Scene* scene) 
     }
 
     // 2. Build BLAS for each mesh object
-    m_rqBackend->m_blasEntries.clear();
+    m_rqBackend->ClearBLASEntries();
     for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
         auto& obj = m_cachedSceneData.objects[oi];
         int type = (int)obj.p0[3];
@@ -1817,7 +1817,7 @@ bool PathTracingPipeline::BuildRayQueryResources([[maybe_unused]] Scene* scene) 
         m_rqBackend->BuildBLAS(input);
     }
 
-    if (m_rqBackend->m_blasEntries.empty()) {
+    if (m_rqBackend->GetBLASEntries().empty()) {
         LOG_ERROR("PathTracingPipeline", "RayQuery: 没有成功构建任何 BLAS");
         return false;
     }
@@ -1829,10 +1829,10 @@ bool PathTracingPipeline::BuildRayQueryResources([[maybe_unused]] Scene* scene) 
         auto& obj = m_cachedSceneData.objects[oi];
         int type = (int)obj.p0[3];
         if (type != 4) continue;
-        if (blasIdx >= (uint32_t)m_rqBackend->m_blasEntries.size()) break;
+        if (blasIdx >= (uint32_t)m_rqBackend->GetBLASEntries().size()) break;
 
         uint64_t blasAddr = m_rqBackend->GetBLASDeviceAddress(
-            m_rqBackend->m_blasEntries[blasIdx].handle);
+            m_rqBackend->GetBLAS(blasIdx));
         blasIdx++;
         if (blasAddr == 0) continue;
 
@@ -1890,7 +1890,7 @@ bool PathTracingPipeline::BuildRayQueryResources([[maybe_unused]] Scene* scene) 
     m_sceneChangedSinceLastRTBuild = false;
 
     LOG_INFO("PathTracingPipeline", "RayQuery 资源构建完成: {} 个 BLAS, {} 个实例",
-             m_rqBackend->m_blasEntries.size(), instances.size());
+             m_rqBackend->GetBLASEntries().size(), instances.size());
     return true;
 }
 
