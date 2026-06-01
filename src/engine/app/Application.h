@@ -32,7 +32,7 @@ struct ApplicationSpecification {
     uint32_t MaxFPS = 0;
     uint32_t MaxSamples = 512;
     uint32_t MaxBounces = 4;
-    bool HardwareRayTracing = false;
+    Graphic::RTMode RTMode = Graphic::RTMode::HardwareRT;
     Graphic::PathTraceMode PathTraceMode = Graphic::PathTraceMode::BVH;
     bool EnableNEE = false;
     uint32_t MaxBatchQuads = 10000;

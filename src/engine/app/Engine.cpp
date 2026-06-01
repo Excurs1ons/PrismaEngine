@@ -207,7 +207,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 spec.MaxFPS             = config.window.maxFPS;
                 spec.MaxSamples         = config.rendering.maxSamples;
                 spec.MaxBounces         = config.rendering.maxBounces;
-                spec.HardwareRayTracing = config.rendering.hardwareRayTracing;
+                spec.RTMode = config.rendering.rtMode;
                 spec.PathTraceMode      = config.rendering.pathTraceMode;
                 spec.EnableNEE          = config.rendering.enableNEE;
                 spec.MaxBatchQuads      = config.rendering.maxBatchQuads;
@@ -284,7 +284,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                  renderMode == RenderMode::Mode2D ? "2D" : "Other");
         rDesc.maxSamples         = appSpec.MaxSamples;
         rDesc.maxBounces         = appSpec.MaxBounces;
-        rDesc.hardwareRayTracing = appSpec.HardwareRayTracing;
+        rDesc.rtMode = appSpec.RTMode;
         rDesc.maxBatchQuads      = appSpec.MaxBatchQuads;
         rDesc.enableValidation   = true;
         
