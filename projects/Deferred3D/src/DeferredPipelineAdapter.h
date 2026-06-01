@@ -26,6 +26,7 @@ public:
     int Initialize(Graphic::IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const Graphic::RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_Deferred; }
     void OnSceneLoaded(Scene* scene) override;
 
     Graphic::DeferredPipeline* GetDeferredPipeline() const { return m_pipeline.get(); }

@@ -17,6 +17,7 @@
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IDescriptorSet.h"
 #include "graphic/interfaces/IRenderTarget.h"
+#include "graphic/adapters/vulkan/VulkanResources.h"
 #include "app/Engine.h"
 #include "Logger.h"
 #include <glm/glm.hpp>
