@@ -15,7 +15,7 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 [中文文档](./docs/README_zh.md) | [English](./README.md)
 
 > **Current Status**: CoreCLR C# scripting functional. SoA entity pool with 1M virtual capacity. Android Vulkan runtime production-ready.
-> **Last Updated**: 2026-06-01
+> **Last Updated**: 2026-06-01 (v2)
 
 ## CI/CD Status
 
@@ -32,33 +32,33 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 | AI System | ✅ 75% | Behavior tree, state machine, perception system, goal-oriented |
 | Android Runtime | ✅ 90% | Optimized Vulkan runtime (integrated GameActivity) |
 | Animation System | ✅ 60% | Skeletal animation, blend tree, IK, morph targets |
-| Audio System | ✅ 55% | XAudio2/SDL3/miniaudio backends with 3D spatial support |
+| Audio System | ✅ 70% | XAudio2/SDL3/miniaudio backends, 12 DSP effects, Flac/Mp3/Ogg codecs |
 | Console/CVar | ✅ 70% | In-game console, CVar system, auto-complete, history |
 | CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
 | DirectX 12 Backend | ❌ Suspended | Suspended, focusing on Vulkan backend |
-| Editor Tools | ✅ 55% | ImGui editor panels, MCP integration, WebUI |
+| Editor Tools | ✅ 70% | ImGui editor panels, MCP tools, ComponentSerializer, scene save/load, WebUI |
 | Input System | ✅ 90% | Keyboard/mouse/gamepad, action mapping, chord detection |
 | Logger System | ✅ 100% | Thread-safe cross-platform logging |
-| MCP Protocol | ✅ 90% | 17 tools, 7 categories, dual transport, hash delta tracking |
+| MCP Protocol | ✅ 95% | 17 tools, 7 categories, dual transport, hash delta tracking |
 | Memory System | ✅ 90% | Stack/arena/pool allocators, virtual memory, double-buffered |
-| Navigation System | ✅ 85% | NavMesh generation, A* pathfinding, nav agent, avoidance |
+| Navigation System | ✅ 90% | NavMesh generation, A* pathfinding, nav agent, avoidance, binary serialization |
 | Network System | ✅ 70% | TCP/UDP transport, RPC, entity replication, lobby |
-| Particle System | ✅ 55% | CPU/GPU particles, emitters, force fields, events |
+| Particle System | ✅ 65% | CPU/GPU particles + GPU compute pipeline, emitters, force fields, events |
 | Physics System | ✅ 80% | Collision detection, rigid body, constraint solver, CCD, trigger volumes |
 | Platform Layer | ✅ 95% | Unified Windows/Linux/Android abstraction |
 | Profiling System | ✅ 60% | GPU/CPU profiler, frame stats, timeline capture |
 | Rendering Architecture | ✅ 95% | Core Pass + Feature system + Compute Pipeline RHI |
 | Resource Management | ✅ 95% | Handle\<T\> system + resource pools |
-| Shaders | ✅ 70% | PBR lighting, shadow mapping, SSAO, TAA, IBL shaders |
+| Shaders | ✅ 78% | PBR lighting, shadow mapping, SSAO, TAA, IBL, deferred/clustered/NPR/SSR/Fog/Tonemap shaders |
 | SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
-| Terrain System | ✅ 70% | Heightmap, LOD, chunk-based loading, splatmap texturing |
-| Testing Infrastructure | ✅ 55% | GTest unit tests + integration tests (66 files) |
+| Terrain System | ✅ 80% | Heightmap, LOD, chunk-based loading, splatmap texturing, Vulkan rendering |
+| Testing Infrastructure | ✅ 65% | GTest unit tests + integration tests (70 files, CI-enabled) |
 | Threading/JobSystem | ✅ 80% | Fiber-based job system, thread pool, wait-free queues |
 | Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
-| Water System | ✅ 55% | Wave simulation, reflection/refraction, buoyancy |
+| Water System | ✅ 70% | Wave simulation, GPU reflection/refraction, buoyancy |
 | WebUI Editor | ✅ 80% | Browser-based editor with scene/game viewport, hierarchy, inspector |
 
-**Overall: ~87%**
+**Overall: ~90%**
 
 ## Quick Start
 
