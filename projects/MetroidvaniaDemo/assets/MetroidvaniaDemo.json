@@ -11,7 +11,7 @@
     "rendering": {
         "maxSamples": 1,
         "maxBounces": 4,
-        "hardwareRayTracing": false,
+        "rtMode": "None",
         "pathTraceMode": "Flat",
         "enableNEE": false,
         "maxBatchQuads": 1024
