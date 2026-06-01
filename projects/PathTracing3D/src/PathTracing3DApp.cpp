@@ -37,6 +37,7 @@ int PathTracing3DApp::OnInitialize() {
     LOG_INFO("PathTracing3D", "3D 模板初始化（路径追踪引擎管线版）");
 
     m_ptPipeline = Engine::Get().GetRenderSystem()->GetMainPipelineAs<Graphic::PathTracingPipeline>();
+    m_renderSystem = Engine::Get().GetRenderSystem();
     if (!m_ptPipeline) {
         // 光线追踪不可用（设备不支持），回退到 Forward 模式
         LOG_WARN("PathTracing3D", "路径追踪管线不可用，设备不支持光线追踪，回退到 Forward 渲染模式");
@@ -63,6 +64,24 @@ int PathTracing3DApp::OnInitialize() {
         m_ptPipeline->SetMode(m_Spec.PathTraceMode);
         m_enableNEE = m_Spec.EnableNEE;
         m_ptPipeline->EnableNEE(m_enableNEE);
+    }
+
+    // 注册渲染模式切换回调
+    if (m_renderSystem) {
+        m_renderSystem->SetRenderModeChangedCallback([this](Prisma::RenderMode mode, Prisma::Graphic::IRenderDevice* device) {
+            (void)device;
+            m_currentRenderMode = mode;
+            if (mode == Prisma::RenderMode::Mode3D_PathTracing) {
+                // 重新获取管线指针（设备重建后旧指针失效）
+                m_ptPipeline = Engine::Get().GetRenderSystem()->GetMainPipelineAs<Prisma::Graphic::PathTracingPipeline>();
+                if (m_ptPipeline && m_scene) {
+                    m_ptPipeline->OnSceneLoaded(m_scene);
+                    m_ptPipeline->ResetAccumulation();
+                }
+            }
+            LOG_INFO("PathTracing3D", "渲染模式切换: {}", 
+                     mode == Prisma::RenderMode::Mode3D_PathTracing ? "PathTracing" : "Forward");
+        });
     }
 
     // Store scene info for hot-reload (F5 reload, F6/F7 cycle)
@@ -205,6 +224,19 @@ void PathTracing3DApp::OnEvent(Event& e) {
                 m_ptPipeline->ResetAccumulation();
             }
             LOG_INFO("PathTracing3D", "模式: {}", m_ptPipeline ? m_ptPipeline->GetModeName() : "?");
+            return true;
+        }
+        if (key == Input::KeyCode::M && !repeat) {
+            if (m_renderSystem) {
+                if (m_currentRenderMode == Prisma::RenderMode::Mode3D_PathTracing) {
+                    m_renderSystem->SetRenderMode(Prisma::RenderMode::Mode3D_Forward);
+                } else {
+                    // 切换到 PathTracing，使用 HardwareRT 扩展需求（自动降级）
+                    m_renderSystem->SetRenderMode(Prisma::RenderMode::Mode3D_PathTracing,
+                                                  Prisma::Graphic::RTMode::HardwareRT);
+                }
+            }
+            LOG_INFO("PathTracing3D", "M 键: 请求切换渲染模式");
             return true;
         }
         if (key == Input::KeyCode::LeftBracket && !repeat) {
