@@ -2,6 +2,7 @@
 #include "navigation/NavMesh.h"
 #include <glm/glm.hpp>
 #include <random>
+#include <type_traits>
 
 namespace Prisma {
 namespace {
@@ -212,6 +213,173 @@ TEST(NavMeshTest, SetPolygonsAndClear) {
     mesh.Clear();
     EXPECT_TRUE(mesh.IsEmpty());
     EXPECT_EQ(mesh.GetPolygonCount(), 0);
+}
+
+TEST(NavMeshTest, BinaryRoundTrip) {
+    // 验证 NavPolygon 的二进序列化/反序列化往返
+    // 使用内存缓冲区模拟二进制 I/O
+
+    // 确认 NavPolygon 是可平凡复制的
+    EXPECT_TRUE(std::is_trivially_copyable_v<NavPolygon>);
+
+    // 准备原始多边形数据
+    NavPolygon original;
+    original.vertices[0] = glm::dvec3(1.0, 2.0, 3.0);
+    original.vertices[1] = glm::dvec3(4.0, 5.0, 6.0);
+    original.vertices[2] = glm::dvec3(7.0, 8.0, 9.0);
+    original.neighbors[0] = 10;
+    original.neighbors[1] = -1;
+    original.neighbors[2] = 42;
+    original.areaType = AreaType::Water;
+    original.id = 12345;
+
+    // 序列化到内存缓冲区
+    std::vector<uint8_t> buffer(sizeof(NavPolygon));
+    std::memcpy(buffer.data(), &original, sizeof(NavPolygon));
+
+    // 反序列化回新对象
+    NavPolygon restored;
+    std::memcpy(&restored, buffer.data(), sizeof(NavPolygon));
+
+    // 验证所有字段一致
+    EXPECT_DOUBLE_EQ(restored.vertices[0].x, 1.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[0].y, 2.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[0].z, 3.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[1].x, 4.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[1].y, 5.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[1].z, 6.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[2].x, 7.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[2].y, 8.0);
+    EXPECT_DOUBLE_EQ(restored.vertices[2].z, 9.0);
+
+    EXPECT_EQ(restored.neighbors[0], 10);
+    EXPECT_EQ(restored.neighbors[1], -1);
+    EXPECT_EQ(restored.neighbors[2], 42);
+
+    EXPECT_EQ(restored.areaType, AreaType::Water);
+    EXPECT_EQ(restored.id, 12345u);
+}
+
+TEST(NavMeshTest, BinaryRoundTripMultiplePolygons) {
+    // 验证多个多边形的二进制序列化往返
+
+    std::vector<NavPolygon> originalPolys;
+    originalPolys.push_back(MakeRightTriangle({0, 0, 0}, 2, 2));
+    originalPolys.push_back(MakeRightTriangle({3, 0, 0}, 2, 2));
+    originalPolys.push_back(MakeRightTriangle({0, 0, 3}, 2, 2));
+
+    // 设置不同的 ID 和 areaType
+    originalPolys[0].id = 10;
+    originalPolys[0].areaType = AreaType::Walkable;
+    originalPolys[1].id = 20;
+    originalPolys[1].areaType = AreaType::Lava;
+    originalPolys[2].id = 30;
+    originalPolys[2].areaType = AreaType::Door;
+
+    // 序列化
+    std::vector<uint8_t> buffer(originalPolys.size() * sizeof(NavPolygon));
+    std::memcpy(buffer.data(), originalPolys.data(), buffer.size());
+
+    // 反序列化
+    std::vector<NavPolygon> restoredPolys(originalPolys.size());
+    std::memcpy(restoredPolys.data(), buffer.data(), buffer.size());
+
+    // 验证
+    ASSERT_EQ(restoredPolys.size(), 3u);
+    for (size_t i = 0; i < 3; ++i) {
+        EXPECT_EQ(restoredPolys[i].id, originalPolys[i].id);
+        EXPECT_EQ(restoredPolys[i].areaType, originalPolys[i].areaType);
+        EXPECT_DOUBLE_EQ(restoredPolys[i].GetCenter().x, originalPolys[i].GetCenter().x);
+        EXPECT_DOUBLE_EQ(restoredPolys[i].GetCenter().y, originalPolys[i].GetCenter().y);
+        EXPECT_DOUBLE_EQ(restoredPolys[i].GetCenter().z, originalPolys[i].GetCenter().z);
+    }
+}
+
+TEST(NavMeshTest, NavMeshBinaryRoundTrip) {
+    // 验证完整的 NavMesh 二进制序列化/反序列化往返
+
+    std::vector<NavPolygon> polys;
+    polys.push_back(MakeRightTriangle({0, 0, 0}, 2, 2));
+    polys.push_back(MakeRightTriangle({2, 0, 0}, 2, 2, 0, -1, -1));
+
+    NavMesh original(std::move(polys));
+
+    // 序列化多边形数量 + 所有多边形
+    uint32_t polyCount = static_cast<uint32_t>(original.GetPolygonCount());
+    std::vector<uint8_t> buffer(
+        sizeof(uint32_t) + polyCount * sizeof(NavPolygon)
+    );
+
+    size_t offset = 0;
+    std::memcpy(buffer.data() + offset, &polyCount, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    for (uint32_t i = 0; i < polyCount; ++i) {
+        NavPolygon p = original.GetPolygon(i);
+        std::memcpy(buffer.data() + offset, &p, sizeof(NavPolygon));
+        offset += sizeof(NavPolygon);
+    }
+
+    // 反序列化
+    offset = 0;
+    uint32_t restoredCount;
+    std::memcpy(&restoredCount, buffer.data() + offset, sizeof(uint32_t));
+    offset += sizeof(uint32_t);
+
+    std::vector<NavPolygon> restored(restoredCount);
+    for (uint32_t i = 0; i < restoredCount; ++i) {
+        std::memcpy(&restored[i], buffer.data() + offset, sizeof(NavPolygon));
+        offset += sizeof(NavPolygon);
+    }
+
+    NavMesh restoredMesh(std::move(restored));
+
+    // 验证
+    EXPECT_EQ(restoredMesh.GetPolygonCount(), 2);
+    EXPECT_EQ(restoredMesh.GetPolygon(0).id, original.GetPolygon(0).id);
+    EXPECT_EQ(restoredMesh.GetPolygon(1).neighbors[0], 0);
+    EXPECT_EQ(restoredMesh.GetPolygon(1).neighbors[1], -1);
+
+    glm::dvec3 min, max;
+    restoredMesh.GetBounds(min, max);
+    EXPECT_EQ(min, glm::dvec3(0, 0, 0));
+    EXPECT_EQ(max, glm::dvec3(4, 0, 2));
+}
+
+TEST(NavMeshTest, BinaryRoundTripEdgeCases) {
+    // 验证边角情况：空网格和单多边形
+
+    // 1. 空网格
+    NavMesh emptyMesh;
+    uint32_t emptyCount = 0;
+    std::vector<uint8_t> emptyBuf(sizeof(uint32_t));
+    std::memcpy(emptyBuf.data(), &emptyCount, sizeof(uint32_t));
+
+    uint32_t restoredEmptyCount;
+    std::memcpy(&restoredEmptyCount, emptyBuf.data(), sizeof(uint32_t));
+    EXPECT_EQ(restoredEmptyCount, 0u);
+
+    // 2. 单多边形
+    NavPolygon single;
+    single.vertices[0] = glm::dvec3(-1.5, 0.0, -2.5);
+    single.vertices[1] = glm::dvec3(3.5, 0.0, 0.0);
+    single.vertices[2] = glm::dvec3(0.0, 0.0, 4.5);
+    single.neighbors[0] = -1;
+    single.neighbors[1] = -1;
+    single.neighbors[2] = -1;
+    single.areaType = AreaType::Obstacle;
+    single.id = 999;
+
+    std::vector<uint8_t> singleBuf(sizeof(NavPolygon));
+    std::memcpy(singleBuf.data(), &single, sizeof(NavPolygon));
+
+    NavPolygon restoredSingle;
+    std::memcpy(&restoredSingle, singleBuf.data(), sizeof(NavPolygon));
+
+    EXPECT_DOUBLE_EQ(restoredSingle.vertices[0].x, -1.5);
+    EXPECT_DOUBLE_EQ(restoredSingle.vertices[0].z, -2.5);
+    EXPECT_EQ(restoredSingle.areaType, AreaType::Obstacle);
+    EXPECT_EQ(restoredSingle.id, 999u);
 }
 
 } // namespace
