@@ -84,6 +84,22 @@ int Editor::OnInitialize() {
         m_MCP->RegisterTool<MCP::EngineStateHashTool>(&Engine::Get());
         m_MCP->RegisterTool<MCP::EngineBuildInfoTool>(&Engine::Get());
 
+        // Debug tools
+        m_MCP->RegisterTool<MCP::DebugFrameStatsTool>();
+        m_MCP->RegisterTool<MCP::DebugLogGetTool>();
+
+        // Game tools
+        m_MCP->RegisterTool<MCP::GameGetStateTool>();
+        m_MCP->RegisterTool<MCP::GameSimulateTool>();
+
+        // Editor tools
+        m_MCP->RegisterTool<MCP::EditorSelectionTool>();
+        m_MCP->RegisterTool<MCP::EditorConsoleTool>();
+
+        // Asset tools
+        m_MCP->RegisterTool<MCP::AssetListTool>();
+        m_MCP->RegisterTool<MCP::AssetGetInfoTool>();
+
         m_MCP->Initialize();
     }
 #endif

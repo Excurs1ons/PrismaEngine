@@ -14,6 +14,10 @@
 #include "mcp/tools/SceneTools.h"
 #include "mcp/tools/ECSTools.h"
 #include "mcp/tools/EngineTools.h"
+#include "mcp/tools/DebugTools.h"
+#include "mcp/tools/EditorTools.h"
+#include "mcp/tools/GameTools.h"
+#include "mcp/tools/AssetTools.h"
 #include "mcp/transport/TransportTCP.h"
 #endif
 

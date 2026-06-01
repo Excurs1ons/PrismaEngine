@@ -675,6 +675,48 @@ void Engine::Update(Timestep ts) {
     if (m_CurrentApp) m_CurrentApp->OnUpdate(ts);
 }
 
+void Engine::Step(float deltaTime) {
+    if (!m_Running || !m_CurrentApp) return;
+
+    if (m_Window) {
+        m_Window->OnUpdate();
+    } else {
+        Platform::PumpEvents();
+    }
+
+    float clampedDelta = std::min(deltaTime, 0.1f);
+
+    // 1. System + Application update
+    Update(Timestep(clampedDelta));
+
+    // 2. Audio
+    if (m_audioDevice) m_audioDevice->Update(clampedDelta);
+
+    // 3. C# script engine
+#if PRISMA_ENABLE_SCRIPTING > 0
+    if (m_scriptEngine->IsInitialized())
+        m_scriptEngine->Update(clampedDelta);
+    EntityManager::Get().SwapBuffers();
+#endif
+
+    // 4. Render frame
+    if (GetRenderSystem()) {
+        GetRenderSystem()->BeginFrame();
+
+#if PRISMA_ENABLE_SCRIPTING > 0
+        if (m_scriptEngine->IsInitialized())
+            m_scriptEngine->Render(clampedDelta);
+#endif
+
+        m_CurrentApp->OnRender();
+        GetRenderSystem()->EndFrame();
+        GetRenderSystem()->Present();
+    }
+
+    // 5. Update frame stats
+    m_FrameStats.FPS = (deltaTime > 0.0f) ? (1.0f / deltaTime) : 0.0f;
+}
+
 void Engine::SubmitToMainThread(std::function<void()>&& func) {
     std::lock_guard<std::mutex> lock(m_MainThreadQueueMutex);
     m_MainThreadQueue.emplace_back(std::move(func));

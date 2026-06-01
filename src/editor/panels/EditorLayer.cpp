@@ -185,9 +185,14 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem(UI::ITEM_SAVE_SCENE, "Ctrl+Alt+S")) {
-                    LOG_INFO("Editor", "场景已保存 (暂存实现)");
                     if (auto sceneManager = Engine::Get().GetSceneManager()) {
                         if (auto scene = sceneManager->GetCurrentScene()) {
+                            if (!m_sceneFilePath.empty()) {
+                                LOG_INFO("Editor", "正在保存场景: %s", m_sceneFilePath.c_str());
+                                scene->Serialize(m_sceneFilePath);
+                            } else {
+                                ImGui::OpenPopup(UI::POPUP_SAVE_SCENE_AS);
+                            }
                             scene->SetDirty(false);
                         }
                     }

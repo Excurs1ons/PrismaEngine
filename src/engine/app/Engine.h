@@ -200,6 +200,9 @@ public:
     bool IsRunning() const { return m_Running; }
 
     // 提交一个函数到主线程执行 (线程安全)
+    /// Advance the simulation by one frame (used by GameSimulateTool).
+    void Step(float deltaTime);
+
     void SubmitToMainThread(std::function<void()>&& func);
 
     void SetProjectName(const std::string& name) { m_ProjectName = name; }
