@@ -103,6 +103,7 @@ public:
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
     void OnSceneLoaded(::Prisma::Scene* scene) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_PathTracing; }
 
     // 设置计算和 present 着色器 SPIR-V（必须在 Initialize 之前调用）
     void SetComputeShaderSPIRV(const void* data, size_t size);

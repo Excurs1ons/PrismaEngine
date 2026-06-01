@@ -22,6 +22,7 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_NPR; }
 
 private:
     IRenderDevice* m_device = nullptr;

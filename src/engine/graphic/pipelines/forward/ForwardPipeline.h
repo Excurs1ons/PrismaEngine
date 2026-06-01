@@ -32,6 +32,7 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_Forward; }
 
     void SetLights(const std::vector<Light>& lights) { m_lights = lights; }
     void SetEnvironmentMap(class ITexture* envMap);

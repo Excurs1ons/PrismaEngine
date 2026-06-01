@@ -1,4 +1,5 @@
 #include "DeferredPipeline.h"
+#include "Logger.h"
 #include "GBuffer.h"
 #include "graphic/ICamera.h"
 #include "../SkyboxRenderPass.h"
@@ -16,7 +17,52 @@ DeferredPipeline::DeferredPipeline() : LogicalDeferredPipeline() {
 }
 
 DeferredPipeline::~DeferredPipeline() {
+    Shutdown();
 }
+
+// === IPipeline 接口实现 ===
+
+int DeferredPipeline::Initialize(IRenderDevice* device) {
+    m_device = device;
+    // 委托到已有的 bool Initialize()
+    return Initialize() ? 0 : -1;
+}
+
+void DeferredPipeline::Shutdown() {
+    m_geometryPass.reset();
+    m_skyboxPass.reset();
+    m_lightingPass.reset();
+    m_transparentPass.reset();
+    m_compositionPass.reset();
+    m_gBufferOwner.reset();
+    m_device = nullptr;
+}
+
+void DeferredPipeline::Execute(const RenderContext& ctx) {
+    // 将 RenderContext 中的相机数据同步到内部 Pass
+    UpdatePassesCameraData(ctx.camera.viewMatrix, ctx.camera.projectionMatrix);
+
+    // 构建 PassExecutionContext 并委托给 LogicalPipeline Execute
+    SceneData sceneData;
+    sceneData.camera.view        = ctx.camera.viewMatrix;
+    sceneData.camera.projection  = ctx.camera.projectionMatrix;
+    sceneData.camera.position    = ctx.camera.position;
+    sceneData.camera.nearPlane   = ctx.camera.nearPlane;
+    sceneData.camera.farPlane    = ctx.camera.farPlane;
+    sceneData.viewport.width     = ctx.width;
+    sceneData.viewport.height    = ctx.height;
+    sceneData.time.ts            = ctx.deltaTime;
+
+    PassExecutionContext passCtx;
+    passCtx.sceneData = &sceneData;
+    passCtx.renderTarget = nullptr;
+    passCtx.depthStencil = nullptr;
+    passCtx.deviceContext = nullptr;
+
+    Execute(passCtx);
+}
+
+// === 原有方法 ===
 
 bool DeferredPipeline::Initialize() {
     m_gBufferOwner = std::make_shared<GBuffer>();
@@ -144,11 +190,10 @@ void DeferredPipeline::UpdatePassesCameraData(Prisma::Graphic::ICamera* camera) 
     if (!camera) {
         return;
     }
+    UpdatePassesCameraData(camera->GetViewMatrix(), camera->GetProjectionMatrix());
+}
 
-    // 从相机接口获取视图和投影矩阵
-    PrismaMath::mat4 view       = camera->GetViewMatrix();
-    PrismaMath::mat4 projection = camera->GetProjectionMatrix();
-
+void DeferredPipeline::UpdatePassesCameraData(const PrismaMath::mat4& view, const PrismaMath::mat4& projection) {
     // 更新几何通道
     if (m_geometryPass) {
         m_geometryPass->SetViewMatrix(view);

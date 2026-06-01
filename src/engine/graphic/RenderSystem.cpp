@@ -12,6 +12,8 @@
 #include "pipelines/forward/ForwardPipeline.h"
 #include "pipelines/pathtracing/PathTracingPipeline.h"
 #include "pipelines/clustered/ClusteredForwardPipeline.h"
+#include "pipelines/deferred/DeferredPipeline.h"
+#include "pipelines/npr/NPRPipeline.h"
 #include "2d/Pipeline2D.h"
 #include "../scene/SceneManager.h"
 
@@ -94,23 +96,29 @@ int RenderSystem::InitializeRenderResourceManager() {
 }
 
 int RenderSystem::InitializeRenderPipelines() {
-    // 路径追踪管线支持三种模式：
-    //   - Flat/BVH：仅需计算着色器，所有 Vulkan 设备可用
-    //   - HardwareRT：需要 VK_KHR_ray_tracing_pipeline 扩展
-    // 因此即使设备不支持硬件光线追踪，BVH/Flat 模式仍可正常创建路径追踪管线。
-    // 若 PathTracingPipeline::Initialize 确实失败，上层 PathTracing3DApp 会回退渲染。
-    // 根据渲染模式选择管线（路径追踪管线的着色器由 LoadDefaultShaders 内部加载）
-    if (m_desc.renderMode == RenderMode::Mode2D) {
-        m_mainRenderPipeline = std::make_shared<Pipeline2D>();
-    } else if (m_desc.renderMode == RenderMode::Mode3D_PathTracing) {
-        auto ptPipeline = std::make_shared<PathTracingPipeline>();
-        ptPipeline->SetMaxSamples(m_desc.maxSamples);
-        ptPipeline->SetMaxBounces(m_desc.maxBounces);
-        m_mainRenderPipeline = std::move(ptPipeline);
-    } else if (m_desc.renderMode == RenderMode::Mode3D_ClusteredForward) {
-        m_mainRenderPipeline = std::make_shared<ClusteredForwardPipeline>();
-    } else {
-        m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+    switch (m_desc.renderMode) {
+        case RenderMode::Mode2D:
+            m_mainRenderPipeline = std::make_shared<Pipeline2D>();
+            break;
+        case RenderMode::Mode3D_PathTracing: {
+            auto ptPipeline = std::make_shared<PathTracingPipeline>();
+            ptPipeline->SetMaxSamples(m_desc.maxSamples);
+            ptPipeline->SetMaxBounces(m_desc.maxBounces);
+            m_mainRenderPipeline = std::move(ptPipeline);
+            break;
+        }
+        case RenderMode::Mode3D_Deferred:
+            m_mainRenderPipeline = std::make_shared<DeferredPipeline>();
+            break;
+        case RenderMode::Mode3D_ClusteredForward:
+            m_mainRenderPipeline = std::make_shared<ClusteredForwardPipeline>();
+            break;
+        case RenderMode::Mode3D_NPR:
+            m_mainRenderPipeline = std::make_shared<NPRPipeline>();
+            break;
+        default:
+            m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+            break;
     }
     return m_mainRenderPipeline->Initialize(m_device.get());
 }

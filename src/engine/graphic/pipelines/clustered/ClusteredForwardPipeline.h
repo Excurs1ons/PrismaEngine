@@ -28,6 +28,7 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_ClusteredForward; }
 
 private:
     void RenderOverlay(const RenderContext& ctx);
