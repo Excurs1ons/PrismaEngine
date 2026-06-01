@@ -12,6 +12,8 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <atomic>
+#include <mutex>
 #include "app/ProjectConfig.h"
 namespace Prisma {
 // 前向声明
@@ -34,7 +36,7 @@ struct RenderSystemDesc {
     PresentMode presentMode    = PresentMode::VSync;
     uint32_t maxSamples        = 512;
     uint32_t maxBounces        = 8;
-    bool hardwareRayTracing    = false;
+    RTMode rtMode              = RTMode::HardwareRT;
     uint32_t maxBatchQuads     = 10000;
     uint32_t maxFramesInFlight = 3;
     std::string name           = "PrismaApp";
@@ -79,6 +81,20 @@ public:
     // === 场景渲染 ===
     void RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamera* camera, ITexture* targetTexture = nullptr);
 
+    // === 渲染模式切换 ===
+    /// Runtime render mode switch.
+    /// May trigger full device recreation if the new mode requires different Vulkan extensions.
+    /// Must be called outside BeginFrame/EndFrame.
+    int SetRenderMode(RenderMode newMode);
+    int SetRenderMode(RenderMode newMode, RTMode rtMode);
+
+    RenderMode GetCurrentRenderMode() const;
+    bool IsRayTracingSupported() const;
+    bool IsRayQuerySupported() const;
+
+    /// Set callback invoked after render mode changes (e.g. for scene data re-upload).
+    void SetRenderModeChangedCallback(std::function<void(RenderMode, IRenderDevice*)> callback);
+
 private:
     int InitializeDevice();
     int InitializeRenderResourceManager();
@@ -88,6 +104,13 @@ private:
     std::unique_ptr<IRenderDevice> m_device;
     std::shared_ptr<RenderResourceManager> m_renderResourceManager;
     std::shared_ptr<IPipeline> m_mainRenderPipeline;
+
+    std::mutex m_recreationMutex;
+    std::atomic<bool> m_isRecreating{false};
+    std::function<void(RenderMode, IRenderDevice*)> m_onRenderModeChanged;
+
+    /// Returns the RT extensions needed for a given render mode.
+    RTMode GetRequiredRTMode(RenderMode mode) const;
 };
 
 }  // namespace Prisma::Graphic
