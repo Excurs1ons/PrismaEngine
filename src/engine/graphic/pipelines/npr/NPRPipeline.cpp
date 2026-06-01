@@ -1,5 +1,6 @@
 #include "NPRPipeline.h"
 #include "NPROpaquePass.h"
+#include "OutlinePostProcessPass.h"
 #include "../../2d/PostProcessPass2D.h"
 #include "../../2d/UIPass2D.h"
 #include "../SkyboxRenderPass.h"
@@ -71,6 +72,8 @@ int NPRPipeline::Initialize(IRenderDevice* device) {
     m_nprOpaquePass = std::make_shared<NPROpaquePass>();
     m_nprOpaquePass->SetDevice(device);
     m_skyboxPass = std::make_shared<SkyboxPass>();
+    m_outlinePass = std::make_shared<OutlinePostProcessPass>();
+    m_outlinePass->Setup(device);
     m_postProcessPass = std::make_shared<PostProcessPass2D>();
     m_uiPass = std::make_shared<UIPass2D>();
     return 0;
@@ -79,6 +82,10 @@ int NPRPipeline::Initialize(IRenderDevice* device) {
 void NPRPipeline::Shutdown() {
     m_nprOpaquePass.reset();
     m_skyboxPass.reset();
+    if (m_outlinePass) {
+        m_outlinePass->Cleanup();
+        m_outlinePass.reset();
+    }
     m_postProcessPass.reset();
     m_uiPass.reset();
 }
@@ -132,6 +139,12 @@ void NPRPipeline::Execute(const RenderContext& ctx) {
         m_skyboxPass->SetViewMatrix(view);
         m_skyboxPass->SetProjectionMatrix(proj);
         m_skyboxPass->Execute(passContext);
+    }
+
+    // ── Outline Post-Process (offscreen only, requires targetTexture) ──
+    if (m_outlinePass && m_outlinePass->IsReady() && ctx.commandBuffer && ctx.targetTexture) {
+        TextureRenderTargetProxy outlineTarget(ctx.targetTexture);
+        m_outlinePass->Execute(ctx.commandBuffer, ctx.targetTexture, &outlineTarget);
     }
 
     // ── Post Processing ──
