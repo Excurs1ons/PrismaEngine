@@ -1,6 +1,7 @@
 #pragma once
 
 #include "IAudioDevice.h"
+#include "audio/dsp/EffectProcessor.h"
 #include <SDL3/SDL.h>
 #include <unordered_map>
 #include <array>
@@ -69,6 +70,9 @@ public:
     AudioStats GetStats() const override;
     void ResetStats() override;
 
+    bool ApplyEffect(AudioVoiceId voiceId, EffectType type, const void* params) override;
+    void RemoveEffects(AudioVoiceId voiceId) override;
+
     void BeginProfile() override;
     std::string EndProfile() override;
     std::string GenerateDebugReport() override;
@@ -94,6 +98,12 @@ private:
         
         // SDL3 Specific
         SDL_AudioSpec spec;
+
+        // 音效状态
+        EffectType effectType = EffectType::None;
+        uint8_t effectParams[128] = {};
+        uint32_t effectParamsSize = 0;
+        DSP::EffectState effectState;
     };
 
     void RemoveVoice(AudioVoiceId voiceId);

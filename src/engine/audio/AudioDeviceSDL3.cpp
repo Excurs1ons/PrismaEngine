@@ -107,6 +107,7 @@ IAudioDevice::DeviceInfo AudioDeviceSDL3::GetDeviceInfo() const {
     info.isDefault  = true;
     info.maxVoices  = m_desc.maxVoices;
     info.supports3D = true;
+    info.supportsEffects = true;
     return info;
 }
 
@@ -538,6 +539,42 @@ void AudioDeviceSDL3::TriggerEvent(AudioEventType type, AudioVoiceId voiceId) {
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now().time_since_epoch())
             .count());
     m_eventCallback(event);
+}
+
+bool AudioDeviceSDL3::ApplyEffect(AudioVoiceId voiceId, EffectType type, const void* params) {
+    if (type == EffectType::None) {
+        RemoveEffects(voiceId);
+        return true;
+    }
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_playingVoices.find(voiceId);
+    if (it == m_playingVoices.end()) return false;
+
+    auto& voice = it->second;
+    if (type != voice.effectType) {
+        DSP::ResetEffectState(voice.effectState);
+    }
+    voice.effectType = type;
+
+    if (params) {
+        std::memcpy(voice.effectParams, params,
+                    std::min(sizeof(voice.effectParams), (size_t)128));
+        voice.effectParamsSize = std::min(sizeof(voice.effectParams), (size_t)128);
+    } else {
+        voice.effectParamsSize = 0;
+    }
+    return true;
+}
+
+void AudioDeviceSDL3::RemoveEffects(AudioVoiceId voiceId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto it = m_playingVoices.find(voiceId);
+    if (it != m_playingVoices.end()) {
+        it->second.effectType = EffectType::None;
+        it->second.effectParamsSize = 0;
+        DSP::ResetEffectState(it->second.effectState);
+    }
 }
 
 void AudioDeviceSDL3::ResetStreamPosition(PlayingVoice& voice) {

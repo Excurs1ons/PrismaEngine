@@ -503,6 +503,41 @@ void AudioDeviceNull::Update(Prisma::Timestep ts) {
     }
 }
 
+bool AudioDeviceNull::ApplyEffect(AudioVoiceId voiceId, EffectType type, const void* params) {
+    if (type == EffectType::None) {
+        RemoveEffects(voiceId);
+        return true;
+    }
+
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto* voice = FindVoice(voiceId);
+    if (!voice) return false;
+
+    if (type != voice->effectType) {
+        DSP::ResetEffectState(voice->effectState);
+    }
+    voice->effectType = type;
+
+    if (params) {
+        std::memcpy(voice->effectParams, params,
+                    std::min(sizeof(voice->effectParams), (size_t)128));
+        voice->effectParamsSize = std::min(sizeof(voice->effectParams), (size_t)128);
+    } else {
+        voice->effectParamsSize = 0;
+    }
+    return true;
+}
+
+void AudioDeviceNull::RemoveEffects(AudioVoiceId voiceId) {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    auto* voice = FindVoice(voiceId);
+    if (voice) {
+        voice->effectType = EffectType::None;
+        voice->effectParamsSize = 0;
+        DSP::ResetEffectState(voice->effectState);
+    }
+}
+
 AudioVoiceId AudioDeviceNull::GenerateVoiceId() {
     AudioVoiceId id = m_nextVoiceId++;
     if (id == INVALID_VOICE_ID) {
