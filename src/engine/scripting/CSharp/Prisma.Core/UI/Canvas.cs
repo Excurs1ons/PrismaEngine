@@ -46,6 +46,19 @@ public partial class Canvas : UIComponent
     {
         _elements.Remove(element);
     }
-    
+
+    public void Render()
+    {
+        if (!Visible) return;
+        foreach (var element in _elements)
+        {
+            var ui = element.GetScript<UIComponent>();
+            if (ui != null && ui.Visible)
+            {
+                ui.Render();
+            }
+        }
+    }
+
     internal List<Node> GetElements() => _elements;
 }

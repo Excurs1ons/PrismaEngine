@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace Prisma.UI;
 
@@ -12,6 +13,8 @@ public partial class Button : Image
     
     private ButtonState _currentState;
     
+    public string ButtonText { get; set; } = "";
+
     public Button()
     {
         ElementType = UIElementType.Button;
@@ -77,6 +80,25 @@ public partial class Button : Image
     
     protected virtual void OnButtonClick()
     {
+    }
+
+    public unsafe override void Render()
+    {
+        if (!Visible) return;
+
+        var pos = WorldPosition;
+        Interop.API.UIDrawQuad(pos.X, pos.Y, Size.X, Size.Y,
+            Color.R, Color.G, Color.B, Color.A);
+
+        if (!string.IsNullOrEmpty(ButtonText))
+        {
+            byte[] textBytes = Encoding.UTF8.GetBytes(ButtonText + "\0");
+            fixed (byte* p = textBytes)
+            {
+                Interop.API.UIDrawString(p, pos.X + 4, pos.Y + 2, 1.0f,
+                    1.0f, 1.0f, 1.0f, 1.0f);
+            }
+        }
     }
 }
 

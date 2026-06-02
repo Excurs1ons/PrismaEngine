@@ -77,6 +77,11 @@ public abstract partial class UIComponent : Script
         return Rect.Contains(screenPos);
     }
     
+    /// <summary>
+    /// 渲染 UI 组件。由 Canvas.Render() 每帧调用，子类应重写以执行实际绘制。
+    /// </summary>
+    public virtual void Render() { }
+
     public virtual void OnClick() { }
     public virtual void OnPointerEnter() { }
     public virtual void OnPointerExit() { }
