@@ -622,6 +622,7 @@ static float S_AudioSpectrumGetPeak(uint64_t handle) {
 // ==================== Tilemap wrappers ====================
 
 static std::unordered_map<uint32_t, std::shared_ptr<Tilemap::Tilemap>> s_tilemaps;
+static std::unordered_map<std::string, uint32_t> s_tilemapPathCache; // resolved path → handle
 static uint32_t s_nextTilemapHandle = 1;
 
 // exe 目录（assets 根），由 Initialize 写入，供 ResolveAssetPath 使用
@@ -646,18 +647,32 @@ static std::string ResolveAssetPath(const char* relPath) {
 }
 
 static uint32_t PR_Tilemap_Load(const char* path) {
-    auto tm = std::make_shared<Tilemap::Tilemap>();
     std::string resolved = ResolveAssetPath(path);
+
+    auto cached = s_tilemapPathCache.find(resolved);
+    if (cached != s_tilemapPathCache.end()) {
+        return cached->second;
+    }
+
+    auto tm = std::make_shared<Tilemap::Tilemap>();
     if (!tm->LoadFromJSON(resolved)) {
         LOG_ERROR("ScriptEngine", "Tilemap_Load failed: {0} (resolved: {1})", path, resolved);
         return 0;
     }
     uint32_t h = s_nextTilemapHandle++;
     s_tilemaps[h] = std::move(tm);
+    s_tilemapPathCache[resolved] = h;
     return h;
 }
 
 static void PR_Tilemap_Unload(uint32_t handle) {
+    for (auto it = s_tilemapPathCache.begin(); it != s_tilemapPathCache.end(); ) {
+        if (it->second == handle) {
+            it = s_tilemapPathCache.erase(it);
+        } else {
+            ++it;
+        }
+    }
     s_tilemaps.erase(handle);
 }
 
