@@ -8,7 +8,7 @@ namespace GameScripts;
 /// </summary>
 public static class GameState
 {
-    public static bool HasDash { get; set; } = true; // 自动化测试模式默认开启
+    public static bool HasDash { get; set; } = false;
     public static Node PlayerNode { get; set; }
     public static uint TilemapHandle { get; set; } = 0;
     public static float[] SolidTileData { get; set; } = Array.Empty<float>();
