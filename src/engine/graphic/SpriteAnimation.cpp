@@ -45,7 +45,7 @@ void SpriteAnimationComponent::PlayAnimation(const std::string& animationName, b
         if (auto current = GetAnimation(m_currentAnimation)) {
             current->Stop();
         }
-        m_currentAnimation = name;
+        m_currentAnimation = animationName;
         anim->Play();
     }
 }
