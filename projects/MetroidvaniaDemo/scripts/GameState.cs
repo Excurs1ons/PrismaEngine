@@ -17,6 +17,6 @@ public static class GameState
     // Camera bounds (center of viewport)
     public static float CameraMinX { get; set; } = 128f;
     public static float CameraMinY { get; set; } = 112f;
-    public static float CameraMaxX { get; set; } = 512f;
+    public static float CameraMaxX { get; set; } = 1792f;
     public static float CameraMaxY { get; set; } = 368f;
 }

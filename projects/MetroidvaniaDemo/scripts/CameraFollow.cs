@@ -8,6 +8,12 @@ public partial class CameraFollow : Script
 {
     public float LerpSpeed = 6f;
 
+    public override void OnCreate()
+    {
+        // 将相机初始位置设为玩家出生点，避免前几帧玩家在屏幕外
+        unsafe { Interop.API.SetCameraPos(64, 400); }
+    }
+
     public override void OnUpdate(TimeContext time, InputContext input)
     {
         Node playerNode = GameState.PlayerNode;
