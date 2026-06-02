@@ -203,10 +203,49 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<byte*, nuint*, void*> ReadAssetData;
     public delegate* unmanaged<void*, void> FreeAssetData;
 
+    // ===== High-Level Audio API (BGM/SFX) =====
+    public delegate* unmanaged<byte*, float, float, void> AudioPlaySFX;
+    public delegate* unmanaged<byte*, float, bool, void> AudioPlayBGM;
+    public delegate* unmanaged<float, void> AudioStopBGM;
+    public delegate* unmanaged<float, void> AudioSetBGMVolume;
+    public delegate* unmanaged<float, void> AudioSetSFXVolume;
+    public delegate* unmanaged<float, float, void> AudioSetListenerPosition;
+
     public byte* ProjectName;
 
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验
     public uint StructSize;
+
+    // ===== UI Rendering API =====
+    public delegate* unmanaged<float, float, float, float, float, float, float, float, void> UIDrawQuad;
+    public delegate* unmanaged<byte*, float, float, float, float, float, float, float, void> UIDrawString;
+    public delegate* unmanaged<byte*, float, float> UIGetStringWidth;
+
+    // ===== SpriteAnimation C# Bindings =====
+    public delegate* unmanaged<byte*, uint> SpriteAnimationCreate;
+    public delegate* unmanaged<uint, float, float, float, float, float, void> SpriteAnimationAddFrame;
+    public delegate* unmanaged<uint, byte*, bool, void> SpriteAnimationPlay;
+    public delegate* unmanaged<uint, void> SpriteAnimationStop;
+    public delegate* unmanaged<uint, void> SpriteAnimationPause;
+    public delegate* unmanaged<uint, bool> SpriteAnimationIsPlaying;
+    public delegate* unmanaged<uint, bool, void> SpriteAnimationSetLooping;
+    public delegate* unmanaged<uint, float, void> SpriteAnimationSetSpeed;
+    public delegate* unmanaged<uint, uint> NodeAddSpriteAnimation;
+
+    // ===== Save/Load API =====
+    public delegate* unmanaged<byte*, byte*, bool> SaveGameSave;
+    public delegate* unmanaged<byte*, byte*> SaveGameLoad;
+    public delegate* unmanaged<byte*, bool> SaveGameDelete;
+    public delegate* unmanaged<byte*> SaveGameListSlots;
+
+    // ===== Scene/Room Transition API =====
+    public delegate* unmanaged<byte*, float, void> SceneSwitchScene;
+    public delegate* unmanaged<byte*> SceneGetCurrentSceneName;
+    public delegate* unmanaged<byte*, byte*, void> SceneSetTransitionData;
+    public delegate* unmanaged<byte*, byte*> SceneGetTransitionData;
+    public delegate* unmanaged<byte*, bool> SceneHasTransitionData;
+    public delegate* unmanaged<void> SceneClearTransitionData;
+    public delegate* unmanaged<byte*, void*, void> SceneRegisterScene;
 }
 
 [StructLayout(LayoutKind.Sequential)]
