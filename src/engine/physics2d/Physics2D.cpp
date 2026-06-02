@@ -63,39 +63,32 @@ bool Physics2D::ResolvePlatform(const AABB2D& player, glm::vec2& velocity,
     hitCeiling = false;
     bool anyCollision = false;
 
-    struct Hit {
-        float time;
-        glm::vec2 normal;
-    };
-    std::vector<Hit> hits;
-    hits.reserve(count);
+    // 迭代重扫描：每次修改 velocity 后重新扫描所有固体，
+    // 避免一次排序后 velocity 变化导致碰撞时序不准确
+    for (int iter = 0; iter < 5; iter++) {
+        float earliestHit = 2.0f;
+        glm::vec2 bestNormal{0.0f, 0.0f};
 
-    for (uint32_t i = 0; i < count; i++) {
-        float hitTime;
-        glm::vec2 normal;
-        if (SweepAABB(player, velocity, solids[i], hitTime, normal)) {
-            hits.push_back({hitTime, normal});
+        for (uint32_t i = 0; i < count; i++) {
+            float hitTime;
+            glm::vec2 normal;
+            if (SweepAABB(player, velocity, solids[i], hitTime, normal)) {
+                if (hitTime >= 0.0f && hitTime < earliestHit) {
+                    earliestHit = hitTime;
+                    bestNormal = normal;
+                }
+            }
         }
-    }
 
-    // 按碰撞时间排序（最近的优先）
-    std::sort(hits.begin(), hits.end(),
-        [](const Hit& a, const Hit& b) { return a.time < b.time; });
+        if (earliestHit > 1.0f) break;
 
-    float remainingTime = 1.0f;
-    for (const auto& hit : hits) {
-        if (hit.time > remainingTime) break;
-
-        // 沿法线方向消除速度分量
-        float dot = glm::dot(velocity, hit.normal);
+        float dot = glm::dot(velocity, bestNormal);
         if (dot < 0.0f) {
-            velocity -= hit.normal * dot;
+            velocity -= bestNormal * dot;
         }
 
-        if (hit.normal.y < -0.5f) onGround = true;
-        if (hit.normal.y > 0.5f) hitCeiling = true;
-
-        remainingTime -= hit.time;
+        if (bestNormal.y < -0.5f) onGround = true;
+        if (bestNormal.y > 0.5f) hitCeiling = true;
         anyCollision = true;
     }
 
