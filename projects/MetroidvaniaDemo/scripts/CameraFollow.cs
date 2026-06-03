@@ -31,10 +31,6 @@ public partial class CameraFollow : Script
         float newX = currentX + (targetX - currentX) * t;
         float newY = currentY + (targetY - currentY) * t;
 
-        // Clamp to camera bounds
-        newX = Mathf.Clamp(newX, GameState.CameraMinX, GameState.CameraMaxX);
-        newY = Mathf.Clamp(newY, GameState.CameraMinY, GameState.CameraMaxY);
-
         // Pixel snap
         newX = Mathf.Round(newX);
         newY = Mathf.Round(newY);

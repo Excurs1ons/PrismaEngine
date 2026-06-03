@@ -15,11 +15,19 @@ public partial class Enemy : Script
     public float PatrolLeft = 0f;
     public float PatrolRight = 640f;
 
+    const float DetectionRange = 120f;
+    const float ChaseSpeed = 80f;
+    const int ContactDamage = 1;
+    const float KnockbackForceX = 120f;
+    const float KnockbackForceY = -200f;
+    const float AttackCooldown = 0.5f;
+
     float velocityX;
     float velocityY;
     bool facingRight = true;
     bool onGround;
     bool hitCeiling;
+    float attackCooldownTimer;
 
     public override void OnStart()
     {
@@ -29,12 +37,35 @@ public partial class Enemy : Script
     public override void OnUpdate(TimeContext time, InputContext input)
     {
         float dt = time.DeltaTime;
+        attackCooldownTimer -= dt;
 
-        // === Patrol ===
-        if (_node.X >= PatrolRight) facingRight = false;
-        if (_node.X <= PatrolLeft) facingRight = true;
+        Node player = GameState.PlayerNode;
 
-        velocityX = facingRight ? MoveSpeed : -MoveSpeed;
+        // === AI State ===
+        if (player.Handle != 0)
+        {
+            float dist = Mathf.Abs(_node.X - player.X);
+
+            if (dist < DetectionRange)
+            {
+                float dir = (player.X > _node.X) ? 1f : -1f;
+                velocityX = dir * ChaseSpeed;
+                facingRight = dir > 0;
+            }
+            else if (dist > DetectionRange * 1.5f)
+            {
+                if (_node.X >= PatrolRight) facingRight = false;
+                if (_node.X <= PatrolLeft) facingRight = true;
+                velocityX = facingRight ? MoveSpeed : -MoveSpeed;
+            }
+            // else: buffer zone — maintain current direction
+        }
+        else
+        {
+            if (_node.X >= PatrolRight) facingRight = false;
+            if (_node.X <= PatrolLeft) facingRight = true;
+            velocityX = facingRight ? MoveSpeed : -MoveSpeed;
+        }
 
         // === Gravity ===
         velocityY += Gravity * dt;
@@ -71,20 +102,37 @@ public partial class Enemy : Script
         _node.Y += deltaY;
 
         // === Player contact damage ===
-        Node player = GameState.PlayerNode;
-        if (player.Handle != 0)
+        if (player.Handle != 0 && attackCooldownTimer <= 0)
         {
-            float px2 = _node.X;
-            float py2 = _node.Y;
-            float dx = px2 - player.X;
-            float dy = py2 - player.Y;
+            float dx = _node.X - player.X;
+            float dy = _node.Y - player.Y;
             float overlapX = (EnemyWidth + 12f) / 2 - Mathf.Abs(dx);
             float overlapY = (EnemyHeight + 16f) / 2 - Mathf.Abs(dy);
 
             if (overlapX > 0 && overlapY > 0)
             {
-                var pc = player.GetScript<PlayerController>();
-                pc?.Respawn();
+                if (dy < -4f && onGround)
+                {
+                    // Player stomp — recoil enemy downward
+                    var pc = player.GetScript<PlayerController>();
+                    velocityX = (dx > 0 ? 1f : -1f) * KnockbackForceX;
+                    velocityY = KnockbackForceY * 0.5f;
+                }
+                else
+                {
+                    var ph = player.GetScript<PlayerHealth>();
+                    ph?.TakeDamage(ContactDamage);
+
+                    float kbDir = (dx > 0 ? 1f : -1f);
+                    unsafe
+                    {
+                        uint pIdx = player.Handle & 0xFFFF;
+                        // Push player position as a one-time knockback impulse
+                        player.X += kbDir * KnockbackForceX * dt;
+                    }
+                }
+
+                attackCooldownTimer = AttackCooldown;
             }
         }
     }

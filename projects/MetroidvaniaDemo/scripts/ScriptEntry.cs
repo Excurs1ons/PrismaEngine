@@ -46,6 +46,7 @@ internal static class ScriptEntry
             // Player (blue rectangle, 12x16)
             var player = Node.Create("Player");
             player.AddScript<PlayerController>();
+            player.AddScript<PlayerHealth>();
             SetupSprite(player, 0.2f, 0.4f, 1.0f, 12, 16);
 
             // Enemy (red rectangle, 14x14)
@@ -77,103 +78,33 @@ internal static class ScriptEntry
 
             Console.WriteLine("[MetroidvaniaDemo] Bootstrap complete — all scene nodes ready");
 
-            // ============================================================
-            // Wave 3 Integration: Demonstrate all 5 new engine APIs
-            // Each section individually wrapped in try/catch for safety
-            // ============================================================
+            // HUD (screen-space overlay)
+            var hudNode = Node.Create("__HUD__");
+            hudNode.AddScript<HUDController>();
 
-            // 1) Animation Demo — create idle animation and attach to player
-            try
-            {
-                var idleAnim = new SpriteAnimation("idle");
-                idleAnim.AddFrame(0, 0, 12, 16, 0.5f);
-                idleAnim.AddFrame(12, 0, 12, 16, 0.5f);
-                idleAnim.SetLooping(true);
+            // DoubleJumpPickup in Room 3 high area (x ~80 tiles = 1280 pixels)
+            var dJump = Node.Create("DoubleJumpPickup");
+            SetupSprite(dJump, 0.8f, 0.2f, 0.8f); // Purple
+            dJump.AddScript<DoubleJumpPickup>();
+            dJump.X = 1280; // Room 3 high platform
+            dJump.Y = 200;  // High up
 
-                var animComp = SpriteAnimationComponent.AddToNode(player.Handle);
-                if (animComp != null)
-                {
-                    animComp.Play("idle");
-                    Console.WriteLine("[Integration] Animation: idle animation playing on player");
-                }
-                else
-                {
-                    Console.WriteLine("[Integration] Animation: AddToNode returned null (expected if unimpl.)");
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("[Integration] Animation demo skipped: " + ex.Message);
-            }
+            // SavePoint in Room 3 safe area
+            var savePt = Node.Create("SavePoint");
+            SetupSprite(savePt, 0.4f, 0.4f, 0.4f); // Gray (inactive)
+            savePt.AddScript<SavePoint>();
+            savePt.X = 1120;
+            savePt.Y = 432; // Ground level
 
-            // 2) Audio Demo — play placeholder BGM (won't crash if file missing)
-            try
-            {
-                Audio.PlayBGM("bgm/demo_placeholder.wav", 0.5f, false);
-                Console.WriteLine("[Integration] Audio: PlayBGM called (no crash on missing file)");
-
-                Audio.PlaySFX("sfx/demo_click.wav", 0.8f, 1.0f);
-                Console.WriteLine("[Integration] Audio: PlaySFX called (no crash on missing file)");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("[Integration] Audio demo skipped: " + ex.Message);
-            }
-
-            // 3) Save Demo — persist player progress
-            try
-            {
-                SaveGame.Save("player_progress", "{\"health\":100,\"position\":\"spawn\"}");
-                var loaded = SaveGame.Load("player_progress");
-                var slots = SaveGame.ListSlots();
-                Console.WriteLine("[Integration] Save: saved/loaded OK, slots=" + (slots?.Length.ToString() ?? "0"));
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("[Integration] Save demo skipped: " + ex.Message);
-            }
-
-            // 4) Scene Transition Demo — transition data + scene switch
-            try
-            {
-                SceneManager.SetTransitionData("lastRoom", "starting_room");
-                SceneManager.SwitchScene("main_scene", 500);
-                var currentScene = SceneManager.GetCurrentSceneName();
-                Console.WriteLine("[Integration] Scene: currentScene='" + currentScene + "'");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("[Integration] Scene transition demo skipped: " + ex.Message);
-            }
-
-            // 5) UI Demo — create HUD canvas + text overlay
-            try
-            {
-                var uiCanvasNode = Node.Create("HUDCanvas");
-                var uiCanvas = uiCanvasNode.AddScript<Canvas>();
-                uiCanvas.RenderMode = CanvasRenderMode.ScreenSpaceOverlay;
-
-                var hudTextNode = Node.Create("HUDText");
-                var hudText = hudTextNode.AddScript<Text>();
-                hudText.TextContent = "HP: 100 | Dash: Ready";
-                hudText.AnchoredPosition = new Vector2(10, 10);
-                hudText.Size = new Vector2(200, 30);
-                hudText.TextColor = Color.White;
-                uiCanvas.AddElement(hudTextNode);
-
-                var buttonNode = Node.Create("DemoButton");
-                var button = buttonNode.AddScript<Button>();
-                button.ButtonText = "Reset";
-                button.AnchoredPosition = new Vector2(400, 10);
-                button.Size = new Vector2(80, 30);
-                uiCanvas.AddElement(buttonNode);
-
-                Console.WriteLine("[Integration] UI: HUD canvas + text + button created");
-            }
-            catch (Exception ex)
-            {
-                Console.Error.WriteLine("[Integration] UI demo skipped: " + ex.Message);
-            }
+            // Enemy2 in Room 3
+            var enemy2 = Node.Create("Enemy2");
+            SetupSprite(enemy2, 1f, 0.3f, 0.3f);
+            enemy2.AddScript<Enemy>();
+            var e2Ai = enemy2.GetScript<Enemy>();
+            // Set patrol range for Room 3 (x ~60-89 tiles = 960-1424 pixels)
+            e2Ai.PatrolLeft = 960f;
+            e2Ai.PatrolRight = 1424f;
+            e2Ai.MoveSpeed = 50f;
 
             Console.WriteLine("[Bootstrap] Wave 3 integration complete — all 5 APIs demonstrated");
         }
