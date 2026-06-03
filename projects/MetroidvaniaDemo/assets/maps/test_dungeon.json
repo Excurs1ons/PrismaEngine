@@ -1,7 +1,7 @@
 {
   "tileSize": 16,
   "columns": 8,
-  "texturePath": "assets/textures/dungeon_tileset.png",
+  "texturePath": "assets/textures/tiles.png",
   "tiles": [
     {
       "tileId": 1,
