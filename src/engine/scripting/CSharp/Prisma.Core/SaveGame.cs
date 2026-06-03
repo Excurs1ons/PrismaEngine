@@ -6,7 +6,7 @@ namespace Prisma.Core
 {
     public static class SaveGame
     {
-        public static bool Save(string slotName, string jsonData)
+        public static unsafe bool Save(string slotName, string jsonData)
         {
             byte[] slotBytes = Encoding.UTF8.GetBytes(slotName + "\0");
             byte[] dataBytes = Encoding.UTF8.GetBytes(jsonData + "\0");
@@ -17,7 +17,7 @@ namespace Prisma.Core
             }
         }
 
-        public static string Load(string slotName)
+        public static unsafe string Load(string slotName)
         {
             byte[] slotBytes = Encoding.UTF8.GetBytes(slotName + "\0");
             byte* result;
@@ -31,7 +31,7 @@ namespace Prisma.Core
             return str;
         }
 
-        public static bool Delete(string slotName)
+        public static unsafe bool Delete(string slotName)
         {
             byte[] slotBytes = Encoding.UTF8.GetBytes(slotName + "\0");
             fixed (byte* pSlot = slotBytes)
@@ -40,7 +40,7 @@ namespace Prisma.Core
             }
         }
 
-        public static string[] ListSlots()
+        public static unsafe string[] ListSlots()
         {
             byte* result = Interop.API.SaveGameListSlots();
             if (result == null) return new string[0];

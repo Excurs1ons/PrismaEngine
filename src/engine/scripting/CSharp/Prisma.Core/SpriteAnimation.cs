@@ -4,11 +4,11 @@ using System.Text;
 
 namespace Prisma;
 
-public class SpriteAnimation : IDisposable
+public unsafe class SpriteAnimation : IDisposable
 {
     private uint m_animId;
 
-    public SpriteAnimation(string name)
+    public unsafe SpriteAnimation(string name)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(name + "\0");
         fixed (byte* p = bytes)
@@ -33,7 +33,7 @@ public class SpriteAnimation : IDisposable
     }
 }
 
-public class SpriteAnimationComponent
+public unsafe class SpriteAnimationComponent
 {
     private uint m_componentId;
 
@@ -42,7 +42,7 @@ public class SpriteAnimationComponent
         m_componentId = componentId;
     }
 
-    public void Play(string animationName, bool restart = false)
+    public unsafe void Play(string animationName, bool restart = false)
     {
         byte[] bytes = Encoding.UTF8.GetBytes(animationName + "\0");
         fixed (byte* p = bytes)
