@@ -24,7 +24,7 @@ public static class ParticleSystem
 
     static Particle[] s_pool = new Particle[PoolSize];
     static bool s_initialized = false;
-    static Random s_rng = new Random();
+    static System.Random s_rng = new System.Random();
 
     static void EnsurePool()
     {
