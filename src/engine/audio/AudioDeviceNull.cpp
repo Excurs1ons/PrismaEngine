@@ -551,45 +551,4 @@ AudioDeviceNull::InternalVoiceState* AudioDeviceNull::FindVoice(AudioVoiceId voi
     return (it != m_voices.end()) ? &it->second : nullptr;
 }
 
-bool AudioDeviceNull::ApplyEffect(AudioVoiceId voiceId, EffectType type, const void* params) {
-    if (type == EffectType::None) {
-        RemoveEffects(voiceId);
-        return true;
-    }
-
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    auto it = m_voices.find(voiceId);
-    if (it == m_voices.end()) {
-        return false;
-    }
-
-    auto& voice = it->second;
-    if (type != voice.effectType) {
-        DSP::ResetEffectState(voice.effectState);
-    }
-    voice.effectType = type;
-
-    if (params) {
-        std::memcpy(voice.effectParams, params,
-                    std::min(sizeof(voice.effectParams), (size_t)128));
-        voice.effectParamsSize = std::min(sizeof(voice.effectParams), (size_t)128);
-    } else {
-        voice.effectParamsSize = 0;
-    }
-
-    return true;
-}
-
-void AudioDeviceNull::RemoveEffects(AudioVoiceId voiceId) {
-    std::lock_guard<std::mutex> lock(m_mutex);
-
-    auto it = m_voices.find(voiceId);
-    if (it != m_voices.end()) {
-        it->second.effectType = EffectType::None;
-        it->second.effectParamsSize = 0;
-        DSP::ResetEffectState(it->second.effectState);
-    }
-}
-
 }  // namespace Prisma::Audio
