@@ -1,8 +1,12 @@
 #include "Physics2D.h"
+#include "Quadtree2D.h"
 #include <algorithm>
 #include <cmath>
+#include <unordered_set>
 
 namespace Prisma::Physics2D {
+
+Quadtree2D* Physics2D::s_quadtree = nullptr;
 
 bool Physics2D::CheckAABB(const AABB2D& a, const AABB2D& b) {
     return a.Intersects(b);
@@ -63,19 +67,45 @@ bool Physics2D::ResolvePlatform(const AABB2D& player, glm::vec2& velocity,
     hitCeiling = false;
     bool anyCollision = false;
 
-    // 迭代重扫描：每次修改 velocity 后重新扫描所有固体，
-    // 避免一次排序后 velocity 变化导致碰撞时序不准确
+    // 如果设置了四叉树，先做空间查询缩小候选范围
+    // 约定：四叉树中的 entityId 对应 solids 数组的索引
+    std::unordered_set<uint32_t> candidateSet;
+    if (s_quadtree != nullptr) {
+        AABB2D expandedBounds = player;
+        if (velocity.x < 0.0f) expandedBounds.minX += velocity.x;
+        if (velocity.x > 0.0f) expandedBounds.maxX += velocity.x;
+        if (velocity.y < 0.0f) expandedBounds.minY += velocity.y;
+        if (velocity.y > 0.0f) expandedBounds.maxY += velocity.y;
+
+        auto candidates = s_quadtree->Query(expandedBounds);
+        candidateSet.insert(candidates.begin(), candidates.end());
+    }
+
     for (int iter = 0; iter < 5; iter++) {
         float earliestHit = 2.0f;
         glm::vec2 bestNormal{0.0f, 0.0f};
 
-        for (uint32_t i = 0; i < count; i++) {
-            float hitTime;
-            glm::vec2 normal;
-            if (SweepAABB(player, velocity, solids[i], hitTime, normal)) {
-                if (hitTime >= 0.0f && hitTime < earliestHit) {
-                    earliestHit = hitTime;
-                    bestNormal = normal;
+        if (s_quadtree != nullptr && !candidateSet.empty()) {
+            for (uint32_t i : candidateSet) {
+                if (i >= count) continue;
+                float hitTime;
+                glm::vec2 normal;
+                if (SweepAABB(player, velocity, solids[i], hitTime, normal)) {
+                    if (hitTime >= 0.0f && hitTime < earliestHit) {
+                        earliestHit = hitTime;
+                        bestNormal = normal;
+                    }
+                }
+            }
+        } else {
+            for (uint32_t i = 0; i < count; i++) {
+                float hitTime;
+                glm::vec2 normal;
+                if (SweepAABB(player, velocity, solids[i], hitTime, normal)) {
+                    if (hitTime >= 0.0f && hitTime < earliestHit) {
+                        earliestHit = hitTime;
+                        bestNormal = normal;
+                    }
                 }
             }
         }
@@ -93,6 +123,11 @@ bool Physics2D::ResolvePlatform(const AABB2D& player, glm::vec2& velocity,
     }
 
     return anyCollision;
+}
+
+void Physics2D::SetQuadtree(Quadtree2D* quadtree)
+{
+    s_quadtree = quadtree;
 }
 
 bool Physics2D::CheckOneWayPlatform(const AABB2D& player,
