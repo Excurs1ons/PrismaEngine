@@ -198,6 +198,12 @@ struct PrismaAPI {
     void (*audioSetSFXVolume)(float volume);
     void (*audioSetListenerPosition)(float x, float y);
 
+    // ===== AudioZone2D (2D Regional Audio) =====
+    uint32_t (*audioZoneRegister)(float minX, float minY, float maxX, float maxY, const char* bgmPath, float bgmVolume, bool bgmLoop, float fadeMs);
+    void (*audioZoneUnregister)(uint32_t zoneId);
+    void (*audioZoneSetPlayerPos)(float x, float y);
+    void (*audioZonePlaySFX)(const char* clipPath, float volume);
+
     const char* projectName;
 
     // [诊断] 结构体大小，用于 C++/C# 版本校验

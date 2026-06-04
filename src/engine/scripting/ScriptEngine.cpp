@@ -17,6 +17,7 @@
 #include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 #include "audio/AudioAPI.h"
 #include "audio/AudioTypes.h"
+#include "audio/AudioZone2D.h"
 #include "audio/dsp/AudioNode.h"
 #include "audio/dsp/nodes/OscillatorNode.h"
 #include "audio/dsp/nodes/ADSRNode.h"
@@ -478,6 +479,33 @@ static void S_AudioSetListenerPosition(float x, float y) {
     listener.position[1] = y;
     listener.position[2] = 0.0f;
     dev->SetListener(listener);
+}
+
+// ==================== AudioZone2D API ====================
+
+static uint32_t S_AudioZoneRegister(float minX, float minY, float maxX, float maxY, const char* bgmPath, float bgmVolume, bool bgmLoop, float fadeMs) {
+    Prisma::Audio::AudioZoneDef def;
+    def.bounds = Prisma::Physics2D::AABB2D(minX, minY, maxX, maxY);
+    if (bgmPath) {
+        def.bgmPath = bgmPath;
+    }
+    def.bgmVolume = bgmVolume;
+    def.bgmLoop = bgmLoop;
+    def.fadeDurationMs = fadeMs;
+    return Prisma::Audio::AudioZoneManager::Get().RegisterZone(def);
+}
+
+static void S_AudioZoneUnregister(uint32_t zoneId) {
+    Prisma::Audio::AudioZoneManager::Get().UnregisterZone(zoneId);
+}
+
+static void S_AudioZoneSetPlayerPos(float x, float y) {
+    Prisma::Audio::AudioZoneManager::Get().SetPlayerPosition(x, y);
+}
+
+static void S_AudioZonePlaySFX(const char* clipPath, float volume) {
+    if (!clipPath) return;
+    Prisma::Audio::AudioZoneManager::Get().PlaySFX(clipPath, volume);
 }
 
 // ==================== AudioGraph API ====================
@@ -1182,6 +1210,12 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.audioSetBGMVolume = S_AudioSetBGMVolume;
     m_api.audioSetSFXVolume = S_AudioSetSFXVolume;
     m_api.audioSetListenerPosition = S_AudioSetListenerPosition;
+
+    // AudioZone2D API
+    m_api.audioZoneRegister = S_AudioZoneRegister;
+    m_api.audioZoneUnregister = S_AudioZoneUnregister;
+    m_api.audioZoneSetPlayerPos = S_AudioZoneSetPlayerPos;
+    m_api.audioZonePlaySFX = S_AudioZonePlaySFX;
 
     // AudioGraph API
     m_api.audioCreateGraph = S_AudioCreateGraph;

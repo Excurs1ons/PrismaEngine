@@ -211,6 +211,12 @@ internal unsafe struct PrismaAPI
     public delegate* unmanaged<float, void> AudioSetSFXVolume;
     public delegate* unmanaged<float, float, void> AudioSetListenerPosition;
 
+    // ===== AudioZone2D (2D Regional Audio) =====
+    public delegate* unmanaged<float, float, float, float, byte*, float, bool, float, uint> AudioZoneRegister;
+    public delegate* unmanaged<uint, void> AudioZoneUnregister;
+    public delegate* unmanaged<float, float, void> AudioZoneSetPlayerPos;
+    public delegate* unmanaged<byte*, float, void> AudioZonePlaySFX;
+
     public byte* ProjectName;
 
     // [诊断] C++ 侧在 Initialize 中设为 sizeof(PrismaAPI)，C# 侧在 Init 中校验

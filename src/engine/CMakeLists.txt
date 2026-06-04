@@ -63,6 +63,8 @@ set(CORE_SOURCES
 
     # Physics2D
     physics2d/Physics2D.cpp
+    physics2d/Quadtree2D.cpp
+    physics2d/Trigger2D.cpp
 
     # Tilemap
     tilemap/Tilemap.cpp
@@ -229,6 +231,7 @@ if(PRISMA_BUILD_SUBSYSTEM_AUDIO)
         audio/AudioAPI.cpp
         audio/backends/SymbolStubs.cpp
         audio/backends/AudioDeviceMiniaudio.cpp
+        audio/AudioZone2D.cpp
     )
 endif()
 
@@ -513,6 +516,7 @@ set(CORE_HEADERS
     audio/AudioDeviceSDL3.h
     audio/AudioTypes.h
     audio/IAudioDevice.h
+    audio/AudioZone2D.h
     audio/core/IAudioDriver.h
 
     # Audio DSP
@@ -555,6 +559,8 @@ set(CORE_HEADERS
     # Physics2D
     physics2d/AABB2D.h
     physics2d/Physics2D.h
+    physics2d/Quadtree2D.h
+    physics2d/Trigger2D.h
 
     # Tilemap
     tilemap/TileSet.h

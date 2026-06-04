@@ -76,6 +76,11 @@ internal static class ScriptEntry
             envLight.Intensity = 2.0f;
             envLight.Radius = 2000.0f;
 
+            // Register audio zones (rooms in test_dungeon)
+            AudioManager.RegisterZone(0f, 0f, 640f, 480f, "assets/audio/room1_bgm.ogg", 0.7f);
+            AudioManager.RegisterZone(640f, 0f, 1280f, 480f, "assets/audio/room2_bgm.ogg", 0.7f);
+            AudioManager.RegisterZone(1280f, 0f, 1920f, 480f, "assets/audio/room3_bgm.ogg", 0.7f);
+
             Console.WriteLine("[MetroidvaniaDemo] Bootstrap complete — all scene nodes ready");
 
             // HUD (screen-space overlay)
