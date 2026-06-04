@@ -15,7 +15,7 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 [中文文档](./docs/README_zh.md) | [English](./README.md)
 
 > **Current Status**: CoreCLR C# scripting functional. SoA entity pool with 1M virtual capacity. Android Vulkan runtime production-ready.
-> **Last Updated**: 2026-06-01 (v2)
+> **Last Updated**: 2026-06-04
 
 ## CI/CD Status
 
@@ -31,8 +31,10 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 |--------|--------|-------------|
 | AI System | ✅ 75% | Behavior tree, state machine, perception system, goal-oriented |
 | Android Runtime | ✅ 90% | Optimized Vulkan runtime (integrated GameActivity) |
-| Animation System | ✅ 60% | Skeletal animation, blend tree, IK, morph targets |
-| Audio System | ✅ 70% | XAudio2/SDL3/miniaudio backends, 12 DSP effects, Flac/Mp3/Ogg codecs |
+| Animation System | ✅ 70% | Skeletal animation, blend tree, IK, morph targets, SpriteAnimation batched |
+| Audio System | ✅ 80% | XAudio2/SDL3/miniaudio backends, 12 DSP effects, Flac/Mp3/Ogg codecs, 2D zone audio |
+| 2D Lighting | ✅ 80% | 2D shadow mapping |
+| 2D Rendering | ✅ 80% | 2D lighting, shadows, post-processing, tilemap instancing, sprite animation batching |
 | Console/CVar | ✅ 70% | In-game console, CVar system, auto-complete, history |
 | CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
 | DirectX 12 Backend | ❌ Suspended | Suspended, focusing on Vulkan backend |
@@ -43,15 +45,17 @@ Prisma Engine is a cross-platform 3D game engine built with modern C++23, focusi
 | Memory System | ✅ 90% | Stack/arena/pool allocators, virtual memory, double-buffered |
 | Navigation System | ✅ 90% | NavMesh generation, A* pathfinding, nav agent, avoidance, binary serialization |
 | Network System | ✅ 70% | TCP/UDP transport, RPC, entity replication, lobby |
-| Particle System | ✅ 65% | CPU/GPU particles + GPU compute pipeline, emitters, force fields, events |
-| Physics System | ✅ 80% | Collision detection, rigid body, constraint solver, CCD, trigger volumes |
+| Particle System | ✅ 75% | CPU/GPU particles + GPU compute pipeline, emitters, force fields, events, 2D projection |
+| Physics System | ✅ 85% | Collision detection, rigid body, constraint solver, CCD, trigger volumes, 2D quadtree |
 | Platform Layer | ✅ 95% | Unified Windows/Linux/Android abstraction |
+| Post-Processing | ✅ 80% | Bloom/Grayscale/Distortion effects |
 | Profiling System | ✅ 60% | GPU/CPU profiler, frame stats, timeline capture |
 | Rendering Architecture | ✅ 95% | Core Pass + Feature system + Compute Pipeline RHI |
 | Resource Management | ✅ 95% | Handle\<T\> system + resource pools |
 | Shaders | ✅ 78% | PBR lighting, shadow mapping, SSAO, TAA, IBL, deferred/clustered/NPR/SSR/Fog/Tonemap shaders |
 | SoA Entity Pool | ✅ 100% | Virtual memory 1M capacity, double-buffered |
 | Terrain System | ✅ 80% | Heightmap, LOD, chunk-based loading, splatmap texturing, Vulkan rendering |
+| Tilemap | ✅ 80% | GPU instancing |
 | Testing Infrastructure | ✅ 65% | GTest unit tests + integration tests (70 files, CI-enabled) |
 | Threading/JobSystem | ✅ 80% | Fiber-based job system, thread pool, wait-free queues |
 | Vulkan Backend | ✅ 90% | Robust cross-platform Vulkan implementation |
