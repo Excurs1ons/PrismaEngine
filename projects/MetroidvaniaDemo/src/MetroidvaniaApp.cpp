@@ -175,6 +175,19 @@ void MetroidvaniaApp::OnEvent(Event& e) {
             LOG_INFO("Metroidvania", "ESC pressed — closing");
             Close(); return true; 
         }
+        // Forward real keyboard presses to InputManager for C# scripts
+        auto* input = Engine::Get().GetInputManager();
+        if (input) {
+            input->SetKeyState(static_cast<KeyCode>(ev.GetKeyCode()), true);
+        }
+        return false;
+    });
+
+    d.Dispatch<KeyReleasedEvent>([this](KeyReleasedEvent& ev) {
+        auto* input = Engine::Get().GetInputManager();
+        if (input) {
+            input->SetKeyState(static_cast<KeyCode>(ev.GetKeyCode()), false);
+        }
         return false;
     });
 }

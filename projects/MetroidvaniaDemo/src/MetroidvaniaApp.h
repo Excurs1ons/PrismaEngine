@@ -24,7 +24,7 @@ public:
 
 private:
     bool m_autoQuit = false;
-    bool m_simInput = true;  // 测试模式：自动移动角色 + 相机跟随
+    bool m_simInput = false; // false=real keyboard input; true=headless test mode
     std::shared_ptr<Tilemap::Tilemap> m_tilemap;
     Tilemap::TilemapRenderer m_tilemapRenderer;
     int m_simFrame = 0;
