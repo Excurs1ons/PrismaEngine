@@ -2,70 +2,36 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20Android-lightgrey.svg)](https://github.com/Excurs1ons/PrismaEngine)
-[![CI Windows](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml)
-[![CI Linux](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml)
-[![CI Android](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml)
+[![Build Status](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions)
 [![Android APK](https://img.shields.io/badge/APK-下载-green.svg?logo=android)](https://github.com/Excurs1ons/PrismaEngine/releases/download/latest/PrismaAndroid.apk)
 
-Prisma Engine 是一个使用现代 C++23 构建的跨平台 3D 游戏引擎，专注于高性能渲染和现代图形架构。
+Prisma Engine 是一个使用现代 C++20 构建的跨平台 3D 游戏引擎，专注于高性能渲染和现代图形架构。
 
 简体中文 | [English](../README.md)
 
-> **当前状态**: Android Vulkan 运行时已达到生产级，CoreCLR C# 脚本系统已集成，SoA Entity Pool 支持百万级虚拟容量。
+> **当前状态**: Android Vulkan 运行时已达到生产级，Windows DirectX 12 后端处于深度开发阶段。
+> **详细路线图**: [TODO.md](TODO.md) — 基于四维决策框架的优先级任务列表。
 > **最后更新**: 2026-06-04
 
 ## CI/CD 状态
 
-| 平台 | 状态 | 触发方式 |
-|------|------|----------|
-| **Windows** | [![CI Windows](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml) | Push / PR |
-| **Linux** | [![CI Linux](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml) | Push / PR |
-| **Android** | [![CI Android](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml/badge.svg)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml) | Push / PR |
+| 目标 | 平台 | 状态 | 触发方式 |
+|------|------|------|----------|
+| **CI** | Windows | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-windows.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-windows.yml) | 推送 / PR |
+| **CI** | Android | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-android.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-android.yml) | 推送 / PR |
+| **CI** | Linux | [![CI](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/ci-linux.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/ci-linux.yml) | 推送 / PR |
+| **APK** | Android | [![Android Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-runtime.yml?branch=main&label=APK)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-runtime.yml) | 推送 / 手动 |
+| **Engine** | Windows | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-engine.yml) | 推送 / 手动 |
+| **Engine** | Android | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-engine.yml) | 推送 / 手动 |
+| **Engine** | Linux | [![Engine](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-engine.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-engine.yml) | 推送 / 手动 |
+| **Editor** | Windows | [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-editor.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-editor.yml) | 推送 / 手动 |
+| **Editor** | Linux | [![Editor](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-editor.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-editor.yml) | 推送 / 手动 |
+| **Launcher** | Windows | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-windows-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-windows-runtime.yml) | 推送 / 手动 |
+| **Launcher** | Android | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-android-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-android-runtime.yml) | 推送 / 手动 |
+| **Launcher** | Linux | [![Runtime](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/build-linux-runtime.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/build-linux-runtime.yml) | 推送 / 手动 |
+| **Release** | 全部 | [![Release](https://img.shields.io/github/actions/workflow/status/Excurs1ons/PrismaEngine/release.yml?branch=main&label=)](https://github.com/Excurs1ons/PrismaEngine/actions/workflows/release.yml) | 标签 (`v*.*.*`) |
 
-## 当前进度
-
-| 模块 | 状态 | 说明 |
-|------|--------|------|
-| SoA Entity Pool | ✅ 100% | 虚拟内存 1M 容量，双缓冲 |
-| CoreCLR Scripting | ✅ 95% | C# Node/Script + SRP (CommandBuffer, RendererFeature, Compute Pipeline) |
-| 渲染架构 | ✅ 90% | 核心 Pass + Feature 系统 + Compute Pipeline RHI |
-| 资源管理 | ✅ 95% | Handle<T> 句柄系统 + 资源池 |
-| Vulkan 后端 | ✅ 90% | 稳健的跨平台 Vulkan 实现 |
-| DirectX 12 后端 | ⏳ 70% | Windows 主要渲染后端 |
-| Platform 层 | ✅ 95% | 统一的 Windows/Linux/Android 抽象层 |
-| Logger 系统 | ✅ 100% | 线程安全的跨平台日志 |
-| 音频系统 | ✅ 80% | XAudio2/SDL3/miniaudio 后端，12 种 DSP 效果，3D 空间音频，2D 区域音频 |
-| 着色器 | ✅ 50% | PBR 光照着色器 (lit/unlit) |
-| Android 运行时 | ✅ 90% | 优化的 Vulkan 运行时（集成 GameActivity） |
-| 编辑器工具 | ⏳ 15% | ImGui 基础检查器 |
-| MCP 协议 | ✅ 85% | 17 工具、7 类别、双传输、Hash Delta 追踪 |
-| WebUI Editor | ✅ 80% | 浏览器编辑器，包含场景/游戏视图、层级、检查器 |
-
-**总体进度: ~82%**
-
-## 2D 引擎功能
-
-新增了完整的 2D 游戏引擎支持，涵盖以下 7 个领域：
-
-| 模块 | 状态 | 说明 |
-|------|------|------|
-| 动画系统 (SpriteAnimation) | ✅ 70% | 批量 Sprite 动画渲染 |
-| 音频系统 (2D Zone Audio) | ✅ 80% | 2D 区域音效系统 |
-| 粒子系统 (2D Projection) | ✅ 75% | 2D 粒子投影 |
-| 物理系统 (2D Quadtree) | ✅ 85% | 2D 四叉树碰撞检测 + 触发器 |
-| 2D 光照 | ✅ 80% | 2D 阴影映射 |
-| 瓦片地图 | ✅ 80% | GPU 实例化渲染 |
-| 后处理 | ✅ 80% | Bloom/灰度/畸变效果 |
-
-### 2D 引擎增强 (2026-06)
-
-- 2D 光照渲染+阴影映射
-- SpriteAnimation 合批渲染
-- Tilemap GPU Instancing
-- 2D 四叉树空间划分+触发器系统
-- Bloom/Grayscale/Distortion 后处理
-- GPU 粒子 2D 投影适配
-- 2D 区域音频
+> 模块进度详情见 [MODULE_PROGRESS.md](MODULE_PROGRESS.md)，开发优先级见 [TODO.md](TODO.md)。
 
 ## 快速开始
 
@@ -105,13 +71,14 @@ cmake --build build/linux-x64-debug --parallel
 ## 文档导航
 
 - [文档索引](Index.md) - **从这里开始**
+- [TODO / 路线图](TODO.md) - 基于四维决策框架的优先级任务列表
 - [架构优化说明](ArchitectureOptimization.md) - 最新的设计改进
 - [Vulkan 集成详情](VulkanIntegration.md) - 详细的 Android 实现
-- [RenderGraph 计划](RenderGraphMigrationPlan.md) - 未来渲染架构路线图
+- [RenderGraph 计划](RenderGraph_Migration_Plan.md) - 未来渲染架构路线图
 
 ## 核心特性
 
-- **现代 C++23**: 利用 Concepts、Coroutines 和 Designated Initializers。
+- **现代 C++20**: 利用 Concepts、Coroutines 和 Designated Initializers。
 - **智能依赖管理**: 彻底告别手动库安装，一切交给 CMake。
 - **统一渲染 API**: 一次编写，在 DX12 或 Vulkan 上同步运行。
 - **Android 深度优化**: 通过 GameActivity 实现零延迟输入，以及高性能 Vulkan 渲染路径。
