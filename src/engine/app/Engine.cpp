@@ -87,9 +87,21 @@ int Engine::Initialize() {
     static Platform s_PlatformLogger;
     Logger::Get().SetPlatformLogger(&s_PlatformLogger);
 
-    Logger::Get().Initialize();
+    {
+        Prisma::LogConfig logConfig;
+#ifdef __ANDROID__
+        // Android 上用同步模式，避免进程被直接 kill 时异步线程来不及写入
+        logConfig.asyncMode = false;
+#endif
+        Logger::Get().Initialize(logConfig);
+    }
     Logger::Get().SetMinLevel(m_Spec.MinLogLevel);
     LOG_INFO("Engine", "Prisma 引擎正在初始化: {0}", m_Spec.Name);
+    {
+        char* prefPath = SDL_GetPrefPath("Prisma", "PrismaEngine");
+        LOG_INFO("Engine", "[日志系统] 持久化路径: {} | 日志级别: {}", prefPath ? prefPath : "?", Logger::Get().GetLevelName(m_Spec.MinLogLevel));
+        SDL_free(prefPath);
+    }
 
     AssetDatabase::Get().Load("assets/metadata.json");
     if (m_Spec.RefreshAssetDatabaseOnStartup) {
