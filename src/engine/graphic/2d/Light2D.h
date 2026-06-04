@@ -80,6 +80,11 @@ public:
     void SetCastShadows(bool cast) { m_castShadows = cast; }
     bool IsCastShadows() const { return m_castShadows; }
 
+    void SetShadowMapSize(uint32_t size) { m_shadowMapSize = size; }
+    uint32_t GetShadowMapSize() const { return m_shadowMapSize; }
+    void SetShadowSoftness(float softness) { m_shadowSoftness = glm::clamp(softness, 0.0f, 1.0f); }
+    float GetShadowSoftness() const { return m_shadowSoftness; }
+
     // ========== 更新 ==========
 
     void Update(Timestep ts);
@@ -101,6 +106,8 @@ private:
     float m_spotAngle = 45.0f;
 
     bool m_castShadows = false;
+    uint32_t m_shadowMapSize = 256;
+    float m_shadowSoftness = 0.5f;
 };
 
 }  // namespace Graphic
