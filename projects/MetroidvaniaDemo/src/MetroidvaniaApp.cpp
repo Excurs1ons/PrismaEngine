@@ -11,6 +11,7 @@
 #include "input/InputManager.h"
 #include "Logger.h"
 #include <vector>
+#include <filesystem>
 #include <SDL3/SDL_scancode.h>
 
 namespace Prisma {
@@ -52,11 +53,34 @@ int MetroidvaniaApp::OnInitialize() {
         sceneMgr->CreateNewScene();
     }
 
-    // 加载地砖地图，使用引擎内置 1x1 白色纹理作为视觉 fallback
+    auto* resMgr = Engine::Get().GetRenderResourceManager();
+    if (!resMgr) {
+        LOG_WARNING("Metroidvania", "No render resource manager - textures disabled");
+    }
+
+    // 辅助：先尝试从文件加载纹理，失败则回退为 1x1 纯色纹理
+    auto loadTextureFromFile = [resMgr](const std::string& path, uint32_t fallbackRGBA)
+        -> std::shared_ptr<Graphic::ITexture> {
+        if (!resMgr) return nullptr;
+        if (std::filesystem::exists(path)) {
+            auto tex = resMgr->LoadTexture(path);
+            if (tex) return tex;
+            LOG_WARNING("Metroidvania", "Failed to load {0}, using fallback", path);
+        } else {
+            LOG_WARNING("Metroidvania", "File not found: {0}, using fallback", path);
+        }
+        Graphic::TextureDesc desc;
+        desc.width = 1;
+        desc.height = 1;
+        desc.format = Graphic::TextureFormat::RGBA8_UNorm;
+        return resMgr->CreateTextureFromMemory(&fallbackRGBA, sizeof(fallbackRGBA), desc);
+    };
+
+    // 加载地砖地图
     m_tilemap = std::make_shared<Tilemap::Tilemap>();
     if (m_tilemap->LoadFromJSON("assets/maps/test_dungeon.json")) {
         m_tilemapRenderer.SetTilemap(m_tilemap);
-        m_tilemapRenderer.SetTexture(Graphic::Renderer2D::GetWhiteTexture());
+        m_tilemapRenderer.SetTexture(loadTextureFromFile("assets/textures/tiles.png", 0xFFFFFFFF));
         LOG_INFO("Metroidvania", "Tilemap loaded: {}x{} tiles, {} layers",
                  m_tilemap->GetWidth(), m_tilemap->GetHeight(),
                  m_tilemap->GetLayerCount());
@@ -65,29 +89,18 @@ int MetroidvaniaApp::OnInitialize() {
         m_tilemap.reset();
     }
 
-    // 创建程序化精灵纹理（1x1 纯色纹理）
-    auto* resMgr = Engine::Get().GetRenderResourceManager();
+    // 加载精灵纹理
     if (resMgr) {
-        auto makeTexture = [resMgr](uint32_t rgba) -> std::shared_ptr<Graphic::ITexture> {
-            Graphic::TextureDesc desc;
-            desc.width = 1;
-            desc.height = 1;
-            desc.format = Graphic::TextureFormat::RGBA8_UNorm;
-            return resMgr->CreateTextureFromMemory(&rgba, sizeof(rgba), desc);
-        };
-        // Player: blue rgba(0,100,255,255)
-        m_playerTexture = makeTexture(0xFFFF6400);
-        // Enemy: red rgba(255,50,50,255)
-        m_enemyTexture = makeTexture(0xFF3232FF);
-        // DashPickup: yellow-green rgba(150,255,50,255)
-        m_dashPickupTexture = makeTexture(0xFF32FF96);
-        // AbilityGate: grey rgba(128,128,128,255)
-        m_abilityGateTexture = makeTexture(0xFF808080);
-        // White texture for fallback
-        m_whiteTexture = makeTexture(0xFFFFFFFF);
-        LOG_INFO("Metroidvania", "Created {} sprite textures", 5);
-    } else {
-        LOG_WARNING("Metroidvania", "No render resource manager - sprite textures disabled");
+        m_playerTexture      = loadTextureFromFile("assets/textures/player.png", 0xFFFF6400);
+        m_enemyTexture       = loadTextureFromFile("assets/textures/enemy.png", 0xFF3232FF);
+        m_dashPickupTexture  = loadTextureFromFile("assets/textures/pickup.png", 0xFF32FF96);
+        m_abilityGateTexture = loadTextureFromFile("assets/textures/gate.png", 0xFF808080);
+        // white fallback (always programmatic)
+        Graphic::TextureDesc desc;
+        desc.width = 1; desc.height = 1; desc.format = Graphic::TextureFormat::RGBA8_UNorm;
+        uint32_t white = 0xFFFFFFFF;
+        m_whiteTexture = resMgr->CreateTextureFromMemory(&white, sizeof(white), desc);
+        LOG_INFO("Metroidvania", "Loaded sprite textures (file or fallback)");
     }
 
     return 0;
