@@ -10,6 +10,8 @@
 #include "core/Event.h"
 #include "input/InputManager.h"
 #include "Logger.h"
+#include "graphic/RenderSystem.h"
+#include "graphic/2d/Pipeline2D.h"
 #include <vector>
 #include <filesystem>
 #include <SDL3/SDL_scancode.h>
@@ -101,6 +103,23 @@ int MetroidvaniaApp::OnInitialize() {
         uint32_t white = 0xFFFFFFFF;
         m_whiteTexture = resMgr->CreateTextureFromMemory(&white, sizeof(white), desc);
         LOG_INFO("Metroidvania", "Loaded sprite textures (file or fallback)");
+    }
+
+    // Enable Post-Processing (PixelPerfect + CRT) for retro pixel-art aesthetic
+    auto* renderSys = Engine::Get().GetRenderSystem();
+    if (renderSys)
+    {
+        auto pipeline2D = renderSys->GetMainPipelineAs<Graphic::Pipeline2D>();
+        if (pipeline2D)
+        {
+            pipeline2D->SetPixelPerfectEnabled(true);
+            pipeline2D->SetCRTEnabled(true);
+            LOG_INFO("Metroidvania", "Pipeline2D: PixelPerfect=ON, CRT=ON");
+        }
+        else
+        {
+            LOG_WARNING("Metroidvania", "Pipeline is not Pipeline2D - post-processing disabled");
+        }
     }
 
     return 0;

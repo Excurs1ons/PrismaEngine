@@ -16,7 +16,7 @@
         "enableNEE": false,
         "maxBatchQuads": 1024,
         "pixelPerfect": true,
-        "crtEffect": false
+        "crtEffect": true
     },
     "renderMode": "2D",
     "scriptingBackend": "CoreCLR",
