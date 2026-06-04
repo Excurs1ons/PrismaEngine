@@ -4,6 +4,7 @@
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IRenderDevice.h"
+#include "graphic/interfaces/ISwapChain.h"
 #include "graphic/interfaces/ISampler.h"
 #include "graphic/RenderDesc.h"
 #include "app/Engine.h"
