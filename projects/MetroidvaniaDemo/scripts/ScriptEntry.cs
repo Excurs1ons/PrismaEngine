@@ -63,6 +63,25 @@ internal static class ScriptEntry
             dashPickup.AddScript<DashPickup>();
             SetupSprite(dashPickup, 0.2f, 1.0f, 0.3f, 12, 12);
 
+            // ── SpriteAnimation Demo (DashPickup pulsing glow) ──
+            try
+            {
+                var dashAnim = new SpriteAnimation("DashPulse");
+                dashAnim.AddFrame(0f, 0f, 16f, 16f, 0.15f);
+                dashAnim.AddFrame(16f, 0f, 16f, 16f, 0.15f);
+                dashAnim.SetLooping(true);
+                var animComp = SpriteAnimationComponent.AddToNode(dashPickup.Handle);
+                if (animComp != null)
+                {
+                    animComp.Play("DashPulse", true);
+                    animComp.SetSpeed(1.5f);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[SpriteAnimation] Skipped (no spritesheet): " + ex.Message);
+            }
+
             // Ability gate (grey wall)
             var gate = Node.Create("AbilityGate");
             gate.Position = new Vector2(640, 432);
@@ -76,10 +95,31 @@ internal static class ScriptEntry
             envLight.Intensity = 2.0f;
             envLight.Radius = 2000.0f;
 
+            // ── 2D Lighting Demo: warm spotlight ──
+            var spotLight = new Light2D(LightType.Point);
+            spotLight.Position = new Vector2(300, 200);
+            spotLight.Color = new Vector3(1.0f, 0.8f, 0.6f);
+            spotLight.Intensity = 0.8f;
+            spotLight.Radius = 300f;
+
+            // ── 2D Lighting Demo: torch-like orange glow ──
+            var torchLight = new Light2D(LightType.Point);
+            torchLight.Position = new Vector2(700, 350);
+            torchLight.Color = new Vector3(1.0f, 0.5f, 0.2f);
+            torchLight.Intensity = 0.6f;
+            torchLight.Radius = 200f;
+
+            // Dim ambient so lights are more visible
+            Light2D.AmbientColor = new Vector3(0.35f, 0.35f, 0.4f);
+
             // Register audio zones (rooms in test_dungeon, matching RoomManager.Rooms)
             AudioManager.RegisterZone(0f, 0f, 640f, 480f, "assets/audio/room1_bgm.ogg", 0.7f);
             AudioManager.RegisterZone(640f, 0f, 1280f, 480f, "assets/audio/room2_bgm.ogg", 0.7f);
             AudioManager.RegisterZone(1280f, 0f, 1920f, 480f, "assets/audio/room3_bgm.ogg", 0.7f);
+
+            // ── Integrations: Trigger (DashPickup distance check), Tilemap GPU Instancing (default ON), Audio (above) ──
+            // Particle integration: ParticleSystem.Update() is called in OnFrame() below.
+            // Particles are triggered on dash via the existing ParticleSystem.Burst/Trail API.
 
             Console.WriteLine("[MetroidvaniaDemo] Bootstrap complete — all scene nodes ready");
 
@@ -125,5 +165,8 @@ internal static class ScriptEntry
     public static void OnFrame(float dt)
     {
         ScriptEngine.OnFrame(dt);
+
+        // Advance the local particle system every frame
+        ParticleSystem.Update(dt);
     }
 }
