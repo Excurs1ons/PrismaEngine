@@ -60,8 +60,13 @@ jobs:
         vulkan-components: Vulkan-Headers, Vulkan-Loader
         vulkan-use-cache: true
 
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
     - name: Configure CMake
-      run: cmake --preset linux-x64-debug -DPRISMA_BUILD_PROJECT_NEOEDITOR=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_TESTING=ON -DPRISMA_BUILD_SUBSYSTEM_EDITOR=OFF
+      run: cmake --preset linux-x64-debug -DPRISMA_BUILD_PROJECT_METROIDVANIADEMO=ON -DPRISMA_BUILD_PROJECT_NEOEDITOR=OFF -DPRISMA_BUILD_PROJECT_PRISMACRAFT=OFF -DPRISMA_BUILD_TESTING=ON -DPRISMA_BUILD_SUBSYSTEM_EDITOR=OFF
 
     - name: Build
       run: cmake --build build/linux-x64-debug --parallel
