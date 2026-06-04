@@ -14,6 +14,7 @@ namespace Prisma {
 namespace Graphic {
 
 class ITexture;
+class SpriteAnimationComponent;
 class RenderCommandContext;
 class OrthographicCamera;
 
@@ -66,6 +67,12 @@ public:
     // 绘制纹理矩形 (带 UV)
     static void DrawQuad(const Vector2& position, const Vector2& size, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
     static void DrawQuad(const Matrix4& transform, const std::shared_ptr<ITexture>& texture, const Vector2 uv[4], const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
+
+    // 绘制动画精灵 (使用 SpriteAnimationComponent 的当前帧 UV)
+    static void DrawAnimatedSprite(const Vector2& position, const Vector2& size, 
+        const std::shared_ptr<ITexture>& texture, 
+        const SpriteAnimationComponent& anim,
+        const Prisma::Color& tintColor = {1.0f, 1.0f, 1.0f, 1.0f});
 
     // 绘制文本 (使用内置像素字体或提供的图集)
     static void DrawString(const std::string& text, const Vector2& position, float scale = 1.0f, const Prisma::Color& color = {1.0f, 1.0f, 1.0f, 1.0f});

@@ -1,4 +1,5 @@
 #include "Renderer2D.h"
+#include "SpriteAnimation.h"
 #include "core/Node.h"
 #include "core/EntityManager.h"
 #include "OrthographicCamera.h"
@@ -438,6 +439,15 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>&
     v[2] = { Vector4((trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).y, uv[2].x, uv[2].y), tint };
     v[3] = { Vector4((trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).y, uv[3].x, uv[3].y), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
+}
+
+void Renderer2D::DrawAnimatedSprite(const Vector2& position, const Vector2& size,
+    const std::shared_ptr<ITexture>& texture,
+    const SpriteAnimationComponent& anim,
+    const Prisma::Color& tintColor) {
+    Vector2 uv[4];
+    anim.GetCurrentUV(uv);
+    DrawQuad(position, size, texture, uv, tintColor);
 }
 
 void Renderer2D::DrawString(const std::string& text, const Vector2& pos, float scale, const Prisma::Color& color) {
