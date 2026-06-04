@@ -1,6 +1,7 @@
 #pragma once
 
 #include "interfaces/IPipeline.h"
+#include "Export.h"
 #include <memory>
 #include <vector>
 
@@ -19,7 +20,7 @@ class PostProcessPass2D;
  * 专注于 2D 游戏的性能与特性，不包含 3D 渲染开销。
  * 由 RenderSystem 根据 RenderMode::Mode2D 自动创建。
  */
-class Pipeline2D : public IPipeline {
+class ENGINE_API Pipeline2D : public IPipeline {
 public:
     Pipeline2D();
     ~Pipeline2D() override;
