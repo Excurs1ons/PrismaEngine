@@ -25,7 +25,7 @@
     "rendering": {
         "maxSamples": 512,
         "maxBounces": 8,
-        "hardwareRayTracing": false,
+        "rtMode": "None",
         "pathTraceMode": "BVH",
         "enableNEE": false
     },

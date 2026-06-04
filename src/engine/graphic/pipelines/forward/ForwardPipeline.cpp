@@ -4,6 +4,8 @@
 #include "OpaquePass.h"
 #include "TransparentPass.h"
 #include "ShadowPass.h"
+#include "SSAOPass.h"
+#include "TAAPass.h"
 #include "../../2d/PostProcessPass2D.h"
 #include "../../2d/UIPass2D.h"
 #include "../SkyboxRenderPass.h"
@@ -101,6 +103,18 @@ int ForwardPipeline::Initialize(IRenderDevice* device) {
         m_iblGenerator.reset();
     }
 
+    // 初始化 SSAO
+    m_ssaoPass = std::make_shared<SSAOPass>();
+    if (!m_ssaoPass->Setup(device)) {
+        m_ssaoPass.reset();
+    }
+
+    // 初始化 TAA
+    m_taaPass = std::make_shared<TAAPass>();
+    if (!m_taaPass->Setup(device)) {
+        m_taaPass.reset();
+    }
+
     return 0;
 }
 
@@ -125,6 +139,14 @@ void ForwardPipeline::Shutdown() {
         m_iblGenerator->Cleanup();
         m_iblGenerator.reset();
     }
+    if (m_ssaoPass) {
+        m_ssaoPass->Cleanup();
+        m_ssaoPass.reset();
+    }
+    if (m_taaPass) {
+        m_taaPass->Cleanup();
+        m_taaPass.reset();
+    }
     m_postProcessPass.reset();
     m_uiPass.reset();
     m_gizmoPSO.reset();
@@ -133,10 +155,10 @@ void ForwardPipeline::Shutdown() {
 }
 
 void ForwardPipeline::SetEnvironmentMap(ITexture* envMap) {
+    m_envMapSet = (envMap != nullptr);
     if (m_iblGenerator) {
         m_iblGenerator->SetCubemapSource(envMap);
-        // IBLGenerator 内部管理 irradiance/prefilter/BRDF LUT 纹理的创建和更新
-        // 外部仅设置环境贴图源，生成管线由 IBLGenerator 按需触发
+        m_iblNeedsGeneration = m_envMapSet;
     }
 }
 
@@ -232,6 +254,14 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         }
     }
 
+    // ── IBL 环境光照图生成 ──
+    if (m_iblGenerator && m_envMapSet && m_iblNeedsGeneration && ctx.commandBuffer) {
+        m_iblGenerator->GenerateIrradianceMap(ctx.commandBuffer);
+        m_iblGenerator->GeneratePrefilterMap(ctx.commandBuffer);
+        m_iblGenerator->GenerateBRDFLUT(ctx.commandBuffer);
+        m_iblNeedsGeneration = false;
+    }
+
     if (m_depthPrePass) {
         m_depthPrePass->SetViewMatrix(view);
         m_depthPrePass->SetProjectionMatrix(proj);
@@ -258,6 +288,18 @@ void ForwardPipeline::Execute(const RenderContext& ctx) {
         m_transparentPass->SetViewMatrix(view);
         m_transparentPass->SetProjectionMatrix(proj);
         m_transparentPass->Execute(passContext);
+    }
+
+    // ── SSAO (环境光遮蔽) ──
+    if (m_ssaoPass && m_ssaoPass->IsReady() && ctx.commandBuffer && ctx.targetTexture) {
+        m_ssaoPass->Execute(ctx.commandBuffer, ctx.targetTexture, ctx.targetTexture,
+                           ctx.targetTexture, ctx.targetTexture);
+    }
+
+    // ── TAA (时域抗锯齿) ──
+    if (m_taaPass && m_taaPass->IsReady() && ctx.commandBuffer && ctx.targetTexture) {
+        m_taaPass->Execute(ctx.commandBuffer, ctx.targetTexture, ctx.targetTexture,
+                          ctx.targetTexture);
     }
 
     // ── Gizmo Overlay Pass ──

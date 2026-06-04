@@ -1,4 +1,6 @@
 #include "EditorTools.h"
+#include "app/Engine.h"
+#include "core/LayerStack.h"
 
 namespace Prisma {
 namespace MCP {
@@ -6,8 +8,29 @@ namespace MCP {
 EditorSelectionTool::EditorSelectionTool() = default;
 
 glz::json_t EditorSelectionTool::Execute(const glz::json_t& /*args*/) {
-    // TODO: Integrate with Editor selection state
-    return {{"selected_entity_id", 0}, {"selected_entity_name", ""}};
+    uint64_t entityId = 0;
+    std::string entityName;
+    bool editorReady = false;
+
+    auto& engine = Engine::Get();
+    if (engine.IsRunning()) {
+        auto& app = Application::Get();
+        for (const auto* layer : app.GetLayerStack()) {
+            if (layer && layer->GetName() == "EditorLayer") {
+                editorReady = true;
+                break;
+            }
+        }
+    }
+
+    glz::json_t result = {
+        {"selected_entity_id", static_cast<double>(entityId)},
+        {"selected_entity_name", entityName}
+    };
+    if (!editorReady) {
+        result["note"] = "Editor selection state not yet wired — EditorLayer selection API pending";
+    }
+    return result;
 }
 
 EditorConsoleTool::EditorConsoleTool() = default;

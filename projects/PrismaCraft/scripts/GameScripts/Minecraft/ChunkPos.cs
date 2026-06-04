@@ -2,7 +2,7 @@ using System;
 
 namespace GameScripts.Minecraft;
 
-区块坐标。对应 net.minecraft.core.ChunkPos</summary>
+/// <summary>区块坐标。对应 net.minecraft.core.ChunkPos</summary>
 public readonly struct ChunkPos : IEquatable<ChunkPos>
 {
     public readonly int X, Z;

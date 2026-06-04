@@ -2,6 +2,7 @@
 
 #include "IAudioDevice.h"
 #include "AudioTypes.h"
+#include "audio/dsp/EffectProcessor.h"
 #include <mutex>
 
 namespace Prisma::Audio {
@@ -72,6 +73,10 @@ public:
     AudioStats GetStats() const override;
     void ResetStats() override;
 
+    // 音效
+    bool ApplyEffect(AudioVoiceId voiceId, EffectType type, const void* params) override;
+    void RemoveEffects(AudioVoiceId voiceId) override;
+
     // 调试
     void BeginProfile() override;
     std::string EndProfile() override;
@@ -94,6 +99,12 @@ private:
         float velocity[3] = {0, 0, 0};
         float direction[3] = {0, 0, 1};
         PlayDesc desc;
+
+        // 音效状态
+        EffectType effectType = EffectType::None;
+        uint8_t effectParams[128] = {};
+        uint32_t effectParamsSize = 0;
+        DSP::EffectState effectState;
     };
 
     // 生成新的Voice ID

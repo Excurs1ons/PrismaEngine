@@ -8,9 +8,14 @@
 #include "TerrainMaterial.h"
 #include "TerrainCollision.h"
 #include "TerrainComponent.h"
+#include "graphic/interfaces/IBuffer.h"
+#include "graphic/interfaces/IPipelineState.h"
+#include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/interfaces/IShader.h"
 #include "math/MathTypes.h"
 #include <memory>
 #include <vector>
+#include <array>
 
 namespace Prisma::Terrain {
 
@@ -167,6 +172,28 @@ private:
      */
     void UpdateFrustum();
 
+    // ========== GPU 资源管理 ==========
+
+    /**
+     * @brief 创建 GPU 资源（管线、缓冲区、描述符集）
+     */
+    void CreateGPUResources();
+
+    /**
+     * @brief 销毁 GPU 资源
+     */
+    void DestroyGPUResources();
+
+    /**
+     * @brief 上传 LOD 缓冲数据到 GPU
+     */
+    void UploadLODBuffers();
+
+    /**
+     * @brief 更新 Uniform 缓冲
+     */
+    void UpdateUniformBuffer();
+
     // ========== 成员变量 ==========
 
     TerrainConfig m_Config;
@@ -193,6 +220,30 @@ private:
     // 状态
     bool m_Enabled = true;
     bool m_Initialized = false;
+
+    // ========== GPU 资源 ==========
+
+    static constexpr uint32_t k_MaxLODLevels = 6;
+
+    // 着色器和管线
+    std::shared_ptr<Graphic::IShader> m_TerrainVertShader;
+    std::shared_ptr<Graphic::IShader> m_TerrainFragShader;
+    std::shared_ptr<Graphic::IPipelineState> m_TerrainPipeline;
+
+    // LOD 缓冲
+    std::array<std::shared_ptr<Graphic::IBuffer>, k_MaxLODLevels> m_VertexBuffers;
+    std::array<std::shared_ptr<Graphic::IBuffer>, k_MaxLODLevels> m_IndexBuffers;
+
+    // Uniform 缓冲
+    std::shared_ptr<Graphic::IBuffer> m_UniformBuffer;
+
+    // 描述符集
+    std::shared_ptr<Graphic::IDescriptorSetLayout> m_DescriptorSetLayout;
+    std::shared_ptr<Graphic::IDescriptorSet> m_DescriptorSet;
+
+    // 已创建的缓冲区 LOD 计数（跟踪哪些 LOD 有 GPU 缓冲）
+    uint32_t m_UploadedLODCount = 0;
+    bool m_GPUResourcesCreated = false;
 };
 
 } // namespace Prisma::Terrain

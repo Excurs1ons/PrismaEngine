@@ -9,6 +9,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <cstdint>
 
 class CommandLineParser;
 
@@ -41,6 +42,62 @@ namespace Profiling { class ProfilerSystem; }
 class ConsoleSystem;
 namespace Particles { class ParticleSystem; }
 
+// 核心子系统枚举（始终启用，无条件初始化）
+enum class CoreSubsystem : uint8_t {
+    MemorySystem,
+    Logger,
+    Window,
+    InputManager,
+    RenderSystem,
+    ConsoleSystem,
+    COUNT
+};
+
+// 非核心子系统枚举（默认关闭，通过 project.jsonc subsystems 白名单启用）
+enum class NonCoreSubsystem : uint8_t {
+    Physics,
+    Audio,
+    Navigation,
+    AI,
+    Particles,
+    Terrain,
+    Water,
+    Network,
+    Localization,
+    ScriptEngine,
+    EditorMCP,
+    Profiler,
+    Animation,
+    COUNT
+};
+
+// 编辑器模式推荐非核心子系统列表
+inline std::vector<NonCoreSubsystem> EditorDefaultSubsystems() {
+    return {
+        NonCoreSubsystem::Physics,
+        NonCoreSubsystem::Audio,
+        NonCoreSubsystem::Animation,
+        NonCoreSubsystem::Profiler,
+        NonCoreSubsystem::ScriptEngine,
+    };
+}
+
+// 游戏模式推荐非核心子系统列表
+inline std::vector<NonCoreSubsystem> GameDefaultSubsystems() {
+    return {
+        NonCoreSubsystem::Physics,
+        NonCoreSubsystem::Audio,
+        NonCoreSubsystem::Animation,
+        NonCoreSubsystem::Navigation,
+        NonCoreSubsystem::AI,
+        NonCoreSubsystem::Particles,
+        NonCoreSubsystem::Terrain,
+        NonCoreSubsystem::Water,
+        NonCoreSubsystem::Network,
+        NonCoreSubsystem::Localization,
+    };
+}
+
 // 引擎配置规范
 struct EngineSpecification {
     const char* Name = "Prisma Engine";
@@ -57,6 +114,9 @@ struct EngineSpecification {
     uint32_t HeadlessHeight = 0;
     std::string HeadlessOutputPath;
     uint32_t MaxSamples = 0;
+
+    // 非核心子系统白名单（默认空 = 全部 OFF，由 project.jsonc / code 控制）
+    std::vector<NonCoreSubsystem> enabledNonCoreSubsystems;
 };
 
 // 引擎核心类
@@ -140,6 +200,9 @@ public:
     bool IsRunning() const { return m_Running; }
 
     // 提交一个函数到主线程执行 (线程安全)
+    /// Advance the simulation by one frame (used by GameSimulateTool).
+    void Step(float deltaTime);
+
     void SubmitToMainThread(std::function<void()>&& func);
 
     void SetProjectName(const std::string& name) { m_ProjectName = name; }

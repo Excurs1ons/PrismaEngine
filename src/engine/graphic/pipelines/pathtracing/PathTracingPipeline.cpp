@@ -464,6 +464,37 @@ bool PathTracingPipeline::ResizeResources() {
         m_rtRhiDescriptorSet->Update();
     }
 
+    // 5. 重建 RayQuery 描述符集（RayQuery 模式使用）
+    if (m_rqResourcesBuilt && m_rqBackend && m_rqBackend->GetTLAS()) {
+        m_rqRhiDescriptorSet.reset();
+        auto* factoryRq = m_device->GetResourceFactory();
+        if (factoryRq) {
+            std::vector<ShaderResource> rqResources = {
+                {"outputImage", ShaderResource::Type::StorageImage, 0, 0, 1, 0},
+                {"accumImage",  ShaderResource::Type::StorageImage, 0, 1, 1, 0},
+                {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(PathTracingCameraUBO)},
+                {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(PathTracingSceneData)},
+                {"triangleBuf", ShaderResource::Type::StorageBuffer, 0, 4, 1, sizeof(PathTracingTriangleData)},
+                {"tlas",        ShaderResource::Type::AccelerationStructure, 0, 5, 1, 0},
+                {"dummy",       ShaderResource::Type::StorageBuffer, 0, 6, 1, 64},
+            };
+            auto rqDescLayout = factoryRq->CreateDescriptorSetLayout(rqResources);
+            if (rqDescLayout) {
+                m_rqRhiDescriptorSet = factoryRq->CreateDescriptorSet(rqDescLayout.get());
+                if (m_rqRhiDescriptorSet) {
+                    m_rqRhiDescriptorSet->BindStorageImage(0, m_storageTexture.get());
+                    m_rqRhiDescriptorSet->BindStorageImage(1, m_storageTexture.get());
+                    m_rqRhiDescriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO), DescriptorType::UniformBuffer);
+                    m_rqRhiDescriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData), DescriptorType::StorageBuffer);
+                    m_rqRhiDescriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData), DescriptorType::StorageBuffer);
+                    m_rqRhiDescriptorSet->BindAccelerationStructure(5, reinterpret_cast<void*>(m_rqBackend->GetTLAS()));
+                    m_rqRhiDescriptorSet->BindBuffer(6, m_bvhBuffer.get(), 0, sizeof(float), DescriptorType::StorageBuffer);
+                    m_rqRhiDescriptorSet->Update();
+                }
+            }
+        }
+    }
+
     // 新建纹理初始状态为 Undefined，必须重置标记使首次 barrier 使用正确的初始状态
     m_textureInitialized = false;
 
@@ -677,8 +708,9 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
         }
         ResetAccumulation();
         m_scene->SetDirty(false);
-        // HardwareRT 需要重建 BLAS/TLAS 以匹配新的场景几何
+        // HardwareRT/RayQuery 需要重建 BLAS/TLAS 以匹配新的场景几何
         m_sceneChangedSinceLastRTBuild = true;
+        m_rqResourcesBuilt = false;
         LOG_INFO("PathTracingPipeline", "场景数据已自动重建");
     }
 
@@ -690,9 +722,16 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
     // 累积阶段（m_frameCount > 0）场景和相机静止，无需每帧上传 SSBO
     if (m_scene && m_frameCount == 0) {
         UpdateTransforms(m_scene);
-        // HardwareRT 模式下，同步更新 TLAS 实例变换
+        // HardwareRT/RayQuery 模式下，同步更新 TLAS 实例变换
         if (m_mode == PathTraceMode::HardwareRT && m_rtBackend && m_rtResourcesBuilt) {
             UpdateTLASInstances(cmd);
+        }
+        if (m_mode == PathTraceMode::RayQuery && m_rqBackend && m_rqResourcesBuilt) {
+            auto* vkCmdBuf = dynamic_cast<Vulkan::VulkanCommandBuffer*>(cmd);
+            if (vkCmdBuf) {
+                VkCommandBuffer vkCmd = vkCmdBuf->GetVkCommandBuffer();
+                UpdateRayQueryTLAS(vkCmd);
+            }
         }
     }
 
@@ -739,6 +778,32 @@ void PathTracingPipeline::Execute(const RenderContext& ctx) {
 
         // 写入 → ShaderRead 供 present
         cmd->PipelineBarrier({{ m_storageTexture.get(), ResourceState::UnorderedAccess, ResourceState::ShaderRead }});
+    } else if (m_mode == PathTraceMode::RayQuery) {
+        // ===== RayQuery 模式 =====
+        if (!m_rqResourcesBuilt && m_sceneChangedSinceLastRTBuild) {
+            LOG_WARN("PathTracingPipeline", "RayQuery 资源未就绪，尝试构建...");
+            if (BuildRayQueryResources(m_scene)) {
+                m_rqResourcesBuilt = true;
+            }
+            m_sceneChangedSinceLastRTBuild = false;
+        }
+
+        if (!m_rqResourcesBuilt) {
+            LOG_WARN("PathTracingPipeline", "RayQuery 资源不可用，跳过帧");
+            // Don't return — still need to present
+        } else {
+            // 屏障: Undefined/ShaderRead → UnorderedAccess
+            {
+                ResourceState ps = m_textureInitialized ? ResourceState::ShaderRead : ResourceState::Undefined;
+                cmd->PipelineBarrier({{ m_storageTexture.get(), ps, ResourceState::UnorderedAccess }});
+                m_textureInitialized = true;
+            }
+
+            ExecuteRayQuery(cmd);
+
+            // UnorderedAccess → ShaderRead 供 present
+            cmd->PipelineBarrier({{ m_storageTexture.get(), ResourceState::UnorderedAccess, ResourceState::ShaderRead }});
+        }
     } else {
         // Compute 模式（Flat/BVH）
         {
@@ -1154,6 +1219,9 @@ void PathTracingPipeline::SetMode(PathTraceMode newMode) {
     if (m_mode == PathTraceMode::HardwareRT) {
         DestroyRTResources();
     }
+    if (m_mode == PathTraceMode::RayQuery) {
+        DestroyRayQueryResources();
+    }
     if (newMode != PathTraceMode::HardwareRT) {
         // 现有模式间切换：重建计算管线
         m_computeShader.reset();
@@ -1247,6 +1315,36 @@ void PathTracingPipeline::SetMode(PathTraceMode newMode) {
         // 构建 RT 资源
         LoadRTHardwareShaders();
         BuildRTResources(m_scene);
+    } else if (newMode == PathTraceMode::RayQuery) {
+        if (!m_device->IsRayQuerySupported()) {
+            LOG_WARN("PathTracingPipeline", "设备不支持 RayQuery，回退 BVH");
+            m_mode = PathTraceMode::BVH;
+            m_targetMode = m_mode;
+            return;
+        }
+        // 释放计算管线资源（下面重新创建）
+        m_computePipeline.reset();
+        m_descriptorSet.reset();
+        m_computeShader.reset();
+        m_computeSPIRV.clear();
+
+        // 保持顶点为局部空间（与 HardwareRT 一致，BLAS 需要局部空间顶点）
+        m_bvhNodes.clear();
+        m_bvhNodeCount = 0;
+        m_triToObject.clear();
+        if (m_scene) {
+            BuildFromScene(m_scene);
+        }
+
+        // 重新创建计算管线（加载 RayQuery 着色器）
+        LoadDefaultShaders();
+        m_computePipeline = factory->CreateComputePipelineImpl();
+        if (!m_computePipeline) { LOG_ERROR("PathTracingPipeline", "切换模式时创建管线失败"); return; }
+        if (m_computeShader) m_computePipeline->SetShader(m_computeShader);
+        if (!m_computePipeline->Create(m_device)) { LOG_ERROR("PathTracingPipeline", "切换模式时编译管线失败"); return; }
+
+        // 标记需构建 BLAS/TLAS
+        m_sceneChangedSinceLastRTBuild = true;
     }
 
     m_mode = newMode;
@@ -1258,7 +1356,8 @@ void PathTracingPipeline::SetMode(PathTraceMode newMode) {
 void PathTracingPipeline::CycleMode() {
     switch (m_mode) {
         case PathTraceMode::Flat:       SetMode(PathTraceMode::BVH); break;
-        case PathTraceMode::BVH:        SetMode(PathTraceMode::HardwareRT); break;
+        case PathTraceMode::BVH:        SetMode(PathTraceMode::RayQuery); break;
+        case PathTraceMode::RayQuery:   SetMode(PathTraceMode::HardwareRT); break;
         case PathTraceMode::HardwareRT: SetMode(PathTraceMode::Flat); break;
     }
 }
@@ -1268,11 +1367,13 @@ const char* PathTracingPipeline::GetModeName() const {
         case PathTraceMode::Flat:       return "Flat";
         case PathTraceMode::BVH:        return "BVH";
         case PathTraceMode::HardwareRT: return "HardwareRT";
+        case PathTraceMode::RayQuery: return "RayQuery";
     }
     return "Unknown";
 }
 
 void PathTracingPipeline::DestroyResources() {
+    DestroyRayQueryResources();
     DestroyRTResources();
     m_descriptorSet.reset();
     m_computePipeline.reset();
@@ -1308,14 +1409,19 @@ void PathTracingPipeline::LoadDefaultShaders() {
     }
 
     if (!m_computeShader && m_computeSPIRV.empty()) {
-        const char* shaderPath = (m_targetMode == PathTraceMode::BVH)
-            ? "assets/shaders/pathtrace_BVH.comp.spv"
-            : "assets/shaders/pathtrace.comp.spv";
+        const char* shaderPath = "assets/shaders/pathtrace.comp.spv";
+        if (m_targetMode == PathTraceMode::BVH)
+            shaderPath = "assets/shaders/pathtrace_BVH.comp.spv";
+        else if (m_targetMode == PathTraceMode::RayQuery)
+            shaderPath = "assets/shaders/pathtrace_RayQuery.comp.spv";
         auto shader = rm->LoadShaderSync(shaderPath);
         if (shader) {
             SetComputeShader(std::move(shader));
+            const char* modeTag = "(Flat)";
+            if (m_targetMode == PathTraceMode::BVH) modeTag = "(BVH)";
+            else if (m_targetMode == PathTraceMode::RayQuery) modeTag = "(RayQuery)";
             LOG_INFO("PathTracingPipeline", "内部加载计算着色器: {} {}",
-                     shaderPath, m_targetMode == PathTraceMode::BVH ? "(BVH)" : "(Flat)");
+                     shaderPath, modeTag);
         }
     }
 
@@ -1615,6 +1721,186 @@ void PathTracingPipeline::ExecuteHardwareRT(ICommandBuffer* cmd) {
         0, 1, &asBarrier, 0, nullptr, 0, nullptr);
 
     m_rtBackend->BindAndTraceRays(vkCmd, dispatchW, dispatchH, vkDescSet);
+}
+
+void PathTracingPipeline::ExecuteRayQuery(ICommandBuffer* cmd) {
+    if (!m_rqBackend || !m_rqBackend->GetTLAS()) return;
+    if (!m_computePipeline || !m_rqRhiDescriptorSet) return;
+
+    cmd->SetComputePipeline(m_computePipeline.get());
+    cmd->BindDescriptorSet(0, m_rqRhiDescriptorSet.get());
+
+    uint32_t cw = m_width, ch = m_height;
+    cmd->Dispatch((cw + 7) / 8, (ch + 7) / 8, 1);
+}
+
+void PathTracingPipeline::UpdateRayQueryTLAS(VkCommandBuffer vkCmd) {
+    if (!m_rqBackend || !m_rqBackend->GetTLAS()) return;
+    if (m_rqBackend->GetBLASEntries().empty()) return;
+
+    std::vector<AccelStructBuilder::InstanceInput> instances;
+    uint32_t blasIdx = 0;
+    for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+        auto& obj = m_cachedSceneData.objects[oi];
+        int type = (int)obj.p0[3];
+        if (type != 4) continue;
+        if (blasIdx >= (uint32_t)m_rqBackend->GetBLASEntries().size()) break;
+
+        glm::mat4 wm;
+        std::memcpy(&wm, obj.worldMatrix, sizeof(float) * 16);
+        VkTransformMatrixKHR transform = {{
+            { wm[0][0], wm[1][0], wm[2][0], wm[3][0] },
+            { wm[0][1], wm[1][1], wm[2][1], wm[3][1] },
+            { wm[0][2], wm[1][2], wm[2][2], wm[3][2] }
+        }};
+
+        AccelStructBuilder::InstanceInput inst;
+        inst.transform = transform;
+        inst.instanceCustomIndex = (int)oi;
+        inst.blasDeviceAddress = m_rqBackend->GetBLASDeviceAddress(
+            m_rqBackend->GetBLAS(blasIdx));
+        inst.instanceMask = (obj.color[3] > 0.0f) ? 0x01 : 0x02;
+        instances.push_back(inst);
+        blasIdx++;
+    }
+
+    m_rqBackend->UpdateTLASInstances(vkCmd, instances);
+}
+
+bool PathTracingPipeline::BuildRayQueryResources([[maybe_unused]] Scene* scene) {
+    if (!m_device || !m_device->IsRayQuerySupported()) return false;
+
+    // 1. Initialize AccelStructBuilder
+    if (!m_rqBackend) {
+        m_rqBackend = std::make_unique<AccelStructBuilder>();
+        VkDevice vkDev = m_device->GetVkDevice();
+        VkPhysicalDevice physDev = m_device->GetPhysicalDevice();
+        VmaAllocator allocator = m_device->GetVmaAllocator();
+        uint32_t gfxQF = m_device->GetGraphicsQueueFamily();
+        if (!m_rqBackend->Initialize(vkDev, physDev, allocator, gfxQF)) {
+            LOG_ERROR("PathTracingPipeline", "AccelStructBuilder 初始化失败");
+            m_rqBackend.reset();
+            return false;
+        }
+    }
+
+    // 2. Build BLAS for each mesh object
+    m_rqBackend->ClearBLASEntries();
+    for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+        auto& obj = m_cachedSceneData.objects[oi];
+        int type = (int)obj.p0[3];
+        if (type != 4) continue;
+        int firstTri = (int)obj.p1[0];
+        int triCnt = (int)obj.p1[1];
+        if (triCnt == 0) continue;
+
+        std::vector<float> verts;
+        std::vector<uint32_t> indices;
+        for (int t = 0; t < triCnt; t++) {
+            auto& tri = m_cachedTriangleData.triangles[firstTri + t];
+            for (int v = 0; v < 3; v++) {
+                verts.push_back(tri.vertices[v].pos[0]);
+                verts.push_back(tri.vertices[v].pos[1]);
+                verts.push_back(tri.vertices[v].pos[2]);
+            }
+            indices.push_back(t * 3 + 0);
+            indices.push_back(t * 3 + 1);
+            indices.push_back(t * 3 + 2);
+        }
+
+        AccelStructBuilder::BLASInput input;
+        input.vertices = verts.data();
+        input.vertexCount = (uint32_t)(verts.size() / 3);
+        input.indices = indices.data();
+        input.indexCount = (uint32_t)indices.size();
+
+        m_rqBackend->BuildBLAS(input);
+    }
+
+    if (m_rqBackend->GetBLASEntries().empty()) {
+        LOG_ERROR("PathTracingPipeline", "RayQuery: 没有成功构建任何 BLAS");
+        return false;
+    }
+
+    // 3. Build TLAS
+    std::vector<AccelStructBuilder::InstanceInput> instances;
+    uint32_t blasIdx = 0;
+    for (uint32_t oi = 0; oi < (uint32_t)m_cachedSceneData.objectCount; oi++) {
+        auto& obj = m_cachedSceneData.objects[oi];
+        int type = (int)obj.p0[3];
+        if (type != 4) continue;
+        if (blasIdx >= (uint32_t)m_rqBackend->GetBLASEntries().size()) break;
+
+        uint64_t blasAddr = m_rqBackend->GetBLASDeviceAddress(
+            m_rqBackend->GetBLAS(blasIdx));
+        blasIdx++;
+        if (blasAddr == 0) continue;
+
+        glm::mat4 wm;
+        std::memcpy(&wm, obj.worldMatrix, sizeof(float) * 16);
+        VkTransformMatrixKHR transform = {{
+            { wm[0][0], wm[1][0], wm[2][0], wm[3][0] },
+            { wm[0][1], wm[1][1], wm[2][1], wm[3][1] },
+            { wm[0][2], wm[1][2], wm[2][2], wm[3][2] }
+        }};
+
+        AccelStructBuilder::InstanceInput inst;
+        inst.transform = transform;
+        inst.instanceCustomIndex = (int)oi;
+        inst.blasDeviceAddress = blasAddr;
+        inst.instanceMask = (obj.color[3] > 0.0f) ? 0x01 : 0x02;
+        instances.push_back(inst);
+    }
+
+    if (!m_rqBackend->BuildTLAS(instances)) {
+        LOG_ERROR("PathTracingPipeline", "RayQuery: TLAS 构建失败");
+        return false;
+    }
+
+    // 4. Create RHI descriptor set with TLAS
+    auto* factory = m_device->GetResourceFactory();
+    if (!factory) return false;
+
+    std::vector<ShaderResource> rqResources = {
+        {"outputImage", ShaderResource::Type::StorageImage, 0, 0, 1, 0},
+        {"accumImage",  ShaderResource::Type::StorageImage, 0, 1, 1, 0},
+        {"cameraUBO",   ShaderResource::Type::UniformBuffer, 0, 2, 1, sizeof(PathTracingCameraUBO)},
+        {"sceneSSBO",   ShaderResource::Type::StorageBuffer, 0, 3, 1, sizeof(PathTracingSceneData)},
+        {"triangleBuf", ShaderResource::Type::StorageBuffer, 0, 4, 1, sizeof(PathTracingTriangleData)},
+        {"tlas",        ShaderResource::Type::AccelerationStructure, 0, 5, 1, 0},
+        {"dummy",       ShaderResource::Type::StorageBuffer, 0, 6, 1, 64},
+    };
+
+    auto rqDescLayout = factory->CreateDescriptorSetLayout(rqResources);
+    if (!rqDescLayout) return false;
+
+    m_rqRhiDescriptorSet = factory->CreateDescriptorSet(rqDescLayout.get());
+    if (!m_rqRhiDescriptorSet) return false;
+
+    m_rqRhiDescriptorSet->BindStorageImage(0, m_storageTexture.get());
+    m_rqRhiDescriptorSet->BindStorageImage(1, m_storageTexture.get());
+    m_rqRhiDescriptorSet->BindBuffer(2, m_cameraUBO.get(), 0, sizeof(PathTracingCameraUBO), DescriptorType::UniformBuffer);
+    m_rqRhiDescriptorSet->BindBuffer(3, m_sceneSSBO.get(), 0, sizeof(PathTracingSceneData), DescriptorType::StorageBuffer);
+    m_rqRhiDescriptorSet->BindBuffer(4, m_triangleBuffer.get(), 0, sizeof(PathTracingTriangleData), DescriptorType::StorageBuffer);
+    m_rqRhiDescriptorSet->BindAccelerationStructure(5, reinterpret_cast<void*>(m_rqBackend->GetTLAS()));
+    m_rqRhiDescriptorSet->BindBuffer(6, m_bvhBuffer.get(), 0, sizeof(float), DescriptorType::StorageBuffer);
+    m_rqRhiDescriptorSet->Update();
+
+    m_rqResourcesBuilt = true;
+    m_sceneChangedSinceLastRTBuild = false;
+
+    LOG_INFO("PathTracingPipeline", "RayQuery 资源构建完成: {} 个 BLAS, {} 个实例",
+             m_rqBackend->GetBLASEntries().size(), instances.size());
+    return true;
+}
+
+void PathTracingPipeline::DestroyRayQueryResources() {
+    if (!m_rqBackend) return;
+    m_rqBackend->Shutdown();
+    m_rqBackend.reset();
+    m_rqRhiDescriptorSet.reset();
+    m_rqResourcesBuilt = false;
+    LOG_DEBUG("PathTracingPipeline", "RayQuery 资源已清理");
 }
 
 void PathTracingPipeline::InitOverlayResources() {

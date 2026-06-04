@@ -93,6 +93,7 @@ public:
 
     const AnimationFrame& GetCurrentFrame() const;
     Vector4 GetCurrentSpriteRect() const;
+    void GetCurrentUV(Vector2 uv[4]) const;
 
 private:
     std::unordered_map<std::string, std::shared_ptr<SpriteAnimation>> m_animations;

@@ -11,6 +11,7 @@ class DepthPrePass;
 class ClusteredOpaquePass;
 class SkyboxPass;
 class TransparentPass;
+class BloomPostProcessPass;
 class UIPass2D;
 class IShader;
 class IPipelineState;
@@ -28,6 +29,7 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_ClusteredForward; }
 
 private:
     void RenderOverlay(const RenderContext& ctx);
@@ -38,6 +40,8 @@ private:
     std::shared_ptr<DepthPrePass> m_depthPrePass;
     std::shared_ptr<ClusteredOpaquePass> m_opaquePass;
     std::shared_ptr<SkyboxPass> m_skyboxPass;
+    std::shared_ptr<TransparentPass> m_transparentPass;
+    std::shared_ptr<BloomPostProcessPass> m_bloomPass;
     std::shared_ptr<UIPass2D> m_uiPass;
 
     // 分块计算管线

@@ -1,4 +1,5 @@
 #include "Renderer2D.h"
+#include "SpriteAnimation.h"
 #include "core/Node.h"
 #include "core/EntityManager.h"
 #include "OrthographicCamera.h"
@@ -280,7 +281,7 @@ void Renderer2D::DrawNodesSoA() {
     for (uint32_t i = 0; i < count; ++i) {
         if (!rb->active[i]) continue;
 
-        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i] + rb->sizeW[i] * 0.5f, tb->posY[i] + rb->sizeH[i] * 0.5f, 0.0f));
+        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i], tb->posY[i], 0.0f));
         if (std::abs(tb->rotation[i]) > 0.001f)
             t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
         t = glm::scale(t, glm::vec3(rb->sizeW[i], rb->sizeH[i], 1.0f));
@@ -438,6 +439,15 @@ void Renderer2D::DrawQuad(const Matrix4& trans, const std::shared_ptr<ITexture>&
     v[2] = { Vector4((trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4( 0.5f,  0.5f, 0, 1)).y, uv[2].x, uv[2].y), tint };
     v[3] = { Vector4((trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).x, (trans * PrismaMath::vec4(-0.5f,  0.5f, 0, 1)).y, uv[3].x, uv[3].y), tint };
     f.VertexBufferPtr += 4; f.QuadCount++; s_Data->Stats.QuadCount++;
+}
+
+void Renderer2D::DrawAnimatedSprite(const Vector2& position, const Vector2& size,
+    const std::shared_ptr<ITexture>& texture,
+    const SpriteAnimationComponent& anim,
+    const Prisma::Color& tintColor) {
+    Vector2 uv[4];
+    anim.GetCurrentUV(uv);
+    DrawQuad(position, size, texture, uv, tintColor);
 }
 
 void Renderer2D::DrawString(const std::string& text, const Vector2& pos, float scale, const Prisma::Color& color) {

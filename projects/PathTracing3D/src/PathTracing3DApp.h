@@ -2,6 +2,7 @@
 
 #include "app/Application.h"
 #include "graphic/interfaces/IRenderDevice.h"
+#include "app/ProjectConfig.h"
 #include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 #include <memory>
 #include <string>
@@ -12,6 +13,7 @@ namespace Prisma {
 class Scene;
 class StatsOverlay;
 class HeadlessRunner;
+namespace Graphic { class RenderSystem; }
 
 class PathTracing3DApp : public Application {
 public:
@@ -48,6 +50,10 @@ private:
     uint32_t m_ptMaxSamples = 512;
     bool m_enableNEE = false;
     bool m_usePrimitiveSphere = true;
+
+    // Render mode switching
+    Graphic::RenderSystem* m_renderSystem = nullptr;
+    RenderMode m_currentRenderMode = RenderMode::Mode3D_PathTracing;
 };
 
 } // namespace Prisma

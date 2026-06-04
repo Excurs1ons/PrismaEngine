@@ -12,6 +12,8 @@
 #include "pipelines/forward/ForwardPipeline.h"
 #include "pipelines/pathtracing/PathTracingPipeline.h"
 #include "pipelines/clustered/ClusteredForwardPipeline.h"
+#include "pipelines/deferred/DeferredPipeline.h"
+#include "pipelines/npr/NPRPipeline.h"
 #include "2d/Pipeline2D.h"
 #include "../scene/SceneManager.h"
 
@@ -75,7 +77,7 @@ int RenderSystem::InitializeDevice() {
         devDesc.enableValidation = m_desc.enableValidation;
         devDesc.headless         = m_desc.headless;
         // RT 扩展仅在切换到 HardwareRT 模式时才需要，Vulkan 设备创建时不附加扩展要求
-        devDesc.requireRayTracing = false;
+        devDesc.rtMode = RTMode::None;
 
         return m_device->Initialize(devDesc);
     }
@@ -94,23 +96,29 @@ int RenderSystem::InitializeRenderResourceManager() {
 }
 
 int RenderSystem::InitializeRenderPipelines() {
-    // 路径追踪管线支持三种模式：
-    //   - Flat/BVH：仅需计算着色器，所有 Vulkan 设备可用
-    //   - HardwareRT：需要 VK_KHR_ray_tracing_pipeline 扩展
-    // 因此即使设备不支持硬件光线追踪，BVH/Flat 模式仍可正常创建路径追踪管线。
-    // 若 PathTracingPipeline::Initialize 确实失败，上层 PathTracing3DApp 会回退渲染。
-    // 根据渲染模式选择管线（路径追踪管线的着色器由 LoadDefaultShaders 内部加载）
-    if (m_desc.renderMode == RenderMode::Mode2D) {
-        m_mainRenderPipeline = std::make_shared<Pipeline2D>();
-    } else if (m_desc.renderMode == RenderMode::Mode3D_PathTracing) {
-        auto ptPipeline = std::make_shared<PathTracingPipeline>();
-        ptPipeline->SetMaxSamples(m_desc.maxSamples);
-        ptPipeline->SetMaxBounces(m_desc.maxBounces);
-        m_mainRenderPipeline = std::move(ptPipeline);
-    } else if (m_desc.renderMode == RenderMode::Mode3D_ClusteredForward) {
-        m_mainRenderPipeline = std::make_shared<ClusteredForwardPipeline>();
-    } else {
-        m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+    switch (m_desc.renderMode) {
+        case RenderMode::Mode2D:
+            m_mainRenderPipeline = std::make_shared<Pipeline2D>();
+            break;
+        case RenderMode::Mode3D_PathTracing: {
+            auto ptPipeline = std::make_shared<PathTracingPipeline>();
+            ptPipeline->SetMaxSamples(m_desc.maxSamples);
+            ptPipeline->SetMaxBounces(m_desc.maxBounces);
+            m_mainRenderPipeline = std::move(ptPipeline);
+            break;
+        }
+        case RenderMode::Mode3D_Deferred:
+            m_mainRenderPipeline = std::make_shared<DeferredPipeline>();
+            break;
+        case RenderMode::Mode3D_ClusteredForward:
+            m_mainRenderPipeline = std::make_shared<ClusteredForwardPipeline>();
+            break;
+        case RenderMode::Mode3D_NPR:
+            m_mainRenderPipeline = std::make_shared<NPRPipeline>();
+            break;
+        default:
+            m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
+            break;
     }
     return m_mainRenderPipeline->Initialize(m_device.get());
 }
@@ -164,6 +172,9 @@ void RenderSystem::Shutdown() {
 }
 
 void RenderSystem::BeginFrame() {
+    if (m_isRecreating) {
+        return;
+    }
     if (m_device)
         m_device->BeginFrame();
 }
@@ -185,23 +196,28 @@ void RenderSystem::EndFrame() {
             ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
         }
 
-        // 优先从当前场景获取相机数据（适用于所有管线类型）
+        // 2D 管线由 Renderer2D 管理正交相机，场景相机是 3D 透视的，不可覆盖
         bool hasSceneCamera = false;
-        auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
-        if (sceneMgr) {
-            auto* scene = sceneMgr->GetCurrentScene();
-            if (scene) {
-                auto camera = scene->GetMainCamera();
-                if (camera) {
-                    ctx.camera.viewMatrix       = camera->GetViewMatrix();
-                    ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
-                    ctx.camera.position         = camera->GetPosition();
-                    ctx.camera.nearPlane        = camera->GetNearPlane();
-                    ctx.camera.farPlane         = camera->GetFarPlane();
-                    ctx.camera.fov              = camera->GetFOV();
-                    ctx.clearColor              = camera->GetClearColor();
-                    ctx.lights                  = scene->GetLights();
-                    hasSceneCamera = true;
+        bool skipSceneCamera = m_mainRenderPipeline &&
+            m_mainRenderPipeline->GetMode() == RenderMode::Mode2D;
+
+        if (!skipSceneCamera) {
+            auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
+            if (sceneMgr) {
+                auto* scene = sceneMgr->GetCurrentScene();
+                if (scene) {
+                    auto camera = scene->GetMainCamera();
+                    if (camera) {
+                        ctx.camera.viewMatrix       = camera->GetViewMatrix();
+                        ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
+                        ctx.camera.position         = camera->GetPosition();
+                        ctx.camera.nearPlane        = camera->GetNearPlane();
+                        ctx.camera.farPlane         = camera->GetFarPlane();
+                        ctx.camera.fov              = camera->GetFOV();
+                        ctx.clearColor              = camera->GetClearColor();
+                        ctx.lights                  = scene->GetLights();
+                        hasSceneCamera = true;
+                    }
                 }
             }
         }
@@ -232,6 +248,14 @@ void RenderSystem::EndFrame() {
         }
 
         m_mainRenderPipeline->Execute(ctx);
+
+        // Water rendering callback (after main pipeline, before present)
+        if (m_onWaterRender) {
+            auto* cmd = ctx.commandBuffer;
+            if (cmd) {
+                m_onWaterRender(cmd, m_device.get());
+            }
+        }
 
         // 第一帧记录 GPU 命令计数（后续不再刷屏）
         static bool s_firstEndFrame = true;
@@ -342,6 +366,157 @@ void RenderSystem::RenderScene(::Prisma::Scene* scene, ::Prisma::Graphic::ICamer
     } else {
         LOG_ERROR("RenderSystem", "没有处于活动状态的管线来进行场景渲染");
     }
+}
+
+// === 渲染模式切换 ===
+
+RTMode RenderSystem::GetRequiredRTMode(RenderMode mode) const {
+    switch (mode) {
+        case RenderMode::Mode3D_PathTracing:
+            return m_desc.rtMode;
+        default:
+            return RTMode::None;
+    }
+}
+
+int RenderSystem::SetRenderMode(RenderMode newMode) {
+    return SetRenderMode(newMode, GetRequiredRTMode(newMode));
+}
+
+int RenderSystem::SetRenderMode(RenderMode newMode, RTMode rtMode) {
+    std::lock_guard<std::mutex> lock(m_recreationMutex);
+
+    RTMode currentRT = GetRequiredRTMode(m_desc.renderMode);
+    RTMode targetRT  = rtMode;
+
+    // No-op if same mode selection
+    if (newMode == m_desc.renderMode && targetRT == currentRT)
+        return 0;
+
+    bool needsDeviceRecreation = (targetRT != currentRT);
+
+    m_isRecreating = true;
+
+    if (needsDeviceRecreation) {
+        LOG_INFO("Renderer", "切换渲染模式: {0} → {1} (RT: {2} → {3}, 需要设备重建)",
+                 static_cast<int>(m_desc.renderMode),
+                 static_cast<int>(newMode),
+                 static_cast<int>(currentRT),
+                 static_cast<int>(targetRT));
+
+        // 1. Shutdown everything that depends on the device
+        Renderer2D::Shutdown();
+
+        if (m_mainRenderPipeline) {
+            m_mainRenderPipeline->Shutdown();
+            m_mainRenderPipeline.reset();
+        }
+
+        if (m_renderResourceManager) {
+            m_renderResourceManager->Shutdown();
+            m_renderResourceManager.reset();
+        }
+
+        // 2. Reset device (keeps VkInstance + VkSurfaceKHR)
+        auto* vkDevice = dynamic_cast<Vulkan::RenderDeviceVulkan*>(m_device.get());
+        if (!vkDevice) {
+            LOG_ERROR("Renderer", "设备不是 Vulkan 设备，无法重建");
+            m_isRecreating = false;
+            return -1;
+        }
+        vkDevice->ResetDeviceOnly();
+
+        // 3. Update desc
+        m_desc.renderMode = newMode;
+        m_desc.rtMode = targetRT;
+
+        // 4. Reinitialize device with new RT requirements
+        DeviceDesc devDesc;
+        devDesc.name             = m_desc.name;
+        devDesc.width            = m_desc.width;
+        devDesc.height           = m_desc.height;
+        devDesc.presentMode      = m_desc.presentMode;
+        devDesc.enableValidation = m_desc.enableValidation;
+        devDesc.headless         = m_desc.headless;
+        devDesc.rtMode           = targetRT;
+
+        int result = vkDevice->ReinitializeDevice(devDesc);
+        if (result != 0) {
+            LOG_ERROR("Renderer", "设备重新初始化失败 ({0})，当前设备可能已损坏！", result);
+            m_isRecreating = false;
+            return result;
+        }
+
+        // 5. Re-acquire and reinitialize resource manager
+        m_renderResourceManager = std::dynamic_pointer_cast<RenderResourceManager>(RenderResourceManager::Get());
+        result = m_renderResourceManager->Initialize(m_device.get());
+        if (result != 0) {
+            LOG_ERROR("Renderer", "资源管理器重新初始化失败 ({0})", result);
+            m_isRecreating = false;
+            return result;
+        }
+
+        // 6. Recreate pipeline
+        result = InitializeRenderPipelines();
+        if (result != 0) {
+            LOG_ERROR("Renderer", "渲染管线重新初始化失败 ({0})", result);
+            m_isRecreating = false;
+            return result;
+        }
+
+        // 7. Reinit 2D renderer
+        Renderer2D::SetMaxBatchQuads(m_desc.maxBatchQuads);
+        Renderer2D::Initialize();
+
+        LOG_INFO("Renderer", "渲染模式切换完成: {0}", static_cast<int>(newMode));
+    } else {
+        LOG_INFO("Renderer", "切换渲染模式: {0} → {1} (同一 RT 层级，仅切换管线)",
+                 static_cast<int>(m_desc.renderMode),
+                 static_cast<int>(newMode));
+
+        // Same RT level — just switch the pipeline
+        m_desc.renderMode = newMode;
+
+        if (m_mainRenderPipeline) {
+            m_mainRenderPipeline->Shutdown();
+            m_mainRenderPipeline.reset();
+        }
+
+        int result = InitializeRenderPipelines();
+        if (result != 0) {
+            LOG_ERROR("Renderer", "渲染管线切换失败 ({0})", result);
+            m_isRecreating = false;
+            return result;
+        }
+    }
+
+    // Fire mode-changed callback
+    if (m_onRenderModeChanged) {
+        m_onRenderModeChanged(newMode, m_device.get());
+    }
+
+    m_isRecreating = false;
+    return 0;
+}
+
+RenderMode RenderSystem::GetCurrentRenderMode() const {
+    return m_desc.renderMode;
+}
+
+bool RenderSystem::IsRayTracingSupported() const {
+    return m_device ? m_device->IsRayTracingSupported() : false;
+}
+
+bool RenderSystem::IsRayQuerySupported() const {
+    return m_device ? m_device->IsRayQuerySupported() : false;
+}
+
+void RenderSystem::SetRenderModeChangedCallback(std::function<void(RenderMode, IRenderDevice*)> callback) {
+    m_onRenderModeChanged = std::move(callback);
+}
+
+void RenderSystem::SetWaterRenderCallback(std::function<void(ICommandBuffer*, IRenderDevice*)> callback) {
+    m_onWaterRender = std::move(callback);
 }
 
 }  // namespace Prisma::Graphic

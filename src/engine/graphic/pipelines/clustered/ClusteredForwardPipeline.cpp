@@ -1,10 +1,13 @@
 #include "ClusteredForwardPipeline.h"
 #include "ClusteredOpaquePass.h"
 #include "../forward/DepthPrePass.h"
+#include "../forward/TransparentPass.h"
+#include "../forward/BloomPostProcessPass.h"
 #include "../SkyboxRenderPass.h"
 #include "../../2d/UIPass2D.h"
 #include "graphic/Renderer.h"
 #include "graphic/Renderer2D.h"
+#include "graphic/RenderCommandContext.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/IResourceFactory.h"
@@ -13,12 +16,51 @@
 #include "graphic/interfaces/IBuffer.h"
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/interfaces/IRenderTarget.h"
+#include "graphic/adapters/vulkan/VulkanResources.h"
 #include "app/Engine.h"
 #include "Logger.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 
 namespace Prisma::Graphic {
+
+/**
+ * @brief 内部渲染目标代理
+ * 用于将 ITexture 包装为 IRenderTarget，以便传递给 Pass。
+ */
+class TextureRenderTargetProxy final : public ITextureRenderTarget {
+public:
+    TextureRenderTargetProxy(ITexture* texture) : m_texture(texture) {}
+
+    uint32_t GetWidth() const override { return m_texture ? static_cast<uint32_t>(m_texture->GetWidth()) : 0; }
+    uint32_t GetHeight() const override { return m_texture ? static_cast<uint32_t>(m_texture->GetHeight()) : 0; }
+    TextureFormat GetFormat() const override { return m_texture ? m_texture->GetFormat() : TextureFormat::Unknown; }
+    TextureType GetType() const override { return m_texture ? m_texture->GetTextureType() : TextureType::Texture2D; }
+
+    void* GetNativeHandle() const override {
+        if (!m_texture) return nullptr;
+        auto vkTexture = dynamic_cast<Vulkan::VulkanTexture*>(m_texture);
+        if (vkTexture) {
+            return reinterpret_cast<void*>(vkTexture->GetVkImageView());
+        }
+        return nullptr;
+    }
+
+    bool IsSwapChain() const override { return false; }
+    void Clear(const float color[4]) override {
+        if (m_texture) {
+            m_texture->Clear(Color(color[0], color[1], color[2], color[3]));
+        }
+    }
+
+    uint32_t GetMipLevels() const override { return m_texture ? m_texture->GetMipLevels() : 0; }
+    uint32_t GetArraySize() const override { return m_texture ? m_texture->GetArraySize() : 0; }
+    ITexture* GetTexture() override { return m_texture; }
+
+private:
+    ITexture* m_texture;
+};
 
 struct ClusterCameraUBO {
     glm::mat4 projection;
@@ -106,6 +148,9 @@ int ClusteredForwardPipeline::Initialize(IRenderDevice* device) {
     m_depthPrePass = std::make_shared<DepthPrePass>();
     m_opaquePass = std::make_shared<ClusteredOpaquePass>();
     m_skyboxPass = std::make_shared<SkyboxPass>();
+    m_transparentPass = std::make_shared<TransparentPass>();
+    m_bloomPass = std::make_shared<BloomPostProcessPass>();
+    m_bloomPass->Setup(device);
     m_uiPass = std::make_shared<UIPass2D>();
 
     // 5. 创建描述符集 (从计算管线获取布局)
@@ -147,6 +192,11 @@ void ClusteredForwardPipeline::Shutdown() {
     m_depthPrePass.reset();
     m_opaquePass.reset();
     m_skyboxPass.reset();
+    m_transparentPass.reset();
+    if (m_bloomPass) {
+        m_bloomPass->Cleanup();
+        m_bloomPass.reset();
+    }
     m_device = nullptr;
 }
 
@@ -226,6 +276,43 @@ void ClusteredForwardPipeline::Execute(const RenderContext& ctx) {
         m_opaquePass->Execute(cmd, commands, m_device);
     }
 
+    // ── Skybox + Transparent Passes (inside render pass) ──
+    {
+        PrismaMath::mat4 view = ctx.camera.viewMatrix;
+        PrismaMath::mat4 proj = ctx.camera.projectionMatrix;
+
+        SceneData sceneData;
+        sceneData.camera.view = view;
+        sceneData.camera.projection = proj;
+        sceneData.camera.viewProjection = proj * view;
+        sceneData.camera.position = ctx.camera.position;
+        sceneData.camera.nearPlane = ctx.camera.nearPlane;
+        sceneData.camera.farPlane = ctx.camera.farPlane;
+        sceneData.time.ts = ctx.deltaTime;
+        sceneData.viewport.width = ctx.width;
+        sceneData.viewport.height = ctx.height;
+
+        RenderCommandContext fallbackContext;
+        IDeviceContext* deviceContext = &fallbackContext;
+
+        PassExecutionContext passContext;
+        passContext.deviceContext = deviceContext;
+        passContext.sceneData = &sceneData;
+        passContext.renderTarget = nullptr; // swap chain rendering
+
+        if (m_skyboxPass) {
+            m_skyboxPass->SetViewMatrix(view);
+            m_skyboxPass->SetProjectionMatrix(proj);
+            m_skyboxPass->Execute(passContext);
+        }
+
+        if (m_transparentPass) {
+            m_transparentPass->SetViewMatrix(view);
+            m_transparentPass->SetProjectionMatrix(proj);
+            m_transparentPass->Execute(passContext);
+        }
+    }
+
     // 8. 渲染 Overlay (UI 会向队列添加新命令)
     RenderOverlay(ctx);
     
@@ -259,6 +346,11 @@ void ClusteredForwardPipeline::Execute(const RenderContext& ctx) {
         m_opaquePass->Execute(cmd, gizmoCommands, m_device);
     }
 
+    // ── Bloom Post-Process (offscreen only, requires targetTexture) ──
+    if (m_bloomPass && m_bloomPass->IsReady() && ctx.commandBuffer && ctx.targetTexture) {
+        TextureRenderTargetProxy bloomTarget(ctx.targetTexture);
+        m_bloomPass->Execute(ctx.commandBuffer, ctx.targetTexture, &bloomTarget);
+    }
 
     // 9. 结束渲染 Pass
     m_device->EndSwapChainRenderPass();

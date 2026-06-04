@@ -136,9 +136,7 @@ void PixelPerfectPass::EnsureResources(IRenderDevice* device) {
     }
 
     // ── 6. 创建描述符集布局和描述符集 ──
-    // Blit shader 使用:
-    //   binding 0: texture2D (sampled image)
-    //   binding 1: sampler
+    // Blit shader 使用: binding 0 = combined image sampler (sampler2D)
     if (m_blitPSO && m_offscreenTexture && m_pointSampler) {
         auto& layouts = m_blitPSO->GetDescriptorSetLayouts();
         if (!layouts.empty()) {

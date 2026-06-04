@@ -190,12 +190,57 @@ struct PrismaAPI {
     void* (*readAssetData)(const char* path, size_t* outSize);
     void  (*freeAssetData)(void* data);
 
+    // ===== High-Level Audio API (BGM/SFX) =====
+    void (*audioPlaySFX)(const char* clipPath, float volume, float pitch);
+    void (*audioPlayBGM)(const char* clipPath, float volume, bool loop);
+    void (*audioStopBGM)(float fadeOutMs);
+    void (*audioSetBGMVolume)(float volume);
+    void (*audioSetSFXVolume)(float volume);
+    void (*audioSetListenerPosition)(float x, float y);
+
+    // ===== AudioZone2D (2D Regional Audio) =====
+    uint32_t (*audioZoneRegister)(float minX, float minY, float maxX, float maxY, const char* bgmPath, float bgmVolume, bool bgmLoop, float fadeMs);
+    void (*audioZoneUnregister)(uint32_t zoneId);
+    void (*audioZoneSetPlayerPos)(float x, float y);
+    void (*audioZonePlaySFX)(const char* clipPath, float volume);
+
     const char* projectName;
 
     // [诊断] 结构体大小，用于 C++/C# 版本校验
     // C++ 侧在 Initialize 中设置为 sizeof(PrismaAPI)
     // C# 侧在 Init 中校验，不匹配时抛出明确异常
     uint32_t structSize = 0;
+
+    // ===== UI Rendering API =====
+    void (*uiDrawQuad)(float x, float y, float w, float h, float r, float g, float b, float a);
+    void (*uiDrawString)(const char* text, float x, float y, float scale, float r, float g, float b, float a);
+    float (*uiGetStringWidth)(const char* text, float scale);
+
+    // ===== SpriteAnimation C# Bindings =====
+    uint32_t (*spriteAnimationCreate)(const char* name);
+    void (*spriteAnimationAddFrame)(uint32_t animId, float rectX, float rectY, float width, float height, float duration);
+    void (*spriteAnimationPlay)(uint32_t componentId, const char* animationName, bool restart);
+    void (*spriteAnimationStop)(uint32_t componentId);
+    void (*spriteAnimationPause)(uint32_t componentId);
+    bool (*spriteAnimationIsPlaying)(uint32_t componentId);
+    void (*spriteAnimationSetLooping)(uint32_t animId, bool looping);
+    void (*spriteAnimationSetSpeed)(uint32_t componentId, float speed);
+    uint32_t (*nodeAddSpriteAnimation)(uint32_t nodeId);
+
+    // ===== Save/Load API =====
+    bool (*saveGameSave)(const char* slotName, const char* jsonData);
+    char* (*saveGameLoad)(const char* slotName);
+    bool (*saveGameDelete)(const char* slotName);
+    char* (*saveGameListSlots)();
+
+    // ===== Scene/Room Transition API =====
+    void (*sceneSwitchScene)(const char* sceneName, float fadeMs);
+    const char* (*sceneGetCurrentSceneName)();
+    void (*sceneSetTransitionData)(const char* key, const char* value);
+    const char* (*sceneGetTransitionData)(const char* key);
+    bool (*sceneHasTransitionData)(const char* key);
+    void (*sceneClearTransitionData)();
+    void (*sceneRegisterScene)(const char* name, void* scenePtr);
 };
 
 class ENGINE_API ScriptEngine {

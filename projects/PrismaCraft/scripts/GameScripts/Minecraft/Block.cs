@@ -2,7 +2,7 @@ using System;
 
 namespace GameScripts.Minecraft;
 
-方块注册表 ID (1:1 对应 BlockState 中的前 12 bits)</summary>
+/// <summary>方块注册表 ID (1:1 对应 BlockState 中的前 12 bits)</summary>
 public enum BlockId : ushort
 {
     Air = 0,

@@ -14,6 +14,8 @@ class OpaquePass;
 class SkyboxPass;
 class TransparentPass;
 class ShadowPass;
+class SSAOPass;
+class TAAPass;
 class PostProcessPass2D;
 class UIPass2D;
 class ShadowMapManager;
@@ -30,6 +32,7 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_Forward; }
 
     void SetLights(const std::vector<Light>& lights) { m_lights = lights; }
     void SetEnvironmentMap(class ITexture* envMap);
@@ -56,6 +59,14 @@ private:
 
     // IBL 环境光照
     std::shared_ptr<IBLGenerator> m_iblGenerator;
+    bool m_iblNeedsGeneration = false;
+    bool m_envMapSet = false;
+
+    // SSAO
+    std::shared_ptr<SSAOPass> m_ssaoPass;
+
+    // TAA
+    std::shared_ptr<TAAPass> m_taaPass;
 
     // Gizmo 覆盖层管线（UnlitVertex：纯顶点色，无纹理无光照）
     std::shared_ptr<IShader> m_gizmoVertShader;

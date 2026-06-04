@@ -316,6 +316,21 @@ struct ResourceDesc {
     bool debug = false;
 };
 
+// 光线追踪模式
+enum class RTMode : uint8_t {
+    None = 0,        // No RT extensions required
+    RayQuery = 1,    // VK_KHR_acceleration_structure + VK_KHR_ray_query
+    HardwareRT = 2   // VK_KHR_acceleration_structure + VK_KHR_ray_tracing_pipeline + VK_KHR_deferred_host_operations
+};
+
+// 路径追踪计算模式
+enum class PathTraceMode : uint8_t {
+    Flat = 0,       ///< 暴力遍历所有三角形
+    BVH = 1,        ///< BVH 加速遍历
+    HardwareRT = 2, ///< 硬件光线追踪
+    RayQuery = 3    ///< Ray Query 软光追
+};
+
 // 设备描述
 struct DeviceDesc {
     std::string name = "RenderDevice";
@@ -327,7 +342,7 @@ struct DeviceDesc {
     bool enableValidation = false;
     uint32_t maxFramesInFlight = 2;
     bool headless = false;
-    bool requireRayTracing = false;
+    RTMode rtMode = RTMode::None;  // 光线追踪模式（None=关闭, RayQuery=软光追, HardwareRT=硬件光追）
 };
 
 // 纹理过滤模式

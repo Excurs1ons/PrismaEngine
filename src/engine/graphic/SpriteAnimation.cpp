@@ -45,7 +45,7 @@ void SpriteAnimationComponent::PlayAnimation(const std::string& animationName, b
         if (auto current = GetAnimation(m_currentAnimation)) {
             current->Stop();
         }
-        m_currentAnimation = name;
+        m_currentAnimation = animationName;
         anim->Play();
     }
 }
@@ -66,6 +66,14 @@ const AnimationFrame& SpriteAnimationComponent::GetCurrentFrame() const {
 
 Vector4 SpriteAnimationComponent::GetCurrentSpriteRect() const {
     return GetCurrentFrame().spriteRect;
+}
+
+void SpriteAnimationComponent::GetCurrentUV(Vector2 uv[4]) const {
+    Vector4 rect = GetCurrentSpriteRect();
+    uv[0] = Vector2(rect.x, rect.y + rect.w);  // bottom-left
+    uv[1] = Vector2(rect.x + rect.z, rect.y + rect.w);  // bottom-right
+    uv[2] = Vector2(rect.x + rect.z, rect.y);  // top-right
+    uv[3] = Vector2(rect.x, rect.y);  // top-left
 }
 
 } // namespace Graphic

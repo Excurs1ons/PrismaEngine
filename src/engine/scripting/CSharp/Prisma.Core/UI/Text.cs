@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 
 namespace Prisma.UI;
 
@@ -93,6 +94,21 @@ public partial class Text : UIComponent
     {
         if (!IsRaycastEnabled) return false;
         return Rect.Contains(screenPos);
+    }
+
+    public unsafe override void Render()
+    {
+        if (!Visible || string.IsNullOrEmpty(TextContent)) return;
+
+        var pos = WorldPosition;
+        float scale = FontSize / 14.0f;
+
+        byte[] textBytes = Encoding.UTF8.GetBytes(TextContent + "\0");
+        fixed (byte* p = textBytes)
+        {
+            Interop.API.UIDrawString(p, pos.X, pos.Y, scale,
+                TextColor.R, TextColor.G, TextColor.B, TextColor.A);
+        }
     }
 }
 

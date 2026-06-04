@@ -1,0 +1,135 @@
+#version 460 core
+// ============================================================
+// cluster_cull.comp — PrismaEngine 聚簇光源剔除计算着色器
+//
+// 对每个聚簇剔除光源:
+//   - 读取聚簇 AABB 和光源列表
+//   - 执行光源-聚簇相交测试
+//   - 写入可见光源索引列表和聚簇网格
+// ============================================================
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+#define MAX_LIGHTS_PER_CLUSTER 256
+
+// ---- 光源结构 (匹配 C++ Light struct) ----
+struct ClusterLight {
+    vec4 position;  // xyz: position, w: type (0=dir, 1=point, 2=spot)
+    vec4 color;     // rgb: color * intensity, w: range
+    vec4 direction; // xyz: direction, w: spotAngle
+};
+
+// ---- 聚簇网格条目 ----
+struct ClusterGridEntry {
+    uint offset;    // 在 GlobalLightIndexList 中的偏移
+    uint count;     // 该聚簇包含的光源数
+};
+
+// ==================== Set 0: 计算数据 ====================
+
+layout(set = 0, binding = 0, std430) readonly buffer ClusterAABBs {
+    vec4 aabbMinMax[];
+} clusterAABBs;
+
+layout(set = 0, binding = 1, std430) readonly buffer LightBuffer {
+    ClusterLight lights[];
+} lightBuffer;
+
+layout(set = 0, binding = 2, std430) buffer GlobalLightIndexList {
+    uint indices[];
+} globalLightIndexList;
+
+layout(set = 0, binding = 3, std430) buffer ClusterGrid {
+    ClusterGridEntry grid[];
+} clusterGrid;
+
+layout(set = 0, binding = 4, std430) buffer GlobalLightCount {
+    uint count;
+} globalLightCount;
+
+layout(set = 0, binding = 5, std140) uniform ClusterCameraUBO {
+    mat4 projection;
+    mat4 invProjection;
+    mat4 view;
+    float nearPlane;
+    float farPlane;
+    uvec2 gridSize;
+    uvec2 screenSize;
+    uint totalLights;
+    uint numZSlices;
+} camera;
+
+// ===================== 核心函数 =====================
+
+// 点光源 vs AABB 相交测试
+bool PointLightIntersectsAABB(vec3 lightPos, float lightRange, vec3 aabbMin, vec3 aabbMax) {
+    // 计算最近距离
+    vec3 closest = max(aabbMin, min(lightPos, aabbMax));
+    vec3 diff = lightPos - closest;
+    float distSq = dot(diff, diff);
+    return distSq <= (lightRange * lightRange);
+}
+
+// 方向光总与所有聚簇相交
+bool DirectionalLightIntersectsAABB() {
+    return true;
+}
+
+void main() {
+    uint tileX = gl_GlobalInvocationID.x;
+    uint tileY = gl_GlobalInvocationID.y;
+    uint tileZ = gl_GlobalInvocationID.z;
+
+    // 边界检查
+    if (tileX >= camera.gridSize.x ||
+        tileY >= camera.gridSize.y ||
+        tileZ >= camera.numZSlices) {
+        return;
+    }
+
+    uint clusterIndex = tileZ * camera.gridSize.x * camera.gridSize.y
+                      + tileY * camera.gridSize.x
+                      + tileX;
+
+    // 读取聚簇 AABB
+    vec4 minData = clusterAABBs.aabbMinMax[clusterIndex * 2];
+    vec4 maxData = clusterAABBs.aabbMinMax[clusterIndex * 2 + 1];
+    vec3 aabbMin = minData.xyz;
+    vec3 aabbMax = maxData.xyz;
+
+    // 在栈上分配光源索引数组
+    uint localLightIndices[MAX_LIGHTS_PER_CLUSTER];
+    uint localLightCount = 0;
+
+    // 遍历所有光源进行剔除
+    for (uint i = 0; i < camera.totalLights && localLightCount < MAX_LIGHTS_PER_CLUSTER; i++) {
+        ClusterLight light = lightBuffer.lights[i];
+        int type = int(light.position.w + 0.5);
+
+        bool visible = false;
+        if (type == 0) {
+            // 方向光: 总是可见
+            visible = DirectionalLightIntersectsAABB();
+        } else {
+            // 点光源: 检测与 AABB 相交
+            visible = PointLightIntersectsAABB(light.position.xyz, light.color.w, aabbMin, aabbMax);
+        }
+
+        if (visible) {
+            localLightIndices[localLightCount] = i;
+            localLightCount++;
+        }
+    }
+
+    // 原子递增全局计数以获取偏移
+    uint offset = atomicAdd(globalLightCount.count, localLightCount);
+
+    // 写入可见光源索引到全局列表
+    for (uint i = 0; i < localLightCount; i++) {
+        globalLightIndexList.indices[offset + i] = localLightIndices[i];
+    }
+
+    // 写入聚簇网格条目
+    clusterGrid.grid[clusterIndex].offset = offset;
+    clusterGrid.grid[clusterIndex].count  = localLightCount;
+}

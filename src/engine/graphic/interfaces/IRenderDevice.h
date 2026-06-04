@@ -47,6 +47,9 @@ public:
     // 获取设备是否支持光线追踪（设备可能因不支持而回退）
     virtual bool IsRayTracingSupported() const = 0;
 
+    /// Returns true if VK_KHR_ray_query is supported and enabled on this device
+    virtual bool IsRayQuerySupported() const = 0;
+
     // === 命令缓冲区管理 ===
 
     // 创建命令缓冲区

@@ -91,7 +91,7 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         }
 
         // 光线追踪扩展仅在 PathTracing 模式下为必需
-        const bool needRayTracing = m_desc.requireRayTracing;
+        const bool needRayTracing = m_desc.rtMode != RTMode::None;
 
         auto selectorBuilder = selector.set_minimum_version(1, 3)
                                    .set_required_features(features)
@@ -106,23 +106,32 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
                                    .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete);
 
         if (needRayTracing) {
-            // 光线追踪所需的扩展特性
+            // Acceleration structure is required for both RayQuery and HardwareRT
             VkPhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures = {};
             accelFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
             accelFeatures.accelerationStructure = VK_TRUE;
-
-            VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures = {};
-            rtPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
-            rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
 
             accelFeatures.pNext = &vk12features;
 
             selectorBuilder = selectorBuilder
                 .add_required_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                .add_required_extension_features(accelFeatures);
+        }
+
+        if (m_desc.rtMode == RTMode::HardwareRT) {
+            VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures = {};
+            rtPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+            rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
+
+            selectorBuilder = selectorBuilder
                 .add_required_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
                 .add_required_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
-                .add_required_extension_features(accelFeatures)
                 .add_required_extension_features(rtPipelineFeatures);
+        }
+
+        if (m_desc.rtMode == RTMode::RayQuery) {
+            selectorBuilder = selectorBuilder
+                .add_required_extension(VK_KHR_RAY_QUERY_EXTENSION_NAME);
         }
 
         auto phys_ret = selectorBuilder.select();
@@ -147,15 +156,17 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
                     return -2;
                 }
                 phys_ret = phys_ret_fallback;
-                m_desc.requireRayTracing = false;
+                m_desc.rtMode = RTMode::None;
                 m_rayTracingSupported = false;
+                m_deviceFeatures.supportsRayQuery = false;
                 LOG_INFO("Vulkan", "已回退到 Forward 渲染模式");
             } else {
                 LOG_ERROR("Vulkan", "物理设备选择失败: {0}", phys_ret.error().message());
                 return -2;
             }
-} else {
+        } else {
             m_rayTracingSupported = needRayTracing;
+            m_deviceFeatures.supportsRayQuery = (m_desc.rtMode == RTMode::RayQuery && needRayTracing);
         }
         m_vkbPhysicalDevice = phys_ret.value();
         m_physicalDevice    = m_vkbPhysicalDevice.physical_device;
@@ -328,7 +339,7 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
             }
         }
 
-        m_deviceFeatures.supportsRayTracing = true;
+        m_deviceFeatures.supportsRayTracing = m_rayTracingSupported;
         m_initialized = true;
         return 0;
     } catch (...) {
@@ -422,6 +433,346 @@ void RenderDeviceVulkan::Shutdown() {
     m_initialized = false;
 
     LOG_DEBUG("VulkanDevice", "Vulkan 渲染设备已完全关闭");
+}
+
+void RenderDeviceVulkan::ResetDeviceOnly() {
+    if (!m_initialized) {
+        LOG_DEBUG("VulkanDevice", "渲染设备无需重置（未初始化）");
+        return;
+    }
+    
+    LOG_DEBUG("VulkanDevice", "正在重置 Vulkan 渲染设备（保留实例+Surface）...");
+
+    // 确保 GPU 已完成所有工作
+    if (m_device != VK_NULL_HANDLE) {
+        LOG_DEBUG("VulkanDevice", "等待 GPU 空闲...");
+        vkDeviceWaitIdle(m_device);
+        LOG_DEBUG("VulkanDevice", "GPU 已空闲");
+    }
+
+    // 释放所有离屏渲染资源
+    VulkanCommandBuffer::ReleaseAllOffscreenResources();
+
+    // 清理 headless 离屏资源
+    DestroyHeadlessResources();
+
+    // 1. 先销毁由此设备管理的子资源
+    if (m_resourceFactory) {
+        LOG_DEBUG("VulkanDevice", "关闭资源工厂...");
+        m_resourceFactory->Shutdown();
+        m_resourceFactory.reset();
+        LOG_DEBUG("VulkanDevice", "资源工厂已关闭");
+    }
+
+    if (m_swapChain) {
+        LOG_DEBUG("VulkanDevice", "清理交换链...");
+        m_swapChain->Cleanup();
+        m_swapChain.reset();
+        LOG_DEBUG("VulkanDevice", "交换链已清理");
+    }
+
+    // 2. 销毁同步对象和命令池
+    LOG_DEBUG("VulkanDevice", "销毁同步对象 (信号量/栅栏)...");
+    for (auto s : m_imageAvailableSemaphores)
+        vkDestroySemaphore(m_device, s, nullptr);
+    for (auto s : m_renderFinishedSemaphores)
+        vkDestroySemaphore(m_device, s, nullptr);
+    for (auto f : m_inFlightFences)
+        vkDestroyFence(m_device, f, nullptr);
+
+    if (m_commandPool) {
+        LOG_DEBUG("VulkanDevice", "销毁命令池...");
+        vkDestroyCommandPool(m_device, m_commandPool, nullptr);
+    }
+    if (m_computeCommandPool && m_computeCommandPool != m_commandPool) {
+        LOG_DEBUG("VulkanDevice", "销毁计算命令池...");
+        vkDestroyCommandPool(m_device, m_computeCommandPool, nullptr);
+        m_computeCommandPool = VK_NULL_HANDLE;
+    }
+
+    if (m_descriptorPool) {
+        LOG_DEBUG("VulkanDevice", "销毁描述符池...");
+        vkDestroyDescriptorPool(m_device, m_descriptorPool, nullptr);
+        m_descriptorPool = VK_NULL_HANDLE;
+    }
+
+    // 3. 销毁基础组件
+    if (m_allocator) {
+        LOG_DEBUG("VulkanDevice", "销毁 VMA...");
+        vmaDestroyAllocator(m_allocator);
+        m_allocator = VK_NULL_HANDLE;
+    }
+
+    // 4. 销毁设备（保留实例+Surface）
+    LOG_DEBUG("VulkanDevice", "销毁 Vulkan 逻辑设备...");
+    vkb::destroy_device(m_vkbDevice);
+    
+    m_device = VK_NULL_HANDLE;
+    m_physicalDevice = VK_NULL_HANDLE;
+    m_initialized = false;
+
+    LOG_DEBUG("VulkanDevice", "Vulkan 渲染设备已重置（实例+Surface 保留）");
+}
+
+int RenderDeviceVulkan::ReinitializeDevice(const DeviceDesc& desc) {
+    m_desc = desc;
+    m_headless = desc.headless;
+    LOG_INFO("Vulkan", "正在重新初始化 Vulkan 设备{0}", m_headless ? " (headless)" : "");
+
+    try {
+        // 跳过: 实例创建 (m_vkbInstance 已存在)
+        // 跳过: Surface 创建 (m_surface 已存在)
+
+        // 1. 选择物理设备
+        VkPhysicalDeviceFeatures features{};
+        features.samplerAnisotropy = VK_TRUE;
+
+        VkPhysicalDeviceVulkan12Features vk12features{};
+        vk12features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES;
+        vk12features.bufferDeviceAddress = VK_TRUE; // VUID 03331
+        vk12features.hostQueryReset = VK_TRUE;      // VUID 02665
+
+        vkb::PhysicalDeviceSelector selector{m_vkbInstance};
+        if (!m_headless) {
+            selector.set_surface(m_surface);
+        }
+
+        // 光线追踪扩展仅在 PathTracing 模式下为必需
+        const bool needRayTracing = m_desc.rtMode != RTMode::None;
+
+        auto selectorBuilder = selector.set_minimum_version(1, 3)
+                                   .set_required_features(features)
+                                   .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
+                                   .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
+                                   .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+#ifdef _WIN32
+                                   .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+                                   .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+#endif
+                                   .add_required_extension_features(vk12features)
+                                   .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete);
+
+        if (needRayTracing) {
+            VkPhysicalDeviceAccelerationStructureFeaturesKHR accelFeatures = {};
+            accelFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR;
+            accelFeatures.accelerationStructure = VK_TRUE;
+
+            VkPhysicalDeviceRayTracingPipelineFeaturesKHR rtPipelineFeatures = {};
+            rtPipelineFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR;
+            rtPipelineFeatures.rayTracingPipeline = VK_TRUE;
+
+            accelFeatures.pNext = &vk12features;
+
+            selectorBuilder = selectorBuilder
+                .add_required_extension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                .add_required_extension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
+                .add_required_extension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                .add_required_extension_features(accelFeatures)
+                .add_required_extension_features(rtPipelineFeatures);
+        }
+
+        auto phys_ret = selectorBuilder.select();
+        if (!phys_ret) {
+            if (needRayTracing) {
+                LOG_WARN("Vulkan", "物理设备不支持光线追踪扩展，回退到 Forward 渲染模式");
+                auto phys_ret_fallback = selector.set_minimum_version(1, 3)
+                    .set_required_features(features)
+                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
+                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
+                    .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
+#ifdef _WIN32
+                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
+                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
+#endif
+                    .add_required_extension_features(vk12features)
+                    .prefer_gpu_device_type(vkb::PreferredDeviceType::discrete)
+                    .select();
+                if (!phys_ret_fallback) {
+                    LOG_ERROR("Vulkan", "物理设备选择失败（回退模式）: {0}", phys_ret_fallback.error().message());
+                    return -2;
+                }
+                phys_ret = phys_ret_fallback;
+                m_desc.rtMode = RTMode::None;
+                m_rayTracingSupported = false;
+                LOG_INFO("Vulkan", "已回退到 Forward 渲染模式");
+            } else {
+                LOG_ERROR("Vulkan", "物理设备选择失败: {0}", phys_ret.error().message());
+                return -2;
+            }
+        } else {
+            m_rayTracingSupported = needRayTracing;
+        }
+        m_vkbPhysicalDevice = phys_ret.value();
+        m_physicalDevice    = m_vkbPhysicalDevice.physical_device;
+
+        // 读取 GPU 名称
+        {
+            VkPhysicalDeviceProperties props{};
+            vkGetPhysicalDeviceProperties(m_physicalDevice, &props);
+            m_gpuName = props.deviceName;
+            LOG_INFO("Vulkan", "GPU: {0} (driver {1}.{2}.{3})",
+                props.deviceName,
+                VK_VERSION_MAJOR(props.driverVersion),
+                VK_VERSION_MINOR(props.driverVersion),
+                VK_VERSION_PATCH(props.driverVersion));
+        }
+
+        // 2. 创建逻辑设备
+        VkValidationFeaturesEXT validationFeatures{};
+        VkValidationFeatureEnableEXT enabledFeatures[] = {
+            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
+            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
+        };
+        validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+        validationFeatures.enabledValidationFeatureCount = static_cast<uint32_t>(std::size(enabledFeatures));
+        validationFeatures.pEnabledValidationFeatures = enabledFeatures;
+
+        vkb::DeviceBuilder device_builder{m_vkbPhysicalDevice};
+        if (desc.enableValidation) {
+            device_builder.add_pNext(&validationFeatures);
+        }
+        auto dev_ret = device_builder.build();
+        if (!dev_ret)
+            return -3;
+        m_vkbDevice = dev_ret.value();
+        m_device    = m_vkbDevice.device;
+
+        // 激活 command buffer 调试标签 (VK_EXT_debug_utils)
+        VulkanCommandBuffer::InitDebugUtils(m_device);
+
+        // 3. 获取队列
+        m_graphicsQueue       = m_vkbDevice.get_queue(vkb::QueueType::graphics).value();
+        m_graphicsQueueFamily = m_vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
+
+        // 3b. 获取异步计算队列
+        {
+            auto dedicatedCompute = m_vkbDevice.get_dedicated_queue(vkb::QueueType::compute);
+            if (dedicatedCompute.has_value()) {
+                m_computeQueue = dedicatedCompute.value();
+                m_computeQueueFamily = m_vkbDevice.get_dedicated_queue_index(vkb::QueueType::compute).value();
+            } else {
+                auto computeQueue = m_vkbDevice.get_queue(vkb::QueueType::compute);
+                if (computeQueue.has_value()) {
+                    m_computeQueue = computeQueue.value();
+                    m_computeQueueFamily = m_vkbDevice.get_queue_index(vkb::QueueType::compute).value();
+                } else {
+                    m_computeQueue = m_graphicsQueue;
+                    m_computeQueueFamily = m_graphicsQueueFamily;
+                }
+            }
+        }
+
+        // 4. 初始化 VMA
+        VmaAllocatorCreateInfo allocatorInfo = {};
+        allocatorInfo.vulkanApiVersion       = VK_API_VERSION_1_3;
+        allocatorInfo.physicalDevice         = m_physicalDevice;
+        allocatorInfo.device                 = m_device;
+        allocatorInfo.instance               = m_instance;
+        allocatorInfo.flags                  = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+        if (vmaCreateAllocator(&allocatorInfo, &m_allocator) != VK_SUCCESS)
+            return -5;
+
+        // 4.1 同步资源工厂的分销器
+        if (m_resourceFactory) {
+            m_resourceFactory->Initialize(this);
+        }
+
+        // 5. 初始化描述符池
+        std::array<VkDescriptorPoolSize, 5> poolSizes{};
+        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        poolSizes[0].descriptorCount = 1000;
+        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        poolSizes[1].descriptorCount = 1000;
+        poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        poolSizes[2].descriptorCount = 100;
+        poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        poolSizes[3].descriptorCount = 100;
+        poolSizes[4].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+        poolSizes[4].descriptorCount = 16;
+
+        VkDescriptorPoolCreateInfo poolInfo{};
+        poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+        poolInfo.pPoolSizes = poolSizes.data();
+        poolInfo.maxSets = 1000;
+        poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+        vkCreateDescriptorPool(m_device, &poolInfo, nullptr, &m_descriptorPool);
+
+        // 6. Command Pool & Buffers
+        VkCommandPoolCreateInfo cmd_pool_info = {};
+        cmd_pool_info.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        cmd_pool_info.queueFamilyIndex        = m_graphicsQueueFamily;
+        cmd_pool_info.flags                   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+        vkCreateCommandPool(m_device, &cmd_pool_info, nullptr, &m_commandPool);
+
+        // 6b. 计算命令池
+        if (m_computeQueueFamily == m_graphicsQueueFamily) {
+            m_computeCommandPool = m_commandPool;
+        } else {
+            VkCommandPoolCreateInfo cmp_pool_info = {};
+            cmp_pool_info.sType                   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+            cmp_pool_info.queueFamilyIndex        = m_computeQueueFamily;
+            cmp_pool_info.flags                   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+            vkCreateCommandPool(m_device, &cmp_pool_info, nullptr, &m_computeCommandPool);
+        }
+
+        m_commandBuffers.resize(3);
+        VkCommandBufferAllocateInfo cmd_alloc_info = {};
+        cmd_alloc_info.sType                       = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmd_alloc_info.commandPool                 = m_commandPool;
+        cmd_alloc_info.level                       = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmd_alloc_info.commandBufferCount          = 3;
+        vkAllocateCommandBuffers(m_device, &cmd_alloc_info, m_commandBuffers.data());
+
+        m_vulkanCommandBuffers.clear();
+        for (auto cmd : m_commandBuffers) {
+            m_vulkanCommandBuffers.push_back(std::make_unique<VulkanCommandBuffer>(cmd));
+        }
+
+        // 7. Sync Objects
+        m_imageAvailableSemaphores.resize(3);
+        m_renderFinishedSemaphores.resize(3);
+        m_inFlightFences.resize(3);
+
+        VkSemaphoreCreateInfo semaphoreInfo{};
+        semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+        VkFenceCreateInfo fenceInfo{};
+        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+        for (size_t i = 0; i < 3; i++) {
+            vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_imageAvailableSemaphores[i]);
+            vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+            vkCreateFence(m_device, &fenceInfo, nullptr, &m_inFlightFences[i]);
+        }
+
+        // 8. SwapChain (headless模式跳过)
+        if (!m_headless) {
+            m_swapChain->Initialize(m_surface, desc.width, desc.height, desc.presentMode);
+
+            uint32_t imageCount = m_swapChain->GetBufferCount();
+            if (m_renderFinishedSemaphores.size() < imageCount) {
+                size_t oldSize = m_renderFinishedSemaphores.size();
+                m_renderFinishedSemaphores.resize(imageCount);
+                for (size_t i = oldSize; i < imageCount; i++) {
+                    vkCreateSemaphore(m_device, &semaphoreInfo, nullptr, &m_renderFinishedSemaphores[i]);
+                }
+            }
+        } else {
+            // 8b. Headless 模式
+            if (!CreateHeadlessResources(desc.width, desc.height)) {
+                LOG_ERROR("Vulkan", "创建离屏渲染资源失败");
+                return -7;
+            }
+        }
+
+        m_deviceFeatures.supportsRayTracing = m_rayTracingSupported;
+        m_initialized = true;
+        return 0;
+    } catch (...) {
+        return -999;
+    }
 }
 
 void RenderDeviceVulkan::BeginFrame() {
@@ -740,6 +1091,11 @@ std::string RenderDeviceVulkan::GetAPIName() const {
 std::string RenderDeviceVulkan::GetGPUName() const {
     return m_gpuName.empty() ? "Unknown GPU" : m_gpuName;
 }
+
+bool RenderDeviceVulkan::IsRayQuerySupported() const {
+    return m_deviceFeatures.supportsRayQuery;
+}
+
 VkRenderPass RenderDeviceVulkan::GetOverlayRenderPass() const {
     if (m_headless) return VK_NULL_HANDLE;
     return m_swapChain ? m_swapChain->GetRenderPass() : VK_NULL_HANDLE;

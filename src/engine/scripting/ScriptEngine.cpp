@@ -4,16 +4,20 @@
 #include "app/Engine.h"
 #include "app/Application.h"
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 #include "input/InputManager.h"
 #include "platform/Platform.h"
 #include "core/EntityManager.h"
 #include "graphic/2d/LightManager2D.h"
 #include "graphic/Renderer2D.h"
+#include "graphic/SpriteAnimation.h"
 #include "graphic/PerspectiveCamera.h"
 #include "graphic/RenderSystem.h"
 #include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 #include "audio/AudioAPI.h"
 #include "audio/AudioTypes.h"
+#include "audio/AudioZone2D.h"
 #include "audio/dsp/AudioNode.h"
 #include "audio/dsp/nodes/OscillatorNode.h"
 #include "audio/dsp/nodes/ADSRNode.h"
@@ -188,6 +192,22 @@ static void S_DrawGizmoString(const char* t, float x, float y, float s, float r,
 
 static void S_SetAmbientLight(float r, float g, float b) {
     Graphic::LightManager2D::Get().SetAmbientColor({r, g, b});
+}
+
+// ==================== UI Rendering API ====================
+
+static void S_UIDrawQuad(float x, float y, float w, float h, float r, float g, float b, float a) {
+    Graphic::Renderer2D::DrawQuad(glm::vec2(x, y), glm::vec2(w, h), glm::vec4(r, g, b, a));
+}
+
+static void S_UIDrawString(const char* text, float x, float y, float scale, float r, float g, float b, float a) {
+    if (!text) return;
+    Graphic::Renderer2D::DrawString(std::string(text), glm::vec2(x, y), scale, glm::vec4(r, g, b, a));
+}
+
+static float S_UIGetStringWidth(const char* text, float scale) {
+    if (!text) return 0.0f;
+    return Graphic::Renderer2D::GetStringWidth(std::string(text), scale);
 }
 
 // ==================== 3D Camera API ====================
@@ -397,6 +417,95 @@ static void S_AudioSetVolume(uint32_t voiceId, float vol) {
 static bool S_AudioIsPlaying(uint32_t voiceId) {
     auto* dev = GetScriptAudioDevice();
     return dev && dev->IsPlaying(voiceId);
+}
+
+// ==================== High-Level Audio API (BGM/SFX) ====================
+
+static uint32_t s_bgmVoiceId = 0;
+static float s_bgmVolume = 1.0f;
+static float s_sfxVolume = 1.0f;
+
+static void S_AudioPlaySFX(const char* clipPath, float volume, float pitch) {
+    if (!clipPath) return;
+    auto* dev = GetScriptAudioDevice();
+    if (!dev) return;
+    auto clip = Audio::AudioAPI::LoadClip(clipPath);
+    if (!clip) return;
+    Audio::PlayDesc desc;
+    desc.volume = std::clamp(volume * s_sfxVolume, 0.0f, 1.0f);
+    desc.pitch = std::clamp(pitch, 0.5f, 2.0f);
+    desc.loop = false;
+    dev->PlayClip(*clip, desc);
+}
+
+static void S_AudioPlayBGM(const char* clipPath, float volume, bool loop) {
+    if (!clipPath) return;
+    auto* dev = GetScriptAudioDevice();
+    if (!dev) return;
+    if (s_bgmVoiceId != 0) {
+        dev->Stop(s_bgmVoiceId);
+        s_bgmVoiceId = 0;
+    }
+    auto clip = Audio::AudioAPI::LoadClip(clipPath);
+    if (!clip) return;
+    Audio::PlayDesc desc;
+    desc.volume = std::clamp(volume * s_bgmVolume, 0.0f, 1.0f);
+    desc.pitch = 1.0f;
+    desc.loop = loop;
+    s_bgmVoiceId = dev->PlayClip(*clip, desc);
+}
+
+static void S_AudioStopBGM(float fadeOutMs) {
+    (void)fadeOutMs;
+    auto* dev = GetScriptAudioDevice();
+    if (!dev || s_bgmVoiceId == 0) return;
+    dev->Stop(s_bgmVoiceId);
+    s_bgmVoiceId = 0;
+}
+
+static void S_AudioSetBGMVolume(float volume) {
+    s_bgmVolume = std::clamp(volume, 0.0f, 1.0f);
+}
+
+static void S_AudioSetSFXVolume(float volume) {
+    s_sfxVolume = std::clamp(volume, 0.0f, 1.0f);
+}
+
+static void S_AudioSetListenerPosition(float x, float y) {
+    auto* dev = GetScriptAudioDevice();
+    if (!dev) return;
+    Audio::AudioListener listener{};
+    listener.position[0] = x;
+    listener.position[1] = y;
+    listener.position[2] = 0.0f;
+    dev->SetListener(listener);
+}
+
+// ==================== AudioZone2D API ====================
+
+static uint32_t S_AudioZoneRegister(float minX, float minY, float maxX, float maxY, const char* bgmPath, float bgmVolume, bool bgmLoop, float fadeMs) {
+    Prisma::Audio::AudioZoneDef def;
+    def.bounds = Prisma::Physics2D::AABB2D(minX, minY, maxX, maxY);
+    if (bgmPath) {
+        def.bgmPath = bgmPath;
+    }
+    def.bgmVolume = bgmVolume;
+    def.bgmLoop = bgmLoop;
+    def.fadeDurationMs = fadeMs;
+    return Prisma::Audio::AudioZoneManager::Get().RegisterZone(def);
+}
+
+static void S_AudioZoneUnregister(uint32_t zoneId) {
+    Prisma::Audio::AudioZoneManager::Get().UnregisterZone(zoneId);
+}
+
+static void S_AudioZoneSetPlayerPos(float x, float y) {
+    Prisma::Audio::AudioZoneManager::Get().SetPlayerPosition(x, y);
+}
+
+static void S_AudioZonePlaySFX(const char* clipPath, float volume) {
+    if (!clipPath) return;
+    Prisma::Audio::AudioZoneManager::Get().PlaySFX(clipPath, volume);
 }
 
 // ==================== AudioGraph API ====================
@@ -622,6 +731,7 @@ static float S_AudioSpectrumGetPeak(uint64_t handle) {
 // ==================== Tilemap wrappers ====================
 
 static std::unordered_map<uint32_t, std::shared_ptr<Tilemap::Tilemap>> s_tilemaps;
+static std::unordered_map<std::string, uint32_t> s_tilemapPathCache; // resolved path → handle
 static uint32_t s_nextTilemapHandle = 1;
 
 // exe 目录（assets 根），由 Initialize 写入，供 ResolveAssetPath 使用
@@ -646,18 +756,32 @@ static std::string ResolveAssetPath(const char* relPath) {
 }
 
 static uint32_t PR_Tilemap_Load(const char* path) {
-    auto tm = std::make_shared<Tilemap::Tilemap>();
     std::string resolved = ResolveAssetPath(path);
+
+    auto cached = s_tilemapPathCache.find(resolved);
+    if (cached != s_tilemapPathCache.end()) {
+        return cached->second;
+    }
+
+    auto tm = std::make_shared<Tilemap::Tilemap>();
     if (!tm->LoadFromJSON(resolved)) {
         LOG_ERROR("ScriptEngine", "Tilemap_Load failed: {0} (resolved: {1})", path, resolved);
         return 0;
     }
     uint32_t h = s_nextTilemapHandle++;
     s_tilemaps[h] = std::move(tm);
+    s_tilemapPathCache[resolved] = h;
     return h;
 }
 
 static void PR_Tilemap_Unload(uint32_t handle) {
+    for (auto it = s_tilemapPathCache.begin(); it != s_tilemapPathCache.end(); ) {
+        if (it->second == handle) {
+            it = s_tilemapPathCache.erase(it);
+        } else {
+            ++it;
+        }
+    }
     s_tilemaps.erase(handle);
 }
 
@@ -689,6 +813,98 @@ static uint32_t PR_Tilemap_GetHeight(uint32_t handle) {
     return it->second->GetHeight();
 }
 
+// ==================== SpriteAnimation bindings ====================
+
+static std::unordered_map<uint32_t, std::shared_ptr<Graphic::SpriteAnimation>> s_animations;
+static uint32_t s_nextAnimId = 1;
+
+// 组件 ID 缓存（避免 64 位指针截断问题）
+static std::unordered_map<uint32_t, std::shared_ptr<Graphic::SpriteAnimationComponent>> s_spriteAnimComponents;
+static uint32_t s_nextSpriteAnimComponentId = 1;
+
+static uint32_t S_SpriteAnimationCreate(const char* name) {
+    (void)name;
+    auto anim = std::make_shared<Graphic::SpriteAnimation>();
+    uint32_t id = s_nextAnimId++;
+    s_animations[id] = anim;
+    return id;
+}
+
+static void S_SpriteAnimationAddFrame(uint32_t animId, float rectX, float rectY, float width, float height, float duration) {
+    auto it = s_animations.find(animId);
+    if (it == s_animations.end()) return;
+    Graphic::AnimationFrame frame;
+    frame.spriteRect = Vector4(rectX, rectY, width, height);
+    frame.duration = duration;
+    it->second->AddFrame(frame);
+}
+
+static void S_SpriteAnimationPlay(uint32_t componentId, const char* animationName, bool restart) {
+    if (!animationName) return;
+    auto it = s_spriteAnimComponents.find(componentId);
+    if (it == s_spriteAnimComponents.end()) return;
+    it->second->PlayAnimation(animationName, restart);
+}
+
+static void S_SpriteAnimationStop(uint32_t componentId) {
+    auto it = s_spriteAnimComponents.find(componentId);
+    if (it == s_spriteAnimComponents.end()) return;
+    auto currentAnim = it->second->GetAnimation(it->second->GetCurrentAnimation());
+    if (currentAnim) currentAnim->Stop();
+}
+
+static void S_SpriteAnimationPause(uint32_t componentId) {
+    auto it = s_spriteAnimComponents.find(componentId);
+    if (it == s_spriteAnimComponents.end()) return;
+    auto currentAnim = it->second->GetAnimation(it->second->GetCurrentAnimation());
+    if (currentAnim) currentAnim->Pause();
+}
+
+static bool S_SpriteAnimationIsPlaying(uint32_t componentId) {
+    auto it = s_spriteAnimComponents.find(componentId);
+    if (it == s_spriteAnimComponents.end()) return false;
+    auto currentAnim = it->second->GetAnimation(it->second->GetCurrentAnimation());
+    return currentAnim ? currentAnim->IsPlaying() : false;
+}
+
+static void S_SpriteAnimationSetLooping(uint32_t animId, bool looping) {
+    auto it = s_animations.find(animId);
+    if (it != s_animations.end()) it->second->SetLooping(looping);
+}
+
+static void S_SpriteAnimationSetSpeed(uint32_t componentId, float speed) {
+    auto it = s_spriteAnimComponents.find(componentId);
+    if (it == s_spriteAnimComponents.end()) return;
+    auto currentAnim = it->second->GetAnimation(it->second->GetCurrentAnimation());
+    if (currentAnim) currentAnim->SetSpeed(speed);
+}
+
+static uint32_t S_NodeAddSpriteAnimation(uint32_t nodeId) {
+    auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
+    if (!scene) return 0;
+    Prisma::Node node(nodeId);
+    if (node.handle == 0) return 0;
+
+    // 检查是否已有该组件
+    auto existing = scene->GetComponent<Graphic::SpriteAnimationComponent>(node);
+    if (existing) {
+        // 查找已有 ID 或注册新 ID
+        for (auto& [id, comp] : s_spriteAnimComponents) {
+            if (comp == existing) return id;
+        }
+        // 已有组件但尚未缓存 ID
+        uint32_t id = s_nextSpriteAnimComponentId++;
+        s_spriteAnimComponents[id] = existing;
+        return id;
+    }
+
+    auto comp = scene->AddComponent<Graphic::SpriteAnimationComponent>(node);
+    if (!comp) return 0;
+    uint32_t id = s_nextSpriteAnimComponentId++;
+    s_spriteAnimComponents[id] = comp;
+    return id;
+}
+
 // ==================== FileSystem / Asset IO ====================
 
 static void* S_ReadAssetData(const char* path, size_t* outSize) {
@@ -707,6 +923,135 @@ static void* S_ReadAssetData(const char* path, size_t* outSize) {
 
 static void S_FreeAssetData(void* data) {
     if (data) std::free(data);
+}
+
+// ==================== Save/Load API ====================
+
+static std::string GetSaveDir() {
+    return (std::filesystem::current_path() / "saves").string();
+}
+
+static bool S_SaveGame(const char* slotName, const char* jsonData) {
+    if (!slotName || !jsonData) return false;
+    try {
+        auto saveDir = std::filesystem::current_path() / "saves";
+        std::filesystem::create_directories(saveDir);
+        auto savePath = saveDir / (std::string(slotName) + ".json");
+        std::ofstream file(savePath);
+        if (!file) return false;
+        file << jsonData;
+        return true;
+    } catch (...) { return false; }
+}
+
+static char* S_LoadGame(const char* slotName) {
+    if (!slotName) return nullptr;
+    try {
+        auto savePath = std::filesystem::current_path() / "saves" / (std::string(slotName) + ".json");
+        std::ifstream file(savePath);
+        if (!file) return nullptr;
+        std::stringstream ss;
+        ss << file.rdbuf();
+        std::string content = ss.str();
+        char* result = (char*)std::malloc(content.size() + 1);
+        if (result) {
+            std::memcpy(result, content.c_str(), content.size() + 1);
+        }
+        return result;
+    } catch (...) { return nullptr; }
+}
+
+static bool S_DeleteGame(const char* slotName) {
+    if (!slotName) return false;
+    try {
+        auto savePath = std::filesystem::current_path() / "saves" / (std::string(slotName) + ".json");
+        return std::filesystem::remove(savePath);
+    } catch (...) { return false; }
+}
+
+static char* S_ListGameSlots() {
+    try {
+        auto saveDir = std::filesystem::current_path() / "saves";
+        if (!std::filesystem::exists(saveDir)) {
+            char* empty = (char*)std::malloc(3);
+            if (empty) std::strcpy(empty, "[]");
+            return empty;
+        }
+        std::string json = "[";
+        bool first = true;
+        for (auto& entry : std::filesystem::directory_iterator(saveDir)) {
+            if (entry.path().extension() == ".json") {
+                if (!first) json += ",";
+                json += "\"" + entry.path().stem().string() + "\"";
+                first = false;
+            }
+        }
+        json += "]";
+        char* result = (char*)std::malloc(json.size() + 1);
+        if (result) std::memcpy(result, json.c_str(), json.size() + 1);
+        return result;
+    } catch (...) {
+        char* empty = (char*)std::malloc(3);
+        if (empty) std::strcpy(empty, "[]");
+        return empty;
+    }
+}
+
+// ==================== Scene/Room Transition wrappers ====================
+
+static void S_SceneSwitch(const char* sceneName, float fadeMs) {
+    if (!sceneName) return;
+    auto& engine = Engine::Get();
+    auto* sm = engine.GetSceneManager();
+    if (sm) sm->SwitchScene(sceneName, fadeMs);
+}
+
+static const char* S_SceneGetCurrentSceneName() {
+    auto& engine = Engine::Get();
+    auto* sm = engine.GetSceneManager();
+    if (!sm) return "";
+    const auto& name = sm->GetCurrentSceneName();
+    if (name.empty()) return "";
+    static std::string cached;
+    cached = name;
+    return cached.c_str();
+}
+
+static void S_SceneSetTransitionData(const char* key, const char* value) {
+    if (!key || !value) return;
+    auto& engine = Engine::Get();
+    auto* sm = engine.GetSceneManager();
+    if (sm) sm->SetTransitionData(key, value);
+}
+
+static const char* S_SceneGetTransitionData(const char* key) {
+    if (!key) return "";
+    auto& engine = Engine::Get();
+    auto* sm = engine.GetSceneManager();
+    if (!sm) return "";
+    static std::string cached;
+    cached = sm->GetTransitionData(key);
+    return cached.c_str();
+}
+
+static bool S_SceneHasTransitionData(const char* key) {
+    if (!key) return false;
+    auto& engine = Engine::Get();
+    auto* sm = engine.GetSceneManager();
+    return sm ? sm->HasTransitionData(key) : false;
+}
+
+static void S_SceneClearTransitionData() {
+    auto& engine = Engine::Get();
+    auto* sm = engine.GetSceneManager();
+    if (sm) sm->ClearTransitionData();
+}
+
+static void S_SceneRegister(const char* name, void* scenePtr) {
+    if (!name || !scenePtr) return;
+    auto& engine = Engine::Get();
+    auto* sm = engine.GetSceneManager();
+    if (sm) sm->RegisterScene(name, static_cast<Scene*>(scenePtr));
 }
 
 // ==================== Physics2D wrappers ====================
@@ -858,6 +1203,20 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     m_api.audioSetVolume = S_AudioSetVolume;
     m_api.audioIsPlaying = S_AudioIsPlaying;
 
+    // High-Level Audio API (BGM/SFX)
+    m_api.audioPlaySFX = S_AudioPlaySFX;
+    m_api.audioPlayBGM = S_AudioPlayBGM;
+    m_api.audioStopBGM = S_AudioStopBGM;
+    m_api.audioSetBGMVolume = S_AudioSetBGMVolume;
+    m_api.audioSetSFXVolume = S_AudioSetSFXVolume;
+    m_api.audioSetListenerPosition = S_AudioSetListenerPosition;
+
+    // AudioZone2D API
+    m_api.audioZoneRegister = S_AudioZoneRegister;
+    m_api.audioZoneUnregister = S_AudioZoneUnregister;
+    m_api.audioZoneSetPlayerPos = S_AudioZoneSetPlayerPos;
+    m_api.audioZonePlaySFX = S_AudioZonePlaySFX;
+
     // AudioGraph API
     m_api.audioCreateGraph = S_AudioCreateGraph;
     m_api.audioDestroyGraph = S_AudioDestroyGraph;
@@ -904,6 +1263,37 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
     // FileSystem / Asset IO
     m_api.readAssetData = S_ReadAssetData;
     m_api.freeAssetData = S_FreeAssetData;
+
+    // UI Rendering API
+    m_api.uiDrawQuad = S_UIDrawQuad;
+    m_api.uiDrawString = S_UIDrawString;
+    m_api.uiGetStringWidth = S_UIGetStringWidth;
+
+    // SpriteAnimation Bindings
+    m_api.spriteAnimationCreate = S_SpriteAnimationCreate;
+    m_api.spriteAnimationAddFrame = S_SpriteAnimationAddFrame;
+    m_api.spriteAnimationPlay = S_SpriteAnimationPlay;
+    m_api.spriteAnimationStop = S_SpriteAnimationStop;
+    m_api.spriteAnimationPause = S_SpriteAnimationPause;
+    m_api.spriteAnimationIsPlaying = S_SpriteAnimationIsPlaying;
+    m_api.spriteAnimationSetLooping = S_SpriteAnimationSetLooping;
+    m_api.spriteAnimationSetSpeed = S_SpriteAnimationSetSpeed;
+    m_api.nodeAddSpriteAnimation = S_NodeAddSpriteAnimation;
+
+    // Save/Load API
+    m_api.saveGameSave = S_SaveGame;
+    m_api.saveGameLoad = S_LoadGame;
+    m_api.saveGameDelete = S_DeleteGame;
+    m_api.saveGameListSlots = S_ListGameSlots;
+
+    // Scene/Room Transition API
+    m_api.sceneSwitchScene = S_SceneSwitch;
+    m_api.sceneGetCurrentSceneName = S_SceneGetCurrentSceneName;
+    m_api.sceneSetTransitionData = S_SceneSetTransitionData;
+    m_api.sceneGetTransitionData = S_SceneGetTransitionData;
+    m_api.sceneHasTransitionData = S_SceneHasTransitionData;
+    m_api.sceneClearTransitionData = S_SceneClearTransitionData;
+    m_api.sceneRegisterScene = S_SceneRegister;
 
     m_api.projectName = Engine::Get().GetProjectName().c_str();
 

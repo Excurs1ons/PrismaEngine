@@ -185,9 +185,14 @@ void Prisma::EditorLayer::OnImGuiRender() {
                 }
                 ImGui::Separator();
                 if (ImGui::MenuItem(UI::ITEM_SAVE_SCENE, "Ctrl+Alt+S")) {
-                    LOG_INFO("Editor", "场景已保存 (暂存实现)");
                     if (auto sceneManager = Engine::Get().GetSceneManager()) {
                         if (auto scene = sceneManager->GetCurrentScene()) {
+                            if (!m_sceneFilePath.empty()) {
+                                LOG_INFO("Editor", "正在保存场景: %s", m_sceneFilePath.c_str());
+                                scene->Serialize(m_sceneFilePath);
+                            } else {
+                                ImGui::OpenPopup(UI::POPUP_SAVE_SCENE_AS);
+                            }
                             scene->SetDirty(false);
                         }
                     }
@@ -870,6 +875,9 @@ void Prisma::EditorLayer::OnImGuiRender() {
         ImGui::InputText("路径", scenePath, IM_ARRAYSIZE(scenePath));
         if (ImGui::Button("加载", ImVec2(120, 0))) {
             LOG_INFO("Editor", "正在加载场景: %s", scenePath);
+            if (auto sceneManager = Engine::Get().GetSceneManager()) {
+                sceneManager->LoadFromFile(scenePath);
+            }
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -895,7 +903,15 @@ void Prisma::EditorLayer::OnImGuiRender() {
     if (ImGui::BeginPopupModal(UI::POPUP_SAVE_SCENE_AS, NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("场景另存为");
         ImGui::Separator();
+        static char sceneSavePath[256] = "assets/scenes/Main.scene";
+        ImGui::InputText("保存路径", sceneSavePath, IM_ARRAYSIZE(sceneSavePath));
         if (ImGui::Button("保存", ImVec2(120, 0))) {
+            LOG_INFO("Editor", "正在保存场景: %s", sceneSavePath);
+            if (auto sceneManager = Engine::Get().GetSceneManager()) {
+                if (auto* scene = sceneManager->GetCurrentScene()) {
+                    scene->Serialize(sceneSavePath);
+                }
+            }
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();

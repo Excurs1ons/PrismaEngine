@@ -73,4 +73,56 @@ bool SceneManager::LoadFromFile(const std::string& path) {
     return true;
 }
 
+void SceneManager::RegisterScene(const std::string& name, Scene* scene) {
+    if (!scene) return;
+    m_scenes[name] = scene;
+}
+
+void SceneManager::UnregisterScene(const std::string& name) {
+    auto it = m_scenes.find(name);
+    if (it != m_scenes.end()) {
+        m_scenes.erase(it);
+    }
+}
+
+void SceneManager::SwitchScene(const std::string& name, float fadeMs) {
+    (void)fadeMs;
+
+    auto it = m_scenes.find(name);
+    if (it == m_scenes.end() || !it->second) return;
+
+    if (m_onSceneWillLoad) m_onSceneWillLoad(name);
+
+    m_currentSceneName = name;
+
+    if (m_onSceneLoaded) m_onSceneLoaded(name);
+}
+
+void SceneManager::SwitchSceneAsync(const std::string& name) {
+    m_transitionPending = true;
+    m_pendingSceneName = name;
+}
+
+Scene* SceneManager::GetScene(const std::string& name) const {
+    auto it = m_scenes.find(name);
+    return it != m_scenes.end() ? it->second : nullptr;
+}
+
+void SceneManager::SetTransitionData(const std::string& key, const std::string& value) {
+    m_transitionData[key] = value;
+}
+
+std::string SceneManager::GetTransitionData(const std::string& key) const {
+    auto it = m_transitionData.find(key);
+    return it != m_transitionData.end() ? it->second : "";
+}
+
+bool SceneManager::HasTransitionData(const std::string& key) const {
+    return m_transitionData.find(key) != m_transitionData.end();
+}
+
+void SceneManager::ClearTransitionData() {
+    m_transitionData.clear();
+}
+
 }  // namespace Prisma

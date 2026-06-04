@@ -6,6 +6,8 @@
 
 namespace Prisma::Physics2D {
 
+class Quadtree2D;
+
 /**
  * @brief 2D AABB 碰撞检测结果
  */
@@ -84,10 +86,21 @@ public:
     static RaycastHit2D RayCast(glm::vec2 origin, glm::vec2 direction,
                                 float maxDist, const AABB2D* targets, uint32_t count);
 
+    /**
+     * @brief 设置全局四叉树用于空间加速
+     *
+     * 设置后 ResolvePlatform 将使用四叉树筛选候选固体，
+     * 仅对玩家扩展范围内的固体执行扫掠检测。
+     * 传入 nullptr 恢复纯数组模式。
+     */
+    static void SetQuadtree(Quadtree2D* quadtree);
+
 private:
     /// @brief 内部：AABB vs 射线 slab 测试
     static bool RayVsAABB(glm::vec2 origin, glm::vec2 invDir,
                           const AABB2D& box, float& tMin, float& tMax);
+
+    static Quadtree2D* s_quadtree;
 };
 
 } // namespace Prisma::Physics2D

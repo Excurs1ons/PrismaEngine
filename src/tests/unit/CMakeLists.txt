@@ -13,3 +13,8 @@ add_subdirectory(audio)
 add_subdirectory(animation)
 add_subdirectory(ai)
 add_subdirectory(navigation)
+
+# Wave 4 — 补充子系统测试
+add_subdirectory(render)
+add_subdirectory(engine)
+add_subdirectory(editor)

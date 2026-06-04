@@ -1,0 +1,130 @@
+#version 460 core
+// ============================================================
+// cluster_build.comp — PrismaEngine 聚簇构建计算着色器
+//
+// 构建聚簇 AABB (轴对齐包围盒):
+//   - 16x9x24 三维栅格 (屏幕空间 tile × 深度切片)
+//   - 每个线程计算一个聚簇的视空间 AABB
+//   - 结果写入 ClusterAABBs SSBO 供后续剔除使用
+// ============================================================
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+// ---- 聚簇 AABB 结构 (每个聚簇 2 个 vec4 = 32 字节) ----
+// min.xyz = 视空间 AABB 最小点, max.xyz = 最大点
+struct ClusterAABB {
+    vec4 min; // xyz: min, w: padding
+    vec4 max; // xyz: max, w: padding
+};
+
+// ==================== Set 0: 计算数据 ====================
+
+layout(set = 0, binding = 0, std430) writeonly buffer ClusterAABBs {
+    ClusterAABB aabbs[];
+} clusterAABBs;
+
+layout(set = 0, binding = 1, std140) uniform ClusterCameraUBO {
+    mat4 projection;
+    mat4 invProjection;
+    mat4 view;
+    float nearPlane;
+    float farPlane;
+    uvec2 gridSize;     // x=tilesX, y=tilesY
+    uvec2 screenSize;   // x=width, y=height
+    uint totalLights;
+    uint numZSlices;
+} camera;
+
+// ===================== 常量 =====================
+
+const float CLUSTER_DEPTH_EXPONENT = 1.0; // 深度分布指数
+
+// ===================== 核心函数 =====================
+
+// 将屏幕空间点转换到视空间
+vec4 ScreenToView(vec4 screenPos) {
+    vec4 ndc = screenPos * 2.0 - 1.0;
+    ndc.y = -ndc.y; // Vulkan: Y 轴翻转
+    vec4 viewPos = camera.invProjection * ndc;
+    return viewPos / viewPos.w;
+}
+
+// 获取聚簇的近/远裁剪面深度
+float GetClusterNear(float slice, float numSlices, float nearPlane, float farPlane) {
+    // 对数分布: 近处精细, 远处粗糙
+    float ratio = slice / numSlices;
+    return nearPlane * pow(farPlane / nearPlane, ratio);
+}
+
+float GetClusterFar(float slice, float numSlices, float nearPlane, float farPlane) {
+    return GetClusterNear(slice + 1.0, numSlices, nearPlane, farPlane);
+}
+
+void main() {
+    uint tileX = gl_GlobalInvocationID.x;
+    uint tileY = gl_GlobalInvocationID.y;
+    uint tileZ = gl_GlobalInvocationID.z;
+
+    // 边界检查
+    if (tileX >= camera.gridSize.x ||
+        tileY >= camera.gridSize.y ||
+        tileZ >= camera.numZSlices) {
+        return;
+    }
+
+    uint clusterIndex = tileZ * camera.gridSize.x * camera.gridSize.y
+                      + tileY * camera.gridSize.x
+                      + tileX;
+
+    // 计算 tile 在屏幕空间的边界 (像素)
+    float tileWidth  = float(camera.screenSize.x) / float(camera.gridSize.x);
+    float tileHeight = float(camera.screenSize.y) / float(camera.gridSize.y);
+
+    float px = float(tileX) * tileWidth;
+    float py = float(tileY) * tileHeight;
+
+    // tile 4 个角在屏幕空间 (近裁剪面)
+    vec4 screenCorners[4];
+    screenCorners[0] = vec4(px / float(camera.screenSize.x),       py / float(camera.screenSize.y),       0.0, 1.0);
+    screenCorners[1] = vec4((px + tileWidth) / float(camera.screenSize.x), py / float(camera.screenSize.y),       0.0, 1.0);
+    screenCorners[2] = vec4(px / float(camera.screenSize.x),       (py + tileHeight) / float(camera.screenSize.y), 0.0, 1.0);
+    screenCorners[3] = vec4((px + tileWidth) / float(camera.screenSize.x), (py + tileHeight) / float(camera.screenSize.y), 0.0, 1.0);
+
+    // 转换到视空间
+    vec4 viewCorners[4];
+    for (int i = 0; i < 4; i++) {
+        viewCorners[i] = ScreenToView(screenCorners[i]);
+    }
+
+    // 计算 tile 在近裁剪面的视空间 AABB
+    vec3 minBounds = viewCorners[0].xyz;
+    vec3 maxBounds = viewCorners[0].xyz;
+    for (int i = 1; i < 4; i++) {
+        minBounds = min(minBounds, viewCorners[i].xyz);
+        maxBounds = max(maxBounds, viewCorners[i].xyz);
+    }
+
+    // 获取当前聚簇的深度范围
+    float nearDepth = GetClusterNear(float(tileZ), float(camera.numZSlices), camera.nearPlane, camera.farPlane);
+    float farDepth  = GetClusterFar(float(tileZ), float(camera.numZSlices), camera.nearPlane, camera.farPlane);
+
+    // 构建聚簇 AABB (视空间)
+    // 近端: min/max 的 Z 在近裁剪面
+    // 远端: 沿视线方向扩展
+    vec3 clusterMin = minBounds;
+    vec3 clusterMax = maxBounds;
+
+    // Z 范围: 视空间中 Z 为负 (Vulkan), 近大远小
+    clusterMin.z = -farDepth;
+    clusterMax.z = -nearDepth;
+
+    // 扩展 XY 范围: 沿视线方向成比例增大
+    float nearScale = nearDepth / camera.nearPlane;
+    float farScale  = farDepth  / camera.nearPlane;
+    clusterMin.xy *= farScale;
+    clusterMax.xy *= farScale;
+
+    // 写入 SSBO
+    clusterAABBs.aabbs[clusterIndex].min = vec4(clusterMin, 0.0);
+    clusterAABBs.aabbs[clusterIndex].max = vec4(clusterMax, 0.0);
+}

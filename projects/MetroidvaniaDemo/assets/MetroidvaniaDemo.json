@@ -11,10 +11,12 @@
     "rendering": {
         "maxSamples": 1,
         "maxBounces": 4,
-        "hardwareRayTracing": false,
+        "rtMode": "None",
         "pathTraceMode": "Flat",
         "enableNEE": false,
-        "maxBatchQuads": 1024
+        "maxBatchQuads": 1024,
+        "pixelPerfect": true,
+        "crtEffect": true
     },
     "renderMode": "2D",
     "scriptingBackend": "CoreCLR",

@@ -9,6 +9,7 @@ namespace Prisma::Graphic {
 
 class NPROpaquePass;
 class SkyboxPass;
+class OutlinePostProcessPass;
 class PostProcessPass2D;
 class UIPass2D;
 
@@ -22,12 +23,14 @@ public:
     int Initialize(IRenderDevice* device) override;
     void Shutdown() override;
     void Execute(const RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_NPR; }
 
 private:
     IRenderDevice* m_device = nullptr;
 
     std::shared_ptr<NPROpaquePass> m_nprOpaquePass;
     std::shared_ptr<SkyboxPass> m_skyboxPass;
+    std::shared_ptr<OutlinePostProcessPass> m_outlinePass;
     std::shared_ptr<PostProcessPass2D> m_postProcessPass;
     std::shared_ptr<UIPass2D> m_uiPass;
 };

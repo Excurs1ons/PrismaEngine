@@ -2,25 +2,12 @@
 
 #include "Export.h"
 #include "graphic/interfaces/RenderTypes.h"
-#include "graphic/pipelines/pathtracing/PathTracingPipeline.h"
 #include <glaze/glaze.hpp>
 #include <string>
 #include <vector>
 #include <cstdint>
 
 namespace Prisma {
-
-/* C# 脚本后端枚举（与编译时 PRISMA_ENABLE_SCRIPTING 值对应） */
-enum class RenderMode : uint8_t {
-    Mode2D = 0,
-    Mode3D_Forward = 1,
-    Mode3D_ForwardPlus = 2,
-    Mode3D_Deferred = 3,
-    Mode3D_DeferredPlus = 4,
-    Mode3D_PathTracing = 5,
-    Mode3D_ClusteredForward = 6,
-    SRP = 7
-};
 
 enum class ScriptingBackend : uint8_t {
     Off     = 0,
@@ -41,10 +28,12 @@ struct WindowConfig {
 struct RenderingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
-    bool hardwareRayTracing = false; // DXR 硬件加速预留
+    Graphic::RTMode rtMode = Graphic::RTMode::HardwareRT;  // 光线追踪模式
     Graphic::PathTraceMode pathTraceMode = Graphic::PathTraceMode::BVH;
     bool enableNEE = false;            // 下一事件估计（小光源时显著提升收敛）
     uint32_t maxBatchQuads = 10000;    // 2D 合批渲染器最大四边形数
+    bool pixelPerfect = true;          // 2D PixelPerfect 整数缩放（仅 2D 管线）
+    bool crtEffect = false;            // 2D CRT 扫描线效果（仅 2D 管线）
 };
 
 struct HeadlessConfig {
@@ -59,6 +48,7 @@ struct ProjectConfig {
     std::string entryScene;
     std::vector<std::string> assets;
     std::vector<std::string> scenes;   // 可选的多场景列表（F6/F7 切换）
+    std::vector<std::string> subsystems; // 非核心子系统白名单，如 ["Physics", "Audio"]
     WindowConfig window;
     RenderMode renderMode = RenderMode::Mode3D_Forward;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
@@ -81,6 +71,7 @@ struct glz::meta<Prisma::RenderMode> {
         "Deferred+", Mode3D_DeferredPlus,
         "PathTracing", Mode3D_PathTracing,
         "ClusteredForward", Mode3D_ClusteredForward,
+        "NPR", Mode3D_NPR,
         "SRP", SRP
     );
 };
@@ -112,6 +103,17 @@ struct glz::meta<Prisma::Graphic::PathTraceMode> {
     static constexpr auto value = glz::enumerate(
         "Flat", Flat,
         "BVH", BVH,
+        "HardwareRT", HardwareRT,
+        "RayQuery", RayQuery
+    );
+};
+
+template <>
+struct glz::meta<Prisma::Graphic::RTMode> {
+    using enum Prisma::Graphic::RTMode;
+    static constexpr auto value = glz::enumerate(
+        "None", None,
+        "RayQuery", RayQuery,
         "HardwareRT", HardwareRT
     );
 };
@@ -134,10 +136,12 @@ struct glz::meta<Prisma::RenderingConfig> {
     static constexpr auto value = glz::object(
         "maxSamples", &Prisma::RenderingConfig::maxSamples,
         "maxBounces", &Prisma::RenderingConfig::maxBounces,
-        "hardwareRayTracing", &Prisma::RenderingConfig::hardwareRayTracing,
+        "rtMode", &Prisma::RenderingConfig::rtMode,
         "pathTraceMode", &Prisma::RenderingConfig::pathTraceMode,
         "enableNEE", &Prisma::RenderingConfig::enableNEE,
-        "maxBatchQuads", &Prisma::RenderingConfig::maxBatchQuads
+        "maxBatchQuads", &Prisma::RenderingConfig::maxBatchQuads,
+        "pixelPerfect",  &Prisma::RenderingConfig::pixelPerfect,
+        "crtEffect",     &Prisma::RenderingConfig::crtEffect
     );
 };
 
@@ -158,6 +162,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "entryScene", &Prisma::ProjectConfig::entryScene,
         "assets", &Prisma::ProjectConfig::assets,
         "scenes", &Prisma::ProjectConfig::scenes,
+        "subsystems", &Prisma::ProjectConfig::subsystems,
         "window", &Prisma::ProjectConfig::window,
         "renderMode", &Prisma::ProjectConfig::renderMode,
         "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,

@@ -4,8 +4,11 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstdint>
 
-namespace Prisma { class Scene; }
+namespace Prisma {
+    class Scene;
+}
 
 namespace Prisma::Graphic {
 
@@ -58,6 +61,9 @@ public:
 
     // 场景加载后自动回调（引擎层在加载入口场景后调用）
     virtual void OnSceneLoaded(Scene* scene) {}
+
+    // 返回该管线对应的渲染模式枚举值
+    virtual RenderMode GetMode() const = 0;
 
     // 基础管线不再需要 AddRenderPass 这种灵活得过头的接口，
     // 具体的管线（如 ForwardPipeline）应该内部固定好自己的 Pass。

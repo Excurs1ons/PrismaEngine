@@ -1,20 +1,18 @@
 # Clangd configuration for PrismaEngine.
 #
-# On Windows (primary): CMake + Visual Studio produces MSVC-style
-#   compile_commands.json. We use "clang-cl" as the compiler driver because
-#   it natively understands MSVC-style flags (/MDd, /Zi, /Fo, etc.).
-#
 # On Linux: compile_commands.json is produced by CMake + Ninja with GCC-style
-#   flags. The "clang-cl" binary doesn't exist there, but clangd gracefully
-#   falls back to the compiler detected in compile_commands.json (clang++).
+#   flags. clangd auto-detects the compiler from compile_commands.json (clang++),
+#   which properly finds C++ standard library headers (libstdc++).
 #   The Remove rules below are largely no-ops (GCC flags don't match).
 #
+# On Windows: CMake + Visual Studio produces MSVC-style compile_commands.json.
+#   clangd auto-detects clang-cl from compile_commands.json, which natively
+#   understands MSVC-style flags (/MDd, /Zi, /Fo, etc.).
+#
 # Remove rules strip only flags that are unnecessary for clangd (response
-# files, output paths, warnings, etc.). clang-cl handles the rest natively.
+# files, output paths, warnings, etc.). The compiler driver handles the rest.
 
 CompileFlags:
-  Compiler: clang-cl
-
   Remove:
     # CMake external wrapping
     - "-external:*"

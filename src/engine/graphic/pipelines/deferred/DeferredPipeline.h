@@ -6,6 +6,7 @@
 #include "graphic/interfaces/IPass.h"
 #include "graphic/interfaces/IRenderTarget.h"
 #include "graphic/interfaces/IGBuffer.h"
+#include "graphic/interfaces/IPipeline.h"
 #include "math/MathTypes.h"
 #include <memory>
 #include <vector>
@@ -20,7 +21,7 @@ class SkyboxPass;
 class TransparentPass;
 class CompositionPass;
 
-class ENGINE_API DeferredPipeline : public LogicalDeferredPipeline {
+class ENGINE_API DeferredPipeline : public LogicalDeferredPipeline, public IPipeline {
 public:
     // 光源类型
     enum class LightType {
@@ -55,6 +56,12 @@ public:
 public:
     DeferredPipeline();
     ~DeferredPipeline() override;
+
+    // IPipeline 接口
+    int Initialize(IRenderDevice* device) override;
+    void Shutdown() override;
+    void Execute(const RenderContext& ctx) override;
+    RenderMode GetMode() const override { return RenderMode::Mode3D_Deferred; }
 
     // 初始化管线
     /// 创建并添加所有 Pass
@@ -132,6 +139,7 @@ public:
 private:
     // 更新所有 Pass 的相机数据
     void UpdatePassesCameraData(Prisma::Graphic::ICamera* camera);
+    void UpdatePassesCameraData(const PrismaMath::mat4& view, const PrismaMath::mat4& projection);
 
     // 收集渲染统计
     void CollectStats();
@@ -148,6 +156,8 @@ private:
 
     // 相机接口
     Prisma::Graphic::ICamera* m_camera;
+
+    IRenderDevice* m_device = nullptr;
 
     // 光照数据
     std::vector<Light> m_lights;

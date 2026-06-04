@@ -13,6 +13,7 @@ extern "C" { char* SDL_GetBasePath(void); void SDL_free(void* ptr); }
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/Shader.h"
 #include "graphic/Renderer2D.h"
+#include "graphic/2d/Pipeline2D.h"
 #include "SceneManager.h"
 #include "PhysicsSystem.h"
 #include "core/ECS.h"
@@ -108,23 +109,51 @@ int Engine::Initialize() {
         AssetDatabase::Get().Refresh("assets");
     }
 
+    // 1. 核心子系统（始终初始化）
     m_MemorySystem = AddSystem<Memory::MemorySystem>();
-    m_AnimationSystem = AddSystem<Animation::AnimationSystem>();
     m_JobSystem = AddSystem<JobSystem>();
     m_AssetManager = AddSystem<AssetManager>();
     m_InputManager = AddSystem<Input::InputManager>();
     m_SceneManager = AddSystem<SceneManager>();
-    m_PhysicsSystem = AddSystem<PhysicsSystem>();
     AddSystem<ConsoleSystem>();
     AddSystem<Graphic::ShaderLibrary>();
-    AddSystem<Particles::ParticleSystem>();
-    m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
-    m_AISystem = AddSystem<AI::AISystem>();
-    m_WaterSystem = AddSystem<Water::WaterSystem>();
-    m_NavigationSystem = AddSystem<Navigation::NavigationSystem>();
-    m_NetworkSystem = AddSystem<Network::NetworkSystem>();
-    m_LocalizationSystem = AddSystem<Localization::LocalizationSystem>();
 
+    // 2. 非核心子系统（根据配置条件初始化）
+    for (auto ns : m_Spec.enabledNonCoreSubsystems) {
+        switch (ns) {
+            case NonCoreSubsystem::Animation:
+                m_AnimationSystem = AddSystem<Animation::AnimationSystem>();
+                break;
+            case NonCoreSubsystem::Physics:
+                m_PhysicsSystem = AddSystem<PhysicsSystem>();
+                break;
+            case NonCoreSubsystem::Particles:
+                AddSystem<Particles::ParticleSystem>();
+                break;
+            case NonCoreSubsystem::Terrain:
+                m_TerrainSystem = AddSystem<Terrain::TerrainSystem>();
+                break;
+            case NonCoreSubsystem::AI:
+                m_AISystem = AddSystem<AI::AISystem>();
+                break;
+            case NonCoreSubsystem::Water:
+                m_WaterSystem = AddSystem<Water::WaterSystem>();
+                break;
+            case NonCoreSubsystem::Navigation:
+                m_NavigationSystem = AddSystem<Navigation::NavigationSystem>();
+                break;
+            case NonCoreSubsystem::Network:
+                m_NetworkSystem = AddSystem<Network::NetworkSystem>();
+                break;
+            case NonCoreSubsystem::Localization:
+                m_LocalizationSystem = AddSystem<Localization::LocalizationSystem>();
+                break;
+            default:
+                break;
+        }
+    }
+
+    // 3. 初始化所有已注册系统
     for (auto& sys : m_Systems) {
         if (sys->Initialize() != 0) {
             LOG_FATAL("Engine", "系统初始化失败！");
@@ -219,10 +248,12 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 spec.MaxFPS             = config.window.maxFPS;
                 spec.MaxSamples         = config.rendering.maxSamples;
                 spec.MaxBounces         = config.rendering.maxBounces;
-                spec.HardwareRayTracing = config.rendering.hardwareRayTracing;
+                spec.RTMode = config.rendering.rtMode;
                 spec.PathTraceMode      = config.rendering.pathTraceMode;
                 spec.EnableNEE          = config.rendering.enableNEE;
                 spec.MaxBatchQuads      = config.rendering.maxBatchQuads;
+                spec.PixelPerfect       = config.rendering.pixelPerfect;
+                spec.CRTEffect          = config.rendering.crtEffect;
                 spec.HeadlessFrames     = config.headless.frames;
                 spec.HeadlessWidth      = config.headless.width;
                 spec.HeadlessHeight     = config.headless.height;
@@ -242,6 +273,34 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 }
                 scriptingBackend = config.scriptingBackend;
                 renderMode       = config.renderMode;
+
+                // 从 project.jsonc 加载非核心子系统白名单
+                {
+                    auto& enabled = m_Spec.enabledNonCoreSubsystems;
+                    enabled.clear();
+                    for (const auto& name : config.subsystems) {
+                        if (name == "Physics") enabled.push_back(NonCoreSubsystem::Physics);
+                        else if (name == "Audio") enabled.push_back(NonCoreSubsystem::Audio);
+                        else if (name == "Navigation") enabled.push_back(NonCoreSubsystem::Navigation);
+                        else if (name == "AI") enabled.push_back(NonCoreSubsystem::AI);
+                        else if (name == "Particles") enabled.push_back(NonCoreSubsystem::Particles);
+                        else if (name == "Terrain") enabled.push_back(NonCoreSubsystem::Terrain);
+                        else if (name == "Water") enabled.push_back(NonCoreSubsystem::Water);
+                        else if (name == "Network") enabled.push_back(NonCoreSubsystem::Network);
+                        else if (name == "Localization") enabled.push_back(NonCoreSubsystem::Localization);
+                        else if (name == "ScriptEngine") enabled.push_back(NonCoreSubsystem::ScriptEngine);
+                        else if (name == "EditorMCP") enabled.push_back(NonCoreSubsystem::EditorMCP);
+                        else if (name == "Profiler") enabled.push_back(NonCoreSubsystem::Profiler);
+                        else if (name == "Animation") enabled.push_back(NonCoreSubsystem::Animation);
+                        else {
+                            LOG_WARNING("Engine", "未知的子系统名称: {0}", name);
+                        }
+                    }
+                    if (!enabled.empty()) {
+                        LOG_INFO("Engine", "非核心子系统白名单已加载: {} 个", enabled.size());
+                    }
+                }
+
                 LOG_INFO("Engine", "[诊断] config.renderMode={}, renderMode={}",
                          static_cast<int>(config.renderMode),
                          static_cast<int>(renderMode));
@@ -296,7 +355,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
                  renderMode == RenderMode::Mode2D ? "2D" : "Other");
         rDesc.maxSamples         = appSpec.MaxSamples;
         rDesc.maxBounces         = appSpec.MaxBounces;
-        rDesc.hardwareRayTracing = appSpec.HardwareRayTracing;
+        rDesc.rtMode = appSpec.RTMode;
         rDesc.maxBatchQuads      = appSpec.MaxBatchQuads;
         rDesc.enableValidation   = true;
         
@@ -308,6 +367,16 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
         if (m_RenderSystem->GetDevice()) {
             m_GPUName = m_RenderSystem->GetDevice()->GetGPUName();
+        }
+
+        // 应用 2D 管线配置
+        if (renderMode == RenderMode::Mode2D) {
+            if (auto pipeline2D = m_RenderSystem->GetMainPipelineAs<Graphic::Pipeline2D>()) {
+                pipeline2D->SetPixelPerfectEnabled(appSpec.PixelPerfect);
+                pipeline2D->SetCRTEnabled(appSpec.CRTEffect);
+                LOG_INFO("Engine", "2D 管线配置: pixelPerfect={}, crtEffect={}",
+                         appSpec.PixelPerfect, appSpec.CRTEffect);
+            }
         }
 
 #if PRISMA_ENABLE_SCRIPTING > 0
@@ -629,6 +698,48 @@ void Engine::Update(Timestep ts) {
     ExecuteMainThreadQueue();
     for (auto& sys : m_Systems) sys->Update(ts);
     if (m_CurrentApp) m_CurrentApp->OnUpdate(ts);
+}
+
+void Engine::Step(float deltaTime) {
+    if (!m_Running || !m_CurrentApp) return;
+
+    if (m_Window) {
+        m_Window->OnUpdate();
+    } else {
+        Platform::PumpEvents();
+    }
+
+    float clampedDelta = std::min(deltaTime, 0.1f);
+
+    // 1. System + Application update
+    Update(Timestep(clampedDelta));
+
+    // 2. Audio
+    if (m_audioDevice) m_audioDevice->Update(clampedDelta);
+
+    // 3. C# script engine
+#if PRISMA_ENABLE_SCRIPTING > 0
+    if (m_scriptEngine->IsInitialized())
+        m_scriptEngine->Update(clampedDelta);
+    EntityManager::Get().SwapBuffers();
+#endif
+
+    // 4. Render frame
+    if (GetRenderSystem()) {
+        GetRenderSystem()->BeginFrame();
+
+#if PRISMA_ENABLE_SCRIPTING > 0
+        if (m_scriptEngine->IsInitialized())
+            m_scriptEngine->Render(clampedDelta);
+#endif
+
+        m_CurrentApp->OnRender();
+        GetRenderSystem()->EndFrame();
+        GetRenderSystem()->Present();
+    }
+
+    // 5. Update frame stats
+    m_FrameStats.FPS = (deltaTime > 0.0f) ? (1.0f / deltaTime) : 0.0f;
 }
 
 void Engine::SubmitToMainThread(std::function<void()>&& func) {

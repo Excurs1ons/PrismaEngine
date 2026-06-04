@@ -44,6 +44,23 @@ set_property(CACHE PRISMA_ENABLE_SCRIPTING PROPERTY STRINGS OFF MONO CORECLR)
 
 option(PRISMA_BUILD_PROJECT_NEOEDITOR "Build NeoEditor project" ON)
 
+# ========== 子系统编译时裁剪 ==========
+# 默认全部 ON（向后兼容），OFF 时对应 .cpp 不加入编译
+option(PRISMA_BUILD_SUBSYSTEM_PHYSICS "Build Physics subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_AUDIO "Build Audio subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_NAVIGATION "Build Navigation subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_AI "Build AI subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_PARTICLES "Build Particles subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_TERRAIN "Build Terrain subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_WATER "Build Water subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_NETWORK "Build Network subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_LOCALIZATION "Build Localization subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_SCRIPTING "Build Scripting subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_EDITOR "Build Editor subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_PROFILING "Build Profiling subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_ANIMATION "Build Animation subsystem" ON)
+option(PRISMA_BUILD_SUBSYSTEM_CONSOLE "Build Console subsystem" ON)
+
 # ========== 打印配置信息 ==========
 
 message(STATUS "")
@@ -97,5 +114,14 @@ if(PRISMA_ENABLE_AUDIO_CODEC_FLAC)
 endif()
 message(STATUS "")
 message(STATUS "Scripting Backend: ${PRISMA_ENABLE_SCRIPTING}")
+message(STATUS "")
+message(STATUS "Subsystem Build Options:")
+foreach(opt IN ITEMS PRISMA_BUILD_SUBSYSTEM_PHYSICS PRISMA_BUILD_SUBSYSTEM_AUDIO PRISMA_BUILD_SUBSYSTEM_NAVIGATION PRISMA_BUILD_SUBSYSTEM_AI PRISMA_BUILD_SUBSYSTEM_PARTICLES PRISMA_BUILD_SUBSYSTEM_TERRAIN PRISMA_BUILD_SUBSYSTEM_WATER PRISMA_BUILD_SUBSYSTEM_NETWORK PRISMA_BUILD_SUBSYSTEM_LOCALIZATION PRISMA_BUILD_SUBSYSTEM_SCRIPTING PRISMA_BUILD_SUBSYSTEM_EDITOR PRISMA_BUILD_SUBSYSTEM_PROFILING PRISMA_BUILD_SUBSYSTEM_ANIMATION PRISMA_BUILD_SUBSYSTEM_CONSOLE)
+    if(${opt})
+        message(STATUS "  - ${opt}: ON")
+    else()
+        message(STATUS "  - ${opt}: OFF")
+    endif()
+endforeach()
 message(STATUS "==============================================")
 message(STATUS "")

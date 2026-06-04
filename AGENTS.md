@@ -10,7 +10,7 @@
 - **Prune branch**: Only SDL3 + Vulkan + ImGui. DX12/OpenGL/XAudio2 are FORCE-disabled in `cmake/DeviceOptions.cmake` — do not enable them.
 - **Dependency management**: FetchContent by default (no vcpkg needed). Set `-DPRISMA_USE_FETCHCONTENT=OFF` for vcpkg.
 - **Targets**: `Engine` (core lib), `Launcher` (executable), `Editor`, `SDK` packaging.
-- **Sample projects** (in `projects/`): `Prisma2D`, `PathTracing3D`, `PacManGame`, `PrismaCraft`, `ClusteredForward3D`, `Deferred3D`.
+- **Sample projects** (in `projects/`): `Prisma2D`, `PathTracing3D`, `PacManGame`, `PrismaCraft`, `ClusteredForward3D`, `Deferred3D`, `MetroidvaniaDemo`.
   - CI builds always pass `-DPRISMA_BUILD_PROJECT_*_MANAGED=OFF` to skip sample projects.
   - Each project has its own CMakeLists.txt and is gated by a `PRISMA_BUILD_PROJECT_*` option in `projects/CMakeLists.txt`.
 
@@ -38,6 +38,29 @@ cmake --build build/linux-x64-debug --target PathTracing3D
 - **No `(void)` casts** for unused params — use `[[maybe_unused]]`.
 - **Third-party warnings** (VMA, glaze, SPIRV-Tools) suppressed via CMake flags, never by modifying library source.
 - Mixed Chinese/English comments in source files — normal for this repo.
+
+## 2D Engine Enhancements (June 2026)
+
+### Physics2D
+- src/engine/physics2d/Quadtree2D.h/.cpp — spatial partitioning
+- src/engine/physics2d/Trigger2D.h/.cpp — trigger volumes
+
+### 2D Lighting
+- src/engine/graphic/2d/ShadowCaster2D.h — shadow caster component
+- src/engine/graphic/2d/Light2DPass.h/.cpp — shadow rendering integration
+- assets/shaders/ShadowGeometry.vert/.frag — shadow geometry shaders
+
+### 2D Graphics
+- src/engine/graphic/2d/PostProcessPass2D.h/.cpp — Bloom, Grayscale, Distortion
+- src/engine/graphic/Renderer2D.h/.cpp — DrawAnimatedSprite added
+- src/engine/graphic/SpriteAnimation.h/.cpp — GetCurrentUV() added
+- resources/common/shaders/glsl/2d/ — 6 post-processing + instanced tilemap shaders
+
+### Tilemap
+- src/engine/tilemap/TilemapRenderer.h/.cpp — GPU instancing added
+
+### Audio
+- src/engine/audio/AudioZone2D.h/.cpp — 2D zone audio
 
 ## LSP / clangd
 
@@ -72,12 +95,12 @@ cmake --build build/linux-x64-debug --target PathTracing3D
 
 | Platform | Workflow | Notes |
 |----------|----------|-------|
-| Windows  | `ci-windows.yml` | VS 2022, Engine only |
-| Linux    | `ci-linux.yml`   | Ninja, Engine only |
+| Windows  | `ci-windows.yml` | VS 2022, Engine + MetroidvaniaDemo |
+| Linux    | `ci-linux.yml`   | Ninja, Engine + MetroidvaniaDemo, dotnet SDK 10.0.x |
 | Android  | `ci-android.yml`  | NDK r28, API 34 |
 | Release  | `release.yml`     | All platforms, triggered by tags |
 
-CI workflows are in `.github/workflows/` and skip sample projects with CMake options.
+CI workflows are in `.github/workflows/`. Linux CI sets up `dotnet SDK 10.0.x` and all platform CI builds now include `-DPRISMA_BUILD_PROJECT_METROIDVANIADEMO=ON`.
 
 ## Notable quirks
 
@@ -85,4 +108,10 @@ CI workflows are in `.github/workflows/` and skip sample projects with CMake opt
 - `project(PRISMA ...)` — the CMake project name is `PRISMA`, not `PrismaEngine`.
 - Thread pool / job system: `src/engine/threading/JobSystem.cpp`, `ThreadManager.cpp`.
 - Physics: `src/engine/physics/` — AABB collision, raycast, sweep.
+- 2D Physics: `src/engine/physics2d/Quadtree2D.h/.cpp`, `Trigger2D.h/.cpp` — 2D quadtree collision + triggers.
+- 2D Graphics: `src/engine/graphic/2d/PostProcessPass2D.h/.cpp` (Bloom/Grayscale/Distortion), `Light2DPass.h/.cpp` (shadow rendering), `ShadowCaster2D.h`.
+- Audio: `src/engine/audio/AudioZone2D.h/.cpp` — 2D zone audio.
+- Tilemap: `src/engine/tilemap/TilemapRenderer.h/.cpp` — GPU instancing tilemap.
+- 2D Shaders: `assets/shaders/ShadowGeometry.vert/.frag`, `PointLight2D.vert/.frag`, `resources/common/shaders/glsl/2d/` (6 shader files for post-processing + tilemap instancing).
 - MCP (AI agent protocol): `src/editor/mcp/`, enabled by `PRISMA_ENABLE_MCP=ON` (Editor scope).
+- CI now includes `-DPRISMA_BUILD_PROJECT_METROIDVANIADEMO=ON` and dotnet SDK 10.0.x setup.

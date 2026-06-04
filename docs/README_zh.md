@@ -12,7 +12,7 @@ Prisma Engine 是一个使用现代 C++23 构建的跨平台 3D 游戏引擎，�
 简体中文 | [English](../README.md)
 
 > **当前状态**: Android Vulkan 运行时已达到生产级，CoreCLR C# 脚本系统已集成，SoA Entity Pool 支持百万级虚拟容量。
-> **最后更新**: 2026-05-25
+> **最后更新**: 2026-06-04
 
 ## CI/CD 状态
 
@@ -34,7 +34,7 @@ Prisma Engine 是一个使用现代 C++23 构建的跨平台 3D 游戏引擎，�
 | DirectX 12 后端 | ⏳ 70% | Windows 主要渲染后端 |
 | Platform 层 | ✅ 95% | 统一的 Windows/Linux/Android 抽象层 |
 | Logger 系统 | ✅ 100% | 线程安全的跨平台日志 |
-| 音频系统 | ✅ 50% | XAudio2/SDL3 后端，支持 3D 空间音频 |
+| 音频系统 | ✅ 80% | XAudio2/SDL3/miniaudio 后端，12 种 DSP 效果，3D 空间音频，2D 区域音频 |
 | 着色器 | ✅ 50% | PBR 光照着色器 (lit/unlit) |
 | Android 运行时 | ✅ 90% | 优化的 Vulkan 运行时（集成 GameActivity） |
 | 编辑器工具 | ⏳ 15% | ImGui 基础检查器 |
@@ -42,6 +42,30 @@ Prisma Engine 是一个使用现代 C++23 构建的跨平台 3D 游戏引擎，�
 | WebUI Editor | ✅ 80% | 浏览器编辑器，包含场景/游戏视图、层级、检查器 |
 
 **总体进度: ~82%**
+
+## 2D 引擎功能
+
+新增了完整的 2D 游戏引擎支持，涵盖以下 7 个领域：
+
+| 模块 | 状态 | 说明 |
+|------|------|------|
+| 动画系统 (SpriteAnimation) | ✅ 70% | 批量 Sprite 动画渲染 |
+| 音频系统 (2D Zone Audio) | ✅ 80% | 2D 区域音效系统 |
+| 粒子系统 (2D Projection) | ✅ 75% | 2D 粒子投影 |
+| 物理系统 (2D Quadtree) | ✅ 85% | 2D 四叉树碰撞检测 + 触发器 |
+| 2D 光照 | ✅ 80% | 2D 阴影映射 |
+| 瓦片地图 | ✅ 80% | GPU 实例化渲染 |
+| 后处理 | ✅ 80% | Bloom/灰度/畸变效果 |
+
+### 2D 引擎增强 (2026-06)
+
+- 2D 光照渲染+阴影映射
+- SpriteAnimation 合批渲染
+- Tilemap GPU Instancing
+- 2D 四叉树空间划分+触发器系统
+- Bloom/Grayscale/Distortion 后处理
+- GPU 粒子 2D 投影适配
+- 2D 区域音频
 
 ## 快速开始
 

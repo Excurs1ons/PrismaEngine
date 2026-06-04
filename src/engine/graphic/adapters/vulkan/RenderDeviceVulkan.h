@@ -37,10 +37,13 @@ public:
     // ========== IRenderDevice接口实现 ==========
     int Initialize(const DeviceDesc& desc) override;
     void Shutdown() override;
+    void ResetDeviceOnly();
+    int ReinitializeDevice(const DeviceDesc& desc);
     std::string GetName() const override;
     std::string GetAPIName() const override;
     std::string GetGPUName() const override;
     bool IsRayTracingSupported() const override { return m_rayTracingSupported; }
+    bool IsRayQuerySupported() const override;
 
     // 命令缓冲区
     std::unique_ptr<ICommandBuffer> CreateCommandBuffer(CommandBufferType type) override;
@@ -221,6 +224,7 @@ private:
     struct DeviceFeatures {
         bool supportsBindless            = false;
         bool supportsRayTracing          = false;
+        bool supportsRayQuery            = false;
         bool supportsMeshShading         = false;
         bool supportsVariableRateShading = false;
     } m_deviceFeatures;

@@ -17,6 +17,7 @@ public partial class AbilityGate : Script
         bool hasAbility = RequiredAbility switch
         {
             "Dash" => GameState.HasDash,
+            "DoubleJump" => GameState.HasDoubleJump,
             _ => false
         };
 

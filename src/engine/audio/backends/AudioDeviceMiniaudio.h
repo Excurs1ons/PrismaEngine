@@ -2,6 +2,7 @@
 
 #include "IAudioDevice.h"
 #include "AudioNode.h"
+#include "audio/dsp/EffectProcessor.h"
 
 #include <miniaudio.h>
 
@@ -76,6 +77,10 @@ public:
     AudioStats GetStats() const override;
     void ResetStats() override;
 
+    // ========== 音效 ==========
+    bool ApplyEffect(AudioVoiceId voiceId, EffectType type, const void* params) override;
+    void RemoveEffects(AudioVoiceId voiceId) override;
+
     // ========== 调试功能 ==========
     std::string GenerateDebugReport() override;
 
@@ -103,6 +108,12 @@ private:
         float coneOuterAngle = 360.0f;
         float coneOuterGain = 0.0f;
         float rolloffFactor = 1.0f;
+
+        // 音效状态
+        EffectType effectType = EffectType::None;
+        uint8_t effectParams[128] = {}; // 存储 EffectParams 联合体 (最大~120字节)
+        uint32_t effectParamsSize = 0;
+        DSP::EffectState effectState;
     };
 
     ma_device m_device = {};

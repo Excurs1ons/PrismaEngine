@@ -56,7 +56,7 @@ IAudioDevice::DeviceInfo AudioDeviceMiniaudio::GetDeviceInfo() const {
     info.isDefault = true;
     info.maxVoices = 256;
     info.supports3D = true;
-    info.supportsEffects = false;
+    info.supportsEffects = true;
     return info;
 }
 
@@ -86,17 +86,116 @@ void AudioDeviceMiniaudio::OnSendAudio(ma_device* pDevice, void* pOutput,
 
     float* out = static_cast<float*>(pOutput);
     uint32_t channels = self->m_desc.outputFormat.channels;
+    uint32_t sampleRate = self->m_device.sampleRate;
+    if (sampleRate == 0) sampleRate = 48000;
 
-    DSP::AudioBuffer mixBuf(channels, frameCount);
+    // 清空输出
+    std::memset(out, 0, sizeof(float) * frameCount * channels);
 
+    // 处理 DSP 图（如果存在）直接输出到 out
     if (self->m_graph) {
-        self->m_graph->Process(mixBuf);
+        DSP::AudioBuffer graphBuf(channels, frameCount);
+        self->m_graph->Process(graphBuf);
+        for (uint32_t f = 0; f < frameCount; ++f)
+            for (uint32_t c = 0; c < channels; ++c)
+                out[f * channels + c] += graphBuf.GetChannel(c)[f];
     }
 
-    for (uint32_t f = 0; f < frameCount; ++f) {
-        for (uint32_t c = 0; c < channels; ++c) {
-            out[f * channels + c] = mixBuf.GetChannel(c)[f] * self->m_masterVolume;
+    // 逐 Voice 读取 PCM → 转换 → 应用效果 → 混合
+    {
+        ma_mutex_lock(&self->m_mutex);
+
+        std::vector<AudioVoiceId> finishedVoices;
+
+        // 每个 Voice 使用独立临时缓冲, 方便应用效果后再混合
+        std::vector<float> voiceBuf; // 按需扩容
+
+        for (auto& [id, voice] : self->m_voices) {
+            if (voice.state != VoiceState::Playing || !voice.clip) continue;
+
+            const auto& clip = *voice.clip;
+            if (clip.data.empty() || clip.format.sampleRate == 0) continue;
+
+            const size_t bytesPerFrame = clip.format.GetFrameSize();
+            const uint32_t clipChannels = clip.format.channels;
+
+            // 确保 voiceBuf 足够大 (channels * frames)
+            size_t needed = (size_t)channels * frameCount;
+            if (voiceBuf.size() < needed) voiceBuf.resize(needed, 0.0f);
+            std::fill(voiceBuf.begin(), voiceBuf.begin() + needed, 0.0f);
+
+            // 读取 PCM 数据并转换为 float (planar 格式)
+            // voiceBuf[c * frameCount + f] 存储声道 c 的第 f 帧
+            bool voiceFinished = false;
+            for (uint32_t f = 0; f < frameCount; ++f) {
+                // 检查是否到达结尾
+                if (voice.readCursor + bytesPerFrame > clip.data.size()) {
+                    if (voice.desc.loop) {
+                        voice.readCursor = 0;
+                    } else {
+                        voiceFinished = true;
+                        break;
+                    }
+                }
+
+                const uint8_t* src = clip.data.data() + voice.readCursor;
+
+                if (clip.format.bitsPerSample == 32) {
+                    const float* srcF = reinterpret_cast<const float*>(src);
+                    for (uint32_t c = 0; c < clipChannels; ++c)
+                        voiceBuf[c * frameCount + f] = srcF[c];
+                } else if (clip.format.bitsPerSample == 16) {
+                    const int16_t* srcI = reinterpret_cast<const int16_t*>(src);
+                    for (uint32_t c = 0; c < clipChannels; ++c)
+                        voiceBuf[c * frameCount + f] = (float)srcI[c] / 32768.0f;
+                } else if (clip.format.bitsPerSample == 8) {
+                    for (uint32_t c = 0; c < clipChannels; ++c)
+                        voiceBuf[c * frameCount + f] = (float)((int)src[c] - 128) / 128.0f;
+                }
+
+                voice.readCursor += bytesPerFrame;
+            }
+
+            // 应用音效 (逐声道处理)
+            if (!voiceFinished && voice.effectType != EffectType::None && voice.effectParamsSize > 0) {
+                for (uint32_t c = 0; c < clipChannels; ++c) {
+                    float* chBuf = voiceBuf.data() + c * frameCount;
+                    DSP::ProcessEffect(chBuf, frameCount - 0,
+                                       clipChannels, sampleRate,
+                                       voice.effectType,
+                                       voice.effectParams,
+                                       voice.effectState);
+                }
+            }
+
+            // 应用音量和 3D 衰减, 并混合到输出
+            float vol = voice.desc.volume;
+            for (uint32_t f = 0; f < frameCount; ++f) {
+                for (uint32_t c = 0; c < channels; ++c) {
+                    uint32_t srcCh = std::min(c, clipChannels - 1);
+                    out[f * channels + c] += voiceBuf[srcCh * frameCount + f] * vol;
+                }
+            }
+
+            if (voiceFinished) {
+                finishedVoices.push_back(id);
+            }
         }
+
+        for (auto vid : finishedVoices) {
+            auto it = self->m_voices.find(vid);
+            if (it != self->m_voices.end()) {
+                it->second.state = VoiceState::Stopped;
+                self->m_voices.erase(it);
+            }
+        }
+
+        ma_mutex_unlock(&self->m_mutex);
+    }
+
+    // 主音量 + 削波保护
+    for (uint32_t f = 0; f < frameCount * channels; ++f) {
+        out[f] = std::clamp(out[f] * self->m_masterVolume, -1.0f, 1.0f);
     }
 }
 
@@ -444,6 +543,50 @@ std::string AudioDeviceMiniaudio::GenerateDebugReport() {
     ma_mutex_unlock(&m_mutex);
 
     return report;
+}
+
+bool AudioDeviceMiniaudio::ApplyEffect(AudioVoiceId voiceId, EffectType type, const void* params) {
+    if (type == EffectType::None) {
+        RemoveEffects(voiceId);
+        return true;
+    }
+
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it == m_voices.end()) {
+        ma_mutex_unlock(&m_mutex);
+        return false;
+    }
+
+    auto& voice = it->second;
+    if (type != voice.effectType) {
+        DSP::ResetEffectState(voice.effectState);
+    }
+    voice.effectType = type;
+
+    // 复制参数到 Voice 的内部存储
+    if (params) {
+        // EffectParams union is ~104 bytes, fits in 128 byte buffer
+        std::memcpy(voice.effectParams, params,
+                    std::min(sizeof(voice.effectParams), (size_t)128));
+        voice.effectParamsSize = std::min(sizeof(voice.effectParams), (size_t)128);
+    } else {
+        voice.effectParamsSize = 0;
+    }
+
+    ma_mutex_unlock(&m_mutex);
+    return true;
+}
+
+void AudioDeviceMiniaudio::RemoveEffects(AudioVoiceId voiceId) {
+    ma_mutex_lock(&m_mutex);
+    auto it = m_voices.find(voiceId);
+    if (it != m_voices.end()) {
+        it->second.effectType = EffectType::None;
+        it->second.effectParamsSize = 0;
+        DSP::ResetEffectState(it->second.effectState);
+    }
+    ma_mutex_unlock(&m_mutex);
 }
 
 void AudioDeviceMiniaudio::FireEvent(AudioEventType type, AudioVoiceId voiceId, const std::string& msg) {

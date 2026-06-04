@@ -51,6 +51,14 @@ int Pipeline2D::Initialize(IRenderDevice* device) {
     return 0;
 }
 
+void Pipeline2D::SetPixelPerfectEnabled(bool enabled) {
+    if (m_pixelPass) m_pixelPass->SetPixelPerfectEnabled(enabled);
+}
+
+void Pipeline2D::SetCRTEnabled(bool enabled) {
+    if (m_ppPass) m_ppPass->SetEffect(PostProcessPass2D::EffectType::CRT, enabled);
+}
+
 void Pipeline2D::Shutdown() {
     if (m_pixelPass) {
         m_pixelPass->Shutdown();

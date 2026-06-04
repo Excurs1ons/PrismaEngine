@@ -2,6 +2,9 @@
 
 #include "app/Application.h"
 #include "scripting/ScriptEngine.h"
+#include "tilemap/Tilemap.h"
+#include "tilemap/TilemapRenderer.h"
+#include "graphic/interfaces/ITexture.h"
 #include <memory>
 
 namespace Prisma {
@@ -21,10 +24,18 @@ public:
 
 private:
     bool m_autoQuit = false;
-    bool m_simInput = true;  // 测试模式：自动移动角色 + 相机跟随
+    bool m_simInput = false; // false=real keyboard input; true=headless test mode
+    std::shared_ptr<Tilemap::Tilemap> m_tilemap;
+    Tilemap::TilemapRenderer m_tilemapRenderer;
     int m_simFrame = 0;
     float m_elapsedTime = 0;
     float m_autoExitTimeout = 30.0f; // 30秒自动退出
+
+    std::shared_ptr<Graphic::ITexture> m_playerTexture;
+    std::shared_ptr<Graphic::ITexture> m_enemyTexture;
+    std::shared_ptr<Graphic::ITexture> m_dashPickupTexture;
+    std::shared_ptr<Graphic::ITexture> m_abilityGateTexture;
+    std::shared_ptr<Graphic::ITexture> m_whiteTexture;
 };
 
 } // namespace Prisma

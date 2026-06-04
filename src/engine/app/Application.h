@@ -32,10 +32,12 @@ struct ApplicationSpecification {
     uint32_t MaxFPS = 0;
     uint32_t MaxSamples = 512;
     uint32_t MaxBounces = 4;
-    bool HardwareRayTracing = false;
+    Graphic::RTMode RTMode = Graphic::RTMode::HardwareRT;
     Graphic::PathTraceMode PathTraceMode = Graphic::PathTraceMode::BVH;
     bool EnableNEE = false;
     uint32_t MaxBatchQuads = 10000;
+    bool PixelPerfect = true;
+    bool CRTEffect = false;
     uint32_t HeadlessFrames = 500;
     uint32_t HeadlessWidth = 1080;
     uint32_t HeadlessHeight = 1080;

@@ -2,6 +2,7 @@
 #include "graphic/Renderer2D.h"
 #include "graphic/Renderer.h"
 #include "graphic/OrthographicCamera.h"
+#include "graphic/interfaces/IResourceManager.h"
 #include "app/Engine.h"
 #include "scene/SceneManager.h"
 #include "scene/Scene.h"
@@ -9,7 +10,10 @@
 #include "core/Event.h"
 #include "input/InputManager.h"
 #include "Logger.h"
+#include "graphic/RenderSystem.h"
+#include "graphic/2d/Pipeline2D.h"
 #include <vector>
+#include <filesystem>
 #include <SDL3/SDL_scancode.h>
 
 namespace Prisma {
@@ -45,7 +49,79 @@ MetroidvaniaApp::MetroidvaniaApp()
 int MetroidvaniaApp::OnInitialize() {
     LOG_INFO("Metroidvania", "Initializing C# scripted demo, resolution={0}x{1} simInput={2} autoExit={3}s",
              m_Spec.Width, m_Spec.Height, m_simInput, m_autoExitTimeout);
-    Engine::Get().GetSceneManager()->CreateNewScene();
+
+    auto* sceneMgr = Engine::Get().GetSceneManager();
+    if (!sceneMgr->GetCurrentScene()) {
+        sceneMgr->CreateNewScene();
+    }
+
+    auto* resMgr = Engine::Get().GetRenderResourceManager();
+    if (!resMgr) {
+        LOG_WARNING("Metroidvania", "No render resource manager - textures disabled");
+    }
+
+    // 辅助：先尝试从文件加载纹理，失败则回退为 1x1 纯色纹理
+    auto loadTextureFromFile = [resMgr](const std::string& path, uint32_t fallbackRGBA)
+        -> std::shared_ptr<Graphic::ITexture> {
+        if (!resMgr) return nullptr;
+        if (std::filesystem::exists(path)) {
+            auto tex = resMgr->LoadTexture(path);
+            if (tex) return tex;
+            LOG_WARNING("Metroidvania", "Failed to load {0}, using fallback", path);
+        } else {
+            LOG_WARNING("Metroidvania", "File not found: {0}, using fallback", path);
+        }
+        Graphic::TextureDesc desc;
+        desc.width = 1;
+        desc.height = 1;
+        desc.format = Graphic::TextureFormat::RGBA8_UNorm;
+        return resMgr->CreateTextureFromMemory(&fallbackRGBA, sizeof(fallbackRGBA), desc);
+    };
+
+    // 加载地砖地图
+    m_tilemap = std::make_shared<Tilemap::Tilemap>();
+    if (m_tilemap->LoadFromJSON("assets/maps/test_dungeon.json")) {
+        m_tilemapRenderer.SetTilemap(m_tilemap);
+        m_tilemapRenderer.SetTexture(loadTextureFromFile("assets/textures/tiles.png", 0xFFFFFFFF));
+        LOG_INFO("Metroidvania", "Tilemap loaded: {}x{} tiles, {} layers",
+                 m_tilemap->GetWidth(), m_tilemap->GetHeight(),
+                 m_tilemap->GetLayerCount());
+    } else {
+        LOG_WARNING("Metroidvania", "Failed to load tilemap, tile rendering disabled");
+        m_tilemap.reset();
+    }
+
+    // 加载精灵纹理
+    if (resMgr) {
+        m_playerTexture      = loadTextureFromFile("assets/textures/player.png", 0xFFFF6400);
+        m_enemyTexture       = loadTextureFromFile("assets/textures/enemy.png", 0xFF3232FF);
+        m_dashPickupTexture  = loadTextureFromFile("assets/textures/pickup.png", 0xFF32FF96);
+        m_abilityGateTexture = loadTextureFromFile("assets/textures/gate.png", 0xFF808080);
+        // white fallback (always programmatic)
+        Graphic::TextureDesc desc;
+        desc.width = 1; desc.height = 1; desc.format = Graphic::TextureFormat::RGBA8_UNorm;
+        uint32_t white = 0xFFFFFFFF;
+        m_whiteTexture = resMgr->CreateTextureFromMemory(&white, sizeof(white), desc);
+        LOG_INFO("Metroidvania", "Loaded sprite textures (file or fallback)");
+    }
+
+    // Enable Post-Processing (PixelPerfect + CRT) for retro pixel-art aesthetic
+    auto* renderSys = Engine::Get().GetRenderSystem();
+    if (renderSys)
+    {
+        auto pipeline2D = renderSys->GetMainPipelineAs<Graphic::Pipeline2D>();
+        if (pipeline2D)
+        {
+            pipeline2D->SetPixelPerfectEnabled(true);
+            pipeline2D->SetCRTEnabled(true);
+            LOG_INFO("Metroidvania", "Pipeline2D: PixelPerfect=ON, CRT=ON");
+        }
+        else
+        {
+            LOG_WARNING("Metroidvania", "Pipeline is not Pipeline2D - post-processing disabled");
+        }
+    }
+
     return 0;
 }
 
@@ -89,9 +165,36 @@ void MetroidvaniaApp::OnRender() {
     );
 
     Graphic::Renderer2D::BeginScene(ortho);
+
+    // 从 SoA 数据池读取实体位置，用精灵纹理绘制
+    auto& em = EntityManager::Get();
+    auto* rb = em.GetRenderData();
+    auto* tb = em.GetTransformRead();
+    uint32_t count = em.GetAliveCount();
+
+    for (uint32_t i = 0; i < count; ++i) {
+        if (!rb->active[i]) continue;
+
+        // 根据实体尺寸匹配对应纹理
+        std::shared_ptr<Graphic::ITexture> tex;
+        float w = rb->sizeW[i];
+        float h = rb->sizeH[i];
+        if (w >= 12.0f && w <= 13.0f && h >= 16.0f && h <= 17.0f)      tex = m_playerTexture;
+        else if (w >= 14.0f && w <= 15.0f && h >= 14.0f && h <= 15.0f) tex = m_enemyTexture;
+        else if (w >= 12.0f && w <= 13.0f && h >= 12.0f && h <= 13.0f) tex = m_dashPickupTexture;
+        else if (w >= 32.0f && w <= 33.0f && h >= 32.0f && h <= 33.0f) tex = m_abilityGateTexture;
+        else                                                              tex = m_whiteTexture;
+
+        Graphic::Renderer2D::DrawQuad(
+            Vector2{tb->posX[i], tb->posY[i]},
+            Vector2{rb->sizeW[i], rb->sizeH[i]},
+            tex
+        );
+    }
+
     // 显式红色方块测试（验证管线shader是否工作）
     Graphic::Renderer2D::DrawQuad(Vector2{128, 112}, Vector2{32, 32}, {1.0f, 0.0f, 0.0f, 1.0f});
-    Graphic::Renderer2D::DrawNodesSoA();
+    if (m_tilemap) m_tilemapRenderer.Render(ortho);
     Graphic::Renderer2D::EndScene();
 }
 
@@ -103,6 +206,19 @@ void MetroidvaniaApp::OnEvent(Event& e) {
         if (ev.GetKeyCode() == SDL_SCANCODE_ESCAPE) { 
             LOG_INFO("Metroidvania", "ESC pressed — closing");
             Close(); return true; 
+        }
+        // Forward real keyboard presses to InputManager for C# scripts
+        auto* input = Engine::Get().GetInputManager();
+        if (input) {
+            input->SetKeyState(static_cast<KeyCode>(ev.GetKeyCode()), true);
+        }
+        return false;
+    });
+
+    d.Dispatch<KeyReleasedEvent>([this](KeyReleasedEvent& ev) {
+        auto* input = Engine::Get().GetInputManager();
+        if (input) {
+            input->SetKeyState(static_cast<KeyCode>(ev.GetKeyCode()), false);
         }
         return false;
     });
