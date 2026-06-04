@@ -26,6 +26,7 @@ layout(std140, binding = 1) uniform CameraUniforms {
     float u_Near;
     vec3  u_CameraForward;
     float u_Far;
+    float u_Use2D;   // 1.0 = 2D mode, 0.0 = 3D mode
 } camera;
 
 // 输出到片段着色器
@@ -64,11 +65,13 @@ void main() {
         return;
     }
 
-    // 相机面向公告板
+    // 相机面向公告板（2D 模式使用固定朝向）
     vec2 offset = cornerOffsets[cornerIdx];
+    vec3 right = (camera.u_Use2D > 0.5) ? vec3(1.0, 0.0, 0.0) : camera.u_CameraRight;
+    vec3 up    = (camera.u_Use2D > 0.5) ? vec3(0.0, 1.0, 0.0) : camera.u_CameraUp;
     vec3 quadPos = p.position.xyz
-                 + camera.u_CameraRight * offset.x * p.position.w
-                 + camera.u_CameraUp    * offset.y * p.position.w;
+                 + right * offset.x * p.position.w
+                 + up    * offset.y * p.position.w;
 
     gl_Position = camera.u_ViewProjection * vec4(quadPos, 1.0);
 

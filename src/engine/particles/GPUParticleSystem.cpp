@@ -38,13 +38,15 @@ static_assert(sizeof(ParticleUniformData) == 32, "ParticleUniformData must be 32
 
 // particles_render.vert 的 camera uniform 数据
 // layout(std140, binding = 1) uniform CameraUniforms { ... }
-// std140 布局中 vec3 对齐到 16 字节，需显式填充
+// 着色器使用 GL_EXT_scalar_block_layout，vec3 按标量对齐（4 字节）
+// 因此 u_Near(offset96) + u_CameraForward(offset100) + u_Far(offset112) + u_Use2D(offset116)
+// 共计 120 字节，对齐到 16 → 128 字节
 struct alignas(16) CameraUniformPacked {
     float viewProj[16];     // offset 0:   mat4 u_ViewProjection (4*vec4)
     float cameraRight[4];   // offset 64:  vec3 u_CameraRight + 1 pad
     float cameraUp[4];      // offset 80:  vec3 u_CameraUp + 1 pad
     float nearFwd[4];       // offset 96:  float u_Near + vec3 u_CameraForward
-    float farPad[4];        // offset 112: float u_Far + 3 pad
+    float farUse2D[4];      // offset 112: float u_Far + float u_Use2D + 2 pad
 };
 static_assert(sizeof(CameraUniformPacked) == 128, "CameraUniformPacked must be 128 bytes (std140)");
 
@@ -561,6 +563,112 @@ void GPUParticleSystem::UploadParticleData() {
 }
 
 // ============================================================================
+// Emit2D — 在 2D 坐标发射粒子（z 强制为 0）
+// ============================================================================
+
+void GPUParticleSystem::Emit2D(float x, float y, const EmitterConfig& config) {
+    if (!m_Initialized) return;
+
+    EmitterConfig adjusted = config;
+    adjusted.position = Vector3(x, y, 0.0f);
+    uint32_t count = std::max(1u, config.burstCount > 0 ? config.burstCount : 1u);
+
+    // 临时保存 m_use2D 并确保启用
+    bool was2D = m_use2D;
+    m_use2D = true;
+    SpawnParticles(count, adjusted);
+    m_use2D = was2D;
+}
+
+// ============================================================================
+// Update2DCameraUniforms — 更新 2D 模式摄像机 uniform
+// 使用正交投影 + 固定朝向公告板（不跟踪相机朝向）
+// ============================================================================
+
+void GPUParticleSystem::Update2DCameraUniforms(Graphic::ICamera* camera,
+                                               Graphic::ICommandBuffer* cmdBuffer) {
+    (void)cmdBuffer;
+    auto& extra = GetExtra(this);
+    if (!extra.cameraUniformBuffer) return;
+
+    CameraUniformPacked camData;
+    std::memset(&camData, 0, sizeof(camData));
+
+    // 正交视图投影矩阵（从相机获取，应为 OrthographicCamera 的 VP）
+    auto vp = camera->GetViewProjectionMatrix();
+    std::memcpy(camData.viewProj, &vp, sizeof(camData.viewProj));
+
+    // 2D 固定公告板朝向：right=(1,0,0), up=(0,1,0)
+    camData.cameraRight[0] = 1.0f;
+    camData.cameraRight[1] = 0.0f;
+    camData.cameraRight[2] = 0.0f;
+    camData.cameraRight[3] = 0.0f;
+
+    camData.cameraUp[0] = 0.0f;
+    camData.cameraUp[1] = 1.0f;
+    camData.cameraUp[2] = 0.0f;
+    camData.cameraUp[3] = 0.0f;
+
+    // 近平面 + 前方向（2D 模式下前方向朝屏幕内）
+    camData.nearFwd[0] = camera->GetNearPlane();
+    camData.nearFwd[1] = 0.0f;
+    camData.nearFwd[2] = 0.0f;
+    camData.nearFwd[3] = -1.0f;
+
+    // 远平面 + 2D 标记
+    camData.farUse2D[0] = camera->GetFarPlane();
+    camData.farUse2D[1] = 1.0f;  // u_Use2D = 1.0
+    camData.farUse2D[2] = 0.0f;
+    camData.farUse2D[3] = 0.0f;
+
+    extra.cameraUniformBuffer->UpdateData(&camData, sizeof(camData), 0);
+}
+
+// ============================================================================
+// Update3DCameraUniforms — 更新 3D 模式摄像机 uniform
+// 使用透视投影 + 面向相机的公告板（跟踪相机朝向）
+// ============================================================================
+
+void GPUParticleSystem::Update3DCameraUniforms(Graphic::ICamera* camera,
+                                               Graphic::ICommandBuffer* cmdBuffer) {
+    (void)cmdBuffer;
+    auto& extra = GetExtra(this);
+    if (!extra.cameraUniformBuffer) return;
+
+    CameraUniformPacked camData;
+
+    // 透视视图投影矩阵（从相机获取）
+    auto vp = camera->GetViewProjectionMatrix();
+    std::memcpy(camData.viewProj, &vp, sizeof(camData.viewProj));
+
+    // 3D 公告板跟踪相机朝向
+    auto right = camera->GetRight();
+    camData.cameraRight[0] = right.x;
+    camData.cameraRight[1] = right.y;
+    camData.cameraRight[2] = right.z;
+    camData.cameraRight[3] = 0.0f;
+
+    auto up = camera->GetUp();
+    camData.cameraUp[0] = up.x;
+    camData.cameraUp[1] = up.y;
+    camData.cameraUp[2] = up.z;
+    camData.cameraUp[3] = 0.0f;
+
+    auto fwd = camera->GetForward();
+    camData.nearFwd[0] = camera->GetNearPlane();
+    camData.nearFwd[1] = fwd.x;
+    camData.nearFwd[2] = fwd.y;
+    camData.nearFwd[3] = fwd.z;
+
+    camData.farUse2D[0] = camera->GetFarPlane();
+    camData.farUse2D[1] = 0.0f;  // u_Use2D = 0.0
+    camData.farUse2D[2] = 0.0f;
+    camData.farUse2D[3] = 0.0f;
+
+    extra.cameraUniformBuffer->UpdateData(&camData, sizeof(camData), 0);
+}
+
+// ============================================================================
 // UpdateParticles — 每帧更新：发射新粒子 + dispatch compute shader
 // ============================================================================
 
@@ -635,37 +743,11 @@ void GPUParticleSystem::RenderParticles(Graphic::ICamera* camera,
     auto& extra = GetExtra(this);
     if (!extra.gfxDescriptorSet) return;
 
-    // === 更新摄像机 Uniform ===
-    {
-        CameraUniformPacked camData;
-
-        auto vp = camera->GetViewProjectionMatrix();
-        std::memcpy(camData.viewProj, &vp, sizeof(camData.viewProj));
-
-        auto right = camera->GetRight();
-        camData.cameraRight[0] = right.x;
-        camData.cameraRight[1] = right.y;
-        camData.cameraRight[2] = right.z;
-        camData.cameraRight[3] = 0.0f;
-
-        auto up = camera->GetUp();
-        camData.cameraUp[0] = up.x;
-        camData.cameraUp[1] = up.y;
-        camData.cameraUp[2] = up.z;
-        camData.cameraUp[3] = 0.0f;
-
-        auto fwd = camera->GetForward();
-        camData.nearFwd[0] = camera->GetNearPlane();
-        camData.nearFwd[1] = fwd.x;
-        camData.nearFwd[2] = fwd.y;
-        camData.nearFwd[3] = fwd.z;
-
-        camData.farPad[0] = camera->GetFarPlane();
-        camData.farPad[1] = 0.0f;
-        camData.farPad[2] = 0.0f;
-        camData.farPad[3] = 0.0f;
-
-        extra.cameraUniformBuffer->UpdateData(&camData, sizeof(camData), 0);
+    // === 更新摄像机 Uniform（根据 2D/3D 模式） ===
+    if (m_use2D) {
+        Update2DCameraUniforms(camera, cmdBuffer);
+    } else {
+        Update3DCameraUniforms(camera, cmdBuffer);
     }
 
     // === Stage 1: 计算着色器更新粒子 ===
@@ -715,6 +797,10 @@ void GPUParticleSystem::SpawnParticles(uint32_t count, const EmitterConfig& conf
 
         // 位置（在发射器形状内随机）
         Vector3 pos = RandomPositionInShape(config, m_RNG);
+        // 2D 模式下强制 z=0
+        if (m_use2D) {
+            pos.z = 0.0f;
+        }
         // 方向/速度
         Vector3 dir = RandomDirectionInShape(config, m_RNG);
         float speed = config.speed.Random(m_RNG);

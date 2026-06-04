@@ -61,6 +61,13 @@ public:
     // 发射粒子（填充 CPU staging buffer，然后上传到 GPU）
     void SpawnParticles(uint32_t count, const EmitterConfig& config);
 
+    // 2D 模式：在指定坐标发射单次粒子（z=0）
+    void Emit2D(float x, float y, const EmitterConfig& config);
+
+    // 设置 2D 模式（true = 使用正交投影 + 固定朝向公告板）
+    void SetUse2D(bool enable) { m_use2D = enable; }
+    bool IsUsing2D() const { return m_use2D; }
+
     // 访问
     uint32_t GetAliveCount() const { return m_AliveCount; }
     uint32_t GetMaxParticles() const { return m_MaxParticles; }
@@ -103,12 +110,17 @@ private:
     // 混合模式
     ParticleBlendMode m_BlendMode = ParticleBlendMode::Alpha;
 
+    // 2D 模式
+    bool m_use2D = false;
+
     // 内部辅助函数
     bool CreateBuffers();
     bool CreateShaders();
     bool CreatePipelines();
     void UpdateIndirectBuffer();
     void UploadParticleData();
+    void Update2DCameraUniforms(Graphic::ICamera* camera, Graphic::ICommandBuffer* cmd);
+    void Update3DCameraUniforms(Graphic::ICamera* camera, Graphic::ICommandBuffer* cmd);
 };
 
 } // namespace Prisma::Particles
