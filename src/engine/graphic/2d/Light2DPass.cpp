@@ -138,7 +138,7 @@ void Light2DPass::EnsureShadowResources(IRenderDevice* device) {
 
     auto buf = rf->CreateBufferImpl(vbDesc);
     if (buf) {
-        buf->SetDebugName("Light2DPass_ShadowVB");
+        buf->SetDebugTag("Light2DPass_ShadowVB");
         m_shadowVB = std::shared_ptr<IBuffer>(std::move(buf));
         m_shadowVBCapacity = 1024;
     }
@@ -288,7 +288,7 @@ flush_shadow:
         auto rf = device->GetResourceFactory();
         auto buf = rf->CreateBufferImpl(vbDesc);
         if (buf) {
-            buf->SetDebugName("Light2DPass_ShadowVB");
+            buf->SetDebugTag("Light2DPass_ShadowVB");
             m_shadowVB = std::shared_ptr<IBuffer>(std::move(buf));
             m_shadowVBCapacity = newCapacity;
         } else {
