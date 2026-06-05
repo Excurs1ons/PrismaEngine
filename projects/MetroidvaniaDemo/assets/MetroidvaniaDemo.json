@@ -2,8 +2,8 @@
     "name": "MetroidvaniaDemo",
     "window": {
         "size": {
-            "width": 1024,
-            "height": 896
+            "width": 1280,
+            "height": 720
         },
         "vsync": "Mailbox",
         "resizable": true,
@@ -28,6 +28,9 @@
     "subsystems": ["Physics"],
     "scriptingBackend": "CoreCLR",
     "entryScene": "assets/scenes/main.scene.json",
-    "assets": [],
+    "assets": [
+        "assets",
+        "projects/MetroidvaniaDemo/assets"
+    ],
     "scenes": []
 }

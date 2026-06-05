@@ -573,6 +573,11 @@ int Engine::Run(std::unique_ptr<Application> app) {
 
     if (m_CurrentApp->OnInitialize() != 0) return -1;
 
+    // 同步物理系统与场景
+    if (m_PhysicsSystem) {
+        m_PhysicsSystem->SyncFromScene();
+    }
+
     auto& actualAppSpec = m_CurrentApp->GetSpecification();
     if (m_Spec.MaxFPS == 0) m_Spec.MaxFPS = actualAppSpec.MaxFPS;
 
@@ -608,9 +613,7 @@ int Engine::Run(std::unique_ptr<Application> app) {
             // [正确双缓冲] C++ 是唯一的交换权威。
             // C# 每帧通过 GetTransformA(Write)/GetTransformB(Read) 重新查询指针，
             // C++ 在这里交换，使下一帧 C# 拿到正确的 Read/Write。
-#if PRISMA_ENABLE_SCRIPTING > 0
             EntityManager::Get().SwapBuffers();
-#endif
 
             if (GetRenderSystem()) {
                 double t0 = Platform::GetTimeSeconds();
@@ -721,8 +724,8 @@ void Engine::Step(float deltaTime) {
 #if PRISMA_ENABLE_SCRIPTING > 0
     if (m_scriptEngine->IsInitialized())
         m_scriptEngine->Update(clampedDelta);
-    EntityManager::Get().SwapBuffers();
 #endif
+    EntityManager::Get().SwapBuffers();
 
     // 4. Render frame
     if (GetRenderSystem()) {

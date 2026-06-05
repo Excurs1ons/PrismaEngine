@@ -18,6 +18,63 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "Floor",
+            "position": [0.0, -400.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.0, 1.0, 1.0],
+            "components": [
+                {
+                    "type": "SpriteRendererComponent",
+                    "data": {
+                        "color": [0.3, 0.3, 0.3, 1.0],
+                        "size": [1200.0, 32.0]
+                    }
+                },
+                {
+                    "type": "RigidBodyComponent",
+                    "data": {
+                        "mass": 0.0,
+                        "isStatic": true
+                    }
+                },
+                {
+                    "type": "BoxColliderComponent",
+                    "data": {
+                        "size": [1200.0, 32.0, 1.0]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Player",
+            "position": [-200.0, 200.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.0, 1.0, 1.0],
+            "components": [
+                {
+                    "type": "SpriteRendererComponent",
+                    "data": {
+                        "color": [1.0, 0.2, 0.2, 1.0],
+                        "size": [64.0, 64.0]
+                    }
+                },
+                {
+                    "type": "RigidBodyComponent",
+                    "data": {
+                        "mass": 1.0,
+                        "isStatic": false,
+                        "useGravity": true
+                    }
+                },
+                {
+                    "type": "BoxColliderComponent",
+                    "data": {
+                        "size": [64.0, 64.0, 1.0]
+                    }
+                }
+            ]
         }
     ]
 }
