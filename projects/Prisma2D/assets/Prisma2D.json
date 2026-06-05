@@ -3,12 +3,22 @@
     "entryScene": "scenes/2d_test.jsonc",
     "assets": ["assets", "projects/Prisma2D/assets"],
     "window": {
-        "width": 1920,
-        "height": 1080,
+        "size": {
+            "width": 1920,
+            "height": 1080
+        },
         "fullscreen": true,
         "resizable": true,
         "vsync": "Mailbox",
         "maxFPS": 0
     },
-    "renderMode": "2D"
+    "renderMode": "2D",
+    "rendering": {
+        "pathTracing": {},
+        "renderer2D": {
+            "maxBatchQuads": 10000,
+            "pixelPerfect": true,
+            "crtEffect": false
+        }
+    }
 }

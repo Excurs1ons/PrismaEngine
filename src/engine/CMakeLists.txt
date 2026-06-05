@@ -219,6 +219,7 @@ if(PRISMA_BUILD_SUBSYSTEM_PHYSICS)
         physics/PhysicsSystem.cpp
         physics/RigidBody.cpp
         physics/TriggerManager.cpp
+        physics/PhysicsComponents.cpp
     )
 endif()
 
@@ -962,7 +963,7 @@ endif()
 
 # ========== Assets shaders 编译 ==========
 set(ASSETS_SHADER_DIR "${PROJECT_SOURCE_DIR}/assets/shaders")
-file(GLOB ASSETS_SHADER_SOURCES
+file(GLOB_RECURSE ASSETS_SHADER_SOURCES
     "${ASSETS_SHADER_DIR}/*.vert"
     "${ASSETS_SHADER_DIR}/*.frag"
     "${ASSETS_SHADER_DIR}/*.comp"
@@ -971,13 +972,15 @@ if(ASSETS_SHADER_SOURCES)
     find_program(GLSLANG_VALIDATOR glslangValidator)
     if(GLSLANG_VALIDATOR)
         foreach(SHADER ${ASSETS_SHADER_SOURCES})
-            get_filename_component(SHADER_NAME ${SHADER} NAME)
-            set(SPV_OUTPUT "${ASSETS_SHADER_DIR}/${SHADER_NAME}.spv")
+            file(RELATIVE_PATH SHADER_REL "${ASSETS_SHADER_DIR}" "${SHADER}")
+            set(SPV_OUTPUT "${ASSETS_SHADER_DIR}/${SHADER_REL}.spv")
+            get_filename_component(SPV_DIR "${SPV_OUTPUT}" DIRECTORY)
             add_custom_command(
                 OUTPUT ${SPV_OUTPUT}
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${SPV_DIR}"
                 COMMAND ${GLSLANG_VALIDATOR} -V ${SHADER} -o ${SPV_OUTPUT}
                 DEPENDS ${SHADER}
-                COMMENT "Compiling asset shader: ${SHADER_NAME} -> SPIR-V"
+                COMMENT "Compiling asset shader: ${SHADER_REL} -> SPIR-V"
             )
             list(APPEND ASSETS_GENERATED_SPVS ${SPV_OUTPUT})
         endforeach()

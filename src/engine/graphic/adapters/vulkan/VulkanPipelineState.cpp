@@ -110,7 +110,6 @@ VulkanPipelineState::VulkanPipelineState() {
     m_blendState = BlendState::Default;
     m_rasterizerState = RasterizerState::Default;
     m_depthStencilState = DepthStencilState::Default;
-    m_renderTargetFormats.push_back(TextureFormat::RGBA8_UNorm);
     // 默认输入布局 (Vertex 格式): 兼容不显式设置 inputLayout 的旧 PSO
     m_inputAttributes = {
         { "POSITION", 0, TextureFormat::RGBA32_Float, 0, offsetof(Prisma::Graphic::Vertex, position) },
@@ -276,16 +275,13 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
         m_pipelineLayout = VK_NULL_HANDLE;
     }
 
-    // [修复] 配置 Push Constant Range 供 2D 变换使用
+    // 配置 Push Constant Range — 从着色器反射信息中获取实际大小
     std::vector<VkDescriptorSetLayout> descriptorSetLayoutHandles;
     std::vector<VkPushConstantRange> pushConstantRanges;
 
-    // 默认推流常量 (mat4 MVP + vec4 Color)
-    VkPushConstantRange defaultPushConstant{};
-    defaultPushConstant.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
-    defaultPushConstant.offset = 0;
-    defaultPushConstant.size = 256; 
-    pushConstantRanges.push_back(defaultPushConstant);
+    uint32_t maxPushConstantSize = 0;
+    // 收集管线中所有着色器阶段的 flags，用于 push constant range
+    VkShaderStageFlags pipelineStages = 0;
 
     m_descriptorSetLayouts.clear();
     
@@ -296,6 +292,24 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
         if (!vkShader) continue;
 
         const auto& reflection = vkShader->GetReflection();
+
+        // 收集 push constant 大小
+        for (uint32_t pcSize : reflection.PushConstantRanges) {
+            maxPushConstantSize = std::max(maxPushConstantSize, pcSize);
+        }
+
+        // 收集管线中所有着色器阶段
+        switch (type) {
+            case ShaderType::Vertex:         pipelineStages |= VK_SHADER_STAGE_VERTEX_BIT; break;
+            case ShaderType::Pixel:          pipelineStages |= VK_SHADER_STAGE_FRAGMENT_BIT; break;
+            case ShaderType::Compute:        pipelineStages |= VK_SHADER_STAGE_COMPUTE_BIT; break;
+            case ShaderType::Geometry:       pipelineStages |= VK_SHADER_STAGE_GEOMETRY_BIT; break;
+            case ShaderType::Hull:           pipelineStages |= VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT; break;
+            case ShaderType::Domain:         pipelineStages |= VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT; break;
+            case ShaderType::VertexAndPixel: pipelineStages |= VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; break;
+            default:                         pipelineStages |= VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; break;
+        }
+
         for (const auto& res : reflection.Resources) {
             // 检查该资源是否已在同一 Set/Binding 中定义（来自不同阶段）
             auto& setResources = groupedResources[res.Set];
@@ -309,6 +323,21 @@ bool VulkanPipelineState::Create(IRenderDevice* device) {
                 // 如果已存在，合并 Stage Flags (虽然 ShaderResource 没存这个，但底层 RHI 会处理)
             }
         }
+    }
+
+    // 根据着色器反射信息创建 Push Constant Range
+    // stage flags 覆盖管线中所有着色器阶段，确保 vkCmdPushConstants 的 stage flags 是子集
+    // 如果着色器反射没有声明 push constant（某些着色器可能没有 layout(push_constant)），
+    // 但引擎代码仍可能推送常量，使用 Vulkan 保证的最小 128 字节作为回退
+    if (maxPushConstantSize > 0 || (pipelineStages & (VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT))) {
+        if (maxPushConstantSize == 0) {
+            maxPushConstantSize = 128; // Vulkan 规范保证的最小 push constant 大小
+        }
+        VkPushConstantRange pcRange{};
+        pcRange.stageFlags = pipelineStages;
+        pcRange.offset = 0;
+        pcRange.size = maxPushConstantSize;
+        pushConstantRanges.push_back(pcRange);
     }
 
     // 2. 为每个 Set 创建布局

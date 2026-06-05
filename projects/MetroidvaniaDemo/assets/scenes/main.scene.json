@@ -1,0 +1,23 @@
+{
+    "name": "Metroidvania Main",
+    "nodes": [
+        {
+            "name": "Main Camera",
+            "position": [0.0, 0.0, 0.0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [1.0, 1.0, 1.0],
+            "components": [
+                {
+                    "type": "Camera",
+                    "data": {
+                        "projectionMode": "orthographic",
+                        "orthoSize": 448.0,
+                        "near": -1.0,
+                        "far": 1000.0,
+                        "clearColor": [0.05, 0.05, 0.2, 1.0]
+                    }
+                }
+            ]
+        }
+    ]
+}

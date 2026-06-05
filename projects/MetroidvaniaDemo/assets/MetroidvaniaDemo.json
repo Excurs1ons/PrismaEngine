@@ -1,26 +1,33 @@
 {
     "name": "MetroidvaniaDemo",
     "window": {
-        "width": 1024,
-        "height": 896,
+        "size": {
+            "width": 1024,
+            "height": 896
+        },
         "vsync": "Mailbox",
         "resizable": true,
         "fullscreen": false,
         "maxFPS": 0
     },
     "rendering": {
-        "maxSamples": 1,
-        "maxBounces": 4,
-        "rtMode": "None",
-        "pathTraceMode": "Flat",
-        "enableNEE": false,
-        "maxBatchQuads": 1024,
-        "pixelPerfect": true,
-        "crtEffect": true
+        "pathTracing": {
+            "maxSamples": 1,
+            "maxBounces": 4,
+            "rtMode": "None",
+            "pathTraceMode": "Flat",
+            "enableNEE": false
+        },
+        "renderer2D": {
+            "maxBatchQuads": 1024,
+            "pixelPerfect": false,
+            "crtEffect": false
+        }
     },
     "renderMode": "2D",
+    "subsystems": ["Physics"],
     "scriptingBackend": "CoreCLR",
-    "entryScene": "",
+    "entryScene": "assets/scenes/main.scene.json",
     "assets": [],
     "scenes": []
 }

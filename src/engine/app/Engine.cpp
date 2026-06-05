@@ -9,7 +9,7 @@
 #include "input/InputManager.h"
 #include "graphic/RenderSystem.h"
 
-extern "C" { char* SDL_GetBasePath(void); void SDL_free(void* ptr); }
+extern "C" { char* SDL_GetBasePath(void); char* SDL_GetPrefPath(const char* org, const char* app); void SDL_free(void* ptr); }
 #include "graphic/interfaces/IResourceManager.h"
 #include "graphic/Shader.h"
 #include "graphic/Renderer2D.h"
@@ -234,26 +234,26 @@ int Engine::Run(std::unique_ptr<Application> app) {
             }
 
             ProjectConfig config;
-            auto err = glz::read_jsonc(config, buf);
+            auto err = glz::read<glz::opts{ .comments = true, .error_on_unknown_keys = false }>(config, buf);
             if (err) {
                 LOG_WARNING("Engine", "[配置] glaze 解析失败: {}", glz::format_error(err, buf));
             } else {
                 spec.Name               = config.name;
                 spec.EntryScene         = config.entryScene;
-                spec.Width              = config.window.width;
-                spec.Height             = config.window.height;
+                spec.Width              = config.window.size.width;
+                spec.Height             = config.window.size.height;
                 spec.Fullscreen         = config.window.fullscreen;
                 spec.Resizable          = config.window.resizable;
                 spec.PresentMode        = config.window.vsync;
                 spec.MaxFPS             = config.window.maxFPS;
-                spec.MaxSamples         = config.rendering.maxSamples;
-                spec.MaxBounces         = config.rendering.maxBounces;
-                spec.RTMode = config.rendering.rtMode;
-                spec.PathTraceMode      = config.rendering.pathTraceMode;
-                spec.EnableNEE          = config.rendering.enableNEE;
-                spec.MaxBatchQuads      = config.rendering.maxBatchQuads;
-                spec.PixelPerfect       = config.rendering.pixelPerfect;
-                spec.CRTEffect          = config.rendering.crtEffect;
+                spec.MaxSamples         = config.rendering.pathTracing.maxSamples;
+                spec.MaxBounces         = config.rendering.pathTracing.maxBounces;
+                spec.RTMode             = config.rendering.pathTracing.rtMode;
+                spec.PathTraceMode      = config.rendering.pathTracing.pathTraceMode;
+                spec.EnableNEE          = config.rendering.pathTracing.enableNEE;
+                spec.MaxBatchQuads      = config.rendering.renderer2D.maxBatchQuads;
+                spec.PixelPerfect       = config.rendering.renderer2D.pixelPerfect;
+                spec.CRTEffect          = config.rendering.renderer2D.crtEffect;
                 spec.HeadlessFrames     = config.headless.frames;
                 spec.HeadlessWidth      = config.headless.width;
                 spec.HeadlessHeight     = config.headless.height;

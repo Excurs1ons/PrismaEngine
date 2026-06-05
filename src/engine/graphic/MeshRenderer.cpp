@@ -93,7 +93,7 @@ namespace {
             [](Prisma::Component& comp, const std::string& json) {
                 auto& typed = static_cast<Prisma::Graphic::MeshRenderer&>(comp);
                 Prisma::Graphic::MeshRenderer::Data data;
-                auto ec = glz::read_json(data, json);
+                auto ec = glz::read<glz::opts{ .error_on_unknown_keys = false }>(data, json);
                 if (!ec) typed.SetData(data);
             }
         );

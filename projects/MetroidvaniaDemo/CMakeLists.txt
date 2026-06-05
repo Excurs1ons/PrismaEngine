@@ -30,26 +30,10 @@ set(MV_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}/src/engine/core
     ${CMAKE_SOURCE_DIR}/src/engine/graphic
     ${CMAKE_SOURCE_DIR}/src/engine/logger
-    ${CMAKE_SOURCE_DIR}/src/engine/platform
-    ${CMAKE_SOURCE_DIR}/src/engine/scripting
-    ${CMAKE_SOURCE_DIR}/src/engine/window
-    ${CMAKE_SOURCE_DIR}/src/engine/math
-    ${CMAKE_SOURCE_DIR}/src/engine/resource
-    ${CMAKE_SOURCE_DIR}/src/engine/audio
-    ${CMAKE_SOURCE_DIR}/src/engine/ui
-    ${CMAKE_SOURCE_DIR}/src/engine/ui/2d
     ${CMAKE_SOURCE_DIR}/src/engine/input
-    ${CMAKE_SOURCE_DIR}/src/engine/tilemap
-    ${CMAKE_SOURCE_DIR}/src/engine/scene
-    ${CMAKE_SOURCE_DIR}/src/engine/object
-    ${CMAKE_SOURCE_DIR}/src/engine/transform
-    ${CMAKE_SOURCE_DIR}/src/engine/threading
-    ${CMAKE_SOURCE_DIR}/src/engine/serialization
     ${CMAKE_SOURCE_DIR}/src/engine/physics
-    ${CMAKE_SOURCE_DIR}/src/engine/physics2d
-    ${CMAKE_SOURCE_DIR}/src/engine/config
-    ${CMAKE_SOURCE_DIR}/src/engine/packing
-    ${CMAKE_SOURCE_DIR}/src/engine/utils
+    ${CMAKE_SOURCE_DIR}/src/engine/scene
+    ${CMAKE_SOURCE_DIR}/src/engine/transform
 )
 
 # ========== 共享编译选项宏 ==========

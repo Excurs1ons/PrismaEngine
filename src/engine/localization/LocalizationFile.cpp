@@ -12,7 +12,7 @@ bool LocalizationFile::Load(const std::string& path, LocaleData& outData) {
         return false;
     }
 
-    auto err = glz::read_json(outData, buffer);
+    auto err = glz::read<glz::opts{ .error_on_unknown_keys = false }>(outData, buffer);
     return !err;
 }
 

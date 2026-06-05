@@ -53,8 +53,9 @@ private:
     // 自管 descriptor set (UnlitSprite.frag: set=0 binding=0 UBO, binding=1 sampler2D)
     std::shared_ptr<IBuffer> m_materialUBO;
     std::shared_ptr<IDescriptorSetLayout> m_dsLayout;
-    std::shared_ptr<IDescriptorSet> m_ds;
+    std::vector<std::shared_ptr<IDescriptorSet>> m_dsArray; // 每帧一个，避免 VUID 03047
     std::shared_ptr<ITexture> m_defaultTexture;
+    static constexpr uint32_t FRAME_OVERLAP = 3;
 };
 
 } // namespace Prisma::Graphic

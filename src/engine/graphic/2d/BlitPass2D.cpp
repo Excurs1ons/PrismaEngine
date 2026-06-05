@@ -10,6 +10,7 @@
 #include "graphic/interfaces/IBuffer.h"
 #include "graphic/interfaces/ITexture.h"
 #include "graphic/interfaces/IDescriptorSet.h"
+#include "graphic/RenderSystem.h"
 #include "Logger.h"
 #include "app/Engine.h"
 
@@ -17,7 +18,6 @@ namespace Prisma::Graphic {
 
 struct alignas(16) BlitPushConstants {
     PrismaMath::mat4 mvp;
-    Prisma::Color color;
 };
 
 // 与 UnlitSprite.frag 对齐: set=0 binding=0 (std140)
@@ -124,54 +124,61 @@ bool BlitPass2D::createDescriptorSet(IRenderDevice* device, IRenderResourceManag
     }
 
     m_dsLayout = rf->CreateDescriptorSetLayout(shaderResources);
-    m_ds = rf->CreateDescriptorSet(m_dsLayout.get());
+    m_dsArray.resize(FRAME_OVERLAP);
 
-    if (!m_ds || !m_materialUBO) {
-        LOG_ERROR("BlitPass2D", "创建 descriptor set 失败");
-        return false;
-    }
-
-    // 绑定 UBO 到 binding 0
-    m_ds->BindBuffer(0, m_materialUBO.get(), 0, sizeof(BlitMaterialData), DescriptorType::UniformBuffer);
-
-    // 绑定默认纹理到 binding 1 (1x1 白像素，避免 VUID 08114 "never updated")
-    {
-        TextureDesc defaultTexDesc;
-        defaultTexDesc.width = 1;
-        defaultTexDesc.height = 1;
-        defaultTexDesc.format = TextureFormat::RGBA8_UNorm;
-        defaultTexDesc.allowShaderResource = true;
-        auto defaultTex = rf->CreateTextureImpl(defaultTexDesc);
-        if (defaultTex) {
-            defaultTex->Clear(Color(1, 1, 1, 1));
+    for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
+        auto ds = rf->CreateDescriptorSet(m_dsLayout.get());
+        if (!ds || !m_materialUBO) {
+            LOG_ERROR("BlitPass2D", "创建 descriptor set [{}] 失败", i);
+            return false;
         }
-        auto defaultSampler = rm ? rm->GetDefaultSampler() : nullptr;
-        if (defaultTex && defaultSampler) {
-            m_defaultTexture = std::move(defaultTex);
-            m_ds->BindTexture(1, m_defaultTexture.get(), defaultSampler.get());
+
+        // 绑定 UBO 到 binding 0
+        ds->BindBuffer(0, m_materialUBO.get(), 0, sizeof(BlitMaterialData), DescriptorType::UniformBuffer);
+
+        // 绑定默认纹理到 binding 1 (1x1 白像素，避免 VUID 08114 "never updated")
+        {
+            TextureDesc defaultTexDesc;
+            defaultTexDesc.width = 1;
+            defaultTexDesc.height = 1;
+            defaultTexDesc.format = TextureFormat::RGBA8_UNorm;
+            defaultTexDesc.allowShaderResource = true;
+            auto defaultTex = rf->CreateTextureImpl(defaultTexDesc);
+            if (defaultTex) {
+                defaultTex->Clear(Color(1, 1, 1, 1));
+            }
+            auto defaultSampler = rm ? rm->GetDefaultSampler() : nullptr;
+            if (defaultTex && defaultSampler) {
+                if (i == 0) m_defaultTexture = std::move(defaultTex);
+                ds->BindTexture(1, (i == 0) ? m_defaultTexture.get() : defaultTex.get(), defaultSampler.get());
+            }
         }
+        ds->Update();
+        m_dsArray[i] = std::move(ds);
     }
-    m_ds->Update();
     return true;
 }
 
 void BlitPass2D::Draw(ICommandBuffer* cmd, const std::vector<RenderCommand>& commands,
                       const PrismaMath::mat4& mvp) {
-    if (!cmd || commands.empty() || !m_pso || !m_ds) return;
+    if (!cmd || commands.empty() || !m_pso || m_dsArray.empty()) return;
+
+    // 使用当前帧索引选择描述符集，避免 VUID 03047（更新正在被引用的描述符集）
+    auto* device = Engine::Get().GetRenderSystem() ? Engine::Get().GetRenderSystem()->GetDevice() : nullptr;
+    uint32_t frameIndex = device ? device->GetCurrentFrameIndex() % FRAME_OVERLAP : 0;
+    auto ds = m_dsArray[frameIndex].get();
 
     cmd->SetPipelineState(m_pso.get());
-
-    // 绑定自管 descriptor set（替代 Material::Bind，避免布局不兼容）
-    cmd->BindDescriptorSet(0, m_ds.get());
 
     auto* rm = Engine::Get().GetRenderResourceManager();
     auto defaultSampler = rm ? rm->GetDefaultSampler() : nullptr;
 
+    // 预先收集所有纹理绑定，在 BindDescriptorSet 之前完成更新
     Material* lastMaterial = nullptr;
+    bool descriptorDirty = false;
     for (const auto& command : commands) {
         if (!command.mesh) continue;
 
-        // 更新纹理绑定（仅材质切换时）
         if (command.material && command.material != lastMaterial) {
             std::shared_ptr<ITexture> tex = nullptr;
             if (auto* texVal = command.material->GetParam("AlbedoMap")) {
@@ -180,11 +187,28 @@ void BlitPass2D::Draw(ICommandBuffer* cmd, const std::vector<RenderCommand>& com
                 }
             }
             if (tex && defaultSampler) {
-                m_ds->BindTexture(1, tex.get(), defaultSampler.get());
-                m_ds->Update();
+                ds->BindTexture(1, tex.get(), defaultSampler.get());
+                descriptorDirty = true;
             }
+            lastMaterial = command.material;
+        }
+    }
 
-            // UBO 更新材质颜色
+    // 在绑定前一次性更新描述符集
+    if (descriptorDirty) {
+        ds->Update();
+    }
+
+    // 绑定描述符集（更新完成后）
+    cmd->BindDescriptorSet(0, ds);
+
+    // 第二遍：绘制所有命令
+    lastMaterial = nullptr;
+    for (const auto& command : commands) {
+        if (!command.mesh) continue;
+
+        // UBO 更新材质颜色
+        if (command.material && command.material != lastMaterial) {
             BlitMaterialData matData;
             matData.baseColor = PrismaMath::vec4(command.color.r, command.color.g, command.color.b, command.color.a);
             if (auto* bc = command.material->GetParam("BaseColor")) {
@@ -196,10 +220,9 @@ void BlitPass2D::Draw(ICommandBuffer* cmd, const std::vector<RenderCommand>& com
             lastMaterial = command.material;
         }
 
-        // Push 常量: MVP + 颜色
+        // Push 常量: MVP（颜色已通过 UBO 传递）
         BlitPushConstants pc{};
         pc.mvp = mvp * command.transform;
-        pc.color = command.color;
         cmd->PushConstants(ShaderType::VertexAndPixel, &pc, sizeof(pc));
 
         // 绘制每个子网格

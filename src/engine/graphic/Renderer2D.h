@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "math/MathTypes.h"
 #include "interfaces/RenderTypes.h"
+#include "ICamera.h"
 #include <memory>
 #include <vector>
 
@@ -16,7 +17,6 @@ namespace Graphic {
 class ITexture;
 class SpriteAnimationComponent;
 class RenderCommandContext;
-class OrthographicCamera;
 
 /* 2D 渲染器 (静态接口) */
 class ENGINE_API Renderer2D {
@@ -34,7 +34,7 @@ public:
 
     // ========== 渲染生命周期 ==========
 
-    static void BeginScene(const OrthographicCamera& camera);
+    static void BeginScene(const ICamera& camera);
     static void EndScene();
     static void Flush();
 

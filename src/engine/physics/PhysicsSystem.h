@@ -1,6 +1,7 @@
 #pragma once
 #include "ISubSystem.h"
 #include "WorkerThread.h"
+#include "core/Node.h"
 #include "physics/CollisionSystem.h"
 #include "physics/RigidBody.h"
 #include "physics/Constraint.h"
@@ -75,6 +76,15 @@ public:
     // 获取触发管理器
     Physics::TriggerManager& getTriggerManager() { return m_triggerManager; }
     const Physics::TriggerManager& getTriggerManager() const { return m_triggerManager; }
+
+    // ========== 场景同步 ==========
+
+    // 从场景中的 RigidBodyComponent + BoxColliderComponent 创建底层 RigidBody
+    // 应在场景加载后调用一次
+    void SyncFromScene();
+
+    // 每帧同步底层 RigidBody 位置到场景 Node
+    void SyncBodiesToNodes();
 
     // ========== 配置 ==========
 
@@ -158,6 +168,10 @@ private:
 
     // 工作线程
     WorkerThread m_workerThread;
+
+    // 场景 Node 映射（RigidBody → Node，用于每帧位置回写）
+    std::unordered_map<Physics::RigidBody*, Node> m_nodeMap;
+    bool m_hasSyncedFromScene = false;
 };
 
 }  // namespace Prisma

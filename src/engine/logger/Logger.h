@@ -118,6 +118,7 @@ public:
     CallStackOutput GetCallStackOutputForLevel(LogLevel level);
 
     LogLevel GetMinLevel() const;
+    std::string GetLevelName(LogLevel level);
 
 private:
     Logger() = default;
@@ -129,7 +130,6 @@ private:
     void RotateLogFile();
 
     std::string FormatEntry(const LogEntry& entry, bool useColors);
-    std::string GetLevelString(LogLevel level);
     LogColor GetLevelColor(LogLevel level);
     std::string ColorCode(LogColor color);
     std::string GetTimestamp(const std::chrono::system_clock::time_point& time);

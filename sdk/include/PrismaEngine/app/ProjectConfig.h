@@ -9,18 +9,6 @@
 
 namespace Prisma {
 
-enum class RenderMode : uint8_t {
-    Mode2D = 0,
-    Mode3D_Forward = 1,
-    Mode3D_ForwardPlus = 2,
-    Mode3D_Deferred = 3,
-    Mode3D_DeferredPlus = 4,
-    Mode3D_PathTracing = 5,
-    Mode3D_ClusteredForward = 6,
-    Mode3D_NPR = 8,
-    SRP = 7
-};
-
 enum class ScriptingBackend : uint8_t {
     Off     = 0,
     Mono    = 1,
@@ -28,20 +16,34 @@ enum class ScriptingBackend : uint8_t {
 };
 
 struct WindowConfig {
-    uint32_t width = 1920;
-    uint32_t height = 1080;
+    struct Size {
+        uint32_t width = 1920;
+        uint32_t height = 1080;
+    } size;
     bool fullscreen = true;
     bool resizable = true;
+    std::string orientation = "landscape";
     Graphic::PresentMode vsync = Graphic::PresentMode::Mailbox;
     uint32_t maxFPS = 0;
 };
 
-struct RenderingConfig {
+struct PathTracingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
-    Graphic::RTMode rtMode = Graphic::RTMode::HardwareRT;  // 光线追踪模式
+    Graphic::RTMode rtMode = Graphic::RTMode::HardwareRT;
     Graphic::PathTraceMode pathTraceMode = Graphic::PathTraceMode::BVH;
-    bool enableNEE = false;            // 下一事件估计（小光源时显著提升收敛）
+    bool enableNEE = false;
+};
+
+struct Renderer2DConfig {
+    uint32_t maxBatchQuads = 10000;
+    bool pixelPerfect = true;
+    bool crtEffect = false;
+};
+
+struct RenderingConfig {
+    PathTracingConfig pathTracing;
+    Renderer2DConfig renderer2D;
 };
 
 struct HeadlessConfig {
@@ -55,7 +57,8 @@ struct ProjectConfig {
     std::string name = "Prisma App";
     std::string entryScene;
     std::vector<std::string> assets;
-    std::vector<std::string> scenes;   // 可选的多场景列表（F6/F7 切换）
+    std::vector<std::string> scenes;
+    std::vector<std::string> subsystems;
     WindowConfig window;
     RenderMode renderMode = RenderMode::Mode3D_Forward;
     ScriptingBackend scriptingBackend = ScriptingBackend::CoreCLR;
@@ -65,7 +68,7 @@ struct ProjectConfig {
 
 } // namespace Prisma
 
-// ── Glaze 映射 ──
+// Glaze Meta
 
 template <>
 struct glz::meta<Prisma::RenderMode> {
@@ -77,6 +80,8 @@ struct glz::meta<Prisma::RenderMode> {
         "Deferred", Mode3D_Deferred,
         "Deferred+", Mode3D_DeferredPlus,
         "PathTracing", Mode3D_PathTracing,
+        "ClusteredForward", Mode3D_ClusteredForward,
+        "NPR", Mode3D_NPR,
         "SRP", SRP
     );
 };
@@ -108,7 +113,8 @@ struct glz::meta<Prisma::Graphic::PathTraceMode> {
     static constexpr auto value = glz::enumerate(
         "Flat", Flat,
         "BVH", BVH,
-        "HardwareRT", HardwareRT
+        "HardwareRT", HardwareRT,
+        "RayQuery", RayQuery
     );
 };
 
@@ -123,25 +129,50 @@ struct glz::meta<Prisma::Graphic::RTMode> {
 };
 
 template <>
+struct glz::meta<Prisma::WindowConfig::Size> {
+    static constexpr auto value = glz::object(
+        "width", &Prisma::WindowConfig::Size::width,
+        "height", &Prisma::WindowConfig::Size::height
+    );
+};
+
+template <>
 struct glz::meta<Prisma::WindowConfig> {
     static constexpr auto value = glz::object(
-        "width", &Prisma::WindowConfig::width,
-        "height", &Prisma::WindowConfig::height,
+        "size", &Prisma::WindowConfig::size,
         "fullscreen", &Prisma::WindowConfig::fullscreen,
         "resizable", &Prisma::WindowConfig::resizable,
+        "orientation", &Prisma::WindowConfig::orientation,
         "vsync", &Prisma::WindowConfig::vsync,
         "maxFPS", &Prisma::WindowConfig::maxFPS
     );
 };
 
 template <>
+struct glz::meta<Prisma::PathTracingConfig> {
+    static constexpr auto value = glz::object(
+        "maxSamples", &Prisma::PathTracingConfig::maxSamples,
+        "maxBounces", &Prisma::PathTracingConfig::maxBounces,
+        "rtMode", &Prisma::PathTracingConfig::rtMode,
+        "pathTraceMode", &Prisma::PathTracingConfig::pathTraceMode,
+        "enableNEE", &Prisma::PathTracingConfig::enableNEE
+    );
+};
+
+template <>
+struct glz::meta<Prisma::Renderer2DConfig> {
+    static constexpr auto value = glz::object(
+        "maxBatchQuads", &Prisma::Renderer2DConfig::maxBatchQuads,
+        "pixelPerfect",  &Prisma::Renderer2DConfig::pixelPerfect,
+        "crtEffect",     &Prisma::Renderer2DConfig::crtEffect
+    );
+};
+
+template <>
 struct glz::meta<Prisma::RenderingConfig> {
     static constexpr auto value = glz::object(
-        "maxSamples", &Prisma::RenderingConfig::maxSamples,
-        "maxBounces", &Prisma::RenderingConfig::maxBounces,
-        "rtMode", &Prisma::RenderingConfig::rtMode,
-        "pathTraceMode", &Prisma::RenderingConfig::pathTraceMode,
-        "enableNEE", &Prisma::RenderingConfig::enableNEE
+        "pathTracing", &Prisma::RenderingConfig::pathTracing,
+        "renderer2D",  &Prisma::RenderingConfig::renderer2D
     );
 };
 
@@ -162,6 +193,7 @@ struct glz::meta<Prisma::ProjectConfig> {
         "entryScene", &Prisma::ProjectConfig::entryScene,
         "assets", &Prisma::ProjectConfig::assets,
         "scenes", &Prisma::ProjectConfig::scenes,
+        "subsystems", &Prisma::ProjectConfig::subsystems,
         "window", &Prisma::ProjectConfig::window,
         "renderMode", &Prisma::ProjectConfig::renderMode,
         "scriptingBackend", &Prisma::ProjectConfig::scriptingBackend,

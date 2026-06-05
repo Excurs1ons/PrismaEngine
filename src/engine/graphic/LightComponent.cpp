@@ -69,7 +69,7 @@ namespace {
 
                 // 2. 反序列化剩余字段到 Data
                 Prisma::Graphic::LightComponent::Data data;
-                auto de = glz::read_json(data, glz::write_json(root).value_or("{}"));
+                auto de = glz::read<glz::opts{ .error_on_unknown_keys = false }>(data, glz::write_json(root).value_or("{}"));
                 if (!de) {
                     typed.SetData(data);
                 } else {

@@ -296,7 +296,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureImpl(const Texture
                 VkImageMemoryBarrier barrier{};
                 barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
                 barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-                barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+                barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 barrier.image = image;
@@ -395,7 +395,7 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(const v
             VkImageMemoryBarrier postBarrier{};
             postBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
             postBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            postBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            postBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             postBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             postBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             postBarrier.image = image;

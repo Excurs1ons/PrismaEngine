@@ -927,10 +927,6 @@ static void S_FreeAssetData(void* data) {
 
 // ==================== Save/Load API ====================
 
-static std::string GetSaveDir() {
-    return (std::filesystem::current_path() / "saves").string();
-}
-
 static bool S_SaveGame(const char* slotName, const char* jsonData) {
     if (!slotName || !jsonData) return false;
     try {

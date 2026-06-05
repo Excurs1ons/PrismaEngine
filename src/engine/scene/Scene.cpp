@@ -311,7 +311,7 @@ bool Scene::DeserializeFromMemory(const std::string& jsonData) {
     }
 
     // 解析 JSON
-    auto error = glz::read_jsonc(sfd, buffer);
+    auto error = glz::read<glz::opts{ .comments = true, .error_on_unknown_keys = false }>(sfd, buffer);
     if (error) {
         LOG_ERROR("Scene", "解析场景数据失败: {0}", glz::format_error(error, ""));
         return false;

@@ -61,11 +61,9 @@ bool SceneManager::LoadFromFile(const std::string& path) {
         return false;
     }
 
-    // 确保场景有主相机（fallback）
+    // 场景无相机是配置错误，不自动创建——品红色清屏即为警告
     if (!newScene->GetMainCamera()) {
-        LOG_WARN("SceneManager", "场景 '{0}' 没有相机节点，创建默认相机", newScene->GetName());
-        auto cameraNode = newScene->CreateNode("Main Camera");
-        newScene->AddComponent<Graphic::Camera>(cameraNode);
+        LOG_ERROR("SceneManager", "场景 '{0}' 没有相机节点，渲染将显示品红色警告", newScene->GetName());
     }
 
     m_currentScene = std::move(newScene);

@@ -196,41 +196,23 @@ void RenderSystem::EndFrame() {
             ctx.commandBuffer = reinterpret_cast<ICommandBuffer*>(vkDevice->GetCurrentCommandBuffer());
         }
 
-        // 2D 管线由 Renderer2D 管理正交相机，场景相机是 3D 透视的，不可覆盖
-        bool hasSceneCamera = false;
-        bool skipSceneCamera = m_mainRenderPipeline &&
-            m_mainRenderPipeline->GetMode() == RenderMode::Mode2D;
+        // 场景相机是唯一数据源：矩阵、clearColor 等始终从场景相机读取
+        auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
+        auto* scene = sceneMgr ? sceneMgr->GetCurrentScene() : nullptr;
+        auto sceneCamera = scene ? scene->GetMainCamera() : nullptr;
 
-        if (!skipSceneCamera) {
-            auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
-            if (sceneMgr) {
-                auto* scene = sceneMgr->GetCurrentScene();
-                if (scene) {
-                    auto camera = scene->GetMainCamera();
-                    if (camera) {
-                        ctx.camera.viewMatrix       = camera->GetViewMatrix();
-                        ctx.camera.projectionMatrix = camera->GetProjectionMatrix();
-                        ctx.camera.position         = camera->GetPosition();
-                        ctx.camera.nearPlane        = camera->GetNearPlane();
-                        ctx.camera.farPlane         = camera->GetFarPlane();
-                        ctx.camera.fov              = camera->GetFOV();
-                        ctx.clearColor              = camera->GetClearColor();
-                        ctx.lights                  = scene->GetLights();
-                        hasSceneCamera = true;
-                    }
-                }
-            }
-        }
-
-        // 降级：使用 Renderer::GetSceneData()（Forward/2D 管线场景）
-        if (!hasSceneCamera) {
-            const auto& sceneData = Renderer::GetSceneData();
-            ctx.camera.viewMatrix       = sceneData.camera.viewMatrix;
-            ctx.camera.projectionMatrix = sceneData.camera.projectionMatrix;
-            ctx.camera.position         = sceneData.camera.position;
-            ctx.camera.nearPlane        = sceneData.camera.nearPlane;
-            ctx.camera.farPlane         = sceneData.camera.farPlane;
-            ctx.camera.fov              = sceneData.camera.fov;
+        if (sceneCamera) {
+            ctx.camera.viewMatrix       = sceneCamera->GetViewMatrix();
+            ctx.camera.projectionMatrix = sceneCamera->GetProjectionMatrix();
+            ctx.camera.position         = sceneCamera->GetPosition();
+            ctx.camera.nearPlane        = sceneCamera->GetNearPlane();
+            ctx.camera.farPlane         = sceneCamera->GetFarPlane();
+            ctx.camera.fov              = sceneCamera->GetFOV();
+            ctx.clearColor              = sceneCamera->GetClearColor();
+            ctx.lights                  = scene->GetLights();
+        } else {
+            // 无相机 = 配置错误，品红色警告
+            ctx.clearColor = {1.0f, 0.0f, 1.0f, 1.0f};
         }
 
         ctx.frameIndex = m_device->GetCurrentFrameIndex();

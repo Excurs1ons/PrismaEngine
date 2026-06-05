@@ -232,7 +232,7 @@ std::string Logger::FormatEntry(const LogEntry& entry, bool useColors) {
     if (m_Config.enableTimestamp) {
         oss << "[" << GetTimestamp(entry.timestamp) << "] ";
     }
-    oss << "[" << GetLevelString(entry.level) << "] ";
+    oss << "[" << GetLevelName(entry.level) << "] ";
     if (!entry.category.empty()) {
         oss << "[" << entry.category << "] ";
     }
@@ -251,7 +251,7 @@ std::string Logger::FormatEntry(const LogEntry& entry, bool useColors) {
     return oss.str();
 }
 
-std::string Logger::GetLevelString(LogLevel level) {
+std::string Logger::GetLevelName(LogLevel level) {
     switch (level) {
         case LogLevel::Trace:   return "TRACE";
         case LogLevel::Debug:   return "DEBUG";

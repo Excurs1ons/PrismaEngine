@@ -4,6 +4,7 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "CollisionSystem.h"
+#include "Export.h"
 #include <memory>
 #include <cstdint>
 
@@ -76,7 +77,7 @@ namespace Prisma {
         };
 
         /* 刚体类 */
-        class RigidBody {
+        class ENGINE_API RigidBody {
         public:
             // ========== 构造函数 ==========
 

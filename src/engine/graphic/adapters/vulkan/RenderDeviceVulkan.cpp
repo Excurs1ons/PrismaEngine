@@ -56,12 +56,17 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
     try {
         // 1. 创建实例
         vkb::InstanceBuilder inst_builder;
-        auto inst_ret = inst_builder.set_app_name(desc.name.c_str())
-                            .request_validation_layers(desc.enableValidation)
-                            .use_default_debug_messenger()
-                            .require_api_version(1, 3, 0)
-                            .set_headless(m_headless)
-                            .build();
+        auto inst_builder_ref = inst_builder.set_app_name(desc.name.c_str())
+                                    .request_validation_layers(desc.enableValidation)
+                                    .use_default_debug_messenger()
+                                    .require_api_version(1, 3, 0)
+                                    .set_headless(m_headless);
+        if (desc.enableValidation) {
+            inst_builder_ref
+                .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT)
+                .add_validation_feature_enable(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+        }
+        auto inst_ret = inst_builder_ref.build();
 
         if (!inst_ret)
             return -1;
@@ -93,11 +98,10 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         // 光线追踪扩展仅在 PathTracing 模式下为必需
         const bool needRayTracing = m_desc.rtMode != RTMode::None;
 
+        // 注意: VK_KHR_dedicated_allocation, VK_KHR_external_memory, VK_KHR_external_semaphore
+        // 已晋升到 Vulkan 1.1 核心，在 Vulkan 1.3 下不需要显式请求
         auto selectorBuilder = selector.set_minimum_version(1, 3)
                                    .set_required_features(features)
-                                   .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
-                                   .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
-                                   .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
 #ifdef _WIN32
                                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
                                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
@@ -141,9 +145,6 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
                 // 回退：不要求光线追踪扩展，重新选择物理设备
                 auto phys_ret_fallback = selector.set_minimum_version(1, 3)
                     .set_required_features(features)
-                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
-                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
-                    .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
 #ifdef _WIN32
                     .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
                     .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
@@ -184,29 +185,17 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
         }
 
         // 3. 创建逻辑设备
-        // 启用 GPU-assisted + 同步校验 + 最佳实践 (需 VK_EXT_validation_features)
-        VkValidationFeaturesEXT validationFeatures{};
-        VkValidationFeatureEnableEXT enabledFeatures[] = {
-            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-        };
-        validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-        validationFeatures.enabledValidationFeatureCount = static_cast<uint32_t>(std::size(enabledFeatures));
-        validationFeatures.pEnabledValidationFeatures = enabledFeatures;
-
         vkb::DeviceBuilder device_builder{m_vkbPhysicalDevice};
-        if (desc.enableValidation) {
-            device_builder.add_pNext(&validationFeatures);
-        }
         auto dev_ret = device_builder.build();
         if (!dev_ret)
             return -3;
         m_vkbDevice = dev_ret.value();
         m_device    = m_vkbDevice.device;
 
-        // 激活 command buffer 调试标签 (VK_EXT_debug_utils)
-        VulkanCommandBuffer::InitDebugUtils(m_device);
+        // 激活 command buffer 调试标签 (VK_EXT_debug_utils) — 仅在验证模式启用
+        if (desc.enableValidation) {
+            VulkanCommandBuffer::InitDebugUtils(m_device);
+        }
 
         // 4. 获取队列
         m_graphicsQueue       = m_vkbDevice.get_queue(vkb::QueueType::graphics).value();
@@ -249,17 +238,15 @@ int RenderDeviceVulkan::Initialize(const DeviceDesc& desc) {
 
 
         // 6. 初始化描述符池（包含所有引擎使用的描述符类型）
-        std::array<VkDescriptorPoolSize, 5> poolSizes{};
-        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[0].descriptorCount = 1000;
-        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = 1000;
-        poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        poolSizes[2].descriptorCount = 100;
-        poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSizes[3].descriptorCount = 100;
-        poolSizes[4].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-        poolSizes[4].descriptorCount = 16;
+        std::vector<VkDescriptorPoolSize> poolSizes{
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 100},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100},
+        };
+        if (needRayTracing) {
+            poolSizes.push_back({VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 16});
+        }
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -540,11 +527,10 @@ int RenderDeviceVulkan::ReinitializeDevice(const DeviceDesc& desc) {
         // 光线追踪扩展仅在 PathTracing 模式下为必需
         const bool needRayTracing = m_desc.rtMode != RTMode::None;
 
+        // 注意: VK_KHR_dedicated_allocation, VK_KHR_external_memory, VK_KHR_external_semaphore
+        // 已晋升到 Vulkan 1.1 核心，在 Vulkan 1.3 下不需要显式请求
         auto selectorBuilder = selector.set_minimum_version(1, 3)
                                    .set_required_features(features)
-                                   .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
-                                   .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
-                                   .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
 #ifdef _WIN32
                                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
                                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
@@ -577,9 +563,6 @@ int RenderDeviceVulkan::ReinitializeDevice(const DeviceDesc& desc) {
                 LOG_WARN("Vulkan", "物理设备不支持光线追踪扩展，回退到 Forward 渲染模式");
                 auto phys_ret_fallback = selector.set_minimum_version(1, 3)
                     .set_required_features(features)
-                    .add_required_extension(VK_KHR_EXTERNAL_MEMORY_EXTENSION_NAME)
-                    .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME)
-                    .add_required_extension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME)
 #ifdef _WIN32
                     .add_required_extension(VK_KHR_EXTERNAL_MEMORY_WIN32_EXTENSION_NAME)
                     .add_required_extension(VK_KHR_EXTERNAL_SEMAPHORE_WIN32_EXTENSION_NAME)
@@ -618,28 +601,17 @@ int RenderDeviceVulkan::ReinitializeDevice(const DeviceDesc& desc) {
         }
 
         // 2. 创建逻辑设备
-        VkValidationFeaturesEXT validationFeatures{};
-        VkValidationFeatureEnableEXT enabledFeatures[] = {
-            VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT,
-            VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT,
-        };
-        validationFeatures.sType = VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
-        validationFeatures.enabledValidationFeatureCount = static_cast<uint32_t>(std::size(enabledFeatures));
-        validationFeatures.pEnabledValidationFeatures = enabledFeatures;
-
         vkb::DeviceBuilder device_builder{m_vkbPhysicalDevice};
-        if (desc.enableValidation) {
-            device_builder.add_pNext(&validationFeatures);
-        }
         auto dev_ret = device_builder.build();
         if (!dev_ret)
             return -3;
         m_vkbDevice = dev_ret.value();
         m_device    = m_vkbDevice.device;
 
-        // 激活 command buffer 调试标签 (VK_EXT_debug_utils)
-        VulkanCommandBuffer::InitDebugUtils(m_device);
+        // 激活 command buffer 调试标签 (VK_EXT_debug_utils) — 仅在验证模式启用
+        if (desc.enableValidation) {
+            VulkanCommandBuffer::InitDebugUtils(m_device);
+        }
 
         // 3. 获取队列
         m_graphicsQueue       = m_vkbDevice.get_queue(vkb::QueueType::graphics).value();
@@ -679,17 +651,15 @@ int RenderDeviceVulkan::ReinitializeDevice(const DeviceDesc& desc) {
         }
 
         // 5. 初始化描述符池
-        std::array<VkDescriptorPoolSize, 5> poolSizes{};
-        poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        poolSizes[0].descriptorCount = 1000;
-        poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        poolSizes[1].descriptorCount = 1000;
-        poolSizes[2].type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        poolSizes[2].descriptorCount = 100;
-        poolSizes[3].type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        poolSizes[3].descriptorCount = 100;
-        poolSizes[4].type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-        poolSizes[4].descriptorCount = 16;
+        std::vector<VkDescriptorPoolSize> poolSizes{
+            {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+            {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+            {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 100},
+            {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100},
+        };
+        if (needRayTracing) {
+            poolSizes.push_back({VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, 16});
+        }
 
         VkDescriptorPoolCreateInfo poolInfo{};
         poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

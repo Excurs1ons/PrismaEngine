@@ -86,15 +86,13 @@ void Pipeline2D::Execute(const RenderContext& ctx) {
                            !ctx.targetTexture;
 
     // ═══════════════════════════════════════════════════════════════
-    // 阶段 0: 短暂开始并结束交换链 RP（仅为了清除颜色 / depth）
-    //         之后光照 Pass 在离屏纹理上运行
+    // 注意: 不再单独开 ClearPass 来清除交换链。
+    //       BeginSwapChainRenderPass 已设置 LOAD_OP_CLEAR，
+    //       会在 MainRender 开始时自动清除颜色和深度。
+    //       之前单独的 ClearPass 会导致同一帧内两次开始/结束
+    //       swapchain render pass，引发 depth buffer 的
+    //       SYNC-HAZARD-WRITE-AFTER-WRITE 验证错误。
     // ═══════════════════════════════════════════════════════════════
-    if (!ctx.targetTexture) {
-        ctx.commandBuffer->BeginDebugGroup("ClearPass");
-        ctx.device->BeginSwapChainRenderPass(ctx.clearColor);
-        ctx.device->EndSwapChainRenderPass();
-        ctx.commandBuffer->EndDebugGroup();
-    }
 
     // ── 1. 2D 光照预处理 (离屏) ──
     if (m_lightPass) {

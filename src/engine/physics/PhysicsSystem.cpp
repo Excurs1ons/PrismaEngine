@@ -1,7 +1,9 @@
 #include "PhysicsSystem.h"
+#include "PhysicsComponents.h"
 #include "SweepAndPrune.h"
 #include "Logger.h"
 #include "SceneManager.h"
+#include "scene/Scene.h"
 #include "Engine.h"
 #include <algorithm>
 
@@ -62,6 +64,9 @@ void PhysicsSystem::Update(Timestep ts) {
     stepSolveConstraints(static_cast<double>(dt));
     stepIntegratePosition(static_cast<double>(dt));
     stepTriggers(static_cast<double>(dt));
+
+    // 每帧同步物理位置到场景 Node
+    SyncBodiesToNodes();
 }
 
 // ========== 刚体管理 ==========
@@ -329,6 +334,76 @@ Physics::RaycastResult PhysicsSystem::raycast(const glm::dvec3& origin, const gl
     }
 
     return result;
+}
+
+// ========== 场景同步 ==========
+
+void PhysicsSystem::SyncFromScene() {
+    if (m_hasSyncedFromScene) return;
+
+    auto* sceneMgr = Prisma::Engine::Get().GetSceneManager();
+    auto* scene = sceneMgr ? sceneMgr->GetCurrentScene() : nullptr;
+    if (!scene) return;
+
+    LOG_DEBUG("Physics", "正在从场景组件创建物理刚体...");
+
+    scene->ForEach<RigidBodyComponent, BoxColliderComponent>(
+        [this](RigidBodyComponent& rbComp, BoxColliderComponent& boxComp) {
+            auto& desc = rbComp.GetDescMutable();
+            auto node = rbComp.GetOwnerNode();
+            if (!node.IsValid()) return;
+
+            // 创建刚体
+            auto bodyType = desc.isStatic
+                ? Physics::RigidBodyType::Static
+                : Physics::RigidBodyType::Dynamic;
+
+            auto* body = createRigidBody(bodyType);
+
+            // 从 Node 位置设置刚体初始位置
+            auto pos = node.GetPosition();
+            body->setPosition({ static_cast<double>(pos.x), static_cast<double>(pos.y), 0.0 });
+
+            // 设置碰撞形状
+            glm::dvec3 halfSize(
+                static_cast<double>(boxComp.GetSize().x) * 0.5,
+                static_cast<double>(boxComp.GetSize().y) * 0.5,
+                static_cast<double>(boxComp.GetSize().z) * 0.5
+            );
+            body->setShapeType(Physics::CollisionShapeType::Box);
+            body->setCollisionHalfSize(halfSize);
+
+            // 设置质量（静态体质量自动设为 0）
+            if (!desc.isStatic) {
+                body->setMass(static_cast<double>(desc.mass));
+            }
+
+            // 关联 Node 用于每帧位置回写
+            m_nodeMap[body] = node;
+
+            // 记录到组件以便后续查询
+            rbComp.SetPhysicsBody(body);
+
+            LOG_DEBUG("Physics", "  创建刚体: Node={}, type={}, pos=({},{})",
+                node.GetIndex(),
+                desc.isStatic ? "Static" : "Dynamic",
+                pos.x, pos.y);
+        }
+    );
+
+    m_hasSyncedFromScene = true;
+    LOG_DEBUG("Physics", "场景同步完成，共 {} 个刚体", m_bodies.size());
+}
+
+void PhysicsSystem::SyncBodiesToNodes() {
+    for (auto& [bodyPtr, node] : m_nodeMap) {
+        if (!node.IsValid()) continue;
+        auto pos = bodyPtr->getPosition();
+        node.SetPosition({
+            static_cast<float>(pos.x),
+            static_cast<float>(pos.y)
+        });
+    }
 }
 
 } // namespace Prisma

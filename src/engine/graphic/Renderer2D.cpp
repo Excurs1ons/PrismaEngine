@@ -2,7 +2,6 @@
 #include "SpriteAnimation.h"
 #include "core/Node.h"
 #include "core/EntityManager.h"
-#include "OrthographicCamera.h"
 #include "Renderer.h"
 #include "Mesh.h"
 #include "Platform.h"
@@ -153,7 +152,7 @@ void Renderer2D::SetMaxBatchQuads(uint32_t maxBatchQuads) {
     MAX_BATCH_INDICES  = maxBatchQuads * 6;
 }
 
-void Renderer2D::BeginScene(const OrthographicCamera& camera) {
+void Renderer2D::BeginScene(const ICamera& camera) {
     if (!s_Data) return;
     s_Data->ViewProjection = camera.GetViewProjectionMatrix();
     CameraData cD; cD.viewMatrix = camera.GetViewMatrix(); cD.projectionMatrix = camera.GetProjectionMatrix();

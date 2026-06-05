@@ -1,7 +1,7 @@
 #include "Prisma2DApp.h"
 #include "graphic/Renderer2D.h"
 #include "graphic/Renderer.h"
-#include "graphic/OrthographicCamera.h"
+#include "transform/Camera.h"
 #include "graphic/SpriteRenderer.h"
 #include "app/Engine.h"
 #include "core/EntityManager.h"
@@ -38,17 +38,19 @@ void Prisma2DApp::OnUpdate(Timestep ts) {
 void Prisma2DApp::OnRender() {
     auto* scene = Engine::Get().GetSceneManager()->GetCurrentScene();
     auto camera = scene ? scene->GetMainCamera() : nullptr;
-    auto ortho = std::dynamic_pointer_cast<Graphic::OrthographicCamera>(camera);
-    if (!ortho) return;
+    if (!camera) return;
 
     // 从 ScriptEngine 同步相机位置到渲染相机
     float camX = 0, camY = 0;
     #if PRISMA_ENABLE_SCRIPTING
     Engine::Get().GetScriptEngine().GetCameraPos(&camX, &camY);
     #endif
-    ortho->SetPosition({camX, camY});
+    auto cam = std::dynamic_pointer_cast<Graphic::Camera>(camera);
+    if (cam) {
+        cam->SetViewport(m_Spec.Width, m_Spec.Height);
+    }
 
-    Graphic::Renderer2D::BeginScene(*ortho);
+    Graphic::Renderer2D::BeginScene(*camera);
 
     // ── 场景物体（受光照影响） ──
     Graphic::Renderer2D::DrawNodesSoA();
@@ -79,7 +81,7 @@ void Prisma2DApp::OnRender() {
 
     // ── HUD 覆盖层 ──
     {
-        Vector3 camPos = ortho->GetPosition();
+        Vector3 camPos = camera->GetPosition();
         auto hud = [&](float sx, float sy) { return Vector2{sx + camPos.x, sy + camPos.y}; };
 
         static std::string timingInfo = "Calculating...";
