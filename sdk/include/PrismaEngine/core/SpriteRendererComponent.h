@@ -19,11 +19,9 @@ public:
     SpriteRendererComponent() = default;
     virtual ~SpriteRendererComponent() = default;
 
-    void Initialize() override {}
-    void Update(Timestep ts) override {
-        // 同步数据到 SoA
-        WriteToSoA(m_ownerNode.GetIndex());
-    }
+    void Initialize() override;
+    void Update(Timestep ts) override;
+    void Shutdown() override;
 
     ComponentId GetComponentId() const override { return GetComponentTypeId<SpriteRendererComponent>(); }
     const char* GetComponentTypeName() const override { return "SpriteRendererComponent"; }

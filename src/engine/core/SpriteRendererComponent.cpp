@@ -45,11 +45,17 @@ namespace {
 namespace Prisma {
 namespace Core {
 
+void SpriteRendererComponent::Initialize() {
+}
+
 void SpriteRendererComponent::Update(Timestep ts) {
     // 每帧同步数据到 SoA，确保数据实时性
     if (m_ownerNode.IsValid()) {
         WriteToSoA(m_ownerNode.GetIndex());
     }
+}
+
+void SpriteRendererComponent::Shutdown() {
 }
 
 SpriteRendererComponent::Data SpriteRendererComponent::GetData() const {
