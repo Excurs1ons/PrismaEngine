@@ -31,7 +31,8 @@ int AssetManager::Initialize() {
     // 或者在 Engine::Initialize 中显式传入
     return Initialize("/data/data/com.prismaengine.android/files") ? 0 : -1;
 #else
-    return Initialize(std::filesystem::current_path()) ? 0 : -1;
+    // 使用 exe 所在目录为基准，而非 CWD
+    return Initialize(Platform::GetExecutablePath()) ? 0 : -1;
 #endif
 }
 

@@ -169,4 +169,10 @@ internal static class ScriptEntry
         // Advance the local particle system every frame
         ParticleSystem.Update(dt);
     }
+
+    [UnmanagedCallersOnly]
+    public static void OnRender(float dt)
+    {
+        // 2D 渲染管线在 C++ 侧完成，此处可预留 hooks
+    }
 }

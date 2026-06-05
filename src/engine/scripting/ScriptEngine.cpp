@@ -1323,8 +1323,10 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
         return m_bootstrapFn && m_onFrameFn;
     };
 
-    if (!tryGetFn(projectPrefix) && projectPrefix != "GameScripts")
-        tryGetFn("GameScripts");
+    // 优先尝试 GameScripts 命名空间（大多数项目使用）
+    // 若失败则回退到项目前缀（如 PathTracing3D、PrismaCraft 等自定义命名空间）
+    if (!tryGetFn("GameScripts"))
+        tryGetFn(projectPrefix);
 
     if (!m_bootstrapFn || !m_onFrameFn) return false;
 

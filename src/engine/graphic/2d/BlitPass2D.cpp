@@ -126,6 +126,20 @@ bool BlitPass2D::createDescriptorSet(IRenderDevice* device, IRenderResourceManag
     m_dsLayout = rf->CreateDescriptorSetLayout(shaderResources);
     m_dsArray.resize(FRAME_OVERLAP);
 
+    // 创建一块共享的默认白纹理，供所有帧的 descriptor set 共用
+    {
+        TextureDesc defaultTexDesc;
+        defaultTexDesc.width = 1;
+        defaultTexDesc.height = 1;
+        defaultTexDesc.format = TextureFormat::RGBA8_UNorm;
+        defaultTexDesc.allowShaderResource = true;
+        m_defaultTexture = rf->CreateTextureImpl(defaultTexDesc);
+        if (m_defaultTexture) {
+            m_defaultTexture->Clear(Color(1, 1, 1, 1));
+        }
+    }
+    auto defaultSampler = rm ? rm->GetDefaultSampler() : nullptr;
+
     for (uint32_t i = 0; i < FRAME_OVERLAP; ++i) {
         auto ds = rf->CreateDescriptorSet(m_dsLayout.get());
         if (!ds || !m_materialUBO) {
@@ -136,23 +150,11 @@ bool BlitPass2D::createDescriptorSet(IRenderDevice* device, IRenderResourceManag
         // 绑定 UBO 到 binding 0
         ds->BindBuffer(0, m_materialUBO.get(), 0, sizeof(BlitMaterialData), DescriptorType::UniformBuffer);
 
-        // 绑定默认纹理到 binding 1 (1x1 白像素，避免 VUID 08114 "never updated")
-        {
-            TextureDesc defaultTexDesc;
-            defaultTexDesc.width = 1;
-            defaultTexDesc.height = 1;
-            defaultTexDesc.format = TextureFormat::RGBA8_UNorm;
-            defaultTexDesc.allowShaderResource = true;
-            auto defaultTex = rf->CreateTextureImpl(defaultTexDesc);
-            if (defaultTex) {
-                defaultTex->Clear(Color(1, 1, 1, 1));
-            }
-            auto defaultSampler = rm ? rm->GetDefaultSampler() : nullptr;
-            if (defaultTex && defaultSampler) {
-                if (i == 0) m_defaultTexture = std::move(defaultTex);
-                ds->BindTexture(1, (i == 0) ? m_defaultTexture.get() : defaultTex.get(), defaultSampler.get());
-            }
+        // 绑定共享默认纹理到 binding 1
+        if (m_defaultTexture && defaultSampler) {
+            ds->BindTexture(1, m_defaultTexture.get(), defaultSampler.get());
         }
+
         ds->Update();
         m_dsArray[i] = std::move(ds);
     }

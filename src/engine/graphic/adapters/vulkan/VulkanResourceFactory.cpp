@@ -374,7 +374,8 @@ std::unique_ptr<ITexture> VulkanResourceFactory::CreateTextureFromMemory(const v
             vkBeginCommandBuffer(cmdBuffer, &beginInfo);
             VkImageMemoryBarrier preBarrier{};
             preBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-            preBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+            // CreateTextureImpl 已经将图像从 UNDEFINED 过渡到 SHADER_READ_ONLY_OPTIMAL
+            preBarrier.oldLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             preBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             preBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             preBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
