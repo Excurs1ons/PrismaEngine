@@ -45,6 +45,13 @@ namespace {
 namespace Prisma {
 namespace Core {
 
+void SpriteRendererComponent::Update(Timestep ts) {
+    // 每帧同步数据到 SoA，确保数据实时性
+    if (m_ownerNode.IsValid()) {
+        WriteToSoA(m_ownerNode.GetIndex());
+    }
+}
+
 SpriteRendererComponent::Data SpriteRendererComponent::GetData() const {
     Data d;
     d.color = {color.r, color.g, color.b, color.a};

@@ -278,12 +278,14 @@ void Renderer2D::DrawNodesSoA() {
     uint32_t count = em.GetAliveCount();
 
     for (uint32_t i = 0; i < count; ++i) {
-        if (!rb->active[i]) continue;
+        if (!rb->active[i] || rb->sizeW[i] < 0.001f || rb->sizeH[i] < 0.001f) continue;
 
         Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i], tb->posY[i], 0.0f));
         if (std::abs(tb->rotation[i]) > 0.001f)
             t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
-        t = glm::scale(t, glm::vec3(rb->sizeW[i], rb->sizeH[i], 1.0f));
+        
+        // 结合基础尺寸 (SoA) 与 变换缩放 (SoA)
+        t = glm::scale(t, glm::vec3(rb->sizeW[i] * tb->scaleX[i], rb->sizeH[i] * tb->scaleY[i], 1.0f));
 
         DrawQuad(t, {rb->colorR[i], rb->colorG[i], rb->colorB[i], rb->colorA[i]});
     }

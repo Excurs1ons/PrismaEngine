@@ -19,14 +19,43 @@ public:
     ComponentId GetComponentId() const override { return GetComponentTypeId<Transform>(); }
 
     // Setters that trigger dirty flag
-    void SetPosition(const Vector3& pos) { m_Position = pos; m_Dirty = true; }
-    void SetRotation(const Quaternion& rot) { m_Rotation = rot; m_Dirty = true; }
-    void SetRotation(const Vector3& euler) { m_Rotation = Quaternion(glm::radians(euler)); m_Dirty = true; }
-    void SetScale(const Vector3& s) { m_Scale = s; m_Dirty = true; }
+    void SetPosition(const Vector3& pos) { 
+        m_Position = pos; 
+        m_Dirty = true; 
+        SyncToNode();
+    }
+    void SetRotation(const Quaternion& rot) { 
+        m_Rotation = rot; 
+        m_Dirty = true; 
+        SyncToNode();
+    }
+    void SetRotation(const Vector3& euler) { 
+        m_Rotation = Quaternion(glm::radians(euler)); 
+        m_Dirty = true; 
+        SyncToNode();
+    }
+    void SetScale(const Vector3& s) { 
+        m_Scale = s; 
+        m_Dirty = true; 
+        SyncToNode();
+    }
 
     [[nodiscard]] const Vector3& GetPosition() const { return m_Position; }
     [[nodiscard]] const Quaternion& GetRotation() const { return m_Rotation; }
     [[nodiscard]] const Vector3& GetScale() const { return m_Scale; }
+
+    // ========== Component 接口实现 ==========
+
+    void Initialize() override {
+        SyncToNode();
+    }
+
+    void Update(Timestep /*ts*/) override {
+        // 每帧同步到当前写入缓冲区，确保双缓冲系统数据一致
+        SyncToNode();
+    }
+
+    void Shutdown() override {}
 
     // 序列化
     const char* GetComponentTypeName() const override { return "Transform"; }
@@ -62,6 +91,14 @@ public:
         float roll  = std::atan2(2.0f * (m_Rotation.w * m_Rotation.y + m_Rotation.z * m_Rotation.x),
                                  1.0f - 2.0f * (m_Rotation.x * m_Rotation.x + m_Rotation.y * m_Rotation.y));
         return Vector3(pitch, yaw, roll);
+    }
+
+    void SyncToNode() {
+        if (m_ownerNode.IsValid()) {
+            m_ownerNode.SetPosition({m_Position.x, m_Position.y});
+            m_ownerNode.SetRotation(GetYaw());
+            m_ownerNode.SetScale({m_Scale.x, m_Scale.y});
+        }
     }
 
 private:
