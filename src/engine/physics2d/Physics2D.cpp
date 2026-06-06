@@ -2,7 +2,6 @@
 #include "Quadtree2D.h"
 #include <algorithm>
 #include <cmath>
-#include <unordered_set>
 
 namespace Prisma::Physics2D {
 
@@ -67,59 +66,59 @@ bool Physics2D::ResolvePlatform(const AABB2D& player, glm::vec2& velocity,
     hitCeiling = false;
     bool anyCollision = false;
 
-    // 如果设置了四叉树，先做空间查询缩小候选范围
-    // 约定：四叉树中的 entityId 对应 solids 数组的索引
-    std::unordered_set<uint32_t> candidateSet;
-    if (s_quadtree != nullptr) {
-        AABB2D expandedBounds = player;
-        if (velocity.x < 0.0f) expandedBounds.minX += velocity.x;
-        if (velocity.x > 0.0f) expandedBounds.maxX += velocity.x;
-        if (velocity.y < 0.0f) expandedBounds.minY += velocity.y;
-        if (velocity.y > 0.0f) expandedBounds.maxY += velocity.y;
+    AABB2D current = player;
 
-        auto candidates = s_quadtree->Query(expandedBounds);
-        candidateSet.insert(candidates.begin(), candidates.end());
+    // === X axis: move, then resolve overlaps ===
+    if (velocity.x != 0.0f) {
+        current = current.Translated(velocity.x, 0.0f);
+
+        for (uint32_t i = 0; i < count; i++) {
+            if (!current.Intersects(solids[i])) continue;
+
+            if (velocity.x > 0.0f) {
+                float push = solids[i].minX - current.maxX;
+                current = current.Translated(push, 0.0f);
+            } else {
+                float push = solids[i].maxX - current.minX;
+                current = current.Translated(push, 0.0f);
+            }
+            velocity.x = 0.0f;
+            anyCollision = true;
+        }
     }
 
-    for (int iter = 0; iter < 5; iter++) {
-        float earliestHit = 2.0f;
-        glm::vec2 bestNormal{0.0f, 0.0f};
+    // === Y axis: move, then resolve overlaps ===
+    if (velocity.y != 0.0f) {
+        current = current.Translated(0.0f, velocity.y);
 
-        if (s_quadtree != nullptr && !candidateSet.empty()) {
-            for (uint32_t i : candidateSet) {
-                if (i >= count) continue;
-                float hitTime;
-                glm::vec2 normal;
-                if (SweepAABB(player, velocity, solids[i], hitTime, normal)) {
-                    if (hitTime >= 0.0f && hitTime < earliestHit) {
-                        earliestHit = hitTime;
-                        bestNormal = normal;
-                    }
-                }
+        for (uint32_t i = 0; i < count; i++) {
+            if (!current.Intersects(solids[i])) continue;
+
+            if (velocity.y > 0.0f) {
+                // Falling — land on top of tile
+                float push = solids[i].minY - current.maxY;
+                current = current.Translated(0.0f, push);
+                onGround = true;
+            } else {
+                // Rising — hit ceiling from below
+                float push = solids[i].maxY - current.minY;
+                current = current.Translated(0.0f, push);
+                hitCeiling = true;
             }
-        } else {
-            for (uint32_t i = 0; i < count; i++) {
-                float hitTime;
-                glm::vec2 normal;
-                if (SweepAABB(player, velocity, solids[i], hitTime, normal)) {
-                    if (hitTime >= 0.0f && hitTime < earliestHit) {
-                        earliestHit = hitTime;
-                        bestNormal = normal;
-                    }
+            velocity.y = 0.0f;
+            anyCollision = true;
+        }
+    } else {
+        // No vertical movement: check resting ground contact
+        for (uint32_t i = 0; i < count; i++) {
+            if (current.maxX > solids[i].minX && current.minX < solids[i].maxX) {
+                float gap = solids[i].minY - current.maxY;
+                if (gap >= 0.0f && gap < 2.0f) {
+                    onGround = true;
+                    break;
                 }
             }
         }
-
-        if (earliestHit > 1.0f) break;
-
-        float dot = glm::dot(velocity, bestNormal);
-        if (dot < 0.0f) {
-            velocity -= bestNormal * dot;
-        }
-
-        if (bestNormal.y < -0.5f) onGround = true;
-        if (bestNormal.y > 0.5f) hitCeiling = true;
-        anyCollision = true;
     }
 
     return anyCollision;

@@ -565,12 +565,6 @@ int Engine::Run(std::unique_ptr<Application> app) {
         }
     }
 
-    // [修复] 所有初始化数据（场景 + C# Bootstrap）已写入 Write (layout A)，
-    // 交换一次使 Read 获得完整数据。
-    // 若不交换：第一帧 World::Step 的 SyncActiveBuffers 从空 Read 覆盖 Write，
-    // 导致场景方块位置丢失（永远在 0,0）。
-    EntityManager::Get().SwapBuffers();
-
     if (m_CurrentApp->OnInitialize() != 0) return -1;
 
     // 同步物理系统与场景
@@ -584,17 +578,16 @@ int Engine::Run(std::unique_ptr<Application> app) {
     double lastFrameTime = Platform::GetTimeSeconds();
 
     while (m_Running && m_CurrentApp->IsRunning()) {
-        if (m_Window) m_Window->OnUpdate();
-        else {
-            Platform::PumpEvents();
-            // 无头模式下手动限制帧率，防止 CPU 空转
-            std::this_thread::sleep_for(std::chrono::milliseconds(16));
-        }
-        
         double time = Platform::GetTimeSeconds();
         float deltaTime = static_cast<float>(time - lastFrameTime);
         lastFrameTime = time;
         if (deltaTime > 0.0f) m_FrameStats.FPS = 1.0f / deltaTime;
+
+        if (m_Window) m_Window->OnUpdate();
+        else {
+            Platform::PumpEvents();
+            std::this_thread::sleep_for(std::chrono::milliseconds(16));
+        }
         
         if (!m_Running) break;
 
@@ -609,11 +602,6 @@ int Engine::Run(std::unique_ptr<Application> app) {
             if (m_scriptEngine->IsInitialized())
                 m_scriptEngine->Update(std::min(deltaTime, 0.1f));
 #endif
-
-            // [正确双缓冲] C++ 是唯一的交换权威。
-            // C# 每帧通过 GetTransformA(Write)/GetTransformB(Read) 重新查询指针，
-            // C++ 在这里交换，使下一帧 C# 拿到正确的 Read/Write。
-            EntityManager::Get().SwapBuffers();
 
             if (GetRenderSystem()) {
                 double t0 = Platform::GetTimeSeconds();
@@ -725,7 +713,6 @@ void Engine::Step(float deltaTime) {
     if (m_scriptEngine->IsInitialized())
         m_scriptEngine->Update(clampedDelta);
 #endif
-    EntityManager::Get().SwapBuffers();
 
     // 4. Render frame
     if (GetRenderSystem()) {

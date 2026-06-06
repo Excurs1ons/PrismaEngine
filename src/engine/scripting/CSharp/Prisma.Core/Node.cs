@@ -38,12 +38,12 @@ public readonly struct Node : IEquatable<Node>
 #endif
     }
 
-    // 属性访问直接指向底层的数据布局缓冲区（热/冷分离），实现零开销跨语言访问
-    public float X { get { unsafe { Validate(); return Interop.TransformRead->PosX[Index]; } } set { unsafe { Validate(); Interop.TransformWrite->PosX[Index] = value; } } }
-    public float Y { get { unsafe { Validate(); return Interop.TransformRead->PosY[Index]; } } set { unsafe { Validate(); Interop.TransformWrite->PosY[Index] = value; } } }
-    public Vector2 Position { get { unsafe { Validate(); return new Vector2(Interop.TransformRead->PosX[Index], Interop.TransformRead->PosY[Index]); } } set { unsafe { Validate(); Interop.TransformWrite->PosX[Index] = value.X; Interop.TransformWrite->PosY[Index] = value.Y; } } }
-    public float Rotation { get { unsafe { Validate(); return Interop.TransformRead->Rotation[Index]; } } set { unsafe { Validate(); Interop.TransformWrite->Rotation[Index] = value; } } }
-    public Vector2 Scale { get { unsafe { Validate(); return new Vector2(Interop.TransformRead->ScaleX[Index], Interop.TransformRead->ScaleY[Index]); } } set { unsafe { Validate(); Interop.TransformWrite->ScaleX[Index] = value.X; Interop.TransformWrite->ScaleY[Index] = value.Y; } } }
+    // 属性访问直接指向底层的数据布局缓冲区，实现零开销跨语言访问
+    public float X { get { unsafe { Validate(); return Interop.TransformRead->PosX[Index]; } } set { unsafe { Validate(); Interop.TransformRead->PosX[Index] = value; } } }
+    public float Y { get { unsafe { Validate(); return Interop.TransformRead->PosY[Index]; } } set { unsafe { Validate(); Interop.TransformRead->PosY[Index] = value; } } }
+    public Vector2 Position { get { unsafe { Validate(); return new Vector2(Interop.TransformRead->PosX[Index], Interop.TransformRead->PosY[Index]); } } set { unsafe { Validate(); Interop.TransformRead->PosX[Index] = value.X; Interop.TransformRead->PosY[Index] = value.Y; } } }
+    public float Rotation { get { unsafe { Validate(); return Interop.TransformRead->Rotation[Index]; } } set { unsafe { Validate(); Interop.TransformRead->Rotation[Index] = value; } } }
+    public Vector2 Scale { get { unsafe { Validate(); return new Vector2(Interop.TransformRead->ScaleX[Index], Interop.TransformRead->ScaleY[Index]); } } set { unsafe { Validate(); Interop.TransformRead->ScaleX[Index] = value.X; Interop.TransformRead->ScaleY[Index] = value.Y; } } }
 
     public static Node Create(string name, World? world = null)
     {

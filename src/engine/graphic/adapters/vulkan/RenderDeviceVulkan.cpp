@@ -775,7 +775,24 @@ void RenderDeviceVulkan::BeginFrame() {
     vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, UINT64_MAX);
 
     if (!m_swapChain->AcquireNextImage(m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE)) {
-        return;
+        if (m_swapChain) {
+            LOG_WARNING("Vulkan", "AcquireNextImage failed, recreating swapchain");
+            vkDeviceWaitIdle(m_device);
+            m_swapChain->Resize(m_swapChain->GetWidth(), m_swapChain->GetHeight());
+            uint32_t imageCount = m_swapChain->GetBufferCount();
+            if (m_renderFinishedSemaphores.size() < imageCount) {
+                VkSemaphoreCreateInfo semInfo{};
+                semInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+                size_t old = m_renderFinishedSemaphores.size();
+                m_renderFinishedSemaphores.resize(imageCount);
+                for (size_t i = old; i < imageCount; i++)
+                    vkCreateSemaphore(m_device, &semInfo, nullptr, &m_renderFinishedSemaphores[i]);
+            }
+            if (!m_swapChain->AcquireNextImage(m_imageAvailableSemaphores[m_currentFrame], VK_NULL_HANDLE))
+                return;
+        } else {
+            return;
+        }
     }
 
     vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);

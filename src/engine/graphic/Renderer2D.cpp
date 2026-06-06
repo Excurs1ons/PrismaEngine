@@ -40,6 +40,8 @@ struct Renderer2D::Renderer2DData {
         Vertex2D* VertexBufferBase = nullptr; 
         Vertex2D* VertexBufferPtr = nullptr;  
         uint32_t QuadCount = 0;
+        std::vector<std::shared_ptr<Mesh>> MeshPool;
+        uint32_t MeshPoolIndex = 0;
     };
     FrameResource Frames[FRAME_SLOTS];      // 场景 VBO（受光照影响）
     FrameResource GizmoFrames[FRAME_SLOTS]; // Gizmo VBO（无光照，纯叠加）
@@ -196,6 +198,7 @@ void Renderer2D::BeginGizmo() {
     auto& f = s_Data->GizmoFrames[s_Data->CurrentFrameSlot];
     f.VertexBufferPtr = f.VertexBufferBase;
     f.QuadCount = 0;
+    f.MeshPoolIndex = 0;
 }
 
 void Renderer2D::EndGizmo() {
@@ -212,50 +215,83 @@ void Renderer2D::Flush() {
         ? s_Data->GizmoFrames[s_Data->CurrentFrameSlot]
         : s_Data->Frames[s_Data->CurrentFrameSlot];
     if (f.QuadCount == 0) return;
-    f.VBO->UpdateData(f.VertexBufferBase, (uint32_t)(f.VertexBufferPtr - f.VertexBufferBase) * sizeof(Vertex2D), 0);
-    auto& sub = const_cast<std::vector<SubMeshBuffer>&>(f.MeshObj->GetSubMeshes());
-    if (!sub.empty()) { sub[0].indexCount = f.QuadCount * 6; sub[0].vertexCount = f.QuadCount * 4; }
-    
+
+    auto* rf = Engine::Get().GetRenderSystem()->GetDevice()->GetResourceFactory();
+
+    // 从 mesh pool 获取独立 mesh，避免多次 Flush 共享 VBO/IBO 导致数据覆盖
+    if (f.MeshPoolIndex >= f.MeshPool.size()) {
+        auto mesh = std::make_shared<Mesh>();
+        BufferDesc vd; vd.type = BufferType::Vertex;
+        vd.size = MAX_BATCH_VERTICES * sizeof(Vertex2D);
+        vd.usage = BufferUsage::Dynamic;
+        auto vbo = rf->CreateBufferImpl(vd);
+        BufferDesc id; id.type = BufferType::Index;
+        id.size = MAX_BATCH_INDICES * sizeof(uint32_t);
+        id.usage = BufferUsage::Dynamic;
+        auto ibo = rf->CreateBufferImpl(id);
+        std::vector<uint32_t> indices(MAX_BATCH_INDICES);
+        uint32_t off = 0;
+        for (uint32_t j = 0; j < MAX_BATCH_INDICES; j += 6) {
+            indices[j+0]=off+0; indices[j+1]=off+1; indices[j+2]=off+2;
+            indices[j+3]=off+2; indices[j+4]=off+3; indices[j+5]=off+0; off+=4;
+        }
+        ibo->UpdateData(indices.data(), (uint32_t)indices.size() * sizeof(uint32_t), 0);
+        SubMeshBuffer smb;
+        smb.name = "Batch";
+        smb.materialIndex = 0;
+        smb.baseVertex = 0;
+        smb.baseIndex = 0;
+        smb.indexCount = 0;
+        smb.vertexCount = 0;
+        smb.vertexBuffer = std::shared_ptr<IBuffer>(std::move(vbo));
+        smb.indexBuffer = std::shared_ptr<IBuffer>(std::move(ibo));
+        smb.use16BitIndices = false;
+        mesh->AddSubMesh(smb);
+        f.MeshPool.push_back(mesh);
+    }
+    auto& batchMesh = f.MeshPool[f.MeshPoolIndex++];
+    auto& sub = const_cast<std::vector<SubMeshBuffer>&>(batchMesh->GetSubMeshes());
+    sub[0].indexCount = f.QuadCount * 6;
+    sub[0].vertexCount = f.QuadCount * 4;
+    sub[0].vertexBuffer->UpdateData(f.VertexBufferBase, f.QuadCount * 4 * sizeof(Vertex2D), 0);
+
     std::shared_ptr<Material> targetMaterial = s_Data->DefaultMaterial;
-    
-    // Gizmo 模式：始终用白色 LightMap（无光照效果），纯叠加
+
     if (s_Data->InGizmoMode) {
         if (s_Data->CurrentTexture) {
             targetMaterial = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader());
             targetMaterial->SetParam("AlbedoMap", s_Data->CurrentTexture);
-            // 白色 LightMap = 无光照
             auto* p = s_Data->DefaultMaterial->GetParam("LightMap");
             if (p) targetMaterial->SetParam("LightMap", *p);
             s_Data->FrameMaterials.push_back(targetMaterial);
         }
-        Renderer::SubmitGizmo(f.MeshObj.get(), targetMaterial.get(),
+        Renderer::SubmitGizmo(batchMesh.get(), targetMaterial.get(),
             PrismaMath::mat4(1.0f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
     } else {
-        // 场景模式：使用真实光照纹理
         if (s_Data->CurrentTexture || s_Data->LightTexture) {
             targetMaterial = std::make_shared<Material>(s_Data->DefaultMaterial->GetShader());
-            
+
             if (s_Data->CurrentTexture) {
                 targetMaterial->SetParam("AlbedoMap", s_Data->CurrentTexture);
             } else {
                 auto* p = s_Data->DefaultMaterial->GetParam("AlbedoMap");
                 if (p) targetMaterial->SetParam("AlbedoMap", *p);
             }
-            
+
             if (s_Data->LightTexture) {
                 targetMaterial->SetParam("LightMap", s_Data->LightTexture);
             } else {
                 auto* p = s_Data->DefaultMaterial->GetParam("LightMap");
                 if (p) targetMaterial->SetParam("LightMap", *p);
             }
-            
+
             s_Data->FrameMaterials.push_back(targetMaterial);
         }
-        
-        Renderer::Submit(f.MeshObj.get(), targetMaterial.get(),
+
+        Renderer::Submit(batchMesh.get(), targetMaterial.get(),
             PrismaMath::mat4(1.0f), Prisma::Color(1.0f, 1.0f, 1.0f, 1.0f));
     }
-    
+
     s_Data->Stats.DrawCalls++;
     f.VertexBufferPtr = f.VertexBufferBase; f.QuadCount = 0;
 }
@@ -264,6 +300,7 @@ void Renderer2D::StartBatch() {
     if (!s_Data) return;
     auto& f = s_Data->Frames[s_Data->CurrentFrameSlot];
     f.VertexBufferPtr = f.VertexBufferBase; f.QuadCount = 0;
+    f.MeshPoolIndex = 0;
     s_Data->FrameMaterials.clear(); s_Data->CurrentTexture = nullptr;
 }
 
@@ -280,7 +317,9 @@ void Renderer2D::DrawNodesSoA() {
     for (uint32_t i = 0; i < count; ++i) {
         if (!rb->active[i] || rb->sizeW[i] < 0.001f || rb->sizeH[i] < 0.001f) continue;
 
-        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(tb->posX[i], tb->posY[i], 0.0f));
+        float px = std::round(tb->posX[i]);
+        float py = std::round(tb->posY[i]);
+        Matrix4 t = glm::translate(glm::mat4(1.0f), glm::vec3(px, py, 0.0f));
         if (std::abs(tb->rotation[i]) > 0.001f)
             t = glm::rotate(t, tb->rotation[i], glm::vec3(0, 0, 1));
         

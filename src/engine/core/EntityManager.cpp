@@ -15,47 +15,41 @@ EntityManager& EntityManager::Get() {
 EntityManager::EntityManager() {
     s_instance = this;
 
-    size_t blockSizeA = 5 * kFieldStride;
+    size_t blockSize = 5 * kFieldStride;
     size_t blockSizeR = 8 * kFieldStride;
 
-    m_blockABase = Platform::ReserveVirtualMemory(blockSizeA);
-    m_blockBBase = Platform::ReserveVirtualMemory(blockSizeA);
+    m_blockBase = Platform::ReserveVirtualMemory(blockSize);
     m_blockRBase = Platform::ReserveVirtualMemory(blockSizeR);
 
     initLayoutPointers();
 }
 
 EntityManager::~EntityManager() {
-    if (m_blockABase) Platform::ReleaseVirtualMemory(m_blockABase, 5 * kFieldStride);
-    if (m_blockBBase) Platform::ReleaseVirtualMemory(m_blockBBase, 5 * kFieldStride);
+    if (m_blockBase) Platform::ReleaseVirtualMemory(m_blockBase, 5 * kFieldStride);
     if (m_blockRBase) Platform::ReleaseVirtualMemory(m_blockRBase, 8 * kFieldStride);
     s_instance = nullptr;
 }
 
 void EntityManager::initLayoutPointers() {
-    auto initTransform = [](TransformDataLayout& layout, void* base) {
-        auto* bytes = (uint8_t*)base;
-        layout.posX     = (float*)(bytes + 0 * kFieldStride);
-        layout.posY     = (float*)(bytes + 1 * kFieldStride);
-        layout.rotation = (float*)(bytes + 2 * kFieldStride);
-        layout.scaleX   = (float*)(bytes + 3 * kFieldStride);
-        layout.scaleY   = (float*)(bytes + 4 * kFieldStride);
-    };
+    auto* bytes = (uint8_t*)m_blockBase;
+    m_layout.posX     = (float*)(bytes + 0 * kFieldStride);
+    m_layout.posY     = (float*)(bytes + 1 * kFieldStride);
+    m_layout.rotation = (float*)(bytes + 2 * kFieldStride);
+    m_layout.scaleX   = (float*)(bytes + 3 * kFieldStride);
+    m_layout.scaleY   = (float*)(bytes + 4 * kFieldStride);
 
     auto initRender = [](RenderDataLayout& layout, void* base) {
-        auto* bytes = (uint8_t*)base;
-        layout.active     = (uint32_t*)(bytes + 0 * kFieldStride);
-        layout.generation = (uint32_t*)(bytes + 1 * kFieldStride);
-        layout.colorR     = (float*)(bytes + 2 * kFieldStride);
-        layout.colorG     = (float*)(bytes + 3 * kFieldStride);
-        layout.colorB     = (float*)(bytes + 4 * kFieldStride);
-        layout.colorA     = (float*)(bytes + 5 * kFieldStride);
-        layout.sizeW      = (float*)(bytes + 6 * kFieldStride);
-        layout.sizeH      = (float*)(bytes + 7 * kFieldStride);
+        auto* b = (uint8_t*)base;
+        layout.active     = (uint32_t*)(b + 0 * kFieldStride);
+        layout.generation = (uint32_t*)(b + 1 * kFieldStride);
+        layout.colorR     = (float*)(b + 2 * kFieldStride);
+        layout.colorG     = (float*)(b + 3 * kFieldStride);
+        layout.colorB     = (float*)(b + 4 * kFieldStride);
+        layout.colorA     = (float*)(b + 5 * kFieldStride);
+        layout.sizeW      = (float*)(b + 6 * kFieldStride);
+        layout.sizeH      = (float*)(b + 7 * kFieldStride);
     };
 
-    initTransform(m_layoutA, m_blockABase);
-    initTransform(m_layoutB, m_blockBBase);
     initRender(m_layoutR, m_blockRBase);
 }
 
@@ -74,8 +68,7 @@ void EntityManager::commitRange(uint32_t fromEntity, uint32_t toEntity) {
         }
     };
 
-    commitField(m_blockABase, 5);
-    commitField(m_blockBBase, 5);
+    commitField(m_blockBase, 5);
     commitField(m_blockRBase, 8);
 }
 
@@ -103,16 +96,14 @@ Node EntityManager::CreateNode() {
     m_layoutR.active[index] = 1;
     if (m_layoutR.generation[index] == 0) m_layoutR.generation[index] = 1;
 
-    // Reset transform (双缓冲：两个 layout 都要初始化)
-    m_layoutA.posX[index] = m_layoutB.posX[index] = 0.0f;
-    m_layoutA.posY[index] = m_layoutB.posY[index] = 0.0f;
-    m_layoutA.rotation[index] = m_layoutB.rotation[index] = 0.0f;
-    m_layoutA.scaleX[index] = m_layoutB.scaleX[index] = 1.0f;
-    m_layoutA.scaleY[index] = m_layoutB.scaleY[index] = 1.0f;
+    m_layout.posX[index] = 0.0f;
+    m_layout.posY[index] = 0.0f;
+    m_layout.rotation[index] = 0.0f;
+    m_layout.scaleX[index] = 1.0f;
+    m_layout.scaleY[index] = 1.0f;
 
-    // Reset render
     m_layoutR.colorR[index] = m_layoutR.colorG[index] = m_layoutR.colorB[index] = m_layoutR.colorA[index] = 1.0f;
-    m_layoutR.sizeW[index] = m_layoutR.sizeH[index] = 100.0f;
+    m_layoutR.sizeW[index] = m_layoutR.sizeH[index] = 0.0f;
 
     uint32_t handle = (index & 0xFFFF) | ((m_layoutR.generation[index] & 0xFFFF) << 16);
     return Node(handle);
@@ -128,18 +119,6 @@ void EntityManager::DestroyNode(uint32_t handle) {
         m_layoutR.generation[index]++;
         if ((m_layoutR.generation[index] & 0xFFFF) == 0) m_layoutR.generation[index] = 1;
     }
-}
-
-void EntityManager::SwapBuffers() {
-    m_writeIndex = 1 - m_writeIndex;
-}
-
-TransformDataLayout* EntityManager::GetTransformRead() {
-    return (m_writeIndex == 1) ? &m_layoutA : &m_layoutB;
-}
-
-TransformDataLayout* EntityManager::GetTransformWrite() {
-    return (m_writeIndex == 0) ? &m_layoutA : &m_layoutB;
 }
 
 } // namespace Prisma

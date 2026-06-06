@@ -43,7 +43,7 @@ public partial class PlayerController : Script
     public override void OnCreate()
     {
         GameState.PlayerNode = node;
-        _node.Position = new Vector2(64, 400);
+        _node.Position = new Vector2(64, 408);
         jumpCount = 0;
         jumpBufferTimer = 0f;
         coyoteTimer = 0f;
@@ -187,7 +187,7 @@ public partial class PlayerController : Script
     public void Respawn()
     {
         _node.X = 64;
-        _node.Y = 400;
+        _node.Y = 408;
         velocity = Vector2.Zero;
         onGround = false;
         jumpCount = 0;

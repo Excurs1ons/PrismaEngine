@@ -26,13 +26,16 @@ set(MV_HEADERS
 
 set(MV_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/src/engine
     ${CMAKE_SOURCE_DIR}/src/engine/app
     ${CMAKE_SOURCE_DIR}/src/engine/core
     ${CMAKE_SOURCE_DIR}/src/engine/graphic
     ${CMAKE_SOURCE_DIR}/src/engine/logger
     ${CMAKE_SOURCE_DIR}/src/engine/input
     ${CMAKE_SOURCE_DIR}/src/engine/physics
+    ${CMAKE_SOURCE_DIR}/src/engine/scripting
     ${CMAKE_SOURCE_DIR}/src/engine/scene
+    ${CMAKE_SOURCE_DIR}/src/engine/tilemap
     ${CMAKE_SOURCE_DIR}/src/engine/transform
 )
 

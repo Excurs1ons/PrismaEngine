@@ -100,16 +100,6 @@ public class World : IDisposable
         Prisma.Time._elapsed = this.Time.Elapsed;
         Prisma.Time._timeScale = this.Time.TimeScale;
 
-        // 0. 同步双缓冲指针——C++ 上帧 SwapBuffers 已交换 Read/Write 含义，
-        // 本帧从 C++ 重新获取正确的 Read(GetB) 和 Write(GetA) 指针
-        Interop.SyncBufferPointers();
-
-        // 1. 将 Read 缓冲区的活跃数据拷贝到 Write 缓冲区
-        //    确保脚本只写增量时 Write 总有完整的基线
-        int aliveCount;
-        unsafe { aliveCount = (int)Interop.API.GetEntityCapacity(); }
-        SyncActiveBuffers(aliveCount);
-
         ProcessDestructionQueue();
         ProcessRemovalQueue();
         ProcessPendingStarts();
@@ -125,27 +115,6 @@ public class World : IDisposable
             for (int i = 0; i < _flattenedLateUpdateBatches.Count; i++) DispatchBatch(_flattenedLateUpdateBatches[i]);
         }
         finally { Prisma.Time._isParallelStep = false; }
-
-        // 4. C++ 会在 World.Step 返回后调用 EntityManager::SwapBuffers()
-        //    所以这里不需要 C# 侧的 SwapBuffers
-    }
-
-    /// <summary>
-    /// 从 Read 缓冲区拷贝活跃数据到 Write 缓冲区
-    /// 消除"幽灵数据"闪烁：静止实体未写增量时 Write 中仍有正确的基值
-    /// </summary>
-    private unsafe void SyncActiveBuffers(int aliveCount)
-    {
-        long bytes = (long)aliveCount * sizeof(float);
-        if (bytes <= 0) return;
-
-        var r = Interop.TransformRead;
-        var w = Interop.TransformWrite;
-        Buffer.MemoryCopy(r->PosX, w->PosX, bytes, bytes);
-        Buffer.MemoryCopy(r->PosY, w->PosY, bytes, bytes);
-        Buffer.MemoryCopy(r->Rotation, w->Rotation, bytes, bytes);
-        Buffer.MemoryCopy(r->ScaleX, w->ScaleX, bytes, bytes);
-        Buffer.MemoryCopy(r->ScaleY, w->ScaleY, bytes, bytes);
     }
 
     private unsafe void UpdateSpatialGrid()

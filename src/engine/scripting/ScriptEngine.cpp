@@ -89,14 +89,12 @@ void ScriptEngine::S_DestroyEntity(uint32_t h) {
     EntityManager::Get().DestroyNode(h); 
 }
 
-TransformDataLayout* ScriptEngine::S_GetTransformA() { 
-    // C++ Write 缓冲区：C# 脚本往这里写
-    return EntityManager::Get().GetTransformWrite();
+TransformDataLayout* ScriptEngine::S_GetTransformA() {
+    return EntityManager::Get().GetTransform();
 }
 
-TransformDataLayout* ScriptEngine::S_GetTransformB() { 
-    // C++ Read 缓冲区：C# 从这里读取上一帧的已提交数据
-    return EntityManager::Get().GetTransformRead();
+TransformDataLayout* ScriptEngine::S_GetTransformB() {
+    return EntityManager::Get().GetTransform();
 }
 
 RenderDataLayout* ScriptEngine::S_GetRenderData() { 
@@ -130,7 +128,8 @@ static float S_GetMouseY() {
     auto& spec = Application::Get().GetSpecification();
     return (float)spec.Height - m->GetMousePosition().y;
 }
-static float S_GetDeltaTime() { return 0.016f; }
+static float s_lastDeltaTime = 0.016f;
+static float S_GetDeltaTime() { return s_lastDeltaTime; }
 static void S_Log(const char* levelStr, const char* msg) {
     if (!levelStr || !msg) return;
     Prisma::LogLevel level = Prisma::LogLevel::Info;
@@ -1359,6 +1358,7 @@ bool ScriptEngine::Initialize(CoreCLRHost& host, const std::string& gameDir) {
 void ScriptEngine::Update(float dt) {
     if (!m_initialized || !m_onFrameFn) return;
     s_activeEngine = this;
+    s_lastDeltaTime = dt;
 
     // 每帧重置鼠标滚轮累积，使用 SDL_PumpEvents + SDL_PeepEvents 获取自上次 PollEvent 以来的新滚轮事件
     s_mouseScrollX = 0.0f;

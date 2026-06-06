@@ -292,14 +292,13 @@ internal static unsafe class Interop
 {
     internal static PrismaAPI API;
 
-    // 双缓冲区指针（每帧由 SyncBufferPointers 更新）
+    // 单缓冲区指针
     internal static TransformDataLayout* TransformRead;
     internal static TransformDataLayout* TransformWrite;
     internal static RenderDataLayout* RenderData;
 
     internal static void Init(PrismaAPI* api)
     {
-        // [诊断] 校验 C++/C# PrismaAPI 结构体大小一致性
         uint expectedSize = (uint)sizeof(PrismaAPI);
         if (api->StructSize != 0 && api->StructSize != expectedSize)
         {
@@ -312,25 +311,9 @@ internal static unsafe class Interop
         }
 
         API = *api;
-        // 初始指针基于当前 m_writeIndex(=0)：
-        //   GetB = GetRead = &layoutB  (C# 从此读)
-        //   GetA = GetWrite = &layoutA (C# 往此写)
-        TransformRead = API.GetTransformB();
-        TransformWrite = API.GetTransformA();
+        TransformRead = API.GetTransformA();
+        TransformWrite = TransformRead;
         RenderData = API.GetRenderData();
-    }
-
-    /// <summary>
-    /// 每帧同步 C# 侧的双缓冲指针，使其与 C++ m_writeIndex 保持一致。
-    /// C++ 是唯一的交换权威，每次 SwapBuffers 后 Read/Write 互换。
-    /// </summary>
-    internal static void SyncBufferPointers()
-    {
-        unsafe
-        {
-            TransformRead = API.GetTransformB();
-            TransformWrite = API.GetTransformA();
-        }
     }
 
     // ===== 字符串编组辅助 =====

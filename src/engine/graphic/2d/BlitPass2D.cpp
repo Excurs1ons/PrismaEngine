@@ -165,7 +165,6 @@ void BlitPass2D::Draw(ICommandBuffer* cmd, const std::vector<RenderCommand>& com
                       const PrismaMath::mat4& mvp) {
     if (!cmd || commands.empty() || !m_pso || m_dsArray.empty()) return;
 
-    // 使用当前帧索引选择描述符集，避免 VUID 03047（更新正在被引用的描述符集）
     auto* device = Engine::Get().GetRenderSystem() ? Engine::Get().GetRenderSystem()->GetDevice() : nullptr;
     uint32_t frameIndex = device ? device->GetCurrentFrameIndex() % FRAME_OVERLAP : 0;
     auto ds = m_dsArray[frameIndex].get();
@@ -175,9 +174,7 @@ void BlitPass2D::Draw(ICommandBuffer* cmd, const std::vector<RenderCommand>& com
     auto* rm = Engine::Get().GetRenderResourceManager();
     auto defaultSampler = rm ? rm->GetDefaultSampler() : nullptr;
 
-    // 预先收集所有纹理绑定，在 BindDescriptorSet 之前完成更新
     Material* lastMaterial = nullptr;
-    bool descriptorDirty = false;
     for (const auto& command : commands) {
         if (!command.mesh) continue;
 
@@ -190,27 +187,8 @@ void BlitPass2D::Draw(ICommandBuffer* cmd, const std::vector<RenderCommand>& com
             }
             if (tex && defaultSampler) {
                 ds->BindTexture(1, tex.get(), defaultSampler.get());
-                descriptorDirty = true;
             }
-            lastMaterial = command.material;
-        }
-    }
 
-    // 在绑定前一次性更新描述符集
-    if (descriptorDirty) {
-        ds->Update();
-    }
-
-    // 绑定描述符集（更新完成后）
-    cmd->BindDescriptorSet(0, ds);
-
-    // 第二遍：绘制所有命令
-    lastMaterial = nullptr;
-    for (const auto& command : commands) {
-        if (!command.mesh) continue;
-
-        // UBO 更新材质颜色
-        if (command.material && command.material != lastMaterial) {
             BlitMaterialData matData;
             matData.baseColor = PrismaMath::vec4(command.color.r, command.color.g, command.color.b, command.color.a);
             if (auto* bc = command.material->GetParam("BaseColor")) {
@@ -219,15 +197,16 @@ void BlitPass2D::Draw(ICommandBuffer* cmd, const std::vector<RenderCommand>& com
             }
             m_materialUBO->UpdateData(&matData, sizeof(matData), 0);
 
+            ds->Update();
+            cmd->BindDescriptorSet(0, ds);
+
             lastMaterial = command.material;
         }
 
-        // Push 常量: MVP（颜色已通过 UBO 传递）
         BlitPushConstants pc{};
         pc.mvp = mvp * command.transform;
         cmd->PushConstants(ShaderType::VertexAndPixel, &pc, sizeof(pc));
 
-        // 绘制每个子网格
         for (const auto& subMesh : command.mesh->GetSubMeshes()) {
             if (subMesh.vertexBuffer && subMesh.indexBuffer) {
                 cmd->SetVertexBuffer(subMesh.vertexBuffer.get(), 0);

@@ -265,8 +265,6 @@ void Camera::LookAt(float x, float y, float z) {
 }
 
 void Camera::UpdateViewMatrix() const {
-    if (!m_isViewDirty) return;
-
     if (auto transform = GetTransform()) {
         PrismaMath::vec3 position   = transform->GetPosition();
         glm::quat rotation          = transform->GetRotation();
@@ -283,8 +281,6 @@ void Camera::UpdateViewMatrix() const {
         // LH View Matrix: R^T * T^-1
         // 但 GLM 的 lookAtLH 更可靠
         m_viewMatrix = glm::lookAtLH(position, position + m_forward, m_up);
-
-        m_isViewDirty = false;
     }
 }
 

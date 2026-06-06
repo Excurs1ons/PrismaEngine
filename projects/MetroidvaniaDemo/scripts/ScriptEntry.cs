@@ -143,9 +143,9 @@ internal static class ScriptEntry
 
             // Enemy2 in Room 3
             var enemy2 = Node.Create("Enemy2");
+            enemy2.Position = new Vector2(1120, 400);
             SetupSprite(enemy2, 1f, 0.3f, 0.3f);
-            enemy2.AddScript<Enemy>();
-            var e2Ai = enemy2.GetScript<Enemy>();
+            var e2Ai = enemy2.AddScript<Enemy>();
             // Set patrol range for Room 3 (x ~60-89 tiles = 960-1424 pixels)
             e2Ai.PatrolLeft = 960f;
             e2Ai.PatrolRight = 1424f;
