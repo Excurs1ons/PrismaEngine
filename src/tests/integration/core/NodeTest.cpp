@@ -56,7 +56,6 @@ TEST_F(NodeTest, NodeComparisonOperators) {
 TEST_F(NodeTest, SetAndGetPosition) {
     Node n = m_em->CreateNode();
     n.SetPosition({10.0f, 20.0f});
-    m_em->SwapBuffers();
 
     Vector2 pos = n.GetPosition();
     EXPECT_FLOAT_EQ(pos.x, 10.0f);
@@ -66,14 +65,12 @@ TEST_F(NodeTest, SetAndGetPosition) {
 TEST_F(NodeTest, SetAndGetRotation) {
     Node n = m_em->CreateNode();
     n.SetRotation(45.0f);
-    m_em->SwapBuffers();
     EXPECT_FLOAT_EQ(n.GetRotation(), 45.0f);
 }
 
 TEST_F(NodeTest, SetAndGetScale) {
     Node n = m_em->CreateNode();
     n.SetScale({2.0f, 3.0f});
-    m_em->SwapBuffers();
 
     Vector2 scale = n.GetScale();
     EXPECT_FLOAT_EQ(scale.x, 2.0f);
@@ -82,7 +79,6 @@ TEST_F(NodeTest, SetAndGetScale) {
 
 TEST_F(NodeTest, DefaultTransformValues) {
     Node n = m_em->CreateNode();
-    m_em->SwapBuffers();
 
     EXPECT_FLOAT_EQ(n.GetX(), 0.0f);
     EXPECT_FLOAT_EQ(n.GetY(), 0.0f);
@@ -97,16 +93,14 @@ TEST_F(NodeTest, SetXandYIndividually) {
     Node n = m_em->CreateNode();
     n.SetX(5.0f);
     n.SetY(15.0f);
-    m_em->SwapBuffers();
 
     EXPECT_FLOAT_EQ(n.GetX(), 5.0f);
     EXPECT_FLOAT_EQ(n.GetY(), 15.0f);
 }
 
-TEST_F(NodeTest, WriteVisibleOnlyAfterSwap) {
+TEST_F(NodeTest, WriteVisibleImmediately) {
     Node n = m_em->CreateNode();
     n.SetX(88.0f);
-    m_em->SwapBuffers();
     EXPECT_FLOAT_EQ(n.GetX(), 88.0f);
 }
 
@@ -118,8 +112,6 @@ TEST_F(NodeTest, MultipleNodesWriteThenRead) {
         nodes.back().SetX(static_cast<float>(i * 10));
         nodes.back().SetY(static_cast<float>(i * 20));
     }
-
-    m_em->SwapBuffers();
 
     for (int i = 0; i < kCount; ++i) {
         EXPECT_FLOAT_EQ(nodes[i].GetX(), static_cast<float>(i * 10));

@@ -68,43 +68,30 @@ TEST_F(EntityManagerTest, SlotReuseAfterDestroy) {
     EXPECT_EQ(m_em->GetAliveCount(), oldAlive);
 }
 
-TEST_F(EntityManagerTest, DoubleBufferWriteThenRead) {
+TEST_F(EntityManagerTest, TransformWriteThenRead) {
     Node n = m_em->CreateNode();
 
     n.SetX(42.0f);
     n.SetY(100.0f);
 
-    m_em->SwapBuffers();
-
     EXPECT_FLOAT_EQ(n.GetX(), 42.0f);
     EXPECT_FLOAT_EQ(n.GetY(), 100.0f);
 }
 
-TEST_F(EntityManagerTest, DoubleBufferSwapToggles) {
+TEST_F(EntityManagerTest, SingleBufferWritesAreImmediate) {
     Node n = m_em->CreateNode();
 
-    m_em->SwapBuffers();
     n.SetX(1.0f);
-    m_em->SwapBuffers();
     EXPECT_FLOAT_EQ(n.GetX(), 1.0f);
 
     n.SetX(2.0f);
-    m_em->SwapBuffers();
     EXPECT_FLOAT_EQ(n.GetX(), 2.0f);
 }
 
-TEST_F(EntityManagerTest, DoubleBufferReadWritePointerDistinct) {
-    auto* readA = m_em->GetTransformRead();
-    auto* writeA = m_em->GetTransformWrite();
-    EXPECT_NE(readA, writeA);
-
-    m_em->SwapBuffers();
-    auto* readB = m_em->GetTransformRead();
-    auto* writeB = m_em->GetTransformWrite();
-    EXPECT_NE(readB, writeB);
-
-    EXPECT_EQ(readA, writeB);
-    EXPECT_EQ(writeA, readB);
+TEST_F(EntityManagerTest, ReadWritePointersAliasInSingleBufferMode) {
+    auto* read = m_em->GetTransformRead();
+    auto* write = m_em->GetTransformWrite();
+    EXPECT_EQ(read, write);
 }
 
 TEST_F(EntityManagerTest, SoAComponentIsolation) {
@@ -115,7 +102,6 @@ TEST_F(EntityManagerTest, SoAComponentIsolation) {
     a.SetX(10.0f);
     b.SetX(20.0f);
     c.SetX(30.0f);
-    m_em->SwapBuffers();
 
     EXPECT_FLOAT_EQ(a.GetX(), 10.0f);
     EXPECT_FLOAT_EQ(b.GetX(), 20.0f);
@@ -124,7 +110,6 @@ TEST_F(EntityManagerTest, SoAComponentIsolation) {
     a.SetX(99.0f);
     b.SetX(20.0f);
     c.SetX(30.0f);
-    m_em->SwapBuffers();
     EXPECT_FLOAT_EQ(a.GetX(), 99.0f);
     EXPECT_FLOAT_EQ(b.GetX(), 20.0f);
     EXPECT_FLOAT_EQ(c.GetX(), 30.0f);
@@ -136,7 +121,6 @@ TEST_F(EntityManagerTest, SoAFieldIndependence) {
     n.SetY(2.0f);
     n.SetRotation(3.0f);
     n.SetScale({4.0f, 5.0f});
-    m_em->SwapBuffers();
 
     EXPECT_FLOAT_EQ(n.GetX(), 1.0f);
     EXPECT_FLOAT_EQ(n.GetY(), 2.0f);
