@@ -1,0 +1,229 @@
+#version 460
+
+// ============================================================================
+// mlgi_screen_gather.comp — Screen-space GI gather pass
+//
+// Reads blended SH probe coefficients, reconstructs world position from
+// depth, performs trilinear probe lookup (with clamp for out-of-grid),
+// evaluates SH9 at the surface normal direction, and writes the GI
+// contribution to an output storage image.
+//
+// Dispatch: 1 thread per pixel (local_size_x=8, local_size_y=8)
+// ============================================================================
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+// ── Output: GI contribution buffer ──
+layout(rgba16f, binding = 0) uniform image2D giOutput;
+
+// ── Input: depth texture ──
+layout(binding = 1) uniform sampler2D depthTexture;
+
+// ── Input: blended SH probe coefficients (SSBO, std430) ──
+//   Layout: probeIndex * 9 + coeffIndex → vec4 per coefficient
+//   .xyz = RGB coefficient value, .w = reserved (0.0)
+layout(std430, binding = 2) readonly buffer BlendedSH {
+    vec4 coefficients[];
+} blendedSH;
+
+// ── Probe grid parameters (UBO, std140) ──
+layout(std140, binding = 3) uniform ProbeGridUBO {
+    vec4  gridOrigin;      // .xyz = world-space origin (minimum corner)
+    vec4  gridSpacing;     // .xyz = world-space distance between probes
+    ivec4 gridDim;         // .xyz = probe count per axis, .w = total probe count
+} probeGrid;
+
+// ── Camera parameters (UBO, std140) ──
+layout(std140, binding = 4) uniform CameraUBO {
+    vec4  cameraPos;
+    vec4  cameraDir;
+    vec4  cameraUp;
+    vec4  cameraRight;
+    float fov;
+    float aspectRatio;
+    float nearPlane;
+    float farPlane;
+} camera;
+
+// ── Normal texture (optional, binding 5) ──
+//   If not available, we fall back to using view direction as the
+//   SH evaluation direction (diffuse approximation).
+layout(binding = 5) uniform sampler2D normalTexture;
+
+// ── Push constants for per-frame control ──
+layout(push_constant) uniform PushConstants {
+    float giStrength;       // GI contribution multiplier (0.0 = disabled, 1.0 = full)
+    float ambientFallback;  // Ambient color multiplier when probes are unavailable
+    int   useNormalMap;     // 1 = use normal texture, 0 = use view direction
+    int   _pad0;
+} pc;
+
+// ============================================================================
+// SH9 Basis Functions (order 3, unnormalized)
+// ============================================================================
+
+// L0 (DC term)
+float sh00(vec3 d) { return 0.2820947918; }
+
+// L1 (linear)
+float sh1n1(vec3 d) { return -0.4886025119 * d.y; }
+float sh10(vec3 d)  { return  0.4886025119 * d.z; }
+float sh1p1(vec3 d) { return -0.4886025119 * d.x; }
+
+// L2 (quadratic)
+float sh2n2(vec3 d) { return  1.0925484306 * d.x * d.y; }
+float sh2n1(vec3 d) { return -1.0925484306 * d.y * d.z; }
+float sh20(vec3 d)  { return  0.3153915653 * (3.0 * d.z * d.z - 1.0); }
+float sh2p1(vec3 d) { return -1.0925484306 * d.x * d.z; }
+float sh2p2(vec3 d) { return  0.5462742153 * (d.x * d.x - d.y * d.y); }
+
+// ============================================================================
+// SH9 Evaluation
+// ============================================================================
+
+/// Evaluate SH9 at the given direction for a specific probe.
+/// @param dir   Unit direction vector (world space)
+/// @param idx   Probe index
+/// @return Reconstructed irradiance (RGB)
+vec3 evaluateSH(vec3 dir, uint idx) {
+    uint base = idx * 9u;
+
+    // L0
+    vec3 result = sh00(dir) * blendedSH.coefficients[base + 0u].rgb;
+
+    // L1
+    result += sh1n1(dir) * blendedSH.coefficients[base + 1u].rgb;
+    result += sh10(dir)  * blendedSH.coefficients[base + 2u].rgb;
+    result += sh1p1(dir) * blendedSH.coefficients[base + 3u].rgb;
+
+    // L2
+    result += sh2n2(dir) * blendedSH.coefficients[base + 4u].rgb;
+    result += sh2n1(dir) * blendedSH.coefficients[base + 5u].rgb;
+    result += sh20(dir)  * blendedSH.coefficients[base + 6u].rgb;
+    result += sh2p1(dir) * blendedSH.coefficients[base + 7u].rgb;
+    result += sh2p2(dir) * blendedSH.coefficients[base + 8u].rgb;
+
+    // Clamp to positive (negative irradiance is physically invalid)
+    return max(result, vec3(0.0));
+}
+
+// ============================================================================
+// Trilinear Probe Lookup
+// ============================================================================
+
+/// Look up a probe by grid coordinates with clamping.
+/// Returns SH-evaluated irradiance at the given world-space direction.
+/// Out-of-grid positions are clamped to the nearest valid probe.
+vec3 lookupProbeTrilinear(vec3 worldPos, vec3 normalDir) {
+    // Compute grid-local coordinates
+    vec3 gridCoord = (worldPos - probeGrid.gridOrigin.xyz) / probeGrid.gridSpacing.xyz;
+
+    // Clamp to valid range [0, gridDim-1] to prevent out-of-grid access
+    vec3 dimF = vec3(probeGrid.gridDim.xyz);
+    vec3 clampedCoord = clamp(gridCoord, vec3(0.0), dimF - vec3(1.0));
+
+    // Compute integer grid indices of the 8 surrounding probes
+    ivec3 i0 = ivec3(floor(clampedCoord));
+    ivec3 i1 = min(i0 + ivec3(1), probeGrid.gridDim.xyz - ivec3(1));
+
+    // Compute fractional weights for trilinear interpolation
+    vec3 frac = clampedCoord - vec3(i0);
+
+    // Flatten 3D grid index → linear probe index
+    ivec3 dim = probeGrid.gridDim.xyz;
+
+    // Evaluate SH at all 8 corners
+    vec3 c000 = evaluateSH(normalDir, uint(i0.z * dim.y * dim.x + i0.y * dim.x + i0.x));
+    vec3 c100 = evaluateSH(normalDir, uint(i1.z * dim.y * dim.x + i0.y * dim.x + i1.x));
+    vec3 c010 = evaluateSH(normalDir, uint(i0.z * dim.y * dim.x + i1.y * dim.x + i0.x));
+    vec3 c110 = evaluateSH(normalDir, uint(i1.z * dim.y * dim.x + i1.y * dim.x + i1.x));
+    vec3 c001 = evaluateSH(normalDir, uint(i1.z * dim.y * dim.x + i0.y * dim.x + i0.x));
+    vec3 c101 = evaluateSH(normalDir, uint(i1.z * dim.y * dim.x + i0.y * dim.x + i1.x));
+    vec3 c011 = evaluateSH(normalDir, uint(i1.z * dim.y * dim.x + i1.y * dim.x + i0.x));
+    vec3 c111 = evaluateSH(normalDir, uint(i1.z * dim.y * dim.x + i1.y * dim.x + i1.x));
+
+    // Trilinear interpolation along X
+    vec3 c00 = mix(c000, c100, frac.x);
+    vec3 c10 = mix(c010, c110, frac.x);
+    vec3 c01 = mix(c001, c101, frac.x);
+    vec3 c11 = mix(c011, c111, frac.x);
+
+    // Along Y
+    vec3 c0 = mix(c00, c10, frac.y);
+    vec3 c1 = mix(c01, c11, frac.y);
+
+    // Along Z
+    return mix(c0, c1, frac.z);
+}
+
+// ============================================================================
+// World Position Reconstruction from Depth
+// ============================================================================
+
+/// Reconstruct world position from screen UV and depth.
+vec3 reconstructWorldPos(vec2 uv, float depth) {
+    // Compute ray direction from camera parameters (same as pathtrace.comp)
+    float hFov = tan(camera.fov * 0.5);
+    float px = (uv.x * 2.0 - 1.0) * hFov * camera.aspectRatio;
+    float py = -(uv.y * 2.0 - 1.0) * hFov;
+    vec3 rayDir = normalize(camera.cameraDir.xyz
+                           + px * camera.cameraRight.xyz
+                           + py * camera.cameraUp.xyz);
+    return camera.cameraPos.xyz + rayDir * depth;
+}
+
+// ============================================================================
+// Main
+// ============================================================================
+
+void main() {
+    ivec2 pix = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 size = imageSize(giOutput);
+
+    // Bounds check
+    if (any(greaterThanEqual(pix, size))) {
+        return;
+    }
+
+    // Compute UV coordinates
+    vec2 uv = (vec2(pix) + 0.5) / vec2(size);
+
+    // Read depth (linear or non-linear — for MVP we assume non-linear
+    // and reconstruct world position using the camera ray)
+    float depth = texelFetch(depthTexture, pix, 0).r;
+
+    // If depth is 1.0 (far plane / sky), write black and return early
+    if (depth >= 1.0) {
+        imageStore(giOutput, pix, vec4(0.0, 0.0, 0.0, 1.0));
+        return;
+    }
+
+    // Reconstruct world position
+    vec3 worldPos = reconstructWorldPos(uv, depth);
+
+    // Determine surface normal direction for SH evaluation
+    vec3 normalDir;
+    if (pc.useNormalMap != 0) {
+        // Read normal from normal texture (assumes world-space normals
+        // encoded as RGB in [0,1] range)
+        vec3 n = texelFetch(normalTexture, pix, 0).rgb;
+        normalDir = normalize(n * 2.0 - 1.0);
+    } else {
+        // Fallback: use view direction as the SH evaluation direction.
+        // This is a diffuse approximation — the SH is evaluated along the
+        // view ray rather than the surface normal, which is acceptable for
+        // low-frequency GI where the difference is subtle.
+        vec3 viewDir = normalize(worldPos - camera.cameraPos.xyz);
+        normalDir = normalize(-viewDir);
+    }
+
+    // Perform trilinear probe lookup and evaluate SH
+    vec3 giContribution = lookupProbeTrilinear(worldPos, normalDir);
+
+    // Apply GI strength
+    giContribution *= pc.giStrength;
+
+    // Write GI contribution to output buffer
+    // Alpha channel is set to 1.0 for compositing
+    imageStore(giOutput, pix, vec4(giContribution, 1.0));
+}

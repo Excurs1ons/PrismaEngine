@@ -1,0 +1,75 @@
+#version 460
+#extension GL_EXT_nonuniform_qualifier : enable
+
+// ============================================================================
+// mlgi_temporal.comp — Temporal accumulation for probe SH coefficients
+//
+// Blends current-frame SH with history SH into blended/output SH using a
+// configurable blend factor. Handles first-frame initialization and reset.
+//
+// SSBO layout (std430):
+//   binding 0: currentSH  — current frame's SH coefficients (read-only)
+//   binding 1: historySH  — accumulated history SH coefficients (read-only)
+//   binding 2: blendedSH  — temporally blended output (write-only)
+//
+// Each coefficient is a vec4: .xyz = RGB, .w = reserved (must be 0.0)
+// Index: probeIndex * 9 + coeffIndex  (0 <= coeffIndex < 9)
+//
+// Push constants:
+//   blendFactor    — lerp factor (0.0 = full history, 1.0 = full current)
+//   totalCoeffCount — total vec4 coefficients (probeCount * 9)
+//   temporalFrame  — 0 = first frame (copy only, no history)
+//   resetFlag      — 1 = reset history (copy current to blended + clear history)
+// ============================================================================
+
+layout(local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+// ── SSBO bindings ──
+
+layout(std430, binding = 0) readonly buffer CurrentSH {
+    vec4 coeffs[];
+} currentSH;
+
+layout(std430, binding = 1) readonly buffer HistorySH {
+    vec4 coeffs[];
+} historySH;
+
+layout(std430, binding = 2) writeonly buffer BlendedSH {
+    vec4 coeffs[];
+} blendedSH;
+
+// ── Push constants ──
+
+layout(push_constant) uniform PushConstants {
+    float  blendFactor;        // lerp factor (default 0.9)
+    uint   totalCoeffCount;    // total vec4 coefficients (probeCount * 9)
+    uint   temporalFrame;      // 0 = first frame (no history)
+    uint   resetFlag;          // 1 = reset history
+} pc;
+
+// ── Main ──
+
+void main() {
+    uint idx = gl_GlobalInvocationID.x;
+    if (idx >= pc.totalCoeffCount) {
+        return;
+    }
+
+    // Reset path: copy current to blended, history will be cleared by CPU
+    if (pc.resetFlag == 1u) {
+        blendedSH.coeffs[idx] = currentSH.coeffs[idx];
+        return;
+    }
+
+    // First frame: no valid history, copy current to blended
+    if (pc.temporalFrame == 0u) {
+        blendedSH.coeffs[idx] = currentSH.coeffs[idx];
+        return;
+    }
+
+    // Frame N: temporal blend
+    // blended = lerp(history, current, blendFactor)
+    vec4 current = currentSH.coeffs[idx];
+    vec4 history = historySH.coeffs[idx];
+    blendedSH.coeffs[idx] = mix(history, current, pc.blendFactor);
+}
