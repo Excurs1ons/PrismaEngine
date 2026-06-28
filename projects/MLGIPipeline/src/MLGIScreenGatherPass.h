@@ -8,7 +8,6 @@
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/ICommandBuffer.h"
 #include "graphic/interfaces/IShader.h"
-#include "graphic/ShaderReflection.h"
 #include "graphic/RenderDesc.h"
 #include "ProbeGrid.h"
 #include <memory>

@@ -7,7 +7,6 @@
 #include "graphic/interfaces/IRenderDevice.h"
 #include "graphic/interfaces/IDescriptorSet.h"
 #include "graphic/interfaces/IResourceFactory.h"
-#include "graphic/ShaderReflection.h"
 #include "ProbeGrid.h"
 #include <memory>
 #include <cstdint>
