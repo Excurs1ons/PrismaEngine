@@ -259,6 +259,15 @@ int Engine::Run(std::unique_ptr<Application> app) {
                 spec.HeadlessHeight     = config.headless.height;
                 spec.HeadlessOutputPath = config.headless.outputPath;
 
+                spec.enableMLGI          = config.rendering.mlgi.enableMLGI;
+                spec.probeGridDimX       = config.rendering.mlgi.probeGridDim.x;
+                spec.probeGridDimY       = config.rendering.mlgi.probeGridDim.y;
+                spec.probeGridDimZ       = config.rendering.mlgi.probeGridDim.z;
+                spec.probeSpacing        = config.rendering.mlgi.probeSpacing;
+                spec.raysPerProbe        = config.rendering.mlgi.raysPerProbe;
+                spec.temporalBlendFactor = config.rendering.mlgi.temporalBlendFactor;
+                spec.debugDumpPath       = config.rendering.mlgi.debugDumpPath;
+
                 if (m_Spec.HeadlessFrames)    spec.HeadlessFrames     = m_Spec.HeadlessFrames;
                 if (m_Spec.HeadlessWidth)     spec.HeadlessWidth      = m_Spec.HeadlessWidth;
                 if (m_Spec.HeadlessHeight)    spec.HeadlessHeight     = m_Spec.HeadlessHeight;

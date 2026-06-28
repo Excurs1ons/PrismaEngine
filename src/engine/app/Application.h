@@ -42,6 +42,15 @@ struct ApplicationSpecification {
     uint32_t HeadlessWidth = 1080;
     uint32_t HeadlessHeight = 1080;
     std::string HeadlessOutputPath = "pt_output.png";
+    bool enableMLGI = false;
+    uint32_t probeGridDimX = 4;
+    uint32_t probeGridDimY = 2;
+    uint32_t probeGridDimZ = 4;
+    float probeSpacing = 1.0f;
+    uint32_t raysPerProbe = 32;
+    float temporalBlendFactor = 0.9f;
+    std::string debugDumpPath;
+
     std::vector<std::string> Scenes;  // 可选多场景列表（F6/F7 切换，放末尾避免破坏聚合初始化）
 };
 

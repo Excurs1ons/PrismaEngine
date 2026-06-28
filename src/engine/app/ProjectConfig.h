@@ -27,6 +27,21 @@ struct WindowConfig {
     uint32_t maxFPS = 0;
 };
 
+struct ProbeGridDim {
+    uint32_t x = 4;
+    uint32_t y = 2;
+    uint32_t z = 4;
+};
+
+struct MLGIConfig {
+    bool enableMLGI = false;
+    ProbeGridDim probeGridDim;
+    float probeSpacing = 1.0f;
+    uint32_t raysPerProbe = 32;
+    float temporalBlendFactor = 0.9f;
+    std::string debugDumpPath;
+};
+
 struct PathTracingConfig {
     uint32_t maxSamples = 512;
     uint32_t maxBounces = 8;
@@ -44,6 +59,7 @@ struct Renderer2DConfig {
 struct RenderingConfig {
     PathTracingConfig pathTracing;
     Renderer2DConfig renderer2D;
+    MLGIConfig mlgi;
 };
 
 struct HeadlessConfig {
@@ -169,10 +185,32 @@ struct glz::meta<Prisma::Renderer2DConfig> {
 };
 
 template <>
+struct glz::meta<Prisma::ProbeGridDim> {
+    static constexpr auto value = glz::object(
+        "x", &Prisma::ProbeGridDim::x,
+        "y", &Prisma::ProbeGridDim::y,
+        "z", &Prisma::ProbeGridDim::z
+    );
+};
+
+template <>
+struct glz::meta<Prisma::MLGIConfig> {
+    static constexpr auto value = glz::object(
+        "enableMLGI",          &Prisma::MLGIConfig::enableMLGI,
+        "probeGridDim",        &Prisma::MLGIConfig::probeGridDim,
+        "probeSpacing",        &Prisma::MLGIConfig::probeSpacing,
+        "raysPerProbe",        &Prisma::MLGIConfig::raysPerProbe,
+        "temporalBlendFactor", &Prisma::MLGIConfig::temporalBlendFactor,
+        "debugDumpPath",       &Prisma::MLGIConfig::debugDumpPath
+    );
+};
+
+template <>
 struct glz::meta<Prisma::RenderingConfig> {
     static constexpr auto value = glz::object(
         "pathTracing", &Prisma::RenderingConfig::pathTracing,
-        "renderer2D",  &Prisma::RenderingConfig::renderer2D
+        "renderer2D",  &Prisma::RenderingConfig::renderer2D,
+        "mlgi",        &Prisma::RenderingConfig::mlgi
     );
 };
 
