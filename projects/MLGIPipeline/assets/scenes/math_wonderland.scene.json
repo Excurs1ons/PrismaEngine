@@ -1,0 +1,86 @@
+{
+    "name": "Math Wonderland",
+    "nodes": [
+        {
+            "name": "SkyLight",
+            "position": [0, 20, 0],
+            "rotation": [0.7071, 0.0, 0.0, 0.7071],
+            "scale": [1, 1, 1],
+            "components": [
+                {"type": "LightComponent", "data": {"type": "Directional", "color": [1, 1, 1], "intensity": 1.0}}
+            ]
+        },
+        {
+            "name": "Floor",
+            "position": [0, -1, 0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [50, 1, 50],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat"}}
+            ]
+        },
+        {
+            "name": "Ceiling",
+            "position": [0, 10, 0],
+            "rotation": [1.0, 0.0, 0.0, 0.0],
+            "scale": [50, 1, 50],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat"}}
+            ]
+        },
+        {
+            "name": "RedWall",
+            "position": [-10, 5, 0],
+            "rotation": [0.0, 0.0, -0.7071, 0.7071],
+            "scale": [10, 1, 50],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/red.mat"}}
+            ]
+        },
+        {
+            "name": "GreenWall",
+            "position": [10, 5, 0],
+            "rotation": [0.0, 0.0, 0.7071, 0.7071],
+            "scale": [10, 1, 50],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/green.mat"}}
+            ]
+        },
+        {
+            "name": "BackWall",
+            "position": [0, 5, 10],
+            "rotation": [-0.7071, 0.0, 0.0, 0.7071],
+            "scale": [20, 1, 10],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/gray.mat"}}
+            ]
+        },
+        {
+            "name": "LargeSphere",
+            "position": [-3, 2, 0],
+            "rotation": [0.0, 0.0, 0.0, 1.0],
+            "scale": [2, 2, 2],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Sphere", "material": "assets/materials/white.mat"}}
+            ]
+        },
+        {
+            "name": "TallBox",
+            "position": [3, 3, -2],
+            "rotation": [0.0, 0.3827, 0.0, 0.9239],
+            "scale": [2, 6, 2],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Box", "material": "assets/materials/white.mat"}}
+            ]
+        },
+        {
+            "name": "LightPanel",
+            "position": [0, 9.9, 0],
+            "rotation": [1.0, 0.0, 0.0, 0.0],
+            "scale": [4, 1, 4],
+            "components": [
+                {"type": "PrimitiveComponent", "data": {"shape": "Plane", "material": "assets/materials/light.mat", "emissive": [15, 15, 15]}}
+            ]
+        }
+    ]
+}
