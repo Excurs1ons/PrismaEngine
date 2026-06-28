@@ -314,6 +314,7 @@ projects/
 ├── PrismaCraft/             # Minecraft 风格体素游戏
 ├── Prisma2D/                # 2D 游戏项目模板（含 C# 脚本）
 ├── PathTracing3D/           # 3D 路径追踪模板（含 Hardware RT + SSBO）
+├── MLGIPipeline/            # Mobile Lumen / Hybrid Probe GI 管线原型
 ├── ClusteredForward3D/      # 聚簇前向渲染演示
 ├── Deferred3D/              # 延迟渲染演示（含 SSGI）
 ├── SRP2D/                   # 2D Scriptable Render Pipeline 示例

@@ -15,6 +15,7 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 - [Architecture Optimization](ArchitectureOptimization.md) - Recent core improvements (2024)
 - [Implementation Summary](ImplementationSummary.md) - Technical implementation details
 - [Path Tracing Plan](plans/2026-05-18-pathtracing-next-steps.md) - Path tracing roadmap (NEE, denoising, ReSTIR)
+- [MLGIPipeline Notes](PathTracing.md#mlgipipeline--hybrid-probe-gi-prototype) - App-layer hybrid probe GI sample using RayQuery probes
 - [Lifecycle Management](LifecycleManagement.md) - Engine and object lifecycle
 - [Lifecycle Management Implementation](LifecycleManagement_Implementation.md) - Deep dive into lifecycle code
 
@@ -62,4 +63,4 @@ Welcome to the Prisma Engine documentation. This index provides a complete map o
 - [MCP Test Report](MCP_Test_Report.md) - MCP protocol test results and validation (19 tests)
 
 ---
-*Last Updated: 2026-05-18 (Added Template3D Path Tracing)*
+*Last Updated: 2026-06-28 (Added MLGIPipeline hybrid probe GI sample)*

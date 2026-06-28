@@ -339,6 +339,7 @@ PrismaEngine（原YAGE）是一个为现代游戏开发设计的跨平台游戏�
 | **MCP 协议** | 85% | 🆕 | 17 工具、7 分类、双传输、增量哈希 |
 | **WebUI 编辑器** | 80% | 🆕 | 浏览器编辑器，Scene/Game 视口 |
 | **路径追踪 (PathTracing3D)** | 30% | 🆕 | Cornell Box SSBO 路径追踪，待 NEE + 降噪 |
+| **移动 GI 原型 (MLGIPipeline)** | 35% | 🆕 | 应用层 Hybrid Probe GI：ProbeGrid、SH9、RayQuery 更新、Temporal、Screen Gather；CI 暂默认关闭 |
 
 ### 按功能
 

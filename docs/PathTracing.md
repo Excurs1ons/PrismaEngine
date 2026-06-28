@@ -14,6 +14,47 @@
 
 **控制键**: `R` 重置累积, `B` 切换模式 (Flat/BVH/HardwareRT), `P` 切换 Primitive|Mesh, `N` 切换 NEE, `[/]` 调整采样帧数
 
+## MLGIPipeline — Hybrid Probe GI Prototype
+
+`projects/MLGIPipeline/` 是从 `PathTracing3D` 拆出的应用层 Mobile Lumen / Hybrid Probe GI 原型。它不再作为路径追踪示例命名，而是用于验证移动端友好的 **Probe 打 Ray** 全局光照管线路线。
+
+### 核心组件
+
+- `ProbeGrid.h`：固定 3D 探针网格，包含维度、原点、间距、探针数量、分帧更新 stride 和上限裁剪。
+- `ProbeSHBuffer.h`：SH9 探针数据布局，使用 `probeIndex * 9 + coeffIndex`，每个系数为 `vec4`，RGB 存放在 `.xyz`。
+- `MLGIProbeUpdatePass.*` + `mlgi_probe_update.comp`：使用 `GL_EXT_ray_query` 从探针位置发射有限预算射线，写入当前帧 SH 系数。
+- `MLGITemporalPass.*` + `mlgi_temporal.comp`：当前帧/历史帧 SH 的时域累积，支持 scene reload、resize 和 config change reset。
+- `MLGIScreenGatherPass.*` + `mlgi_screen_gather.comp`：屏幕空间重建位置，采样 blended SH，输出 GI contribution。
+- `MLGISystem.*`：按 `ProbeUpdate -> PipelineBarrier -> Temporal -> PipelineBarrier -> ScreenGather` 顺序编排应用层 dispatch。
+
+### 设计边界
+
+- MVP 使用现有 RHI 抽象（`IRenderDevice`、`ICommandBuffer`、`IResourceFactory`、`IBuffer`、`ITexture`、`IComputePipeline`）。
+- 不依赖完整 RenderGraph，不要求 descriptor buffer / bindless descriptor indexing。
+- 不实现完整 UE Lumen MDF/GDF、SSGI contact correction、多 bounce、probe relocation/classification。
+- 无 RayQuery、无 TLAS、无效 ProbeGrid 时进入显式 fallback path 并记录 metrics/fallback reason。
+
+### 配置
+
+`ProjectConfig.h` 的 `rendering.mlgi` 段包含：
+
+```jsonc
+"mlgi": {
+  "enableMLGI": false,
+  "probeGridDim": { "x": 4, "y": 2, "z": 4 },
+  "probeSpacing": 1.0,
+  "raysPerProbe": 32,
+  "temporalBlendFactor": 0.9,
+  "debugDumpPath": ""
+}
+```
+
+### CI 策略
+
+`MLGIPipeline` 默认可作为样例项目存在，但当前跨平台 CI 显式传入 `PRISMA_BUILD_PROJECT_MLGIPIPELINE=OFF`，避免移动/受限环境在该原型尚未完全平台化前阻塞引擎核心验证。
+
+---
+
 ## 当前实现 (PathTracing3D)
 
 PathTracing3D 包含一个纯 compute shader 实现的路径追踪器，位于 `projects/PathTracing3D/`。
