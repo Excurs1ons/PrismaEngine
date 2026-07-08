@@ -2,6 +2,9 @@
     // 项目名称（HUD 左上角显示）
     "name": "PathTracing3D（3D路径追踪模板）",
 
+    // Android plugin 库名（用于 dlopen，对应 CMake OUTPUT_NAME）
+    "coreLibrary": "PathTracing3D.Core",
+
     // 入口场景（相对 assets/ 搜索路径）
     "entryScene": "scenes/math_wonderland.scene.json",
 

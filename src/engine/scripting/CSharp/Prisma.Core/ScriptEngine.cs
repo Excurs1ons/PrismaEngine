@@ -8,18 +8,18 @@ namespace Prisma;
 /// 内部脚本引擎。充�?C++ 引擎�?C# World 之间的桥梁�?
 /// Internal script engine. Acts as a bridge between C++ engine and C# World.
 /// </summary>
-internal static class ScriptEngine
+public static class ScriptEngine
 {
     private static World? _mainWorld;
 
     /// <summary>SRP 渲染回调。由游戏脚本在 Bootstrap 中设置。</summary>
-    internal static Action<float>? OnRenderCallback;
+    public static Action<float>? OnRenderCallback;
 
     /// <summary>
     /// 引导入口。支持热重载时的状态迁移�?
     /// Bootstrap entry point. Supports state migration during Hot Reloading.
     /// </summary>
-    internal static void Bootstrap(IntPtr apiPtr)
+    public static void Bootstrap(IntPtr apiPtr)
     {
         unsafe { Interop.Init((PrismaAPI*)apiPtr); }
         
@@ -56,7 +56,7 @@ internal static class ScriptEngine
     /// 每帧更新逻辑�?
     /// Update logic per frame.
     /// </summary>
-    internal static void OnFrame(float dt)
+    public static void OnFrame(float dt)
     {
         try
         {
@@ -72,7 +72,7 @@ internal static class ScriptEngine
     /// 每帧渲染回调。在 C++ BeginFrame/EndFrame 之间调用。
     /// 由游戏脚本的 OnRender 委托触发 SRP 管线。
     /// </summary>
-    internal static void OnRender(float dt)
+    public static void OnRender(float dt)
     {
         try
         {

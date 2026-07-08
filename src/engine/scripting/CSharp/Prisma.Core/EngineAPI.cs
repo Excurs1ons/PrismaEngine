@@ -7,7 +7,7 @@ namespace Prisma;
 /// Transform 数据布局（双缓冲）。内存布局与 C++ Prisma::TransformDataLayout 一致。
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct TransformDataLayout
+public unsafe struct TransformDataLayout
 {
     public float* PosX;
     public float* PosY;
@@ -20,7 +20,7 @@ internal unsafe struct TransformDataLayout
 /// Render 数据布局（单缓冲）。内存布局与 C++ Prisma::RenderDataLayout 一致。
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct RenderDataLayout
+public unsafe struct RenderDataLayout
 {
     public uint*   Active;
     public uint*   Generation;
@@ -33,7 +33,7 @@ internal unsafe struct RenderDataLayout
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct PrismaAPI
+public unsafe struct PrismaAPI
 {
     public delegate* unmanaged<byte*, byte*, void> Log;
     public delegate* unmanaged<uint> CreateEntity;
@@ -255,7 +255,7 @@ internal unsafe struct PrismaAPI
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct SRPPipelineDesc
+public unsafe struct SRPPipelineDesc
 {
     public uint VertexShader;
     public uint FragmentShader;
@@ -278,7 +278,7 @@ internal unsafe struct SRPPipelineDesc
 /// 采样器创建描述。内存布局与 C++ Prisma::Scripting::SRPSamplerDesc 一致。
 /// </summary>
 [StructLayout(LayoutKind.Sequential)]
-internal unsafe struct SRPSamplerDesc
+public unsafe struct SRPSamplerDesc
 {
     public uint MinFilter;
     public uint MagFilter;
@@ -288,16 +288,16 @@ internal unsafe struct SRPSamplerDesc
     public uint AddressW;
 }
 
-internal static unsafe class Interop
+public static unsafe class Interop
 {
-    internal static PrismaAPI API;
+    public static PrismaAPI API;
 
     // 单缓冲区指针
-    internal static TransformDataLayout* TransformRead;
-    internal static TransformDataLayout* TransformWrite;
-    internal static RenderDataLayout* RenderData;
+    public static TransformDataLayout* TransformRead;
+    public static TransformDataLayout* TransformWrite;
+    public static RenderDataLayout* RenderData;
 
-    internal static void Init(PrismaAPI* api)
+    public static void Init(PrismaAPI* api)
     {
         uint expectedSize = (uint)sizeof(PrismaAPI);
         if (api->StructSize != 0 && api->StructSize != expectedSize)
@@ -321,7 +321,7 @@ internal static unsafe class Interop
     /// <summary>
     /// 将 C# string 转为以 null 结尾的 UTF-8 字节数组（配合 fixed 语句使用）
     /// </summary>
-    internal static byte[] StringToUtf8(string s)
+    public static byte[] StringToUtf8(string s)
     {
         if (s == null) return new byte[] { 0 };
         return System.Text.Encoding.UTF8.GetBytes(s + "\0");
@@ -330,7 +330,7 @@ internal static unsafe class Interop
     /// <summary>
     /// 将以 null 结尾的 UTF-8 指针转为 C# string
     /// </summary>
-    internal static unsafe string Utf8ToString(byte* ptr)
+    public static unsafe string Utf8ToString(byte* ptr)
     {
         if (ptr == null) return "";
         int len = 0;

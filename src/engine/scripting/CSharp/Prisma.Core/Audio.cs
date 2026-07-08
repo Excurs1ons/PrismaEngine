@@ -66,7 +66,7 @@ public static unsafe class Audio
 }
 
 [StructLayout(LayoutKind.Sequential)]
-internal struct AudioPlayDesc
+public struct AudioPlayDesc
 {
     public float volume;
     public float pitch;

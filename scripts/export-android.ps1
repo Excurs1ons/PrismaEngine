@@ -473,6 +473,14 @@ function Copy-ProjectAssets {
         Write-Info "Project assets copied"
     }
 
+    # 生成标准化 project.jsonc（不依赖项目名，供 native 层读取 plugin 库名）
+    $jsoncFile = Get-ChildItem -Path $assetsDir -Filter "*.jsonc" -File | Select-Object -First 1
+    if ($jsoncFile) {
+        $standardPath = Join-Path $assetsDir "project.jsonc"
+        Copy-Item -Path $jsoncFile.FullName -Destination $standardPath -Force
+        Write-Info "Standard project.jsonc generated from $($jsoncFile.Name)"
+    }
+
     # Copy engine common shaders (.spv) — 根 assets/shaders/
     $rootShadersDir = Join-Path $EngineRoot "assets\shaders"
     if (Test-Path $rootShadersDir) {
