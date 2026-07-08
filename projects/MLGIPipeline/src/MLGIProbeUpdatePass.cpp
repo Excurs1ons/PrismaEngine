@@ -147,7 +147,7 @@ bool MLGIProbeUpdatePass::CreateDescriptorSets(Graphic::IRenderDevice* device) {
 
     {
         Graphic::BufferDesc desc{};
-        desc.type  = Graphic::BufferType::Uniform;
+        desc.type  = Graphic::BufferType::Constant;
         desc.size  = sizeof(ProbeGridUBOData);
         desc.stride = 0;
         desc.usage = Graphic::BufferUsage::ShaderResource

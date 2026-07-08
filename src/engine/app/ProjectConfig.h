@@ -71,6 +71,7 @@ struct HeadlessConfig {
 
 struct ProjectConfig {
     std::string name = "Prisma App";
+    std::string coreLibrary;   // Android plugin 库名（如 "MLGIPipeline.Core"），用于 dlopen
     std::string entryScene;
     std::vector<std::string> assets;
     std::vector<std::string> scenes;
@@ -98,6 +99,7 @@ struct glz::meta<Prisma::RenderMode> {
         "PathTracing", Mode3D_PathTracing,
         "ClusteredForward", Mode3D_ClusteredForward,
         "NPR", Mode3D_NPR,
+        "MobileLumen", Mode3D_MobileLumen,
         "SRP", SRP
     );
 };
@@ -228,6 +230,7 @@ template <>
 struct glz::meta<Prisma::ProjectConfig> {
     static constexpr auto value = glz::object(
         "name", &Prisma::ProjectConfig::name,
+        "coreLibrary", &Prisma::ProjectConfig::coreLibrary,
         "entryScene", &Prisma::ProjectConfig::entryScene,
         "assets", &Prisma::ProjectConfig::assets,
         "scenes", &Prisma::ProjectConfig::scenes,

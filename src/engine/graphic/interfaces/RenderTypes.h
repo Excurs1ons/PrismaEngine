@@ -345,6 +345,7 @@ enum class RenderMode : uint8_t {
     Mode3D_PathTracing = 5,
     Mode3D_ClusteredForward = 6,
     Mode3D_NPR = 8,
+    Mode3D_MobileLumen = 9,
     SRP = 7
 };
 } // namespace Prisma

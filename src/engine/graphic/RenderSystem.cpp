@@ -14,6 +14,7 @@
 #include "pipelines/clustered/ClusteredForwardPipeline.h"
 #include "pipelines/deferred/DeferredPipeline.h"
 #include "pipelines/npr/NPRPipeline.h"
+#include "pipelines/mobilelumen/MobileLumenPipeline.h"
 #include "2d/Pipeline2D.h"
 #include "../scene/SceneManager.h"
 
@@ -76,8 +77,9 @@ int RenderSystem::InitializeDevice() {
         devDesc.presentMode      = m_desc.presentMode;
         devDesc.enableValidation = m_desc.enableValidation;
         devDesc.headless         = m_desc.headless;
-        // RT 扩展仅在切换到 HardwareRT 模式时才需要，Vulkan 设备创建时不附加扩展要求
-        devDesc.rtMode = RTMode::None;
+        const RTMode requiredRT = GetRequiredRTMode(m_desc.renderMode);
+        devDesc.rtMode = requiredRT;
+        LOG_INFO("Renderer", "设备 RT 模式: {0}", static_cast<int>(requiredRT));
 
         return m_device->Initialize(devDesc);
     }
@@ -115,6 +117,9 @@ int RenderSystem::InitializeRenderPipelines() {
             break;
         case RenderMode::Mode3D_NPR:
             m_mainRenderPipeline = std::make_shared<NPRPipeline>();
+            break;
+        case RenderMode::Mode3D_MobileLumen:
+            m_mainRenderPipeline = std::make_shared<MobileLumenPipeline>();
             break;
         default:
             m_mainRenderPipeline = std::make_shared<ForwardPipeline>();
@@ -356,6 +361,8 @@ RTMode RenderSystem::GetRequiredRTMode(RenderMode mode) const {
     switch (mode) {
         case RenderMode::Mode3D_PathTracing:
             return m_desc.rtMode;
+        case RenderMode::Mode3D_MobileLumen:
+            return RTMode::RayQuery;
         default:
             return RTMode::None;
     }

@@ -168,6 +168,10 @@ set(CORE_SOURCES
     graphic/pipelines/clustered/ClusteredForwardPipeline.cpp
     graphic/pipelines/clustered/ClusteredOpaquePass.cpp
 
+    # Graphic - MobileLumen Pipeline
+    graphic/pipelines/mobilelumen/MobileLumenPipeline.cpp
+    graphic/pipelines/ProceduralSkyPass.cpp
+
     # Graphic - NPR Pipeline
     graphic/pipelines/npr/NPRPipeline.cpp
     graphic/pipelines/npr/NPROpaquePass.cpp

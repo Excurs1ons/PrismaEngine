@@ -2,8 +2,11 @@
     // 项目名称（HUD 左上角显示）
     "name": "MLGIPipeline（多光源GI管线）",
 
+    // Android plugin 库名（用于 dlopen，对应 CMake OUTPUT_NAME）
+    "coreLibrary": "MLGIPipeline.Core",
+
     // 入口场景（相对 assets/ 搜索路径）
-    "entryScene": "scenes/cornell_box.scene.json",
+    "entryScene": "scenes/default.scene.json",
 
     // 可选多场景列表（F6 下一场景 F7 上一场景）
     "scenes": [
@@ -24,7 +27,7 @@
     },
 
     // 渲染模式
-    "renderMode": "PathTracing",
+    "renderMode": "MobileLumen",
 
     // ========== 渲染配置 ==========
     "rendering": {
@@ -49,7 +52,7 @@
             "crtEffect": false
         },
         "mlgi": {
-            "enableMLGI": false,
+            "enableMLGI": true,
             "probeGridDim": { "x": 4, "y": 2, "z": 4 },
             "probeSpacing": 1.0,
             "raysPerProbe": 32,

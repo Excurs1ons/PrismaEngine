@@ -108,7 +108,7 @@ bool MLGIScreenGatherPass::CreateDescriptorSet(Graphic::IRenderDevice* device) {
     // Create probe grid UBO (std140 layout: 3 vec4 + 1 ivec4 = 64 bytes)
     {
         Graphic::BufferDesc desc{};
-        desc.type  = Graphic::BufferType::Uniform;
+        desc.type  = Graphic::BufferType::Constant;
         desc.size  = sizeof(glm::vec4) * 3 + sizeof(glm::ivec4);
         desc.stride = 0;
         desc.usage = Graphic::BufferUsage::ShaderResource
@@ -124,7 +124,7 @@ bool MLGIScreenGatherPass::CreateDescriptorSet(Graphic::IRenderDevice* device) {
     // Create camera UBO (std140: 4 vec4 + 4 floats = 80 bytes)
     {
         Graphic::BufferDesc desc{};
-        desc.type  = Graphic::BufferType::Uniform;
+        desc.type  = Graphic::BufferType::Constant;
         desc.size  = sizeof(glm::vec4) * 4 + sizeof(float) * 4;
         desc.stride = 0;
         desc.usage = Graphic::BufferUsage::ShaderResource
